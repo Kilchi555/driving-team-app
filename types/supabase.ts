@@ -1,11 +1,4 @@
-[?25l
-    Select a project:                                                                                 
-                                                                                                      
-  >  1. unyjaetebnaexaflpyoc [name: Driving Team App, org: mlrquplwazxofrlkmlhr, region: eu-central-2]
-                                                                                                      
-                                                                                                      
-    ↑/k up • ↓/j down • / filter • q quit • ? more                                                    
-                                                                                                      [0D[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[0D[2K [0D[2K[?25h[?1002l[?1003l[?1006lexport type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -89,6 +82,27 @@ export type Database = {
           },
         ]
       }
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          name?: string | null
+        }
+        Relationships: []
+      }
       locations: {
         Row: {
           adress: string | null
@@ -159,6 +173,42 @@ export type Database = {
           },
         ]
       }
+      teacher_categories: {
+        Row: {
+          category_id: number | null
+          created_at: string
+          id: number
+          teacher_id: string
+        }
+        Insert: {
+          category_id?: number | null
+          created_at?: string
+          id?: number
+          teacher_id: string
+        }
+        Update: {
+          category_id?: number | null
+          created_at?: string
+          id?: number
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_categories_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           assigned_staff_id: string | null
@@ -172,6 +222,7 @@ export type Database = {
           is_active: boolean
           last_name: string
           lernfahrausweis_url: string | null
+          payment_provider_customer_id: string | null
           phone: string
           role: string
           street: string | null
@@ -190,6 +241,7 @@ export type Database = {
           is_active?: boolean
           last_name: string
           lernfahrausweis_url?: string | null
+          payment_provider_customer_id?: string | null
           phone: string
           role?: string
           street?: string | null
@@ -208,6 +260,7 @@ export type Database = {
           is_active?: boolean
           last_name?: string
           lernfahrausweis_url?: string | null
+          payment_provider_customer_id?: string | null
           phone?: string
           role?: string
           street?: string | null

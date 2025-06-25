@@ -2,7 +2,6 @@
 import type { Config } from 'tailwindcss'
 
 export default <Partial<Config>>{
-  darkMode: 'class', // Oder 'media'
   content: [
     './components/**/*.{vue,js,ts}',
     './layouts/**/*.{vue,js,ts}',

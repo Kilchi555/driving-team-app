@@ -14,6 +14,8 @@ type LazyComponent<T> = (T & DefineComponent<HydrationStrategies, {}, {}, {}, {}
 interface _GlobalComponents {
       'CalendarComponent': typeof import("../components/CalendarComponent.vue")['default']
     'EventModal': typeof import("../components/EventModal.vue")['default']
+    'StaffLocationManager': typeof import("../components/StaffLocationManager.vue")['default']
+    'TeacherCategorySelector': typeof import("../components/TeacherCategorySelector.vue")['default']
     'UAccordion': typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Accordion.vue")['default']
     'UAlert': typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Alert.vue")['default']
     'UApp': typeof import("../node_modules/@nuxt/ui/dist/runtime/components/App.vue")['default']
@@ -98,6 +100,8 @@ interface _GlobalComponents {
     'NuxtRouteAnnouncer': IslandComponent<typeof import("../node_modules/nuxt/dist/app/components/server-placeholder")['default']>
       'LazyCalendarComponent': LazyComponent<typeof import("../components/CalendarComponent.vue")['default']>
     'LazyEventModal': LazyComponent<typeof import("../components/EventModal.vue")['default']>
+    'LazyStaffLocationManager': LazyComponent<typeof import("../components/StaffLocationManager.vue")['default']>
+    'LazyTeacherCategorySelector': LazyComponent<typeof import("../components/TeacherCategorySelector.vue")['default']>
     'LazyUAccordion': LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Accordion.vue")['default']>
     'LazyUAlert': LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Alert.vue")['default']>
     'LazyUApp': LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/App.vue")['default']>
@@ -188,6 +192,8 @@ declare module 'vue' {
 
 export const CalendarComponent: typeof import("../components/CalendarComponent.vue")['default']
 export const EventModal: typeof import("../components/EventModal.vue")['default']
+export const StaffLocationManager: typeof import("../components/StaffLocationManager.vue")['default']
+export const TeacherCategorySelector: typeof import("../components/TeacherCategorySelector.vue")['default']
 export const UAccordion: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Accordion.vue")['default']
 export const UAlert: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Alert.vue")['default']
 export const UApp: typeof import("../node_modules/@nuxt/ui/dist/runtime/components/App.vue")['default']
@@ -272,6 +278,8 @@ export const NuxtIsland: typeof import("../node_modules/nuxt/dist/app/components
 export const NuxtRouteAnnouncer: IslandComponent<typeof import("../node_modules/nuxt/dist/app/components/server-placeholder")['default']>
 export const LazyCalendarComponent: LazyComponent<typeof import("../components/CalendarComponent.vue")['default']>
 export const LazyEventModal: LazyComponent<typeof import("../components/EventModal.vue")['default']>
+export const LazyStaffLocationManager: LazyComponent<typeof import("../components/StaffLocationManager.vue")['default']>
+export const LazyTeacherCategorySelector: LazyComponent<typeof import("../components/TeacherCategorySelector.vue")['default']>
 export const LazyUAccordion: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Accordion.vue")['default']>
 export const LazyUAlert: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/Alert.vue")['default']>
 export const LazyUApp: LazyComponent<typeof import("../node_modules/@nuxt/ui/dist/runtime/components/App.vue")['default']>
