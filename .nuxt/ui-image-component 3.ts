@@ -1,1 +1,0 @@
-export { default } from "/Users/pascalkilchenmann/Desktop/driving-team-app/node_modules/@nuxt/image/dist/runtime/components/NuxtImg.vue";
