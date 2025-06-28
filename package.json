@@ -1,5 +1,5 @@
 {
-  "name": "nuxt-app",
+  "name": "driving-team-app",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,9 +10,21 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@nuxt/ui": "^3.2.0",
+    "@fullcalendar/core": "^6.1.17",
+    "@fullcalendar/daygrid": "^6.1.17",
+    "@fullcalendar/interaction": "^6.1.17",
+    "@fullcalendar/timegrid": "^6.1.17",
+    "@fullcalendar/vue3": "^6.1.17",
+    "@nuxt/ui": "^2.18.7",
+    "@nuxtjs/supabase": "^1.5.3",
+    "@pinia/nuxt": "^0.5.5",
+    "@supabase/supabase-js": "^2.50.2",
     "nuxt": "^3.17.5",
-    "vue": "^3.5.17",
-    "vue-router": "^4.5.1"
+    "pinia": "^2.2.6"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^0.5.7",
+    "eslint": "^8.57.1",
+    "typescript": "^5.8.3"
   }
 }
