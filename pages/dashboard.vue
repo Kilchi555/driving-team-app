@@ -1,9 +1,29 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import CalendarComponent from '../components/CalendarComponent.vue'
-import { navigateTo } from '#app'; 
+import { navigateTo } from '#app';
+import { useCurrentUser } from '~/composables/useCurrentUser'
+import StaffSettings from '~/components/StaffSettings.vue'
+import { getSupabase } from '~/utils/supabase' 
 
+
+const { currentUser, fetchCurrentUser, isLoading } = useCurrentUser()
 const calendarRef = ref()
+
+// Neue refs für Modals/Views
+const showStaffSettings = ref(false) // 👈 Das fehlte!
+const showCustomers = ref(false)
+const showPendenzen = ref(false)
+const showEinstellungen = ref(false)
+
+onMounted(async () => {
+  await fetchCurrentUser()
+  
+  // Falls nicht eingeloggt, zu Login weiterleiten
+  if (!currentUser.value) {
+    await navigateTo('/')
+  }
+})
 
 const goToToday = () => {
   const api = calendarRef.value?.getApi()
@@ -93,45 +113,97 @@ onMounted(() => {
 </script>
 
 <template>
-  <span class="text-responsive hidden">.</span>
-  <div class="fixed top-0 left-0 right-0 h-[50px] bg-white shadow z-50 flex items-center justify-between px-2">
-    <div class="flex items-center gap-4">
-      <img src="../public/images/Driving_Team_ch.jpg" class="w-24">
-    </div>
+  <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
+    <div class="text-lg">Lade User-Daten...</div>
+  </div>
+  
+  <div v-else-if="currentUser" class="h-screen flex flex-col">
+    
+    <!-- Header -->
+    <div class="fixed top-0 left-0 right-0 h-[50px] bg-white shadow z-50 flex items-center justify-between px-4">
+      <div class="flex items-center gap-4">
+        <img src="/images/Driving_Team_ch.jpg" class="h-10 w-auto" alt="Driving Team">
+      </div>
 
-    <div class="flex gap-2">
-      <button
-        class="responsive font-bold text-white px-2 py-2 rounded-xl shadow-md transition-all duration-200 transform active:scale-95 hover:bg-blue-600 disabled:bg-gray-400 bg-blue-500"
-        :disabled="isTodayActive"
-        @click="goToToday"
-      >
-        Heute
-      </button>
-      <button class="responsive font-bold text-white text-xl px-4 py-1 rounded-xl shadow-md transition-all duration-200 transform active:scale-95 bg-green-500 hover:bg-green-600" @click="goPrev">‹</button>
-      <button class="responsive font-bold text-white text-xl px-4 py-1 rounded-xl shadow-md transition-all duration-200 transform active:scale-95 bg-green-500 hover:bg-green-600" @click="goNext">›</button>
-    </div>
+      <!-- Navigation Controls -->
+      <div class="flex gap-2">
+        <button
+          class="responsive font-bold text-white px-3 py-2 rounded-xl shadow-md transition-all duration-200 transform active:scale-95 hover:bg-blue-600 disabled:bg-gray-400 bg-blue-500"
+          :disabled="isTodayActive"
+          @click="goToToday"
+        >
+          Heute
+        </button>
+        <button 
+          class="responsive font-bold text-white text-xl px-4 py-1 rounded-xl shadow-md transition-all duration-200 transform active:scale-95 bg-green-500 hover:bg-green-600" 
+          @click="goPrev"
+        >
+          ‹
+        </button>
+        <button 
+          class="responsive font-bold text-white text-xl px-4 py-1 rounded-xl shadow-md transition-all duration-200 transform active:scale-95 bg-green-500 hover:bg-green-600" 
+          @click="goNext"
+        >
+          ›
+        </button>
+      </div>
 
-    <div class="flex gap-2 bar-button">
-      <div class="responsive font-semibold text-gray-800 top-bar-text">
+      <!-- Month Display -->
+      <div class="responsive font-semibold text-gray-800">
         {{ currentMonth }}
       </div>
     </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 pt-[50px] pb-[50px] overflow-hidden">
+      <CalendarComponent 
+        ref="calendarRef" 
+        :current-user="currentUser"
+        @view-updated="onViewUpdate" 
+      />
+    </div>
+
+    <!-- Footer Navigation -->
+    <div class="fixed bottom-0 left-0 right-0 h-[50px] bg-white shadow z-50 flex justify-around items-center px-4">
+      <button 
+        @click="goToCustomers" 
+        class="responsive bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200"
+      >
+        📋 Schüler
+      </button>   
+      
+      <button 
+        :class="buttonClasses" 
+        class="responsive"
+        @click="showPendenzen = true"
+      >
+        ⏰ Offene ({{ count }})
+      </button>
+      
+      <!-- Staff Settings nur für Staff/Admin -->
+      <button 
+        v-if="currentUser.role === 'staff' || currentUser.role === 'admin'"
+        @click="showStaffSettings = true" 
+        class="responsive bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200"
+      >
+        ⚙️ Einstellungen
+      </button>
+    </div>
+
+  </div>
+  
+  <div v-else class="flex items-center justify-center min-h-screen">
+    <div class="text-lg text-gray-600">Nicht eingeloggt</div>
   </div>
 
-  <div class="pt-[50px] pb-[50px] h-screen overflow-y-auto">
-    <CalendarComponent ref="calendarRef" @view-updated="onViewUpdate" />
-  </div>
-
-  <div class="fixed bottom-0 left-0 right-0 h-[50px] bg-white shadow z-50 flex justify-around items-center px-4">
-    <button @click="goToCustomers" class="responsive pointer bg-blue-500 hover:bg-blue-600 text-white font-bold px-2 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200">
-       Schülerliste
-    </button>   
-    <button :class="buttonClasses" class="responsive">
-        Offene ({{ count }})
-    </button>
-    <button class="responsive bg-gray-500 hover:bg-gray-600 text-white font-bold px-2 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200">Einstellungen</button>
-
-  </div>
+  <!-- StaffSettings Modal nur wenn currentUser existiert -->
+  <StaffSettings 
+    v-if="showStaffSettings && currentUser" 
+    :current-user="currentUser"
+    @close="showStaffSettings = false"
+  />
+  
+  <!-- Weitere Modals hier... -->
 </template>
 
 <style>

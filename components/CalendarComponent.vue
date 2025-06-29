@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { CalendarOptions } from '@fullcalendar/core'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import deLocale from '@fullcalendar/core/locales/de'
+import EventModal from './EventModal.vue'
 
 const calendar = ref()
+
+interface Props {
+  currentUser?: any // User aus useCurrentUser
+}
+
+const props = defineProps<Props>()
 
 // NEU: Variablen für das zentrale Modal
 const isModalVisible = ref(false)
@@ -42,13 +49,14 @@ type CalendarEvent = {
 // Beispiel-Termine mit IDs
 const calendarEvents = ref<CalendarEvent[]>([
   {
-    id: 'test-event-1', // Beispiel-ID
-    title: 'Test-Termin',
-    start: new Date().toISOString(),
-    end: new Date(Date.now() + 3600000).toISOString(),
+    id: 'test-event-1',
+    title: 'Anna Müller - Fahrstunde B',
+    start: new Date(Date.now() + 86400000).toISOString(), // Morgen
+    end: new Date(Date.now() + 86400000 + 2700000).toISOString(), // 45min später
     extendedProps: {
-      location: 'Zürich',
-      staff_note: 'Achtung: Spezialfall'
+      location: 'Bahnhof Zürich',
+      staff_note: 'Erste Fahrstunde',
+      client_note: 'Stadtverkehr üben'
     }
   }
 ])
@@ -73,31 +81,43 @@ const openCreateModal = () => {
 };
 
 // NEU: Handler für das Speichern eines Events vom EventModal
-const handleSaveEvent = (eventData: CalendarEvent) => {
+const handleSaveEvent = async (eventData: CalendarEvent) => {
+  console.log('💾 Saving event:', eventData)
+  
+  // Erstmal nur lokal speichern (später Supabase)
   if (eventData.id) {
-    // Event aktualisieren: Finde das Event anhand der ID und ersetze es
-    const index = calendarEvents.value.findIndex(e => e.id === eventData.id);
+    // Event aktualisieren
+    const index = calendarEvents.value.findIndex(e => e.id === eventData.id)
     if (index !== -1) {
-      calendarEvents.value[index] = eventData;
+      calendarEvents.value[index] = eventData
     }
   } else {
-    // Neues Event hinzufügen: Generiere eine neue ID und füge es hinzu
-    const newId = Date.now().toString(); // Einfache ID-Generierung für Demo
-    calendarEvents.value.push({ ...eventData, id: newId });
+    // Neues Event hinzufügen
+    const newId = Date.now().toString()
+    calendarEvents.value.push({ ...eventData, id: newId })
   }
-  isModalVisible.value = false; // Modal schliessen
-  // Optional: Kalender aktualisieren, falls nötig (FullCalendar reagiert oft automatisch)
-  // calendar.value.getApi().refetchEvents();
-};
+  
+  isModalVisible.value = false
+  
+  // Kalender neu laden
+  setTimeout(() => {
+    calendar.value?.getApi()?.refetchEvents()
+  }, 100)
+}
 
 // NEU: Handler für das Löschen eines Events vom EventModal
-const handleDeleteEvent = (eventData: CalendarEvent) => {
-  // Event anhand der ID aus dem Array entfernen
-  calendarEvents.value = calendarEvents.value.filter(e => e.id !== eventData.id);
-  isModalVisible.value = false; // Modal schliessen
-  // Optional: Kalender aktualisieren, falls nötig
-  // calendar.value.getApi().refetchEvents();
-};
+const handleDeleteEvent = async (eventData: CalendarEvent) => {
+  console.log('🗑️ Deleting event:', eventData)
+  
+  // Erstmal nur lokal löschen (später Supabase)
+  calendarEvents.value = calendarEvents.value.filter(e => e.id !== eventData.id)
+  isModalVisible.value = false
+  
+  // Kalender neu laden
+  setTimeout(() => {
+    calendar.value?.getApi()?.refetchEvents()
+  }, 100)
+}
 
 
 // Anpassung deiner Kontextmenü-Funktionen, um das Modal zu nutzen
@@ -187,7 +207,7 @@ const calendarOptions = ref<CalendarOptions>({
   selectable: true, // Ermöglicht das Ziehen und Auswählen von Bereichen
   editable: true, // Ermöglicht das Verschieben und Ändern der Grösse von Terminen
   selectMirror: true, // Spiegelt die Auswahl beim Ziehen
-  events: calendarEvents.value, // Bindet die Termine an den Kalender
+  events: () => calendarEvents.value, 
   slotMinTime: '06:00:00', // Startzeit der Anzeige
   slotMaxTime: '22:00:00', // Endzeit der Anzeige
   allDaySlot: false, // Ganztägiger Slot am oberen Rand ausblenden
@@ -345,6 +365,7 @@ onMounted(() => {
       :is-visible="isModalVisible"
       :event-data="modalEventData"
       :mode="modalMode"
+      :current-user="props.currentUser" 
       @close="isModalVisible = false"
       @save-event="handleSaveEvent"
       @delete-event="handleDeleteEvent"
@@ -367,71 +388,286 @@ onMounted(() => {
 </template>
 
 <style>
-/* Dein bestehendes CSS (falls nicht schon im Projekt) */
-.context-menu {
-  position: fixed;
-  background-color: white;
-  border: 1px solid #ccc;
-  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-  min-width: 150px;
-  border-radius: 4px;
+/* === KALENDER BASIS === */
+.fc {
+  background-color: white !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
 
+/* === HEADER & NAVIGATION === */
+.fc-header-toolbar {
+  padding: 16px 20px !important;
+  background-color: #fafafa !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.fc-col-header-cell {
+  background-color: #f8fafc !important;
+  color: #374151 !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  padding: 12px 8px !important;
+  border-bottom: 2px solid #e5e7eb !important;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.fc-col-header-cell .fc-scrollgrid-sync-inner {
+  color: #374151 !important;
+}
+
+/* Heute hervorheben */
+.fc-col-header-cell.fc-day-today {
+  background-color: #dbeafe !important;
+  color: #1d4ed8 !important;
+}
+
+.fc-col-header-cell.fc-day-today .fc-day-header-content span {
+  color: #1d4ed8 !important;
+  font-weight: 700;
+}
+
+/* === ZEIT-SPALTE === */
+.fc-timegrid-axis {
+  background-color: #f9fafb !important;
+  border-right: 1px solid #e5e7eb !important;
+}
+
+.fc-timegrid-slot-label {
+  color: #6b7280 !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+}
+
+/* === GRID & SLOTS === */
+.fc-timegrid-slot {
+  background-color: white !important;
+  border-color: #f3f4f6 !important;
+  height: 40px !important;
+}
+
+.fc-timegrid-slot-minor {
+  border-color: #f9fafb !important;
+}
+
+.fc-scrollgrid {
+  background-color: white !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.fc-scrollgrid-section-body table {
+  border-color: #e5e7eb !important;
+}
+
+/* === HEUTE HERVORHEBEN === */
+.fc-day-today {
+  background-color: #fffbeb !important;
+}
+
+.fc-timegrid-col.fc-day-today {
+  background-color: #fffbeb !important;
+}
+
+/* === EVENTS === */
+.fc-event {
+  background-color: #62b22f !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 1px 1px !important;
+  margin: 1px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.fc-event:hover {
+  background-color: #54a026 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.fc-event-title {
+  font-weight: 600 !important;
+  color: white !important;
+}
+
+/* === EVENT KATEGORIEN === */
+.fc-event[data-category="driving_b"] {
+  background-color: #62b22f !important;
+}
+
+.fc-event[data-category="driving_a"] {
+  background-color: #019ee5 !important;
+}
+
+.fc-event[data-category="theory"] {
+  background-color: #666666 !important;
+}
+
+.fc-event[data-category="exam"] {
+  background-color: #1d1e19 !important;
+}
+
+.fc-event[data-category="consultation"] {
+  background-color: #f59e0b !important;
+}
+
+/* === BUTTONS === */
+.fc-button {
+  background-color: white !important;
+  border: 1px solid #d1d5db !important;
+  color: #374151 !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.fc-button:hover {
+  background-color: #f9fafb !important;
+  border-color: #9ca3af !important;
+  transform: translateY(-1px);
+}
+
+.fc-button-primary {
+  background-color: #62b22f !important;
+  border-color: #62b22f !important;
+  color: white !important;
+}
+
+.fc-button-primary:hover {
+  background-color: #54a026 !important;
+  border-color: #54a026 !important;
+}
+
+.fc-button:disabled {
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
+  cursor: not-allowed !important;
+}
+
+/* === TOOLBAR === */
+.fc-toolbar {
+  padding: 16px 20px !important;
+  background-color: white !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  gap: 12px !important;
+}
+
+.fc-toolbar-chunk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fc-toolbar-title {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  margin: 0 16px !important;
+}
+
+/* === CUSTOM EVENT CONTENT === */
+.fc-event-custom {
+  font-size: 0.75rem;
+  padding: 2px 4px;
+  line-height: 1.3;
+}
+
+.event-name {
+  font-weight: 600;
+  color: white;
+  margin-bottom: 2px;
+}
+
+.event-subline {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* === CONTEXT MENU === */
+.context-menu {
+  position: fixed;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  min-width: 180px;
+  overflow: hidden;
+  padding: 4px 0;
+}
+
 .context-menu-item {
-  padding: 8px 12px;
+  padding: 10px 16px;
   cursor: pointer;
-  font-size: 0.9rem;
-  color: #333;
+  font-size: 0.875rem;
+  color: #374151;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .context-menu-item:hover {
-  background-color: #f0f0f0;
+  background-color: #f3f4f6;
 }
 
 .context-menu-item.disabled {
-  color: #bbb;
+  color: #9ca3af;
   cursor: not-allowed;
-  background-color: #f9f9f9;
+  background-color: transparent;
 }
 
-.fc-event-custom {
-  font-size: 0.75rem;
-  padding: 2px;
-}
-.event-name {
-  font-weight: bold;
-}
-.event-subline {
-  font-size: 0.75rem;
-  color: #4b5563;
-}
-.fc .fc-timegrid-slot-label-cushion {
-  font-size: 0.7rem;  /* entspricht text-xs */
-  color: #6b7280;      /* Tailwind text-gray-500 */
-  padding-left: 0.15rem;
+.context-menu-item.disabled:hover {
+  background-color: transparent;
 }
 
-/* 🧱 Wichtig: Toolbar wird als Flexbox behandelt */
-.fc .fc-toolbar {
-  display: flex;
-  align-items: center;        /* ⬅️ vertikal mittig ausrichten */
-  justify-content: center;    /* ⬅️ horizontal zentrieren (optional) */
-  min-height: 3.5rem;         /* ⬅️ genug Höhe für zentriertes Layout */
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .fc-toolbar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px !important;
+  }
+  
+  .fc-toolbar-title {
+    font-size: 1.25rem !important;
+    margin: 0 !important;
+  }
+  
+  .fc-button {
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .fc-col-header-cell {
+    padding: 8px 4px !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .fc-timegrid-slot {
+    height: 35px !important;
+  }
 }
 
-/* 🧱 Jedes Button-Chunk innerhalb zentrieren */
-.fc .fc-toolbar-chunk {
-  display: flex;
-  align-items: center;
+/* === LOADING STATE === */
+.fc-loading {
+  background-color: #f9fafb !important;
+  opacity: 0.7;
 }
 
-/* 🎯 Optional: Style für die Buttons */
-.fc .fc-button {
-  padding: 0.5rem 0.5rem !important;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  z-index: 100;
+/* === SELECTION === */
+.fc-highlight {
+  background-color: rgba(98, 178, 47, 0.2) !important;
+  border-radius: 4px;
 }
 </style>

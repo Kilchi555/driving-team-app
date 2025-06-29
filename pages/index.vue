@@ -2,6 +2,7 @@
   <div class="min-h-screen bg-gray-50 flex items-center justify-center">
     <div class="max-w-md w-full p-8 bg-white rounded-lg shadow">
       <div class="text-center mb-8">
+        <img src="/images/Driving_Team_ch.jpg" alt="Driving Team" class="mx-auto h-16 w-auto">
         <h2 class="mt-4 text-2xl font-bold text-gray-900">Anmelden</h2>
       </div>
 
