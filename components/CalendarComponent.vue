@@ -202,6 +202,9 @@ const calendarOptions = ref<CalendarOptions>({
   locale: deLocale,
   timeZone: 'local',
   height: 'auto',
+  contentHeight: 600,
+  scrollTime: '08:00:00',
+  scrollTimeReset: false,  
   stickyHeaderDates: true,
   headerToolbar: false, // Toolbar ausgeblendet
   selectable: true, // Ermöglicht das Ziehen und Auswählen von Bereichen
@@ -211,6 +214,7 @@ const calendarOptions = ref<CalendarOptions>({
   slotMinTime: '06:00:00', // Startzeit der Anzeige
   slotMaxTime: '22:00:00', // Endzeit der Anzeige
   allDaySlot: false, // Ganztägiger Slot am oberen Rand ausblenden
+  
 
   datesSet(info) {
     emit('view-updated', info.start)
@@ -338,6 +342,18 @@ const isCalendarReady = ref(false)
 onMounted(() => {
   isCalendarReady.value = true
   emit('view-updated', calendar.value?.getApi()?.view?.currentStart)
+
+  // Scroll-Fix nach dem Rendern
+  setTimeout(() => {
+    const calendarEl = calendar.value?.$el
+    if (calendarEl) {
+      const scroller = calendarEl.querySelector('.fc-scroller')
+      if (scroller) {
+        scroller.style.overflowY = 'auto'
+        scroller.style.maxHeight = '70vh'
+      }
+    }
+  }, 200)
 
   // Listener zum Schliessen des Kontextmenüs bei Klick ausserhalb
   document.addEventListener('click', (event) => {
@@ -669,5 +685,45 @@ onMounted(() => {
 .fc-highlight {
   background-color: rgba(98, 178, 47, 0.2) !important;
   border-radius: 4px;
+}
+
+/* === SCROLL FIXES === */
+.fc-scroller {
+  overflow-y: auto !important;
+  max-height: 70vh !important;
+}
+
+.fc-timegrid-slots {
+  overflow-y: auto !important;
+  max-height: 70vh !important;
+}
+
+.fc-view-harness {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.fc {
+  height: auto !important;
+  min-height: 600px !important;
+}
+
+/* Scrollbar Styling */
+.fc-scroller::-webkit-scrollbar {
+  width: 8px;
+}
+
+.fc-scroller::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb {
+  background: #62b22f;
+  border-radius: 4px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb:hover {
+  background: #54a026;
 }
 </style>

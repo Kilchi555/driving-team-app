@@ -1,102 +1,107 @@
 <template>
-  <div class="min-h-screen bg-gray-50 flex items-center justify-center">
-    <div class="max-w-md w-full p-8 bg-white rounded-lg shadow">
-      <div class="text-center mb-8">
-        <img src="/images/Driving_Team_ch.jpg" alt="Driving Team" class="mx-auto h-16 w-auto">
-        <h2 class="mt-4 text-2xl font-bold text-gray-900">Anmelden</h2>
+  <div class="min-h-screen flex items-center justify-center bg-gray-50">
+    <div class="max-w-md w-full space-y-8">
+      <div class="text-center">
+        <h2 class="text-3xl font-bold text-gray-900">Driving Team Login</h2>
       </div>
-
-      <form @submit.prevent="handleLogin" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
-          <input
-            v-model="email"
-            type="email"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          />
-        </div>
+      
+      <!-- Test-Login Buttons -->
+      <div class="space-y-3">
+        <h3 class="text-lg font-medium text-gray-700">Schnell-Login:</h3>
         
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
-          <input
-            v-model="password"
-            type="password"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-
-        <div v-if="errorMsg" class="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p class="text-sm text-red-600">{{ errorMsg }}</p>
-        </div>
+        <button
+          @click="createAndLogin('marc@drivingteam.ch', 'Marc Hermann')"
+          class="w-full py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Als Marc Hermann einloggen
+        </button>
+        
+        <button
+          @click="createAndLogin('samir@drivingteam.ch', 'Samir Khedhri')"
+          class="w-full py-3 px-4 bg-green-600 text-white rounded-md hover:bg-green-700"
+        >
+          Als Samir Khedhri einloggen
+        </button>
+        
+        <button
+          @click="createAndLogin('peter@drivingteam.ch', 'Peter Thoma')"
+          class="w-full py-3 px-4 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+        >
+          Als Peter Thoma einloggen
+        </button>
 
         <button
-          type="submit"
-          :disabled="loading"
-          class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 font-medium disabled:opacity-50"
+          @click="createAndLogin('kilchi@drivingteam.ch', 'Pascal Kilchenmann')"
+          class="w-full py-3 px-4 bg-red-600 text-white rounded-md hover:bg-red-700"
         >
-          {{ loading ? 'Wird angemeldet...' : 'Anmelden' }}
+          Als Pascal Kilchenmann einloggen
         </button>
-      </form>
+      </div>
+
+      <div v-if="isLoading" class="text-center text-gray-600">
+        {{ loadingMessage }}
+      </div>
+
+      <div v-if="error" class="text-red-600 text-center">
+        {{ error }}
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { navigateTo } from 'nuxt/app'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { ref } from 'vue'
+import { navigateTo } from '#app'
+import { getSupabase } from '~/utils/supabase'
 
-// Direkte Supabase-Verbindung
-const supabase: SupabaseClient = createClient(
-  'https://unyjaetebnaexaflpyoc.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVueWphZXRlYm5hZXhhZmxweW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzOTc0NjAsImV4cCI6MjA2NTk3MzQ2MH0.GH3W1FzpogOG-iTWNv8ckt-TkqboCiB9RYGFlGUzLnU'
-)
+const isLoading = ref(false)
+const error = ref('')
+const loadingMessage = ref('')
 
-const email = ref('')
-const password = ref('')
-const errorMsg = ref('')
-const loading = ref(false)
+const createAndLogin = async (email: string, name: string) => {
+  isLoading.value = true
+  error.value = ''
+  loadingMessage.value = `Erstelle Auth-User für ${name}...`
 
-onMounted(async () => {
-  console.log('Supabase loaded:', supabase)
-  console.log('Auth available:', supabase.auth)
-  
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    console.log('Current user:', user)
+    const supabase = getSupabase()
     
-    if (user) {
-      navigateTo('/dashboard')
-    }
-  } catch (error) {
-    console.error('Error checking user:', error)
-  }
-})
-
-const handleLogin = async () => {
-  loading.value = true
-  errorMsg.value = ''
-
-  try {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.value,
-      password: password.value
+    // 1. Versuche Login (falls Auth-User bereits existiert)
+    loadingMessage.value = `Versuche Login für ${name}...`
+    
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: 'temp123456' // Standard-Passwort
     })
 
-    if (error) {
-      errorMsg.value = error.message
+    if (!loginError) {
+      console.log('Login erfolgreich:', email)
+      await navigateTo('/dashboard')
       return
     }
 
-    navigateTo('/dashboard')
+    // 2. Auth-User existiert nicht, erstelle ihn
+    loadingMessage.value = `Erstelle Auth-User für ${name}...`
     
-  } catch (error) {
-    console.error('Login error:', error)
-    errorMsg.value = 'Login fehlgeschlagen'
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: email,
+      password: 'temp123456'
+    })
+
+    if (signUpError) throw signUpError
+
+    console.log('Auth-User erstellt für:', email)
+    loadingMessage.value = 'Leite weiter...'
+    
+    // 3. Direkt zum Dashboard (useCurrentUser findet den Business-User per E-Mail)
+    await navigateTo('/dashboard')
+
+  } catch (err: any) {
+    console.error('Fehler:', err)
+    error.value = err.message || 'Fehler beim Login'
   } finally {
-    loading.value = false
+    isLoading.value = false
+    loadingMessage.value = ''
   }
 }
 </script>

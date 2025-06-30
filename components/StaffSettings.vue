@@ -21,7 +21,21 @@
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             🎓 Meine Unterrichtskategorien
           </h3>
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          
+          <!-- DEBUG INFO -->
+          <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+            <p><strong>Debug:</strong> {{ availableCategories.length }} Kategorien geladen</p>
+            <p><strong>Ausgewählte:</strong> {{ selectedCategories.length }} Kategorien</p>
+          </div>
+          
+          <!-- Loading State -->
+          <div v-if="availableCategories.length === 0" class="text-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+            <p class="mt-2 text-gray-600">Lade Kategorien...</p>
+          </div>
+          
+          <!-- Categories Grid -->
+          <div v-else class="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div 
               v-for="category in availableCategories" 
               :key="category.id"
@@ -163,8 +177,8 @@
                   <input
                     type="checkbox"
                     :id="`day-${index}`"
-                    :checked="availableDays.includes(index)"
-                    @change="toggleDay(index)"
+                    :checked="availableDays.includes(index + 1)"
+                    @change="toggleDay(index + 1)"
                     class="w-4 h-4 text-green-600 rounded focus:ring-green-500"
                   />
                   <label :for="`day-${index}`" class="text-xs cursor-pointer">
@@ -198,15 +212,10 @@
               />
               <span class="text-sm">E-Mail bei Änderungen</span>
             </label>
-            <label class="flex items-center space-x-3">
-              <input
-                v-model="autoConfirm"
-                type="checkbox"
-                class="w-4 h-4 text-green-600 rounded focus:ring-green-500"
-              />
-              <span class="text-sm">Buchungen automatisch bestätigen</span>
-            </label>
           </div>
+          <p class="text-xs text-gray-500 mt-2">
+            Benachrichtigungen werden implementiert, sobald SMS/E-Mail-Service aktiv ist
+          </p>
         </section>
 
       </div>
@@ -227,7 +236,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabase } from '~/utils/supabase'
 
 // Types
 interface User {
@@ -270,11 +279,8 @@ const emit = defineEmits<{
   close: []
 }>()
 
-// Supabase Client
-const supabaseClient = createClient(
-  'https://unyjaetebnaexaflpyoc.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVueWphZXRlYm5hZXhhZmxweW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzOTc0NjAsImV4cCI6MjA2NTk3MzQ2MH0.GH3W1FzpogOG-iTWNv8ckt-TkqboCiB9RYGFlGUzLnU'
-)
+// Supabase
+const supabase = getSupabase()
 
 // Reactive Data
 const availableCategories = ref<Category[]>([])
@@ -282,9 +288,8 @@ const selectedCategories = ref<number[]>([])
 const myLocations = ref<Location[]>([])
 const preferredDurations = ref<number[]>([45, 90])
 const workingHours = ref<WorkingHours>({ start: '08:00', end: '18:00' })
-const availableDays = ref<number[]>([1, 2, 3, 4, 5]) // Mo-Fr
+const availableDays = ref<number[]>([1, 2, 3, 4, 5]) // Mo-Fr (1=Mo, 7=So)
 const notifications = ref<Notifications>({ sms: true, email: true })
-const autoConfirm = ref<boolean>(false)
 
 // New location form
 const newLocationName = ref<string>('')
@@ -297,8 +302,10 @@ const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 // Methods
 const loadData = async () => {
   try {
+    console.log('🔄 Loading staff settings...')
+    
     // Load available categories
-    const { data: categoriesData } = await supabaseClient
+    const { data: categoriesData } = await supabase
       .from('categories')
       .select('*')
       .eq('is_active', true)
@@ -307,7 +314,7 @@ const loadData = async () => {
     availableCategories.value = categoriesData || []
 
     // Load staff categories (selected ones)
-    const { data: staffCategoriesData } = await supabaseClient
+    const { data: staffCategoriesData } = await supabase
       .from('staff_categories')
       .select('category_id')
       .eq('staff_id', props.currentUser.id)
@@ -316,7 +323,7 @@ const loadData = async () => {
     selectedCategories.value = staffCategoriesData?.map(sc => sc.category_id) || []
 
     // Load staff locations
-    const { data: locationsData } = await supabaseClient
+    const { data: locationsData } = await supabase
       .from('locations')
       .select('*')
       .eq('staff_id', props.currentUser.id)
@@ -327,20 +334,43 @@ const loadData = async () => {
       address: loc.address || ''
     })) || []
 
-    // Load staff settings if exists
-    const { data: settingsData } = await supabaseClient
+    // Load staff settings
+    const { data: settingsData } = await supabase
       .from('staff_settings')
       .select('*')
       .eq('staff_id', props.currentUser.id)
       .single()
     
     if (settingsData) {
-      preferredDurations.value = JSON.parse(settingsData.preferred_durations || '[45,90]')
-      workingHours.value = JSON.parse(settingsData.working_hours || '{"start":"08:00","end":"18:00"}')
-      availableDays.value = JSON.parse(settingsData.available_days || '[1,2,3,4,5]')
-      notifications.value = JSON.parse(settingsData.notifications || '{"sms":true,"email":true}')
-      autoConfirm.value = settingsData.auto_confirm || false
+      // Preferred durations - robust parsing
+      try {
+        preferredDurations.value = JSON.parse(settingsData.preferred_durations || '["45","90"]')
+        // Convert strings to numbers if needed
+        preferredDurations.value = preferredDurations.value.map(d => typeof d === 'string' ? parseInt(d) : d)
+      } catch {
+        // Fallback: parse comma-separated string
+        preferredDurations.value = settingsData.preferred_durations?.split(',').map(Number) || [45, 90]
+      }
+      
+      // Working hours
+      workingHours.value = {
+        start: settingsData.work_start_time || '08:00',
+        end: settingsData.work_end_time || '18:00'
+      }
+      
+      // Available days - robust parsing
+      if (settingsData.available_weekdays) {
+        availableDays.value = settingsData.available_weekdays.split(',').map(Number).filter((n: number) => n >= 1 && n <= 7)
+      }
+      
+      // Notifications
+      notifications.value = {
+        sms: settingsData.sms_notifications !== false,
+        email: settingsData.email_notifications !== false
+      }
     }
+
+    console.log('✅ Staff settings loaded successfully')
 
   } catch (error) {
     console.error('Error loading staff settings:', error)
@@ -392,7 +422,7 @@ const removeLocation = async (index: number) => {
   // Wenn es eine existierende Location ist (hat ID), aus DB löschen
   if (locationToRemove?.id) {
     try {
-      await supabaseClient
+      await supabase
         .from('locations')
         .delete()
         .eq('id', locationToRemove.id)
@@ -409,8 +439,11 @@ const removeLocation = async (index: number) => {
 
 const saveSettings = async () => {
   try {
+    console.log('🔄 Saving settings...')
+    
     // Update staff categories
-    await supabaseClient
+    console.log('📝 Updating staff categories...')
+    await supabase
       .from('staff_categories')
       .delete()
       .eq('staff_id', props.currentUser.id)
@@ -422,25 +455,30 @@ const saveSettings = async () => {
         is_active: true
       }))
       
-      await supabaseClient
+      const { error: categoriesError } = await supabase
         .from('staff_categories')
         .insert(staffCategoriesInsert)
+      
+      if (categoriesError) throw categoriesError
     }
 
-    // Update locations - Nur neue/geänderte speichern
+    // Update locations
+    console.log('📍 Updating locations...')
     const existingLocations = myLocations.value.filter(loc => loc.id !== null)
     const newLocations = myLocations.value.filter(loc => loc.id === null)
     
     // Existierende Locations updaten
     for (const loc of existingLocations) {
       if (loc.id) {
-        await supabaseClient
+        const { error: updateError } = await supabase
           .from('locations')
           .update({
             name: loc.name,
             address: loc.address
           })
           .eq('id', loc.id)
+        
+        if (updateError) throw updateError
       }
     }
     
@@ -452,33 +490,40 @@ const saveSettings = async () => {
         address: loc.address
       }))
       
-      await supabaseClient
+      const { error: insertError } = await supabase
         .from('locations')
         .insert(locationsInsert)
+      
+      if (insertError) throw insertError
     }
 
     // Update staff settings
+    console.log('⚙️ Updating staff settings...')
     const settingsData = {
       staff_id: props.currentUser.id,
       preferred_durations: JSON.stringify(preferredDurations.value),
-      working_hours: JSON.stringify(workingHours.value),
-      available_days: JSON.stringify(availableDays.value),
-      notifications: JSON.stringify(notifications.value),
-      auto_confirm: autoConfirm.value
+      work_start_time: workingHours.value.start,
+      work_end_time: workingHours.value.end,
+      available_weekdays: availableDays.value.join(','),
+      sms_notifications: notifications.value.sms,
+      email_notifications: notifications.value.email
     }
 
-    const { error } = await supabaseClient
+    const { error: settingsError } = await supabase
       .from('staff_settings')
-      .upsert(settingsData)
+      .upsert(settingsData, {
+        onConflict: 'staff_id'
+      })
     
-    if (error) throw error
+    if (settingsError) throw settingsError
 
+    console.log('✅ All settings saved successfully!')
     alert('✅ Einstellungen erfolgreich gespeichert!')
     emit('close')
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving settings:', error)
-    alert('❌ Fehler beim Speichern der Einstellungen')
+    alert(`❌ Fehler beim Speichern: ${error?.message || 'Unbekannter Fehler'}`)
   }
 }
 
@@ -505,5 +550,48 @@ onMounted(() => {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* TEXT VISIBILITY FIXES */
+* {
+  color: #1f2937;
+}
+
+input[type="text"],
+input[type="time"],
+select,
+textarea {
+  color: #1f2937 !important;
+  background-color: white !important;
+  border: 1px solid #d1d5db;
+}
+
+label {
+  color: #374151 !important;
+}
+
+h2, h3 {
+  color: #111827 !important;
+}
+
+.text-gray-600 {
+  color: #6b7280 !important;
+}
+
+.text-gray-500 {
+  color: #9ca3af !important;
+}
+
+button {
+  color: inherit;
+}
+
+/* FORM STYLING */
+.border {
+  border-color: #d1d5db;
+}
+
+.hover\:bg-gray-50:hover {
+  background-color: #f9fafb;
 }
 </style>

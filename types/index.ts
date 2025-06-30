@@ -9,4 +9,36 @@ export interface Location {
   address: string; // Vollständige Adresse des Ortes
 }
 
-// ... deine anderen Interfaces wie Category, TeacherCategory, User
+// types/index.ts - Neue Datei erstellen
+export interface User {
+  id: string
+  email: string | null  // ✅ Email kann null sein
+  role: 'client' | 'staff' | 'admin'
+  first_name: string | null
+  last_name: string | null
+  phone?: string | null
+  is_active: boolean
+  assigned_staff_id?: string | null
+  category?: string | null
+  created_at?: string
+}
+
+export interface CalendarApi {
+  today(): void
+  next(): void
+  prev(): void
+  getDate(): Date
+  view: {
+    currentStart: Date
+  }
+}
+
+export interface DashboardState {
+  showStaffSettings: boolean
+  showCustomers: boolean
+  showPendenzen: boolean
+  showEinstellungen: boolean
+  currentMonth: string
+  isTodayActive: boolean
+  pendingCount: number
+}

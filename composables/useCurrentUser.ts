@@ -1,104 +1,148 @@
 // composables/useCurrentUser.ts
-import { ref, readonly } from 'vue'
-import { createClient } from '@supabase/supabase-js'
-
-interface User {
-  id: string
-  created_at: string
-  email: string
-  role: string
-  first_name: string
-  last_name: string
-  phone: string | null
-  birthdate: string | null
-  street: string | null
-  street_nr: string | null
-  zip: string | null
-  city: string | null
-  is_active: boolean
-  assigned_staff: string | null
-  category: string | null
-}
-
-const currentUser = ref<User | null>(null)
-const isLoading = ref<boolean>(false)
-
-// Supabase Client
-const supabaseClient = createClient(
-  'https://unyjaetebnaexaflpyoc.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVueWphZXRlYm5hZXhhZmxweW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzOTc0NjAsImV4cCI6MjA2NTk3MzQ2MH0.GH3W1FzpogOG-iTWNv8ckt-TkqboCiB9RYGFlGUzLnU'
-)
+import { ref } from 'vue'
+import { getSupabase } from '~/utils/supabase'
 
 export const useCurrentUser = () => {
-  const fetchCurrentUser = async (): Promise<void> => {
+  const currentUser = ref<any>(null)
+  const isLoading = ref(false)
+  const userError = ref<string | null>(null)
+  const profileExists = ref(false) // 🆕 NEU: Profil-Status
+
+  const fetchCurrentUser = async () => {
+    // Skip auf Login-Seite
+    if (process.client && window.location.pathname === '/') {
+      return
+    }
+
+    isLoading.value = true
+    userError.value = null
+    currentUser.value = null
+    profileExists.value = false // 🆕 Reset
+
     try {
-      isLoading.value = true
+      const supabase = getSupabase()
       
-      // 1. Hole aktuellen Auth-User
-      const { data: authData, error: authError } = await supabaseClient.auth.getUser()
-      
-      if (authError || !authData.user) {
-        console.log('Kein eingeloggter User:', authError?.message)
-        currentUser.value = null
+      // 1. Auth-User holen
+      const { data: authData, error: authError } = await supabase.auth.getUser()
+      const user = authData?.user
+
+      if (authError || !user?.email) {
+        userError.value = 'Nicht eingeloggt'
         return
       }
 
-      console.log('Auth User gefunden:', authData.user.email)
+      console.log('Auth-User gefunden:', user.email)
 
-      // 2. Hole User-Details aus der users Tabelle
-      const { data: userData, error: userError } = await supabaseClient
+      // 2. Database-User per E-Mail suchen
+      const { data: usersData, error: dbError } = await supabase
         .from('users')
         .select('*')
-        .eq('email', authData.user.email)
-        .single() // 👈 Das ist wichtig!
+        .eq('email', user.email)
+        .eq('is_active', true)
 
-      if (userError) {
-        console.error('Fehler beim Laden der User-Daten:', userError.message)
-        
-        // Prüfe ob User in DB existiert
-        const { data: allUsers } = await supabaseClient
-          .from('users')
-          .select('email, first_name, last_name')
-          .eq('email', authData.user.email)
-        
-        console.log('Users gefunden:', allUsers)
-        
-        if (!allUsers || allUsers.length === 0) {
-          console.error('User nicht in users Tabelle gefunden!')
-          // Hier könntest du den User automatisch erstellen
-          throw new Error(`User ${authData.user.email} nicht in Datenbank gefunden`)
-        }
-        
-        throw userError
+      // ✅ DEBUG-CODE
+      console.log('=== COMPLETE DEBUG ===')
+      console.log('1. Auth Email:', user.email)
+      console.log('2. usersData:', usersData)
+      console.log('3. usersData length:', usersData?.length)
+      console.log('4. dbError:', dbError)
+      console.log('5. First user:', usersData?.[0])
+      console.log('====================')
+
+      if (dbError) {
+        console.error('Database Error:', dbError)
+        userError.value = `Database-Fehler: ${dbError.message}`
+        return
       }
 
-      currentUser.value = userData as User
-      console.log('✅ User-Daten geladen:', currentUser.value)
+      if (!usersData || usersData.length === 0) {
+        console.log('Business-User nicht gefunden für:', user.email)
+        // 🆕 WICHTIGE ÄNDERUNG: Setze profileExists auf false, aber keinen userError
+        profileExists.value = false
+        currentUser.value = {
+          email: user.email,
+          auth_user_id: user.id
+        }
+        // 🚫 ENTFERNT: userError.value = `Kein Benutzerprofil für ${user.email} gefunden.`
+        return
+      }
 
-    } catch (error: any) {
-      console.error('❌ Fehler beim Laden des Users:', error.message || error)
-      currentUser.value = null
+      // ✅ User gefunden
+      const userData = usersData[0]
+      console.log('✅ Business-User geladen:', userData)
+      
+      currentUser.value = {
+        ...userData,
+        auth_user_id: user.id
+      }
+      profileExists.value = true // 🆕 Profil existiert
+
+    } catch (err: any) {
+      console.error('Unerwarteter Fehler:', err)
+      userError.value = err?.message || 'Unbekannter Fehler'
     } finally {
       isLoading.value = false
     }
   }
 
-  const logout = async (): Promise<void> => {
+  // 🆕 NEU: Funktion zum Erstellen des User-Profils
+  const createUserProfile = async (profileData: { company_name: string, role: string }) => {
+    isLoading.value = true
+    userError.value = null
+
     try {
-      const { error } = await supabaseClient.auth.signOut()
-      if (error) throw error
+      const supabase = getSupabase()
+      const { data: authData } = await supabase.auth.getUser()
+      const user = authData?.user
+
+      if (!user?.email) {
+        throw new Error('Kein authentifizierter Benutzer')
+      }
+
+      // Erstelle neuen User in der Datenbank
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          email: user.email,
+          auth_user_id: user.id,
+          company_name: profileData.company_name,
+          role: profileData.role,
+          is_active: true,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      console.log('✅ Profil erstellt:', data)
       
-      currentUser.value = null
-      console.log('✅ User ausgeloggt')
-    } catch (error: any) {
-      console.error('❌ Logout-Fehler:', error.message)
+      // Update lokaler State
+      currentUser.value = {
+        ...data,
+        auth_user_id: user.id
+      }
+      profileExists.value = true
+
+      return data
+
+    } catch (err: any) {
+      console.error('Fehler beim Erstellen des Profils:', err)
+      userError.value = err?.message || 'Fehler beim Erstellen des Profils'
+      throw err
+    } finally {
+      isLoading.value = false
     }
   }
 
   return {
-    currentUser: readonly(currentUser),
-    isLoading: readonly(isLoading),
+    currentUser,
+    isLoading,
+    userError,
+    profileExists, // 🆕 NEU exportiert
     fetchCurrentUser,
-    logout
+    createUserProfile // 🆕 NEU exportiert
   }
 }
