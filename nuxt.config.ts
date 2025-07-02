@@ -32,5 +32,16 @@ export default defineNuxtConfig({
     experimental: {
       wasm: true
     }
+  },
+    experimental: {
+    // Suspense explizit aktivieren
+    payloadExtraction: false
+  }, 
+  // Vue-spezifische Konfiguration
+  vue: {
+    compilerOptions: {
+      // Suspense-Warnungen unterdrücken
+      isCustomElement: (tag) => false
+    }
   }
 })

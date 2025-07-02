@@ -1,6 +1,6 @@
 <template>
-  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click="handleBackdropClick">
-    <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2" @click="handleBackdropClick">
+    <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] mb-12 overflow-y-auto" @click.stop>
       <!-- Header -->
       <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
         <div class="flex justify-between items-center">
@@ -15,240 +15,327 @@
 
       <!-- Content -->
       <div class="px-6 py-6 space-y-6">
-        <!-- Terminkategorie -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Kategorie *
-          </label>
-          <select 
-            v-model="formData.category" 
-            @change="handleCategoryChange"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            required
-          >
-            <option value="">Kategorie wählen...</option>
-            <option 
-              v-for="cat in availableCategories" 
-              :key="cat.value" 
-              :value="cat.value"
-            >
-              {{ cat.label }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Titel -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Titel *
-          </label>
-          <input 
-            v-model="formData.title"
-            type="text" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            placeholder="z.B. Grundschulung Stadtverkehr"
-            required
-          />
-        </div>
-
-        <!-- Datum & Zeit -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Startdatum *
+        
+        <!-- 1. FAHRSCHÜLER AUSWAHL (Standard-Ansicht) -->
+        <div v-if="formData.eventType === 'lesson'" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="flex justify-between items-center mb-3">
+            <label class="block text-sm font-semibold text-gray-900">
+              🎓 Fahrschüler auswählen *
             </label>
-            <input 
-              v-model="formData.startDate"
-              type="date" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              required
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Startzeit *
-            </label>
-            <input 
-              v-model="formData.startTime"
-              type="time" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              required
-            />
-          </div>
-        </div>
-
-        <!-- Dauer -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Dauer
-          </label>
-          <select 
-            v-model="formData.duration" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            <option value="45">45 Minuten (1 Lektion)</option>
-            <option value="90">90 Minuten (2 Lektionen)</option>
-            <option value="135">135 Minuten (3 Lektionen)</option>
-            <option value="60">60 Minuten</option>
-            <option value="30">30 Minuten</option>
-          </select>
-        </div>
-
-        <!-- Fahrlehrer -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Fahrlehrer *
-          </label>
-          <select 
-            v-model="formData.instructor" 
-            @change="handleInstructorChange"
-            :disabled="!canEditInstructor"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
-            required
-          >
-            <option value="">Fahrlehrer wählen...</option>
-            <option 
-              v-for="instructor in availableInstructors" 
-              :key="instructor.value" 
-              :value="instructor.value"
-            >
-              {{ instructor.label }}
-            </option>
-          </select>
-          <p v-if="isStudentBooking && props.currentUser?.assigned_staff" class="text-xs text-gray-500 mt-1">
-            Ihr zugewiesener Fahrlehrer: {{ instructorData[props.currentUser.assigned_staff]?.name }}
-          </p>
-        </div>
-
-        <!-- Schüler (nur für Fahrlehrer/Admin sichtbar) -->
-        <div v-if="props.currentUser?.role !== 'student'">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Schüler {{ isStudentBooking ? '' : '*' }}
-          </label>
-          <select 
-            v-model="formData.student" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            <option value="">Schüler wählen...</option>
-            <!-- Diese würden aus der Datenbank kommen -->
-            <option value="anna_mueller">Anna Müller</option>
-            <option value="tom_weber">Tom Weber</option>
-            <option value="lisa_schneider">Lisa Schneider</option>
-          </select>
-        </div>
-
-        <!-- Ort -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Treffpunkt *
-            <span v-if="canEditLocations" class="text-xs text-blue-600">(bearbeitbar)</span>
-          </label>
-          <select 
-            v-model="formData.location" 
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            required
-          >
-            <option value="">Ort wählen...</option>
-            <option v-for="location in availableLocations" :key="location" :value="location">
-              {{ location }}
-            </option>
-          </select>
-          
-          <!-- Location editing for instructors -->
-          <div v-if="canEditLocations" class="mt-2">
-            <input 
-              v-model="newLocation"
-              type="text" 
-              placeholder="Neuen Ort hinzufügen..."
-              class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              @keyup.enter="addNewLocation"
-            />
             <button 
-              @click="addNewLocation"
-              type="button"
-              class="mt-1 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+              @click="formData.eventType = 'other'" 
+              class="text-xs text-blue-600 hover:text-blue-800 border-solid border-blue-500"
             >
-              + Ort hinzufügen
+              Andere Terminart
             </button>
           </div>
+          
+          <!-- Schüler Suche/Dropdown -->
+          <div class="relative">
+            <input
+              v-model="studentSearchQuery"
+              @input="filterStudents"
+              @focus="showStudentDropdown = true"
+              @blur="hideStudentDropdownDelayed"
+              type="text"
+              placeholder="Schüler suchen (Name, E-Mail oder Telefon)..."
+              autocomplete="off"
+              class="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            
+            <!-- Dropdown mit Schülern -->
+            <div v-if="showStudentDropdown && filteredStudents.length > 0" 
+                 class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <div 
+                v-for="student in filteredStudents" 
+                :key="student.id"
+                @mousedown="selectStudent(student)"
+                class="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+              >
+                <div class="font-semibold text-gray-900">{{ student.first_name }} {{ student.last_name }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ausgewählter Schüler Anzeige -->
+          <div v-if="selectedStudent" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-semibold text-green-800">
+                  ✅ {{ selectedStudent.first_name }} {{ selectedStudent.last_name }}
+                </div>
+                <div class="text-sm text-green-600">
+                  {{ selectedStudent.category }} • {{ selectedStudent.phone }}
+                </div>
+                <div class="text-xs text-gray-500">
+                  Fahrlehrer: {{ getAssignedInstructorName(selectedStudent.assigned_staff_id) }}
+                </div>
+              </div>
+              <button @click="clearStudent()" class="text-red-500 hover:text-red-700">
+                ✕
+              </button>
+            </div>
+          </div>
         </div>
 
-        <!-- Preis -->
-        <div v-if="formData.price > 0" class="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-medium text-green-800">Preis pro Lektion:</span>
-            <span class="text-lg font-bold text-green-900">CHF {{ formData.price }}</span>
-          </div>
-          <div v-if="totalLessons > 1" class="text-sm text-green-700 mt-1">
-            Total {{ totalLessons }} Lektionen: CHF {{ totalPrice }}
-          </div>
-        </div>
-
-        <!-- Notizen -->
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Schüler-Notiz (sichtbar für Schüler)
+        <!-- 2. TERMINART AUSWAHL (wenn gewechselt) -->
+        <div v-else class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <div class="flex justify-between items-center mb-3">
+            <label class="block text-sm font-semibold text-gray-900">
+              📋 Terminart auswählen *
             </label>
-            <textarea 
-              v-model="formData.clientNote"
-              rows="3"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="Notizen für den Schüler..."
-            ></textarea>
+            <button 
+              @click="backToStudentSelection" 
+              class="text-xs text-purple-600 hover:text-purple-800 underline"
+            >
+              ← Zurück zu Fahrlektion
+            </button>
           </div>
           
-          <div>
+          <div class="grid grid-cols-2 gap-2 mb-4">
+            <button
+              v-for="eventType in specialEventTypes.filter(t => t.value !== 'lesson')"
+              :key="eventType.value"
+              @click="selectSpecialEventType(eventType)"
+              :class="[
+                'p-3 text-sm rounded border text-left',
+                formData.selectedSpecialType === eventType.value 
+                  ? 'bg-purple-600 text-white border-purple-600' 
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              ]"
+            >
+              {{ eventType.label }}
+            </button>
+          </div>
+
+          <!-- Individueller Titel -->
+          <div v-if="formData.selectedSpecialType">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Fahrlehrer-Notiz (nur für Fahrlehrer sichtbar)
+              📝 Titel *
             </label>
-            <textarea 
-              v-model="formData.staffNote"
-              rows="3"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="Interne Notizen..."
-            ></textarea>
+            <input
+              v-model="formData.title"
+              type="text"
+              class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              :placeholder="formData.selectedSpecialType === 'custom' ? 'Individueller Titel...' : getDefaultTitle()"
+            />
           </div>
         </div>
 
-        <!-- Wiederholung (für zukünftige Erweiterung) -->
-        <div v-if="false" class="border-t pt-4">
-          <label class="flex items-center">
-            <input 
-              v-model="formData.isRecurring" 
-              type="checkbox" 
-              class="rounded border-gray-300 text-green-600 focus:ring-green-500"
+        <!-- 3. AUTOMATISCH GENERIERTE DATEN (basierend auf Schüler-Historie) -->
+        <div v-if="selectedStudent && formData.eventType === 'lesson'" class="space-y-4">
+          
+          <!-- Titel (automatisch generiert) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              📝 Titel *
+            </label>
+            <input
+              v-model="formData.title"
+              type="text"
+              class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="z.B. Sandra - Kategorie B"
             />
-            <span class="ml-2 text-sm text-gray-700">Termin wiederholen</span>
+            <p class="text-xs text-gray-500 mt-1">
+              🤖 Automatisch generiert: {{ selectedStudent.first_name }} - {{ selectedStudent.category }}
+            </p>
+          </div>
+
+          <!-- Kategorie (basierend auf Schüler) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              🚗 Kategorie *
+            </label>
+            <select 
+              v-model="formData.type"
+              @change="handleCategoryChange"
+              class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">Kategorie wählen</option>
+              <option value="A">A - CHF 95/45min</option>
+              <option value="B">B - CHF 95/45min</option>
+              <option value="BE">BE - CHF 120/45min</option>
+              <option value="C">C - CHF 170/45min</option>
+              <option value="CE">CE - CHF 200/45min</option>
+              <option value="D">D - CHF 200/45min</option>
+              <option value="BPT">BPT - CHF 100/45min</option>
+              <option value="BOAT">BOAT - CHF 95/45min</option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">
+              🤖 Vorschlag: {{ selectedStudent.category }} (basierend auf Schüler-Profil)
+            </p>
+          </div>
+
+          <!-- Dauer (intelligent vorgeschlagen) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              ⏱️ Dauer
+            </label>
+            <div class="grid grid-cols-4 gap-2">
+              <button
+                v-for="duration in getRecommendedDurations()"
+                :key="duration.value"
+                @click="formData.duration_minutes = duration.value"
+                :class="[
+                  'p-2 text-sm rounded border',
+                  formData.duration_minutes === duration.value 
+                    ? 'bg-green-600 text-white border-green-600' 
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                ]"
+              >
+                {{ duration.label }}
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">
+              🤖 Empfehlung: {{ getLastLessonDuration() }}min (letzte Lektion)
+            </p>
+          </div>
+
+          <!-- Abholort (basierend auf Historie) -->
+         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            📍 Abholort *
           </label>
+          <select
+            v-model="formData.location_id"
+            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="">Ort wählen</option>
+            <option v-for="location in availableLocations" :key="location.id" :value="location.id">
+              {{ location.name }}
+            </option>
+          </select>
+          
+          <!-- NEU: Google Maps Link -->
+          <div v-if="formData.location_id" class="mt-2">
+            <a :href="getGoogleMapsUrl()" target="_blank" 
+                class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+              🗺️ In Google Maps öffnen
+            </a>
+          </div>
+          
+          <p class="text-xs text-gray-500 mt-1">
+            🤖 Häufigster Ort: {{ getMostUsedLocation() }}
+          </p>
+          </div>
+        </div>
+
+        <!-- 4. DATUM & ZEIT (für alle Terminarten) -->
+        <div v-if="(formData.eventType === 'lesson' && selectedStudent) || (formData.eventType !== 'lesson' && formData.selectedSpecialType)" class="space-y-4 border-t pt-4">
+          
+          <!-- Datum & Zeit -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                📅 Datum *
+              </label>
+              <input 
+                v-model="formData.startDate"
+                type="date" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                🕐 Startzeit *
+              </label>
+              <input 
+                v-model="formData.startTime"
+                type="time" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                🕐 Endzeit *
+              </label>
+              <input 
+                v-model="formData.endTime"
+                type="time" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                required
+              />
+              <p class="text-xs text-gray-500 mt-1">
+                🤖 Berechnet: {{ computedEndTime }} ({{ formData.duration_minutes }}min)
+              </p>
+            </div>
+          </div>
+
+          <!-- Preis Anzeige (nur bei Fahrlektionen) -->
+          <div v-if="formData.eventType === 'lesson' && parseFloat(totalPrice) > 0" class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-green-800">Preis für diesen Termin:</span>
+              <span class="text-lg font-bold text-green-900">CHF {{ totalPrice }}</span>
+            </div>
+          </div>
+
+          <!-- Notizen -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                💬 Beschreibung
+              </label>
+              <textarea 
+                v-model="formData.description"
+                rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                :placeholder="formData.eventType === 'lesson' ? 'Notiz für die Fahrstunde...' : 'Notiz für den Termin...'"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fallback: Kein Schüler/Terminart ausgewählt -->
+        <div v-if="formData.eventType === 'lesson' && !selectedStudent" class="text-center py-8 bg-gray-50 rounded-lg">
+          <div class="text-4xl mb-2">👆</div>
+          <p class="text-gray-600">Wählen Sie zuerst einen Schüler aus</p>
+          <p class="text-sm text-gray-500">Alle anderen Felder werden automatisch vorausgefüllt</p>
+        </div>
+
+        <div v-if="formData.eventType !== 'lesson' && !formData.selectedSpecialType" class="text-center py-8 bg-gray-50 rounded-lg">
+          <div class="text-4xl mb-2">📋</div>
+          <p class="text-gray-600">Wählen Sie eine Terminart aus</p>
+          <p class="text-sm text-gray-500">Dann können Sie Datum und Zeit festlegen</p>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="isLoading" class="px-6 py-4">
+        <div class="text-center text-gray-600">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
+          Termin wird gespeichert...
         </div>
       </div>
 
       <!-- Footer -->
-      <div class="sticky bottom-0 bg-gray-50 px-6 py-4 rounded-b-lg border-t">
+      <div class="sticky bottom-0 bg-gray-50 px-2 py-2 rounded-b-lg border-t">
         <div class="flex justify-between">
           <div>
             <button 
               v-if="mode === 'edit'" 
               @click="handleDelete"
-              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              class="px-2 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              :disabled="isLoading"
             >
-              🗑️ Löschen
+              Löschen
             </button>
           </div>
           <div class="flex space-x-3">
             <button 
               @click="$emit('close')" 
-              class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-medium"
+              class="px-2 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-small"
+              :disabled="isLoading"
             >
               Abbrechen
             </button>
             <button 
               @click="handleSave"
-              :disabled="!isFormValid"
-              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              :disabled="!isFormValid || isLoading"
+              class="px-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {{ mode === 'create' ? '💾 Erstellen' : '💾 Speichern' }}
+              {{ mode === 'create' ? '📅 Termin erstellen' : 'Speichern' }}
             </button>
           </div>
         </div>
@@ -259,21 +346,43 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { getSupabase } from '~/utils/supabase'
 
-interface EventData {
+// 1. UPDATED INTERFACE
+interface AppointmentData {
   id?: string
   title: string
-  category: string
+  description: string
+  type: string
   startDate: string
   startTime: string
-  duration: number
-  instructor: string
-  student: string
-  location: string
-  price: number
-  clientNote: string
-  staffNote: string
-  isRecurring: boolean
+  endTime: string 
+  duration_minutes: number
+  user_id: string
+  staff_id: string
+  location_id: string
+  price_per_minute: number
+  start_time?: string
+  end_time?: string
+  status: string
+  eventType: string 
+  selectedSpecialType: string 
+}
+
+interface Student {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  category: string
+  assigned_staff_id: string
+}
+
+interface Location {
+  id: string
+  name: string
+  address: string
 }
 
 interface Props {
@@ -284,279 +393,412 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
 const emit = defineEmits<{
   close: []
   'save-event': [eventData: any]
   'delete-event': [eventData: any]
+  'appointment-saved': []
 }>()
 
-// Form data
-const formData = ref<EventData>({
+const supabase = getSupabase()
+
+// State
+const isLoading = ref(false)
+const instructorNames = ref<Record<string, string>>({})
+
+const formData = ref<AppointmentData>({
   title: '',
-  category: '',
+  description: '',
+  type: '',
   startDate: '',
   startTime: '',
-  duration: 45,
-  instructor: '',
-  student: '',
-  location: '',
-  price: 0,
-  clientNote: '',
-  staffNote: '',
-  isRecurring: false
+  endTime: '', 
+  duration_minutes: 45,
+  user_id: '',
+  staff_id: '',
+  location_id: '',
+  price_per_minute: 0,
+  status: 'booked',
+  eventType: 'lesson', 
+  selectedSpecialType: ''
 })
 
-const newLocation = ref('')
+// 3. SPECIAL EVENT TYPES
+const specialEventTypes = [
+  { value: 'lesson', label: '🚗 Fahrlektion', requiresStudent: true },
+  { value: 'meeting', label: '🏢 Team-Sitzung', requiresStudent: false },
+  { value: 'course', label: '📚 Theoriekurs', requiresStudent: false },
+  { value: 'office', label: '💼 Bürozeit', requiresStudent: false },
+  { value: 'break', label: '☕ Pause', requiresStudent: false },
+  { value: 'custom', label: '✏️ Individuell...', requiresStudent: false }
+]
 
-// Category-Instructor mapping
-const categoryInstructors: Record<string, string[]> = {
-  'A': ['samir_khedhri', 'peter_thoma'],
-  'B': ['marc_hermann', 'nicole_stohr', 'peter_thoma'], 
-  'BE': ['marc_hermann', 'nicole_stohr'],
-  'C': ['peter_thoma'],
-  'CE': ['peter_thoma'],
-  'D': ['samir_khedhri'],
-  'BPT': ['marc_hermann', 'nicole_stohr'],
-  'Motorboot': ['samir_khedhri']
-}
+// Student selection
+const studentSearchQuery = ref('')
+const showStudentDropdown = ref(false)
+const selectedStudent = ref<Student | null>(null)
+const availableStudents = ref<Student[]>([])
+const filteredStudents = ref<Student[]>([])
+const availableLocations = ref<Location[]>([])
 
-// Category pricing
+// Category pricing (aus der Projektdokumentation)
 const categoryPricing: Record<string, number> = {
-  'A': 90,
-  'B': 85,
-  'BE': 95,
-  'C': 120,
-  'CE': 130,
-  'D': 140,
-  'BPT': 85,
-  'Motorboot': 100,
-  'theory': 0,
-  'exam': 120,
-  'consultation': 0,
-  'internal': 0
+  'A': 95/45,    // CHF 95 pro 45min = ~2.11 pro Minute
+  'B': 95/45,    
+  'BE': 120/45,  // CHF 120 pro 45min = ~2.67 pro Minute
+  'C': 170/45,   
+  'CE': 200/45,  
+  'D': 200/45,   
+  'BPT': 100/45, 
+  'BOAT': 95/45  
 }
 
-// All instructors data
-const instructorData: Record<string, { name: string; locations: string[] }> = {
-  marc_hermann: {
-    name: 'Marc Hermann',
-    locations: ['Bahnhof Zürich', 'Limmatplatz', 'Hauptbahnhof']
-  },
-  nicole_stohr: {
-    name: 'Nicole Stohr', 
-    locations: ['Driving Team Büro', 'Stadelhofen', 'Oerlikon']
-  },
-  peter_thoma: {
-    name: 'Peter Thoma',
-    locations: ['Verkehrsübungsplatz', 'Albisriederplatz']
-  },
-  samir_khedhri: {
-    name: 'Samir Khedhri',
-    locations: ['Bahnhof Zürich', 'Wiedikon', 'Altstetten']
-  }
-}
-
-// Computed
+// 4. COMPUTED PROPERTIES
 const modalTitle = computed(() => {
   if (props.mode === 'create') return '🆕 Neuer Termin'
   if (props.mode === 'edit') return '✏️ Termin bearbeiten'
   return '👁️ Termin anzeigen'
 })
 
-// Computed - based on user permissions
-const availableCategories = computed(() => {
-  if (props.currentUser?.role === 'instructor' || props.currentUser?.role === 'admin') {
-    // Instructors/Admins see all categories
-    return [
-      { value: 'A', label: 'Fahrstunde A (CHF 90)', price: 90 },
-      { value: 'B', label: 'Fahrstunde B (CHF 85)', price: 85 },
-      { value: 'BE', label: 'Fahrstunde BE (CHF 95)', price: 95 },
-      { value: 'C', label: 'Fahrstunde C (CHF 120)', price: 120 },
-      { value: 'CE', label: 'Fahrstunde CE (CHF 130)', price: 130 },
-      { value: 'D', label: 'Fahrstunde D (CHF 140)', price: 140 },
-      { value: 'BPT', label: 'BPT (CHF 85)', price: 85 },
-      { value: 'Motorboot', label: 'Motorboot (CHF 100)', price: 100 },
-      { value: 'theory', label: 'Theoriestunde (kostenlos)', price: 0 },
-      { value: 'exam', label: 'Prüfung (CHF 120)', price: 120 },
-      { value: 'consultation', label: 'Beratung (kostenlos)', price: 0 },
-      { value: 'internal', label: 'Interne Sitzung', price: 0 }
-    ]
-  } else {
-    // Students only see their registered categories + theory/exam
-    const userCategories = props.currentUser?.category ? props.currentUser.category.split(',') : []
-    const categories: Array<{ value: string; label: string; price: number }> = []
-    
-    userCategories.forEach((cat: string) => {
-      const price = categoryPricing[cat.trim()] || 0
-      categories.push({
-        value: cat.trim(),
-        label: `Fahrstunde ${cat.trim()} (CHF ${price})`,
-        price: price
-      })
-    })
-    
-    // Always add theory, exam, consultation for students
-    categories.push(
-      { value: 'theory', label: 'Theoriestunde (kostenlos)', price: 0 },
-      { value: 'exam', label: 'Prüfung (CHF 120)', price: 120 },
-      { value: 'consultation', label: 'Beratung (kostenlos)', price: 0 }
-    )
-    
-    return categories
-  }
-})
-
-const availableInstructors = computed(() => {
-  if (props.currentUser?.role === 'instructor') {
-    // Instructors only see themselves
-    const instructorId = props.currentUser.id
-    return instructorData[instructorId] ? [{
-      value: instructorId,
-      label: instructorData[instructorId].name
-    }] : []
-  } else if (props.currentUser?.role === 'admin') {
-    // Admins see all instructors
-    return Object.entries(instructorData).map(([id, data]) => ({
-      value: id,
-      label: data.name
-    }))
-  } else {
-    // Students see their assigned staff or category-based instructors
-    if (props.currentUser?.assigned_staff) {
-      const staffData = instructorData[props.currentUser.assigned_staff]
-      return staffData ? [{
-        value: props.currentUser.assigned_staff,
-        label: staffData.name
-      }] : []
-    } else if (formData.value.category && categoryInstructors[formData.value.category]) {
-      return categoryInstructors[formData.value.category].map((id: string) => ({
-        value: id,
-        label: instructorData[id]?.name || id
-      }))
-    }
-    return []
-  }
-})
-
-const availableLocations = computed(() => {
-  if (props.currentUser?.role === 'instructor' && formData.value.instructor === props.currentUser.id) {
-    // Instructors can edit their own locations
-    return instructorData[formData.value.instructor]?.locations || []
-  } else {
-    // Everyone else sees predefined locations
-    return instructorData[formData.value.instructor]?.locations || []
-  }
-})
-
-const canEditInstructor = computed(() => {
-  return props.currentUser?.role === 'admin' || 
-         (props.currentUser?.role === 'instructor' && props.mode === 'create')
-})
-
-const canEditLocations = computed(() => {
-  return props.currentUser?.role === 'instructor' && 
-         formData.value.instructor === props.currentUser.id
-})
-
-const isStudentBooking = computed(() => {
-  return props.currentUser?.role === 'student'
-})
-
-const totalLessons = computed(() => {
-  return Math.ceil((formData.value.duration || 45) / 45)
-})
-
 const totalPrice = computed(() => {
-  return (formData.value.price || 0) * totalLessons.value
+  const pricePerMinute = categoryPricing[formData.value.type] || (95/45)
+  const total = pricePerMinute * (formData.value.duration_minutes || 45)
+  return total.toFixed(2)
 })
 
-const isFormValid = computed(() => {
-  const basicValidation = formData.value.title && 
-         formData.value.category && 
-         formData.value.startDate && 
-         formData.value.startTime && 
-         formData.value.instructor && 
-         formData.value.location
+const requiresStudent = computed(() => {
+  return formData.value.eventType === 'lesson'
+})
 
-  // For students booking themselves, no student field needed
-  if (props.currentUser?.role === 'student') {
-    return basicValidation
-  }
+const computedEndTime = computed(() => {
+  if (!formData.value.startTime || !formData.value.duration_minutes) return ''
   
-  // For instructors/admins, student field required for driving lessons
-  const needsStudent = ['A', 'B', 'BE', 'C', 'CE', 'D', 'BPT', 'Motorboot', 'theory', 'exam'].includes(formData.value.category)
-  return basicValidation && (!needsStudent || formData.value.student)
+  const [hours, minutes] = formData.value.startTime.split(':').map(Number)
+  const startDate = new Date()
+  startDate.setHours(hours, minutes, 0, 0)
+  
+  const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
+  
+  const endHours = String(endDate.getHours()).padStart(2, '0')
+  const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
+  
+  return `${endHours}:${endMinutes}`
 })
 
 // Methods
-const handleCategoryChange = () => {
-  const selectedCategory = availableCategories.value.find(cat => cat.value === formData.value.category)
-  formData.value.price = selectedCategory?.price || 0
-  
-  // Auto-assign instructor for students
-  if (props.currentUser?.role === 'student') {
-    if (props.currentUser.assigned_staff) {
-      formData.value.instructor = props.currentUser.assigned_staff
-    } else if (categoryInstructors[formData.value.category]?.length === 1) {
-      formData.value.instructor = categoryInstructors[formData.value.category][0]
-    }
-  }
-  
-  // Auto-generate title
-  if (!formData.value.title && selectedCategory) {
-    formData.value.title = selectedCategory.label.split(' (')[0] // Remove price part
-  }
-}
-
-const handleInstructorChange = () => {
-  // Reset location when instructor changes
-  formData.value.location = ''
-}
-
-const addNewLocation = () => {
-  if (newLocation.value.trim() && formData.value.instructor) {
-    // Here you would save to database
-    // For now, just add to local array
-    instructorData[formData.value.instructor].locations.push(newLocation.value.trim())
-    formData.value.location = newLocation.value.trim()
-    newLocation.value = ''
+const loadStudents = async () => {
+  try {
+    console.log('🔓 Loading ALL students (RLS test)')
+    const { data: studentsData, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('role', 'client')
+      // .eq('is_active', true) // Temporär entfernt
+      .order('first_name')
     
-    // TODO: Save to Supabase
-    console.log('New location added:', formData.value.location)
+    if (error) {
+      console.error('❌ Students query error:', error)
+      throw error
+    }
+    
+    console.log('📊 Raw students data:', studentsData)
+    availableStudents.value = studentsData || []
+    filteredStudents.value = studentsData || []
+    console.log('✅ Students loaded:', availableStudents.value.length)
+  } catch (error) {
+    console.error('❌ Error loading students:', error)
   }
 }
 
-const handleSave = () => {
+const backToStudentSelection = () => {
+  formData.value.eventType = 'lesson'
+  formData.value.selectedSpecialType = ''
+  formData.value.title = ''
+}
+
+const selectSpecialEventType = (eventType: any) => {
+  formData.value.selectedSpecialType = eventType.value
+  
+  if (eventType.value !== 'custom') {
+    // Entferne Emoji und nimm nur den Text
+    const cleanLabel = eventType.label.split(' ').slice(1).join(' ')
+    formData.value.title = cleanLabel
+  } else {
+    formData.value.title = ''
+  }
+}
+
+const getDefaultTitle = () => {
+  const type = specialEventTypes.find(t => t.value === formData.value.selectedSpecialType)
+  if (!type) return ''
+  
+  // Entferne Emoji und nimm nur den Text
+  return type.label.split(' ').slice(1).join(' ')
+}
+
+const loadInstructors = async () => {
+  try {
+    console.log('🔓 Loading ALL instructors (RLS test)')
+    const { data: instructorsData, error } = await supabase
+      .from('users')
+      .select('id, first_name, last_name')
+      .eq('role', 'staff')
+      // .eq('is_active', true) // Temporär entfernt
+    
+    if (error) {
+      console.error('❌ Instructors query error:', error)
+      throw error
+    }
+    
+    console.log('📊 Raw instructors data:', instructorsData)
+    
+    // Create lookup object for instructor names
+    instructorNames.value = {}
+    instructorsData?.forEach(instructor => {
+      instructorNames.value[instructor.id] = `${instructor.first_name} ${instructor.last_name}`
+    })
+    
+    console.log('✅ Instructors loaded:', Object.keys(instructorNames.value).length)
+  } catch (error) {
+    console.error('❌ Error loading instructors:', error)
+  }
+}
+const loadLocations = async () => {
+  try {
+    const { data: locationsData, error } = await supabase
+      .from('locations')
+      .select('*')
+      .order('name')
+    
+    if (error) throw error
+    
+    availableLocations.value = locationsData || []
+    console.log('✅ Locations loaded:', availableLocations.value.length)
+  } catch (error) {
+    console.error('❌ Error loading locations:', error)
+  }
+}
+
+const filterStudents = () => {
+  const query = studentSearchQuery.value.toLowerCase()
+  if (!query) {
+    filteredStudents.value = availableStudents.value
+    return
+  }
+  
+  filteredStudents.value = availableStudents.value.filter(student => 
+    student.first_name.toLowerCase().includes(query) ||
+    student.last_name.toLowerCase().includes(query) ||
+    student.email.toLowerCase().includes(query) ||
+    student.phone.includes(query)
+  )
+}
+
+const selectStudent = (student: Student) => {
+  selectedStudent.value = student
+  studentSearchQuery.value = `${student.first_name} ${student.last_name}`
+  showStudentDropdown.value = false
+  
+  // Auto-fill based on student
+  autoFillFromStudent(student)
+}
+
+const clearStudent = () => {
+  selectedStudent.value = null
+  studentSearchQuery.value = ''
+  
+  // Reset form
+  formData.value.title = ''
+  formData.value.type = ''
+  formData.value.user_id = ''
+  formData.value.staff_id = ''
+  formData.value.location_id = ''
+  formData.value.price_per_minute = 0
+}
+
+const autoFillFromStudent = (student: Student) => {
+  // Set category/type
+  formData.value.type = student.category
+  
+  // Set user and staff IDs
+  formData.value.user_id = student.id
+  formData.value.staff_id = student.assigned_staff_id || props.currentUser?.id || ''
+  
+  // Set price per minute
+  formData.value.price_per_minute = categoryPricing[student.category] || (95/45)
+  
+  // Set default location (first available)
+  if (availableLocations.value.length > 0) {
+    formData.value.location_id = availableLocations.value[0].id
+  }
+  
+  // Auto-generate title NACH location_id
+  const selectedLocation = availableLocations.value.find(loc => loc.id === formData.value.location_id)
+  const locationName = selectedLocation?.name || 'Ort unbekannt'
+  formData.value.title = `${student.first_name}  ${locationName}`
+  
+  console.log('🤖 Auto-filled form for:', student.first_name)
+}
+
+const getStudentCategories = () => {
+  if (!selectedStudent.value) return []
+  
+  // Split categories if multiple (e.g., "B,BE")
+  const categories = selectedStudent.value.category.split(',')
+  
+  return categories.map(cat => ({
+    value: cat.trim(),
+    label: `${cat.trim()} - CHF ${Math.round((categoryPricing[cat.trim()] || (95/45)) * 45)}/45min`
+  }))
+}
+
+const getRecommendedDurations = () => {
+  return [
+    { value: 45, label: '45min' },
+    { value: 60, label: '60min' },
+    { value: 90, label: '90min' },
+    { value: 135, label: '135min' }
+  ]
+}
+
+const getLastLessonDuration = () => {
+  // TODO: Fetch from appointment history
+  return 45 // Placeholder
+}
+
+const getMostUsedLocation = () => {
+  // TODO: Calculate from appointment history
+  return availableLocations.value[0]?.name || 'Kein Standort verfügbar'
+}
+
+const getAssignedInstructorName = (staffId: string) => {
+  if (staffId === props.currentUser?.id) return 'Sie'
+  return instructorNames.value[staffId] || 'Unbekannter Fahrlehrer'
+}
+
+const hideStudentDropdownDelayed = () => {
+  setTimeout(() => {
+    showStudentDropdown.value = false
+  }, 200)
+}
+
+const handleCategoryChange = () => {
+  // Update price when category changes
+  formData.value.price_per_minute = categoryPricing[formData.value.type] || (95/45)
+  
+  // Update title
+  if (selectedStudent.value) {
+    formData.value.title = `${selectedStudent.value.first_name} - ${formData.value.type}`
+  }
+}
+
+const handleSave = async () => {
   if (!isFormValid.value) return
 
-  // Convert form data to event format
-  const startDateTime = new Date(`${formData.value.startDate}T${formData.value.startTime}`)
-  const endDateTime = new Date(startDateTime.getTime() + formData.value.duration * 60000)
+  isLoading.value = true
+  
+  try {
+  const localStartDate = `${formData.value.startDate}T${formData.value.startTime}`
+  const localEndDate = `${formData.value.startDate}T${formData.value.endTime}`
 
-  const eventData = {
-    id: props.eventData?.id || undefined,
-    title: formData.value.title,
-    start: startDateTime.toISOString(),
-    end: endDateTime.toISOString(),
-    allDay: false,
-    extendedProps: {
-      category: formData.value.category,
-      instructor: formData.value.instructor,
-      student: formData.value.student,
-      location: formData.value.location,
-      price: formData.value.price,
-      client_note: formData.value.clientNote,
-      staff_note: formData.value.staffNote
+  const startDateTime = new Date(localStartDate)
+  const endDateTime = new Date(localEndDate)
+
+  // Berechne duration_minutes aus der Differenz (für DB-Konsistenz)
+  const calculatedDuration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000)
+
+    console.log('🕐 Time processing:', {
+      inputDate: formData.value.startDate,
+      inputTime: formData.value.startTime,
+      combined: localStartDate,
+      localStart: startDateTime.toLocaleString('de-CH'),
+      utcStart: startDateTime.toISOString(),
+      localEnd: endDateTime.toLocaleString('de-CH'),
+      utcEnd: endDateTime.toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    })
+
+    const appointmentData = {
+      title: formData.value.title,
+      description: formData.value.description || '',
+      type: formData.value.type,
+      user_id: formData.value.user_id,
+      staff_id: formData.value.staff_id,
+      location_id: formData.value.location_id,
+      start_time: startDateTime.toISOString(),
+      end_time: endDateTime.toISOString(),
+      duration_minutes: calculatedDuration,
+      price_per_minute: formData.value.price_per_minute,
+      status: formData.value.status,
+      is_paid: false
     }
-  }
 
-  emit('save-event', eventData)
+    let result
+    if (props.mode === 'edit' && props.eventData?.id) {
+      // Update existing appointment
+      result = await supabase
+        .from('appointments')
+        .update(appointmentData)
+        .eq('id', props.eventData.id)
+        .select()
+    } else {
+      // Create new appointment
+      result = await supabase
+        .from('appointments')
+        .insert(appointmentData)
+        .select()
+    }
+
+    if (result.error) {
+      throw result.error
+    }
+
+    console.log('✅ Appointment saved:', result.data?.[0])
+    console.log('📅 Saved times:', {
+      start_db: result.data?.[0]?.start_time,
+      end_db: result.data?.[0]?.end_time,
+      start_local: new Date(result.data?.[0]?.start_time).toLocaleString('de-CH'),
+      end_local: new Date(result.data?.[0]?.end_time).toLocaleString('de-CH')
+    })
+    
+    // Emit success events to update calendar
+    emit('appointment-saved')
+    emit('save-event', result.data?.[0]) // Pass the saved appointment data
+    emit('close')
+    
+  } catch (error) {
+    console.error('❌ Error saving appointment:', error)
+    alert('Fehler beim Speichern des Termins. Bitte versuchen Sie es erneut.')
+  } finally {
+    isLoading.value = false
+  }
 }
 
-const handleDelete = () => {
-  if (confirm('Sind Sie sicher, dass Sie diesen Termin löschen möchten?')) {
+const handleDelete = async () => {
+  if (!confirm(`Termin "${formData.value.title}" wirklich löschen?`)) return
+  
+  isLoading.value = true
+  
+  try {
+    const { error } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('id', props.eventData.id)
+    
+    if (error) throw error
+    
+    console.log('✅ Appointment deleted')
+    
+    // HIER IST DER FIX: emit delete-event VOR close
     emit('delete-event', props.eventData)
+    emit('appointment-saved') 
+    emit('close')
+    
+  } catch (error) {
+    console.error('❌ Error deleting appointment:', error)
+    alert('Fehler beim Löschen des Termins.')
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -564,50 +806,219 @@ const handleBackdropClick = () => {
   emit('close')
 }
 
-// Load event data when modal opens
-watch(() => props.eventData, (newData) => {
-  if (newData && props.isVisible) {
-    const startDate = new Date(newData.start)
-    const endDate = newData.end ? new Date(newData.end) : new Date(startDate.getTime() + 45 * 60000)
-    const durationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000)
-    
-    formData.value = {
-      title: newData.title || '',
-      category: newData.extendedProps?.category || '',
-      startDate: startDate.toISOString().split('T')[0],
-      startTime: startDate.toTimeString().slice(0, 5),
-      duration: durationMinutes || 45,
-      instructor: newData.extendedProps?.instructor || '',
-      student: newData.extendedProps?.student || '',
-      location: newData.extendedProps?.location || '',
-      price: newData.extendedProps?.price || 0,
-      clientNote: newData.extendedProps?.client_note || '',
-      staffNote: newData.extendedProps?.staff_note || '',
-      isRecurring: false
-    }
-  }
-}, { immediate: true })
+const getGoogleMapsUrl = () => {
+  const selectedLocation = availableLocations.value.find(loc => loc.id === formData.value.location_id)
+  const locationName = selectedLocation?.name || selectedLocation?.address || ''
+  return `https://maps.google.com/maps?q=${encodeURIComponent(locationName)}`
+}
 
-// Reset form when modal closes
-watch(() => props.isVisible, (isVisible) => {
-  if (!isVisible) {
-    // Reset form after a delay to avoid visual glitch
-    setTimeout(() => {
+// Initialize data when modal opens
+watch(() => props.isVisible, async (isVisible) => {
+  if (isVisible) {
+    await Promise.all([loadStudents(), loadLocations(), loadInstructors()])
+    
+    // Load event data if editing
+    if (props.eventData && props.mode !== 'create') {
+      const appointment = props.eventData
+      
+      // Find and select student
+      const student = availableStudents.value.find(s => s.id === appointment.user_id || s.id === appointment.extendedProps?.user_id)
+      if (student) {
+        selectStudent(student)
+      }
+      
+      // Fill form with appointment data
+      let startDate, startTime
+      
+      // Bevorzugen Sie start_time (aus der Datenbank)
+      if (appointment.start_time) {
+        const startDateTime = new Date(appointment.start_time)
+        // Lokale Komponenten extrahieren
+        startDate = `${startDateTime.getFullYear()}-${String(startDateTime.getMonth() + 1).padStart(2, '0')}-${String(startDateTime.getDate()).padStart(2, '0')}`
+        startTime = `${String(startDateTime.getHours()).padStart(2, '0')}:${String(startDateTime.getMinutes()).padStart(2, '0')}`
+      } 
+      // Dann das 'start' Event-Property (vom Kalender)
+      else if (appointment.start) {
+        const startDateTime = new Date(appointment.start)
+        // Lokale Komponenten extrahieren
+        startDate = `${startDateTime.getFullYear()}-${String(startDateTime.getMonth() + 1).padStart(2, '0')}-${String(startDateTime.getDate()).padStart(2, '0')}`
+        startTime = `${String(startDateTime.getHours()).padStart(2, '0')}:${String(startDateTime.getMinutes()).padStart(2, '0')}`
+      } else {
+        // Fallback auf aktuelle Zeit
+        const now = new Date()
+        startDate = now.toISOString().split('T')[0]
+        startTime = now.toTimeString().slice(0, 5)
+      }
+      
+      formData.value = {
+        title: appointment.title || '',
+        description: appointment.description || appointment.extendedProps?.staff_note || '',
+        type: appointment.type || appointment.extendedProps?.category || '',
+        startDate: startDate,
+        startTime: startTime,
+        endTime: '', // Wird gleich berechnet
+        duration_minutes: appointment.duration_minutes || appointment.extendedProps?.duration_minutes || 45,
+        user_id: appointment.user_id || appointment.extendedProps?.user_id || '',
+        staff_id: appointment.staff_id || appointment.extendedProps?.staff_id || '',
+        location_id: appointment.location_id || appointment.extendedProps?.location_id || '',
+        price_per_minute: appointment.price_per_minute || appointment.extendedProps?.price_per_minute || 0,
+        status: appointment.status || appointment.extendedProps?.status || 'booked',
+        eventType: 'lesson',
+        selectedSpecialType: ''
+      }
+      
+      // NACH der formData-Zuweisung: Endzeit berechnen
+      if (appointment.end_time) {
+        // Verwende direkt die end_time aus der DB
+        const endDateTime = new Date(appointment.end_time)
+        const endHours = String(endDateTime.getHours()).padStart(2, '0')
+        const endMinutes = String(endDateTime.getMinutes()).padStart(2, '0')
+        formData.value.endTime = `${endHours}:${endMinutes}`
+        
+        console.log('📝 Set endTime from DB:', {
+          end_time: appointment.end_time,
+          endTime: formData.value.endTime
+        })
+      } else if (appointment.end) {
+        // Fallback: Verwende 'end' Property vom Event
+        const endDateTime = new Date(appointment.end)
+        const endHours = String(endDateTime.getHours()).padStart(2, '0')
+        const endMinutes = String(endDateTime.getMinutes()).padStart(2, '0')
+        formData.value.endTime = `${endHours}:${endMinutes}`
+        
+        console.log('📝 Set endTime from event.end:', {
+          end: appointment.end,
+          endTime: formData.value.endTime
+        })
+      } else if (formData.value.startTime && formData.value.duration_minutes) {
+        // Fallback: Berechne aus startTime + duration
+        const [hours, minutes] = formData.value.startTime.split(':').map(Number)
+        const startDate = new Date()
+        startDate.setHours(hours, minutes, 0, 0)
+        const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
+        
+        const endHours = String(endDate.getHours()).padStart(2, '0')
+        const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
+        formData.value.endTime = `${endHours}:${endMinutes}`
+        
+        console.log('📝 Calculated endTime from duration:', {
+          startTime: formData.value.startTime,
+          duration: formData.value.duration_minutes,
+          endTime: formData.value.endTime
+        })
+      }
+      
+      console.log('📝 Editing appointment:', {
+        original: appointment,
+        parsed: formData.value
+      })
+      
+    } else {
+      // New event - use data from calendar click
+      let startDate, startTime
+      
+      // **Dies ist der angepasste Teil für den 'create'-Modus:**
+      // Überprüfen Sie zuerst, ob `parsedDate` und `parsedTime` vom `dateClick`-Handler gesendet wurden.
+      // (Wie im vorherigen Schritt im FullCalendar-Code hinzugefügt)
+      if (props.eventData?.parsedDate && props.eventData?.parsedTime) {
+        startDate = props.eventData.parsedDate
+        startTime = props.eventData.parsedTime
+        
+        console.log('📅 Creating new appointment from click (using pre-parsed local date/time):', {
+          originalEventData: props.eventData,
+          parsedDate: startDate,
+          parsedTime: startTime,
+        })
+      } 
+      // Fallback: Wenn nur `start` verfügbar ist (immer noch ein ISO-String),
+      // konvertieren Sie ihn in die lokale Zeit.
+      else if (props.eventData?.start) {
+        const clickedDateTime = new Date(props.eventData.start)
+        
+        // **Wichtig:** Verwenden Sie hier lokale Methoden, um die Stunden, Minuten etc. zu bekommen.
+        startDate = `${clickedDateTime.getFullYear()}-${String(clickedDateTime.getMonth() + 1).padStart(2, '0')}-${String(clickedDateTime.getDate()).padStart(2, '0')}`
+        startTime = `${String(clickedDateTime.getHours()).padStart(2, '0')}:${String(clickedDateTime.getMinutes()).padStart(2, '0')}`
+        
+        console.log('📅 Creating new appointment from click (converting ISO start to local):', {
+          originalStart: props.eventData.start,
+          parsedDate: startDate,
+          parsedTime: startTime,
+          clickedDateTime: clickedDateTime.toLocaleString('de-CH')
+        })
+      } else {
+        // Fallback auf aktuelle Zeit, wenn keine Startzeit vom Kalender kommt
+        const now = new Date()
+        startDate = now.toISOString().split('T')[0]
+        startTime = now.toTimeString().slice(0, 5)
+        
+        console.log('⚠️ No start time provided, using current time:', {
+          startDate,
+          startTime
+        })
+      }
+      
+      // NEU: Explizit alle Felder für neue Events zurücksetzen
+      selectedStudent.value = null
+      studentSearchQuery.value = ''
+      
       formData.value = {
         title: '',
-        category: '',
-        startDate: '',
-        startTime: '',
-        duration: 45,
-        instructor: '',
-        student: '',
-        location: '',
-        price: 0,
-        clientNote: '',
-        staffNote: '',
-        isRecurring: false
+        description: '',
+        type: '',
+        startDate: startDate,
+        startTime: startTime,
+        endTime: '',
+        duration_minutes: 45,
+        user_id: '',
+        staff_id: props.currentUser?.id || '',
+        location_id: '',
+        price_per_minute: 0,
+        status: 'booked',
+        eventType: 'lesson',
+        selectedSpecialType: ''
       }
-    }, 300)
+      
+      console.log('📅 Reset form for new appointment')
+    }
+  }
+})
+
+// Fügen Sie das zu den anderen Watchern hinzu (nach dem endTime Watcher):
+watch(() => formData.value.location_id, () => {
+  // Nur bei Fahrlektionen und wenn ein Schüler ausgewählt ist
+  if (formData.value.eventType === 'lesson' && selectedStudent.value) {
+    const selectedLocation = availableLocations.value.find(loc => loc.id === formData.value.location_id)
+    const locationName = selectedLocation?.name || 'Ort unbekannt'
+    formData.value.title = `${selectedStudent.value.first_name} • ${locationName}`
+  }
+})
+
+watch([() => formData.value.startTime, () => formData.value.duration_minutes], () => {
+  formData.value.endTime = computedEndTime.value
+})
+
+watch([() => formData.value.startTime, () => formData.value.duration_minutes], () => {
+  // Nur automatisch setzen wenn Endzeit noch leer ist ODER wenn es eine Fahrlektion ist
+  if (!formData.value.endTime || formData.value.eventType === 'lesson') {
+    formData.value.endTime = computedEndTime.value
+  }
+})
+
+// 7. UPDATED FORM VALIDATION
+const isFormValid = computed(() => {
+  const baseValid = formData.value.title && 
+                   formData.value.startDate && 
+                   formData.value.startTime &&
+                   formData.value.endTime
+
+  if (formData.value.eventType === 'lesson') {
+    return baseValid && 
+           selectedStudent.value && 
+           formData.value.type && 
+           formData.value.location_id &&
+           formData.value.duration_minutes > 0
+  } else {
+    return baseValid && formData.value.selectedSpecialType
   }
 })
 </script>

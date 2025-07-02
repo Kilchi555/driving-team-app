@@ -5,7 +5,7 @@
       <!-- Header -->
       <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center rounded-t-xl">
         <div>
-          <h2 class="text-2xl font-bold text-gray-900">Meine Einstellungen</h2>
+          <h2 class="text-2xl font-bold text-gray-900">Mein Profil</h2>
           <p class="text-gray-600">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</p>
         </div>
         <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700 text-2xl">
@@ -21,12 +21,6 @@
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             🎓 Meine Unterrichtskategorien
           </h3>
-          
-          <!-- DEBUG INFO -->
-          <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-            <p><strong>Debug:</strong> {{ availableCategories.length }} Kategorien geladen</p>
-            <p><strong>Ausgewählte:</strong> {{ selectedCategories.length }} Kategorien</p>
-          </div>
           
           <!-- Loading State -->
           <div v-if="availableCategories.length === 0" class="text-center py-8">
@@ -301,28 +295,46 @@ const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
 // Methods
 const loadData = async () => {
+  console.log('🔄 Loading staff settings for user:', props.currentUser?.id)
+  
+  if (!props.currentUser?.id) {
+    console.error('❌ No current user ID available!')
+    return
+  }
+
   try {
-    console.log('🔄 Loading staff settings...')
+    // Load categories with detailed logging
+    console.log('📚 About to load categories...')
     
-    // Load available categories
-    const { data: categoriesData } = await supabase
+    const { data: categoriesData, error: categoriesError } = await supabase
       .from('categories')
       .select('*')
       .eq('is_active', true)
       .order('display_order')
     
+    if (categoriesError) {
+      console.error('❌ Categories error:', categoriesError)
+      alert('Fehler beim Laden der Kategorien: ' + categoriesError.message)
+      return
+    }
+    
     availableCategories.value = categoriesData || []
+    console.log('✅ Categories loaded successfully:', availableCategories.value.length)
 
-    // Load staff categories (selected ones)
-    const { data: staffCategoriesData } = await supabase
+    // Load staff categories
+    console.log('👨‍🏫 Loading staff categories...')
+    const { data: staffCategoriesData, error: staffCategoriesError } = await supabase
       .from('staff_categories')
       .select('category_id')
       .eq('staff_id', props.currentUser.id)
       .eq('is_active', true)
     
+    console.log('👨‍🏫 Staff categories result:', staffCategoriesData, staffCategoriesError)
     selectedCategories.value = staffCategoriesData?.map(sc => sc.category_id) || []
+    console.log('✅ Selected categories:', selectedCategories.value)
 
     // Load staff locations
+    console.log('📍 Loading locations...')
     const { data: locationsData } = await supabase
       .from('locations')
       .select('*')
@@ -333,13 +345,17 @@ const loadData = async () => {
       name: loc.name,
       address: loc.address || ''
     })) || []
+    console.log('✅ Locations loaded:', myLocations.value.length)
 
     // Load staff settings
-    const { data: settingsData } = await supabase
+    console.log('⚙️ Loading staff settings...')
+    const { data: settingsData, error: settingsError } = await supabase
       .from('staff_settings')
       .select('*')
       .eq('staff_id', props.currentUser.id)
       .single()
+    
+    console.log('⚙️ Settings result:', settingsData, settingsError)
     
     if (settingsData) {
       // Preferred durations - robust parsing
@@ -368,12 +384,16 @@ const loadData = async () => {
         sms: settingsData.sms_notifications !== false,
         email: settingsData.email_notifications !== false
       }
+      
+      console.log('✅ Settings parsed - Working hours:', workingHours.value, 'Days:', availableDays.value)
     }
 
-    console.log('✅ Staff settings loaded successfully')
+    console.log('✅ All data loaded successfully!')
+    console.log('📊 Final state - Categories:', availableCategories.value.length, 'Selected:', selectedCategories.value.length, 'Locations:', myLocations.value.length)
 
-  } catch (error) {
-    console.error('Error loading staff settings:', error)
+  } catch (error: any) {
+    console.error('❌ Global error:', error)
+    alert('Fehler: ' + error.message)
   }
 }
 

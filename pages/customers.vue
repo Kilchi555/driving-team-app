@@ -35,7 +35,7 @@
           >
             ← 
           </button>
-          <h1 class="text-2xl font-bold text-gray-900">Schüler-Verwaltung</h1>
+          <h1 class="text-2xl font-bold text-gray-900">Schülerliste</h1>
         </div>
 
         <!-- Add Student Button (nur für Staff/Admin) -->
@@ -44,7 +44,7 @@
           @click="showAddModal = true"
           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
         >
-          + Neuer Schüler
+          + Neu
         </button>
       </div>
 
@@ -72,7 +72,7 @@
               type="checkbox"
               class="rounded border-gray-300 text-green-600 focus:ring-green-500"
             >
-            <span class="text-sm text-gray-700">Inaktive anzeigen</span>
+            <span class="text-sm text-gray-700">Inaktive</span>
           </label>
 
           <!-- All Students Toggle (nur für Staff) -->
@@ -86,7 +86,7 @@
               class="rounded border-gray-300 text-green-600 focus:ring-green-500"
               @change="loadStudents"
             >
-            <span class="text-sm text-gray-700">Alle Schüler der Fahrschule</span>
+            <span class="text-sm text-gray-700">Alle Fahrschüler</span>
           </label>
         </div>
 

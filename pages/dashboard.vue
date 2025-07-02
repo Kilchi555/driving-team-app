@@ -129,23 +129,30 @@ watch(calendarRef, () => {
   updateTodayState()
 })
 
-// Auto-refresh alle 5 Minuten - GEÄNDERT: Nur wenn Profil existiert
-const refreshInterval = setInterval(async () => {
-  if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
-    await fetchPendingTasks(currentUser.value.id)
+// Definiere refreshInterval außerhalb der Funktionen
+const refreshInterval = ref<number | null>(null)
+
+onMounted(() => {
+  // Auto-refresh alle 5 Minuten - Nur im Browser und wenn Profil existiert
+  if (process.client) {
+    refreshInterval.value = setInterval(async () => {
+      if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
+        await fetchPendingTasks(currentUser.value.id)
+      }
+    }, 5 * 60 * 1000) as unknown as number
   }
-}, 5 * 60 * 1000)
+})
 
 onUnmounted(() => {
-  clearInterval(refreshInterval)
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value)
+    refreshInterval.value = null
+  }
 })
+
 </script>
 
 <template>
-  <!-- DEBUG INFO - Temporär -->
-  <div class="fixed top-0 left-0 z-[100] bg-black text-white p-2 text-xs">
-    Debug: profileExists={{ profileExists }}, userError={{ userError }}, hasUser={{ !!currentUser }}
-  </div>
 
   <!-- Loading State -->
   <div v-if="isLoading" class="min-h-screen flex items-center justify-center">
@@ -177,42 +184,10 @@ onUnmounted(() => {
   <!-- Success State - Dashboard -->
   <div v-else-if="currentUser && profileExists" class="h-screen flex flex-col">
     <!-- Header -->
-    <div class="fixed top-0 left-0 right-0 h-[50px] bg-white shadow z-50 flex items-center justify-between px-4">
-      <div class="flex items-center gap-4">
-        <img src="/images/Driving_Team_ch.jpg" class="h-10 w-auto" alt="Driving Team">
-      </div>
 
-      <!-- Navigation Controls -->
-      <div class="flex gap-2">
-        <button
-          class="responsive font-bold text-white px-3 py-2 rounded-xl shadow-md transition-all duration-200 transform active:scale-95 hover:bg-blue-600 disabled:bg-gray-400 bg-blue-500"
-          :disabled="isTodayActive"
-          @click="goToToday"
-        >
-          Heute
-        </button>
-        <button 
-          class="responsive font-bold text-white text-xl px-4 py-1 rounded-xl shadow-md transition-all duration-200 transform active:scale-95 bg-green-500 hover:bg-green-600" 
-          @click="goPrev"
-        >
-          ‹
-        </button>
-        <button 
-          class="responsive font-bold text-white text-xl px-4 py-1 rounded-xl shadow-md transition-all duration-200 transform active:scale-95 bg-green-500 hover:bg-green-600" 
-          @click="goNext"
-        >
-          ›
-        </button>
-      </div>
-
-      <!-- Month Display -->
-      <div class="responsive font-semibold text-gray-800">
-        {{ currentMonth }}
-      </div>
-    </div>
 
     <!-- Main Content -->
-    <div class="flex-1 pt-[50px] pb-[50px] overflow-hidden">
+    <div class="flex-1 overflow-hidden">
       <CalendarComponent 
         ref="calendarRef" 
         :current-user="currentUser"
@@ -243,7 +218,7 @@ onUnmounted(() => {
         @click="showStaffSettings = true" 
         class="responsive bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200"
       >
-        ⚙️ Einstellungen
+        ⚙️ Profil
       </button>
     </div>
   </div>
