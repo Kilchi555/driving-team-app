@@ -8,6 +8,59 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import deLocale from '@fullcalendar/core/locales/de'
 import EventModal from './EventModal.vue'
 import { getSupabase } from '~/utils/supabase'
+import ConfirmationDialog from './ConfirmationDialog.vue'
+
+// Neue refs für Confirmation Dialog
+const showConfirmation = ref(false)
+const confirmationData = ref({
+  title: '',
+  message: '',
+  details: '',
+  icon: '',
+  type: 'warning' as 'success' | 'warning' | 'danger',
+  confirmText: 'Bestätigen',
+  cancelText: 'Abbrechen'
+})
+const pendingAction = ref<(() => Promise<void>) | null>(null)
+
+// Helper-Funktion für Confirmation Dialog
+const showConfirmDialog = (options: {
+  title: string
+  message: string
+  details?: string
+  icon?: string
+  type?: 'success' | 'warning' | 'danger'
+  confirmText?: string
+  cancelText?: string
+  action: () => Promise<void>
+}) => {
+  confirmationData.value = {
+    title: options.title,
+    message: options.message,
+    details: options.details || '',
+    icon: options.icon || '❓',
+    type: options.type || 'warning',
+    confirmText: options.confirmText || 'Bestätigen',
+    cancelText: options.cancelText || 'Abbrechen'
+  }
+  pendingAction.value = options.action
+  showConfirmation.value = true
+}
+
+// Confirmation handlers
+const handleConfirmAction = async () => {
+  if (pendingAction.value) {
+    await pendingAction.value()
+  }
+  showConfirmation.value = false
+  pendingAction.value = null
+}
+
+const handleCancelAction = () => {
+  showConfirmation.value = false
+  pendingAction.value = null
+}
+
 
 const calendar = ref()
 const supabase = getSupabase()
@@ -21,6 +74,7 @@ const props = defineProps<Props>()
 const isModalVisible = ref(false)
 const modalEventData = ref<any>(null)
 const modalMode = ref<'view' | 'edit' | 'create'>('create')
+
 
 type CalendarEvent = {
   id: string
@@ -43,6 +97,9 @@ type CalendarEvent = {
     price_per_minute?: number
     status?: string
     is_paid?: boolean
+    appointment_type?: string
+    is_team_invite?: boolean
+    original_type?: string
   }
 }
 
@@ -51,11 +108,17 @@ const isLoadingEvents = ref(false)
 
 const emit = defineEmits(['view-updated'])
 
+// CalendarComponent.vue - loadAppointments korrigieren
+
+// CalendarComponent.vue - Erweiterte Abfrage für Team-Einladungen
+
 const loadAppointments = async () => {
   isLoadingEvents.value = true
   try {
     console.log('🔄 Loading appointments from Supabase...')
+    console.log('👤 Current user:', props.currentUser?.id)
     
+    // Erweiterte Abfrage: Eigene Termine UND Team-Einladungen
     let query = supabase
       .from('appointments')
       .select(`
@@ -64,15 +127,38 @@ const loadAppointments = async () => {
         staff:staff_id(first_name, last_name),
         location:location_id(name, address)
       `)
+      .or(`staff_id.eq.${props.currentUser?.id}`) // Eigene Termine (als staff_id)
       .order('start_time')
     
     const { data: appointments, error } = await query
     
-    console.log('📊 Raw appointments from DB:', appointments)
+    console.log('📊 Raw appointments from DB:', appointments?.length || 0)
     
     if (error) throw error
     
-    const convertedEvents = (appointments || []).map((apt) => {
+    // Filtern: Eigene Termine + echte Team-Einladungen (nicht doppelte)
+    const filteredAppointments = (appointments || []).filter((apt) => {
+      const isOwnAppointment = apt.staff_id === props.currentUser?.id
+      const isTeamInvite = apt.type === 'team_invite'
+      
+      // Debug-Info
+      console.log(`🔍 Filtering appointment "${apt.title}":`, {
+        id: apt.id,
+        staff_id: apt.staff_id,
+        type: apt.type,
+        isOwnAppointment,
+        isTeamInvite,
+        currentUserId: props.currentUser?.id
+      })
+      
+      return isOwnAppointment // Nur eigene Termine
+    })
+    
+    console.log('✅ Filtered appointments:', filteredAppointments.length)
+    
+    const convertedEvents = filteredAppointments.map((apt) => {
+      const isTeamInvite = apt.type === 'team_invite'
+      
       const event = {
         id: apt.id,
         title: apt.title || `${apt.user?.first_name || 'Unbekannt'} - ${apt.type || 'Termin'}`,
@@ -93,26 +179,34 @@ const loadAppointments = async () => {
           duration_minutes: apt.duration_minutes,
           price_per_minute: apt.price_per_minute,
           status: apt.status,
-          is_paid: apt.is_paid
+          is_paid: apt.is_paid,
+          // WICHTIG: Typ-Informationen für Modal
+          appointment_type: apt.type,
+          is_team_invite: isTeamInvite,
+          original_type: apt.type
         }
       }
       
       console.log(`✅ Converted event:`, {
         id: event.id,
         title: event.title,
-        start: event.start,
-        end: event.end,
-        rawStart: apt.start_time,
-        rawEnd: apt.end_time,
-        duration: apt.duration_minutes
+        type: apt.type,
+        isTeamInvite,
+        staff_id: apt.staff_id
       })
       
       return event
-    }).filter(event => event !== null)
+    })
     
     calendarEvents.value = convertedEvents
     
-    console.log('✅ Final calendarEvents:', calendarEvents.value.length, 'events')
+    console.log('✅ Final calendar summary:', {
+      totalEvents: convertedEvents.length,
+      teamInvites: convertedEvents.filter(e => e.extendedProps.is_team_invite).length,
+      regularTermine: convertedEvents.filter(e => !e.extendedProps.is_team_invite).length,
+      lessons: convertedEvents.filter(e => e.extendedProps.appointment_type === 'lesson').length,
+      others: convertedEvents.filter(e => !['lesson', 'team_invite'].includes(e.extendedProps.appointment_type)).length
+    })
     
     if (calendar.value?.getApi) {
       const calendarApi = calendar.value.getApi()
@@ -127,6 +221,25 @@ const loadAppointments = async () => {
   }
 }
 
+// WICHTIG: EventClick für verschiedene Terminarten anpassen
+const handleEventClick = (clickInfo: any) => {
+  const appointmentData = calendarEvents.value.find(evt => evt.id === clickInfo.event.id)
+  
+  console.log('🖱️ Event clicked:', {
+    id: clickInfo.event.id,
+    title: clickInfo.event.title,
+    appointmentType: appointmentData?.extendedProps?.appointment_type,
+    isTeamInvite: appointmentData?.extendedProps?.is_team_invite
+  })
+  
+  isModalVisible.value = true
+  modalMode.value = 'edit'
+  modalEventData.value = appointmentData
+}
+
+// Im calendarOptions eventClick ersetzen:
+// eventClick: handleEventClick,
+
 const handleSaveEvent = async (eventData: CalendarEvent) => {
   console.log('💾 Event saved, refreshing calendar...')
   await loadAppointments()
@@ -139,81 +252,223 @@ const handleDeleteEvent = async (eventData: CalendarEvent) => {
   isModalVisible.value = false
 }
 
-// Erweiterte handleEventDrop Funktion mit Modal-Update
+// CalendarComponent.vue - Erweiterte handleEventDrop Funktion
+// Debug-Version um die richtigen Selektoren zu finden
+const updateModalFieldsIfOpen = (event: any) => {
+  console.log('🔍 Debugging modal inputs...')
+  
+  // Verschiedene Selektoren ausprobieren
+  const dateInputs = document.querySelectorAll('input[type="date"]')
+  const timeInputs = document.querySelectorAll('input[type="time"]')
+  const allInputs = document.querySelectorAll('input')
+  
+  console.log('📊 Found inputs:', {
+    dateInputs: dateInputs.length,
+    timeInputs: timeInputs.length,
+    allInputs: allInputs.length
+  })
+  
+  // Alle Input-Elemente loggen um die richtigen zu finden
+  allInputs.forEach((input, index) => {
+    console.log(`Input ${index}:`, {
+      type: input.type,
+      id: input.id,
+      name: input.name,
+      className: input.className,
+      value: input.value,
+      placeholder: input.placeholder
+    })
+  })
+  
+  // Versuchen spezifischere Selektoren basierend auf Ihrem Modal
+  const startDateInput = document.querySelector('input[type="date"]') as HTMLInputElement
+  const startTimeInput = document.querySelector('input[type="time"]:first-of-type') as HTMLInputElement
+  const endTimeInput = document.querySelector('input[type="time"]:last-of-type') as HTMLInputElement
+  
+}
+
+const eventModalRef = ref()
+const isUpdating = ref(false)
+
+
+// Überarbeitete handleEventDrop mit schönem Dialog
 const handleEventDrop = async (dropInfo: any) => {
-  try {
-    const { error } = await supabase
-      .from('appointments')
-      .update({
-        start_time: dropInfo.event.startStr,
-        end_time: dropInfo.event.endStr
+  const newStartTime = new Date(dropInfo.event.start).toLocaleString('de-CH', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  
+  const newEndTime = new Date(dropInfo.event.end).toLocaleString('de-CH', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+
+  const moveAction = async () => {
+    try {
+      console.log('✅ User confirmed move, updating database...')
+      
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          start_time: dropInfo.event.startStr,
+          end_time: dropInfo.event.endStr
+        })
+        .eq('id', dropInfo.event.id)
+
+      if (error) throw error
+
+      console.log('✅ Appointment moved in database:', dropInfo.event.title)
+      
+      // Modal aktualisieren falls offen
+      if (isModalVisible.value && modalEventData.value?.id === dropInfo.event.id) {
+        console.log('📝 Updating modal data...')
+        modalEventData.value = {
+          ...modalEventData.value,
+          start: dropInfo.event.startStr,
+          end: dropInfo.event.endStr
+        }
+      }
+      
+      // Kalender neu laden
+      console.log('🔄 Reloading calendar events...')
+        isUpdating.value = true
+        await loadAppointments()
+        isUpdating.value = false
+
+      
+      console.log(`✅ Termin "${dropInfo.event.title}" erfolgreich verschoben`)
+      
+    } catch (err: any) {
+      console.error('❌ Error moving appointment:', err)
+      dropInfo.revert()
+      
+      // Schöne Fehlermeldung auch mit Dialog
+      showConfirmDialog({
+        title: 'Fehler beim Verschieben',
+        message: 'Der Termin konnte nicht verschoben werden.',
+        details: `<strong>Fehler:</strong> ${err?.message || 'Unbekannter Fehler'}<br><br>Der Termin wurde auf die ursprüngliche Zeit zurückgesetzt.`,
+        icon: '❌',
+        type: 'danger',
+        confirmText: 'OK',
+        cancelText: '',
+        action: async () => {} // Leere Aktion für OK-Button
       })
-      .eq('id', dropInfo.event.id)
+    }
+  }
 
-    if (error) throw error
+const studentName = dropInfo.event.extendedProps?.student || 'Unbekannt'
+const studentPhone = dropInfo.event.extendedProps?.phone || 'Keine Nummer'
 
-    console.log('✅ Appointment moved:', dropInfo.event.title)
+showConfirmDialog({
+  title: 'Termin verschieben',
+  message: 'Möchten Sie diesen Termin wirklich verschieben?',
+  details: `
+    <strong>Termin:</strong> ${dropInfo.event.title}<br>
+    <strong>Neue Zeit:</strong> ${newStartTime} - ${newEndTime}<br>
+    <strong>Fahrschüler:</strong> ${studentName}<br><br>
     
-    // Modal aktualisieren falls offen
-    updateModalIfOpen(dropInfo.event)
-    
-  } catch (error) {
-    console.error('❌ Error moving appointment:', error)
-    dropInfo.revert()
-    alert('Fehler beim Verschieben des Termins.')
-  }
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+      <div class="flex items-center gap-2 mb-2">
+        <input type="checkbox" id="sendSms" checked class="rounded border-gray-300">
+        <label for="sendSms" class="font-medium text-blue-800">
+          📱 SMS-Benachrichtigung senden
+        </label>
+      </div>
+      <div class="text-xs text-blue-600">
+        Der Fahrschüler wird über die Terminverschiebung informiert.
+      </div>
+    </div>
+  `,
+  icon: '🔄',
+  type: 'warning',
+  confirmText: 'Verschieben & Benachrichtigen',
+  cancelText: 'Abbrechen',
+  action: moveAction
+})
+
+  // Verschieben erstmal rückgängig machen, wird nur bei Bestätigung durchgeführt
+  dropInfo.revert()
 }
 
-const selectedAppointment = ref(null)
-
-// Funktion um Modal zu aktualisieren
-const updateModalIfOpen = (event: any) => {
-  // Direkt DOM-Elemente aktualisieren falls Modal offen
-  const modal = document.querySelector('.modal') // Passen Sie den Selector an Ihr Modal an
-  if (modal && modal.classList.contains('show')) { // oder wie auch immer Ihr Modal "offen" markiert ist
-    updateModalFields(event)
-  }
-}
-
-// Modal-Felder aktualisieren
-const updateModalFields = (event: any) => {
-  // Start-Zeit Feld aktualisieren
-  const startTimeInput = document.querySelector('#start_time') as HTMLInputElement
-  if (startTimeInput) {
-    startTimeInput.value = event.start.toISOString().slice(0, 16)
-  }
-  
-  // End-Zeit Feld aktualisieren
-  const endTimeInput = document.querySelector('#end_time') as HTMLInputElement
-  if (endTimeInput) {
-    endTimeInput.value = event.end.toISOString().slice(0, 16)
-  }
-  
-  console.log('Modal fields updated with new times')
-}
-
+// Überarbeitete handleEventResize
 const handleEventResize = async (resizeInfo: any) => {
-  try {
-    const { error } = await supabase
-      .from('appointments')
-      .update({
-        end_time: resizeInfo.event.endStr,
-        duration_minutes: Math.round((resizeInfo.event.end - resizeInfo.event.start) / (1000 * 60))
+  const durationMs = resizeInfo.event.end.getTime() - resizeInfo.event.start.getTime()
+  const durationMinutes = Math.round(durationMs / (1000 * 60))
+
+  const resizeAction = async () => {
+    try {
+      console.log('✅ User confirmed resize, updating database...')
+      
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          end_time: resizeInfo.event.endStr,
+          duration_minutes: durationMinutes
+        })
+        .eq('id', resizeInfo.event.id)
+
+      if (error) throw error
+      
+      console.log('✅ Appointment resized in database:', resizeInfo.event.title)
+      
+      if (isModalVisible.value && modalEventData.value?.id === resizeInfo.event.id) {
+        modalEventData.value = {
+          ...modalEventData.value,
+          end: resizeInfo.event.endStr
+        }
+      }
+      
+      await loadAppointments()
+      
+    } catch (err: any) {
+      console.error('❌ Error resizing appointment:', err)
+      resizeInfo.revert()
+      
+      showConfirmDialog({
+        title: 'Fehler beim Ändern',
+        message: 'Die Terminlänge konnte nicht geändert werden.',
+        details: `<strong>Fehler:</strong> ${err?.message || 'Unbekannter Fehler'}`,
+        icon: '❌',
+        type: 'danger',
+        confirmText: 'OK',
+        cancelText: '',
+        action: async () => {}
       })
-      .eq('id', resizeInfo.event.id)
-
-    if (error) throw error
-    
-    console.log('✅ Appointment resized:', resizeInfo.event.title)
-    updateModalIfOpen(resizeInfo.event)
-    
-  } catch (error) {
-    console.error('❌ Error resizing appointment:', error)
-    resizeInfo.revert()
-    alert('Fehler beim Ändern der Terminlänge.')
+    }
   }
-}
 
+showConfirmDialog({
+  title: 'Terminlänge ändern',
+  message: 'Möchten Sie die Terminlänge wirklich ändern?',
+  details: `
+    <strong>Termin:</strong> ${resizeInfo.event.title}<br>
+    <strong>Neue Dauer:</strong> ${durationMinutes} Minuten<br>
+    <strong>Fahrschüler:</strong> ${resizeInfo.event.extendedProps?.student || 'Unbekannt'}<br><br>
+    
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+      <div class="flex items-center gap-2 mb-2">
+        <input type="checkbox" id="sendSmsResize" checked class="rounded border-gray-300">
+        <label for="sendSmsResize" class="font-medium text-blue-800">
+          📱 SMS über Änderung senden
+        </label>
+      </div>
+      <div class="text-xs text-blue-600">
+        Der Fahrschüler wird über die Terminänderung informiert.
+      </div>
+    </div>
+  `,
+  icon: '📏',
+  type: 'warning',
+  confirmText: 'Ändern & Benachrichtigen',
+  cancelText: 'Abbrechen',
+  action: resizeAction
+})
+
+  resizeInfo.revert()
+}
 const calendarOptions = ref<CalendarOptions>({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
   initialView: 'timeGridWeek',
@@ -222,18 +477,16 @@ const calendarOptions = ref<CalendarOptions>({
   allDaySlot: false,
   slotMinTime: '05:00:00',
   slotMaxTime: '23:00:00',
-    firstDay: 1,
+  firstDay: 1,
   displayEventTime: false,
   forceEventDuration: true, 
   selectable: true,
   editable: true,
-  
-  
- events: calendarEvents.value
-,
-
+  events: calendarEvents.value,
+  eventDrop: handleEventDrop,
+  eventResize: handleEventResize,
 // Klick auf leeren Zeitslot
-dateClick: (arg) => {
+  dateClick: (arg) => {
   const clickedDate = arg.date
   const endDate = new Date(clickedDate.getTime() + 45 * 60000)
 
@@ -355,14 +608,30 @@ defineExpose({
     Kalender wird geladen...
   </div>
 
-  <EventModal
-    :is-visible="isModalVisible"
-    :event-data="modalEventData"
-    :mode="modalMode"
-    :current-user="props.currentUser" 
-    @close="isModalVisible = false"
-    @save-event="handleSaveEvent"
-    @delete-event="handleDeleteEvent"
+ <EventModal
+  ref="eventModalRef"
+  :is-visible="isModalVisible"
+  :event-data="modalEventData"
+  :mode="modalMode"
+  :current-user="props.currentUser" 
+  @close="isModalVisible = false"
+  @save-event="handleSaveEvent"
+  @delete-event="handleDeleteEvent"
+/>
+
+  <!-- Confirmation Dialog -->
+  <ConfirmationDialog
+    :is-visible="showConfirmation"
+    :title="confirmationData.title"
+    :message="confirmationData.message"
+    :details="confirmationData.details"
+    :icon="confirmationData.icon"
+    :type="confirmationData.type"
+    :confirm-text="confirmationData.confirmText"
+    :cancel-text="confirmationData.cancelText"
+    @confirm="handleConfirmAction"
+    @cancel="handleCancelAction"
+    @close="handleCancelAction"
   />
 </template>
 
@@ -370,7 +639,6 @@ defineExpose({
 /* === KALENDER BASIS === */
 .fc {
   background-color: white !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   overflow: hidden;
@@ -386,8 +654,6 @@ defineExpose({
   padding: 4px 4px !important;
   border-bottom: 2px solid #e5e7eb !important;
 }
-
-
 
 /* Custom day header styling */
 .fc-day-header-content {
@@ -542,15 +808,14 @@ defineExpose({
 
 /* === TOOLBAR === */
 .fc-toolbar {
-  padding-top: 12px;
+  padding: 8px;
   background-color: white !important;
   gap: 2px !important;
+  align-items: center;
+    justify-content: center;
 }
 
-.fc-toolbar-chunk {
-  display: flex;
-  align-items: center;
-}
+
 
 .fc-toolbar-title {
   font-size: 1.5rem !important;
@@ -573,7 +838,6 @@ defineExpose({
   
   .fc-toolbar-title {
     font-size: 1.25rem !important;
-    margin: 0 !important;
   }
   
   .fc-button {
@@ -591,5 +855,14 @@ defineExpose({
 .fc-loading {
   background-color: #f9fafb !important;
   opacity: 0.7;
+}
+
+/* Nur diese CSS-Klasse hinzufügen: */
+.fc {
+  transition: opacity 0.3s ease !important;
+}
+
+.fc.updating {
+  opacity: 0.7 !important;
 }
 </style>
