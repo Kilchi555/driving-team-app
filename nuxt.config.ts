@@ -43,5 +43,21 @@ export default defineNuxtConfig({
       // Suspense-Warnungen unterdrücken
       isCustomElement: (tag) => false
     }
+  },
+    runtimeConfig: {
+    public: {
+      googleMapsApiKey: process.env.VITE_GOOGLE_MAPS_API_KEY
+    }
+  },
+    app: {
+    head: {
+      script: [
+        {
+          src: `https://maps.googleapis.com/maps/api/js?key=${process.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=de&region=CH&v=beta`,
+          async: true,
+          defer: true
+        }
+      ]
+    }
   }
 })

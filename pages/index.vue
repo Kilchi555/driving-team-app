@@ -328,7 +328,7 @@ const manualLogin = async () => {
           await navigateTo('/admin')
           break
         case 'staff':
-          await navigateTo('/staff')
+          await navigateTo('/dashboard')
           break
         default:
           await navigateTo('/dashboard')

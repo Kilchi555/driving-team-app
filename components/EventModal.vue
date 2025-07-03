@@ -194,34 +194,6 @@
               🤖 Empfehlung: {{ getLastLessonDuration() }}min (letzte Lektion)
             </p>
           </div>
-
-          <!-- Abholort (basierend auf Historie) -->
-         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            📍 Abholort *
-          </label>
-          <select
-            v-model="formData.location_id"
-            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">Ort wählen</option>
-            <option v-for="location in availableLocations" :key="location.id" :value="location.id">
-              {{ location.name }}
-            </option>
-          </select>
-          
-          <!-- NEU: Google Maps Link -->
-          <div v-if="formData.location_id" class="mt-2">
-            <a :href="getGoogleMapsUrl()" target="_blank" 
-                class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-              🗺️ In Google Maps öffnen
-            </a>
-          </div>
-          
-          <p class="text-xs text-gray-500 mt-1">
-            🤖 Häufigster Ort: {{ getMostUsedLocation() }}
-          </p>
-          </div>
         </div>
 
         <!-- 4. DATUM & ZEIT (für alle Terminarten) -->
@@ -403,35 +375,13 @@
             </Transition>
           </div>
 
-            <!-- Location Sektion verbessern -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                📍 Standort *
-              </label>
-              <select
-                v-model="formData.location_id"
-                class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              >
-                <option value="">Standort wählen</option>
-                <option v-for="location in availableLocations" :key="location.id" :value="location.id">
-                  {{ location.name }}
-                </option>
-              </select>
-              
-              <!-- Standard-Location Hinweis -->
-              <p v-if="!formData.location_id" class="text-xs text-gray-500 mt-1">
-                ℹ️ Falls kein Standort gewählt wird, wird der Standard-Standort verwendet
-              </p>
-              
-              <!-- Google Maps Link -->
-              <div v-if="formData.location_id" class="mt-2">
-                <a :href="getGoogleMapsUrl()" target="_blank" 
-                    class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                  🗺️ In Google Maps öffnen
-                </a>
-              </div>
-            </div>
+            <!-- Location Sektion -->
+            <LocationSelector
+              v-model="formData.location_id"
+              @locationSelected="onLocationSelected"
+              :required="true"
+              :standardLocations="availableLocations"
+            />
 
           <!-- Preis Anzeige (nur bei Fahrlektionen) -->
           <div v-if="formData.eventType === 'lesson' && parseFloat(totalPrice) > 0" class="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -517,6 +467,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import LocationSelector from './LocationSelector.vue'
+
 
 // 1. UPDATED INTERFACE
 interface AppointmentData {
@@ -626,6 +578,12 @@ const formData = ref<AppointmentData>({
   eventType: 'lesson', 
   selectedSpecialType: ''
 })
+
+const onLocationSelected = (location: any) => {
+  console.log('📍 Location selected:', location)
+  formData.value.location_id = location.id || location.place_id
+  // Weitere Verarbeitung falls nötig...
+}
 
 // 3. SPECIAL EVENT TYPES
 const availableEventTypes = ref<EventType[]>([])
@@ -769,6 +727,7 @@ const backToStudentSelection = () => {
   formData.value.selectedSpecialType = ''
   formData.value.title = ''
 }
+
 const selectSpecialEventType = (eventType: EventType) => {  // ✅ Typ ändern: any → EventType
   try {
     console.log('📋 Selecting event type:', eventType)
@@ -878,17 +837,19 @@ const loadLocations = async () => {
 
 const filterStudents = () => {
   const query = studentSearchQuery.value.toLowerCase()
+  
   if (!query) {
     filteredStudents.value = availableStudents.value
-    return
+  } else {
+    filteredStudents.value = availableStudents.value.filter((student: any) => 
+      student.first_name?.toLowerCase().includes(query) ||
+      student.last_name?.toLowerCase().includes(query) ||
+      student.email?.toLowerCase().includes(query) ||
+      student.phone?.includes(query)
+    )
   }
   
-  filteredStudents.value = availableStudents.value.filter(student =>
-    student.first_name.toLowerCase().includes(query) ||
-    student.last_name.toLowerCase().includes(query) ||
-    student.email?.toLowerCase().includes(query) ||  // ✅ Optional chaining
-    student.phone?.includes(query)                   // ✅ Optional chaining
-  )
+  showStudentDropdown.value = true
 }
 
 const selectStudent = (student: Student) => {
@@ -1158,15 +1119,15 @@ const handleSave = async () => {
     const startDateTime = new Date(localStartDate)
     const endDateTime = new Date(localEndDate)
     const calculatedDuration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000)
-
-    // Helper-Funktionen (HINZUFÜGEN)
+    
+    // Helper-Funktionen
     const sanitizeUuid = (value: string | null | undefined): string | null => {
       if (!value || value.trim() === '') {
         return null
       }
       return value
     }
-
+    
     const sanitizeNumber = (value: any): number | null => {
       if (value === null || value === undefined || value === '') {
         return null
@@ -1174,7 +1135,7 @@ const handleSave = async () => {
       const num = parseFloat(value)
       return isNaN(num) ? null : num
     }
-
+    
     // User-ID bestimmen
     let appointmentUserId: string
     if (formData.value.eventType === 'lesson' && selectedStudent.value?.id) {
@@ -1182,39 +1143,80 @@ const handleSave = async () => {
     } else {
       appointmentUserId = await loadDummyUser()
     }
-
-    // Location-ID bestimmen
-    let appointmentLocationId: string
-    if (formData.value.location_id && formData.value.location_id.trim() !== '') {
-      appointmentLocationId = formData.value.location_id
-    } else {
-      appointmentLocationId = await loadDefaultLocation()
+    
+    // ✅ LOCATION-DATEN RICHTIG VERARBEITEN
+    let appointmentLocationId: string | null = null
+    let googlePlaceId: string | null = null
+    let customLocationName: string | null = null
+    let customLocationAddress: string | null = null
+    
+    if (formData.value.location_id) {
+      // Prüfen ob es ein Objekt vom LocationSelector ist
+      if (typeof formData.value.location_id === 'object') {
+        const locationObj = formData.value.location_id as any
+        
+        if (locationObj.source === 'standard') {
+          // Standard Location
+          appointmentLocationId = locationObj.id
+          console.log('📍 Using standard location:', locationObj.name)
+        } else if (locationObj.source === 'google') {
+          // Google Place
+          googlePlaceId = locationObj.place_id
+          customLocationName = locationObj.name
+          customLocationAddress = locationObj.address
+          appointmentLocationId = null // Keine Standard-Location
+          console.log('📍 Using Google Place:', locationObj.name, locationObj.address)
+        }
+      } 
+      // String-basierte Location ID
+      else if (typeof formData.value.location_id === 'string') {
+        if (formData.value.location_id.includes('Eh') && formData.value.location_id.length > 50) {
+          // Google Place ID als String
+          googlePlaceId = formData.value.location_id
+          customLocationName = 'Google Place'
+          customLocationAddress = 'Unbekannte Adresse'
+          appointmentLocationId = null
+          console.log('📍 Using Google Place ID string:', formData.value.location_id)
+        } else if (formData.value.location_id.trim() !== '') {
+          // Standard UUID
+          appointmentLocationId = formData.value.location_id
+        }
+      }
     }
-
-    // Appointment-Daten
+    
+    // Fallback: Default Location wenn gar nichts gesetzt
+    if (!appointmentLocationId && !googlePlaceId) {
+      appointmentLocationId = await loadDefaultLocation()
+      console.log('📍 Using default location fallback')
+    }
+    
+    // ✅ ERWEITERTE APPOINTMENT-DATEN MIT GOOGLE PLACES
     const appointmentData = {
       title: formData.value.title || 'Neuer Termin',
       description: formData.value.description || '',
       type: formData.value.type || (formData.value.selectedSpecialType || 'other'),
-      
       user_id: appointmentUserId,
       staff_id: props.currentUser?.id,
-      location_id: appointmentLocationId,
-      
+      location_id: appointmentLocationId,              // ✅ Standard Location UUID oder null
+      google_place_id: googlePlaceId,                  // ✅ Google Place ID
+      custom_location_name: customLocationName,        // ✅ Google Place Name
+      custom_location_address: customLocationAddress,  // ✅ Google Place Address
       start_time: startDateTime.toISOString(),
       end_time: endDateTime.toISOString(),
       duration_minutes: calculatedDuration,
-      
-      // JETZT FUNKTIONIERT ES:
-     price_per_minute: formData.value.eventType === 'lesson' ? 
-     sanitizeNumber(formData.value.price_per_minute) || 0 : 0,
-      
+      price_per_minute: formData.value.eventType === 'lesson' ?
+        sanitizeNumber(formData.value.price_per_minute) || 0 : 0,
       status: 'confirmed',
       is_paid: formData.value.eventType === 'lesson' ? false : true
     }
-
-    console.log('💾 Saving main appointment:', appointmentData)
-
+    
+    console.log('💾 Saving appointment with location data:', {
+      standard_location: appointmentLocationId,
+      google_place: googlePlaceId,
+      custom_name: customLocationName,
+      custom_address: customLocationAddress
+    })
+    
     // Haupt-Termin speichern
     let result
     if (props.mode === 'edit' && props.eventData?.id) {
@@ -1229,22 +1231,21 @@ const handleSave = async () => {
         .insert(appointmentData)
         .select()
     }
-
+    
     if (result.error) throw result.error
-
     const savedAppointment = result.data?.[0]
-    console.log('✅ Main appointment saved:', savedAppointment)
-
-    // Team-Termine erstellen (nur bei neuen Terminen und wenn Team eingeladen)
+    console.log('✅ Appointment saved with full location data:', savedAppointment)
+    
+    // Team-Termine erstellen
     if (props.mode !== 'edit' && invitedStaff.value.length > 0) {
       await createTeamAppointments(appointmentData, savedAppointment)
     }
-
+    
     // Erfolg
     emit('appointment-saved')
     emit('save-event', savedAppointment)
     emit('close')
-
+    
   } catch (error: any) {
     console.error('❌ Error saving appointment:', error)
     
@@ -1254,6 +1255,8 @@ const handleSave = async () => {
       } else {
         alert('❌ Pflichtfeld fehlt: Bitte überprüfen Sie alle Eingaben.')
       }
+    } else if (error.code === '22P02') {
+      alert('❌ Ungültige Daten: Bitte überprüfen Sie Ihre Eingaben.')
     } else {
       alert(`❌ Fehler beim Speichern: ${error.message || 'Unbekannter Fehler'}`)
     }
@@ -1653,6 +1656,18 @@ watch(() => formData.value.eventType, (newType) => {
     console.log('⚡ UI should update now')
   })
 })
+
+// ✅ Nur EINE kleine Verbesserung: Watcher als Backup
+watch(() => studentSearchQuery.value, () => {
+  filterStudents()
+}, { immediate: false })
+
+// ✅ Und initialization fix:
+watch(() => availableStudents.value, (newStudents) => {
+  if (newStudents.length > 0 && filteredStudents.value.length === 0) {
+    filteredStudents.value = newStudents
+  }
+}, { immediate: true })
 
 // 7. UPDATED FORM VALIDATION
 const isFormValid = computed(() => {

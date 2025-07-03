@@ -132,6 +132,29 @@ watch(calendarRef, () => {
 // Definiere refreshInterval außerhalb der Funktionen
 const refreshInterval = ref<number | null>(null)
 
+// HINZUFÜGEN: State für Evaluation Modal
+const showEvaluationModal = ref(false)
+const selectedAppointment = ref<any>(null)
+
+// HINZUFÜGEN: Event Handler für Pendenzen Modal
+const handleEvaluateLesson = (appointment: any) => {
+  console.log('🔥 Evaluating lesson:', appointment) // Debug
+  selectedAppointment.value = appointment
+  showEvaluationModal.value = true
+}
+
+const closeEvaluationModal = () => {
+  showEvaluationModal.value = false
+  selectedAppointment.value = null
+}
+
+const onEvaluationSaved = () => {
+  // Nach dem Speichern Pendenzen neu laden
+  closeEvaluationModal()
+  // Optional: Pendenzen-Count aktualisieren
+}
+
+
 onMounted(() => {
   // Auto-refresh alle 5 Minuten - Nur im Browser und wenn Profil existiert
   if (process.client) {
@@ -205,12 +228,30 @@ onUnmounted(() => {
       </button>   
       
       <button 
-        :class="buttonClasses" 
-        class="responsive"
         @click="showPendenzen = true"
+        :class="[
+          'px-4 py-2 rounded-lg font-medium transition-colors',
+          pendingCount > 0 
+            ? 'bg-red-600 text-white hover:bg-red-700' 
+            : 'bg-green-600 text-white hover:bg-green-700'
+        ]"
       >
-        ⏰ Offene ({{ pendingCount }})
+        ⏰ Pendenzen
+        <span :class="[
+          'ml-2 px-2 py-1 rounded-full text-xs font-medium',
+          pendingCount > 0 
+            ? 'bg-red-800 text-red-100' 
+            : 'bg-green-800 text-green-100'
+        ]">
+          {{ pendingCount }}
+        </span>
       </button>
+
+      <PendenzenModal
+        :is-open="showPendenzen"
+        @close="showPendenzen = false"
+        @evaluate-lesson="handleEvaluateLesson"
+      />
       
       <!-- Staff Settings nur für Staff/Admin -->
       <button 
@@ -248,10 +289,6 @@ onUnmounted(() => {
     v-if="showStaffSettings && currentUser" 
     :current-user="currentUser"
     @close="showStaffSettings = false"
-  />
-  <PendenzenModal 
-    :show="showPendenzen"
-    @close="showPendenzen = false"
   />
 </template>
 
