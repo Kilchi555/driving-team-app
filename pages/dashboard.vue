@@ -7,6 +7,7 @@ import ProfileSetup from '~/components/ProfileSetup.vue'
 import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { usePendingTasks } from '~/composables/usePendingTasks'
+import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
 
 interface CalendarApi {
   today(): void
@@ -16,10 +17,29 @@ interface CalendarApi {
   view: { currentStart: Date }
 }
 
-// GEÄNDERT: profileExists hinzugefügt
+// Composables
 const { currentUser, fetchCurrentUser, isLoading, userError, profileExists } = useCurrentUser()
-const { pendingCount, buttonClasses, fetchPendingTasks } = usePendingTasks()
 
+// WICHTIG: Hole das ganze Composable-Objekt für volle Reaktivität
+const pendingTasksComposable = usePendingTasks()
+const { 
+  pendingAppointments,
+  pendingCount,
+  buttonClasses,
+  buttonText,
+  fetchPendingTasks,
+  isLoading: isPendingLoading,
+  error: pendingError
+} = pendingTasksComposable
+
+const { 
+  updateOverdueAppointments, 
+  markAppointmentEvaluated,
+  isUpdating: isUpdatingStatus,
+  updateError: statusUpdateError 
+} = useAppointmentStatus()
+
+// Refs
 const calendarRef = ref<{ getApi(): CalendarApi } | null>(null)
 const showStaffSettings = ref(false)
 const showCustomers = ref(false)
@@ -27,29 +47,23 @@ const showPendenzen = ref(false)
 const isTodayActive = ref(false)
 const currentMonth = ref('')
 
-onMounted(async () => {
-  await fetchCurrentUser()
-  
-  // // NEU: Nur bei echten Auth-Fehlern redirecten
-  // if (userError.value && userError.value === 'Nicht eingeloggt') {
-  //   console.log('Redirect zu Login: Nicht authentifiziert')
-  //   await navigateTo('/')
-  //   return
-  // }
-
-  // Debug-Ausgaben
-  console.log('Debug - profileExists:', profileExists?.value)
-  console.log('Debug - userError:', userError.value)
-  console.log('Debug - currentUser:', currentUser.value)
-
-  // NEU: Pending Tasks nur laden wenn Profil existiert
-  if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
-    await fetchPendingTasks(currentUser.value.id)
-  }
-
-  updateTodayState()
-  updateCurrentMonth()
+// NEU: Lokale computed für bessere Reaktivität
+const pendenzenButtonClasses = computed(() => {
+  return buttonClasses.value
 })
+
+const pendenzenButtonText = computed(() => {
+  return buttonText.value
+})
+
+// Debug computed für bessere Nachverfolgung
+const debugInfo = computed(() => ({
+  userEmail: currentUser.value?.email || 'NULL',
+  profileExists: profileExists.value,
+  pendingCount: pendingCount.value,
+  isPendingLoading: isPendingLoading.value,
+  pendingError: pendingError.value
+}))
 
 // NEU: Funktion für nach Profilerstellung
 const handleProfileCreated = async () => {
@@ -58,7 +72,33 @@ const handleProfileCreated = async () => {
   
   // Nach erfolgreicher Profilerstellung Pending Tasks laden
   if (currentUser.value && ['staff', 'admin'].includes(currentUser.value.role)) {
+    console.log('🔄 Loading pending tasks after profile creation...')
     await fetchPendingTasks(currentUser.value.id)
+    console.log('✅ Pending tasks loaded, count:', pendingCount.value)
+  }
+}
+
+// NEU: Zentrale Funktion zum Aktualisieren der Pendenzen
+const refreshPendingData = async () => {
+  if (!currentUser.value || !['staff', 'admin'].includes(currentUser.value.role)) {
+    return
+  }
+
+  try {
+    console.log('🔄 Refreshing pending data...')
+    
+    // 1. Erst überfällige Termine updaten
+    const result = await updateOverdueAppointments()
+    if (result.updated > 0) {
+      console.log(`✅ Updated ${result.updated} appointments to 'completed'`)
+    }
+    
+    // 2. Dann Pending Tasks neu laden
+    await fetchPendingTasks(currentUser.value.id)
+    console.log('✅ Pending tasks refreshed, count:', pendingCount.value)
+    
+  } catch (err) {
+    console.error('❌ Error refreshing pending data:', err)
   }
 }
 
@@ -138,45 +178,63 @@ const selectedAppointment = ref<any>(null)
 
 // HINZUFÜGEN: Event Handler für Pendenzen Modal
 const handleEvaluateLesson = (appointment: any) => {
-  console.log('🔥 Evaluating lesson:', appointment) // Debug
+  console.log('🔥 Evaluating lesson:', appointment)
   selectedAppointment.value = appointment
   showEvaluationModal.value = true
 }
-
-const closeEvaluationModal = () => {
-  showEvaluationModal.value = false
-  selectedAppointment.value = null
+const onAppointmentChanged = async (event: { type: string, data: any }) => {
+  console.log('📅 Appointment changed:', event.type, event.data)
+  
+  // Bei jedem Termin-Change die Pendenzen aktualisieren
+  await refreshPendingData()
 }
 
-const onEvaluationSaved = () => {
-  // Nach dem Speichern Pendenzen neu laden
-  closeEvaluationModal()
-  // Optional: Pendenzen-Count aktualisieren
-}
+// NEU: Watch für pendingCount um Debugging zu verbessern
+watch(pendingCount, (newCount, oldCount) => {
+  console.log(`🔄 Pending count changed: ${oldCount} → ${newCount}`)
+}, { immediate: true })
 
+// onMounted
+onMounted(async () => {
+  console.log('🚀 Dashboard mounting...')
+  
+  await fetchCurrentUser()
+  
+  console.log('🔥 Current user after fetch:', currentUser.value)
+  console.log('Debug - profileExists:', profileExists?.value)
+  console.log('Debug - userError:', userError.value)
 
-onMounted(() => {
-  // Auto-refresh alle 5 Minuten - Nur im Browser und wenn Profil existiert
+  if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
+    // Initial load der Pending Data
+    await refreshPendingData()
+  }
+
+  updateTodayState()
+  updateCurrentMonth()
+
+  // AUTO-REFRESH ERWEITERT:
   if (process.client) {
+    console.log('🔄 Setting up auto-refresh interval...')
     refreshInterval.value = setInterval(async () => {
       if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
-        await fetchPendingTasks(currentUser.value.id)
+        console.log('🔄 Auto-refreshing pending data...')
+        await refreshPendingData()
       }
     }, 5 * 60 * 1000) as unknown as number
   }
 })
 
+// Cleanup on unmount
 onUnmounted(() => {
   if (refreshInterval.value) {
     clearInterval(refreshInterval.value)
-    refreshInterval.value = null
+    console.log('🧹 Cleaned up refresh interval')
   }
 })
-
 </script>
 
 <template>
-
+  
   <!-- Loading State -->
   <div v-if="isLoading" class="min-h-screen flex items-center justify-center">
     <div class="text-center">
@@ -206,8 +264,15 @@ onUnmounted(() => {
 
   <!-- Success State - Dashboard -->
   <div v-else-if="currentUser && profileExists" class="h-screen flex flex-col">
-    <!-- Header -->
+    <!-- NEU: Status Update Indicator -->
+    <div v-if="isUpdatingStatus" class="fixed top-4 right-4 bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg z-50">
+      🔄 Updating appointment status...
+    </div>
 
+    <!-- Error Indicator -->
+    <div v-if="statusUpdateError" class="fixed top-4 right-4 bg-red-500 text-white px-3 py-2 rounded-lg shadow-lg z-50">
+      ❌ {{ statusUpdateError }}
+    </div>
 
     <!-- Main Content -->
     <div class="flex-1 overflow-hidden">
@@ -215,6 +280,7 @@ onUnmounted(() => {
         ref="calendarRef" 
         :current-user="currentUser"
         @view-updated="onViewUpdate" 
+        @appointment-changed="onAppointmentChanged"
       />
     </div>
 
@@ -227,29 +293,25 @@ onUnmounted(() => {
         📋 Schüler
       </button>   
       
+      <!-- Pendenzen Button - VERBESSERT -->
       <button 
-        @click="showPendenzen = true"
-        :class="[
-          'px-4 py-2 rounded-lg font-medium transition-colors',
-          pendingCount > 0 
-            ? 'bg-red-600 text-white hover:bg-red-700' 
-            : 'bg-green-600 text-white hover:bg-green-700'
-        ]"
+        @click="() => { 
+          console.log('🔥 Opening pendenzen modal, current count:', pendingCount); 
+          showPendenzen = true; 
+        }"
+        :class="pendenzenButtonClasses"
       >
-        ⏰ Pendenzen
-        <span :class="[
-          'ml-2 px-2 py-1 rounded-full text-xs font-medium',
-          pendingCount > 0 
-            ? 'bg-red-800 text-red-100' 
-            : 'bg-green-800 text-green-100'
-        ]">
-          {{ pendingCount }}
-        </span>
+        {{ pendenzenButtonText }}
       </button>
 
+      <!-- Pendenzen Modal -->
       <PendenzenModal
         :is-open="showPendenzen"
-        @close="showPendenzen = false"
+        :current-user="currentUser"
+        @close="() => { 
+          console.log('🔥 Closing pendenzen modal'); 
+          showPendenzen = false; 
+        }"
         @evaluate-lesson="handleEvaluateLesson"
       />
       

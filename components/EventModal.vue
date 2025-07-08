@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2" @click="handleBackdropClick">
+  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
     <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] mb-12 overflow-y-auto" @click.stop>
       <!-- Header -->
       <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
@@ -16,183 +16,64 @@
       <!-- Content -->
       <div class="px-6 py-6 space-y-6">
         
-        <!-- 1. FAHRSCHÜLER AUSWAHL (Standard-Ansicht) -->
-        <div v-if="formData.eventType === 'lesson'" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div class="flex justify-between items-center mb-3">
-            <label class="block text-sm font-semibold text-gray-900">
-              🎓 Fahrschüler auswählen *
-            </label>
-            <button 
-              @click="switchToOtherEventType" 
-              class="text-xs text-blue-600 hover:text-blue-800 border-solid border-blue-500"
-            >
-              Andere Terminart
-            </button>
-          </div>
-          
-          <!-- Schüler Suche/Dropdown -->
-          <div class="relative">
-            <input
-              v-model="studentSearchQuery"
-              @input="filterStudents"
-              @focus="showStudentDropdown = true"
-              @blur="hideStudentDropdownDelayed"
-              type="text"
-              placeholder="Schüler suchen (Name, E-Mail oder Telefon)..."
-              autocomplete="off"
-              class="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            
-            <!-- Dropdown mit Schülern -->
-            <div v-if="showStudentDropdown && filteredStudents.length > 0" 
-                 class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-              <div 
-                v-for="student in filteredStudents" 
-                :key="student.id"
-                @mousedown="selectStudent(student)"
-                class="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-              >
-                <div class="font-semibold text-gray-900">{{ student.first_name }} {{ student.last_name }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Ausgewählter Schüler Anzeige -->
-          <div v-if="selectedStudent" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div class="flex justify-between items-start">
-              <div>
-                <div class="font-semibold text-green-800">
-                  ✅ {{ selectedStudent.first_name }} {{ selectedStudent.last_name }}
-                </div>
-                <div class="text-sm text-green-600">
-                  {{ selectedStudent.category }} • {{ selectedStudent.phone }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  Fahrlehrer: {{ getAssignedInstructorName(selectedStudent.assigned_staff_id) }}
-                </div>
-              </div>
-              <button @click="clearStudent()" class="text-red-500 hover:text-red-700">
-                ✕
-              </button>
-            </div>
-          </div>
-        </div>
+               <!-- 1. STUDENT SELECTOR (Neue Komponente) -->
+       <StudentSelector
+          v-if="eventType === 'lesson' && formData.eventType === 'lesson'"
+          ref="studentSelectorRef"
+          v-model="selectedStudent"
+          :current-user="currentUser"
+          :disabled="mode === 'view'"
+          @student-selected="onStudentSelected"
+          @student-cleared="onStudentCleared"
+          @switch-to-other="switchToOtherEventType"
+          :show-all-students="false"
+        />
 
         <!-- 2. TERMINART AUSWAHL (wenn gewechselt) -->
-        <div v-else class="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <div class="flex justify-between items-center mb-3">
-            <label class="block text-sm font-semibold text-gray-900">
-              📋 Terminart auswählen *
-            </label>
-            <button 
-              @click="backToStudentSelection" 
-              class="text-xs text-purple-600 hover:text-purple-800 underline"
-            >
-              ← Zurück zu Fahrlektion
-            </button>
-          </div>
-
-          <div v-if="availableEventTypes.length === 0" class="text-center py-4">
-            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mx-auto mb-2"></div>
-            <p class="text-sm text-gray-600">Terminarten werden geladen...</p>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-2 mb-4">
-            <button
-              v-for="eventType in availableEventTypes" :key="eventType.code"
-              @click="selectSpecialEventType(eventType)"
-              :class="[
-                'p-3 text-sm rounded border text-left',
-                formData.selectedSpecialType === eventType.code 
-                  ? 'bg-purple-600 text-white border-purple-600' 
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              ]"
-            >
-            {{ eventType.emoji }} {{ eventType.name }}
-            </button>
-          </div>
+         <EventTypeSelector
+          v-if="showEventTypeSelection || (props.eventType === 'staff_meeting' && !formData.selectedSpecialType)"
+          :selected-type="formData.selectedSpecialType"
+          @event-type-selected="handleEventTypeSelected"
+          @back-to-student="backToStudentSelection"
+        />
 
           <!-- Individueller Titel -->
-          <div v-if="formData.selectedSpecialType">
+          <div v-if="(formData.eventType === 'lesson' && selectedStudent) || (formData.eventType !== 'lesson' && formData.selectedSpecialType)">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              📝 Titel *
+              📝 Titel
             </label>
             <input
               v-model="formData.title"
               type="text"
-              class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              :placeholder="formData.selectedSpecialType === 'custom' ? 'Individueller Titel...' : getDefaultTitle()"
+              class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              :placeholder="getDefaultTitle()"
             />
           </div>
-        </div>
 
         <!-- 3. AUTOMATISCH GENERIERTE DATEN (basierend auf Schüler-Historie) -->
         <div v-if="selectedStudent && formData.eventType === 'lesson'" class="space-y-4">
-          
-          <!-- Titel (automatisch generiert) -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              📝 Titel *
-            </label>
-            <input
-              v-model="formData.title"
-              type="text"
-              class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="z.B. Sandra - Kategorie B"
-            />
-            <p class="text-xs text-gray-500 mt-1">
-              🤖 Automatisch generiert: {{ selectedStudent.first_name }} - {{ selectedStudent.category }}
-            </p>
-          </div>
 
-          <!-- Kategorie (basierend auf Schüler) -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              🚗 Kategorie *
-            </label>
-            <select 
+            <!-- Kategorie (basierend auf Schüler) -->
+            <div>
+            <CategorySelector
+              ref="categoryRef"
               v-model="formData.type"
-              @change="handleCategoryChange"
-              class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="">Kategorie wählen</option>
-              <option value="A">A - CHF 95/45min</option>
-              <option value="B">B - CHF 95/45min</option>
-              <option value="BE">BE - CHF 120/45min</option>
-              <option value="C">C - CHF 170/45min</option>
-              <option value="CE">CE - CHF 200/45min</option>
-              <option value="D">D - CHF 200/45min</option>
-              <option value="BPT">BPT - CHF 100/45min</option>
-              <option value="BOAT">BOAT - CHF 95/45min</option>
-            </select>
-            <p class="text-xs text-gray-500 mt-1">
-              🤖 Vorschlag: {{ selectedStudent.category }} (basierend auf Schüler-Profil)
-            </p>
-          </div>
+              :selected-user="selectedStudent"
+              :current-user="currentUser"
+              :current-user-role="currentUser?.role"
+              @category-selected="handleCategorySelected"
+              @price-changed="handlePriceChanged"
+              @durations-changed="handleDurationsChanged"
+            />
 
-          <!-- Dauer (intelligent vorgeschlagen) -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              ⏱️ Dauer
-            </label>
-            <div class="grid grid-cols-4 gap-2">
-              <button
-                v-for="duration in getRecommendedDurations()"
-                :key="duration.value"
-                @click="formData.duration_minutes = duration.value"
-                :class="[
-                  'p-2 text-sm rounded border',
-                  formData.duration_minutes === duration.value 
-                    ? 'bg-green-600 text-white border-green-600' 
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                ]"
-              >
-                {{ duration.label }}
-              </button>
-            </div>
-            <p class="text-xs text-gray-500 mt-1">
-              🤖 Empfehlung: {{ getLastLessonDuration() }}min (letzte Lektion)
-            </p>
+                <!-- DurationSelector -->
+              <DurationSelector
+                v-model="formData.duration_minutes"
+                :selected-category="currentSelectedCategory"
+                :current-user="currentUser"
+                :price-per-minute="formData.price_per_minute"
+                @duration-changed="handleDurationChanged"
+            />
           </div>
         </div>
 
@@ -203,7 +84,7 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                📅 Datum *
+                📅 Datum
               </label>
               <input 
                 v-model="formData.startDate"
@@ -214,7 +95,7 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                🕐 Startzeit *
+                🕐 Startzeit
               </label>
               <input 
                 v-model="formData.startTime"
@@ -225,7 +106,7 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                🕐 Endzeit *
+                🕐 Endzeit
               </label>
               <input 
                 v-model="formData.endTime"
@@ -233,9 +114,6 @@
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 required
               />
-              <p class="text-xs text-gray-500 mt-1">
-                🤖 Berechnet: {{ computedEndTime }} ({{ formData.duration_minutes }}min)
-              </p>
             </div>
           </div>
 
@@ -252,9 +130,9 @@
               <div class="flex items-center gap-3">
                 <span class="text-xl">👥</span>
                 <div>
-                  <h3 class="font-medium text-blue-900">Team-Einladungen</h3>
+                  <h3 class="font-medium text-blue-900">Team-Mitglieder einladen</h3>
                   <p class="text-sm text-blue-600">
-                    {{ invitedStaff.length > 0 ? `${invitedStaff.length} Mitarbeiter eingeladen` : 'Optional - Teammitglieder zum Termin einladen' }}
+                    {{ invitedStaff.length > 0 ? `${invitedStaff.length} Mitarbeiter eingeladen` : 'Optional' }}
                   </p>
                 </div>
               </div>
@@ -378,18 +256,34 @@
             <!-- Location Sektion -->
             <LocationSelector
               v-model="formData.location_id"
-              @locationSelected="onLocationSelected"
-              :required="true"
-              :standardLocations="availableLocations"
+              :selected-student-id="formData.user_id"
+              :selected-student-name="selectedStudent?.first_name || ''"
+              :current-staff-id="formData.staff_id"
+              @location-selected="onLocationSelected"
+              required
             />
 
           <!-- Preis Anzeige (nur bei Fahrlektionen) -->
-          <div v-if="formData.eventType === 'lesson' && parseFloat(totalPrice) > 0" class="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-green-800">Preis für diesen Termin:</span>
-              <span class="text-lg font-bold text-green-900">CHF {{ totalPrice }}</span>
-            </div>
-          </div>
+           <PriceDisplay
+            :event-type="formData.eventType"
+            :duration-minutes="formData.duration_minutes"
+            :price-per-minute="formData.price_per_minute"
+            :category-code="formData.type"
+            :category-info="selectedCategory"
+            :selectedDate="formData.startDate"   
+            :selectedTime="formData.startTime" 
+            :start-time="formData.startTime"  
+            :available-durations="availableDurations"
+            :is-paid="formData.is_paid"
+            :admin-fee="getAdminFeeForCategory()"
+            :appointment-number="appointmentNumber"
+            :show-admin-fee-by-default="false"
+            :discount="formData.discount || 0"
+            :discount-type="formData.discount_type || 'fixed'"
+            :discount-reason="formData.discount_reason || ''"
+            :allow-discount-edit="currentUser?.role === 'staff' || currentUser?.role === 'admin'"
+            @discount-changed="handleDiscountChanged"
+          />
 
           <!-- Notizen -->
           <div class="space-y-4">
@@ -409,8 +303,8 @@
 
         <!-- Fallback: Kein Schüler/Terminart ausgewählt -->
         <div v-if="formData.eventType === 'lesson' && !selectedStudent" class="text-center py-8 bg-gray-50 rounded-lg">
-          <div class="text-4xl mb-2">👆</div>
-          <p class="text-gray-600">Wählen Sie zuerst einen Schüler aus</p>
+          <div class="text-4xl mb-2 text-blue-600">↑</div>
+          <p class="text-blue-600">Wählen Sie zuerst einen Schüler aus</p>
           <p class="text-sm text-gray-500">Alle anderen Felder werden automatisch vorausgefüllt</p>
         </div>
 
@@ -468,6 +362,13 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import LocationSelector from './LocationSelector.vue'
+import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
+import { usePendingTasks } from '~/composables/usePendingTasks'
+import StudentSelector from './StudentSelector.vue'
+import EventTypeSelector from './EventTypeSelector.vue'
+import CategorySelector from '~/components/CategorySelector.vue'
+import DurationSelector from '~/components/DurationSelector.vue'
+import PriceDisplay from '~/components/PriceDisplay.vue'
 
 
 // 1. UPDATED INTERFACE
@@ -489,6 +390,10 @@ interface AppointmentData {
   status: string
   eventType: string 
   selectedSpecialType: string 
+  is_paid: boolean 
+  discount?: number
+  discount_type?: 'fixed' | 'fixed'
+  discount_reason?: string
 }
 
 interface Student {
@@ -500,13 +405,24 @@ interface Student {
   category: string
   assigned_staff_id: string
   preferred_location_id?: string
-
+  preferred_duration?: number 
 }
 
+// ✅ FIX: Location Interface erweitern (in types/index.ts oder oben in der Datei)
 interface Location {
   id: string
   name: string
   address: string
+  staff_id?: string  // ✅ Hinzufügen
+  latitude?: number
+  longitude?: number
+  google_place_id?: string
+  created_at?: string
+}
+
+// Oder falls du das Interface schon hast, erweitere es:
+interface ExtendedLocation extends Location {
+  staff_id?: string
 }
 
 interface Props {
@@ -514,6 +430,8 @@ interface Props {
   eventData: any
   mode: 'view' | 'edit' | 'create'
   currentUser?: any
+  eventType?: 'lesson' | 'staff_meeting'
+  
 }
 
 interface Staff {
@@ -524,16 +442,45 @@ interface Staff {
 }
 
 interface EventType {
-  code: string         
+  code: string
   name: string
   emoji: string
   description?: string
-  default_duration_minutes: number
+  default_duration_minutes?: number // ← OPTIONAL machen!
   default_color?: string
   auto_generate_title?: boolean
+  price_per_minute?: number
 }
 
-const props = defineProps<Props>()
+// ✅ FIX: Category Interface für Supabase Response
+interface CategoryResponse {
+  code: string
+  price_per_lesson: number
+  lesson_duration: number
+  name?: string
+  is_active?: boolean
+}
+
+interface SelectedLocation {
+  id?: string
+  name: string
+  address: string
+  place_id?: string
+  latitude?: number
+  longitude?: number
+  source: 'standard' | 'pickup' | 'google'
+}
+
+
+// Props mit Default-Werten:
+const props = withDefaults(defineProps<Props>(), {
+  isVisible: false,
+  mode: 'create',
+  eventData: null,
+  currentUser: null,
+  eventType: 'lesson' // ✅ Default: lesson
+})
+
 const emit = defineEmits<{
   close: []
   'save-event': [eventData: any]
@@ -547,11 +494,6 @@ const supabase = getSupabase()
 const isLoading = ref(false)
 const instructorNames = ref<Record<string, string>>({})
 const showTeamInvites = ref(false)
-const studentSearchQuery = ref('')
-const showStudentDropdown = ref(false)
-const selectedStudent = ref<Student | null>(null)
-const availableStudents = ref<Student[]>([])
-const filteredStudents = ref<Student[]>([])
 const availableLocations = ref<Location[]>([])
 const dummyUserId = ref<string | null>(null)
 const isDummyUserLoading = ref(false)
@@ -560,7 +502,312 @@ const availableStaff = ref<Staff[]>([])
 const invitedStaff = ref<string[]>([])
 const selectedEventType = ref('')  // Separate reactive var
 const currentEventTypeData = ref<EventType | null>(null)
+const modalJustOpened = ref(false)
+const modalError = ref<string | null>(null)
+const selectedLocation = ref<SelectedLocation | null>(null)
+const error = ref<string | null>(null) // Falls das fehlt
+const selectedStudent = ref<Student | null>(null)
+const studentSelectorRef = ref<any>(null)
+const selectedCategory = ref<any>(null)
+const availableDurations = ref<number[]>([45]) // Standard-Dauer
+const categoryRef = ref<any>(null)
+const appointmentNumber = ref<number>(1)
 
+const getAppointmentNumber = async (userId?: string) => {
+  const studentId = userId || formData.value.user_id
+  
+  // Falls Edit-Mode und Termin bereits existiert
+  if (props.mode === 'edit' || !studentId) {
+    return 1 // Vereinfacht für bestehende Termine
+  }
+  
+  try {
+    console.log('📊 Counting previous appointments for student:', studentId)
+    
+    // Zähle vorherige Termine dieses Schülers
+    const { count, error } = await supabase
+      .from('appointments')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', studentId)
+      .in('status', ['completed', 'confirmed'])
+    
+    if (error) throw error
+    
+    const nextAppointmentNumber = (count || 0) + 1
+    console.log(`📈 Found ${count || 0} previous appointments, this will be #${nextAppointmentNumber}`)
+    
+    return nextAppointmentNumber
+    
+  } catch (err) {
+    console.error('❌ Error counting appointments:', err)
+    return 1
+  }
+}
+
+const handleCategorySelected = (category: any) => {
+  console.log('🎯 EventModal - handleCategorySelected called with:', category)
+  
+  selectedCategory.value = category
+  if (category) {
+    formData.value.price_per_minute = category.price_per_lesson / 45
+    if (category.availableDurations?.length > 0) {
+      formData.value.duration_minutes = category.availableDurations[0]
+      calculateEndTime()
+      console.log('✅ Set duration from category:', category.availableDurations[0])
+    } else {
+      console.log('❌ No availableDurations in category:', category)
+    }
+  }
+}
+
+const handlePriceChanged = (pricePerMinute: number) => {
+    console.log('🎯 EventModal - handlePriceChanged CALLED with:', pricePerMinute)
+  formData.value.price_per_minute = pricePerMinute
+}
+
+const handleDurationsChanged = (durations: number[]) => {
+  console.log('🎯 EventModal - handleDurationsChanged called with:', durations)
+  console.log('🎯 Current formData.type:', formData.value.type)
+  
+  availableDurations.value = durations
+  
+  // Validierung: Wenn aktuelle Dauer nicht verfügbar, erste verfügbare wählen
+  if (durations.length > 0 && !durations.includes(formData.value.duration_minutes)) {
+    formData.value.duration_minutes = durations[0]
+    calculateEndTime()
+    console.log('✅ Set duration to:', durations[0])
+  } else if (durations.length === 0) {
+    console.log('❌ No durations received!')
+  }
+}
+
+// 4. ✅ Event Handler für Rabatt-Änderungen
+const handleDiscountChanged = (discount: number, discountType: string, reason: string) => {
+  console.log('🏷️ Discount changed:', { discount, discountType, reason })
+  
+  formData.value.discount = discount
+  formData.value.discount_type = discountType as 'fixed' | 'fixed'
+  formData.value.discount_reason = reason
+  
+  console.log('✅ Discount applied to formData')
+}
+
+const handleDurationChanged = (duration: number) => {
+  console.log('⏱️ Duration changed:', duration)
+  calculateEndTime()
+}
+
+const getAdminFeeForCategory = () => {
+  if (!selectedCategory.value) return 0
+  
+  const adminFees: Record<string, number> = {
+    'B': 120, 'A1': 0, 'A35kW': 0, 'A': 0, 'BE': 120,
+    'C1': 200, 'D1': 200, 'C': 200, 'CE': 250, 'D': 300,
+    'Motorboot': 120, 'BPT': 120
+  }
+  
+  return adminFees[selectedCategory.value.code] || 0
+}
+
+// ✅ HINZUFÜGEN falls nicht vorhanden:
+const showEventTypeSelection = computed(() => {
+  return formData.value.eventType === 'other'
+})
+
+// 3. EVENT HANDLERS FÜR STUDENTSELECTOR
+const onStudentSelected = async (student: Student) => {
+  console.log('🎯 Student selected via StudentSelector:', student.first_name)
+  
+  // selectedStudent wird automatisch durch v-model gesetzt
+  // Hier nur Auto-Fill Logik ausführen
+  await autoFillFromStudentDynamic(student)
+}
+
+const autoFillFromStudentDynamic = async (student: Student) => {
+  console.log('🤖 Auto-filling form dynamically for:', student.first_name)
+
+    // Im Edit/View Mode nur user_id setzen, kein Auto-fill
+  if (props.mode === 'edit' || props.mode === 'view') {
+    formData.value.user_id = student.id
+    console.log('✏️ Edit mode detected - skipping auto-fill')
+    return
+  }
+  
+  // Set category/type
+  formData.value.type = student.category
+  
+  // Set user and staff IDs
+  formData.value.user_id = student.id
+  formData.value.staff_id = student.assigned_staff_id || props.currentUser?.id || ''
+  
+  // Set price per minute
+  formData.value.price_per_minute = categoryPricing[student.category] || (95/45)
+  
+  // Set preferred duration
+  formData.value.duration_minutes = student.preferred_duration || 45
+  console.log('⏱️ Duration set to:', formData.value.duration_minutes, 'minutes')
+  
+  // Load last appointment duration (async)
+  try {
+    const lastDuration = await getLastAppointmentDuration(student.id)
+    formData.value.duration_minutes = lastDuration
+    console.log('⏱️ Updated duration from history:', lastDuration, 'minutes')
+  } catch (err) {
+    console.log('⚠️ Could not load last duration, using default')
+  }
+  
+  // Set preferred location
+  if (student.preferred_location_id) {
+    formData.value.location_id = student.preferred_location_id
+    console.log('📍 Using student preferred location')
+  } else if (availableLocations.value.length > 0) {
+    formData.value.location_id = availableLocations.value[0].id
+    console.log('📍 Using first available location')
+  }
+  
+  // Auto-generate title NACH location_id
+  const selectedLocation = availableLocations.value.find(loc => loc.id === formData.value.location_id)
+  const locationName = selectedLocation?.name || 'Ort unbekannt'
+  formData.value.title = `${student.first_name} • ${locationName}`
+  
+  // Endzeit automatisch berechnen
+  if (formData.value.startTime) {
+    formData.value.endTime = computedEndTime.value
+    console.log('🕐 End time calculated:', formData.value.endTime)
+  }
+  
+  console.log('✅ Auto-fill completed for:', student.first_name)
+}
+
+// EventModal.vue - Das bleibt hier:
+const handleEventTypeSelected = (eventType: EventType) => {
+  try {
+    console.log('📋 Processing selected event type:', eventType)
+    
+    // Formular-Daten sicher setzen
+    formData.value.selectedSpecialType = eventType.code
+    formData.value.duration_minutes = eventType.default_duration_minutes || 45
+    formData.value.duration_minutes = eventType.default_duration_minutes ?? 45
+
+    // ✅ Titel automatisch setzen bei auto_generate_title
+    if (eventType.auto_generate_title) {
+      formData.value.title = eventType.name || 'Neuer Termin'
+      console.log('📝 Title auto-generated:', formData.value.title)
+    } else if (!formData.value.title || formData.value.title.trim() === '') {
+      formData.value.title = eventType.name || 'Neuer Termin'
+    }
+    
+    // Endzeit SICHER berechnen
+    calculateEndTime()
+    
+  } catch (error) {
+    console.error('❌ Error in handleEventTypeSelected:', error)
+  }
+}
+
+// ✅ Korrigierte Version:
+const selectedEventTypeObject = computed(() => {
+  if (!formData.value.selectedSpecialType) return null
+  
+  // Fallback Event Type Object erstellen
+  return {
+    code: formData.value.selectedSpecialType,
+    name: getEventTypeName(formData.value.selectedSpecialType),
+    emoji: '📝'
+  }
+})
+
+// Helper Funktion für Event Type Namen
+const getEventTypeName = (code: string): string => {
+  switch (code) {
+    case 'meeting':
+      return 'Team-Meeting'
+    case 'course':
+      return 'Verkehrskunde'
+    case 'other':
+      return 'Sonstiger Termin'
+    default:
+      return code || 'Neuer Termin'
+  }
+}
+
+const getDefaultTitle = () => {
+  // Für normale Fahrlektionen
+  if (formData.value.eventType === 'lesson' && selectedStudent.value) {
+    const studentName = selectedStudent.value.first_name || 'Schüler'
+    return `${studentName}`
+  }
+  
+  // Für Special Event Types
+  if (formData.value.selectedSpecialType) {
+    return getEventTypeName(formData.value.selectedSpecialType)
+  }
+  
+  return 'Neuer Termin'
+}
+
+const calculateEndTime = () => {
+  if (formData.value.startTime && formData.value.duration_minutes) {
+    try {
+      // Validate and parse startTime
+      if (formData.value.startTime.includes(':')) {
+        const timeParts = formData.value.startTime.split(':')
+        if (timeParts.length === 2) {
+          const hours = parseInt(timeParts[0]) || 0
+          const minutes = parseInt(timeParts[1]) || 0
+
+          // Ensure hours and minutes are valid
+          if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+            const startDate = new Date();
+            startDate.setHours(hours, minutes, 0, 0); // Set time, keeping current date
+
+            const endDate = new Date(startDate.getTime() + (formData.value.duration_minutes * 60000));
+
+            const endHours = String(endDate.getHours()).padStart(2, '0');
+            const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+
+            formData.value.endTime = `${endHours}:${endMinutes}`;
+            console.log('⏰ End time calculated:', formData.value.endTime);
+          } else {
+            console.error('❌ Invalid startTime format or values. Hours must be 0-23 and minutes 0-59.');
+          }
+        } else {
+          console.error('❌ Invalid startTime format. Expected "HH:MM".');
+        }
+      } else {
+        console.error('❌ startTime is missing the ":" separator. Expected "HH:MM".');
+      }
+    } catch (timeError) {
+      console.error('❌ Error calculating end time:', timeError);
+    }
+  } else {
+    console.log('⚠️ startTime or duration_minutes are missing, cannot calculate end time.');
+  }
+};
+
+const backToStudentSelection = () => {
+  formData.value.eventType = 'lesson'
+  formData.value.selectedSpecialType = ''
+  formData.value.title = ''
+}
+
+const onStudentCleared = () => {
+  console.log('🗑️ Student cleared')
+  
+  // Reset form
+  formData.value.title = ''
+  formData.value.type = ''
+  formData.value.user_id = ''
+  formData.value.staff_id = ''
+  formData.value.location_id = ''
+  formData.value.price_per_minute = 0
+}
+
+const switchToOtherEventType = () => {
+  formData.value.eventType = 'other'
+  formData.value.selectedSpecialType = ''
+  formData.value.title = ''
+}
 
 const formData = ref<AppointmentData>({
   title: '',
@@ -576,76 +823,14 @@ const formData = ref<AppointmentData>({
   price_per_minute: 0,
   status: 'booked',
   eventType: 'lesson', 
-  selectedSpecialType: ''
+  selectedSpecialType: '',
+  is_paid: false,
+  discount: 0,
+  discount_type: 'fixed',
+  discount_reason: ''
 })
 
-const onLocationSelected = (location: any) => {
-  console.log('📍 Location selected:', location)
-  formData.value.location_id = location.id || location.place_id
-  // Weitere Verarbeitung falls nötig...
-}
 
-// 3. SPECIAL EVENT TYPES
-const availableEventTypes = ref<EventType[]>([])
-const isLoadingEventTypes = ref(false)
-
-const loadEventTypes = async () => {
-  isLoadingEventTypes.value = true
-  
-  try {
-    console.log('🔄 Loading event types from database...')
-    const { data, error } = await supabase
-      .from('event_types')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order')
-    
-    if (error) throw error
-    
-    availableEventTypes.value = (data || []) as EventType[]  // ✅ Type Assertion
-    
-    console.log('✅ Event types loaded:', {
-      count: availableEventTypes.value.length,
-      types: availableEventTypes.value.map((et: EventType) => `${et.emoji} ${et.name} (${et.default_duration_minutes}min)`)  // ✅ Type Assertion
-    })
-    
-  } catch (error) {
-    console.error('❌ Error loading event types:', error)
-    
-    // Fallback: Statische Event-Types falls DB-Abfrage fehlschlägt
-    availableEventTypes.value = [
-      {
-        code: 'meeting',
-        name: 'Besprechung',
-        emoji: '🤝',
-        description: 'Team-Meeting, Kundengespräch',
-        default_duration_minutes: 60,
-        default_color: '#019ee5'
-      },
-      {
-        code: 'break',
-        name: 'Pause',
-        emoji: '☕',
-        description: 'Mittagspause, Kaffeepause',
-        default_duration_minutes: 30,
-        default_color: '#62b22f'
-      },
-      {
-        code: 'other',
-        name: 'Sonstiges',
-        emoji: '📝',
-        description: 'Individueller Termin',
-        default_duration_minutes: 45,
-        default_color: '#666666'
-      }
-    ] as EventType[]  // ✅ Type Assertion
-    
-    console.log('🔄 Using fallback event types')
-    
-  } finally {
-    isLoadingEventTypes.value = false
-  }
-}
 
 // Hilfsfunktionen
 const getStaffName = (staffId: string) => {
@@ -663,19 +848,6 @@ const inviteAllStaff = () => {
   console.log('👥 All staff invited:', invitedStaff.value.length)
 }
 
-// Automatisch aufklappen falls bereits Einladungen vorhanden
-watch(() => invitedStaff.value.length, (newCount) => {
-  if (newCount > 0 && !showTeamInvites.value) {
-    showTeamInvites.value = true
-  }
-})
-
-// Hilfsfunktionen für Template (angepasst für DB)
-const getSelectedEventType = () => {
-  return availableEventTypes.value.find(et => et.code === formData.value.selectedSpecialType)
-}
-
-
 // Category pricing (aus der Projektdokumentation)
 const categoryPricing: Record<string, number> = {
   'A': 95/45,    // CHF 95 pro 45min = ~2.11 pro Minute
@@ -689,6 +861,24 @@ const categoryPricing: Record<string, number> = {
 }
 
 // 4. COMPUTED PROPERTIES
+
+// Neue computed property für selectedCategory
+const currentSelectedCategory = computed(() => {
+  // Falls CategorySelector eine selectedCategory hat, die verwenden
+  if (categoryRef.value?.selectedCategory) {
+    return categoryRef.value.selectedCategory
+  }
+  
+  // Fallback: Aus formData.type eine einfache Category-Struktur erstellen
+  if (formData.value.type) {
+    return { 
+      code: formData.value.type,
+      name: formData.value.type // Einfacher Fallback
+    }
+  }
+  
+  return null
+})
 
 const totalPrice = computed(() => {
   const pricePerMinute = categoryPricing[formData.value.type] || (95/45)
@@ -720,78 +910,6 @@ const showTeamInvitesSection = computed(() => {
   return !isLessonType.value && selectedEventType.value !== ''
 })
 
-// Methods
-
-const backToStudentSelection = () => {
-  formData.value.eventType = 'lesson'
-  formData.value.selectedSpecialType = ''
-  formData.value.title = ''
-}
-
-const selectSpecialEventType = (eventType: EventType) => {  // ✅ Typ ändern: any → EventType
-  try {
-    console.log('📋 Selecting event type:', eventType)
-    
-    // Sichere Checks
-    if (!eventType || !eventType.code) {
-      console.error('❌ Invalid event type:', eventType)
-      return
-    }
-    
-    // Formular-Daten sicher setzen
-    formData.value.selectedSpecialType = eventType.code
-    formData.value.duration_minutes = eventType.default_duration_minutes || 45
-    
-    // ✅ ÄNDERUNG: Titel IMMER automatisch setzen bei auto_generate_title
-    if (eventType.auto_generate_title) {
-      formData.value.title = eventType.name || 'Neuer Termin'
-      console.log('📝 Title auto-generated:', formData.value.title)
-    } else if (!formData.value.title || formData.value.title.trim() === '') {
-      // Nur bei manuellen Types und leerem Titel setzen
-      formData.value.title = eventType.name || 'Neuer Termin'
-    }
-    
-    // Endzeit SICHER berechnen
-    if (formData.value.startTime && formData.value.startTime.includes(':')) {
-      try {
-        const timeParts = formData.value.startTime.split(':')
-        if (timeParts.length === 2) {
-          const hours = parseInt(timeParts[0]) || 0
-          const minutes = parseInt(timeParts[1]) || 0
-          if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
-            const startDate = new Date()
-            startDate.setHours(hours, minutes, 0, 0)
-            const endDate = new Date(startDate.getTime() + (formData.value.duration_minutes * 60000))
-            const endHours = String(endDate.getHours()).padStart(2, '0')
-            const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
-            formData.value.endTime = `${endHours}:${endMinutes}`
-            console.log('⏰ End time calculated:', formData.value.endTime)
-          }
-        }
-      } catch (timeError) {
-        console.error('❌ Error calculating end time:', timeError)
-      }
-    }
-    
-    console.log('✅ Event type selected successfully:', {
-      code: eventType.code,
-      name: eventType.name,
-      duration: formData.value.duration_minutes,
-      title: formData.value.title
-    })
-    
-  } catch (error) {
-    console.error('❌ Error in selectSpecialEventType:', error)
-  }
-}
-
-
-
-const getDefaultTitle = () => {
-  const type = getSelectedEventType()
-  return type ? type.name : ''
-}
-
 const loadInstructors = async () => {
   try {
     console.log('🔓 Loading ALL instructors (RLS test)')
@@ -819,6 +937,7 @@ const loadInstructors = async () => {
     console.error('❌ Error loading instructors:', error)
   }
 }
+
 const loadLocations = async () => {
   try {
     const { data: locationsData, error } = await supabase
@@ -835,110 +954,14 @@ const loadLocations = async () => {
   }
 }
 
-const filterStudents = () => {
-  const query = studentSearchQuery.value.toLowerCase()
-  
-  if (!query) {
-    filteredStudents.value = availableStudents.value
-  } else {
-    filteredStudents.value = availableStudents.value.filter((student: any) => 
-      student.first_name?.toLowerCase().includes(query) ||
-      student.last_name?.toLowerCase().includes(query) ||
-      student.email?.toLowerCase().includes(query) ||
-      student.phone?.includes(query)
-    )
-  }
-  
-  showStudentDropdown.value = true
-}
-
-const selectStudent = (student: Student) => {
-  selectedStudent.value = student
-  studentSearchQuery.value = `${student.first_name} ${student.last_name}`
-  showStudentDropdown.value = false
-  
-  // Auto-fill based on student
-  autoFillFromStudent(student)
-}
-
-const clearStudent = () => {
-  selectedStudent.value = null
-  studentSearchQuery.value = ''
-  
-  // Reset form
-  formData.value.title = ''
-  formData.value.type = ''
-  formData.value.user_id = ''
-  formData.value.staff_id = ''
-  formData.value.location_id = ''
-  formData.value.price_per_minute = 0
-}
-
-const autoFillFromStudent = (student: Student) => {
-  // Set category/type
-  formData.value.type = student.category
-  
-  // Set user and staff IDs
-  formData.value.user_id = student.id
-  formData.value.staff_id = student.assigned_staff_id || props.currentUser?.id || ''
-  
-  // Set price per minute
-  formData.value.price_per_minute = categoryPricing[student.category] || (95/45)
-  
-  // Set default location (first available)
-  if (availableLocations.value.length > 0) {
-    formData.value.location_id = availableLocations.value[0].id
-  }
-  
-  // Auto-generate title NACH location_id
-  const selectedLocation = availableLocations.value.find(loc => loc.id === formData.value.location_id)
-  const locationName = selectedLocation?.name || 'Ort unbekannt'
-  formData.value.title = `${student.first_name}  ${locationName}`
-  
-  console.log('🤖 Auto-filled form for:', student.first_name)
-}
-
-const getRecommendedDurations = () => {
-  return [
-    { value: 45, label: '45min' },
-    { value: 60, label: '60min' },
-    { value: 90, label: '90min' },
-    { value: 135, label: '135min' }
-  ]
-}
-
-const getLastLessonDuration = () => {
-  // TODO: Fetch from appointment history
-  return 45 // Placeholder
-}
-
-const getMostUsedLocation = () => {
-  // TODO: Calculate from appointment history
-  return availableLocations.value[0]?.name || 'Kein Standort verfügbar'
-}
-
-const getAssignedInstructorName = (staffId: string) => {
-  if (staffId === props.currentUser?.id) return 'Sie'
-  return instructorNames.value[staffId] || 'Unbekannter Fahrlehrer'
-}
-
-const hideStudentDropdownDelayed = () => {
-  setTimeout(() => {
-    showStudentDropdown.value = false
-  }, 200)
-}
-
-const handleCategoryChange = () => {
+const handleCategoryPriceUpdate = () => {
   // Update price when category changes
   formData.value.price_per_minute = categoryPricing[formData.value.type] || (95/45)
-  
   // Update title
   if (selectedStudent.value) {
     formData.value.title = `${selectedStudent.value.first_name} - ${formData.value.type}`
   }
 }
-
-
 
 // Dummy-User laden (nur bei Bedarf)
 const loadDummyUser = async () => {
@@ -988,25 +1011,6 @@ const loadDummyUser = async () => {
   } finally {
     isDummyUserLoading.value = false
   }
-}
-
-// Funktion wird aufgerufen wenn User auf "Andere Terminart" klickt
-const switchToOtherEventType = async () => {
-  console.log('🔄 Switching to other event type...')
-  
-  // Erst Event-Types laden falls noch nicht vorhanden
-  if (availableEventTypes.value.length === 0) {
-    console.log('📋 Loading event types for other event selection...')
-    await loadEventTypes()
-  }
-  
-  // Dann auf "other" umschalten
-  formData.value.eventType = 'other'
-  
-  console.log('✅ Switched to other event type', {
-    availableTypes: availableEventTypes.value.length,
-    types: availableEventTypes.value.map((t: any) => t.name)
-  })
 }
 
 // EventModal.vue - Standard-Locations + Team-Einladungen
@@ -1106,164 +1110,237 @@ const createTeamAppointments = async (mainAppointmentData: any, savedMainAppoint
   }
 }
 
-// Erweiterte handleSave mit Team-Einladungen
+const onLocationSelected = (location: SelectedLocation) => {
+  console.log('📍 Location selected in EventModal:', location)
+  selectedLocation.value = location
+  
+  // Setze location_id nur wenn es eine echte UUID ist (nicht temp_)
+  if (location?.id && !location.id.startsWith('temp_')) {
+    formData.value.location_id = location.id
+    console.log('✅ Real location ID set:', location.id)
+  } else {
+    formData.value.location_id = '' // Leerer String statt null für TypeScript
+    console.log('⚠️ Temporary location, will save on appointment creation')
+  }
+}
+
+// EventModal.vue - Minimale Korrekturen für bestehenden Code
+  
+  const startDateTime = new Date(`${formData.value.startDate}T${formData.value.startTime}:00`)
+  const endDateTime = new Date(startDateTime.getTime() + (formData.value.duration_minutes * 60 * 1000))
+
 const handleSave = async () => {
-  if (!isFormValid.value) return
-  
-  isLoading.value = true
-  
   try {
-    // Zeit-Verarbeitung (Ihr bestehender Code)
-    const localStartDate = `${formData.value.startDate}T${formData.value.startTime}`
-    const localEndDate = `${formData.value.startDate}T${formData.value.endTime}`
-    const startDateTime = new Date(localStartDate)
-    const endDateTime = new Date(localEndDate)
-    const calculatedDuration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000)
+    isLoading.value = true
+    console.log('🔥 Starting save...', { eventType: formData.value.eventType })
     
-    // Helper-Funktionen
-    const sanitizeUuid = (value: string | null | undefined): string | null => {
-      if (!value || value.trim() === '') {
-        return null
-      }
-      return value
+    // 1. VALIDATION
+    if (!isFormValid.value) {
+      throw new Error('Bitte füllen Sie alle Pflichtfelder aus')
     }
-    
-    const sanitizeNumber = (value: any): number | null => {
-      if (value === null || value === undefined || value === '') {
-        return null
-      }
-      const num = parseFloat(value)
-      return isNaN(num) ? null : num
-    }
-    
-    // User-ID bestimmen
-    let appointmentUserId: string
-    if (formData.value.eventType === 'lesson' && selectedStudent.value?.id) {
-      appointmentUserId = selectedStudent.value.id
+
+    // 2. ROUTING: Appointments vs Staff Meetings
+    if (formData.value.eventType === 'lesson') {
+      await saveAppointment() // Deine bestehende Logik
     } else {
-      appointmentUserId = await loadDummyUser()
+      await saveStaffMeeting() // Neue Funktion
     }
     
-    // ✅ LOCATION-DATEN RICHTIG VERARBEITEN
-    let appointmentLocationId: string | null = null
-    let googlePlaceId: string | null = null
-    let customLocationName: string | null = null
-    let customLocationAddress: string | null = null
+  } catch (err: unknown) {
+    console.error('❌ Error saving:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Unbekannter Fehler'
+    error.value = errorMessage
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 1. GEMEINSAME handleLocation Funktion
+const handleLocationLogic = async () => {
+  let finalLocationId = formData.value.location_id
+  
+  // Prüfe ob wir eine temporäre Location haben die gespeichert werden muss
+  if (!finalLocationId && selectedLocation.value) {
+    console.log('🔄 Processing custom location:', selectedLocation.value)
     
-    if (formData.value.location_id) {
-      // Prüfen ob es ein Objekt vom LocationSelector ist
-      if (typeof formData.value.location_id === 'object') {
-        const locationObj = formData.value.location_id as any
-        
-        if (locationObj.source === 'standard') {
-          // Standard Location
-          appointmentLocationId = locationObj.id
-          console.log('📍 Using standard location:', locationObj.name)
-        } else if (locationObj.source === 'google') {
-          // Google Place
-          googlePlaceId = locationObj.place_id
-          customLocationName = locationObj.name
-          customLocationAddress = locationObj.address
-          appointmentLocationId = null // Keine Standard-Location
-          console.log('📍 Using Google Place:', locationObj.name, locationObj.address)
-        }
-      } 
-      // String-basierte Location ID
-      else if (typeof formData.value.location_id === 'string') {
-        if (formData.value.location_id.includes('Eh') && formData.value.location_id.length > 50) {
-          // Google Place ID als String
-          googlePlaceId = formData.value.location_id
-          customLocationName = 'Google Place'
-          customLocationAddress = 'Unbekannte Adresse'
-          appointmentLocationId = null
-          console.log('📍 Using Google Place ID string:', formData.value.location_id)
-        } else if (formData.value.location_id.trim() !== '') {
-          // Standard UUID
-          appointmentLocationId = formData.value.location_id
-        }
+    // Falls es eine Google Places Location ist, speichere sie erst
+    if (selectedLocation.value.source === 'google' || selectedLocation.value.id?.startsWith('temp_')) {
+      
+      // Für Staff Meetings: staff_id verwenden statt user_id
+      const locationUserId = formData.value.eventType === 'lesson' 
+        ? formData.value.user_id 
+        : null // Staff meetings brauchen keine user_id für locations
+      
+      if (formData.value.eventType === 'lesson' && !locationUserId) {
+        throw new Error('Schüler muss ausgewählt sein für individuellen Treffpunkt')
       }
+      
+      // Speichere neue Location
+      const { data: savedLocation, error: locationError } = await supabase
+        .from('locations')
+        .insert({
+          location_type: formData.value.eventType === 'lesson' ? 'pickup' : 'custom',
+          user_id: locationUserId,
+          staff_id: formData.value.eventType === 'lesson' ? null : formData.value.staff_id,
+          name: formData.value.eventType === 'lesson' 
+            ? `${selectedStudent.value?.first_name || 'Schüler'} - ${selectedLocation.value.name}`
+            : selectedLocation.value.name,
+          address: selectedLocation.value.address,
+          latitude: selectedLocation.value.latitude || null,
+          longitude: selectedLocation.value.longitude || null,
+          google_place_id: selectedLocation.value.place_id || null,
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (locationError) {
+        console.error('❌ Error saving location:', locationError)
+        throw new Error(`Fehler beim Speichern des Standorts: ${locationError.message}`)
+      }
+
+      finalLocationId = savedLocation.id
+      console.log('✅ Location saved with ID:', finalLocationId)
     }
+  }
+
+  // Validate final location
+  if (!finalLocationId) {
+    throw new Error('Standort muss ausgewählt werden')
+  }
+
+  return finalLocationId
+}
+
+// 3. NEUE FUNKTION für Staff Meetings
+const saveStaffMeeting = async () => {
+  const finalLocationId = await handleLocationLogic()
+
+  // Staff Meeting Data
+  const meetingData = {
+    title: formData.value.title.trim(),
+    description: formData.value.description?.trim() || '',
+    start_time: `${formData.value.startDate}T${formData.value.startTime}:00`,
+    end_time: `${formData.value.startDate}T${computedEndTime.value}:00`,
+    duration_minutes: Number(formData.value.duration_minutes),
+    staff_id: formData.value.staff_id,
+    location_id: finalLocationId,
+    event_type_code: formData.value.selectedSpecialType,
+    status: formData.value.status || 'confirmed'
+  }
+
+  console.log('📝 Staff meeting data to save:', meetingData)
+
+  // Save to staff_meetings table
+  let result
+  if (props.mode === 'edit' && props.eventData?.id) {
+    result = await supabase
+      .from('staff_meetings')
+      .update(meetingData)
+      .eq('id', props.eventData.id)
+      .select()
+      .single()
+  } else {
+    result = await supabase
+      .from('staff_meetings')
+      .insert(meetingData)
+      .select()
+      .single()
+  }
+
+  if (result.error) {
+    throw new Error(`Datenbank-Fehler: ${result.error.message}`)
+  }
+
+  emit('save-event', result.data)
+  emit('close')
+  console.log('🎉 Staff meeting saved successfully!')
+}
+
+// 2. Save Appointment (Fahrstunden)
+const saveAppointment = async () => {
+  try {
+    isLoading.value = true
+    console.log('🔥 Starting appointment save...')
     
-    // Fallback: Default Location wenn gar nichts gesetzt
-    if (!appointmentLocationId && !googlePlaceId) {
-      appointmentLocationId = await loadDefaultLocation()
-      console.log('📍 Using default location fallback')
-    }
-    
-    // ✅ ERWEITERTE APPOINTMENT-DATEN MIT GOOGLE PLACES
+    const finalLocationId = await handleLocationLogic()
+
+    // 4. PREPARE APPOINTMENT DATA - korrigierte Typen
     const appointmentData = {
-      title: formData.value.title || 'Neuer Termin',
-      description: formData.value.description || '',
-      type: formData.value.type || (formData.value.selectedSpecialType || 'other'),
-      user_id: appointmentUserId,
-      staff_id: props.currentUser?.id,
-      location_id: appointmentLocationId,              // ✅ Standard Location UUID oder null
-      google_place_id: googlePlaceId,                  // ✅ Google Place ID
-      custom_location_name: customLocationName,        // ✅ Google Place Name
-      custom_location_address: customLocationAddress,  // ✅ Google Place Address
-      start_time: startDateTime.toISOString(),
-      end_time: endDateTime.toISOString(),
-      duration_minutes: calculatedDuration,
-      price_per_minute: formData.value.eventType === 'lesson' ?
-        sanitizeNumber(formData.value.price_per_minute) || 0 : 0,
-      status: 'confirmed',
-      is_paid: formData.value.eventType === 'lesson' ? false : true
+      title: formData.value.title.trim(),
+      description: formData.value.description?.trim() || '',
+      start_time: `${formData.value.startDate}T${formData.value.startTime}:00`,
+      end_time: `${formData.value.startDate}T${computedEndTime.value}:00`,
+      duration_minutes: Number(formData.value.duration_minutes), // String zu Number
+      user_id: formData.value.user_id,
+      staff_id: formData.value.staff_id,
+      location_id: finalLocationId,
+      price_per_minute: Number(formData.value.price_per_minute) || 0, // String zu Number
+      type: formData.value.type || 'lesson',
+      status: formData.value.status || 'confirmed',
+      is_paid: false,
+      discount: formData.value.discount || 0,
+      discount_type: formData.value.discount_type || 'fixed',
+      discount_reason: formData.value.discount_reason || null
     }
-    
-    console.log('💾 Saving appointment with location data:', {
-      standard_location: appointmentLocationId,
-      google_place: googlePlaceId,
-      custom_name: customLocationName,
-      custom_address: customLocationAddress
-    })
-    
-    // Haupt-Termin speichern
+
+    console.log('📝 Appointment data to save:', appointmentData)
+
+    // 5. SAVE OR UPDATE APPOINTMENT
     let result
     if (props.mode === 'edit' && props.eventData?.id) {
-      result = await supabase
+      // UPDATE
+      const { data, error } = await supabase
         .from('appointments')
         .update(appointmentData)
         .eq('id', props.eventData.id)
         .select()
+        .single()
+
+      result = { data, error }
+      console.log('🔄 Updated appointment:', data?.id)
     } else {
-      result = await supabase
+      // CREATE  
+      const { data, error } = await supabase
         .from('appointments')
         .insert(appointmentData)
         .select()
+        .single()
+
+      result = { data, error }
+      console.log('✅ Created appointment:', data?.id)
     }
-    
-    if (result.error) throw result.error
-    const savedAppointment = result.data?.[0]
-    console.log('✅ Appointment saved with full location data:', savedAppointment)
-    
-    // Team-Termine erstellen
-    if (props.mode !== 'edit' && invitedStaff.value.length > 0) {
-      await createTeamAppointments(appointmentData, savedAppointment)
+
+    if (result.error) {
+      console.error('❌ Supabase error:', result.error)
+      throw new Error(`Datenbank-Fehler: ${result.error.message}`)
     }
-    
-    // Erfolg
-    emit('appointment-saved')
-    emit('save-event', savedAppointment)
+
+    console.log('🚨 EMIT save-event:', result.data)
+
+    // 6. SUCCESS - verwende deine bestehenden emit-Namen
+    emit('save-event', result.data) // Das ist richtig laut deinen defineEmits
     emit('close')
     
-  } catch (error: any) {
-    console.error('❌ Error saving appointment:', error)
+    console.log('🎉 Appointment saved successfully!')
+
+  } catch (err: unknown) {
+    console.error('❌ Error saving appointment:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Unbekannter Fehler'
     
-    if (error.code === '23502') {
-      if (error.message.includes('location_id')) {
-        alert('❌ Standort-Fehler: Bitte wählen Sie einen Standort aus.')
-      } else {
-        alert('❌ Pflichtfeld fehlt: Bitte überprüfen Sie alle Eingaben.')
-      }
-    } else if (error.code === '22P02') {
-      alert('❌ Ungültige Daten: Bitte überprüfen Sie Ihre Eingaben.')
+    // Verwende bestehende error ref (die du schon hast)
+    if (typeof error !== 'undefined') {
+      error.value = errorMessage
     } else {
-      alert(`❌ Fehler beim Speichern: ${error.message || 'Unbekannter Fehler'}`)
+      // Fallback falls error ref nicht existiert
+      modalError.value = errorMessage
     }
   } finally {
     isLoading.value = false
   }
 }
+
+
 
 const handleDelete = async () => {
   if (!confirm(`Termin "${formData.value.title}" wirklich löschen?`)) return
@@ -1271,6 +1348,15 @@ const handleDelete = async () => {
   isLoading.value = true
   
   try {
+    // 🆕 VORHER: Termin-Daten für Pendenzenmodal speichern
+    const deletedAppointmentEnd = new Date(props.eventData?.end || props.eventData?.endStr)
+    const now = new Date()
+    const wasPastAppointment = deletedAppointmentEnd < now
+    
+    console.log('🗑️ Deleting appointment:', {
+      end: deletedAppointmentEnd.toISOString(),
+      wasPast: wasPastAppointment
+    })
     const { error } = await supabase
       .from('appointments')
       .delete()
@@ -1279,7 +1365,26 @@ const handleDelete = async () => {
     if (error) throw error
     
     console.log('✅ Appointment deleted')
+
+        if (wasPastAppointment) {
+      console.log('📅 Deleted past appointment - triggering immediate refresh')
+      
+      const { updateOverdueAppointments } = useAppointmentStatus()
+      const { fetchPendingTasks } = usePendingTasks()
+      
+      // Status updaten (falls andere Termine betroffen)
+      await updateOverdueAppointments()
+      
+      // Pendenzen neu laden
+      if (props.currentUser?.id) {
+        await fetchPendingTasks(props.currentUser.id)
+      }
+      
+      console.log('✅ Immediate refresh after delete completed')
+    }
     
+    console.log('🚨 EMIT delete-event:', props.eventData)
+
     // HIER IST DER FIX: emit delete-event VOR close
     emit('delete-event', props.eventData)
     emit('appointment-saved') 
@@ -1293,47 +1398,42 @@ const handleDelete = async () => {
   }
 }
 
-const handleBackdropClick = () => {
-  emit('close')
-}
 
-const getGoogleMapsUrl = () => {
-  const selectedLocation = availableLocations.value.find(loc => loc.id === formData.value.location_id)
-  const locationName = selectedLocation?.name || selectedLocation?.address || ''
-  return `https://maps.google.com/maps?q=${encodeURIComponent(locationName)}`
-}
-
-
-// EventModal.vue - Automatische Termintyp-Erkennung
-
-// In der onMounted oder watch-Funktion (Edit-Mode):
+// ====================================
+// KOMBINIERTE ONMOUNTED FUNKTION
+// ====================================
 onMounted(async () => {
   console.log('📅 EventModal mounted')
   
   try {
     console.log('🔄 Loading basic data...')
     
-    
+    // Basis-Daten laden
     if (typeof loadInstructors === 'function') {
       await loadInstructors()
     }
-    
     if (typeof loadLocations === 'function') {
       await loadLocations()
     }
     
     // Team-Mitglieder laden
-    await loadAvailableStaff()
+    if (typeof loadAvailableStaff === 'function') {
+      await loadAvailableStaff()
+    }
+    
+    // Google Maps für LocationSelector initialisieren
+    if (typeof window !== 'undefined' && window.google) {
+      console.log('🗺️ Google Maps available, will be initialized by LocationSelector')
+    }
     
     console.log('✅ All data loaded')
     
     // Termintyp-Erkennung für Edit-Mode
     if (props.mode === 'edit' && props.eventData) {
       console.log('📝 Edit mode: Auto-detecting event type')
-      
-      const appointmentType = props.eventData.extendedProps?.appointment_type || 
-                             props.eventData.extendedProps?.original_type ||
-                             props.eventData.extendedProps?.category
+      const appointmentType = props.eventData.extendedProps?.appointment_type ||
+                            props.eventData.extendedProps?.original_type ||
+                            props.eventData.extendedProps?.category
       
       console.log('🔍 Detected appointment type:', appointmentType)
       
@@ -1341,9 +1441,20 @@ onMounted(async () => {
         formData.value.eventType = 'other'
         formData.value.selectedSpecialType = appointmentType
         formData.value.title = props.eventData.title || ''
-        
         console.log('✅ Switched to "other" event type for:', appointmentType)
       }
+      
+      // Locations für Edit-Mode: Falls ein Student bereits ausgewählt ist, 
+      // seine Pickup-Locations laden (wird vom LocationSelector-Watcher gemacht)
+      if (formData.value.user_id) {
+        console.log('👤 Edit mode: Student already selected, LocationSelector will load pickup locations')
+      }
+    }
+    
+    // CREATE-Mode Initialisierung
+    if (props.mode === 'create') {
+      console.log('🆕 Create mode: Ready for user input')
+      // LocationSelector wird automatisch Standard-Locations laden
     }
     
     console.log('✅ EventModal fully initialized')
@@ -1353,321 +1464,443 @@ onMounted(async () => {
   }
 })
 
-// Initialize data when modal opens
-// EventModal.vue - Bestehenden watch erweitern
-watch(() => selectedEventType.value, (newType) => {
-  console.log('👀 Watching event type change:', newType)
-  nextTick(() => {
-    console.log('⚡ UI should update now - isLessonType:', isLessonType.value)
-  })
-})
+// ====================================
+// 2. DYNAMISCHE DURATION-FUNKTION
+// ====================================
+const getLastAppointmentDuration = async (studentId: string): Promise<number> => {
+  try {
+    console.log('⏱️ Loading last appointment duration for:', studentId)
+    
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('duration_minutes, end_time, title')
+      .eq('user_id', studentId)
+      .eq('status', 'completed')
+      .order('end_time', { ascending: false })
+      .limit(1)
+      .single()
+    
+    if (error || !data?.duration_minutes) {
+      console.log('📋 No previous appointments, using default 45min')
+      return 45
+    }
+    
+    console.log('✅ Last appointment duration:', data.duration_minutes, 'min')
+    return data.duration_minutes
+  } catch (err) {
+    console.log('❌ Error loading last appointment:', err)
+    return 45
+  }
+}
 
+// ====================================
+// EVENTMODAL WATCHERS - Nach StudentSelector Integration
+// ====================================
+
+// 1. MODAL LIFECYCLE WATCHER
 watch(() => props.isVisible, async (isVisible) => {
+  console.log('👀 Modal visibility changed to:', isVisible)
+  
   if (isVisible) {
-    // Event-Types IMMER laden (nicht nur bei Other)
-    console.log('🔄 Loading event types at modal open...')
-    await loadEventTypes()
+    modalError.value = null
+    modalJustOpened.value = true
+    console.log('🔄 Modal opening - starting initialization...')
     
-    // Studenten laden
     try {
-      console.log('🔄 Loading students explicitly...')
+      // Basis-Daten laden (StudentSelector lädt eigene Students)
+      await Promise.all([
+        loadLocations(),
+        loadInstructors(),
+        loadAvailableStaff()
+      ])
       
-      const { data: studentsData, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'client')
-        .eq('is_active', true)
-        .order('first_name')
+      console.log('✅ All base data loaded')
+      modalJustOpened.value = false
       
-      if (error) throw error
+      if (!props.isVisible) {
+        console.log('❌ Modal was closed during data loading - aborting')
+        return
+      }
       
-      availableStudents.value = studentsData || []
-      console.log('✅ Students loaded explicitly:', availableStudents.value.length)
+      // Mode-basierte Verarbeitung
+      if (props.eventData && (props.mode === 'edit' || props.mode === 'view')) {
+        console.log('📝 Processing EDIT/VIEW mode...')
+        await handleEditMode()
+      } else {
+        console.log('📅 Processing CREATE mode...')
+        await handleCreateMode()
+      }
       
-    } catch (error) {
-      console.error('❌ Error loading students:', error)
+      console.log('✅ Modal initialization completed')
+      
+    } catch (error: unknown) {
+      console.error('❌ Error during modal initialization:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Laden der Modal-Daten'
+      modalError.value = errorMessage
     }
     
-    // Rest der Lade-Funktionen...
-    await Promise.all([loadLocations(), loadInstructors()])
+  } else {
+    // Modal wird geschlossen - State zurücksetzen
+    console.log('❌ Modal closed - resetting state')
+    selectedStudent.value = null
+    selectedLocation.value = null
+    invitedStaff.value = []
+    showTeamInvites.value = false
     
-    if (typeof loadAvailableStaff === 'function') {
-      await loadAvailableStaff()
+    // Form zurücksetzen
+    formData.value = {
+      title: '',
+      description: '',
+      type: '',
+      startDate: '',
+      startTime: '',
+      endTime: '',
+      duration_minutes: 45,
+      user_id: '',
+      staff_id: '',
+      location_id: '',
+      price_per_minute: 0,
+      status: 'booked',
+      eventType: 'lesson',
+      selectedSpecialType: '',
+      is_paid: false,
+      discount: 0,
+      discount_type: 'fixed',
+      discount_reason: ''
+
     }
+  }
+})
+
+// 2. TITLE GENERATION WATCHER
+watch([
+  () => selectedStudent.value,
+  () => formData.value.location_id,
+  () => formData.value.eventType,
+  () => formData.value.selectedSpecialType,
+  () => formData.value.type
+], ([currentStudent, locationId, eventType, specialType, category]) => {
+
+    // Schutz für Edit-Mode - kein Auto-Title-Generation
+  if (props.mode === 'edit' || props.mode === 'view') {
+    console.log(`📝 ${props.mode} mode detected - skipping auto-title generation`)
+    return
+  }
+  
+  if (eventType === 'lesson' && currentStudent) {
+    // FAHRLEKTION: Student + Ort + Kategorie
+    const selectedLocation = availableLocations.value.find(loc => loc.id === locationId)
+    const locationName = selectedLocation?.name || ''
+    const currentCategory = category || currentStudent.category || ''
     
-    // Load event data if editing
-    if (props.eventData && props.mode !== 'create') {
-      const appointment = props.eventData
-      
-      // Termintyp-Erkennung
-      const appointmentType = appointment.extendedProps?.appointment_type || 
-                             appointment.extendedProps?.original_type ||
-                             appointment.extendedProps?.category ||
-                             appointment.type ||
-                             appointment.extendedProps?.type
-      
-      console.log('🔍 Detected appointment type:', appointmentType)
-      
-      let eventType = 'lesson'
-      let selectedSpecialType = ''
-      
-      const otherEventTypes = [
-        'meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other',
-        'office', 'bürozeit', 'pause', 'schulung', 'wartung'
-      ]
-      
-      if (appointmentType && otherEventTypes.includes(appointmentType.toLowerCase())) {
-        eventType = 'other'
-        selectedSpecialType = appointmentType
-        console.log('✅ OTHER event type:', appointmentType)
-      } else {
-        console.log('✅ LESSON event type for:', appointmentType)
-      }
-      
-      // Schüler-Auswahl für Fahrlektionen
-      if (eventType === 'lesson') {
-        const userId = appointment.user_id || appointment.extendedProps?.user_id
-        
-        console.log('🔍 STUDENT LOADING (after explicit load):', {
-          userId,
-          availableStudents_length: availableStudents.value?.length || 0,
-          allStudentIds: availableStudents.value?.map(s => s.id) || []
-        })
-        
-        if (userId && availableStudents.value?.length > 0) {
-          const student = availableStudents.value.find(s => s.id === userId)
-          
-          if (student && typeof selectStudent === 'function') {
-            selectStudent(student)
-            console.log('👨‍🎓 Student selected successfully:', student.first_name, student.last_name)
-          } else {
-            console.log('❌ Student not found after explicit load:', {
-              searchingFor: userId,
-              availableIds: availableStudents.value.map(s => s.id)
-            })
-          }
-        } else {
-          console.log('❌ Missing data for student selection:', {
-            userId,
-            hasStudents: availableStudents.value?.length > 0
-          })
-        }
-      }
-      
-      // Zeit-Verarbeitung
-      let startDate, startTime
-      
-      if (appointment.start_time) {
-        const startDateTime = new Date(appointment.start_time)
-        startDate = `${startDateTime.getFullYear()}-${String(startDateTime.getMonth() + 1).padStart(2, '0')}-${String(startDateTime.getDate()).padStart(2, '0')}`
-        startTime = `${String(startDateTime.getHours()).padStart(2, '0')}:${String(startDateTime.getMinutes()).padStart(2, '0')}`
-      } 
-      else if (appointment.start) {
-        const startDateTime = new Date(appointment.start)
-        startDate = `${startDateTime.getFullYear()}-${String(startDateTime.getMonth() + 1).padStart(2, '0')}-${String(startDateTime.getDate()).padStart(2, '0')}`
-        startTime = `${String(startDateTime.getHours()).padStart(2, '0')}:${String(startDateTime.getMinutes()).padStart(2, '0')}`
-      } else {
-        const now = new Date()
-        startDate = now.toISOString().split('T')[0]
-        startTime = now.toTimeString().slice(0, 5)
-      }
-      
-      // Form-Daten setzen
-      formData.value = {
-        title: appointment.title || '',
-        description: appointment.description || appointment.extendedProps?.staff_note || '',
-        type: appointment.type || appointment.extendedProps?.category || '',
-        startDate: startDate,
-        startTime: startTime,
-        endTime: '',
-        duration_minutes: appointment.duration_minutes || appointment.extendedProps?.duration_minutes || 45,
-        user_id: appointment.user_id || appointment.extendedProps?.user_id || '',
-        staff_id: appointment.staff_id || appointment.extendedProps?.staff_id || '',
-        location_id: appointment.location_id || appointment.extendedProps?.location_id || '',
-        price_per_minute: appointment.price_per_minute || appointment.extendedProps?.price_per_minute || 0,
-        status: appointment.status || appointment.extendedProps?.status || 'booked',
-        eventType: eventType,
-        selectedSpecialType: selectedSpecialType
-      }
-      
-      console.log('📝 Form data set:', {
-        eventType: formData.value.eventType,
-        selectedSpecialType: formData.value.selectedSpecialType,
-        title: formData.value.title,
-        user_id: formData.value.user_id
-      })
-      
-      // Endzeit berechnen
-      if (appointment.end_time) {
-        const endDateTime = new Date(appointment.end_time)
-        const endHours = String(endDateTime.getHours()).padStart(2, '0')
-        const endMinutes = String(endDateTime.getMinutes()).padStart(2, '0')
-        formData.value.endTime = `${endHours}:${endMinutes}`
-        
-        console.log('📝 Set endTime from DB:', {
-          end_time: appointment.end_time,
-          endTime: formData.value.endTime
-        })
-      } else if (appointment.end) {
-        const endDateTime = new Date(appointment.end)
-        const endHours = String(endDateTime.getHours()).padStart(2, '0')
-        const endMinutes = String(endDateTime.getMinutes()).padStart(2, '0')
-        formData.value.endTime = `${endHours}:${endMinutes}`
-        
-        console.log('📝 Set endTime from event.end:', {
-          end: appointment.end,
-          endTime: formData.value.endTime
-        })
-      } else if (formData.value.startTime && formData.value.duration_minutes) {
-        const [hours, minutes] = formData.value.startTime.split(':').map(Number)
-        const startDate = new Date()
-        startDate.setHours(hours, minutes, 0, 0)
-        const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
-        
-        const endHours = String(endDate.getHours()).padStart(2, '0')
-        const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
-        formData.value.endTime = `${endHours}:${endMinutes}`
-        
-        console.log('📝 Calculated endTime from duration:', {
-          startTime: formData.value.startTime,
-          duration: formData.value.duration_minutes,
-          endTime: formData.value.endTime
-        })
-      }
-      
-      console.log('📝 Editing appointment completed:', {
-        original: appointment.title,
-        eventType: formData.value.eventType,
-        hasStudent: !!selectedStudent.value
-      })
-      
+    if (locationName && currentCategory) {
+      formData.value.title = `${currentStudent.first_name} • ${locationName} (${currentCategory})`
+    } else if (locationName) {
+      formData.value.title = `${currentStudent.first_name} • ${locationName}`
+    } else if (currentCategory) {
+      formData.value.title = `${currentStudent.first_name} - ${currentCategory}`
     } else {
-      // New event - use data from calendar click
-      let startDate, startTime
-      
-      if (props.eventData?.parsedDate && props.eventData?.parsedTime) {
-        startDate = props.eventData.parsedDate
-        startTime = props.eventData.parsedTime
-        
-        console.log('📅 Creating new appointment from click (using pre-parsed local date/time):', {
-          originalEventData: props.eventData,
-          parsedDate: startDate,
-          parsedTime: startTime,
-        })
-      } 
-      else if (props.eventData?.start) {
-        const clickedDateTime = new Date(props.eventData.start)
-        
-        startDate = `${clickedDateTime.getFullYear()}-${String(clickedDateTime.getMonth() + 1).padStart(2, '0')}-${String(clickedDateTime.getDate()).padStart(2, '0')}`
-        startTime = `${String(clickedDateTime.getHours()).padStart(2, '0')}:${String(clickedDateTime.getMinutes()).padStart(2, '0')}`
-        
-        console.log('📅 Creating new appointment from click (converting ISO start to local):', {
-          originalStart: props.eventData.start,
-          parsedDate: startDate,
-          parsedTime: startTime,
-          clickedDateTime: clickedDateTime.toLocaleString('de-CH')
-        })
-      } else {
-        const now = new Date()
-        startDate = now.toISOString().split('T')[0]
-        startTime = now.toTimeString().slice(0, 5)
-        
-        console.log('⚠️ No start time provided, using current time:', {
-          startDate,
-          startTime
-        })
-      }
-      
-      // Reset für neue Termine
-      selectedStudent.value = null
-      studentSearchQuery.value = ''
-      
-      formData.value = {
-        title: '',
-        description: '',
-        type: '',
-        startDate: startDate,
-        startTime: startTime,
-        endTime: '',
-        duration_minutes: 45,
-        user_id: '',
-        staff_id: props.currentUser?.id || '',
-        location_id: '',
-        price_per_minute: 0,
-        status: 'booked',
-        eventType: 'lesson',
-        selectedSpecialType: ''
-      }
-      
-      console.log('📅 Reset form for new appointment')
+      formData.value.title = `${currentStudent.first_name}`
     }
-  }
-})
-
-// ✅ NEU: Für Event Type Title Updates
-watch(() => formData.value.selectedSpecialType, (newType) => {
-  if (newType && formData.value.eventType !== 'lesson') {
-    const eventType = availableEventTypes.value.find(et => et.code === newType)
-    if (eventType && eventType.auto_generate_title) {
-      formData.value.title = eventType.name
-    }
-  }
-})
-
-// ✅ NEU: Für Student Title Updates  
-watch(() => selectedStudent.value, (newStudent) => {
-  if (newStudent && formData.value.eventType === 'lesson') {
-    formData.value.title = `${newStudent.first_name} - ${formData.value.type || newStudent.category || 'B'}`
-  }
-})
-
-// ✅ NEU: Für Category Title Updates
-watch(() => formData.value.type, (newType) => {
-  if (selectedStudent.value && formData.value.eventType === 'lesson' && newType) {
-    formData.value.title = `${selectedStudent.value.first_name} - ${newType}`
-  }
-})
-
-// Fügen Sie das zu den anderen Watchern hinzu (nach dem endTime Watcher):
-watch(() => formData.value.location_id, () => {
-  // Nur bei Fahrlektionen und wenn ein Schüler ausgewählt ist
-  if (formData.value.eventType === 'lesson' && selectedStudent.value) {
-    const selectedLocation = availableLocations.value.find(loc => loc.id === formData.value.location_id)
-    const locationName = selectedLocation?.name || 'Ort unbekannt'
-    formData.value.title = `${selectedStudent.value.first_name} • ${locationName}`
-  }
-})
-
-watch([() => formData.value.startTime, () => formData.value.duration_minutes], () => {
-  formData.value.endTime = computedEndTime.value
-})
-
-watch([() => formData.value.startTime, () => formData.value.duration_minutes], () => {
-  // Nur automatisch setzen wenn Endzeit noch leer ist ODER wenn es eine Fahrlektion ist
-  if (!formData.value.endTime || formData.value.eventType === 'lesson') {
-    formData.value.endTime = computedEndTime.value
-  }
-})
-
-// Watch für Event Type Changes
-watch(() => formData.value.eventType, (newType) => {
-  console.log('👀 Event type changed to:', newType)
-  nextTick(() => {
-    console.log('⚡ UI should update now')
-  })
-})
-
-// ✅ Nur EINE kleine Verbesserung: Watcher als Backup
-watch(() => studentSearchQuery.value, () => {
-  filterStudents()
-}, { immediate: false })
-
-// ✅ Und initialization fix:
-watch(() => availableStudents.value, (newStudents) => {
-  if (newStudents.length > 0 && filteredStudents.value.length === 0) {
-    filteredStudents.value = newStudents
+    
+    console.log('✏️ Title generated:', formData.value.title)
   }
 }, { immediate: true })
+
+// 3. ZEIT-BERECHNUNG WATCHER
+watch([() => formData.value.startTime, () => formData.value.duration_minutes], () => {
+  if (formData.value.startTime && formData.value.duration_minutes) {
+    formData.value.endTime = computedEndTime.value
+  }
+}, { immediate: true })
+
+// 4. EVENT-TYPE-CHANGES WATCHER
+watch(() => formData.value.eventType, (newType) => {
+  console.log('👀 Event type changed to:', newType)
+  
+  // Form-Reset bei Typ-Wechsel
+  if (newType !== 'lesson') {
+    formData.value.user_id = ''
+    formData.value.type = ''
+    selectedStudent.value = null
+  }
+}, { immediate: false })
+
+// 5. LOCATION DEBUGGING WATCHER
+watch(() => formData.value.location_id, (newVal, oldVal) => {
+  console.log('🔄 location_id changed:', oldVal, '→', newVal)
+})
+
+watch(() => selectedLocation.value, (newVal, oldVal) => {
+  console.log('🔄 selectedLocation changed:', oldVal?.name, '→', newVal?.name)
+})
+
+// 6. STUDENT AUTO-FILL WATCHER (für user_id changes)
+watch(() => formData.value.user_id, async (newUserId) => {
+  // Schutz für Edit-Mode - kein Auto-Fill
+  if (props.mode === 'edit' || props.mode === 'view') {
+    console.log(`📝 ${props.mode} mode detected - skipping auto-fill`)
+    return
+  }
+  
+  // Nur für CREATE mode und lesson events
+  if (newUserId && formData.value.eventType === 'lesson') {
+    // Student ist bereits durch selectedStudent.value verfügbar
+    // Diese Logik wurde in onStudentSelected() Event Handler verschoben
+    console.log('🎯 User ID changed in CREATE mode:', newUserId)
+    
+    // ✅ NEU: Appointment Number für Preis-Kalkulation laden
+    try {
+      console.log('🔢 Loading appointment number for pricing...')
+      appointmentNumber.value = await getAppointmentNumber(newUserId)
+      console.log('✅ Appointment number loaded:', appointmentNumber.value)
+    } catch (err) {
+      console.error('❌ Error loading appointment number:', err)
+      appointmentNumber.value = 1 // Fallback
+    }
+  } else if (!newUserId) {
+    // ✅ NEU: Reset appointment number wenn kein Student ausgewählt
+    appointmentNumber.value = 1
+    console.log('🔄 Reset appointment number to 1')
+  }
+}, { immediate: false })
+
+// Watcher hinzufügen
+watch(() => formData.value.duration_minutes, calculateEndTime)
+
+// Im EventModal - Watch für formData.type
+// Watch für formData.type - aber nur wenn CategorySelector bereit ist
+watch(() => formData.value.type, async (newType) => {
+  if (newType && categoryRef.value) {
+    console.log('👀 Category type changed to:', newType)
+    
+    // Warte bis CategorySelector vollständig geladen ist
+    await nextTick()
+    
+    // Prüfe ob availableCategoriesForUser verfügbar ist
+    if (categoryRef.value.availableCategoriesForUser) {
+      const selectedCat = categoryRef.value.availableCategoriesForUser.find((cat: any) => cat.code === newType)
+      if (selectedCat) {
+        console.log('🔧 Manual trigger for:', selectedCat.code, selectedCat.availableDurations)
+        handleCategorySelected(selectedCat)
+        handleDurationsChanged(selectedCat.availableDurations)
+      }
+    } else {
+      console.log('⚠️ CategorySelector not ready yet, will retry...')
+      // Retry in 100ms
+      setTimeout(() => {
+        const selectedCat = categoryRef.value?.availableCategoriesForUser?.find((cat: any) => cat.code === newType)
+        if (selectedCat) {
+          console.log('🔧 Delayed trigger for:', selectedCat.code)
+          handleCategorySelected(selectedCat)
+          handleDurationsChanged(selectedCat.availableDurations)
+        }
+      }, 100)
+    }
+  }
+}, { immediate: true })
+
+// Im EventModal - CategorySelector Load Detection
+watch(() => categoryRef.value?.staffCategoryDurations?.length, (newLength) => {
+  console.log('🎯 Watch triggered! Length:', newLength, 'Type:', formData.value.type)
+  if (newLength > 0 && formData.value.type) {
+    console.log('🎯 CategorySelector loaded, triggering for:', formData.value.type)
+    const selectedCat = categoryRef.value.availableCategoriesForUser?.find((cat: any) => cat.code === formData.value.type)
+    if (selectedCat) {
+      console.log('🔧 Post-load trigger:', selectedCat)
+      handleCategorySelected(selectedCat)
+      handleDurationsChanged(selectedCat.availableDurations)
+    } else {
+      console.log('❌ Category not found in availableCategoriesForUser')
+    }
+  }
+})
+
+// Im EventModal - Debug Watch hinzufügen
+watch(() => categoryRef.value, (newRef) => {
+  if (newRef) {
+    console.log('📊 CategorySelector ref available!')
+    console.log('📊 Available properties:', Object.keys(newRef))
+    console.log('📊 staffCategoryDurations:', newRef.staffCategoryDurations)
+    console.log('📊 availableCategoriesForUser:', newRef.availableCategoriesForUser)
+  }
+}, { immediate: true })
+
+// ====================================
+// HILFSFUNKTIONEN FÜR MODAL-MODES
+// ====================================
+
+const handleEditMode = async () => {
+  const appointment = props.eventData
+  console.log('📝 handleEditMode - Raw appointment data:', appointment)
+  
+  // Event-Type Detection
+  const appointmentType = appointment.extendedProps?.appointment_type || 
+                         appointment.extendedProps?.original_type ||
+                         appointment.type ||
+                         'lesson'
+  
+  const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
+  const isOtherEvent = appointmentType && otherEventTypes.includes(appointmentType.toLowerCase())
+  
+  console.log('🔍 Event type detection:', { appointmentType, isOtherEvent })
+  
+  // Zeit-Verarbeitung
+  const startDateTime = new Date(appointment.start_time || appointment.start)
+  const endDateTime = appointment.end_time || appointment.end ? new Date(appointment.end_time || appointment.end) : null
+  
+  const startDate = startDateTime.toISOString().split('T')[0]
+  const startTime = startDateTime.toTimeString().slice(0, 5)
+  const endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : ''
+  
+  // Duration berechnen
+  let duration = appointment.duration_minutes || appointment.extendedProps?.duration_minutes
+  if (!duration && endDateTime) {
+    duration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60))
+  }
+  duration = duration || 45
+  
+  // Form-Daten setzen
+  const newFormData = {
+    title: appointment.title || '',
+    description: appointment.description || appointment.extendedProps?.description || '',
+    type: appointment.type || appointment.extendedProps?.category || '',
+    startDate: startDate,
+    startTime: startTime,
+    endTime: endTime,
+    duration_minutes: duration,
+    user_id: appointment.user_id || appointment.extendedProps?.user_id || '',
+    staff_id: appointment.staff_id || appointment.extendedProps?.staff_id || props.currentUser?.id || '',
+    location_id: appointment.location_id || appointment.extendedProps?.location_id || '',
+    price_per_minute: appointment.price_per_minute || appointment.extendedProps?.price_per_minute || 0,
+    status: appointment.status || appointment.extendedProps?.status || 'confirmed',
+    eventType: isOtherEvent ? 'other' : 'lesson',
+    selectedSpecialType: isOtherEvent ? appointmentType : '',
+    is_paid: appointment.is_paid || false 
+
+  }
+  
+  console.log('📋 Setting form data:', newFormData)
+  formData.value = newFormData
+  
+  // Schüler für Edit-Mode setzen (über StudentSelector Ref)
+  if (newFormData.user_id && newFormData.eventType === 'lesson') {
+    await selectStudentForEditMode(newFormData.user_id)
+  }
+  
+  console.log('✅ handleEditMode completed')
+
+  setTimeout(() => {
+    if (formData.value.type && props.currentUser?.id) {
+      loadCategoryDurations(formData.value.type, props.currentUser.id)
+    }
+  }, 1000)
+}
+
+const loadCategoryDurations = async (categoryCode: string, staffId: string) => {
+  console.log('🔄 Loading durations for category:', categoryCode, 'staff:', staffId)
+  
+  try {
+    const supabase = getSupabase()
+    
+    // Direkte Abfrage der staff_category_durations
+    const { data: durationsData, error } = await supabase
+      .from('staff_category_durations')
+      .select('duration_minutes')
+      .eq('staff_id', staffId)
+      .eq('category_code', categoryCode)
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+
+    if (error) throw error
+
+    const durations = durationsData?.map(d => d.duration_minutes) || []
+    console.log('✅ Loaded durations from DB:', durations)
+    
+    if (durations.length > 0) {
+      availableDurations.value = durations
+      formData.value.duration_minutes = durations[0]
+      calculateEndTime()
+      console.log('🎯 Set duration to:', durations[0])
+    } else {
+      console.log('⚠️ No durations found for', categoryCode)
+    }
+
+  } catch (err) {
+    console.error('❌ Error loading category durations:', err)
+  }
+}
+
+
+const handleCreateMode = async () => {
+  // Zeit aus Calendar-Click oder jetzt
+  let startDate, startTime
+  
+  if (props.eventData?.parsedDate && props.eventData?.parsedTime) {
+    startDate = props.eventData.parsedDate
+    startTime = props.eventData.parsedTime
+  } else if (props.eventData?.start) {
+    const clickedDateTime = new Date(props.eventData.start)
+    startDate = clickedDateTime.toISOString().split('T')[0]
+    startTime = clickedDateTime.toTimeString().slice(0, 5)
+  } else {
+    const now = new Date()
+    startDate = now.toISOString().split('T')[0]
+    startTime = now.toTimeString().slice(0, 5)
+  }
+  
+  // Reset für neue Termine
+  selectedStudent.value = null
+  
+  formData.value = {
+    title: '',
+    description: '',
+    type: '',
+    startDate: startDate,
+    startTime: startTime,
+    endTime: '',
+    duration_minutes: 45,
+    user_id: '',
+    staff_id: props.currentUser?.id || '',
+    location_id: '',
+    price_per_minute: 0,
+    status: 'booked',
+    eventType: 'lesson',
+    selectedSpecialType: '',
+    is_paid: false,
+    discount: 0,
+    discount_type: 'fixed',
+    discount_reason: ''
+
+  }
+  
+  console.log('📅 Create mode ready')
+}
+
+const selectStudentForEditMode = async (userId: string) => {
+  console.log('📝 Selecting student for edit mode:', userId)
+  
+  // ✅ ERWEITERT: Lade Studenten mit spezifischer ID für Edit-Modus
+  if (studentSelectorRef.value) {
+    // 1. Erst Studenten laden (inkl. der spezifischen ID)
+    if (studentSelectorRef.value.loadStudents) {
+      await studentSelectorRef.value.loadStudents(userId)
+    }
+    
+    // 2. Dann Student auswählen
+    if (studentSelectorRef.value.selectStudentById) {
+      const student = await studentSelectorRef.value.selectStudentById(userId)
+      if (student) {
+        selectedStudent.value = student
+        console.log('✅ Student selected for edit mode:', student.first_name)
+      }
+    }
+  } else {
+    console.warn('❌ StudentSelector ref not available for edit mode')
+  }
+}
+
+
 
 // 7. UPDATED FORM VALIDATION
 const isFormValid = computed(() => {

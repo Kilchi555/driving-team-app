@@ -5,10 +5,11 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { CalendarOptions } from '@fullcalendar/core'
 import dayGridPlugin from '@fullcalendar/daygrid'
-import deLocale from '@fullcalendar/core/locales/de'
 import EventModal from './EventModal.vue'
 import { getSupabase } from '~/utils/supabase'
 import ConfirmationDialog from './ConfirmationDialog.vue'
+import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
+
 
 // Neue refs für Confirmation Dialog
 const showConfirmation = ref(false)
@@ -61,6 +62,8 @@ const handleCancelAction = () => {
   pendingAction.value = null
 }
 
+const { updateOverdueAppointments } = useAppointmentStatus()
+
 
 const calendar = ref()
 const supabase = getSupabase()
@@ -106,13 +109,92 @@ type CalendarEvent = {
 const calendarEvents = ref<CalendarEvent[]>([])
 const isLoadingEvents = ref(false)
 
-const emit = defineEmits(['view-updated'])
+const emit = defineEmits(['view-updated', 'appointment-changed'])
 
-// CalendarComponent.vue - loadAppointments korrigieren
+const loadStaffMeetings = async () => {
+  console.log('🔄 Loading staff meetings...')
+  try {
+    const supabase = getSupabase()
+    let query = supabase
+      .from('staff_meetings')
+      .select(`
+        *,
+        staff:staff_id(first_name, last_name),
+        location:location_id(name, address)
+      `)
+      .eq('staff_id', props.currentUser?.id) // Nur eigene Meetings
+      .order('start_time')
 
-// CalendarComponent.vue - Erweiterte Abfrage für Team-Einladungen
+    const { data: meetings, error } = await query
 
+    console.log('📊 Raw staff meetings from DB:', meetings?.length || 0)
+    if (error) throw error
+
+    // Convert zu Calendar Events Format
+    const convertedMeetings = (meetings || []).map((meeting) => ({
+      id: meeting.id,
+      title: meeting.title || 'Staff Meeting',
+      start: meeting.start_time,
+      end: meeting.end_time,
+      allDay: false,
+      extendedProps: {
+        location: meeting.location?.name || 'Kein Ort',
+        description: meeting.description || '',
+        category: meeting.event_type_code,
+        staff_id: meeting.staff_id,
+        location_id: meeting.location_id,
+        duration_minutes: meeting.duration_minutes,
+        status: meeting.status,
+        // Markiere als Staff Meeting
+        isStaffMeeting: true,
+        eventType: 'staff_meeting'
+      }
+    }))
+
+    console.log('✅ Staff meetings loaded:', convertedMeetings.length)
+    return convertedMeetings
+
+  } catch (error) {
+    console.error('❌ Error loading staff meetings:', error)
+    return []
+  }
+}
+
+// Kombiniere beide Datenquellen in loadAppointments
 const loadAppointments = async () => {
+  isLoadingEvents.value = true
+  try {
+    console.log('🔄 Loading all calendar events...')
+    
+    // Parallel laden
+    const [appointments, staffMeetings] = await Promise.all([
+      loadRegularAppointments(), // Deine bestehende Logik umbenennen
+      loadStaffMeetings()
+    ])
+
+    // Kombinieren
+    const allEvents = [...appointments, ...staffMeetings]
+    calendarEvents.value = allEvents
+
+    console.log('✅ Final calendar summary:', {
+      appointments: appointments.length,
+      staffMeetings: staffMeetings.length,
+      total: allEvents.length
+    })
+
+    if (calendar.value?.getApi) {
+      const calendarApi = calendar.value.getApi()
+      calendarApi.refetchEvents()
+    }
+
+  } catch (error) {
+    console.error('❌ Error loading calendar events:', error)
+  } finally {
+    isLoadingEvents.value = false
+  }
+}
+
+const loadRegularAppointments = async () => {
   isLoadingEvents.value = true
   try {
     console.log('🔄 Loading appointments from Supabase...')
@@ -162,8 +244,8 @@ const loadAppointments = async () => {
       const event = {
         id: apt.id,
         title: apt.title || `${apt.user?.first_name || 'Unbekannt'} - ${apt.type || 'Termin'}`,
-        start: apt.start_time,
-        end: apt.end_time,
+        start: new Date(apt.start_time).toISOString(), // Explizit als Date parsen und zurück zu ISO
+        end: new Date(apt.end_time).toISOString(),
         allDay: false,
         extendedProps: {
           location: apt.location?.name || 'Kein Ort',
@@ -187,18 +269,18 @@ const loadAppointments = async () => {
         }
       }
       
-      console.log(`✅ Converted event:`, {
-        id: event.id,
-        title: event.title,
-        type: apt.type,
-        isTeamInvite,
-        staff_id: apt.staff_id
+      console.log('🔍 TIME COMPARISON:', {
+        dbStartTime: apt.start_time,
+        eventStartTime: event.start,
+        parsedDate: new Date(apt.start_time),
+        parsedISOString: new Date(apt.start_time).toISOString()
       })
       
       return event
     })
     
     calendarEvents.value = convertedEvents
+    
     
     console.log('✅ Final calendar summary:', {
       totalEvents: convertedEvents.length,
@@ -208,14 +290,18 @@ const loadAppointments = async () => {
       others: convertedEvents.filter(e => !['lesson', 'team_invite'].includes(e.extendedProps.appointment_type)).length
     })
     
+    
     if (calendar.value?.getApi) {
       const calendarApi = calendar.value.getApi()
       calendarApi.refetchEvents()
       console.log('🔄 Calendar events refetched')
     }
+    return convertedEvents 
+
     
   } catch (error) {
     console.error('❌ Error loading appointments:', error)
+    return [] 
   } finally {
     isLoadingEvents.value = false
   }
@@ -243,12 +329,23 @@ const handleEventClick = (clickInfo: any) => {
 const handleSaveEvent = async (eventData: CalendarEvent) => {
   console.log('💾 Event saved, refreshing calendar...')
   await loadAppointments()
+  await loadStaffMeetings()
+  
+  // 🆕 Event nach oben emittieren
+  emit('appointment-changed', { type: 'saved', data: eventData })
+  
   isModalVisible.value = false
 }
 
 const handleDeleteEvent = async (eventData: CalendarEvent) => {
-  console.log('🗑️ Event deleted, refreshing calendar...') 
-    await loadAppointments()
+  console.log('🗑 Event deleted, refreshing calendar...')
+  await loadAppointments()
+  await loadStaffMeetings()
+
+  
+  // 🆕 Event nach oben emittieren  
+  emit('appointment-changed', { type: 'deleted', data: eventData })
+  
   isModalVisible.value = false
 }
 
@@ -289,6 +386,8 @@ const updateModalFieldsIfOpen = (event: any) => {
 
 const eventModalRef = ref()
 const isUpdating = ref(false)
+const modalEventType = ref<'lesson' | 'staff_meeting'>('lesson')
+
 
 
 // Überarbeitete handleEventDrop mit schönem Dialog
@@ -336,6 +435,7 @@ const handleEventDrop = async (dropInfo: any) => {
       console.log('🔄 Reloading calendar events...')
         isUpdating.value = true
         await loadAppointments()
+        await loadStaffMeetings()
         isUpdating.value = false
 
       
@@ -422,6 +522,7 @@ const handleEventResize = async (resizeInfo: any) => {
       }
       
       await loadAppointments()
+      await loadStaffMeetings()
       
     } catch (err: any) {
       console.error('❌ Error resizing appointment:', err)
@@ -469,38 +570,49 @@ showConfirmDialog({
 
   resizeInfo.revert()
 }
-const calendarOptions = ref<CalendarOptions>({
-  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-  initialView: 'timeGridWeek',
-  locale: 'delocale',
-  timeZone: 'local',
-  allDaySlot: false,
-  slotMinTime: '05:00:00',
-  slotMaxTime: '23:00:00',
-  firstDay: 1,
-  displayEventTime: false,
-  forceEventDuration: true, 
-  selectable: true,
-  editable: true,
-  events: calendarEvents.value,
-  eventDrop: handleEventDrop,
-  eventResize: handleEventResize,
-// Klick auf leeren Zeitslot
-  dateClick: (arg) => {
-  const clickedDate = arg.date
-  const endDate = new Date(clickedDate.getTime() + 45 * 60000)
 
-  isModalVisible.value = true
-  modalMode.value = 'create'
-  modalEventData.value = {
-    title: '',
-    start: clickedDate.toISOString(),
-    end: endDate.toISOString(),
-    allDay: arg.allDay,
-    extendedProps: {
-      location: '',
-      staff_note: '',
-      client_note: ''
+  const calendarOptions = ref<CalendarOptions>({
+    plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+    initialView: 'timeGridWeek',
+    locale: 'delocale',
+    timeZone: 'UTC',
+    allDaySlot: false,
+    slotMinTime: '05:00:00',
+    slotMaxTime: '23:00:00',
+    firstDay: 1,
+    displayEventTime: true,
+    forceEventDuration: true, 
+    selectable: true,
+    editable: true,
+    events: calendarEvents.value,
+    eventDrop: handleEventDrop,
+    eventResize: handleEventResize,
+  // Klick auf leeren Zeitslot
+    dateClick: (arg) => {
+        console.log('🔍 CLICKED TIME:', {
+    clickedDate: arg.date,
+    clickedISO: arg.date.toISOString(),
+    clickedUTC: arg.date.toISOString()
+  })
+  const clickedDate = new Date(arg.date.getTime() - (2 * 60 * 60 * 1000)) // -2 Stunden
+  const endDate = new Date(clickedDate.getTime() + 45 * 60000)
+  
+  console.log('🔍 CORRECTED TIME:', {
+    originalDate: arg.date,
+    correctedDate: clickedDate,
+    correctedISO: clickedDate.toISOString()
+  })
+    isModalVisible.value = true
+    modalMode.value = 'create'
+    modalEventData.value = {
+      title: '',
+      start: clickedDate.toISOString(), 
+      end: endDate.toISOString(),
+      allDay: arg.allDay,
+      extendedProps: {
+        location: '',
+        staff_note: '',
+        client_note: ''
     }
   }
 },
@@ -513,7 +625,7 @@ eventContent: (arg) => {
     html: `
       <div class="custom-event">
         <div class="event-name">${student}</div>
-          📍 ${location}
+          <div class="event-location"> ${location}</div>
         </div>
       </div>
     `
@@ -523,6 +635,16 @@ eventContent: (arg) => {
 // Klick auf existierenden Termin
 eventClick: (clickInfo) => {
   const appointmentData = calendarEvents.value.find(evt => evt.id === clickInfo.event.id)
+
+ // Type Assertion verwenden
+  const extendedProps = appointmentData?.extendedProps as any
+  
+  // Event Type erkennen
+  const isStaffMeeting = extendedProps?.eventType === 'staff_meeting' ||
+                         extendedProps?.isStaffMeeting === true ||
+                         !extendedProps?.student // Kein Student = Staff Meeting
+  
+  modalEventType.value = isStaffMeeting ? 'staff_meeting' : 'lesson'
   
   isModalVisible.value = true
   modalMode.value = 'edit'
@@ -565,7 +687,8 @@ onMounted(async () => {
   
   console.log('🔄 Initial appointment loading...')
   await loadAppointments()
-  
+  await loadStaffMeetings()
+
   if (calendar.value) {
     emit('view-updated', calendar.value.getApi().view.currentStart)
   }
@@ -574,6 +697,7 @@ onMounted(async () => {
 watch(() => props.currentUser, async (newUser) => {
   if (newUser) {
     await loadAppointments()
+    await loadStaffMeetings()
   }
 }, { deep: true })
 
@@ -587,7 +711,8 @@ watch(calendarEvents, (newEvents) => {
 
 defineExpose({
   getApi: () => calendar.value?.getApi?.(),
-  loadAppointments
+  loadAppointments,
+  loadStaffMeetings
 })
 
 
@@ -614,6 +739,7 @@ defineExpose({
   :event-data="modalEventData"
   :mode="modalMode"
   :current-user="props.currentUser" 
+  :event-type="modalEventType"
   @close="isModalVisible = false"
   @save-event="handleSaveEvent"
   @delete-event="handleDeleteEvent"
@@ -752,7 +878,7 @@ defineExpose({
 
 /* === CUSTOM EVENT CONTENT === */
 .custom-event {
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1;
   color: white;
   height: 100%;
@@ -761,7 +887,7 @@ defineExpose({
 }
 
 .event-location {
-  font-size: 8px;
+  font-size: 7px;
   opacity: 0.9;
   color: white !important;
   text-decoration: none;
@@ -812,10 +938,8 @@ defineExpose({
   background-color: white !important;
   gap: 2px !important;
   align-items: center;
-    justify-content: center;
+  justify-content: center;
 }
-
-
 
 .fc-toolbar-title {
   font-size: 1.5rem !important;

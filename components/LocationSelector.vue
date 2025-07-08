@@ -1,7 +1,7 @@
 <template>
   <div>
     <label class="block text-sm font-medium text-gray-700 mb-2">
-      📍 Standort *
+      📍 Standort
     </label>
     
     <!-- Toggle zwischen Standard und Custom -->
@@ -30,18 +30,33 @@
       </button>
     </div>
 
-    <!-- Standard Dropdown -->
+    <!-- Kombinierter Dropdown für Standard + Pickup Locations -->
     <select
       v-if="useStandardLocations"
       v-model="selectedLocationId"
-      @change="onStandardLocationChange"
+      @change="onLocationChange"
       class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
       :required="required"
+      :disabled="isLoadingLocations"
     >
       <option value="">Standort wählen</option>
-      <option v-for="location in standardLocations" :key="location.id" :value="location.id">
-        {{ location.name }} - {{ location.address }}
-      </option>
+      
+      <!-- Standard Locations (Fahrschule) -->
+      <optgroup label="🏢 Fahrschule-Standorte" v-if="standardLocations.length > 0">
+        <option v-for="location in standardLocations" :key="`standard-${location.id}`" :value="location.id">
+          {{ location.name }} - {{ location.address }}
+        </option>
+      </optgroup>
+      
+      <!-- Pickup Locations (Schüler) -->
+      <optgroup label="📍 Gespeicherte Treffpunkte" v-if="studentPickupLocations.length > 0 && selectedStudentId">
+        <option v-for="location in studentPickupLocations" :key="`pickup-${location.id}`" :value="location.id">
+          {{ location.name }} - {{ location.address }}
+        </option>
+      </optgroup>
+      
+      <!-- Loading State -->
+      <option v-if="isLoadingLocations" disabled>Lade Standorte...</option>
     </select>
 
     <!-- Google Places Input -->
@@ -59,7 +74,7 @@
       />
       
       <!-- Loading -->
-      <div v-if="isLoadingLocations" class="absolute right-3 top-3">
+      <div v-if="isLoadingGooglePlaces" class="absolute right-3 top-3">
         <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
       </div>
 
@@ -90,7 +105,7 @@
 
       <!-- No Results -->
       <div 
-        v-if="showLocationSuggestions && locationSearchQuery.length > 2 && locationSuggestions.length === 0 && !isLoadingLocations"
+        v-if="showLocationSuggestions && locationSearchQuery.length > 2 && locationSuggestions.length === 0 && !isLoadingGooglePlaces"
         class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-center text-gray-500"
       >
         <span class="text-2xl block mb-2">🔍</span>
@@ -106,7 +121,7 @@
           <div class="font-medium text-green-800">{{ selectedCustomLocation.name }}</div>
           <div class="text-sm text-green-600">{{ selectedCustomLocation.address }}</div>
           <div class="flex gap-2 mt-2">
-            <a :href="getCustomLocationMapsUrl()" target="_blank" 
+            <a :href="getLocationMapsUrl(selectedCustomLocation)" target="_blank" 
                class="text-xs text-blue-600 hover:text-blue-800">
               🗺️ In Google Maps öffnen
             </a>
@@ -118,26 +133,44 @@
       </div>
     </div>
 
-    <!-- Standard Location Google Maps Link -->
-    <div v-if="useStandardLocations && selectedLocationId" class="mt-2">
-      <a :href="getStandardLocationMapsUrl()" target="_blank" 
-         class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-        🗺️ In Google Maps öffnen
-      </a>
+    <!-- Selected Standard/Pickup Location Preview -->
+    <div v-if="useStandardLocations && selectedLocationId && currentSelectedLocation" class="mt-2">
+      <div class="flex items-center gap-2 text-sm text-gray-600">
+        <span>{{ currentSelectedLocation.location_type === 'standard' ? '🏢' : '📍' }}</span>
+        <span>{{ currentSelectedLocation.name }}</span>
+        <a :href="getLocationMapsUrl(currentSelectedLocation)" target="_blank" 
+           class="text-blue-600 hover:text-blue-800 ml-auto">
+          🗺️ Maps
+        </a>
+      </div>
     </div>
 
     <!-- Hint Text -->
     <p class="text-xs text-gray-500 mt-2">
       {{ useStandardLocations 
-          ? 'ℹ️ Wählen Sie einen vorkonfigurierten Treffpunkt' 
-          : '🔍 Tippen Sie mindestens 3 Zeichen für Vorschläge'
+          ? (selectedStudentId 
+              ? 'ℹ️ Standard-Orte und gespeicherte Treffpunkte des Schülers' 
+              : 'ℹ️ Nur Standard-Orte (Schüler wählen für Treffpunkte)')
+          : '🔍 Tippen Sie mindestens 3 Zeichen für Vorschläge. Wird automatisch für den Schüler gespeichert.'
       }}
     </p>
+
+    <!-- Loading Indicator -->
+    <div v-if="isLoadingLocations" class="flex items-center gap-2 mt-2 text-sm text-gray-500">
+      <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+      <span>Lade Standorte...</span>
+    </div>
+
+    <!-- Error Display -->
+    <div v-if="error" class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+      ⚠️ {{ error }}
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
 
 // Google Maps Types Declaration
 declare global {
@@ -148,12 +181,18 @@ declare global {
 }
 
 // Types
-interface StandardLocation {
+interface Location {
   id: string
   name: string
   address: string
-  latitude?: number
-  longitude?: number
+  latitude?: undefined
+  longitude?: undefined
+  place_id?: string // Für temporäre Locations
+  location_type: 'standard' | 'pickup'
+  staff_id?: string
+  user_id?: string
+  google_place_id?: string
+  source?: 'standard' | 'pickup' | 'google' // ✅ HINZUFÜGEN
 }
 
 interface GooglePlaceSuggestion {
@@ -165,87 +204,262 @@ interface GooglePlaceSuggestion {
   }
 }
 
-interface SelectedLocation {
-  id?: string
-  name: string
-  address: string
-  place_id?: string
-  latitude?: number
-  longitude?: number
-  source: 'standard' | 'google'
-}
-
 // Props
 const props = defineProps({
   modelValue: {
-    type: [String, Object],
+    type: String, // location_id
     default: null
   },
   required: {
     type: Boolean,
     default: false
   },
-  standardLocations: {
-    type: Array as () => StandardLocation[],
-    default: () => [
-      { 
-        id: '1', 
-        name: 'Hauptbahnhof Zürich', 
-        address: 'Bahnhofstrasse 1, 8001 Zürich',
-        latitude: 47.3781,
-        longitude: 8.5396
-      },
-      { 
-        id: '2', 
-        name: 'Flughafen Zürich', 
-        address: 'Flughafenstrasse 1, 8058 Zürich-Flughafen',
-        latitude: 47.4647,
-        longitude: 8.5492
-      },
-      { 
-        id: '3', 
-        name: 'ETH Zentrum', 
-        address: 'Rämistrasse 101, 8092 Zürich',
-        latitude: 47.3769,
-        longitude: 8.5482
-      }
-    ]
+  selectedStudentId: {
+    type: String,
+    default: null
+  },
+  selectedStudentName: {
+    type: String,
+    default: ''
+  },
+  currentStaffId: {
+    type: String,
+    default: null
   }
 })
 
 // Emits
 const emit = defineEmits(['update:modelValue', 'locationSelected'])
 
+// Supabase
+const supabase = getSupabase()
+
 // Reactive state
 const useStandardLocations = ref(true)
 const selectedLocationId = ref('')
 const locationSearchQuery = ref('')
 const showLocationSuggestions = ref(false)
+const isLoadingGooglePlaces = ref(false)
 const isLoadingLocations = ref(false)
 const locationSuggestions = ref<GooglePlaceSuggestion[]>([])
-const selectedCustomLocation = ref<SelectedLocation | null>(null)
+const selectedCustomLocation = ref<Location | null>(null)
 const googlePlacesInput = ref<HTMLInputElement | null>(null)
+const error = ref<string | null>(null)
 
-// Google Places Service - Updated for new API
+// Location Data
+const standardLocations = ref<Location[]>([])
+const studentPickupLocations = ref<Location[]>([])
+
+// Computed
+const currentSelectedLocation = computed(() => {
+  if (!selectedLocationId.value) return null
+  
+  return [...standardLocations.value, ...studentPickupLocations.value]
+    .find(loc => loc.id === selectedLocationId.value)
+})
+
+// Google Places Service
 let placesLibrary: any = null
 
-// Google Places Functions - Updated for new API
+// === DATABASE FUNCTIONS ===
+
+const loadStandardLocations = async () => {
+  try {
+    let query = supabase
+      .from('locations')
+      .select('id, name, address, latitude, longitude, location_type, staff_id')
+      .eq('location_type', 'standard')
+      .eq('is_active', true)
+      .order('name')
+
+    // Filter by current staff if provided
+    if (props.currentStaffId) {
+      query = query.eq('staff_id', props.currentStaffId)
+    }
+
+    const { data, error: fetchError } = await query
+
+    if (fetchError) throw fetchError
+    
+    standardLocations.value = data || []
+    console.log('✅ Standard locations loaded:', data?.length)
+    
+  } catch (err: any) {
+    error.value = `Fehler beim Laden der Standard-Standorte: ${err.message}`
+    console.error('❌ Error loading standard locations:', err)
+  }
+}
+
+// Erweiterte loadStudentPickupLocations Funktion
+const loadStudentPickupLocations = async (studentId: string) => {
+  if (!studentId) {
+    studentPickupLocations.value = []
+    return
+  }
+
+  try {
+    // 1. Lade alle Pickup-Locations des Schülers
+    const { data, error: fetchError } = await supabase
+      .from('locations')
+      .select('id, name, address, latitude, longitude, location_type, user_id, google_place_id')
+      .eq('location_type', 'pickup')
+      .eq('user_id', studentId)
+      .eq('is_active', true)
+      .order('name')
+
+    if (fetchError) throw fetchError
+    
+    studentPickupLocations.value = data || []
+    console.log('✅ Student pickup locations loaded:', data?.length)
+    
+    // 2. Lade letzten verwendeten Standort
+    const lastLocation = await loadLastUsedLocation(studentId)
+    
+    if (lastLocation && !selectedLocationId.value) {
+      // 3. Setze letzten Standort als Standard (nur wenn noch nichts ausgewählt)
+      selectedLocationId.value = lastLocation.id
+      
+      emit('update:modelValue', lastLocation.id)
+      emit('locationSelected', {
+        ...lastLocation,
+        source: lastLocation.location_type === 'standard' ? 'standard' : 'pickup'
+      })
+      
+      console.log('🎯 Auto-selected last used location:', lastLocation.name)
+    } else if (!lastLocation && studentPickupLocations.value.length > 0 && !selectedLocationId.value) {
+      // 4. Fallback: Ersten Pickup-Location wählen falls kein letzter Standort gefunden
+      const firstPickup = studentPickupLocations.value[0]
+      selectedLocationId.value = firstPickup.id
+      
+      emit('update:modelValue', firstPickup.id)
+      emit('locationSelected', {
+        ...firstPickup,
+        source: 'pickup'
+      })
+      
+      console.log('📍 Auto-selected first pickup location:', firstPickup.name)
+    }
+    
+  } catch (err: any) {
+    error.value = `Fehler beim Laden der Treffpunkte: ${err.message}`
+    console.error('❌ Error loading pickup locations:', err)
+  }
+}
+
+// 🔧 LOCATION SELECTOR - KORREKTE CONSTRAINT LOGIC
+const savePickupLocation = async (locationData: any, studentId: string) => {
+  try {
+    const locationName = `${props.selectedStudentName} - ${locationData.name}`.trim()
+    
+    // ✅ RICHTIGE CONSTRAINT LOGIC FÜR PICKUP:
+    // location_type = 'pickup' AND user_id NOT NULL AND staff_id IS NULL
+    const locationToSave = {
+      location_type: 'pickup',    // ✅ pickup type
+      user_id: studentId,         // ✅ MUSS gesetzt sein
+      staff_id: null,             // ✅ MUSS null sein für pickup!
+      name: locationName,
+      address: locationData.address,
+      latitude: locationData.latitude,
+      longitude: locationData.longitude,
+      google_place_id: locationData.place_id,
+      is_active: true
+    }
+    
+    console.log('📤 Sending pickup location (staff_id=null):', locationToSave)
+    
+    const { data, error: saveError } = await supabase
+      .from('locations')
+      .insert(locationToSave)
+      .select()
+      .single()
+
+    if (saveError) {
+      console.error('❌ Supabase Error:', saveError)
+      throw saveError
+    }
+
+    studentPickupLocations.value.push(data)
+    console.log('✅ Pickup location saved successfully:', data)
+    return data
+
+  } catch (err: any) {
+    console.error('❌ Error saving pickup location:', err)
+    error.value = `Fehler beim Speichern des Treffpunkts: ${err.message}`
+    throw err
+  }
+}
+
+// Neue Funktion für letzten Treffpunkt
+// LocationSelector.vue - Ersetze die loadLastUsedLocation Funktion komplett
+
+const loadLastUsedLocation = async (studentId: string) => {
+  if (!studentId) return null
+  
+  try {
+    console.log('🔍 Loading last used location for student:', studentId)
+    
+    // Schritt 1: Letzten Termin finden
+    const { data: appointmentData, error: appointmentError } = await supabase
+      .from('appointments')
+      .select('location_id, start_time')
+      .eq('user_id', studentId)
+      .eq('status', 'completed')
+      .order('start_time', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (appointmentError) {
+      if (appointmentError.code === 'PGRST116') {
+        console.log('ℹ️ No previous appointments found for student')
+        return null
+      }
+      throw appointmentError
+    }
+
+    if (!appointmentData?.location_id) {
+      console.log('ℹ️ No location_id in last appointment')
+      return null
+    }
+
+    // Schritt 2: Location-Details laden
+    const { data: locationData, error: locationError } = await supabase
+      .from('locations')
+      .select('id, name, address, location_type, user_id, staff_id, google_place_id, is_active')
+      .eq('id', appointmentData.location_id)
+      .single()
+
+    if (locationError) {
+      console.error('❌ Error loading location details:', locationError)
+      return null
+    }
+
+    if (locationData) {
+      console.log('✅ Found last used location:', locationData.name)
+      return locationData
+    }
+
+    return null
+    
+  } catch (err: any) {
+    console.error('❌ Error loading last used location:', err)
+    return null
+  }
+}
+
+// === GOOGLE PLACES FUNCTIONS ===
+
 const initializeGooglePlaces = async () => {
   if (typeof window !== 'undefined' && window.google && window.google.maps) {
     try {
-      // Use new Places Library (v3.56+)
       const { Place, AutocompleteSuggestion } = await window.google.maps.importLibrary('places')
       placesLibrary = { Place, AutocompleteSuggestion }
       console.log('✅ Google Places (New API) initialized')
     } catch (error) {
-      // Fallback to old API if new one fails
       console.warn('⚠️ New Places API failed, using legacy API:', error)
       if (window.google.maps.places) {
         console.log('✅ Google Places (Legacy) initialized')
       }
     }
-  } else {
-    console.warn('⚠️ Google Maps not loaded')
   }
 }
 
@@ -258,7 +472,8 @@ const onLocationSearch = async () => {
     return
   }
 
-  isLoadingLocations.value = true
+  isLoadingGooglePlaces.value = true
+  error.value = null
   
   try {
     // Try new API first
@@ -266,7 +481,7 @@ const onLocationSearch = async () => {
       try {
         const request = {
           input: query,
-          includedRegionCodes: ['CH'], // Switzerland
+          includedRegionCodes: ['CH'],
           language: 'de'
         }
 
@@ -275,15 +490,14 @@ const onLocationSearch = async () => {
         if (suggestions && suggestions.length > 0) {
           locationSuggestions.value = suggestions.map((suggestion: any) => ({
             place_id: suggestion.placePrediction?.placeId || `new_${Date.now()}_${Math.random()}`,
-            description: suggestion.placePrediction?.text?.text || suggestion.placePrediction?.mainText?.text || 'Unbekannter Ort',
+            description: suggestion.placePrediction?.text?.text || 'Unbekannter Ort',
             structured_formatting: {
               main_text: suggestion.placePrediction?.mainText?.text || '',
               secondary_text: suggestion.placePrediction?.secondaryText?.text || ''
             }
           }))
           showLocationSuggestions.value = true
-          isLoadingLocations.value = false
-          console.log('✅ New Places API suggestions:', locationSuggestions.value.length)
+          isLoadingGooglePlaces.value = false
           return
         }
       } catch (newApiError) {
@@ -303,7 +517,7 @@ const onLocationSearch = async () => {
       }
 
       autocompleteService.getPlacePredictions(request, (predictions: any, status: any) => {
-        isLoadingLocations.value = false
+        isLoadingGooglePlaces.value = false
         
         if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
           locationSuggestions.value = predictions.map((prediction: any) => ({
@@ -312,15 +526,13 @@ const onLocationSearch = async () => {
             structured_formatting: prediction.structured_formatting
           }))
           showLocationSuggestions.value = true
-          console.log('✅ Legacy API suggestions:', locationSuggestions.value.length)
         } else {
           locationSuggestions.value = []
-          console.warn('Google Places API error:', status)
+          error.value = 'Keine Vorschläge von Google Places gefunden'
         }
       })
     } else {
-      // Final fallback: Simple text suggestions
-      await new Promise(resolve => setTimeout(resolve, 300))
+      // Final fallback
       locationSuggestions.value = [
         {
           place_id: `fallback_${Date.now()}`,
@@ -329,61 +541,104 @@ const onLocationSearch = async () => {
             main_text: query,
             secondary_text: 'Zürich, Schweiz'
           }
-        },
-        {
-          place_id: `fallback_${Date.now()}_2`,
-          description: `${query}, Schweiz`,
-          structured_formatting: {
-            main_text: query,
-            secondary_text: 'Schweiz'
-          }
         }
       ]
       showLocationSuggestions.value = true
-      isLoadingLocations.value = false
-      console.log('✅ Fallback suggestions provided')
+      isLoadingGooglePlaces.value = false
     }
-  } catch (error) {
-    console.error('Error searching places:', error)
-    isLoadingLocations.value = false
+  } catch (err: any) {
+    console.error('Error searching places:', err)
+    error.value = 'Fehler bei der Adresssuche'
+    isLoadingGooglePlaces.value = false
     locationSuggestions.value = []
   }
 }
 
-const selectLocationSuggestion = (suggestion: GooglePlaceSuggestion) => {
-  const location: SelectedLocation = {
-    name: suggestion.structured_formatting?.main_text || suggestion.description,
-    address: suggestion.description,
-    place_id: suggestion.place_id,
-    source: 'google'
-  }
-  
-  selectedCustomLocation.value = location
-  locationSearchQuery.value = suggestion.description
-  showLocationSuggestions.value = false
-  
-  emit('update:modelValue', location)
-  emit('locationSelected', location)
-  
-  console.log('📍 Custom location selected:', location)
-}
-
-const onStandardLocationChange = () => {
-  const location = props.standardLocations.find(l => l.id === selectedLocationId.value)
-  if (location) {
-    const selectedLoc: SelectedLocation = {
-      id: location.id,
-      name: location.name,
-      address: location.address,
-      latitude: location.latitude,
-      longitude: location.longitude,
-      source: 'standard'
+const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
+  try {
+    const locationData = {
+      name: suggestion.structured_formatting?.main_text || suggestion.description,
+      address: suggestion.description,
+      place_id: suggestion.place_id
     }
     
-    emit('update:modelValue', selectedLoc)
-    emit('locationSelected', selectedLoc)
+    // Check if this location already exists for this student
+    const existingLocation = studentPickupLocations.value.find(
+      loc => loc.google_place_id === suggestion.place_id
+    )
     
-    console.log('📍 Standard location selected:', selectedLoc)
+    if (existingLocation) {
+      // Use existing pickup location
+      selectedLocationId.value = existingLocation.id
+      useStandardLocations.value = true
+      locationSearchQuery.value = ''
+      selectedCustomLocation.value = null
+      
+      emit('update:modelValue', existingLocation.id)
+      emit('locationSelected', existingLocation)
+      
+      console.log('🔄 Using existing pickup location:', existingLocation.name)
+    } else if (props.selectedStudentId) {
+      // Save as new pickup location
+      const savedLocation = await savePickupLocation(locationData, props.selectedStudentId)
+      
+      selectedLocationId.value = savedLocation.id
+      useStandardLocations.value = true
+      locationSearchQuery.value = ''
+      selectedCustomLocation.value = null
+      
+      emit('update:modelValue', savedLocation.id)
+      emit('locationSelected', savedLocation)
+      
+      console.log('💾 Saved and selected new pickup location:', savedLocation.name)
+    } else {
+      // ✅ FIX: Kein Student selected - emitte temporäre Location mit korrektem Format
+      const tempLocation = {
+         id: `temp_${Date.now()}`,
+        name: locationData.name,
+        address: locationData.address,
+        place_id: locationData.place_id,
+        latitude: undefined, // ✅ FIX: undefined statt null
+        longitude: undefined, // ✅ FIX: undefined statt null
+        source: 'google' as const, // ✅ FIX: as const für bessere Typisierung
+        location_type: 'pickup' as const // ✅ FIX: as const
+      }
+      
+      selectedCustomLocation.value = tempLocation as Location
+      locationSearchQuery.value = suggestion.description
+      
+      // ✅ FIX: Emitte null für modelValue aber vollständige Location für locationSelected
+      emit('update:modelValue', null) // Keine echte ID
+      emit('locationSelected', tempLocation) // ✅ Vollständige temp Location für EventModal
+      
+      console.log('⚠️ Temporary location (no student selected):', tempLocation)
+    }
+    
+    showLocationSuggestions.value = false
+    
+  } catch (err: any) {
+    error.value = `Fehler beim Speichern des Treffpunkts: ${err.message}`
+    console.error('❌ Error selecting location:', err)
+  }
+}
+
+// === EVENT HANDLERS ===
+
+const onLocationChange = () => {
+  const location = [...standardLocations.value, ...studentPickupLocations.value]
+    .find(l => l.id === selectedLocationId.value)
+    
+  if (location) {
+    emit('update:modelValue', location.id)
+    
+    // ✅ FIX: Emitte vollständige Location mit source
+    const locationWithSource = {
+      ...location,
+      source: location.location_type === 'standard' ? 'standard' : 'pickup'
+    }
+    
+    emit('locationSelected', locationWithSource)
+    console.log('📍 Location selected:', location.name)
   }
 }
 
@@ -391,6 +646,7 @@ const clearCustomLocation = () => {
   selectedCustomLocation.value = null
   locationSearchQuery.value = ''
   emit('update:modelValue', null)
+  emit('locationSelected', null) // ✅ FIX: Auch locationSelected auf null setzen
 }
 
 const hideLocationSuggestionsDelayed = () => {
@@ -399,14 +655,7 @@ const hideLocationSuggestionsDelayed = () => {
   }, 150)
 }
 
-const getCustomLocationMapsUrl = () => {
-  if (!selectedCustomLocation.value) return '#'
-  const query = encodeURIComponent(selectedCustomLocation.value.address)
-  return `https://maps.google.com/maps?q=${query}`
-}
-
-const getStandardLocationMapsUrl = () => {
-  const location = props.standardLocations.find(l => l.id === selectedLocationId.value)
+const getLocationMapsUrl = (location: Location) => {
   if (!location) return '#'
   
   if (location.latitude && location.longitude) {
@@ -417,63 +666,72 @@ const getStandardLocationMapsUrl = () => {
   }
 }
 
-// Initialize Google Maps
-onMounted(async () => {
-  // Check if Google Maps is already loaded
-  if (typeof window !== 'undefined' && window.google) {
-    await initializeGooglePlaces()
-  } else {
-    // Listen for Google Maps to load
-    if (typeof window !== 'undefined') {
-      const handleGoogleMapsLoad = async () => {
-        await initializeGooglePlaces()
-      }
-      
-      window.addEventListener('load', handleGoogleMapsLoad)
-      
-      // Or load Google Maps if not included globally
-      if (!document.querySelector('script[src*="maps.googleapis.com"]')) {
-        const script = document.createElement('script')
-        // Get API key from environment or use a placeholder
-        const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY'
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=de&region=CH&v=beta`
-        script.async = true
-        script.defer = true
-        script.onload = handleGoogleMapsLoad
-        script.onerror = () => {
-          console.error('❌ Failed to load Google Maps API')
-        }
-        document.head.appendChild(script)
-      }
-    }
+// === WATCHERS ===
+
+// Aktualisierter Watcher für Student-Änderungen
+watch(() => props.selectedStudentId, async (newStudentId, oldStudentId) => {
+  if (newStudentId && newStudentId !== oldStudentId) {
+    isLoadingLocations.value = true
+    
+    // Reset current selection when student changes
+    selectedLocationId.value = ''
+    selectedCustomLocation.value = null
+    emit('update:modelValue', null)
+    
+    await loadStudentPickupLocations(newStudentId)
+    isLoadingLocations.value = false
+  } else if (!newStudentId) {
+    studentPickupLocations.value = []
+    selectedLocationId.value = ''
+    selectedCustomLocation.value = null
+    emit('update:modelValue', null)
   }
 })
 
-// Watch for external changes
-watch(() => props.modelValue, (newValue: any) => {
-  if (newValue && typeof newValue === 'object') {
-    const location = newValue as SelectedLocation
-    if (location.source === 'standard') {
-      useStandardLocations.value = true
-      selectedLocationId.value = location.id || ''
-    } else {
-      useStandardLocations.value = false
-      selectedCustomLocation.value = location
-      locationSearchQuery.value = location.address || ''
+// Watch for staff changes
+watch(() => props.currentStaffId, async (newStaffId) => {
+  if (newStaffId) {
+    isLoadingLocations.value = true
+    await loadStandardLocations()
+    isLoadingLocations.value = false
+  }
+})
+
+// Watch for external model value changes
+watch(() => props.modelValue, (newValue) => {
+  if (newValue && newValue !== selectedLocationId.value) {
+    selectedLocationId.value = newValue
+    useStandardLocations.value = true
+    selectedCustomLocation.value = null
+  }
+})
+
+// === LIFECYCLE ===
+
+onMounted(async () => {
+  // Initialize Google Maps
+  if (typeof window !== 'undefined' && window.google) {
+    await initializeGooglePlaces()
+  }
+  
+  // Load initial data
+  isLoadingLocations.value = true
+  
+  try {
+    await loadStandardLocations()
+    
+    if (props.selectedStudentId) {
+      await loadStudentPickupLocations(props.selectedStudentId)
     }
-  } else if (typeof newValue === 'string') {
-    // Legacy string location_id
-    const location = props.standardLocations.find(l => l.id === newValue)
-    if (location) {
-      useStandardLocations.value = true
-      selectedLocationId.value = newValue
-    }
+  } catch (err) {
+    console.error('Error loading initial location data:', err)
+  } finally {
+    isLoadingLocations.value = false
   }
 })
 </script>
 
 <style scoped>
-/* Ensure dropdown appears above other elements */
 .relative .absolute {
   z-index: 50;
 }

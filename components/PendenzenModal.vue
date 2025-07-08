@@ -1,7 +1,7 @@
-<!-- components/PendenzenModal.vue - Korrigiertes Design -->
+<!-- components/PendenzenModal.vue -->
 <template>
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-    <!-- MODAL CONTAINER - Das hat gefehlt! -->
+    <!-- MODAL CONTAINER -->
     <div class="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
       
       <!-- Header -->
@@ -31,38 +31,20 @@
           </button>
         </div>
 
-        <!-- Filter & Stats -->
-        <div class="mt-4 flex flex-wrap gap-4 items-center text-sm">
-          <!-- Date Filter -->
-          <div class="flex items-center gap-2">
-            <label class="text-green-100">Zeitraum:</label>
-            <select 
-              v-model="selectedPeriod" 
-              @change="loadPendingEvaluations"
-              class="border border-green-400 bg-green-700 text-white rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
-            >
-              <option value="7">Letzte 7 Tage</option>
-              <option value="14">Letzte 14 Tage</option>
-              <option value="30">Letzte 30 Tage</option>
-              <option value="all">Alle</option>
-            </select>
-          </div>
-
-          <!-- Stats -->
-          <div class="flex gap-4 text-green-100">
-            <span>Gesamt: {{ pendingAppointments.length }}</span>
-            <span>Heute: {{ getTodayCount() }}</span>
-            <span>Überfällig: {{ getOverdueCount() }}</span>
-          </div>
-
-          <!-- Refresh Button -->
-          <button
-            @click="refreshPendings"
-            :disabled="isLoading"
-            class="bg-green-700 text-green-100 px-3 py-1 rounded hover:bg-green-600 transition-colors disabled:opacity-50"
-          >
-            🔄 Aktualisieren
-          </button>
+        <!-- Smart Stats mit Farbkodierung -->
+        <div class="mt-4 flex gap-4 items-center text-sm">
+          <span class="text-green-200">
+            <span class="inline-block w-2 h-2 bg-green-300 rounded-full mr-1"></span>
+            Offen: {{ getOpenCount() }}
+          </span>
+          <span class="text-orange-200">
+            <span class="inline-block w-2 h-2 bg-orange-300 rounded-full mr-1"></span>
+            Fällig: {{ getDueCount() }}
+          </span>
+          <span class="text-red-200">
+            <span class="inline-block w-2 h-2 bg-red-300 rounded-full mr-1"></span>
+            Überfällig: {{ getOverdueCount() }}
+          </span>
         </div>
       </div>
 
@@ -82,7 +64,7 @@
             <h3 class="font-bold mb-2">Fehler beim Laden</h3>
             <p class="mb-4">{{ error }}</p>
             <button 
-              @click="loadPendingEvaluations" 
+              @click="refreshData" 
               class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
             >
               Erneut versuchen
@@ -91,7 +73,7 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="pendingAppointments.length === 0" class="flex items-center justify-center py-8">
+        <div v-else-if="pendingCount === 0" class="flex items-center justify-center py-8">
           <div class="text-center px-4">
             <div class="text-6xl mb-4">🎉</div>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Pendenzen!</h3>
@@ -110,466 +92,270 @@
         <!-- Pending Appointments List -->
         <div v-else class="p-4 space-y-3">
           <div
-            v-for="appointment in sortedPendingAppointments"
+            v-for="appointment in formattedAppointments"
             :key="appointment.id"
-            class="bg-gray-50 rounded-lg border p-4 hover:bg-gray-100 transition-all"
+            :class="[
+              'rounded-lg border p-4 hover:shadow-md transition-all cursor-pointer',
+              getAppointmentBackgroundClass(appointment)
+            ]"
+            @click="openEvaluation(appointment)"
           >
-            <!-- Mobile-First Layout -->
-            <div class="space-y-3">
-              <!-- Header Row -->
-              <div class="flex items-start justify-between">
-                <div class="flex-1 min-w-0">
-                  <!-- Student Name & Title -->
-                  <h3 class="font-semibold text-gray-900 truncate">
-                    {{ appointment.student_name || 'Unbekannter Schüler' }}
-                  </h3>
-                  <p class="text-sm text-gray-600 truncate">
-                    {{ appointment.title || 'Fahrlektion' }}
-                  </p>
-                </div>
-                
-                <!-- Priority Badge -->
+            <!-- Vereinfachtes Layout -->
+            <div class="flex items-center justify-between">
+              <!-- Links: Name & Kategorie -->
+              <div class="flex-1">
+                <h3 class="font-semibold text-gray-900">
+                  {{ appointment.studentName }}
+                </h3>
+                <p class="text-sm text-gray-600">
+                  {{ appointment.title }}
+                </p>
+              </div>
+              
+              <!-- Rechts: Status & Datum -->
+              <div class="text-right">
+                <!-- Status Badge -->
                 <span :class="[
-                  'text-xs px-2 py-1 rounded-full font-medium ml-2',
+                  'text-xs px-2 py-1 rounded-full font-medium block mb-1',
                   getPriorityClass(appointment)
                 ]">
                   {{ getPriorityText(appointment) }}
                 </span>
-              </div>
-
-              <!-- Details Row -->
-              <div class="flex flex-wrap gap-3 text-sm text-gray-600">
-                <span class="flex items-center gap-1">
-                  📅 {{ formatDate(appointment.start_time) }}
-                </span>
-                <span class="flex items-center gap-1">
-                  ⏱️ {{ formatDuration(appointment.duration_minutes || 0) }}
-                </span>
-                <span v-if="appointment.category" class="flex items-center gap-1">
-                  🚗 {{ appointment.category }}
-                </span>
-                <span class="flex items-center gap-1">
-                  📍 {{ appointment.location_name || 'Kein Ort' }}
-                </span>
-              </div>
-
-              <!-- Days since completion -->
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-500">
-                  {{ getDaysSinceText(appointment.start_time) }}
-                </span>
                 
-                <!-- Action Button -->
-                <button
-                  @click="openEvaluation(appointment)"
-                  class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                >
-                  Jetzt bewerten
-                </button>
-              </div>
-
-              <!-- Quick Info -->
-              <div v-if="appointment.student_phone" class="pt-2 border-t border-gray-200">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-gray-500">
-                    📱 {{ formatPhone(appointment.student_phone) }}
-                  </span>
-                  <div class="flex gap-2">
-                    <button
-                      @click="callStudent(appointment.student_phone)"
-                      class="text-xs text-green-600 hover:text-green-800 font-medium"
-                    >
-                      Anrufen
-                    </button>
-                    <button
-                      v-if="appointment.student_email"
-                      @click="emailStudent(appointment.student_email)"
-                      class="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      E-Mail
-                    </button>
-                  </div>
-                </div>
+                <!-- Datum & Zeit -->
+                <p class="text-xs text-gray-500">
+                  {{ appointment.formattedDate }}
+                </p>
+                <p class="text-xs text-gray-500">
+                  {{ appointment.formattedStartTime }} - {{ appointment.formattedEndTime }}
+                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Footer -->
-      <div class="bg-gray-50 px-4 py-3 border-t">
-        <div class="flex gap-3">
-          <button
-            @click="closeModal"
-            class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Schließen
-          </button>
-          <button
-            v-if="pendingCount > 0"
-            @click="refreshPendings"
-            :disabled="isLoading"
-            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-          >
-            {{ isLoading ? 'Aktualisiere...' : 'Aktualisieren' }}
-          </button>
-        </div>
-      </div>
-
-    </div>
-
     <!-- Evaluation Modal (außerhalb des Hauptmodals) -->
     <EvaluationModal
+      v-if="showEvaluationModal"
       :is-open="showEvaluationModal"
       :appointment="selectedAppointment"
-      :student-category="selectedAppointment?.category || 'B'"
+      :student-category="selectedAppointment?.users?.category || 'B'"
+      :current-user="currentUser"
       @close="closeEvaluationModal"
       @saved="onEvaluationSaved"
     />
   </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { navigateTo } from '#app'
-import { useCurrentUser } from '~/composables/useCurrentUser'
-import { getSupabase } from '~/utils/supabase'
+import { ref, computed, watch, onMounted } from 'vue'
+import { usePendingTasks } from '~/composables/usePendingTasks'
 import EvaluationModal from '~/components/EvaluationModal.vue'
-import PendenzenModal from '~/components/PendenzenModal.vue'
 
-// Types
+// Props
 interface Props {
   isOpen: boolean
+  currentUser: any
 }
 
-interface UserData {
-  first_name: string
-  last_name: string
-  phone?: string
-  email?: string
-  category?: string
-}
+const props = defineProps<Props>()
 
-interface LocationData {
-  name: string
-}
+// Emits
+const emit = defineEmits<{
+  close: []
+  'evaluate-lesson': [appointment: any]
+}>()
 
-interface AppointmentData {
-  id: string
-  title?: string
-  start_time: string
-  end_time: string
-  duration_minutes?: number
-  user_id: string
-  users?: UserData
-  locations?: LocationData
-}
-
-interface PendingAppointment extends AppointmentData {
-  student_name: string
-  student_phone?: string
-  student_email?: string
-  category?: string
-  location_name?: string
-}
-
-// Supabase client
-const supabase = getSupabase()
-
-// Composables
-const { currentUser, fetchCurrentUser, userError } = useCurrentUser()
-
-// State
-const pendingAppointments = ref<PendingAppointment[]>([])
-const isLoading = ref(false)
-const error = ref<string | null>(null)
-const selectedPeriod = ref('14')
+// WICHTIG: Verwende das zentrale usePendingTasks Composable
+const {
+  pendingAppointments,
+  formattedAppointments,
+  pendingCount,
+  isLoading,
+  error,
+  fetchPendingTasks,
+  clearError
+} = usePendingTasks()
 
 // Modal state
 const showEvaluationModal = ref(false)
-const selectedAppointment = ref<PendingAppointment | null>(null)
+const selectedAppointment = ref<any>(null)
 
-// Computed
-const pendingCount = computed(() => pendingAppointments.value.length)
 
-const props = defineProps<Props>()
-const emit = defineEmits(['close', 'evaluate-lesson'])
-
-// HINZUFÜGEN: Close Method
+// Methods
 const closeModal = () => {
+  console.log('🔥 PendenzenModal closing...')
   emit('close')
 }
 
-// ÄNDERN: openEvaluation Method
 const openEvaluation = (appointment: any) => {
-  emit('evaluate-lesson', appointment)
-  closeModal() // Modal schließen nach Evaluation
+  console.log('🔥 PendenzenModal - opening evaluation for:', appointment.id)
+  selectedAppointment.value = appointment
+  showEvaluationModal.value = true
 }
 
-// Deine bestehenden Methods bleiben...
+const closeEvaluationModal = () => {
+  console.log('🔥 PendenzenModal - closing evaluation modal')
+  showEvaluationModal.value = false
+  selectedAppointment.value = null
+}
 
-// HINZUFÜGEN: Watcher für Props
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    loadPendingEvaluations()
-  }
-})
-
-const sortedPendingAppointments = computed(() => {
-  return [...pendingAppointments.value].sort((a, b) => {
-    // Sort by priority: oldest first, then by start_time
-    const daysA = getDaysSince(a.start_time)
-    const daysB = getDaysSince(b.start_time)
-    
-    if (daysA !== daysB) {
-      return daysB - daysA // Older appointments first
-    }
-    
-    return new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-  })
-})
-
-// Methods
-const loadPendingEvaluations = async () => {
-  if (!currentUser.value) return
+const onEvaluationSaved = async (appointmentId: string) => {
+  console.log('🎉 PendenzenModal - evaluation saved for:', appointmentId)
   
-  isLoading.value = true
-  error.value = null
+  // Das Composable wird automatisch aktualisiert durch markAsCompleted
+  console.log('✅ New pending count after evaluation:', pendingCount.value)
   
-  try {
-    // Calculate date filter
-    let dateFilter = null
-    if (selectedPeriod.value !== 'all') {
-      const days = parseInt(selectedPeriod.value)
-      dateFilter = new Date()
-      dateFilter.setDate(dateFilter.getDate() - days)
-    }
+  closeEvaluationModal()
+}
 
-    // Get appointments without evaluations
-    let query = supabase
-      .from('appointments')
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        duration_minutes,
-        user_id,
-        users!user_id(
-          first_name,
-          last_name,
-          phone,
-          email,
-          category
-        ),
-        locations!location_id(
-          name
-        )
-      `)
-      .eq('staff_id', currentUser.value.id)
-      .eq('status', 'completed')
-      .lt('end_time', new Date().toISOString()) // Only past appointments
-
-    if (dateFilter) {
-      query = query.gte('start_time', dateFilter.toISOString())
-    }
-
-    const { data: appointments, error: appointmentsError } = await query
-      .order('start_time', { ascending: false }) as { data: AppointmentData[] | null, error: any }
-
-    if (appointmentsError) throw appointmentsError
-
-    if (!appointments || appointments.length === 0) {
-      pendingAppointments.value = []
-      return
-    }
-
-    // Check which appointments don't have evaluations (overall rating)
-    const appointmentIds = appointments.map(a => a.id)
-    const { data: existingNotes, error: notesError } = await supabase
-      .from('notes')
-      .select('appointment_id')
-      .in('appointment_id', appointmentIds)
-      .not('staff_rating', 'is', null) // Has overall rating
-
-    if (notesError) throw notesError
-
-    const evaluatedAppointmentIds = new Set(
-      existingNotes?.map(note => note.appointment_id) || []
-    )
-
-    // Filter out appointments that already have evaluations
-    const pending = appointments.filter(appointment => 
-      !evaluatedAppointmentIds.has(appointment.id)
-    ).map(appointment => ({
-      ...appointment,
-      student_name: appointment.users ? `${appointment.users.first_name} ${appointment.users.last_name}` : 'Unbekannter Schüler',
-      student_phone: appointment.users?.phone,
-      student_email: appointment.users?.email,
-      category: appointment.users?.category,
-      location_name: appointment.locations?.name
-    }))
-
-    pendingAppointments.value = pending
-
-  } catch (err: any) {
-    console.error('Error loading pending evaluations:', err)
-    error.value = err.message || 'Fehler beim Laden der Pendenzen'
-  } finally {
-    isLoading.value = false
+const refreshData = async () => {
+  if (!props.currentUser?.id) {
+    console.warn('⚠️ No current user ID available for refresh')
+    return
   }
+  
+  console.log('🔄 PendenzenModal - refreshing data...')
+  clearError()
+  await fetchPendingTasks(props.currentUser.id)
+  console.log('✅ PendenzenModal - data refreshed, count:', pendingCount.value)
 }
 
-const refreshPendings = () => {
-  loadPendingEvaluations()
-}
-
-const getTodayCount = () => {
+// Smart Count Funktionen
+const getOpenCount = () => {
   const today = new Date().toDateString()
   return pendingAppointments.value.filter(apt => 
     new Date(apt.start_time).toDateString() === today
   ).length
 }
 
-const getOverdueCount = () => {
-  const threeDaysAgo = new Date()
-  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+const getDueCount = () => {
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayString = yesterday.toDateString()
   
   return pendingAppointments.value.filter(apt => 
-    new Date(apt.start_time) < threeDaysAgo
+    new Date(apt.start_time).toDateString() === yesterdayString
   ).length
 }
 
-const getDaysSince = (dateString: string) => {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffTime = now.getTime() - date.getTime()
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24))
+const getOverdueCount = () => {
+  const dayBeforeYesterday = new Date()
+  dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2)
+  
+  return pendingAppointments.value.filter(apt => 
+    new Date(apt.start_time) <= dayBeforeYesterday
+  ).length
 }
 
-const getDaysSinceText = (dateString: string) => {
-  const days = getDaysSince(dateString)
+// Background-Klassen für Termine
+const getAppointmentBackgroundClass = (appointment: any) => {
+  const appointmentDate = new Date(appointment.start_time).toDateString()
+  const today = new Date().toDateString()
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayString = yesterday.toDateString()
   
-  if (days === 0) return 'Heute abgeschlossen'
-  if (days === 1) return 'Gestern abgeschlossen'
-  if (days < 7) return `Vor ${days} Tagen abgeschlossen`
-  if (days < 30) return `Vor ${Math.floor(days / 7)} Wochen abgeschlossen`
-  return `Vor ${Math.floor(days / 30)} Monaten abgeschlossen`
+  if (appointmentDate === today) {
+    return 'bg-green-50 border-green-200 hover:bg-green-100'
+  } else if (appointmentDate === yesterdayString) {
+    return 'bg-orange-50 border-orange-200 hover:bg-orange-100'
+  } else {
+    return 'bg-red-50 border-red-200 hover:bg-red-100'
+  }
 }
 
 const getPriorityClass = (appointment: any) => {
-  const days = getDaysSince(appointment.start_time)
+  const appointmentDate = new Date(appointment.start_time).toDateString()
+  const today = new Date().toDateString()
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayString = yesterday.toDateString()
   
-  if (days >= 7) return 'bg-red-100 text-red-800'
-  if (days >= 3) return 'bg-orange-100 text-orange-800'
-  if (days >= 1) return 'bg-yellow-100 text-yellow-800'
-  return 'bg-blue-100 text-blue-800'
+  if (appointmentDate === today) {
+    return 'bg-green-100 text-green-800'
+  } else if (appointmentDate === yesterdayString) {
+    return 'bg-orange-100 text-orange-800'
+  } else {
+    return 'bg-red-100 text-red-800'
+  }
 }
 
 const getPriorityText = (appointment: any) => {
-  const days = getDaysSince(appointment.start_time)
+  const appointmentDate = new Date(appointment.start_time).toDateString()
+  const today = new Date().toDateString()
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayString = yesterday.toDateString()
   
-  if (days >= 7) return 'Überfällig'
-  if (days >= 3) return 'Dringend'
-  if (days >= 1) return 'Bald fällig'
-  return 'Neu'
-}
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('de-CH', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-const formatDuration = (minutes: number | undefined) => {
-  if (!minutes || minutes <= 0) return 'Keine Angabe'
-  
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
-  
-  if (hours > 0) {
-    return remainingMinutes > 0 
-      ? `${hours}h ${remainingMinutes}min`
-      : `${hours}h`
-  }
-  
-  return `${minutes}min`
-}
-
-const formatPhone = (phone: string) => {
-  if (!phone) return ''
-  
-  // Swiss format: +41 79 123 45 67 -> 079 123 45 67
-  if (phone.startsWith('+41')) {
-    return phone.replace('+41', '0').replace(/\s+/g, ' ')
-  }
-  
-  return phone
-}
-
-const callStudent = (phone: string) => {
-  if (phone) {
-    window.open(`tel:${phone}`)
+  if (appointmentDate === today) {
+    return 'Offen'
+  } else if (appointmentDate === yesterdayString) {
+    return 'Fällig'
+  } else {
+    return 'Überfällig'
   }
 }
 
-const emailStudent = (email: string) => {
-  if (email) {
-    window.open(`mailto:${email}`)
-  }
-}
-
-const closeEvaluationModal = () => {
-  showEvaluationModal.value = false
-  selectedAppointment.value = null
-}
-
-const onEvaluationSaved = () => {
-  // Refresh the pending list
-  loadPendingEvaluations()
-  closeEvaluationModal()
-}
-
-// Lifecycle
-onMounted(async () => {
-  await fetchCurrentUser()
+// Watch für Modal-Öffnung
+watch(() => props.isOpen, async (newIsOpen) => {
+  console.log('🔥 PendenzenModal isOpen changed:', newIsOpen)
+  console.log('🔥 Current user in modal:', props.currentUser)
   
-  if (userError.value || !currentUser.value) {
-    await navigateTo('/')
-    return
+  if (newIsOpen && props.currentUser?.id) {
+    console.log('🔄 PendenzenModal opened - loading data...')
+    await refreshData()
+  } else if (!newIsOpen) {
+    console.log('ℹ️ PendenzenModal closed')
+  } else {
+    console.warn('⚠️ Modal opened but no user ID available')
   }
+}, { immediate: true })
 
-  if (currentUser.value.role === 'client') {
-    await navigateTo('/dashboard')
-    return
+// Debug: Watch pendingCount changes
+watch(pendingCount, (newCount, oldCount) => {
+  console.log(`🔄 PendenzenModal - pending count changed: ${oldCount} → ${newCount}`)
+}, { immediate: true })
+
+// Initial load wenn Component gemounted wird UND Modal bereits offen ist
+onMounted(() => {
+  if (props.isOpen && props.currentUser?.id) {
+    console.log('🔄 PendenzenModal mounted with open state - loading data...')
+    refreshData()
   }
-
-  await loadPendingEvaluations()
 })
 </script>
 
 <style scoped>
-/* Mobile optimizations */
+/* Custom scrollbar */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+/* Smooth transitions */
 .transition-all {
   transition: all 0.2s ease-in-out;
 }
 
-/* Smooth touch interactions */
+.transition-colors {
+  transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+/* Mobile optimizations */
 @media (hover: none) and (pointer: coarse) {
-  .hover\:shadow-md:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  }
-  
-  .hover\:bg-green-700:hover {
-    background-color: #15803d;
-  }
-  
-  .hover\:bg-gray-50:hover {
-    background-color: #f9fafb;
+  .hover\:bg-gray-100:hover {
+    background-color: #f3f4f6;
   }
 }
 
@@ -578,10 +364,5 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Floating action button shadow */
-.shadow-lg {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 </style>

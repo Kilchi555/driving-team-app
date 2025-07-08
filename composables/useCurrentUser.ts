@@ -40,15 +40,6 @@ export const useCurrentUser = () => {
         .eq('email', user.email)
         .eq('is_active', true)
 
-      // ✅ DEBUG-CODE
-      console.log('=== COMPLETE DEBUG ===')
-      console.log('1. Auth Email:', user.email)
-      console.log('2. usersData:', usersData)
-      console.log('3. usersData length:', usersData?.length)
-      console.log('4. dbError:', dbError)
-      console.log('5. First user:', usersData?.[0])
-      console.log('====================')
-
       if (dbError) {
         console.error('Database Error:', dbError)
         userError.value = `Database-Fehler: ${dbError.message}`
