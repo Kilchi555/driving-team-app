@@ -413,7 +413,7 @@
           class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
         >
           <span v-if="isSubmitting">⏳ Registrierung...</span>
-          <span v-else">✅ Registrieren</span>
+          <span v-else>✅ Registrieren</span>
         </button>
       </div>
 

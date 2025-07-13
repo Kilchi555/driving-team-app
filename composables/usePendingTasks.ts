@@ -14,11 +14,21 @@ interface PendingAppointment {
     first_name: string
     last_name: string
   }
+  // Da wir nur Kriterien-Bewertungen wollen, passen wir den Typ an
+  // Die notes Property sollte hier nur die Kriterien-spezifischen Notizen halten
   notes: Array<{
     id: string
-    staff_rating?: number
-    staff_note?: string
+    criteria_rating?: number
+    criteria_note?: string
+    evaluation_criteria_id?: string
   }>
+}
+
+// Typ für die Daten, die von saveCriteriaEvaluations erwartet werden
+export interface CriteriaEvaluationData {
+  criteria_id: string; // evaluation_criteria_id
+  rating: number;     // criteria_rating
+  note: string;       // criteria_note
 }
 
 // SINGLETON PATTERN - Globaler reaktiver State
@@ -90,9 +100,8 @@ const fetchPendingTasks = async (staffId: string) => {
           last_name
         ),
         notes (
-          id,
-          staff_rating,
-          staff_note
+          evaluation_criteria_id,
+          criteria_rating
         )
       `)
       .eq('staff_id', staffId)
@@ -102,23 +111,22 @@ const fetchPendingTasks = async (staffId: string) => {
 
     if (fetchError) throw fetchError
 
-    console.log('🔥 Fetched appointments:', data?.length)
+    console.log('🔥 Fetched appointments (raw data):', data?.length)
 
-    // Termine ohne Bewertung filtern
+    // Termine ohne Kriterienbewertung filtern
     const pending: PendingAppointment[] = (data || []).filter((appointment: any) => {
-      // Prüfen ob eine gültige Bewertung vorhanden ist
-      const hasValidRating = appointment.notes && 
-        appointment.notes.length > 0 && 
+      // Ein Termin ist "pending", wenn er KEINE Kriterien-Bewertung hat.
+      // Wir definieren "Kriterien-Bewertung" als einen Note-Eintrag, 
+      // bei dem evaluation_criteria_id und criteria_rating gesetzt sind.
+      const hasCriteriaEvaluation = appointment.notes && 
         appointment.notes.some((note: any) => 
-          note.staff_rating && 
-          note.staff_rating >= 1 && 
-          note.staff_rating <= 6 && // Entsprechend Ihrer Skala 1-6
-          note.staff_note && 
-          note.staff_note.trim().length > 0
-        )
+          note.evaluation_criteria_id !== null && 
+          note.criteria_rating !== null
+        );
 
-      console.log(`🔥 Appointment ${appointment.id}: hasValidRating=${hasValidRating}`)
-      return !hasValidRating // Pending wenn keine gültige Bewertung
+      // Hier ignorieren wir alte staff_rating Einträge komplett für die Pendenzen-Logik
+      console.log(`🔥 Appointment ${appointment.id}: hasCriteriaEvaluation=${hasCriteriaEvaluation}`)
+      return !hasCriteriaEvaluation; // Pending, wenn keine Kriterien-Bewertung vorhanden ist
     }).map((appointment: any): PendingAppointment => ({
       id: appointment.id,
       title: appointment.title,
@@ -127,7 +135,8 @@ const fetchPendingTasks = async (staffId: string) => {
       user_id: appointment.user_id,
       status: appointment.status,
       users: appointment.users,
-      notes: appointment.notes
+      // Wichtig: Filtere hier die notes, damit nur relevante Kriterien-notes enthalten sind
+      notes: appointment.notes.filter((note: any) => note.evaluation_criteria_id !== null)
     }))
 
     console.log('🔥 Filtered pending appointments:', pending.length)
@@ -144,98 +153,73 @@ const fetchPendingTasks = async (staffId: string) => {
   }
 }
 
-const markAsCompleted = async (
-  appointmentId: string, 
-  rating: number, 
-  note: string,
+// NEUE Funktion zum Speichern der Kriterien-Bewertungen
+const saveCriteriaEvaluations = async (
+  appointmentId: string,
+  evaluations: CriteriaEvaluationData[], // Array von Kriterien-Bewertungen
   currentUserId?: string
 ) => {
   try {
-    // Validierung entsprechend Ihrer Skala
-    if (rating < 1 || rating > 6) {
-      throw new Error('Bewertung muss zwischen 1 und 6 liegen')
-    }
-
-    if (!note || note.trim().length === 0) {
-      throw new Error('Eine Notiz ist erforderlich')
-    }
-
-    const supabase = getSupabase()
+    const supabase = getSupabase();
     
-    const { error } = await supabase
-      .from('notes')
-      .upsert({
+    // Validierung der übergebenen Daten
+    if (!evaluations || evaluations.length === 0) {
+      throw new Error('Es müssen Bewertungen für mindestens ein Kriterium angegeben werden.');
+    }
+
+    const notesToInsert = evaluations.map(evalData => {
+      // Validierung für jede einzelne Kriterienbewertung
+      if (evalData.rating < 1 || evalData.rating > 6) {
+        throw new Error(`Bewertung für Kriterium ${evalData.criteria_id} muss zwischen 1 und 6 liegen.`);
+      }
+      if (typeof evalData.note !== 'string') { // Stellen Sie sicher, dass note ein String ist
+        evalData.note = String(evalData.note);
+      }
+      if (evalData.note.trim().length === 0) { // Eine Notiz ist nicht mehr zwingend
+        evalData.note = ''; // Sicherstellen, dass es ein leerer String ist
+      }
+
+      return {
         appointment_id: appointmentId,
-        staff_rating: rating,
-        staff_note: note.trim(),
+        evaluation_criteria_id: evalData.criteria_id,
+        criteria_rating: evalData.rating,
+        criteria_note: evalData.note.trim(),
+        // staff_rating und staff_note bleiben NULL, da nicht mehr verwendet
+        staff_rating: null,
+        staff_note: '',
         last_updated_by_user_id: currentUserId || null,
         last_updated_at: new Date().toISOString()
-      })
+      };
+    });
 
-    if (error) throw error
+    console.log('Attempting to upsert notes:', notesToInsert);
 
-    // Aus GLOBALEM State entfernen (splice verwenden statt filter)
-    const index = globalState.pendingAppointments.findIndex(
-      (appointment) => appointment.id === appointmentId
-    )
-    if (index > -1) {
-      globalState.pendingAppointments.splice(index, 1)
-    }
-
-    console.log('✅ Bewertung erfolgreich gespeichert und aus globalem State entfernt:', appointmentId)
-    console.log('🔥 New global pending count:', pendingCount.value)
-    
-  } catch (err: any) {
-    globalState.error = err?.message || 'Fehler beim Speichern der Bewertung'
-    console.error('❌ Fehler beim Speichern der Bewertung:', err)
-    throw err
-  }
-}
-
-const markMultipleAsCompleted = async (
-  completions: Array<{
-    appointmentId: string
-    rating: number
-    note: string
-  }>,
-  currentUserId?: string
-) => {
-  try {
-    const supabase = getSupabase()
-    
-    const notesToInsert = completions.map(({ appointmentId, rating, note }) => ({
-      appointment_id: appointmentId,
-      staff_rating: rating,
-      staff_note: note.trim(),
-      last_updated_by_user_id: currentUserId || null,
-      last_updated_at: new Date().toISOString()
-    }))
-
-    const { error } = await supabase
+    // Verwende upsert für mehrere Einträge
+    const { error: upsertError } = await supabase
       .from('notes')
-      .upsert(notesToInsert)
+      .upsert(notesToInsert, { onConflict: 'appointment_id,evaluation_criteria_id' }); // Conflict auf diesen beiden Spalten
+                                                                                        // um Updates zu ermöglichen
+    if (upsertError) throw upsertError;
 
-    if (error) throw error
+    // Nach erfolgreichem Speichern: Aktualisiere die Pendenzen
+    // Ein Termin ist NICHT mehr pending, wenn er mindestens eine Kriterien-Bewertung hat.
+    // Die fetchPendingTasks Funktion wird das übernehmen.
+    await fetchPendingTasks(currentUserId || ''); // Aktualisiere die Liste nach dem Speichern
 
-    // Alle bewerteten Termine aus der GLOBALEN Liste entfernen (splice verwenden)
-    const completedIds = completions.map(c => c.appointmentId)
-    
-    // Rückwärts durch das Array gehen, um Index-Probleme zu vermeiden
-    for (let i = globalState.pendingAppointments.length - 1; i >= 0; i--) {
-      if (completedIds.includes(globalState.pendingAppointments[i].id)) {
-        globalState.pendingAppointments.splice(i, 1)
-      }
-    }
+    console.log('✅ Kriterien-Bewertungen erfolgreich gespeichert und Pendenzen aktualisiert:', appointmentId);
 
-    console.log('✅ Mehrere Bewertungen erfolgreich gespeichert:', completedIds.length)
-    console.log('🔥 New global pending count:', pendingCount.value)
-    
   } catch (err: any) {
-    globalState.error = err?.message || 'Fehler beim Speichern der Bewertungen'
-    console.error('❌ Fehler beim Speichern der Bewertungen:', err)
-    throw err
+    globalState.error = err?.message || 'Fehler beim Speichern der Kriterien-Bewertungen';
+    console.error('❌ Fehler beim Speichern der Kriterien-Bewertungen:', err);
+    throw err;
   }
-}
+};
+
+
+// Die markAsCompleted und markMultipleAsCompleted Funktionen sind obsolet,
+// da wir keine Gesamtbewertungen mehr speichern.
+// Ich habe sie hier entfernt, damit sie nicht mehr versehentlich aufgerufen werden.
+// Wenn du sie noch irgendwo im Code hast, wo sie aufgerufen werden, musst du diese Aufrufe ändern.
 
 const refreshPendingTasks = async (staffId: string) => {
   await fetchPendingTasks(staffId)
@@ -262,8 +246,7 @@ export const usePendingTasks = () => {
     
     // Actions
     fetchPendingTasks,
-    markAsCompleted,
-    markMultipleAsCompleted,
+    saveCriteriaEvaluations, // Die neue Funktion zum Export hinzufügen
     refreshPendingTasks,
     clearError,
     

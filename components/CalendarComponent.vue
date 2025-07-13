@@ -9,6 +9,9 @@ import EventModal from './EventModal.vue'
 import { getSupabase } from '~/utils/supabase'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
+import MoveAppointmentModal from './MoveAppointmentModal.vue'
+
+
 
 
 // Neue refs für Confirmation Dialog
@@ -23,6 +26,9 @@ const confirmationData = ref({
   cancelText: 'Abbrechen'
 })
 const pendingAction = ref<(() => Promise<void>) | null>(null)
+const showMoveModal = ref(false)
+const selectedAppointmentToMove = ref<CalendarAppointment | null>(null)
+
 
 // Helper-Funktion für Confirmation Dialog
 const showConfirmDialog = (options: {
@@ -48,6 +54,19 @@ const showConfirmDialog = (options: {
   showConfirmation.value = true
 }
 
+// CalendarComponent.vue - Einfache Toast-Alternative
+
+const showToast = (message: string) => {
+  // Einfache Browser-Benachrichtigung
+  if (message.includes('✅')) {
+    alert('✅ ' + message.replace('✅ ', ''))
+  } else if (message.includes('❌')) {
+    alert('❌ ' + message.replace('❌ ', ''))
+  } else {
+    alert(message)
+  }
+}
+
 // Confirmation handlers
 const handleConfirmAction = async () => {
   if (pendingAction.value) {
@@ -60,6 +79,11 @@ const handleConfirmAction = async () => {
 const handleCancelAction = () => {
   showConfirmation.value = false
   pendingAction.value = null
+}
+
+const openMoveModal = (appointment: CalendarAppointment) => {
+  selectedAppointmentToMove.value = appointment
+  showMoveModal.value = true
 }
 
 const { updateOverdueAppointments } = useAppointmentStatus()
@@ -77,6 +101,21 @@ const props = defineProps<Props>()
 const isModalVisible = ref(false)
 const modalEventData = ref<any>(null)
 const modalMode = ref<'view' | 'edit' | 'create'>('create')
+
+const handleAppointmentMoved = async (moveData: MoveData) => {
+  console.log('✅ Appointment moved:', moveData)
+  
+  try {
+    // Kalender neu laden
+    await loadAppointments()
+    
+    // Success Toast
+    showToast('✅ Termin erfolgreich verschoben')
+  } catch (error) {
+    console.error('❌ Error reloading calendar:', error)
+    showToast('❌ Fehler beim Aktualisieren des Kalenders')
+  }
+}
 
 
 type CalendarEvent = {
@@ -103,6 +142,26 @@ type CalendarEvent = {
     appointment_type?: string
     is_team_invite?: boolean
     original_type?: string
+  }
+}
+
+interface MoveData {
+  appointmentId: string
+  newStart: string
+  newEnd: string
+}
+
+interface CalendarAppointment {
+  id: string
+  title: string
+  start: Date | string
+  end: Date | string
+  extendedProps?: {
+    student?: string
+    location?: string
+    user_name?: string
+    duration_minutes?: number
+    [key: string]: any
   }
 }
 
@@ -321,6 +380,27 @@ const handleEventClick = (clickInfo: any) => {
   isModalVisible.value = true
   modalMode.value = 'edit'
   modalEventData.value = appointmentData
+
+    const options = [
+    { label: 'Bearbeiten', action: () => editAppointment(clickInfo.event) },
+    { label: 'Verschieben', action: () => openMoveModal(clickInfo.event) },
+    { label: 'Löschen', action: () => handleDeleteEvent(clickInfo.event) }
+  ]
+  
+  // Zeige Context Menu oder öffne Modal direkt
+  openMoveModal(clickInfo.event)
+}
+
+const handleMoveError = (error: string) => {
+  console.error('❌ Move error:', error)
+  showToast('❌ Fehler beim Verschieben: ' + error)
+}
+
+const editAppointment = (appointment: CalendarAppointment) => {
+  console.log('✏️ Edit appointment:', appointment.id)
+  // TODO: Implementiere Edit-Modal
+  // emit('edit-appointment', appointment)
+  showToast('Edit-Funktion noch nicht implementiert')
 }
 
 // Im calendarOptions eventClick ersetzen:
@@ -759,6 +839,15 @@ defineExpose({
     @cancel="handleCancelAction"
     @close="handleCancelAction"
   />
+
+    <!-- Move Modal hinzufügen -->
+  <MoveAppointmentModal
+    :is-visible="showMoveModal"
+    :appointment="selectedAppointmentToMove"
+    @close="showMoveModal = false"
+    @moved="handleAppointmentMoved"
+    @error="handleMoveError"
+  />
 </template>
 
 <style>
@@ -819,7 +908,6 @@ defineExpose({
   border: none !important;
   border-radius: 6px !important;
   padding: 2px;
-  margin: 1px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
   font-weight: 500 !important;
   transition: all 0.2s ease !important;

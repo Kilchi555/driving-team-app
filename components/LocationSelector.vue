@@ -136,25 +136,12 @@
     <!-- Selected Standard/Pickup Location Preview -->
     <div v-if="useStandardLocations && selectedLocationId && currentSelectedLocation" class="mt-2">
       <div class="flex items-center gap-2 text-sm text-gray-600">
-        <span>{{ currentSelectedLocation.location_type === 'standard' ? '🏢' : '📍' }}</span>
-        <span>{{ currentSelectedLocation.name }}</span>
         <a :href="getLocationMapsUrl(currentSelectedLocation)" target="_blank" 
            class="text-blue-600 hover:text-blue-800 ml-auto">
-          🗺️ Maps
+          🗺️ Google Maps
         </a>
       </div>
     </div>
-
-    <!-- Hint Text -->
-    <p class="text-xs text-gray-500 mt-2">
-      {{ useStandardLocations 
-          ? (selectedStudentId 
-              ? 'ℹ️ Standard-Orte und gespeicherte Treffpunkte des Schülers' 
-              : 'ℹ️ Nur Standard-Orte (Schüler wählen für Treffpunkte)')
-          : '🔍 Tippen Sie mindestens 3 Zeichen für Vorschläge. Wird automatisch für den Schüler gespeichert.'
-      }}
-    </p>
-
     <!-- Loading Indicator -->
     <div v-if="isLoadingLocations" class="flex items-center gap-2 mt-2 text-sm text-gray-500">
       <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>

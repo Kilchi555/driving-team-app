@@ -1,4 +1,4 @@
-<!-- VERWENDEN SIE NUR DIESE index.vue (keine Middleware nötig!) -->
+<!-- ERWEITERTE index.vue mit Passwort Toggle & Debug Features -->
 
 <template>
   <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
@@ -29,18 +29,45 @@
             />
           </div>
 
-          <!-- Password -->
+          <!-- Password mit Toggle -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Passwort
             </label>
-            <input
-              v-model="loginPassword"
-              type="password"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Ihr Passwort"
-            />
+            <div class="relative">
+              <input
+                v-model="loginPassword"
+                :type="showPassword ? 'text' : 'password'"
+                required
+                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Ihr Passwort"
+              />
+              <!-- Toggle Button -->
+              <button
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <!-- Eye Icon (sichtbar) -->
+                <svg v-if="!showPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                
+                <!-- Eye Slash Icon (versteckt) -->
+                <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.466 8.466M9.878 9.878l4.242 4.242m0 0L15.533 15.533M14.12 14.12L8.466 8.466m5.654 5.654l1.414 1.414" />
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Debug Info (Development) -->
+            <div v-if="loginPassword" class="mt-2 p-2 bg-gray-100 rounded text-xs text-gray-600">
+              <strong>Debug:</strong> "{{ loginPassword }}" ({{ loginPassword.length }} Zeichen)
+            </div>
           </div>
 
           <!-- Remember Me & Forgot Password -->
@@ -76,6 +103,53 @@
           </button>
         </form>
 
+        <!-- Quick Test Buttons (Development) -->
+        <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h3 class="text-sm font-medium text-yellow-800 mb-3">🧪 Quick Test Buttons</h3>
+          
+          <div class="grid grid-cols-1 gap-2">
+            <button 
+              @click="fillLoginData('marc@drivingteam.ch', 'Marc2025!')"
+              class="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 px-3 rounded text-sm text-left"
+            >
+              🟠 Marc (Staff - funktioniert garantiert)
+              <div class="text-xs opacity-80">marc@drivingteam.ch / Marc2025!</div>
+            </button>
+            
+            <button 
+              @click="fillLoginData('fresh.test@example.com', 'Test2025!')"
+              class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded text-sm text-left"
+            >
+              🟢 Fresh Test User
+              <div class="text-xs opacity-80">fresh.test@example.com / Test2025!</div>
+            </button>
+            
+            <button 
+              @click="fillLoginData('test.zuerich@example.com', 'Test2025!')"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded text-sm text-left"
+            >
+              🔵 Original Test User  
+              <div class="text-xs opacity-80">test.zuerich@example.com / Test2025!</div>
+            </button>
+            
+            <button 
+              @click="fillLoginData('test.zuerich@example.com', 'NewTest2025!')"
+              class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-3 rounded text-sm text-left"
+            >
+              🟣 Test User (neues PW)
+              <div class="text-xs opacity-80">test.zuerich@example.com / NewTest2025!</div>
+            </button>
+          </div>
+          
+          <!-- Debug Button -->
+          <button 
+            @click="debugAuth"
+            class="w-full mt-3 bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded text-sm"
+          >
+            🔍 Debug Current Input
+          </button>
+        </div>
+
         <!-- Divider -->
         <div class="my-6 flex items-center">
           <div class="flex-1 border-t border-gray-300"></div>
@@ -98,7 +172,7 @@
       </div>
     </div>
 
-    <!-- PASSWORD RESET MODAL (wird nur bei showResetForm=true angezeigt) -->
+    <!-- PASSWORD RESET MODAL -->
     <div v-if="showResetForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
         <!-- Reset Header -->
@@ -198,17 +272,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { navigateTo } from '#app'
+import { ref, computed, onMounted, watch } from 'vue'
+import { navigateTo, useRoute } from '#app' // useRoute hier importieren
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
+import { storeToRefs } from 'pinia'
 
 const supabase = getSupabase()
+const authStore = useAuthStore()
+const { user, userRole, loading: authLoading } = storeToRefs(authStore)
 
 // Login variables
 const loginEmail = ref('')
 const loginPassword = ref('')
 const isLoading = ref(false)
 const rememberMe = ref(false)
+const showPassword = ref(false)
 
 // Reset variables
 const showResetForm = ref(false)
@@ -226,116 +305,143 @@ const passwordChecks = computed(() => ({
 }))
 
 const passwordIsValid = computed(() => {
-  return passwordChecks.value.length && 
-         passwordChecks.value.uppercase && 
+  return passwordChecks.value.length &&
+         passwordChecks.value.uppercase &&
          passwordChecks.value.number
 })
 
 const canSubmitReset = computed(() => {
-  return newPassword.value && 
-         confirmPassword.value && 
-         newPassword.value === confirmPassword.value && 
+  return newPassword.value &&
+         confirmPassword.value &&
+         newPassword.value === confirmPassword.value &&
          passwordIsValid.value
 })
+
+// Debug functions
+const fillLoginData = (email: string, password: string) => {
+  loginEmail.value = email
+  loginPassword.value = password
+  console.log(`🎯 Filled: ${email} / "${password}"`)
+}
+
+const debugAuth = () => {
+  console.log('🔍 === LOGIN DEBUG INFO ===')
+  console.log('Email:', `"${loginEmail.value}"`)
+  console.log('Password:', `"${loginPassword.value}"`)
+  console.log('Email Length:', loginEmail.value.length)
+  console.log('Password Length:', loginPassword.value.length)
+  console.log('Email Trimmed:', `"${loginEmail.value.trim()}"`)
+  console.log('Password has spaces:', loginPassword.value.includes(' '))
+  console.log('Password visible chars:', loginPassword.value.split('').map(c => c.charCodeAt(0)))
+  console.log('========================')
+}
 
 // Auth token handling on mount
 onMounted(async () => {
   try {
     const urlParams = new URLSearchParams(window.location.search)
     const hash = window.location.hash
-    
+
     console.log('Page loaded with hash:', hash)
-    
+
     // Check for reset parameter
     if (urlParams.get('reset') === 'true') {
       showResetForm.value = true
       return
     }
-    
+
     // Check for auth tokens in hash
     if (hash.includes('access_token') && hash.includes('refresh_token')) {
       const hashParams = new URLSearchParams(hash.substring(1))
       const accessToken = hashParams.get('access_token')
       const refreshToken = hashParams.get('refresh_token')
       const type = hashParams.get('type')
-      
+
       if (type === 'recovery' && accessToken && refreshToken) {
         console.log('Password recovery detected')
-        
+
         const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken
         })
-        
+
         if (error) {
           resetError.value = `Session-Fehler: ${error.message}`
         } else {
           showResetForm.value = true
           resetSuccess.value = '✅ Reset-Link erfolgreich verarbeitet!'
         }
-        
+
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname)
       }
     }
-    
+
   } catch (error: any) {
     console.error('Mount error:', error)
   }
 })
 
-// Login function
+// WICHTIG: Watcher-Logik HIERher verschieben, direkt nach den reaktiven Variablen
+watch(userRole, (newRole: string | null) => { // <<< `newRole: string | null` Typisierung hinzugefügt
+  if (newRole) { // Wenn userRole gesetzt ist (nicht leer)
+    console.log('DEBUG: UserRole detected in index.vue watcher:', newRole);
+    // Nur navigieren, wenn nicht bereits auf der Zielseite
+    const currentPath = useRoute().path; // useRoute ist jetzt importiert
+    let targetPath = '/';
+
+    switch (newRole) {
+      case 'admin':
+        targetPath = '/admin';
+        break;
+      case 'staff':
+        targetPath = '/dashboard';
+        break;
+      case 'client':
+        targetPath = '/customer-dashboard';
+        break;
+      default:
+        targetPath = '/';
+    }
+
+    if (currentPath !== targetPath) {
+        navigateTo(targetPath);
+    }
+  }
+});
+
+
+// Enhanced Login function
 const manualLogin = async () => {
   if (!loginEmail.value || !loginPassword.value) {
     alert('Bitte geben Sie E-Mail und Passwort ein')
     return
   }
-  
-  isLoading.value = true
-  
+
+  isLoading.value = true // Nur für den Button
+
   try {
     const email = loginEmail.value.trim().toLowerCase()
     const password = loginPassword.value
-    
-    console.log('Login attempt:', email)
-    
+
+    console.log('🔑 Login attempt:', email)
+    console.log('🔍 Password (visible):', password)
+
     await supabase.auth.signOut()
-    
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password
-    })
-    
-    if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        alert(`❌ Login fehlgeschlagen!\n\nBitte überprüfen Sie:\n• E-Mail: ${email}\n• Passwort\n• Groß-/Kleinschreibung\n\n💡 Tipp: Nutzen Sie "Passwort vergessen?"`)
-      } else {
-        alert(`Fehler: ${error.message}`)
-      }
-      return
+
+    const loginSuccess = await authStore.login(email, password, supabase);
+
+    if (!loginSuccess) {
+      alert(`Login fehlgeschlagen: ${authStore.errorMessage}`);
+      return;
     }
-    
-    if (data.user) {
-      console.log('✅ Login successful')
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', data.user.id)
-        .single()
-      
-      switch (userProfile?.role) {
-        case 'admin':
-          await navigateTo('/admin')
-          break
-        case 'staff':
-          await navigateTo('/dashboard')
-          break
-        default:
-          await navigateTo('/dashboard')
-      }
-    }
-    
+
+    console.log('✅ Login initiated successfully via store action.');
+    // Keine direkte Navigation hier, der Watcher auf userRole übernimmt dies
+    // sobald der Store die Rolle geladen hat.
+
   } catch (error: any) {
+    console.error('❌ Catch Error in manualLogin:', error)
     alert(`Fehler: ${error.message}`)
   } finally {
     isLoading.value = false
@@ -348,14 +454,14 @@ const resetPassword = async () => {
     alert('Bitte geben Sie zuerst Ihre E-Mail-Adresse ein')
     return
   }
-  
+
   const { error } = await supabase.auth.resetPasswordForEmail(
     loginEmail.value.trim().toLowerCase(),
     {
       redirectTo: `${window.location.origin}/?reset=true`
     }
   )
-  
+
   if (error) {
     alert(`Fehler: ${error.message}`)
   } else {
@@ -366,29 +472,29 @@ const resetPassword = async () => {
 // Password update
 const updatePassword = async () => {
   if (!canSubmitReset.value) return
-  
+
   isResetting.value = true
-  
+
   try {
     const { data, error } = await supabase.auth.updateUser({
       password: newPassword.value
     })
-    
+
     if (error) {
       throw error
     }
-    
+
     resetSuccess.value = '🎉 Passwort erfolgreich geändert!'
     resetError.value = ''
-    
+
     newPassword.value = ''
     confirmPassword.value = ''
-    
+
     setTimeout(() => {
       showResetForm.value = false
       resetSuccess.value = ''
     }, 3000)
-    
+
   } catch (error: any) {
     resetError.value = `Fehler: ${error.message}`
   } finally {

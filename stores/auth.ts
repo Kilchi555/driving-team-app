@@ -3,9 +3,7 @@
 
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { useSupabaseUser, useSupabaseClient } from '#imports'
-import type { User } from '@supabase/supabase-js'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { User, SupabaseClient, AuthResponse } from '@supabase/supabase-js' // <<< AuthResponse hier hinzufügen!
 import type { Ref } from 'vue' 
 
 export const useAuthStore = defineStore('authV2', () => {
@@ -77,11 +75,16 @@ export const useAuthStore = defineStore('authV2', () => {
     errorMessage.value = null
 
     try {
-      const { error } = await supabaseClient.auth.signInWithPassword({
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
         email: email_val,
         password: password_val,
       })
       if (error) throw error
+            // NEU: Wenn Login erfolgreich ist, aktualisiere den User im Store
+      if (data.user) {
+        user.value = data.user;
+        await fetchUserRole(supabaseClient, data.user.id); // NEU: Rolle direkt nach Login laden
+      }
       return true
     } catch (err: any) {
       errorMessage.value = err.message || 'Login fehlgeschlagen.'

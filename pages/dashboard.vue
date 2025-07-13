@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import CalendarComponent from '../components/CalendarComponent.vue'
 import StaffSettings from '~/components/StaffSettings.vue'
 import PendenzenModal from '~/components/PendenzenModal.vue'
@@ -234,7 +234,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  
+
   <!-- Loading State -->
   <div v-if="isLoading" class="min-h-screen flex items-center justify-center">
     <div class="text-center">
@@ -351,7 +351,7 @@ onUnmounted(() => {
     v-if="showStaffSettings && currentUser" 
     :current-user="currentUser"
     @close="showStaffSettings = false"
-  />
+/>
 </template>
 
 <style>

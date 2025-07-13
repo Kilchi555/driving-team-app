@@ -1,7 +1,6 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
     <div class="bg-white rounded-lg max-w-2xl w-full max-h-[95vh] overflow-hidden flex flex-col">
-      <!-- Header -->
       <div class="bg-green-600 text-white p-4">
         <div class="flex items-center justify-between">
           <div>
@@ -18,21 +17,16 @@
         </div>
       </div>
 
-      <!-- Content -->
       <div class="flex-1 overflow-y-auto p-4">
-        <!-- Loading State -->
         <div v-if="isLoading" class="flex items-center justify-center py-8">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
 
-        <!-- Error State -->
         <div v-else-if="error" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
           {{ error }}
         </div>
 
-        <!-- Clean Evaluation Form -->
         <div v-else class="space-y-4">
-          <!-- Search Field with Dropdown -->
           <div class="relative">
             <div class="relative">
               <input
@@ -48,7 +42,6 @@
               </div>
             </div>
 
-            <!-- Dropdown -->
             <div 
               v-if="showDropdown && filteredCriteria.length > 0"
               class="criteria-dropdown absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg mt-1 shadow-lg z-50 max-h-60 overflow-y-auto"
@@ -72,14 +65,12 @@
             </div>
           </div>
 
-          <!-- Selected Criteria (Newest First) -->
           <div class="space-y-3">
             <div
               v-for="(criteriaId, index) in selectedCriteriaOrder"
               :key="criteriaId"
               class="bg-gray-50 rounded-lg p-4 border border-gray-200"
             >
-              <!-- Criteria Info -->
               <div class="flex items-start justify-between mb-3">
                 <div class="flex-1">
                   <h4 class="font-medium text-gray-900">
@@ -90,7 +81,6 @@
                   </p>
                 </div>
                 
-                <!-- Remove Button -->
                 <button
                   @click="removeCriteria(criteriaId)"
                   class="text-gray-400 hover:text-red-500 transition-colors"
@@ -101,7 +91,6 @@
                 </button>
               </div>
 
-              <!-- Rating Scale -->
               <div class="mb-3">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   Bewertung (1-6)
@@ -126,10 +115,9 @@
                 </p>
               </div>
 
-              <!-- Note Field -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Notiz
+                  Notiz (optional)
                 </label>
                 <textarea
                   v-model="criteriaNotes[criteriaId]"
@@ -140,7 +128,6 @@
             </div>
           </div>
 
-          <!-- Empty State -->
           <div v-if="selectedCriteriaOrder.length === 0" class="text-center py-8">
             <div class="text-4xl mb-2">📝</div>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Bewertungspunkte hinzufügen</h3>
@@ -151,7 +138,6 @@
         </div>
       </div>
 
-      <!-- Footer -->
       <div class="bg-gray-50 px-4 py-3 border-t">
         <div class="flex gap-3">
           <button
@@ -174,7 +160,6 @@
           </button>
         </div>
         
-        <!-- Validation hints -->
         <div v-if="!isValid && selectedCriteriaOrder.length > 0" class="mt-2 text-xs text-red-600">
           <p v-if="missingRequiredRatings.length > 0">
             • Folgende Bewertungspunkte müssen noch bewertet werden: {{ missingRequiredRatings.join(', ') }}
@@ -189,7 +174,8 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { formatDate } from '~/utils/dateUtils'
-import { usePendingTasks } from '~/composables/usePendingTasks'
+// Importiere den CriteriaEvaluationData-Typ
+import { usePendingTasks, type CriteriaEvaluationData } from '~/composables/usePendingTasks'
 
 // Props
 interface Props {
@@ -206,7 +192,8 @@ const props = defineProps<Props>()
 const emit = defineEmits(['close', 'saved'])
 
 // WICHTIG: Verwende das zentrale usePendingTasks Composable
-const { markAsCompleted } = usePendingTasks()
+// Jetzt importieren wir saveCriteriaEvaluations
+const { saveCriteriaEvaluations } = usePendingTasks()
 
 // Supabase
 const supabase = getSupabase()
@@ -219,7 +206,7 @@ const error = ref<string | null>(null)
 // Search & Dropdown
 const searchQuery = ref('')
 const showDropdown = ref(false)
-const allCriteria = ref<any[]>([])
+const allCriteria = ref<any[]>([]) // Wird von v_evaluation_matrix geladen
 
 // Selected Criteria (in order of selection, newest first)
 const selectedCriteriaOrder = ref<string[]>([])
@@ -228,14 +215,16 @@ const criteriaNotes = ref<Record<string, string>>({})
 
 // Computed
 const filteredCriteria = computed(() => {
-  if (!searchQuery.value) return allCriteria.value
+  if (!searchQuery.value) {
+    // Wenn Suchfeld leer ist, zeige alle Kriterien, die noch nicht ausgewählt sind
+    return allCriteria.value.filter(criteria => !selectedCriteriaOrder.value.includes(criteria.id))
+  }
   
   const query = searchQuery.value.toLowerCase()
   return allCriteria.value.filter(criteria => 
-    criteria.name.toLowerCase().includes(query) ||
-    criteria.category_name.toLowerCase().includes(query) ||
-    criteria.short_code?.toLowerCase().includes(query)
-  ).filter(criteria => 
+    (criteria.name?.toLowerCase().includes(query) ||
+    criteria.category_name?.toLowerCase().includes(query) ||
+    criteria.short_code?.toLowerCase().includes(query)) &&
     // Don't show already selected criteria
     !selectedCriteriaOrder.value.includes(criteria.id)
   )
@@ -287,90 +276,89 @@ const loadAllCriteria = async () => {
   error.value = null
   
   try {
-    console.log('🔄 Querying database for criteria...')
+    // Da v_evaluation_matrix die category_id enthält, müssen wir hier die richtige Spalte verwenden
+    // Der Fehler bei evaluation_criteria_id im vorherigen Schritt deutet darauf hin,
+    // dass deine v_evaluation_matrix anders aufgebaut ist, als ich dachte.
+    // Wir müssen die korrekten Spaltennamen aus v_evaluation_matrix verwenden.
     
-    // SCHRITT 1: Erst mal alle Spalten anzeigen
-    const { data: sampleData, error: sampleError } = await supabase
-      .from('v_evaluation_matrix')
-      .select('*')
-      .limit(1)
+    // Die Spaltennamen sind typischerweise:
+    // id (der Kriterien-ID), name (Kriterienname), short_code, category_name (aus evaluation_categories)
+    // Wenn deine v_evaluation_matrix nur 'evaluation_criteria_id' und 'criteria_name' etc. hat, 
+    // dann müssen wir das entsprechend anpassen.
+    // Laut deiner letzten Ausgabe: item.evaluation_criteria_id, item.criteria_name, item.category_name
     
-    console.log('📋 Sample data structure:', sampleData)
-    console.log('📋 Sample error:', sampleError)
-    
-    if (sampleData && sampleData.length > 0) {
-      console.log('📋 Available columns:', Object.keys(sampleData[0]))
-    }
-    
-    // SCHRITT 2: Alle Daten für Kategorie B laden
     const { data, error: supabaseError } = await supabase
       .from('v_evaluation_matrix')
-      .select('*')
-      .eq('driving_category', props.studentCategory)
+      .select(`
+        evaluation_criteria_id,
+        criteria_name,
+        criteria_description,
+        short_code,
+        category_name
+      `)
+      // .eq('driving_category', props.studentCategory) // Diese Zeile könnte einen Fehler verursachen,
+      // da ich nicht sicher bin, ob 'driving_category' in v_evaluation_matrix existiert.
+      // Falls ja, lass sie drin. Falls nicht, kommentiere sie aus und füge sie später hinzu.
+      // Basierend auf den vorherigen Logs, scheint diese Spalte NICHT zu existieren in evaluation_criteria.
+      // Wenn evaluation_matrix eine View ist, die alles zusammenfügt, ist es wahrscheinlich,
+      // dass sie eine Spalte wie `driving_category` hat.
+      // Wenn der Fehler auftritt, liegt es an diesem .eq() Filter.
+      
+      // Ich gehe davon aus, dass deine v_evaluation_matrix das driving_category-Feld hat,
+      // da du es als Prop übergibst. Wenn nicht, melde dich!
+      .eq('driving_category', props.studentCategory) 
 
-    console.log('📊 Database response:', { 
-      dataCount: data?.length || 0, 
-      error: supabaseError,
-      firstItem: data?.[0]
-    })
 
     if (supabaseError) {
-      console.error('❌ Supabase error:', supabaseError)
+      console.error('❌ Supabase error loading evaluation criteria:', supabaseError)
       throw supabaseError
     }
 
     if (!data || data.length === 0) {
-      console.log('⚠️ No data returned from database')
+      console.log('⚠️ No criteria found for category', props.studentCategory)
       error.value = 'Keine Bewertungskriterien gefunden für Kategorie ' + props.studentCategory
       return
     }
 
-    console.log('✅ Raw data from DB:', data.length, 'items')
-    console.log('📋 First item keys:', Object.keys(data[0]))
+    // Mappe die Daten auf das erwartete Format
+    allCriteria.value = data.map(item => ({
+      id: item.evaluation_criteria_id, // Wichtig: Die ID des Kriteriums
+      name: item.criteria_name,
+      description: item.criteria_description,
+      short_code: item.short_code,
+      category_name: item.category_name, // Name der Kategorie
+      // Hier könntest du weitere Felder hinzufügen, falls aus v_evaluation_matrix vorhanden (z.B. min_rating, max_rating)
+    }));
 
-    // SCHRITT 3: Daten verarbeiten - versuche verschiedene Spalten-Namen
-    allCriteria.value = data.map(item => {
-      console.log('📝 Processing item:', item)
-      
-      return {
-        id: item.evaluation_criteria_id || item.criteria_id || item.id || 'unknown',
-        name: item.criteria_name || item.name || item.title || 'Unbekannt',
-        description: item.criteria_description || item.description || '',
-        short_code: item.short_code || item.code || '',
-        category_name: item.category_name || item.category || 'Allgemein',
-        is_required: item.is_required || false,
-        min_rating: item.min_rating || 1,
-        max_rating: item.max_rating || 6
-      }
-    })
-
-    console.log('🎯 Processed criteria:', allCriteria.value.length)
-    console.log('📋 First few criteria:', allCriteria.value.slice(0, 3))
+    console.log('✅ Loaded and processed criteria:', allCriteria.value.length)
+    console.log('📋 First few processed criteria:', allCriteria.value.slice(0, 3))
 
   } catch (err: any) {
     console.error('❌ Error in loadAllCriteria:', err)
     error.value = err.message
   } finally {
     isLoading.value = false
-    console.log('🏁 loadAllCriteria finished. Final count:', allCriteria.value.length)
   }
 }
 
+
 const selectCriteria = (criteria: any) => {
-  // Add to beginning of array (newest first)
-  selectedCriteriaOrder.value.unshift(criteria.id)
+  // Add to beginning of array (newest first) only if not already selected
+  if (!selectedCriteriaOrder.value.includes(criteria.id)) {
+    selectedCriteriaOrder.value.unshift(criteria.id)
+    
+    // Initialize rating and note if not exists
+    if (!criteriaRatings.value[criteria.id]) {
+      criteriaRatings.value[criteria.id] = 0 // Standardwert 0 oder null
+    }
+    if (!criteriaNotes.value[criteria.id]) {
+      criteriaNotes.value[criteria.id] = ''
+    }
+  }
   
   // Clear search and hide dropdown
   searchQuery.value = ''
   showDropdown.value = false
-  
-  // Initialize rating and note if not exists
-  if (!criteriaRatings.value[criteria.id]) {
-    criteriaRatings.value[criteria.id] = 0
-  }
-  if (!criteriaNotes.value[criteria.id]) {
-    criteriaNotes.value[criteria.id] = ''
-  }
 }
 
 const removeCriteria = (criteriaId: string) => {
@@ -393,7 +381,7 @@ const setCriteriaRating = (criteriaId: string, rating: number) => {
 }
 
 const getCriteriaRating = (criteriaId: string) => {
-  return criteriaRatings.value[criteriaId] || null
+  return criteriaRatings.value[criteriaId] || 0 // Rückgabe 0, falls nicht gesetzt
 }
 
 const getRatingColor = (rating: number, selected = false) => {
@@ -426,15 +414,17 @@ const loadExistingEvaluation = async () => {
   try {
     const { data, error: supabaseError } = await supabase
       .from('notes')
-      .select('*')
+      .select('evaluation_criteria_id, criteria_rating, criteria_note') // Nur die relevanten Spalten laden
       .eq('appointment_id', props.appointment.id)
+      .not('evaluation_criteria_id', 'is', null) // Nur Kriterien-Bewertungen laden
 
     if (supabaseError) throw supabaseError
 
-    // Load existing criteria ratings (no overall rating)
+    // Lade existierende Kriterien-Bewertungen und ordne sie neu an (neueste zuerst)
+    selectedCriteriaOrder.value = [] // Zuerst leeren
     data?.forEach(note => {
       if (note.evaluation_criteria_id) {
-        selectedCriteriaOrder.value.push(note.evaluation_criteria_id)
+        selectedCriteriaOrder.value.unshift(note.evaluation_criteria_id) // Add to beginning
         criteriaRatings.value[note.evaluation_criteria_id] = note.criteria_rating || 0
         criteriaNotes.value[note.evaluation_criteria_id] = note.criteria_note || ''
       }
@@ -450,44 +440,40 @@ const saveEvaluation = async () => {
   
   if (!isValid.value || !props.appointment?.id) {
     console.log('❌ Validation failed or no appointment ID')
-    return
+    // Fehler anzeigen, wenn isValid false ist, z.B. über ein Toast
+    error.value = missingRequiredRatings.value.length > 0
+      ? `Bitte bewerten Sie alle ausgewählten Kriterien: ${missingRequiredRatings.value.join(', ')}`
+      : 'Bitte wählen Sie mindestens ein Kriterium und bewerten Sie es.';
+    return;
   }
   
   isSaving.value = true
   error.value = null
   
   try {
-    // Berechne Durchschnittsbewertung aus den Kriterien
-    const averageRating = Math.round(
-      Object.values(criteriaRatings.value).reduce((sum, rating) => sum + rating, 0) / 
-      Object.values(criteriaRatings.value).length
-    )
-    
-    // Kombiniere alle Bewertungen zu einer Notiz
-    const combinedNote = selectedCriteriaOrder.value
-      .map(criteriaId => {
-        const criteria = getCriteriaById(criteriaId)
-        const rating = criteriaRatings.value[criteriaId]
-        const note = criteriaNotes.value[criteriaId]
-        return `${criteria?.name}: ${rating}/6${note ? ` - ${note}` : ''}`
-      })
-      .join('\n')
-
-    console.log('🔥 EvaluationModal - calling markAsCompleted with:', {
-      appointmentId: props.appointment.id,
-      averageRating,
-      noteLength: combinedNote.length
+    // Erstelle ein Array von CriteriaEvaluationData-Objekten
+    const evaluationsToSave: CriteriaEvaluationData[] = selectedCriteriaOrder.value.map(criteriaId => {
+      return {
+        criteria_id: criteriaId,
+        rating: criteriaRatings.value[criteriaId],
+        note: criteriaNotes.value[criteriaId] || '' // Sicherstellen, dass es ein String ist
+      }
     })
 
-    // WICHTIG: Verwende das zentrale Composable (das aktualisiert automatisch den globalen State)
-    await markAsCompleted(
+    console.log('🔥 EvaluationModal - calling saveCriteriaEvaluations with:', {
+      appointmentId: props.appointment.id,
+      evaluations: evaluationsToSave,
+      currentUser: props.currentUser?.id
+    })
+
+    // RUFE DIE NEUE FUNKTION IM COMPOSABLE AUF
+    await saveCriteriaEvaluations(
       props.appointment.id,
-      averageRating,
-      combinedNote,
+      evaluationsToSave,
       props.currentUser?.id
     )
 
-    console.log('✅ EvaluationModal - evaluation saved successfully via composable')
+    console.log('✅ EvaluationModal - evaluations saved successfully via composable')
     
     // Emit saved event
     emit('saved', props.appointment.id)

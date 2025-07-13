@@ -1,16 +1,12 @@
-<!-- EnhancedStudentModal.vue - Student Details mit Lektionshistorie -->
 <template>
   <div v-if="selectedStudent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
     <div class="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
-      <!-- Header -->
       <div class="bg-green-600 text-white p-4">
         <div class="flex items-center justify-between">
           <div class="flex-1">
             <h3 class="text-lg font-bold">{{ selectedStudent.first_name }} {{ selectedStudent.last_name }}</h3>
-            <p class="text-green-100 text-sm">{{ selectedStudent.email }}</p>
           </div>
           <div class="flex items-center gap-3">
-            <!-- Status Badge -->
             <span :class="[
               'text-xs px-2 py-1 rounded-full font-medium',
               selectedStudent.is_active 
@@ -19,7 +15,6 @@
             ]">
               {{ selectedStudent.is_active ? 'Aktiv' : 'Inaktiv' }}
             </span>
-            <!-- Close Button -->
             <button @click="closeModal" class="text-white hover:text-green-200">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -29,7 +24,6 @@
         </div>
       </div>
 
-      <!-- Tab Navigation -->
       <div class="bg-gray-50 border-b px-4">
         <div class="flex">
           <button
@@ -71,248 +65,363 @@
         </div>
       </div>
 
-      <!-- Content -->
-      <div class="flex-1 overflow-y-auto p-4">
-        <!-- Details Tab -->
-        <div v-if="activeTab === 'details'" class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div class="space-y-3">
-              <div><strong class="text-gray-900 font-semibold">E-Mail:</strong> 
-                <span class="text-gray-700">{{ selectedStudent.email || 'Nicht angegeben' }}</span>
-              </div>
-              <div><strong class="text-gray-900 font-semibold">Telefon:</strong> 
-                <span class="text-gray-700">{{ selectedStudent.phone || 'Nicht angegeben' }}</span>
-              </div>
-              <div><strong class="text-gray-900 font-semibold">Kategorie:</strong> 
-                <span class="text-gray-700">{{ selectedStudent.category || 'Nicht angegeben' }}</span>
-              </div>
-              <div v-if="selectedStudent.assignedInstructor">
-                <strong class="text-gray-900 font-semibold">Fahrlehrer:</strong> 
-                <span class="text-gray-700">{{ selectedStudent.assignedInstructor }}</span>
-              </div>
+     <div class="flex-1 overflow-y-auto p-4">
+  <div v-if="activeTab === 'details'" class="space-y-6">
+    <!-- Persönliche Informationen -->
+    <div class="bg-white rounded-lg border p-6">
+      <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+        </svg>
+        Persönliche Daten
+      </h4>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-4">
+          <!-- E-Mail -->
+          <div class="flex items-start space-x-3">
+            <div class="flex-shrink-0 w-5 h-5 mt-0.5">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
             </div>
-            
-            <div class="space-y-3">
-              <div v-if="selectedStudent.birthdate">
-                <strong class="text-gray-900 font-semibold">Geburtsdatum:</strong> 
-                <span class="text-gray-700">{{ formatDate(selectedStudent.birthdate) }}</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-900">E-Mail</div>
+              <div v-if="selectedStudent.email" class="mt-1">
+                <a 
+                  :href="`mailto:${selectedStudent.email}`"
+                  class="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
+                >
+                  {{ selectedStudent.email }}
+                  <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                  </svg>
+                </a>
               </div>
-              <div v-if="selectedStudent.fullAddress">
-                <strong class="text-gray-900 font-semibold">Adresse:</strong> 
-                <span class="text-gray-700">{{ selectedStudent.fullAddress }}</span>
-              </div>
-              <div v-if="selectedStudent.lessonsCount">
-                <strong class="text-gray-900 font-semibold">Lektionen total:</strong> 
-                <span class="text-gray-700">{{ selectedStudent.lessonsCount }}</span>
-              </div>
-              <div v-if="selectedStudent.lastLesson">
-                <strong class="text-gray-900 font-semibold">Letzte Lektion:</strong> 
-                <span class="text-gray-700">{{ formatDate(selectedStudent.lastLesson) }}</span>
-              </div>
+              <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
             </div>
           </div>
 
-          <!-- Quick Actions -->
-          <div class="bg-gray-50 rounded-lg p-4">
-            <h4 class="font-semibold text-gray-900 mb-3">Aktionen</h4>
-            <div class="flex flex-wrap gap-2">
-              <button
-                v-if="selectedStudent.phone"
-                @click="callStudent(selectedStudent.phone)"
-                class="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
-              >
-                📞 Anrufen
-              </button>
-              <button
-                v-if="selectedStudent.email"
-                @click="emailStudent(selectedStudent.email)"
-                class="bg-purple-600 text-white px-3 py-2 rounded text-sm hover:bg-purple-700 transition-colors"
-              >
-                ✉️ E-Mail
-              </button>
-              <button
-                @click="createAppointment(selectedStudent)"
-                class="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors"
-              >
-                📅 Termin buchen
-              </button>
+          <!-- Telefon -->
+          <div class="flex items-start space-x-3">
+            <div class="flex-shrink-0 w-5 h-5 mt-0.5">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-900">Telefon</div>
+              <div v-if="selectedStudent.phone" class="mt-1">
+                <a 
+                  :href="`tel:${selectedStudent.phone}`"
+                  class="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
+                >
+                  {{ selectedStudent.phone }}
+                  <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                  </svg>
+                </a>
+              </div>
+              <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
             </div>
           </div>
-        </div>
 
-        <!-- Lessons Tab -->
-        <div v-if="activeTab === 'lessons'">
-          <!-- Loading State -->
-          <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-          </div>
-
-          <!-- Error State -->
-          <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
-            {{ lessonsError }}
-          </div>
-
-          <!-- No Lessons -->
-          <div v-else-if="lessons.length === 0" class="text-center py-8">
-            <div class="text-4xl mb-2">📚</div>
-            <h4 class="font-semibold text-gray-900 mb-2">Noch keine Lektionen</h4>
-            <p class="text-gray-600 mb-4">Dieser Schüler hat noch keine Fahrlektionen absolviert.</p>
-            <button
-              @click="createAppointment(selectedStudent)"
-              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-            >
-              Erste Lektion buchen
-            </button>
-          </div>
-
-          <!-- Lessons List -->
-          <div v-else class="space-y-4">
-            <!-- Filter -->
-            <div class="flex items-center gap-4 mb-4">
-              <select 
-                v-model="lessonFilter" 
-                class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="all">Alle Lektionen</option>
-                <option value="evaluated">Nur bewertete</option>
-                <option value="pending">Unbewertete</option>
-              </select>
-              <span class="text-sm text-gray-600">{{ filteredLessons.length }} Lektionen</span>
+          <!-- Kategorie -->
+          <div class="flex items-start space-x-3">
+            <div class="flex-shrink-0 w-5 h-5 mt-0.5">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
             </div>
-
-            <!-- Lessons -->
-            <div class="space-y-3">
-              <div
-                v-for="lesson in filteredLessons"
-                :key="lesson.id"
-                class="bg-white border rounded-lg p-4 hover:shadow-md transition-all"
-              >
-                <!-- Lesson Header -->
-                <div class="flex items-start justify-between mb-3">
-                  <div class="flex-1">
-                    <h4 class="font-semibold text-gray-900">
-                      {{ lesson.title || 'Fahrlektion' }}
-                    </h4>
-                    <p class="text-sm text-gray-600">
-                      {{ formatDateTime(lesson.start_time) }}
-                      <span v-if="lesson.duration_minutes" class="ml-2">
-                        ({{ lesson.duration_minutes }}min)
-                      </span>
-                    </p>
-                  </div>
-                  
-                  <!-- Overall Rating -->
-                  <div v-if="lesson.overall_rating" class="text-right">
-                    <div class="flex items-center gap-1">
-                      <span :class="[
-                        'px-2 py-1 rounded-full text-xs font-medium',
-                        getRatingColor(lesson.overall_rating)
-                      ]">
-                        {{ lesson.overall_rating }}/6
-                      </span>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-1">
-                      {{ getRatingText(lesson.overall_rating) }}
-                    </p>
-                  </div>
-                  
-                  <!-- No Rating -->
-                  <div v-else class="text-right">
-                    <span class="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
-                      Nicht bewertet
-                    </span>
-                  </div>
-                </div>
-
-                <!-- General Note -->
-                <div v-if="lesson.general_note" class="mb-3">
-                  <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                    {{ lesson.general_note }}
-                  </p>
-                </div>
-
-                <!-- Detailed Criteria Ratings -->
-                <div v-if="lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0" class="space-y-2">
-                  <h5 class="text-sm font-medium text-gray-900">Detailbewertungen:</h5>
-                  
-                  <!-- Group by Category -->
-                  <div v-for="(categoryGroup, categoryName) in groupedCriteriaEvaluations(lesson.criteria_evaluations)" 
-                       :key="categoryName" 
-                       class="border-l-2 border-gray-200 pl-3">
-                    
-                    <h6 class="text-xs font-medium text-gray-700 mb-1">{{ categoryName }}</h6>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div v-for="evaluation in categoryGroup" 
-                           :key="evaluation.criteria_id" 
-                           class="flex items-center justify-between text-xs">
-                        <span class="text-gray-600">{{ evaluation.criteria_name }}</span>
-                        <div class="flex items-center gap-2">
-                          <span :class="[
-                            'px-1.5 py-0.5 rounded text-xs font-medium',
-                            getRatingColor(evaluation.criteria_rating)
-                          ]">
-                            {{ evaluation.criteria_rating }}/6
-                          </span>
-                          <!-- Criteria Note (if exists) -->
-                          <button 
-                            v-if="evaluation.criteria_note"
-                            @click="showCriteriaNote(evaluation)"
-                            class="text-blue-600 hover:text-blue-800"
-                            title="Notiz anzeigen"
-                          >
-                            💬
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- No Detailed Evaluation -->
-                <div v-else-if="!lesson.overall_rating" class="text-center py-2">
-                  <button
-                    @click="evaluateLesson(lesson)"
-                    class="text-green-600 hover:text-green-800 text-sm font-medium"
-                  >
-                    📝 Jetzt bewerten
-                  </button>
-                </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-900">Kategorie</div>
+              <div class="mt-1">
+                <span v-if="selectedStudent.category" 
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {{ selectedStudent.category }}
+                </span>
+                <span v-else class="text-sm text-gray-500 italic">Nicht angegeben</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Progress Tab -->
-        <div v-if="activeTab === 'progress'" class="space-y-4">
-          <div class="text-center py-8">
-            <div class="text-4xl mb-2">📊</div>
-            <h4 class="font-semibold text-gray-900 mb-2">Lernfortschritt</h4>
-            <p class="text-gray-600">Fortschritts-Dashboard wird hier implementiert...</p>
+        <div class="space-y-4">
+          <!-- Geburtsdatum -->
+          <div v-if="selectedStudent.birthdate" class="flex items-start space-x-3">
+            <div class="flex-shrink-0 w-5 h-5 mt-0.5">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-900">Geburtsdatum</div>
+              <div class="mt-1 text-sm text-gray-700">{{ formatDate(selectedStudent.birthdate) }}</div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Footer -->
-      <div class="bg-gray-50 px-4 py-3 border-t">
-        <div class="flex gap-3">
-          <button
-            @click="closeModal"
-            class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Schließen
-          </button>
-          <button
-            @click="editStudent(selectedStudent)"
-            class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Bearbeiten
-          </button>
+          <!-- Adresse -->
+          <div v-if="selectedStudent.fullAddress" class="flex items-start space-x-3">
+            <div class="flex-shrink-0 w-5 h-5 mt-0.5">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-900">Adresse</div>
+              <div class="mt-1">
+                <a 
+                  :href="`https://maps.google.com/?q=${encodeURIComponent(selectedStudent.fullAddress)}`"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-start"
+                >
+                  <span class="break-words">{{ selectedStudent.fullAddress }}</span>
+                  <svg class="w-3 h-3 ml-1 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fahrlehrer -->
+          <div v-if="selectedStudent.assignedInstructor" class="flex items-start space-x-3">
+            <div class="flex-shrink-0 w-5 h-5 mt-0.5">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-900">Fahrlehrer</div>
+              <div class="mt-1 text-sm text-gray-700">{{ selectedStudent.assignedInstructor }}</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Criteria Note Modal -->
+    <!-- Statistiken -->
+    <div class="bg-white rounded-lg border p-6">
+      <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        Lektionen-Übersicht
+      </h4>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div v-if="selectedStudent.lessonsCount" class="flex items-center space-x-3">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+              </svg>
+            </div>
+          </div>
+          <div>
+            <div class="text-sm font-medium text-gray-900">Lektionen total</div>
+            <div class="text-2xl font-bold text-gray-900">{{ selectedStudent.lessonsCount }}</div>
+          </div>
+        </div>
+
+        <div v-if="selectedStudent.lastLesson" class="flex items-center space-x-3">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <div>
+            <div class="text-sm font-medium text-gray-900">Letzte Lektion</div>
+            <div class="text-sm text-gray-700">{{ formatDate(selectedStudent.lastLesson) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aktionen -->
+    <div class="bg-white rounded-lg border p-6">
+      <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+        Schnellaktionen
+      </h4>
+      
+      <div class="flex flex-wrap gap-3">
+        <button
+          v-if="selectedStudent.phone"
+          @click="callStudent(selectedStudent.phone)"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+          </svg>
+          Anrufen
+        </button>
+
+        <button
+          v-if="selectedStudent.email"
+          @click="emailStudent(selectedStudent.email)"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          </svg>
+          E-Mail senden
+        </button>
+
+        <button
+          @click="createAppointment(selectedStudent)"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          Termin buchen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+       <div v-if="activeTab === 'lessons'">
+  <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+    <span class="ml-2 text-gray-600">Lektionen werden geladen...</span>
+  </div>
+
+  <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+    {{ lessonsError }}
+  </div>
+
+  <div v-else-if="lessons.length === 0" class="text-center py-8">
+    <div class="text-4xl mb-2">📚</div>
+    <h4 class="font-semibold text-gray-900 mb-2">Noch keine Lektionen</h4>
+    <p class="text-gray-600 mb-4">Dieser Schüler hat noch keine Fahrlektionen absolviert.</p>
+    <button
+      @click="createAppointment(selectedStudent)"
+      class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+    >
+      Erste Lektion buchen
+    </button>
+  </div>
+
+  <div v-else class="space-y-4">
+    <div class="text-sm text-gray-600 mb-4">{{ lessons.length }} Lektionen</div>
+
+    <div class="space-y-3">
+      <div
+        v-for="lesson in lessons"
+        :key="lesson.id"
+        class="bg-white border rounded-lg p-4 hover:shadow-md transition-all"
+      >
+        <div class="flex items-center justify-between">
+          <div class="flex-1">
+            <h4 class="font-semibold text-gray-900">
+              {{ formatDateTime(lesson.start_time) }}
+              <span v-if="lesson.duration_minutes" class="ml-2">
+                |  {{ lesson.duration_minutes }}min
+              </span></h4>
+              <p class=" text-gray-600">
+              📍 {{ lesson.location_name || 'Treffpunkt nicht definiert' }}
+              </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+        <div v-if="activeTab === 'progress'" class="space-y-4">
+          <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <span class="ml-2 text-gray-600">Lade Fortschrittsdaten...</span>
+          </div>
+
+          <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded p-3 text-red-700 text-sm">
+            {{ lessonsError }}
+          </div>
+
+          <div v-else-if="lessons.length === 0" class="text-center py-8">
+            <div class="text-3xl mb-2">📚</div>
+            <h4 class="font-semibold text-gray-900 mb-2">Keine Lektionen gefunden</h4>
+            <p class="text-gray-600 text-sm">Dieser Schüler hat noch keine Fahrlektionen absolviert.</p>
+          </div>
+
+          <div v-else-if="progressData.length === 0" class="text-center py-8">
+            <div class="text-3xl mb-2">📊</div>
+            <h4 class="font-semibold text-gray-900 mb-2">Keine Kriterien-Bewertungen verfügbar</h4>
+            <p class="text-gray-600 text-sm">
+              {{ lessons.length }} Lektionen gefunden, aber noch keine Kriterien bewertet.
+            </p>
+          </div>
+
+          <div v-else class="space-y-2">
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="font-semibold text-gray-900">Lernfortschritt</h4>
+            </div>
+
+            <div class="space-y-1">
+              <!-- KORRIGIERT: Iteriere über Gruppen und dann über Evaluationen -->
+              <div
+                v-for="group in progressData"
+                :key="group.appointment_id"
+                class="space-y-1"
+              >
+                <!-- Terminheader -->
+                <div class="text-xs font-medium text-gray-600 mb-2">
+                  {{ group.date }} • {{ group.time }}
+                  <span v-if="group.duration" class="text-gray-500">
+                    ({{ group.duration }}min)
+                  </span>
+                </div>
+
+                <!-- Einzelne Kriterien-Bewertungen -->
+                <div
+                  v-for="(evaluation, evalIndex) in group.evaluations"
+                  :key="`${group.appointment_id}-${evaluation.criteria_id}-${evalIndex}`"
+                  class="border-l-3 pl-3 py-2 border-gray-200 hover:bg-gray-50 transition-colors"
+                  :style="{ borderLeftColor: evaluation.borderColor }"
+                >
+                  <div class="space-y-1">
+                    <div class="flex items-start gap-2">
+                      <span
+                        class="text-xs px-2 py-1 rounded-full font-medium flex-shrink-0"
+                        :class="evaluation.colorClass"
+                      >
+                        {{ evaluation.rating }}/6
+                      </span>
+                      <div class="flex-1 min-w-0">
+                        <div
+                          class="text-xs font-medium mb-1"
+                          :class="evaluation.textColorClass"
+                        >
+                          {{ evaluation.criteriaName }}
+                          <span v-if="evaluation.shortCode" class="text-gray-500 ml-1">({{ evaluation.shortCode }})</span>
+                        </div>
+                        <div
+                          v-if="evaluation.note"
+                          class="text-xs leading-relaxed"
+                          :class="evaluation.noteColorClass"
+                        >
+                          {{ evaluation.note }}
+                        </div>
+                        <div v-else class="text-xs text-gray-500 italic">Keine Notiz</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div v-if="showNoteModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-60 p-4">
       <div class="bg-white rounded-lg max-w-md w-full p-6">
         <div class="flex items-center justify-between mb-4">
@@ -351,16 +460,94 @@
         </button>
       </div>
     </div>
-  </div>
+ 
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { 
+  formatDate, 
+  formatTime, 
+  formatDateTime,
+  formatDateShort,
+  formatTimeShort
+} from '~/utils/dateUtils'
 
 // Props
 interface Props {
   selectedStudent: any
+}
+
+// Interfaces für Datenstrukturen
+interface EvaluationCategorySupabase {
+  name: string | null
+}
+
+interface EvaluationCriteriaSupabase {
+  name: string
+  short_code: string | null
+  evaluation_categories: EvaluationCategorySupabase[] | null
+}
+
+interface RawNote {
+  appointment_id: string
+  criteria_rating: number
+  criteria_note: string | null
+  evaluation_criteria_id: string
+  evaluation_criteria: EvaluationCriteriaSupabase[] | null
+}
+
+interface CriteriaEvaluation {
+  criteria_id: string
+  criteria_name: string
+  criteria_short_code: string | null
+  criteria_rating: number
+  criteria_note: string | null
+  criteria_category_name?: string | null
+}
+
+interface Lesson {
+  id: string
+  title: string | null
+  start_time: string
+  end_time: string
+  duration_minutes: number | null
+  status: string
+  location_name?: string | null  
+  criteria_evaluations?: CriteriaEvaluation[]
+}
+
+// KORRIGIERTE Interface für ProgressEntry - entfernt die direkten Properties
+interface ProgressGroup {
+  appointment_id: string
+  date: string
+  time: string
+  duration?: number
+  sortDate: Date
+  evaluations: {
+    criteria_id: string
+    criteriaName: string
+    shortCode: string | null
+    rating: number
+    note: string
+    colorClass: string
+    textColorClass: string
+    noteColorClass: string
+    borderColor: string
+  }[]
+}
+
+interface AppointmentWithLocation {
+  id: string
+  title: string | null
+  start_time: string
+  end_time: string
+  duration_minutes: number | null
+  status: string
+  locations: {
+    name: string
+  } | null
 }
 
 const props = defineProps<Props>()
@@ -375,26 +562,75 @@ const supabase = getSupabase()
 const activeTab = ref('details')
 const isLoadingLessons = ref(false)
 const lessonsError = ref<string | null>(null)
-const lessons = ref<any[]>([])
+const lessons = ref<Lesson[]>([])
 const lessonFilter = ref('all')
 
 // Modal state
 const showNoteModal = ref(false)
-const selectedCriteria = ref<any>(null)
+const selectedCriteria = ref<CriteriaEvaluation | null>(null)
 
 // Computed
 const lessonsCount = computed(() => lessons.value.length)
 
 const filteredLessons = computed(() => {
   const allLessons = lessons.value
-  
+
   if (lessonFilter.value === 'evaluated') {
-    return allLessons.filter(lesson => lesson.overall_rating)
+    return allLessons.filter(lesson =>
+      lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0
+    )
   } else if (lessonFilter.value === 'pending') {
-    return allLessons.filter(lesson => !lesson.overall_rating)
+    return allLessons.filter(lesson =>
+      !lesson.criteria_evaluations || lesson.criteria_evaluations.length === 0
+    )
   }
-  
+
   return allLessons
+})
+
+// KORRIGIERTES progressData computed - gibt Gruppen zurück, nicht flache Einträge
+const progressData = computed((): ProgressGroup[] => {
+  if (!lessons.value || lessons.value.length === 0) return []
+
+  const groupedByAppointment: Record<string, ProgressGroup> = {}
+
+  lessons.value.forEach(lesson => {
+    if (lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0) {
+      const appointmentGroup: ProgressGroup = {
+        appointment_id: lesson.id,
+        date: formatDateShort(lesson.start_time),
+        time: formatTimeShort(lesson.start_time),
+        duration: lesson.duration_minutes || undefined,
+        sortDate: new Date(lesson.start_time),
+        evaluations: []
+      }
+
+      lesson.criteria_evaluations.forEach((criteria: CriteriaEvaluation) => {
+        const rating = criteria.criteria_rating || 0
+        appointmentGroup.evaluations.push({
+          criteria_id: criteria.criteria_id,
+          criteriaName: criteria.criteria_name,
+          shortCode: criteria.criteria_short_code,
+          rating: rating,
+          note: criteria.criteria_note || '',
+          colorClass: getRatingColor(rating),
+          textColorClass: getRatingTextColor(rating),
+          noteColorClass: getRatingNoteColor(rating),
+          borderColor: getRatingBorderColor(rating)
+        })
+      })
+
+      // Sortiere Evaluationen nach Kriterien-Name
+      appointmentGroup.evaluations.sort((a, b) => a.criteriaName.localeCompare(b.criteriaName))
+      
+      groupedByAppointment[lesson.id] = appointmentGroup
+    }
+  })
+
+  // Konvertiere zu Array und sortiere nach Datum (neueste zuerst)
+  return Object.values(groupedByAppointment).sort((a, b) => 
+    b.sortDate.getTime() - a.sortDate.getTime()
+  )
 })
 
 // Methods
@@ -416,12 +652,14 @@ const evaluateLesson = (lesson: any) => {
 
 const loadLessons = async () => {
   if (!props.selectedStudent?.id) return
-  
+
   isLoadingLessons.value = true
   lessonsError.value = null
-  
+
   try {
-    // Load appointments for this student
+    console.log('🔥 Loading lessons for student:', props.selectedStudent.id)
+
+    // 1. Lade Appointments
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
       .select(`
@@ -430,27 +668,47 @@ const loadLessons = async () => {
         start_time,
         end_time,
         duration_minutes,
-        status
+        status,
+        location_id
       `)
       .eq('user_id', props.selectedStudent.id)
       .in('status', ['completed', 'cancelled'])
       .order('start_time', { ascending: false })
 
     if (appointmentsError) throw appointmentsError
+    console.log('✅ Appointments loaded:', appointments?.length || 0)
 
     if (!appointments || appointments.length === 0) {
       lessons.value = []
       return
     }
 
-    // Load evaluations for these appointments
+    // 2. Lade Locations separat
+    const locationIds = [...new Set(appointments.map(a => a.location_id).filter(Boolean))]
+    let locationsMap: Record<string, string> = {}
+    
+    if (locationIds.length > 0) {
+      const { data: locations, error: locationsError } = await supabase
+        .from('locations')
+        .select('id, name')
+        .in('id', locationIds)
+
+      if (!locationsError && locations) {
+        locationsMap = locations.reduce((acc, loc) => {
+          acc[loc.id] = loc.name
+          return acc
+        }, {} as Record<string, string>)
+      }
+    }
+
+    // 3. Lade Notes mit Bewertungen (für Fortschritt)
     const appointmentIds = appointments.map(a => a.id)
+    console.log('🔍 Searching notes for appointments:', appointmentIds)
+
     const { data: notes, error: notesError } = await supabase
       .from('notes')
       .select(`
         appointment_id,
-        staff_rating,
-        staff_note,
         criteria_rating,
         criteria_note,
         evaluation_criteria_id,
@@ -460,66 +718,81 @@ const loadLessons = async () => {
         )
       `)
       .in('appointment_id', appointmentIds)
+      .not('evaluation_criteria_id', 'is', null)
 
-    if (notesError) throw notesError
+    if (notesError) {
+      console.error('❌ Notes error:', notesError)
+      throw notesError
+    }
 
-    // Group notes by appointment
-    const notesByAppointment = (notes || []).reduce((acc: any, note: any) => {
+    console.log('✅ Notes loaded:', notes?.length || 0)
+
+    // 4. Verarbeite Notes zu Criteria Evaluations
+    const notesByAppointment = (notes || []).reduce((acc: Record<string, CriteriaEvaluation[]>, note: any) => {
       if (!acc[note.appointment_id]) {
-        acc[note.appointment_id] = {
-          overall_rating: null,
-          general_note: '',
-          criteria_evaluations: []
-        }
+        acc[note.appointment_id] = []
       }
       
-      if (note.staff_rating) {
-        // Overall evaluation
-        acc[note.appointment_id].overall_rating = note.staff_rating
-        acc[note.appointment_id].general_note = note.staff_note || ''
-      } else if (note.evaluation_criteria_id) {
-        // Criteria-specific evaluation
-        acc[note.appointment_id].criteria_evaluations.push({
+      const evaluationCriteria = note.evaluation_criteria
+      
+      if (note.evaluation_criteria_id && note.criteria_rating !== null && evaluationCriteria) {
+        acc[note.appointment_id].push({
           criteria_id: note.evaluation_criteria_id,
-          criteria_name: note.evaluation_criteria?.name || 'Unbekannt',
-          criteria_short_code: note.evaluation_criteria?.short_code || '',
+          criteria_name: evaluationCriteria.name || 'Unbekannt',
+          criteria_short_code: evaluationCriteria.short_code || null,
           criteria_rating: note.criteria_rating,
-          criteria_note: note.criteria_note
+          criteria_note: note.criteria_note,
+          criteria_category_name: null
         })
       }
       
       return acc
-    }, {})
+    }, {} as Record<string, CriteriaEvaluation[]>)
 
-    // Combine appointments with their evaluations
+    // 5. Kombiniere alles
     lessons.value = appointments.map(appointment => ({
       ...appointment,
-      ...notesByAppointment[appointment.id]
+      location_name: locationsMap[appointment.location_id] || null,
+      criteria_evaluations: notesByAppointment[appointment.id] || []
     }))
 
+    console.log('✅ Final lessons with locations and evaluations:', lessons.value.length)
+    console.log('📍 Sample lesson:', lessons.value?.[0])
+
   } catch (err: any) {
-    console.error('Error loading lessons:', err)
+    console.error('❌ Error loading lessons:', err)
     lessonsError.value = err.message || 'Fehler beim Laden der Lektionen'
   } finally {
     isLoadingLessons.value = false
   }
 }
 
-const groupedCriteriaEvaluations = (evaluations: any[]) => {
-  // TODO: Group by evaluation category when we have that data
-  // For now, just return as "Allgemein"
-  return {
-    'Bewertungspunkte': evaluations
+
+
+const groupedCriteriaEvaluations = (evaluations: CriteriaEvaluation[]) => {
+  const grouped: Record<string, CriteriaEvaluation[]> = {}
+  evaluations.forEach(evalItem => {
+    const categoryName = evalItem.criteria_category_name || 'Allgemeine Kriterien'
+    if (!grouped[categoryName]) {
+      grouped[categoryName] = []
+    }
+    grouped[categoryName].push(evalItem)
+  })
+
+  for (const category in grouped) {
+    grouped[category].sort((a, b) => a.criteria_name.localeCompare(b.criteria_name))
   }
+  return grouped
 }
 
-const showCriteriaNote = (criteria: any) => {
+const showCriteriaNote = (criteria: CriteriaEvaluation) => {
   selectedCriteria.value = criteria
   showNoteModal.value = true
 }
 
-const getRatingColor = (rating: number) => {
-  const colors = {
+const getRatingColor = (rating: number | null | undefined): string => {
+  if (rating === null || rating === undefined) return 'bg-gray-100 text-gray-700'
+  const colors: Record<number, string> = {
     1: 'bg-red-100 text-red-700',
     2: 'bg-orange-100 text-orange-700',
     3: 'bg-yellow-100 text-yellow-700',
@@ -527,11 +800,12 @@ const getRatingColor = (rating: number) => {
     5: 'bg-green-100 text-green-700',
     6: 'bg-emerald-100 text-emerald-700'
   }
-  return colors[rating as keyof typeof colors] || 'bg-gray-100 text-gray-700'
+  return colors[rating] || 'bg-gray-100 text-gray-700'
 }
 
-const getRatingText = (rating: number) => {
-  const texts = {
+const getRatingText = (rating: number | null | undefined): string => {
+  if (rating === null || rating === undefined) return ''
+  const texts: Record<number, string> = {
     1: 'Besprochen',
     2: 'Geübt',
     3: 'Ungenügend',
@@ -539,22 +813,59 @@ const getRatingText = (rating: number) => {
     5: 'Gut',
     6: 'Prüfungsreif'
   }
-  return texts[rating as keyof typeof texts] || ''
+  return texts[rating] || ''
 }
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('de-CH')
+const getRatingTextColor = (rating: number | null | undefined): string => {
+  if (rating === null || rating === undefined) return 'text-gray-900'
+  const colors: Record<number, string> = {
+    1: 'text-red-800',     
+    2: 'text-orange-800',  
+    3: 'text-yellow-800',  
+    4: 'text-blue-800',    
+    5: 'text-green-800',   
+    6: 'text-emerald-800'  
+  }
+  return colors[rating] || 'text-gray-900'
 }
 
-const formatDateTime = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('de-CH', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    year: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+const getRatingNoteColor = (rating: number | null | undefined): string => {
+  if (rating === null || rating === undefined) return 'text-gray-700'
+  const colors: Record<number, string> = {
+    1: 'text-red-700',     
+    2: 'text-orange-700',  
+    3: 'text-yellow-700',  
+    4: 'text-blue-700',    
+    5: 'text-green-700',   
+    6: 'text-emerald-700'  
+  }
+  return colors[rating] || 'text-gray-700'
+}
+
+const getRatingBorderColor = (rating: number | null | undefined): string => {
+  if (rating === null || rating === undefined) return '#6b7280'
+  const colors: Record<number, string> = {
+    1: '#dc2626',
+    2: '#ea580c',
+    3: '#ca8a04',
+    4: '#2563eb',
+    5: '#16a34a',
+    6: '#059669'
+  }
+  return colors[rating] || '#6b7280'
+}
+
+const getRatingBgColor = (rating: number | null | undefined): string => {
+  if (rating === null || rating === undefined) return 'bg-gray-400'
+  const colors: Record<number, string> = {
+    1: 'bg-red-400',
+    2: 'bg-orange-400',
+    3: 'bg-yellow-400', 
+    4: 'bg-blue-400',
+    5: 'bg-green-400',
+    6: 'bg-emerald-400'
+  }
+  return colors[rating] || 'bg-gray-400'
 }
 
 const callStudent = (phone: string) => {
@@ -569,51 +880,60 @@ const emailStudent = (email: string) => {
   }
 }
 
+// Statistics (optional, falls benötigt)
+const totalLessons = computed(() => {
+  return lessons.value.filter(lesson => 
+    lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0
+  ).length
+})
+
+const averageRating = computed(() => {
+  const allRatings = progressData.value.flatMap(group => 
+    group.evaluations.map(evaluation => evaluation.rating)
+  )
+  if (allRatings.length === 0) return '0.0'
+  const avg = allRatings.reduce((sum, rating) => sum + rating, 0) / allRatings.length
+  return avg.toFixed(1)
+})
+
+const totalCriteria = computed(() => {
+  return progressData.value.reduce((total, group) => total + group.evaluations.length, 0)
+})
+
+const lastLessonDays = computed(() => {
+  if (lessons.value.length === 0) return '–'
+  const lastLesson = lessons.value[0]
+  if (!lastLesson || !lastLesson.start_time) return '–'
+  const daysDiff = Math.floor((new Date().getTime() - new Date(lastLesson.start_time).getTime()) / (1000 * 60 * 60 * 24))
+  return daysDiff.toString()
+})
+
+const ratingDistribution = computed(() => {
+  const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+  progressData.value.forEach(group => {
+    group.evaluations.forEach(evaluation => {
+      const rating = evaluation.rating
+      if (rating >= 1 && rating <= 6) {
+        distribution[rating]++
+      }
+    })
+  })
+  return distribution
+})
+
 // Watchers
 watch(() => props.selectedStudent, (newStudent) => {
   if (newStudent) {
+    console.log('🔥 Student ausgewählt:', newStudent.first_name, newStudent.last_name)
     activeTab.value = 'details'
-    if (activeTab.value === 'lessons') {
-      loadLessons()
-    }
+    loadLessons()
   }
 }, { immediate: true })
 
 watch(activeTab, (newTab) => {
-  if (newTab === 'lessons' && props.selectedStudent) {
+  if ((newTab === 'lessons' || newTab === 'progress') && props.selectedStudent) {
+    console.log('🔥 Tab gewechselt zu:', newTab, '. Lektionen werden geladen...')
     loadLessons()
   }
 })
 </script>
-
-<style scoped>
-/* Custom scrollbar */
-.overflow-y-auto::-webkit-scrollbar {
-  width: 4px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 2px;
-}
-
-/* Smooth transitions */
-.transition-all {
-  transition: all 0.2s ease-in-out;
-}
-
-.transition-colors {
-  transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
-}
-
-/* Mobile optimizations */
-@media (hover: none) and (pointer: coarse) {
-  .hover\:shadow-md:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  }
-}
-</style>

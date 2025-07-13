@@ -24,7 +24,8 @@ export default defineNuxtConfig({
   
   // --- TypeScript Configuration ---
   typescript: {
-    strict: true
+    strict: true,
+    typeCheck: true
   },
   
   // --- Nitro Configuration ---
@@ -33,10 +34,12 @@ export default defineNuxtConfig({
       wasm: true
     }
   },
-    experimental: {
+  
+  experimental: {
     // Suspense explizit aktivieren
     payloadExtraction: false
-  }, 
+  },
+  
   // Vue-spezifische Konfiguration
   vue: {
     compilerOptions: {
@@ -44,16 +47,26 @@ export default defineNuxtConfig({
       isCustomElement: (tag) => false
     }
   },
-    runtimeConfig: {
+  
+  runtimeConfig: {
+    // Private keys (only available on server-side)
+    walleeSpaceId: process.env.WALLEE_SPACE_ID,
+    walleeApplicationUserId: process.env.WALLEE_APPLICATION_USER_ID,
+    walleeSecretKey: process.env.WALLEE_SECRET_KEY,
+    
+    // Public keys (exposed to client-side)
     public: {
-      googleMapsApiKey: process.env.VITE_GOOGLE_MAPS_API_KEY
+      googleMapsApiKey: process.env.VITE_GOOGLE_MAPS_API_KEY,
+      walleeSpaceId: process.env.WALLEE_SPACE_ID,
+      walleeUserId: process.env.WALLEE_USER_ID
     }
   },
-    app: {
+  
+  app: {
     head: {
       script: [
         {
-          src: `https://maps.googleapis.com/maps/api/js?key=${process.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=de&region=CH&v=beta`,
+          src: `https://maps.googleapis.com/maps/api/js?key=${process.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=de&region=CH&v=beta&loading=async`,
           async: true,
           defer: true
         }
