@@ -95,6 +95,18 @@ const selectedCategory = computed(() => {
 const availableCategoriesForUser = computed(() => {
   let result: CategoryWithDurations[] = []
   
+  console.log('🔍 Computing availableCategoriesForUser:', {
+    role: props.currentUserRole,
+    allCategoriesCount: allCategories.value.length,
+    staffDurationsCount: staffCategoryDurations.value.length
+  })
+  
+  // ✅ DEFENSIVE: Warte bis Categories geladen sind
+  if (allCategories.value.length === 0) {
+    console.log('⏳ Categories not loaded yet, returning empty')
+    return []
+  }
+  
   // Admin kann alle Kategorien sehen
   if (props.currentUserRole === 'admin') {
     result = allCategories.value
@@ -103,29 +115,59 @@ const availableCategoriesForUser = computed(() => {
         ...cat,
         availableDurations: [cat.lesson_duration_minutes] // Standard-Dauer für Admins
       }))
+    console.log('👨‍💼 Admin: Showing all categories:', result.length)
   }
   // Staff sieht nur seine zugewiesenen Kategorien mit seinen verfügbaren Dauern
   else if (props.currentUserRole === 'staff') {
-    // Gruppiere Staff-Kategorien-Dauern nach category_code
-    const groupedByCode: Record<string, number[]> = {}
+    // ✅ DEFENSIVE: Check ob Staff-Dauern geladen sind
+    if (staffCategoryDurations.value.length === 0) {
+      console.log('⏳ Staff durations not loaded yet, using fallback')
+      result = allCategories.value
+        .filter(cat => cat.is_active)
+        .map(cat => ({
+          ...cat,
+          availableDurations: [cat.lesson_duration_minutes]
+        }))
+    } else {
+      // Gruppiere Staff-Kategorien-Dauern nach category_code
+      const groupedByCode: Record<string, number[]> = {}
+      
+      staffCategoryDurations.value.forEach(item => {
+        if (!groupedByCode[item.category_code]) {
+          groupedByCode[item.category_code] = []
+        }
+        groupedByCode[item.category_code].push(item.duration_minutes)
+      })
+
+      console.log('📊 Staff categories grouped:', groupedByCode)
+
+      // Erstelle CategoryWithDurations für jede Staff-Kategorie
+      result = Object.entries(groupedByCode).map(([code, durations]) => {
+        const baseCategory = allCategories.value.find(cat => cat.code === code)
+        if (!baseCategory) {
+          console.log(`❌ Category ${code} not found in allCategories`)
+          return null
+        }
+
+        return {
+          ...baseCategory,
+          availableDurations: durations.sort((a, b) => a - b)
+        }
+      }).filter((item): item is CategoryWithDurations => item !== null)
+      
+      // ✅ FALLBACK: Wenn Staff keine spezifischen Dauern hat, alle Kategorien mit Standard-Dauern zeigen
+      if (result.length === 0) {
+        console.log('⚠️ Staff has no specific category durations, showing ALL categories as fallback')
+        result = allCategories.value
+          .filter(cat => cat.is_active)
+          .map(cat => ({
+            ...cat,
+            availableDurations: [cat.lesson_duration_minutes] // Standard-Dauer
+          }))
+      }
+    }
     
-    staffCategoryDurations.value.forEach(item => {
-      if (!groupedByCode[item.category_code]) {
-        groupedByCode[item.category_code] = []
-      }
-      groupedByCode[item.category_code].push(item.duration_minutes)
-    })
-
-    // Erstelle CategoryWithDurations für jede Staff-Kategorie
-    result = Object.entries(groupedByCode).map(([code, durations]) => {
-      const baseCategory = allCategories.value.find(cat => cat.code === code)
-      if (!baseCategory) return null
-
-      return {
-        ...baseCategory,
-        availableDurations: durations.sort((a, b) => a - b)
-      }
-    }).filter((item): item is CategoryWithDurations => item !== null)
+    console.log('👨‍🏫 Staff: Final categories:', result.length, result.map(r => r.code))
   }
   // Client sieht alle aktiven Kategorien (für Terminbuchung)
   else {
@@ -135,16 +177,27 @@ const availableCategoriesForUser = computed(() => {
         ...cat,
         availableDurations: [cat.lesson_duration_minutes] // Standard-Dauer für Clients
       }))
+    console.log('👤 Client: Showing all categories:', result.length)
   }
   
   // Sortieren nach display_order und dann nach Name
-  return result.sort((a, b) => {
+  const sortedResult = result.sort((a, b) => {
     if (a.display_order !== b.display_order) {
       return a.display_order - b.display_order
     }
     return a.name.localeCompare(b.name)
   })
+  
+  console.log('📋 Final sorted categories:', sortedResult.map(cat => ({
+    code: cat.code,
+    name: cat.name,
+    durations: cat.availableDurations
+  })))
+  
+  return sortedResult
 })
+
+
 
 // Methods
 const loadCategories = async () => {
@@ -177,6 +230,15 @@ const loadCategories = async () => {
     error.value = err.message || 'Fehler beim Laden der Kategorien'
   } finally {
     isLoading.value = false
+   
+    if (props.modelValue) {
+      console.log('🔄 Categories loaded, checking current selection:', props.modelValue)
+      const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
+      if (selected) {
+        console.log('✅ Emitting durations for loaded category:', selected.availableDurations)
+        emit('durations-changed', selected.availableDurations)
+      }
+    }
   }
 }
 
@@ -216,8 +278,17 @@ const loadStaffCategoryDurations = async (staffId: string) => {
 
   } catch (err: any) {
     console.error('❌ Error loading staff category durations:', err)
-    // Bei Fehlern leere Liste
     staffCategoryDurations.value = []
+  }
+  
+  // 🔥 NEUER CODE: Nach dem Laden der Staff-Dauern prüfen
+  if (props.modelValue) {
+    console.log('🔄 Staff durations loaded, checking current selection:', props.modelValue)
+    const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
+    if (selected) {
+      console.log('✅ Emitting durations after staff load:', selected.availableDurations)
+      emit('durations-changed', selected.availableDurations)
+    }
   }
 }
 
@@ -226,42 +297,57 @@ const handleCategoryChange = (event: Event) => {
   const newValue = target.value
   
   console.log('🔄 CategorySelector - category changed:', newValue)
-  console.log('🎯 CategorySelector - Will emit events now!')
-
   
   emit('update:modelValue', newValue)
   
   const selected = availableCategoriesForUser.value.find(cat => cat.code === newValue) || null
-    console.log('🎯 CategorySelector - Selected category:', selected)
+  console.log('🎯 CategorySelector - Selected category:', selected)
+  console.log('🎯 CategorySelector - Available durations:', selected?.availableDurations)
 
   emit('category-selected', selected)
-    console.log('🎯 CategorySelector - Events emitted!')
-
   
   // Preis pro Minute berechnen (alle Preise sind auf 45min basis)
   if (selected) {
     const pricePerMinute = selected.price_per_lesson / 45
     emit('price-changed', pricePerMinute)
+    
+    // ✅ DEBUG: Durations-changed Event
+    console.log('⏱️ CategorySelector - Emitting durations-changed:', selected.availableDurations)
     emit('durations-changed', selected.availableDurations)
+    
     console.log('💰 Price per minute:', pricePerMinute)
-    console.log('⏱️ Available durations:', selected.availableDurations)
   } else {
+    console.log('❌ No category selected, emitting empty durations')
     emit('price-changed', 0)
     emit('durations-changed', [])
   }
 }
 
 // Watchers
+// GEZIELTER FIX für CategorySelector.vue
+// Ersetzen Sie den User-Watcher (Zeile 314-328) mit diesem korrigierten Code:
+
 watch(() => props.selectedUser, (newUser) => {
   if (newUser?.category && newUser.category !== props.modelValue) {
     console.log('👤 User category detected:', newUser.category)
-    emit('update:modelValue', newUser.category)
     
-    const selected = availableCategoriesForUser.value.find(cat => cat.code === newUser.category)
+    // ✅ FIX: Nur erste Kategorie nehmen wenn mehrere
+    const primaryCategory = newUser.category.split(',')[0].trim()
+    console.log('🎯 Using primary category:', primaryCategory)
+    
+    emit('update:modelValue', primaryCategory)
+    
+    // 🔥 KRITISCHER FIX: Suche nach primaryCategory statt newUser.category
+    const selected = availableCategoriesForUser.value.find(cat => cat.code === primaryCategory)
+    
     if (selected) {
+      console.log('🎯 Auto-selected category:', selected)
       emit('category-selected', selected)
       const pricePerMinute = selected.price_per_lesson / 45
       emit('price-changed', pricePerMinute)
+      
+      // 🔥 KRITISCH: durations-changed Event auch hier emittieren
+      console.log('⏱️ Auto-emitting durations-changed:', selected.availableDurations)
       emit('durations-changed', selected.availableDurations)
     }
   }
@@ -271,6 +357,18 @@ watch(() => props.selectedUser, (newUser) => {
 watch(() => props.currentUser?.id, (newUserId) => {
   if (newUserId && props.currentUserRole === 'staff') {
     loadStaffCategoryDurations(newUserId)
+  }
+}, { immediate: true })
+
+// Neuer Watcher in CategorySelector.vue hinzufügen:
+watch([() => allCategories.value.length, () => props.modelValue], ([categoriesCount, modelValue]) => {
+  if (categoriesCount > 0 && modelValue) {
+    console.log('🔄 Categories loaded, re-emitting for:', modelValue)
+    const selected = availableCategoriesForUser.value.find(cat => cat.code === modelValue)
+    if (selected) {
+      console.log('✅ Re-emitting durations-changed:', selected.availableDurations)
+      emit('durations-changed', selected.availableDurations)
+    }
   }
 }, { immediate: true })
 

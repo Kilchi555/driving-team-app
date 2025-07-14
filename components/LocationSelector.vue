@@ -142,6 +142,7 @@
         </a>
       </div>
     </div>
+    
     <!-- Loading Indicator -->
     <div v-if="isLoadingLocations" class="flex items-center gap-2 mt-2 text-sm text-gray-500">
       <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
@@ -172,14 +173,14 @@ interface Location {
   id: string
   name: string
   address: string
-  latitude?: undefined
-  longitude?: undefined
-  place_id?: string // Für temporäre Locations
+  latitude?: number | null
+  longitude?: number | null
+  place_id?: string
   location_type: 'standard' | 'pickup'
-  staff_id?: string
-  user_id?: string
-  google_place_id?: string
-  source?: 'standard' | 'pickup' | 'google' // ✅ HINZUFÜGEN
+  staff_id?: string | null
+  user_id?: string | null
+  google_place_id?: string | null
+  source?: 'standard' | 'pickup' | 'google'
 }
 
 interface GooglePlaceSuggestion {
@@ -194,7 +195,7 @@ interface GooglePlaceSuggestion {
 // Props
 const props = defineProps({
   modelValue: {
-    type: String, // location_id
+    type: String,
     default: null
   },
   required: {
@@ -268,7 +269,12 @@ const loadStandardLocations = async () => {
 
     if (fetchError) throw fetchError
     
-    standardLocations.value = data || []
+    standardLocations.value = (data || []).map(item => ({
+      ...item,
+      address: item.address || '',
+      source: 'standard' as const
+    }))
+    
     console.log('✅ Standard locations loaded:', data?.length)
     
   } catch (err: any) {
@@ -277,7 +283,6 @@ const loadStandardLocations = async () => {
   }
 }
 
-// Erweiterte loadStudentPickupLocations Funktion
 const loadStudentPickupLocations = async (studentId: string) => {
   if (!studentId) {
     studentPickupLocations.value = []
@@ -285,6 +290,8 @@ const loadStudentPickupLocations = async (studentId: string) => {
   }
 
   try {
+    console.log('🔍 Loading student pickup locations for:', studentId)
+    
     // 1. Lade alle Pickup-Locations des Schülers
     const { data, error: fetchError } = await supabase
       .from('locations')
@@ -296,34 +303,38 @@ const loadStudentPickupLocations = async (studentId: string) => {
 
     if (fetchError) throw fetchError
     
-    studentPickupLocations.value = data || []
+    studentPickupLocations.value = (data || []).map(item => ({
+      ...item,
+      address: item.address || '',
+      source: 'pickup' as const
+    }))
+    
     console.log('✅ Student pickup locations loaded:', data?.length)
     
-    // 2. Lade letzten verwendeten Standort
-    const lastLocation = await loadLastUsedLocation(studentId)
+    // 2. Lade letzten verwendeten Standort nur wenn staffId vorhanden
+    if (props.currentStaffId) {
+      const lastLocation = await loadLastUsedLocation(studentId, props.currentStaffId)
+      
+      if (lastLocation && !selectedLocationId.value) {
+        // Suche die entsprechende Location in den geladenen Locations
+        const matchingLocation = [...standardLocations.value, ...studentPickupLocations.value]
+          .find(loc => loc.id === lastLocation.location_id)
+        
+        if (matchingLocation) {
+          selectedLocationId.value = matchingLocation.id
+          emit('update:modelValue', matchingLocation.id)
+          emit('locationSelected', matchingLocation)
+          console.log('🎯 Auto-selected last used location:', matchingLocation.name)
+        }
+      }
+    }
     
-    if (lastLocation && !selectedLocationId.value) {
-      // 3. Setze letzten Standort als Standard (nur wenn noch nichts ausgewählt)
-      selectedLocationId.value = lastLocation.id
-      
-      emit('update:modelValue', lastLocation.id)
-      emit('locationSelected', {
-        ...lastLocation,
-        source: lastLocation.location_type === 'standard' ? 'standard' : 'pickup'
-      })
-      
-      console.log('🎯 Auto-selected last used location:', lastLocation.name)
-    } else if (!lastLocation && studentPickupLocations.value.length > 0 && !selectedLocationId.value) {
-      // 4. Fallback: Ersten Pickup-Location wählen falls kein letzter Standort gefunden
+    // 3. Fallback: Ersten Pickup-Location wählen falls noch nichts ausgewählt
+    if (!selectedLocationId.value && studentPickupLocations.value.length > 0) {
       const firstPickup = studentPickupLocations.value[0]
       selectedLocationId.value = firstPickup.id
-      
       emit('update:modelValue', firstPickup.id)
-      emit('locationSelected', {
-        ...firstPickup,
-        source: 'pickup'
-      })
-      
+      emit('locationSelected', firstPickup)
       console.log('📍 Auto-selected first pickup location:', firstPickup.name)
     }
     
@@ -333,26 +344,23 @@ const loadStudentPickupLocations = async (studentId: string) => {
   }
 }
 
-// 🔧 LOCATION SELECTOR - KORREKTE CONSTRAINT LOGIC
 const savePickupLocation = async (locationData: any, studentId: string) => {
   try {
     const locationName = `${props.selectedStudentName} - ${locationData.name}`.trim()
     
-    // ✅ RICHTIGE CONSTRAINT LOGIC FÜR PICKUP:
-    // location_type = 'pickup' AND user_id NOT NULL AND staff_id IS NULL
     const locationToSave = {
-      location_type: 'pickup',    // ✅ pickup type
-      user_id: studentId,         // ✅ MUSS gesetzt sein
-      staff_id: null,             // ✅ MUSS null sein für pickup!
+      location_type: 'pickup',
+      user_id: studentId,
+      staff_id: null,
       name: locationName,
       address: locationData.address,
-      latitude: locationData.latitude,
-      longitude: locationData.longitude,
-      google_place_id: locationData.place_id,
+      latitude: locationData.latitude || null,
+      longitude: locationData.longitude || null,
+      google_place_id: locationData.place_id || null,
       is_active: true
     }
     
-    console.log('📤 Sending pickup location (staff_id=null):', locationToSave)
+    console.log('📤 Saving pickup location:', locationToSave)
     
     const { data, error: saveError } = await supabase
       .from('locations')
@@ -365,9 +373,15 @@ const savePickupLocation = async (locationData: any, studentId: string) => {
       throw saveError
     }
 
-    studentPickupLocations.value.push(data)
-    console.log('✅ Pickup location saved successfully:', data)
-    return data
+    const savedLocation = {
+      ...data,
+      address: data.address || '',
+      source: 'pickup' as const
+    }
+    
+    studentPickupLocations.value.push(savedLocation)
+    console.log('✅ Pickup location saved successfully:', savedLocation)
+    return savedLocation
 
   } catch (err: any) {
     console.error('❌ Error saving pickup location:', err)
@@ -376,59 +390,41 @@ const savePickupLocation = async (locationData: any, studentId: string) => {
   }
 }
 
-// Neue Funktion für letzten Treffpunkt
-// LocationSelector.vue - Ersetze die loadLastUsedLocation Funktion komplett
-
-const loadLastUsedLocation = async (studentId: string) => {
-  if (!studentId) return null
-  
+// ✅ Korrigierte loadLastUsedLocation Funktion
+const loadLastUsedLocation = async (userId: string, staffId: string): Promise<any> => {
   try {
-    console.log('🔍 Loading last used location for student:', studentId)
+    console.log('🔍 Loading last used location for student:', userId, 'staff:', staffId)
     
-    // Schritt 1: Letzten Termin finden
-    const { data: appointmentData, error: appointmentError } = await supabase
+    if (!userId || !staffId || staffId === '') {
+      console.log('⚠️ Missing or empty staffId, skipping last location load')
+      return null
+    }
+    
+    const { data, error } = await supabase
       .from('appointments')
-      .select('location_id, start_time')
-      .eq('user_id', studentId)
+      .select('location_id, custom_location_name, custom_location_address')
+      .eq('user_id', userId)
+      .eq('staff_id', staffId)
       .eq('status', 'completed')
       .order('start_time', { ascending: false })
       .limit(1)
-      .single()
-
-    if (appointmentError) {
-      if (appointmentError.code === 'PGRST116') {
-        console.log('ℹ️ No previous appointments found for student')
-        return null
-      }
-      throw appointmentError
-    }
-
-    if (!appointmentData?.location_id) {
-      console.log('ℹ️ No location_id in last appointment')
+      .maybeSingle()
+    
+    if (error) {
+      console.log('❌ Error loading appointments:', error)
       return null
     }
-
-    // Schritt 2: Location-Details laden
-    const { data: locationData, error: locationError } = await supabase
-      .from('locations')
-      .select('id, name, address, location_type, user_id, staff_id, google_place_id, is_active')
-      .eq('id', appointmentData.location_id)
-      .single()
-
-    if (locationError) {
-      console.error('❌ Error loading location details:', locationError)
+    
+    if (!data) {
+      console.log('ℹ️ No completed appointments found')
       return null
     }
-
-    if (locationData) {
-      console.log('✅ Found last used location:', locationData.name)
-      return locationData
-    }
-
-    return null
+    
+    console.log('✅ Last used location data:', data)
+    return data
     
   } catch (err: any) {
-    console.error('❌ Error loading last used location:', err)
+    console.log('❌ Error loading last location:', err)
     return null
   }
 }
@@ -546,7 +542,9 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
     const locationData = {
       name: suggestion.structured_formatting?.main_text || suggestion.description,
       address: suggestion.description,
-      place_id: suggestion.place_id
+      place_id: suggestion.place_id,
+      latitude: null,
+      longitude: null
     }
     
     // Check if this location already exists for this student
@@ -579,24 +577,23 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       
       console.log('💾 Saved and selected new pickup location:', savedLocation.name)
     } else {
-      // ✅ FIX: Kein Student selected - emitte temporäre Location mit korrektem Format
-      const tempLocation = {
-         id: `temp_${Date.now()}`,
+      // Kein Student selected - emitte temporäre Location
+      const tempLocation: Location = {
+        id: `temp_${Date.now()}`,
         name: locationData.name,
         address: locationData.address,
         place_id: locationData.place_id,
-        latitude: undefined, // ✅ FIX: undefined statt null
-        longitude: undefined, // ✅ FIX: undefined statt null
-        source: 'google' as const, // ✅ FIX: as const für bessere Typisierung
-        location_type: 'pickup' as const // ✅ FIX: as const
+        latitude: null,
+        longitude: null,
+        location_type: 'pickup',
+        source: 'google'
       }
       
-      selectedCustomLocation.value = tempLocation as Location
+      selectedCustomLocation.value = tempLocation
       locationSearchQuery.value = suggestion.description
       
-      // ✅ FIX: Emitte null für modelValue aber vollständige Location für locationSelected
-      emit('update:modelValue', null) // Keine echte ID
-      emit('locationSelected', tempLocation) // ✅ Vollständige temp Location für EventModal
+      emit('update:modelValue', null)
+      emit('locationSelected', tempLocation)
       
       console.log('⚠️ Temporary location (no student selected):', tempLocation)
     }
@@ -617,14 +614,7 @@ const onLocationChange = () => {
     
   if (location) {
     emit('update:modelValue', location.id)
-    
-    // ✅ FIX: Emitte vollständige Location mit source
-    const locationWithSource = {
-      ...location,
-      source: location.location_type === 'standard' ? 'standard' : 'pickup'
-    }
-    
-    emit('locationSelected', locationWithSource)
+    emit('locationSelected', location)
     console.log('📍 Location selected:', location.name)
   }
 }
@@ -633,7 +623,7 @@ const clearCustomLocation = () => {
   selectedCustomLocation.value = null
   locationSearchQuery.value = ''
   emit('update:modelValue', null)
-  emit('locationSelected', null) // ✅ FIX: Auch locationSelected auf null setzen
+  emit('locationSelected', null)
 }
 
 const hideLocationSuggestionsDelayed = () => {
@@ -655,7 +645,6 @@ const getLocationMapsUrl = (location: Location) => {
 
 // === WATCHERS ===
 
-// Aktualisierter Watcher für Student-Änderungen
 watch(() => props.selectedStudentId, async (newStudentId, oldStudentId) => {
   if (newStudentId && newStudentId !== oldStudentId) {
     isLoadingLocations.value = true
@@ -675,7 +664,6 @@ watch(() => props.selectedStudentId, async (newStudentId, oldStudentId) => {
   }
 })
 
-// Watch for staff changes
 watch(() => props.currentStaffId, async (newStaffId) => {
   if (newStaffId) {
     isLoadingLocations.value = true
@@ -684,7 +672,6 @@ watch(() => props.currentStaffId, async (newStaffId) => {
   }
 })
 
-// Watch for external model value changes
 watch(() => props.modelValue, (newValue) => {
   if (newValue && newValue !== selectedLocationId.value) {
     selectedLocationId.value = newValue

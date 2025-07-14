@@ -1,9 +1,13 @@
-// composables/useWallee.ts (Einfache Version)
+// composables/useWallee.ts - Updated Version
+
+import { useRuntimeConfig } from '#app'
+
 interface WalleeTransactionResult {
   success: boolean
   error: string | null
   transactionId?: string
   paymentUrl?: string
+  transaction?: any
 }
 
 interface WalleeConnectionResult {
@@ -13,26 +17,72 @@ interface WalleeConnectionResult {
   spaceId?: string
 }
 
-export const useWallee = () => {
-  
-  const createTransaction = async (amount: number, currency: string = 'CHF'): Promise<WalleeTransactionResult> => {
-    try {
-      console.log('🔄 Creating Wallee transaction:', { amount, currency })
-      
+interface WalleeTransactionRequest {
+  appointmentId: string
+  amount: number
+  currency?: string
+  customerId: string
+  customerEmail: string
+  lineItems?: Array<{
+    uniqueId: string
+    name: string
+    quantity: number
+    amountIncludingTax: number
+    type: string
+  }>
+  successUrl?: string
+  failedUrl?: string
+}
 
-      const response = await $fetch('/api/wallee/create-transaction', {...})
+export const useWallee = () => {
+  const createTransaction = async (request: WalleeTransactionRequest): Promise<WalleeTransactionResult> => {
+    try {
+      console.log('🔄 Creating Wallee transaction:', request)
       
+      // Validierung der erforderlichen Felder
+      if (!request.appointmentId || !request.amount || !request.customerId || !request.customerEmail) {
+        throw new Error('Missing required fields: appointmentId, amount, customerId, customerEmail')
+      }
+
+      // API Call zu deiner Wallee Route
+      const response = await $fetch('/api/wallee/create-transaction', {
+        method: 'POST',
+        body: {
+          appointmentId: request.appointmentId,
+          amount: request.amount,
+          currency: request.currency || 'CHF',
+          customerId: request.customerId,
+          customerEmail: request.customerEmail,
+          lineItems: request.lineItems || [
+            {
+              uniqueId: `appointment-${request.appointmentId}`,
+              name: 'Fahrstunde',
+              quantity: 1,
+              amountIncludingTax: request.amount,
+              type: 'PRODUCT'
+            }
+          ],
+          successUrl: request.successUrl,
+          failedUrl: request.failedUrl
+        }
+      })  as any
+
+      console.log('✅ Wallee transaction created successfully:', response)
+
       return {
         success: true,
-        transactionId: `txn_${Date.now()}`,
-        paymentUrl: `https://checkout.wallee.com/payment/${Date.now()}`,
+        transactionId: response.transactionId,
+        paymentUrl: response.paymentUrl,
+        transaction: response.transaction,
         error: null
       }
+
     } catch (error: any) {
       console.error('❌ Wallee Transaction Error:', error)
+      
       return {
         success: false,
-        error: error.message || 'Transaction creation failed'
+        error: error.data?.message || error.message || 'Transaction creation failed'
       }
     }
   }
@@ -41,17 +91,21 @@ export const useWallee = () => {
     try {
       console.log('🔄 Testing Wallee connection...')
       
-      // TODO: Implement real connection test
-      await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
-      
+      // Test mit einer minimalen Transaction oder Connection Check
+      const testResponse = await $fetch('/api/wallee/test-connection', {
+        method: 'GET'
+      }) as any
+
       return {
         success: true,
         connected: true,
-        spaceId: '12345',
+        spaceId: testResponse.spaceId,
         error: null
       }
+
     } catch (error: any) {
       console.error('❌ Wallee Connection Error:', error)
+      
       return {
         success: false,
         connected: false,
@@ -61,13 +115,77 @@ export const useWallee = () => {
   }
 
   const isWalleeAvailable = (): boolean => {
-    // For now, always return false since it's not implemented yet
-    return false
+    // Check if environment variables are available
+    const config = useRuntimeConfig()
+    return !!(config.public.walleeEnabled || process.env.WALLEE_SPACE_ID)
+  }
+
+  // Neue Utility-Funktionen
+  const calculateAppointmentPrice = (category: string, duration: number, isSecondAppointment: boolean = false): number => {
+    // Preise basierend auf deinen Projektdaten
+    const categoryPrices: Record<string, { base: number, admin: number }> = {
+      'B': { base: 95, admin: 120 },
+      'A1': { base: 95, admin: 0 },
+      'A35kW': { base: 95, admin: 0 },
+      'A': { base: 95, admin: 0 },
+      'BE': { base: 120, admin: 120 },
+      'C1': { base: 150, admin: 200 },
+      'D1': { base: 150, admin: 200 },
+      'C': { base: 170, admin: 200 },
+      'CE': { base: 200, admin: 250 },
+      'D': { base: 200, admin: 300 },
+      'Motorboot': { base: 95, admin: 120 },
+      'BPT': { base: 100, admin: 120 }
+    }
+
+    const priceInfo = categoryPrices[category] || { base: 95, admin: 120 }
+    
+    // Preis pro 45min auf gewünschte Dauer umrechnen
+    const lessonPrice = (priceInfo.base / 45) * duration
+    
+    // Versicherungspauschale ab 2. Termin (außer bei Motorrad-Kategorien)
+    const adminFee = isSecondAppointment ? priceInfo.admin : 0
+    
+    return Math.round((lessonPrice + adminFee) * 100) / 100 // Auf 2 Dezimalstellen runden
+  }
+
+  const createAppointmentPayment = async (
+    appointment: any, 
+    user: any, 
+    isSecondAppointment: boolean = false
+  ): Promise<WalleeTransactionResult> => {
+    const amount = calculateAppointmentPrice(
+      appointment.type || 'B', 
+      appointment.duration_minutes || 45, 
+      isSecondAppointment
+    )
+
+    return await createTransaction({
+      appointmentId: appointment.id,
+      amount: amount,
+      currency: 'CHF',
+      customerId: user.id,
+      customerEmail: user.email,
+      lineItems: [
+        {
+          uniqueId: `appointment-${appointment.id}`,
+          name: `Fahrstunde ${appointment.type || 'B'} (${appointment.duration_minutes || 45}min)`,
+          quantity: 1,
+          amountIncludingTax: amount,
+          type: 'PRODUCT'
+        }
+      ]
+    })
   }
 
   return {
+    // Core functions
     createTransaction,
     testConnection,
-    isWalleeAvailable
+    isWalleeAvailable,
+    
+    // Utility functions
+    calculateAppointmentPrice,
+    createAppointmentPayment
   }
 }

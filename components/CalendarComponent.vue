@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -380,12 +380,6 @@ const handleEventClick = (clickInfo: any) => {
   isModalVisible.value = true
   modalMode.value = 'edit'
   modalEventData.value = appointmentData
-
-    const options = [
-    { label: 'Bearbeiten', action: () => editAppointment(clickInfo.event) },
-    { label: 'Verschieben', action: () => openMoveModal(clickInfo.event) },
-    { label: 'Löschen', action: () => handleDeleteEvent(clickInfo.event) }
-  ]
   
   // Zeige Context Menu oder öffne Modal direkt
   openMoveModal(clickInfo.event)
@@ -410,10 +404,11 @@ const handleSaveEvent = async (eventData: CalendarEvent) => {
   console.log('💾 Event saved, refreshing calendar...')
   await loadAppointments()
   await loadStaffMeetings()
+
+    refreshCalendar()
   
   // 🆕 Event nach oben emittieren
   emit('appointment-changed', { type: 'saved', data: eventData })
-  
   isModalVisible.value = false
 }
 
@@ -422,7 +417,8 @@ const handleDeleteEvent = async (eventData: CalendarEvent) => {
   await loadAppointments()
   await loadStaffMeetings()
 
-  
+  refreshCalendar()
+
   // 🆕 Event nach oben emittieren  
   emit('appointment-changed', { type: 'deleted', data: eventData })
   
@@ -759,19 +755,52 @@ select: (arg) => {
 },
 })
 
+let calendarApi: any = null
+
+// 🔥 NEU: Refresh Function hinzufügen
+const refreshCalendar = async () => {
+  console.log('🔄 CalendarComponent - Refreshing calendar...')
+  
+  try {
+    // 1. Daten neu laden
+    await Promise.all([
+      loadAppointments(),
+      loadStaffMeetings()
+    ])
+    
+    // 2. Warte einen Moment für State-Updates
+    await nextTick()
+    
+    // 3. Calendar events direkt setzen
+    if (calendar.value?.getApi) {
+      const api = calendar.value.getApi()
+      api.removeAllEvents() // Alte Events entfernen
+      api.addEventSource(calendarEvents.value) // Neue Events hinzufügen
+      console.log('✅ Calendar events directly updated')
+    }
+    
+  } catch (error) {
+    console.error('❌ Error during calendar refresh:', error)
+  }
+}
+
 const isCalendarReady = ref(false)
 
 onMounted(async () => {
   console.log('📅 CalendarComponent mounted')
   isCalendarReady.value = true
   
+  // 🔥 NEU: Calendar API Setup
+  await nextTick()
+  if (calendar.value) {
+    calendarApi = calendar.value.getApi()
+    console.log('✅ Calendar API initialized')
+    emit('view-updated', calendarApi.view.currentStart)
+  }
+  
   console.log('🔄 Initial appointment loading...')
   await loadAppointments()
   await loadStaffMeetings()
-
-  if (calendar.value) {
-    emit('view-updated', calendar.value.getApi().view.currentStart)
-  }
 })
 
 watch(() => props.currentUser, async (newUser) => {
@@ -780,6 +809,7 @@ watch(() => props.currentUser, async (newUser) => {
     await loadStaffMeetings()
   }
 }, { deep: true })
+
 
 watch(calendarEvents, (newEvents) => {
   if (calendarOptions.value) {
@@ -792,7 +822,8 @@ watch(calendarEvents, (newEvents) => {
 defineExpose({
   getApi: () => calendar.value?.getApi?.(),
   loadAppointments,
-  loadStaffMeetings
+  loadStaffMeetings,
+  refreshCalendar
 })
 
 
@@ -823,6 +854,10 @@ defineExpose({
   @close="isModalVisible = false"
   @save-event="handleSaveEvent"
   @delete-event="handleDeleteEvent"
+  @refresh-calendar="loadAppointments"
+  @appointment-saved="refreshCalendar"    
+  @appointment-updated="refreshCalendar"   
+  @appointment-deleted="refreshCalendar"
 />
 
   <!-- Confirmation Dialog -->

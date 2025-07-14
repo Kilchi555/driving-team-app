@@ -103,52 +103,6 @@
           </button>
         </form>
 
-        <!-- Quick Test Buttons (Development) -->
-        <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h3 class="text-sm font-medium text-yellow-800 mb-3">🧪 Quick Test Buttons</h3>
-          
-          <div class="grid grid-cols-1 gap-2">
-            <button 
-              @click="fillLoginData('marc@drivingteam.ch', 'Marc2025!')"
-              class="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 px-3 rounded text-sm text-left"
-            >
-              🟠 Marc (Staff - funktioniert garantiert)
-              <div class="text-xs opacity-80">marc@drivingteam.ch / Marc2025!</div>
-            </button>
-            
-            <button 
-              @click="fillLoginData('fresh.test@example.com', 'Test2025!')"
-              class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded text-sm text-left"
-            >
-              🟢 Fresh Test User
-              <div class="text-xs opacity-80">fresh.test@example.com / Test2025!</div>
-            </button>
-            
-            <button 
-              @click="fillLoginData('test.zuerich@example.com', 'Test2025!')"
-              class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded text-sm text-left"
-            >
-              🔵 Original Test User  
-              <div class="text-xs opacity-80">test.zuerich@example.com / Test2025!</div>
-            </button>
-            
-            <button 
-              @click="fillLoginData('test.zuerich@example.com', 'NewTest2025!')"
-              class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-3 rounded text-sm text-left"
-            >
-              🟣 Test User (neues PW)
-              <div class="text-xs opacity-80">test.zuerich@example.com / NewTest2025!</div>
-            </button>
-          </div>
-          
-          <!-- Debug Button -->
-          <button 
-            @click="debugAuth"
-            class="w-full mt-3 bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded text-sm"
-          >
-            🔍 Debug Current Input
-          </button>
-        </div>
 
         <!-- Divider -->
         <div class="my-6 flex items-center">

@@ -380,7 +380,18 @@ const availablePaymentMethods = ref<PaymentMethod[]>([
   }
 ])
 
+const showPaymentModal = ref(false)
+const selectedAppointment = ref(null)
 
+const openPaymentModal = (appointment: any) => {
+  selectedAppointment.value = appointment
+  showPaymentModal.value = true
+}
+
+const handlePaymentCompleted = (result: any) => {
+  console.log('Payment completed:', result)
+  // Refresh calendar or appointment list
+}
 
 const isLoadingMethods = ref(false)
 const isLoadingPrice = ref(false)

@@ -40,12 +40,13 @@
 
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { useStaffCategoryDurations } from '~/composables/useStaffCategoryDurations'
+import { useDurationManager } from '~/composables/useDurationManager' 
 
 interface Props {
   modelValue: number
   selectedCategory?: any
   currentUser?: any
+  availableDurations?: number[]  
   pricePerMinute?: number
   adminFee?: number
   showDebugInfo?: boolean
@@ -59,23 +60,38 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   pricePerMinute: 0,
   adminFee: 0,
+  availableDurations: () => [],
   showDebugInfo: false
 })
 
 const emit = defineEmits<Emits>()
 
-// Composable verwenden
 const {
-  formattedDurations,
   isLoading,
   error,
-  loadStaffCategoryDurations,
+  loadStaffDurations,  
   getDefaultDuration
-} = useStaffCategoryDurations()
+} = useDurationManager()
 
 // Computed
 const totalPrice = computed(() => {
   return props.modelValue * props.pricePerMinute
+})
+
+const formattedDurations = computed(() => {
+  // ✅ Verwende Props-Dauern falls verfügbar, sonst Composable
+  const durations = props.availableDurations?.length > 0 
+    ? props.availableDurations 
+    : [] // Fallback auf leer
+
+  console.log('🎯 DurationSelector - Using durations from props:', durations)
+  
+  return durations.map(duration => ({
+    value: duration,
+    label: duration >= 120 
+      ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
+      : `${duration}min`
+  }))
 })
 
 // Methods
@@ -92,16 +108,22 @@ watch(() => props.selectedCategory, async (newCategory, oldCategory) => {
     new: newCategory?.code,
     userId: props.currentUser?.id
   })
+
+  // ✅ ADD: Debug selected category structure
+  if (newCategory) {
+    console.log('📊 Selected category full object:', newCategory)
+    console.log('📊 Available durations in category:', newCategory.availableDurations)
+  }
   
   if (newCategory && props.currentUser?.id) {
-    console.log('🚗 Loading durations for staff + category:', {
+    console.log('🚗 Loading durations for staff:', {
       staffId: props.currentUser.id,
       categoryCode: newCategory.code
     })
     
     try {
-      // Lade spezifische Dauern für Staff + Kategorie
-      await loadStaffCategoryDurations(props.currentUser.id, newCategory.code)
+      // ✅ KORRIGIERT - loadStaffDurations(staffId)
+      await loadStaffDurations(props.currentUser.id)
       
       const defaultDuration = getDefaultDuration()
       console.log('🎯 Setting default duration:', defaultDuration)
@@ -124,8 +146,9 @@ watch(() => props.currentUser?.id, async (newUserId, oldUserId) => {
     categoryCode: props.selectedCategory?.code
   })
   
-  if (newUserId && props.selectedCategory?.code) {
-    await loadStaffCategoryDurations(newUserId, props.selectedCategory.code)
+  if (newUserId) {
+    // ✅ KORRIGIERT - loadStaffDurations(staffId)
+    await loadStaffDurations(newUserId)
   }
 })
 </script>
