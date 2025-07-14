@@ -1,7 +1,7 @@
 <template>
   <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
     <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.stop>
-      
+
       <!-- Header -->
       <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
         <div class="flex justify-between items-center">
@@ -16,15 +16,15 @@
 
       <!-- Content -->
       <div class="px-6 py-6 space-y-6">
-        
+
         <!-- Student Selector -->
         <StudentSelector
           v-if="showStudentSelector"
           v-model="selectedStudent"
           :current-user="currentUser"
           :disabled="mode === 'view'"
-          @student-selected="StudentSelected"
-          @student-cleared="StudentCleared"
+          @student-selected="handleStudentSelected"
+          @student-cleared="handleStudentCleared"
           @switch-to-other="switchToOtherEventType"
         />
 
@@ -32,7 +32,7 @@
         <EventTypeSelector
           v-if="showEventTypeSelectionComputed"
           :selected-type="formData.selectedSpecialType"
-          @event-type-selected="EventTypeSelected"
+          @event-type-selected="handleEventTypeSelected"
           @back-to-student="backToStudentSelection"
         />
 
@@ -57,7 +57,7 @@
             :selected-user="selectedStudent"
             :current-user="currentUser"
             :current-user-role="currentUser?.role"
-            @category-selected="CategorySelected"
+            @category-selected="handleCategorySelected"
             @price-changed="handlePriceChanged"
             @durations-changed="handleDurationsChanged"
           />
@@ -70,9 +70,9 @@
             :price-per-minute="formData.price_per_minute"
             :disabled="mode === 'view'"
             @durations-changed="(durations: number[]) => {
-              console.log('🔥 DIRECT TEST: EventModal received durations:', durations)
-              availableDurations = durations  // ✅ OHNE .value
-              handleDurationsChanged?.(durations)  // ✅ Optional chaining
+              console.log('🔥 EventModal received durations:', durations)
+              // availableDurations.value = durations  // <-- ENTFERNT: Redundant, da handleDurationsChanged dies bereits tut
+              handleDurationsChanged?.(durations)
             }"
           />
         </div>
@@ -82,9 +82,9 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">📅 Datum</label>
-              <input 
+              <input
                 v-model="formData.startDate"
-                type="date" 
+                type="date"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 :disabled="mode === 'view'"
                 required
@@ -92,9 +92,9 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">🕐 Startzeit</label>
-              <input 
+              <input
                 v-model="formData.startTime"
-                type="time" 
+                type="time"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 :disabled="mode === 'view'"
                 @change="calculateEndTime"
@@ -103,9 +103,9 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">🕐 Endzeit</label>
-              <input 
+              <input
                 v-model="formData.endTime"
-                type="time" 
+                type="time"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 :disabled="mode === 'view'"
                 required
@@ -130,7 +130,7 @@
         <!-- Staff Assignment (nur für Admins) -->
         <div v-if="showStaffSection">
           <label class="block text-sm font-medium text-gray-700 mb-2">👨‍🏫 Fahrlehrer</label>
-          <select 
+          <select
             v-model="formData.staff_id"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
             :disabled="mode === 'view'"
@@ -150,7 +150,6 @@
             :user-id="formData.user_id"
             :staff-id="currentUser.id"
             :appointment-number="appointmentNumber"
-            :show-payment-methods="ShowPaymentMethods"
             :discount="formData.discount ? {
               amount: formData.discount,
               type: (formData.discount_type || 'fixed') as 'fixed' | 'percentage',
@@ -158,8 +157,7 @@
             } : undefined"
             @payment-success="handlePaymentSuccess"
             @payment-error="handlePaymentError"
-            @payment-started="handlePaymentStarted"
-            @payment-method-selected="handlePaymentMethodSelected"
+            @payment-started="handlePaymentStarted" 
           />
 
         <!-- Description -->
@@ -174,7 +172,6 @@
           ></textarea>
         </div>
 
-    
 
         <!-- Error Display -->
         <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -281,9 +278,9 @@ const emit = defineEmits<{
   'close': []
   'save': [data: any]
   'delete': [id: string]
-  'appointment-saved': [appointment: any]    
-  'appointment-updated': [appointment: any]  
-  'appointment-deleted': [appointmentId: string] 
+  'appointment-saved': [appointment: any]
+  'appointment-updated': [appointment: any]
+  'appointment-deleted': [appointmentId: string]
 }>()
 
 // ============ COMPOSABLES ============
@@ -292,32 +289,37 @@ const {
   formData,
   selectedStudent,
   selectedCategory,
-  selectedLocation,
+  selectedLocation, // Make sure this is also returned by useEventModalForm if it's managed there
   availableDurations,
   appointmentNumber,
   isLoading,
   error,
   // computed
   isFormValid,
-  computedEndTime,
-  totalPrice,
+  computedEndTime, // Not used in template, but kept if needed elsewhere
+  totalPrice,      // Not used in template, but kept if needed elsewhere
   // actions
   resetForm,
   populateFormFromAppointment,
   saveAppointment,
   deleteAppointment,
-  getAppointmentNumber
+  getAppointmentNumber // Ensure this is the one from useEventModalForm
 } = useEventModalForm(props.currentUser)
 
+// Additional EventModal-specific state
+const availableStaff = ref<any[]>([])
+const showEventTypeSelection = ref(false)
+const availableLocations = ref<any[]>([]) // This ref is still here, but its usage needs to be consistent with LocationSelector
+
 // Event Handlers
-// Destrukturiere die Funktionen direkt aus useEventModalHandlers
+// Destructure functions directly from useEventModalHandlers
 const {
-  StudentSelected,
-  StudentCleared,
+  handleStudentSelected,
+  handleStudentCleared,
   switchToOtherEventType,
-  EventTypeSelected,
+  handleEventTypeSelected,
   backToStudentSelection,
-  CategorySelected,
+  handleCategorySelected,
   handlePriceChanged,
   handleDurationsChanged,
   handleDurationChanged,
@@ -326,25 +328,26 @@ const {
   handlePaymentSuccess,
   handlePaymentError,
   handleSaveRequired,
+  handlePaymentStarted, // <-- FIX: handlePaymentStarted hier hinzugefügt
   getDefaultTitle,
   calculateEndTime
 } = useEventModalHandlers(
   formData,
   selectedStudent,
   selectedCategory,
-  availableDurations, // Stelle sicher, dass availableDurations ein Ref ist, wenn es in useEventModalHandlers mutiert wird
-  appointmentNumber
+  availableDurations,
+  appointmentNumber,
+  selectedLocation // Pass selectedLocation to useEventModalHandlers for synchronization
 );
 
-// Erstelle ein Objekt mit allen Handlern, die an useEventModalWatchers übergeben werden sollen.
-// Dies ist wichtig, da useEventModalWatchers diese Funktionen "braucht", um sie in seinen Watchern auszuführen.
+// Create an object with all handlers to be passed to useEventModalWatchers.
 const handlerActions = {
-  StudentSelected,
-  StudentCleared,
+  handleStudentSelected,
+  handleStudentCleared,
   switchToOtherEventType,
-  EventTypeSelected,
+  handleEventTypeSelected,
   backToStudentSelection,
-  CategorySelected,
+  handleCategorySelected,
   handlePriceChanged,
   handleDurationsChanged,
   handleDurationChanged,
@@ -353,35 +356,25 @@ const handlerActions = {
   handlePaymentSuccess,
   handlePaymentError,
   handleSaveRequired,
+  handlePaymentStarted, // <-- FIX: handlePaymentStarted hier hinzugefügt
   getDefaultTitle,
   calculateEndTime,
-  // Füge hier auch die Methoden aus useEventModalForm hinzu, die Watchers eventuell benötigen könnten,
-  // wie z.B. populateFormFromAppointment oder resetForm, wenn sie nicht direkt von den Handlern aufgerufen werden.
   populateFormFromAppointment,
   resetForm,
-  getAppointmentNumber // Füge diese hinzu, falls sie direkt von Watchern benötigt wird
+  // getAppointmentNumber is from useEventModalForm, no need to pass it here again if watchers use the one from useEventModalForm directly
 };
 
-// ... (Rest deines Codes, z.B. die useEventModalWatchers-Initialisierung)
-
-// Beispiel, wie useEventModalWatchers aufgerufen wird (Annahme):
+// Initialize the Watchers (call only once)
 const watchers = useEventModalWatchers(
   props,
   formData,
   selectedStudent,
-  // Füge hier weitere benötigte Refs hinzu, die die Watcher direkt überwachen müssen
-  availableLocations, // Annahme: availableLocations ist ein Ref, das von Watchern überwacht wird
-  appointmentNumber,  // Annahme: appointmentNumber ist ein Ref, das von Watchern überwacht wird
-  handlerActions      // Übergebe das Aktionen-Objekt
+  selectedLocation,
+  availableLocations,
+  appointmentNumber,
+  handlerActions
 );
-
-// Initialisiere die Watcher
-watchers.setupAllWatchers();
-
-// Additional EventModal-specific state
-const availableStaff = ref<any[]>([])
-const showEventTypeSelection = ref(false)
-const availableLocations = ref<any[]>([])
+watchers.setupAllWatchers(); // Call setupAllWatchers once here
 
 
 // ============ COMPUTED PROPERTIES ============
@@ -408,12 +401,12 @@ const showTitleInput = computed(() => {
   if (formData.value.eventType !== 'lesson' || formData.value.selectedSpecialType !== '') {
     return true
   }
-  
+
   // Für Fahrstunden - nur anzeigen wenn Schüler ausgewählt wurde
   if (formData.value.eventType === 'lesson') {
     return !!selectedStudent.value
   }
-  
+
   return false
 })
 
@@ -422,8 +415,8 @@ const showCategorySection = computed(() => {
 })
 
 const showTimeSection = computed(() => {
-  return formData.value.eventType === 'lesson' ? 
-         !!selectedStudent.value : 
+  return formData.value.eventType === 'lesson' ?
+         !!selectedStudent.value :
          !!formData.value.selectedSpecialType
 })
 
@@ -448,51 +441,52 @@ const showDescriptionField = computed(() => {
 })
 
 const showStatusField = computed(() => {
-  return props.mode !== 'create' && 
+  return props.mode !== 'create' &&
          (props.currentUser?.role === 'staff' || props.currentUser?.role === 'admin')
 })
 
 const canDelete = computed(() => {
-  return props.currentUser?.role === 'admin' || 
+  return props.currentUser?.role === 'admin' ||
          (props.currentUser?.role === 'staff' && formData.value.staff_id === props.currentUser?.id)
 })
 
 // ✅ Korrigierte Validierung - nur nach Schüler-Auswahl
 const validationErrors = computed(() => {
   const errors: string[] = []
-  
+
   // ✅ Keine Validierung anzeigen wenn noch kein Schüler/Terminart ausgewählt
   if (formData.value.eventType === 'lesson' && !selectedStudent.value) {
     return []
   }
-  
+
   if (formData.value.eventType !== 'lesson' && !formData.value.selectedSpecialType) {
     return []
   }
-  
+
   // ✅ Ab hier normale Validierung
   if (!formData.value.title.trim()) {
     errors.push('Titel ist erforderlich')
   }
-  
+
   if (formData.value.eventType === 'lesson') {
     if (!selectedStudent.value) errors.push('Schüler muss ausgewählt werden')
     if (!formData.value.type) errors.push('Kategorie muss ausgewählt werden')
   }
-  
+
   if (!formData.value.startDate) errors.push('Datum ist erforderlich')
   if (!formData.value.startTime) errors.push('Startzeit ist erforderlich')
   if (!formData.value.endTime) errors.push('Endzeit ist erforderlich')
-  
-  // ✅ FIX: Korrekte Location-Validierung mit der richtigen Variable
-  // ✅ Erweiterte Location-Validierung
-    const hasRealLocation = formData.value.location_id && formData.value.location_id !== ''
-    const hasTemporaryLocation = selectedLocation.value?.id?.startsWith('temp_')
 
-    if (!hasRealLocation && !hasTemporaryLocation) {
-      errors.push('Standort ist erforderlich')
-    }
-  
+  // ✅ FIX: Korrekte Location-Validierung mit der richtigen Variable
+  // ✅ Erweiterte Location-Validierung: Prüft entweder ob eine reale ID vorhanden ist ODER ob ein temporärer Standort ausgewählt wurde
+  const hasRealLocation = formData.value.location_id && formData.value.location_id !== '' && !String(formData.value.location_id).startsWith('temp_');
+  const hasTemporaryLocation = selectedLocation.value?.id && String(selectedLocation.value.id).startsWith('temp_');
+
+  if (!hasRealLocation && !hasTemporaryLocation) {
+      errors.push('Standort ist erforderlich');
+  }
+
+
   // ✅ FIX 2: Staff-Validierung nur für Admins, Staff wird automatisch gesetzt
   if (props.currentUser?.role === 'admin' && !formData.value.staff_id) {
     errors.push('Fahrlehrer ist erforderlich')
@@ -501,7 +495,7 @@ const validationErrors = computed(() => {
   else if (props.currentUser?.role === 'staff' && !formData.value.staff_id) {
     formData.value.staff_id = props.currentUser.id
   }
-  
+
   return errors
 })
 
@@ -511,13 +505,13 @@ const selectedAppointment = computed(() => props.eventData)
 // ============ METHODS ============
 const initializeFormData = () => {
   console.log('🎯 EventModal - Initializing form data, mode:', props.mode)
-  
+
   if (props.mode === 'create') {
     // Set defaults for new appointment
     let startDate = ''
     let startTime = '08:00'
     let preselectedUserId = ''
-    
+
     // Check if we have calendar data
     if (props.eventData) {
       if (props.eventData.clickedDate) {
@@ -529,7 +523,7 @@ const initializeFormData = () => {
         startDate = startDateTime.toISOString().split('T')[0]
         startTime = startDateTime.toTimeString().slice(0, 5)
       }
-      
+
       // Check for preselected student
       if (props.eventData.user_id) {
         preselectedUserId = props.eventData.user_id
@@ -537,32 +531,32 @@ const initializeFormData = () => {
         preselectedUserId = props.eventData.extendedProps.user_id
       }
     }
-    
+
     // Fallback to current date
     if (!startDate) {
       startDate = new Date().toISOString().split('T')[0]
     }
-    
+
     formData.value.startDate = startDate
     formData.value.startTime = startTime
     formData.value.endTime = calculateEndTimeFromStart(startTime, 45)
     formData.value.user_id = preselectedUserId
-    
+
     // Set default staff
     if (props.currentUser?.role === 'staff' && !formData.value.staff_id) {
     formData.value.staff_id = props.currentUser.id
     console.log('🎯 Auto-set staff_id for logged-in staff:', props.currentUser.id)
   }
-    
+
     // Load student if preselected
     if (preselectedUserId) {
       loadStudentData(preselectedUserId)
     }
-    
+
   } else if (props.eventData) {
     // Load existing appointment data
     populateFormFromAppointment(props.eventData)
-    
+
     if (formData.value.user_id) {
       loadStudentData(formData.value.user_id)
     }
@@ -571,11 +565,11 @@ const initializeFormData = () => {
 
 const calculateEndTimeFromStart = (startTime: string, durationMinutes: number): string => {
   if (!startTime) return ''
-  
+
   const [hours, minutes] = startTime.split(':').map(Number)
   const startDate = new Date()
   startDate.setHours(hours, minutes, 0, 0)
-  
+
   const endDate = new Date(startDate.getTime() + durationMinutes * 60000)
   return endDate.toTimeString().slice(0, 5)
 }
@@ -588,12 +582,12 @@ const loadStudentData = async (userId: string) => {
       .select('*')
       .eq('id', userId)
       .single()
-    
+
     if (error) throw error
-    
+
     if (data) {
       selectedStudent.value = data
-      
+
       // Auto-set category and price
       if (data.category) {
         const primaryCategory = data.category.split(',')[0].trim()
@@ -614,7 +608,7 @@ const loadStaff = async () => {
       .eq('role', 'staff')
       .eq('is_active', true)
       .order('first_name')
-    
+
     if (error) throw error
     availableStaff.value = data || []
   } catch (err) {
@@ -627,9 +621,10 @@ const updateLocationId = (locationId: string | null) => {
   console.log('📍 Location ID updated via model-value:', locationId)
 }
 
-const handlePaymentStatusChanged = (isPaid: boolean) => {
-  formData.value.is_paid = isPaid
-}
+// This handler seems redundant if handlePaymentSuccess already sets is_paid
+// const handlePaymentStatusChanged = (isPaid: boolean) => {
+//   formData.value.is_paid = isPaid
+// }
 
 // ============ EVENT HANDLERS ============
 const handleClose = () => {
@@ -645,18 +640,18 @@ const handleSave = async () => {
     error.value = 'Bitte füllen Sie alle erforderlichen Felder aus'
     return
   }
-  
+
   try {
     const mode = props.mode === 'edit' ? 'edit' : 'create'
     const eventId = props.mode === 'edit' ? formData.value.id : undefined
     const result = await saveAppointment(mode, eventId)
-    
+
     console.log('✅ EventModal - Save successful, emitting events:', { mode, resultId: result?.id })
-    
-    // Bestehende Emits
+
+    // Existing Emits
     emit('save', result)
-    
-    // 🔥 NEU: Calendar Refresh Emits
+
+    // 🔥 NEW: Calendar Refresh Emits
     if (mode === 'edit') {
       console.log('📤 Emitting appointment-updated')
       emit('appointment-updated', result)
@@ -664,7 +659,7 @@ const handleSave = async () => {
       console.log('📤 Emitting appointment-saved')
       emit('appointment-saved', result)
     }
-    
+
     handleClose()
   } catch (err: any) {
     console.error('❌ EventModal - Save error:', err)
@@ -676,54 +671,23 @@ const handleDelete = async () => {
   try {
     const eventId = props.eventData?.id
     await deleteAppointment(eventId)
-    
-    // Bestehende Emits
+
+    // Existing Emits
     emit('delete', eventId)
-    
-    // 🔥 NEU: Calendar Refresh Emit
+
+    // 🔥 NEW: Calendar Refresh Emit
     emit('appointment-deleted', eventId)
-    
+
     handleClose()
   } catch (err: any) {
     console.error('❌ EventModal - Delete error:', err)
   }
 }
 
-const handlePaymentStarted = (method: string) => {
-  console.log('🔄 Payment started:', method)
-}
+// handlePaymentStarted is now correctly destructured from useEventModalHandlers
+// and used directly in the template.
 
 // ============ WATCHERS ============
-// Setup watchers using the composable
-const watchers = useEventModalWatchers(
-  props,
-  formData,
-  selectedStudent,
-  availableLocations,
-  appointmentNumber,
-  {
-    handleStudentSelected: handleStudentSelected || (() => {}),
-    handleCategorySelected: handleCategorySelected || (() => {}),
-    handleDurationChanged: handleDurationChanged || (() => {}),
-    handleLocationSelected: handleLocationSelected || (() => {}),
-    calculateEndTime: calculateEndTime || (() => {}),
-    getDefaultTitle: getDefaultTitle || (() => 'Neuer Termin')
-  }
-)
-
-// Initialize watchers
-watchers.setupAllWatchers()
-
-// Modal visibility watcher
-watch(() => props.isVisible, (newValue) => {
-  if (newValue) {
-    console.log('👁️ EventModal - Modal opened')
-    resetForm()
-    initializeFormData()
-    loadStaff()
-  }
-})
-
 // Auto-generate title when student changes
 watch(selectedStudent, () => {
   if (formData.value.eventType === 'lesson' && selectedStudent.value) {
@@ -739,6 +703,17 @@ watch([() => formData.value.type, () => selectedCategory.value], ([categoryCode,
     availableDurations.value = [...category.availableDurations]
   }
 }, { immediate: true, deep: true })
+
+// Modal visibility watcher
+watch(() => props.isVisible, (newValue) => {
+  if (newValue) {
+    console.log('👁️ EventModal - Modal opened')
+    resetForm()
+    initializeFormData()
+    loadStaff()
+  }
+})
+
 // ============ LIFECYCLE ============
 onMounted(() => {
   console.log('🔥 EventModal - Component mounted')
