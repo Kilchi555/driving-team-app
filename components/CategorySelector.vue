@@ -85,6 +85,8 @@ const allCategories = ref<Category[]>([])
 const staffCategoryDurations = ref<StaffCategoryDuration[]>([])
 const isLoading = ref(false)
 const error = ref<string | null>(null)
+const isAutoEmitting = ref(false)
+const isInitializing = ref(false)
 
 // Computed
 const selectedCategory = computed(() => {
@@ -201,157 +203,212 @@ const availableCategoriesForUser = computed(() => {
 
 // Methods
 const loadCategories = async () => {
-  console.log('🔥 CategorySelector - loadCategories called')
-  isLoading.value = true
-  error.value = null
-
-  try {
-    const supabase = getSupabase()
-    
-    // Alle Kategorien laden
-    const { data: categoriesData, error: categoriesError } = await supabase
-      .from('categories')
-      .select('id, name, code, description, price_per_lesson, lesson_duration_minutes, color, is_active, display_order, price_unit')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true })
-      .order('name', { ascending: true })
-
-    if (categoriesError) throw categoriesError
-    allCategories.value = categoriesData || []
-    console.log('✅ All categories loaded:', categoriesData?.length)
-
-    // Wenn es ein Staff-Benutzer ist, seine spezifischen Kategorie-Dauern laden
-    if (props.currentUserRole === 'staff' && props.currentUser?.id) {
-      await loadStaffCategoryDurations(props.currentUser.id)
-    }
-
-  } catch (err: any) {
-    console.error('❌ Error loading categories:', err)
-    error.value = err.message || 'Fehler beim Laden der Kategorien'
-  } finally {
-    isLoading.value = false
+ console.log('🔥 CategorySelector - loadCategories called')
+ 
+ isLoading.value = true
+ isInitializing.value = true  // ✅ Initialization Mode
+ error.value = null
+ 
+ try {
+   const supabase = getSupabase()
    
-    if (props.modelValue) {
-      console.log('🔄 Categories loaded, checking current selection:', props.modelValue)
-      const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
-      if (selected) {
-        console.log('✅ Emitting durations for loaded category:', selected.availableDurations)
-        emit('durations-changed', selected.availableDurations)
-      }
-    }
-  }
+   // Alle Kategorien laden
+   const { data: categoriesData, error: categoriesError } = await supabase
+     .from('categories')
+     .select('id, name, code, description, price_per_lesson, lesson_duration_minutes, color, is_active, display_order, price_unit')
+     .eq('is_active', true)
+     .order('display_order', { ascending: true })
+     .order('name', { ascending: true })
+
+   if (categoriesError) throw categoriesError
+
+   allCategories.value = categoriesData || []
+   console.log('✅ All categories loaded:', categoriesData?.length)
+
+   // Wenn es ein Staff-Benutzer ist, seine spezifischen Kategorie-Dauern laden
+   if (props.currentUserRole === 'staff' && props.currentUser?.id) {
+     await loadStaffCategoryDurations(props.currentUser.id)
+   }
+
+ } catch (err: any) {
+   console.error('❌ Error loading categories:', err)
+   error.value = err.message || 'Fehler beim Laden der Kategorien'
+ } finally {
+   isLoading.value = false
+   
+   // ✅ NACH dem Laden prüfen ob Durations emittiert werden müssen
+   if (props.modelValue) {
+     console.log('🔄 Categories loaded, checking current selection:', props.modelValue)
+     const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
+     
+     if (selected) {
+       console.log('✅ Re-emitting durations for loaded category:', selected.availableDurations)
+       
+       // ✅ RACE-SAFE Emit mit Verzögerung
+       setTimeout(() => {
+         if (!isAutoEmitting.value) {
+           emit('durations-changed', selected.availableDurations)
+         }
+       }, 100)
+     }
+   }
+   
+   // ✅ Initialization Mode beenden
+   setTimeout(() => {
+     isInitializing.value = false
+     console.log('✅ CategorySelector initialization completed')
+   }, 200)
+ }
 }
 
 const loadStaffCategoryDurations = async (staffId: string) => {
-  console.log('🔄 Loading staff category durations for:', staffId)
-  
-  try {
-    const supabase = getSupabase()
-    
-    // Staff-Kategorie-Dauern laden - KORREKTE TABELLE
-    const { data: durationsData, error: durationsError } = await supabase
-      .from('staff_category_durations')
-      .select('id, created_at, staff_id, category_code, duration_minutes, is_active, display_order')
-      .eq('staff_id', staffId)
-      .eq('is_active', true)
-      .order('category_code', { ascending: true })
-      .order('display_order', { ascending: true })
+ console.log('🔄 Loading staff category durations for:', staffId)
+ 
+ try {
+   const supabase = getSupabase()
+   
+   // Staff-Kategorie-Dauern laden - KORREKTE TABELLE
+   const { data: durationsData, error: durationsError } = await supabase
+     .from('staff_category_durations')
+     .select('id, created_at, staff_id, category_code, duration_minutes, is_active, display_order')
+     .eq('staff_id', staffId)
+     .eq('is_active', true)
+     .order('category_code', { ascending: true })
+     .order('display_order', { ascending: true })
 
-    if (durationsError) throw durationsError
+   if (durationsError) throw durationsError
 
-    staffCategoryDurations.value = durationsData || []
-    
-    console.log('✅ Staff category durations loaded:', durationsData?.length)
-    
-    if (durationsData && durationsData.length > 0) {
-      const categories = [...new Set(durationsData.map(d => d.category_code))]
-      console.log('📊 Categories found:', categories)
-      
-      // Debug: Zeige Dauern pro Kategorie
-      categories.forEach(code => {
-        const durations = durationsData.filter(d => d.category_code === code).map(d => d.duration_minutes)
-        console.log(`📊 ${code}: [${durations.join(', ')}] Minuten`)
-      })
-    } else {
-      console.log('⚠️ No category durations found for staff:', staffId)
-    }
+   staffCategoryDurations.value = durationsData || []
+   console.log('✅ Staff category durations loaded:', durationsData?.length)
 
-  } catch (err: any) {
-    console.error('❌ Error loading staff category durations:', err)
-    staffCategoryDurations.value = []
-  }
-  
-  // 🔥 NEUER CODE: Nach dem Laden der Staff-Dauern prüfen
-  if (props.modelValue) {
-    console.log('🔄 Staff durations loaded, checking current selection:', props.modelValue)
-    const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
-    if (selected) {
-      console.log('✅ Emitting durations after staff load:', selected.availableDurations)
-      emit('durations-changed', selected.availableDurations)
-    }
-  }
+   if (durationsData && durationsData.length > 0) {
+     const categories = [...new Set(durationsData.map(d => d.category_code))]
+     console.log('📊 Categories found:', categories)
+     
+     // Debug: Zeige Dauern pro Kategorie
+     categories.forEach(code => {
+       const durations = durationsData.filter(d => d.category_code === code).map(d => d.duration_minutes)
+       console.log(`📊 ${code}: [${durations.join(', ')}] Minuten`)
+     })
+   } else {
+     console.log('⚠️ No category durations found for staff:', staffId)
+   }
+
+ } catch (err: any) {
+   console.error('❌ Error loading staff category durations:', err)
+   staffCategoryDurations.value = []
+ }
+
+ // ✅ RACE-SAFE: Nach dem Laden der Staff-Dauern prüfen
+ if (props.modelValue && !isInitializing.value) {
+   console.log('🔄 Staff durations loaded, checking current selection:', props.modelValue)
+   const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
+   
+   if (selected) {
+     console.log('✅ Emitting durations after staff load:', selected.availableDurations)
+     
+     // ✅ RACE-SAFE Emit mit Verzögerung
+     setTimeout(() => {
+       if (!isAutoEmitting.value) {
+         emit('durations-changed', selected.availableDurations)
+       }
+     }, 100)
+   }
+ }
 }
 
 const handleCategoryChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const newValue = target.value
-  
-  console.log('🔄 CategorySelector - category changed:', newValue)
-  
-  emit('update:modelValue', newValue)
-  
-  const selected = availableCategoriesForUser.value.find(cat => cat.code === newValue) || null
-  console.log('🎯 CategorySelector - Selected category:', selected)
-  console.log('🎯 CategorySelector - Available durations:', selected?.availableDurations)
-
-  emit('category-selected', selected)
-  
-  // Preis pro Minute berechnen (alle Preise sind auf 45min basis)
-  if (selected) {
-    const pricePerMinute = selected.price_per_lesson / 45
-    emit('price-changed', pricePerMinute)
-    
-    // ✅ DEBUG: Durations-changed Event
-    console.log('⏱️ CategorySelector - Emitting durations-changed:', selected.availableDurations)
-    emit('durations-changed', selected.availableDurations)
-    
-    console.log('💰 Price per minute:', pricePerMinute)
-  } else {
-    console.log('❌ No category selected, emitting empty durations')
-    emit('price-changed', 0)
-    emit('durations-changed', [])
-  }
+ const target = event.target as HTMLSelectElement
+ const newValue = target.value
+ 
+ console.log('🔄 CategorySelector - Manual category change:', newValue)
+ 
+ // ✅ Mark als User Interaction (verhindert andere Auto-Updates)
+ isAutoEmitting.value = true
+ 
+ emit('update:modelValue', newValue)
+ 
+ const selected = availableCategoriesForUser.value.find(cat => cat.code === newValue) || null
+ console.log('🎯 CategorySelector - Selected category:', selected)
+ console.log('🎯 CategorySelector - Available durations:', selected?.availableDurations)
+ 
+ emit('category-selected', selected)
+ 
+ // Preis pro Minute berechnen (alle Preise sind auf 45min basis)
+ if (selected) {
+   const pricePerMinute = selected.price_per_lesson / 45
+   emit('price-changed', pricePerMinute)
+   
+   // ✅ RACE-SAFE Durations Emit (User Selection erlaubt)
+   console.log('⏱️ CategorySelector - Emitting durations-changed:', selected.availableDurations)
+   emit('durations-changed', selected.availableDurations)
+   
+   console.log('💰 Price per minute:', pricePerMinute)
+ } else {
+   console.log('❌ No category selected, emitting empty durations')
+   emit('price-changed', 0)
+   emit('durations-changed', [])
+ }
+ 
+ // ✅ Reset Auto-Selecting Flag nach kurzer Zeit
+ setTimeout(() => {
+   isAutoEmitting.value = false
+ }, 300)
 }
 
 // Watchers
 // GEZIELTER FIX für CategorySelector.vue
 // Ersetzen Sie den User-Watcher (Zeile 314-328) mit diesem korrigierten Code:
 
-watch(() => props.selectedUser, (newUser) => {
-  if (newUser?.category && newUser.category !== props.modelValue) {
-    console.log('👤 User category detected:', newUser.category)
-    
-    // ✅ FIX: Nur erste Kategorie nehmen wenn mehrere
-    const primaryCategory = newUser.category.split(',')[0].trim()
-    console.log('🎯 Using primary category:', primaryCategory)
-    
-    emit('update:modelValue', primaryCategory)
-    
-    // 🔥 KRITISCHER FIX: Suche nach primaryCategory statt newUser.category
-    const selected = availableCategoriesForUser.value.find(cat => cat.code === primaryCategory)
-    
-    if (selected) {
-      console.log('🎯 Auto-selected category:', selected)
-      emit('category-selected', selected)
-      const pricePerMinute = selected.price_per_lesson / 45
-      emit('price-changed', pricePerMinute)
-      
-      // 🔥 KRITISCH: durations-changed Event auch hier emittieren
-      console.log('⏱️ Auto-emitting durations-changed:', selected.availableDurations)
-      emit('durations-changed', selected.availableDurations)
-    }
-  }
-}, { immediate: true })
+watch(() => props.selectedUser, (newUser, oldUser) => {
+ // ✅ Skip wenn User nicht wirklich geändert wurde
+ if (!newUser || oldUser?.id === newUser.id) return
+ 
+ // ✅ Skip während Initialisierung
+ if (isInitializing.value) {
+   console.log('🚫 Auto-category selection blocked - initializing')
+   return
+ }
+ 
+ // ✅ Skip wenn bereits Kategorie gewählt (verhindert Überschreibung)
+ if (props.modelValue) {
+   console.log('🚫 Auto-category selection blocked - category already selected')
+   return
+ }
+ 
+ if (newUser?.category && newUser.category !== props.modelValue) {
+   console.log('👤 User category detected:', newUser.category)
+   
+   // ✅ FIX: Nur erste Kategorie nehmen wenn mehrere
+   const primaryCategory = newUser.category.split(',')[0].trim()
+   console.log('🎯 Using primary category:', primaryCategory)
+   
+   // ✅ Mark als Auto-Selection
+   isAutoEmitting.value = true
+   
+   emit('update:modelValue', primaryCategory)
+   
+   // 🔥 KRITISCHER FIX: Suche nach primaryCategory statt newUser.category
+   const selected = availableCategoriesForUser.value.find(cat => cat.code === primaryCategory)
+   
+   if (selected) {
+     console.log('🎯 Auto-selected category:', selected)
+     emit('category-selected', selected)
+     
+     const pricePerMinute = selected.price_per_lesson / 45
+     emit('price-changed', pricePerMinute)
+     
+     // ✅ RACE-SAFE Auto-Emit
+     console.log('⏱️ Auto-emitting durations-changed:', selected.availableDurations)
+     emit('durations-changed', selected.availableDurations)
+     
+     // ✅ Reset Auto-Emit Flag
+     setTimeout(() => {
+       isAutoEmitting.value = false
+     }, 200)
+   }
+ }
+}, { immediate: false })
 
 // Wenn sich der currentUser ändert, Staff-Kategorien neu laden
 watch(() => props.currentUser?.id, (newUserId) => {
@@ -362,15 +419,34 @@ watch(() => props.currentUser?.id, (newUserId) => {
 
 // Neuer Watcher in CategorySelector.vue hinzufügen:
 watch([() => allCategories.value.length, () => props.modelValue], ([categoriesCount, modelValue]) => {
-  if (categoriesCount > 0 && modelValue) {
-    console.log('🔄 Categories loaded, re-emitting for:', modelValue)
-    const selected = availableCategoriesForUser.value.find(cat => cat.code === modelValue)
-    if (selected) {
-      console.log('✅ Re-emitting durations-changed:', selected.availableDurations)
-      emit('durations-changed', selected.availableDurations)
-    }
-  }
-}, { immediate: true })
+ // ✅ Skip während Initialisierung
+ if (isInitializing.value) {
+   console.log('🚫 Re-emit blocked - initializing')
+   return
+ }
+ 
+ // ✅ Skip wenn Auto-Selection läuft
+ if (isAutoEmitting.value) {
+   console.log('🚫 Re-emit blocked - auto-selection in progress')
+   return
+ }
+ 
+ if (categoriesCount > 0 && modelValue) {
+   console.log('🔄 Categories loaded, re-emitting for:', modelValue)
+   const selected = availableCategoriesForUser.value.find(cat => cat.code === modelValue)
+   
+   if (selected) {
+     console.log('✅ Re-emitting durations-changed:', selected.availableDurations)
+     
+     // ✅ RACE-SAFE Re-Emit mit Verzögerung
+     setTimeout(() => {
+       if (!isAutoEmitting.value) {
+         emit('durations-changed', selected.availableDurations)
+       }
+     }, 150)
+   }
+ }
+}, { immediate: false })  // ✅ KEIN immediate: true!
 
 // Lifecycle
 onMounted(() => {

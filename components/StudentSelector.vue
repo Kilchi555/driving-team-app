@@ -59,12 +59,23 @@
       <div v-if="!selectedStudent" class="mb-3">
         <input
           v-model="searchQuery"
+          @focus="handleSearchFocus"
           @input="filterStudents"
           type="text"
           placeholder="Schüler suchen (Name, E-Mail oder Telefon)..."
           autocomplete="off"
           class="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+      </div>
+
+      <!-- Manual Load Button - nur wenn autoLoad false und keine Students geladen -->
+      <div v-if="!shouldAutoLoadComputed && availableStudents.length === 0 && !isLoading && !selectedStudent" class="mb-3">
+        <button 
+          @click="loadStudents()"
+          class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          👥 Schüler laden
+        </button>
       </div>
 
       <!-- Scrollbare Schülerliste - nur wenn kein Schüler ausgewählt -->
@@ -79,7 +90,7 @@
         <div v-else-if="studentList.length === 0" class="text-center py-8 text-gray-500">
           <span class="text-3xl mb-2 block">👨‍🎓</span>
           <p class="text-sm">
-            {{ searchQuery ? 'Keine Schüler gefunden' : 'Keine Schüler verfügbar' }}
+            {{ searchQuery ? 'Keine Schüler gefunden' : (!shouldAutoLoadComputed ? 'Klicken Sie "Schüler laden" um die Liste anzuzeigen' : 'Keine Schüler verfügbar') }}
           </p>
         </div>
 
@@ -126,9 +137,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-// ✅ FIX: Entferne den Import des User-Types um Konflikte zu vermeiden
 
-// ✅ FIX: Verwende das Student Interface aus useEventModalForm.ts für Konsistenz
+// Student Interface
 interface Student {
   id: string
   first_name: string
@@ -180,7 +190,6 @@ const selectedStudent = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-// 🔥 FIX: Verwende computed für die gefilterte Liste
 const studentList = computed(() => {
   if (!searchQuery.value) {
     return availableStudents.value
@@ -195,7 +204,12 @@ const studentList = computed(() => {
   )
 })
 
-// ✅ FIX: Korrekte Type-Definitionen für Supabase-Responses
+// 🔥 FIX: Better auto-load logic
+const shouldAutoLoadComputed = computed(() => {
+  return props.autoLoad
+})
+
+// Supabase Types
 interface UserFromDB {
   id: string
   first_name: string | null
@@ -214,13 +228,15 @@ interface AppointmentResponse {
   users: UserFromDB | null
 }
 
+// Methods
 const loadStudents = async (editStudentId?: string | null) => {
   console.log('🔄 Loading students...', { 
     showAll: showAllStudentsLocal.value,
     editMode: !!editStudentId,
     editStudentId: editStudentId,
     currentUserId: props.currentUser?.id,
-    currentUserRole: props.currentUser?.role
+    currentUserRole: props.currentUser?.role,
+    autoLoad: props.autoLoad
   })
   
   if (isLoading.value) return
@@ -231,7 +247,7 @@ const loadStudents = async (editStudentId?: string | null) => {
     console.log('📚 StudentSelector: Loading students...')
     const supabase = getSupabase()
 
-    // 🔥 NEU: Erweiterte Logik für Staff-Schüler
+    // Staff-spezifische Logik
     if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value) {
       console.log('👨‍🏫 Loading students for staff member:', props.currentUser.id)
       
@@ -246,7 +262,7 @@ const loadStudents = async (editStudentId?: string | null) => {
 
       if (assignedError) throw assignedError
 
-      // 2. Schüler mit Termin-Historie laden (auch ohne assigned_staff_id)
+      // 2. Schüler mit Termin-Historie laden
       const { data: appointmentStudents, error: appointmentError } = await supabase
         .from('appointments')
         .select(`
@@ -261,10 +277,8 @@ const loadStudents = async (editStudentId?: string | null) => {
 
       if (appointmentError) throw appointmentError
 
-      // ✅ FIX: Korrekte Type-Behandlung für appointment students
       const typedAppointmentStudents = appointmentStudents as unknown as AppointmentResponse[]
       
-      // 3. Schüler aus Terminen extrahieren
       const historyStudents = typedAppointmentStudents
         .map(apt => apt.users)
         .filter((user): user is UserFromDB => {
@@ -279,11 +293,10 @@ const loadStudents = async (editStudentId?: string | null) => {
         historyStudents: historyStudents.length
       })
 
-      // 4. Kombinieren und Duplikate entfernen
+      // 3. Kombinieren und Duplikate entfernen
       const allStudentIds = new Set<string>()
       const combinedStudents: Student[] = []
 
-      // ✅ FIX: Konvertierung zu Student Interface (ohne role/is_active)
       if (assignedStudents) {
         assignedStudents.forEach((student: UserFromDB) => {
           if (!allStudentIds.has(student.id)) {
@@ -302,7 +315,6 @@ const loadStudents = async (editStudentId?: string | null) => {
         })
       }
 
-      // ✅ FIX: Konvertierung zu Student Interface für history students
       historyStudents.forEach(student => {
         if (student && !allStudentIds.has(student.id)) {
           allStudentIds.add(student.id)
@@ -319,7 +331,7 @@ const loadStudents = async (editStudentId?: string | null) => {
         }
       })
 
-      // 5. Edit-Mode: Spezifischen Student hinzufügen falls nötig
+      // 4. Edit-Mode: Spezifischen Student hinzufügen
       if (editStudentId && !allStudentIds.has(editStudentId)) {
         console.log('✏️ Loading specific student for edit mode:', editStudentId)
         const { data: specificStudent, error: specificError } = await supabase
@@ -373,7 +385,6 @@ const loadStudents = async (editStudentId?: string | null) => {
       const { data, error: fetchError } = await query
       if (fetchError) throw fetchError
       
-      // ✅ FIX: Konvertierung zu Student Interface mit null-Handling
       const typedStudents: Student[] = (data || []).map((user: UserFromDB) => ({
         id: user.id,
         first_name: user.first_name || '',
@@ -398,6 +409,18 @@ const loadStudents = async (editStudentId?: string | null) => {
   }
 }
 
+// 🔥 FIX: Enhanced Search Focus Handler
+const handleSearchFocus = () => {
+  console.log('🔍 Search field focused, autoLoad:', shouldAutoLoadComputed.value)
+  
+  if (shouldAutoLoadComputed.value && availableStudents.value.length === 0) {
+    console.log('📚 Auto-loading students on search focus')
+    loadStudents()
+  } else if (!shouldAutoLoadComputed.value) {
+    console.log('🚫 Auto-load disabled - user must manually trigger loading')
+  }
+}
+
 const filterStudents = () => {
   // Diese Funktion ist jetzt leer, da wir computed verwenden
   // Wird aber für Kompatibilität beibehalten
@@ -418,19 +441,6 @@ const clearStudent = () => {
   console.log('🗑️ StudentSelector: Student cleared')
   emit('student-cleared')
 }
-
-// Watchers
-watch(showAllStudentsLocal, async () => {
-  console.log('🔄 Toggle changed:', showAllStudentsLocal.value)
-  await loadStudents()
-})
-
-// Lifecycle
-onMounted(() => {
-  if (props.autoLoad) {
-    loadStudents()
-  }
-})
 
 const selectStudentById = async (userId: string, retryCount = 0) => {
   const maxRetries = 3
@@ -467,6 +477,34 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
     return null
   }
 }
+
+// Watchers
+watch(showAllStudentsLocal, async () => {
+  console.log('🔄 Toggle changed:', showAllStudentsLocal.value)
+  await loadStudents()
+})
+
+// 🔥 FIX: Enhanced onMounted with better auto-load logic
+onMounted(() => {
+  console.log('📚 StudentSelector mounted, autoLoad:', shouldAutoLoadComputed.value)
+  
+  if (shouldAutoLoadComputed.value) {
+    console.log('🔄 Auto-loading students on mount')
+    loadStudents()
+  } else {
+    console.log('🚫 Auto-load disabled, waiting for user action')
+  }
+})
+
+// 🔥 NEW: Watch for autoLoad prop changes
+watch(() => props.autoLoad, (newAutoLoad) => {
+  console.log('🔄 autoLoad prop changed to:', newAutoLoad)
+  
+  if (newAutoLoad && availableStudents.value.length === 0) {
+    console.log('🔄 autoLoad enabled - loading students')
+    loadStudents()
+  }
+}, { immediate: true })
 
 // Expose methods for parent components
 defineExpose({

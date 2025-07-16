@@ -1,7 +1,8 @@
+
 <template>
   <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
     <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.stop>
-
+      
       <!-- Header -->
       <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
         <div class="flex justify-between items-center">
@@ -16,42 +17,45 @@
 
       <!-- Content -->
       <div class="px-6 py-6 space-y-6">
-
+        
         <!-- Student Selector -->
-        <StudentSelector
-          v-if="showStudentSelector"
-          v-model="selectedStudent"
-          :current-user="currentUser"
-          :disabled="mode === 'view'"
-          @student-selected="handleStudentSelected"
-          @student-cleared="handleStudentCleared"
-          @switch-to-other="switchToOtherEventType"
-        />
-
-        <!-- Event Type Selector -->
-        <EventTypeSelector
-          v-if="showEventTypeSelectionComputed"
-          :selected-type="formData.selectedSpecialType"
-          @event-type-selected="handleEventTypeSelected"
-          @back-to-student="backToStudentSelection"
-        />
-
-        <!-- Title Input -->
-        <div v-if="showTitleInput">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            📝 Titel
-          </label>
-          <input
-            v-model="formData.title"
-            type="text"
-            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            :placeholder="getDefaultTitle?.() || 'Titel eingeben...'"
+        <div v-if="showStudentSelector">
+          <StudentSelector
+            ref="studentSelectorRef"
+            v-model="selectedStudent"
+            :current-user="currentUser"
             :disabled="mode === 'view'"
+            :auto-load="shouldAutoLoadStudents"
+            @student-selected="handleStudentSelected"
+            @student-cleared="handleStudentCleared"
+            @switch-to-other="switchToOtherEventType"
           />
         </div>
 
+        <!-- Event Type Selector -->
+        <div v-if="showEventTypeSelector">
+          <EventTypeSelector
+            :selected-type="formData.selectedSpecialType"
+            @event-type-selected="handleEventTypeSelected"
+            @back-to-student="backToStudentSelection"
+          />
+        </div>
+
+       <!-- Title Input -->
+        <TitleInput
+          :title="formData.title"
+          :event-type="formData.eventType"
+          :selected-student="selectedStudent"
+          :selected-special-type="formData.selectedSpecialType"
+          :category-code="formData.type"
+          :selected-location="selectedLocation"
+          :disabled="mode === 'view'"
+          @update:title="formData.title = $event"
+          @title-generated="handleTitleGenerated"
+        />
+
         <!-- Category & Duration Section -->
-        <div v-if="showCategorySection" class="space-y-4">
+        <div v-if="selectedStudent" class="space-y-4">
           <CategorySelector
             v-model="formData.type"
             :selected-user="selectedStudent"
@@ -63,179 +67,101 @@
           />
 
           <DurationSelector
+            v-if="formData.type"
             v-model="formData.duration_minutes"
-            :selected-category="selectedCategory"
-            :current-user="currentUser"
             :available-durations="availableDurations"
             :price-per-minute="formData.price_per_minute"
             :disabled="mode === 'view'"
-            @durations-changed="(durations: number[]) => {
-              console.log('🔥 EventModal received durations:', durations)
-              // availableDurations.value = durations  // <-- ENTFERNT: Redundant, da handleDurationsChanged dies bereits tut
-              handleDurationsChanged?.(durations)
-            }"
+            @duration-changed="handleDurationChanged"
           />
         </div>
 
-        <!-- Date & Time Section -->
-        <div v-if="showTimeSection" class="space-y-4 border-t pt-4">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">📅 Datum</label>
-              <input
-                v-model="formData.startDate"
-                type="date"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                :disabled="mode === 'view'"
-                required
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">🕐 Startzeit</label>
-              <input
-                v-model="formData.startTime"
-                type="time"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                :disabled="mode === 'view'"
-                @change="calculateEndTime"
-                required
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">🕐 Endzeit</label>
-              <input
-                v-model="formData.endTime"
-                type="time"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                :disabled="mode === 'view'"
-                required
-              />
-            </div>
-          </div>
-        </div>
+        <!-- Time Section -->
+        <TimeSelector
+          :start-date="formData.startDate"
+          :start-time="formData.startTime"
+          :end-time="formData.endTime"
+          :duration-minutes="formData.duration_minutes"
+          :event-type="formData.eventType"
+          :selected-student="selectedStudent"
+          :selected-special-type="formData.selectedSpecialType"
+          :disabled="mode === 'view'"
+          :mode="mode"
+          @update:start-date="formData.startDate = $event"
+          @update:start-time="formData.startTime = $event"
+          @update:end-time="formData.endTime = $event"
+          @time-changed="handleTimeChanged"
+        />
 
         <!-- Location Section -->
-        <LocationSelector
-            v-if="showLocationSection"
+        <div v-if="formData.startDate && formData.startTime">
+          <LocationSelector
             :model-value="formData.location_id"
-            :selected-student-id="formData.user_id"
-            :selected-student-name="selectedStudent?.first_name || ''"
+            :selected-student-id="selectedStudent?.id"
             :current-staff-id="formData.staff_id"
             :disabled="mode === 'view'"
             @update:model-value="updateLocationId"
             @location-selected="handleLocationSelected"
-            required
-        />
-
-        <!-- Staff Assignment (nur für Admins) -->
-        <div v-if="showStaffSection">
-          <label class="block text-sm font-medium text-gray-700 mb-2">👨‍🏫 Fahrlehrer</label>
-          <select
-            v-model="formData.staff_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-            :disabled="mode === 'view'"
-            required
-          >
-            <option value="">Fahrlehrer wählen...</option>
-            <option v-for="staff in availableStaff" :key="staff.id" :value="staff.id">
-              {{ staff.first_name }} {{ staff.last_name }}
-            </option>
-          </select>
-        </div>
-
-           <PaymentDisplay
-            :appointment-data="mode === 'edit' ? selectedAppointment : null"
-            :category="formData.type"
-            :duration="formData.duration_minutes"
-            :user-id="formData.user_id"
-            :staff-id="currentUser.id"
-            :appointment-number="appointmentNumber"
-            :discount="formData.discount ? {
-              amount: formData.discount,
-              type: (formData.discount_type || 'fixed') as 'fixed' | 'percentage',
-              reason: formData.discount_reason
-            } : undefined"
-            @payment-success="handlePaymentSuccess"
-            @payment-error="handlePaymentError"
-            @payment-started="handlePaymentStarted" 
           />
-
-        <!-- Description -->
-        <div v-if="showDescriptionField">
-          <label class="block text-sm font-medium text-gray-700 mb-2">📝 Beschreibung/Notizen</label>
-          <textarea
-            v-model="formData.description"
-            rows="3"
-            class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            :placeholder="mode === 'view' ? 'Keine Beschreibung vorhanden' : 'Optional: Zusätzliche Informationen zum Termin'"
-            :disabled="mode === 'view'"
-          ></textarea>
         </div>
 
+        <!-- Price Display - nur für Fahrstunden -->
+        <div v-if="selectedStudent && formData.duration_minutes && formData.eventType === 'lesson'">
+          <PriceDisplay
+            :event-type="formData.eventType"
+            :duration-minutes="formData.duration_minutes"
+            :price-per-minute="formData.price_per_minute"
+            :category-code="formData.type"
+            :is-paid="formData.is_paid"
+            :discount="formData.discount"
+            :discount-type="formData.discount_type"
+            :discount-reason="formData.discount_reason"
+            :allow-discount-edit="currentUser?.role === 'staff' || currentUser?.role === 'admin'"
+            :current-user="currentUser"
+            :selected-date="formData.startDate"
+            :start-time="formData.startTime"
+            @discount-changed="handleDiscountChanged"
+            @payment-status-changed="handlePaymentStatusChanged"
+            @open-payment-modal="handleOpenPaymentModal"
+          />
+        </div>
 
         <!-- Error Display -->
         <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <span class="text-red-400">❌</span>
-            </div>
-            <div class="ml-3">
-              <p class="text-sm text-red-800">{{ error }}</p>
-            </div>
+          <p class="text-sm text-red-800">❌ {{ error }}</p>
+        </div>
+
+        <!-- Loading Display -->
+        <div v-if="isLoading" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-center space-x-2">
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <p class="text-sm text-blue-800">💾 Termin wird gespeichert...</p>
           </div>
         </div>
 
-        <!-- Validation Messages -->
-        <div v-if="validationErrors.length > 0" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <span class="text-yellow-400">⚠️</span>
-            </div>
-            <div class="ml-3">
-              <h4 class="text-sm font-medium text-yellow-800">Bitte vervollständigen Sie folgende Felder:</h4>
-              <ul class="mt-2 text-sm text-yellow-700 list-disc list-inside">
-                <li v-for="validationError in validationErrors" :key="validationError">{{ validationError }}</li>
-              </ul>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <!-- Footer Actions -->
+      <!-- Footer -->
       <div class="sticky bottom-0 bg-gray-50 px-6 py-4 border-t rounded-b-lg">
-        <div class="flex justify-between items-center">
-          <div class="flex space-x-3">
-            <button
-              v-if="mode !== 'create' && canDelete"
-              @click="handleDelete"
-              :disabled="isLoading"
-              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center space-x-2"
-            >
-              <span>🗑️</span>
-              <span>Löschen</span>
-            </button>
-          </div>
+        <div class="flex justify-end space-x-3">
+          <button
+            @click="handleClose"
+            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+            :disabled="isLoading"
+          >
+            {{ mode === 'view' ? 'Schließen' : 'Abbrechen' }}
+          </button>
 
-          <div class="flex space-x-3">
-            <button
-              @click="handleClose"
-              :disabled="isLoading"
-              class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50"
-            >
-              {{ mode === 'view' ? 'Schließen' : 'Abbrechen' }}
-            </button>
-
-            <button
-              v-if="mode !== 'view'"
-              @click="handleSave"
-              :disabled="isLoading || !isFormValid"
-              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2"
-            >
-              <span v-if="isLoading">⏳</span>
-              <span v-else>💾</span>
-              <span>{{ mode === 'create' ? 'Erstellen' : 'Speichern' }}</span>
-            </button>
-          </div>
+          <button
+            v-if="mode !== 'view'"
+            @click="handleSave"
+            :disabled="!isFormValid || isLoading"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2 transition-colors"
+          >
+            <span v-if="isLoading">⏳</span>
+            <span v-else>💾</span>
+            <span>{{ mode === 'create' ? 'Erstellen' : 'Speichern' }}</span>
+          </button>
         </div>
       </div>
     </div>
@@ -243,13 +169,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-
-// Composables
-import { useEventModalForm } from '~/composables/useEventModalForm'
-import { useEventModalHandlers } from '~/composables/useEventModalHandlers'
-import { useEventModalWatchers } from '~/composables/useEventModalWatchers'
 
 // Components
 import StudentSelector from '~/components/StudentSelector.vue'
@@ -257,127 +178,75 @@ import EventTypeSelector from '~/components/EventTypeSelector.vue'
 import CategorySelector from '~/components/CategorySelector.vue'
 import DurationSelector from '~/components/DurationSelector.vue'
 import LocationSelector from '~/components/LocationSelector.vue'
-import PaymentDisplay from '~/components/PaymentDisplay.vue'
+import PriceDisplay from '~/components/PriceDisplay.vue'
+import TimeSelector from '~/components/TimeSelector.vue'
+import TitleInput from '~/components/TitleInput.vue'
 
+// Types
+interface Student {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  category: string
+  assigned_staff_id: string
+}
 
-// Types & Interfaces
 interface Props {
   isVisible: boolean
   eventData: any
   mode: 'view' | 'edit' | 'create'
   currentUser?: any
+  eventType?: 'lesson' | 'staff_meeting'
 }
 
-// Props & Emits
 const props = withDefaults(defineProps<Props>(), {
   mode: 'create'
 })
 
-
 const emit = defineEmits<{
   'close': []
   'save': [data: any]
-  'delete': [id: string]
-  'appointment-saved': [appointment: any]
-  'appointment-updated': [appointment: any]
-  'appointment-deleted': [appointmentId: string]
+  'save-event': [data: any]
+  'appointment-saved': [data: any]
+  'appointment-updated': [data: any]
+  'appointment-deleted': [id: string]
 }>()
 
-// ============ COMPOSABLES ============
-// Form State Management
-const {
-  formData,
-  selectedStudent,
-  selectedCategory,
-  selectedLocation, // Make sure this is also returned by useEventModalForm if it's managed there
-  availableDurations,
-  appointmentNumber,
-  isLoading,
-  error,
-  // computed
-  isFormValid,
-  computedEndTime, // Not used in template, but kept if needed elsewhere
-  totalPrice,      // Not used in template, but kept if needed elsewhere
-  // actions
-  resetForm,
-  populateFormFromAppointment,
-  saveAppointment,
-  deleteAppointment,
-  getAppointmentNumber // Ensure this is the one from useEventModalForm
-} = useEventModalForm(props.currentUser)
-
-// Additional EventModal-specific state
-const availableStaff = ref<any[]>([])
+// ============ REFS ============
+const supabase = getSupabase()
+const studentSelectorRef = ref()
+const selectedStudent = ref<Student | null>(null)
+const selectedLocation = ref<any | null>(null)
+const availableDurations = ref([45])
+const error = ref('')
+const isLoading = ref(false)
 const showEventTypeSelection = ref(false)
-const availableLocations = ref<any[]>([]) // This ref is still here, but its usage needs to be consistent with LocationSelector
 
-// Event Handlers
-// Destructure functions directly from useEventModalHandlers
-const {
-  handleStudentSelected,
-  handleStudentCleared,
-  switchToOtherEventType,
-  handleEventTypeSelected,
-  backToStudentSelection,
-  handleCategorySelected,
-  handlePriceChanged,
-  handleDurationsChanged,
-  handleDurationChanged,
-  handleLocationSelected,
-  handleDiscountChanged,
-  handlePaymentSuccess,
-  handlePaymentError,
-  handleSaveRequired,
-  handlePaymentStarted, // <-- FIX: handlePaymentStarted hier hinzugefügt
-  getDefaultTitle,
-  calculateEndTime
-} = useEventModalHandlers(
-  formData,
-  selectedStudent,
-  selectedCategory,
-  availableDurations,
-  appointmentNumber,
-  selectedLocation // Pass selectedLocation to useEventModalHandlers for synchronization
-);
+const formData = ref({
+  id: '',
+  title: '',
+  type: '',
+  startDate: '',
+  startTime: '',
+  endTime: '',
+  duration_minutes: 45,
+  location_id: '',
+  staff_id: props.currentUser?.id || '',
+  price_per_minute: 95/45,
+  user_id: '',
+  status: 'confirmed',
+  is_paid: false,
+  description: '',
+  eventType: 'lesson' as 'lesson' | 'staff_meeting' | 'other',
+  selectedSpecialType: '',
+  discount: 0,
+  discount_type: 'fixed' as const,
+  discount_reason: ''
+})
 
-// Create an object with all handlers to be passed to useEventModalWatchers.
-const handlerActions = {
-  handleStudentSelected,
-  handleStudentCleared,
-  switchToOtherEventType,
-  handleEventTypeSelected,
-  backToStudentSelection,
-  handleCategorySelected,
-  handlePriceChanged,
-  handleDurationsChanged,
-  handleDurationChanged,
-  handleLocationSelected,
-  handleDiscountChanged,
-  handlePaymentSuccess,
-  handlePaymentError,
-  handleSaveRequired,
-  handlePaymentStarted, // <-- FIX: handlePaymentStarted hier hinzugefügt
-  getDefaultTitle,
-  calculateEndTime,
-  populateFormFromAppointment,
-  resetForm,
-  // getAppointmentNumber is from useEventModalForm, no need to pass it here again if watchers use the one from useEventModalForm directly
-};
-
-// Initialize the Watchers (call only once)
-const watchers = useEventModalWatchers(
-  props,
-  formData,
-  selectedStudent,
-  selectedLocation,
-  availableLocations,
-  appointmentNumber,
-  handlerActions
-);
-watchers.setupAllWatchers(); // Call setupAllWatchers once here
-
-
-// ============ COMPUTED PROPERTIES ============
+// ============ COMPUTED ============
 const modalTitle = computed(() => {
   switch (props.mode) {
     case 'create': return '➕ Neuen Termin erstellen'
@@ -387,330 +256,412 @@ const modalTitle = computed(() => {
   }
 })
 
-// Show/Hide Logic
+const shouldAutoLoadStudents = computed(() => {
+  return formData.value.eventType === 'lesson' && (props.mode === 'create' || !selectedStudent.value)
+})
+
+const isFormValid = computed(() => {
+  if (formData.value.eventType === 'lesson') {
+    return selectedStudent.value && 
+           formData.value.type && 
+           formData.value.startDate && 
+           formData.value.startTime && 
+           formData.value.location_id &&
+           formData.value.staff_id
+  } else {
+    // Für andere Terminarten
+    return formData.value.title &&
+           formData.value.startDate && 
+           formData.value.startTime && 
+           formData.value.location_id &&
+           formData.value.staff_id
+  }
+})
+
 const showStudentSelector = computed(() => {
   return formData.value.eventType === 'lesson' && !showEventTypeSelection.value
 })
 
-const showEventTypeSelectionComputed = computed(() => {
+const showEventTypeSelector = computed(() => {
   return showEventTypeSelection.value
 })
 
-const showTitleInput = computed(() => {
-  // Für "andere Terminarten" - immer anzeigen
-  if (formData.value.eventType !== 'lesson' || formData.value.selectedSpecialType !== '') {
-    return true
-  }
-
-  // Für Fahrstunden - nur anzeigen wenn Schüler ausgewählt wurde
+const showTimeSection = computed(() => {
   if (formData.value.eventType === 'lesson') {
     return !!selectedStudent.value
+  } else {
+    return !!formData.value.selectedSpecialType
   }
-
-  return false
 })
 
-const showCategorySection = computed(() => {
-  return formData.value.eventType === 'lesson' && selectedStudent.value
+const totalPrice = computed(() => {
+  const total = formData.value.price_per_minute * formData.value.duration_minutes
+  return total.toFixed(2)
 })
 
-const showTimeSection = computed(() => {
-  return formData.value.eventType === 'lesson' ?
-         !!selectedStudent.value :
-         !!formData.value.selectedSpecialType
-})
-
-const showLocationSection = computed(() => {
-  return showTimeSection.value
-})
-
-const showStaffSection = computed(() => {
-  return showTimeSection.value && props.currentUser?.role === 'admin'
-})
-
-const showPriceSection = computed(() => {
-  return showTimeSection.value && formData.value.eventType === 'lesson'
-})
-
-const showPaymentSection = computed(() => {
-  return showPriceSection.value && props.mode !== 'view'
-})
-
-const showDescriptionField = computed(() => {
-  return showTimeSection.value
-})
-
-const showStatusField = computed(() => {
-  return props.mode !== 'create' &&
-         (props.currentUser?.role === 'staff' || props.currentUser?.role === 'admin')
-})
-
-const canDelete = computed(() => {
-  return props.currentUser?.role === 'admin' ||
-         (props.currentUser?.role === 'staff' && formData.value.staff_id === props.currentUser?.id)
-})
-
-// ✅ Korrigierte Validierung - nur nach Schüler-Auswahl
-const validationErrors = computed(() => {
-  const errors: string[] = []
-
-  // ✅ Keine Validierung anzeigen wenn noch kein Schüler/Terminart ausgewählt
-  if (formData.value.eventType === 'lesson' && !selectedStudent.value) {
-    return []
+// ============ HANDLERS ============
+const handleStudentSelected = (student: Student | null) => {
+  console.log('👤 Student selected:', student?.first_name)
+  selectedStudent.value = student
+  formData.value.user_id = student?.id || ''
+  
+  if (student?.category) {
+    const primaryCategory = student.category.split(',')[0].trim()
+    formData.value.type = primaryCategory
   }
+  
+  // Auto-generate title if we have student and location
+  generateTitleIfReady()
+}
 
-  if (formData.value.eventType !== 'lesson' && !formData.value.selectedSpecialType) {
-    return []
-  }
+const handleStudentCleared = () => {
+  console.log('🗑️ Student cleared')
+  selectedStudent.value = null
+  formData.value.user_id = ''
+  formData.value.title = ''
+  formData.value.type = ''
+  triggerStudentLoad()
+}
 
-  // ✅ Ab hier normale Validierung
-  if (!formData.value.title.trim()) {
-    errors.push('Titel ist erforderlich')
-  }
+const switchToOtherEventType = () => {
+  console.log('🔄 Switching to other event types')
+  formData.value.eventType = 'other'
+  showEventTypeSelection.value = true
+  selectedStudent.value = null
+  formData.value.user_id = ''
+}
 
-  if (formData.value.eventType === 'lesson') {
-    if (!selectedStudent.value) errors.push('Schüler muss ausgewählt werden')
-    if (!formData.value.type) errors.push('Kategorie muss ausgewählt werden')
-  }
+const handleEventTypeSelected = (eventType: any) => {
+  console.log('🎯 Event type selected:', eventType)
+  formData.value.selectedSpecialType = eventType.code
+  formData.value.title = eventType.name
+  formData.value.type = eventType.code
+  formData.value.duration_minutes = eventType.default_duration_minutes || 60
+  calculateEndTime()
+}
 
-  if (!formData.value.startDate) errors.push('Datum ist erforderlich')
-  if (!formData.value.startTime) errors.push('Startzeit ist erforderlich')
-  if (!formData.value.endTime) errors.push('Endzeit ist erforderlich')
+const backToStudentSelection = () => {
+  console.log('⬅️ Back to student selection')
+  showEventTypeSelection.value = false
+  formData.value.eventType = 'lesson'
+  formData.value.selectedSpecialType = ''
+  formData.value.title = ''
+  formData.value.type = ''
+}
 
-  // ✅ FIX: Korrekte Location-Validierung mit der richtigen Variable
-  // ✅ Erweiterte Location-Validierung: Prüft entweder ob eine reale ID vorhanden ist ODER ob ein temporärer Standort ausgewählt wurde
-  const hasRealLocation = formData.value.location_id && formData.value.location_id !== '' && !String(formData.value.location_id).startsWith('temp_');
-  const hasTemporaryLocation = selectedLocation.value?.id && String(selectedLocation.value.id).startsWith('temp_');
-
-  if (!hasRealLocation && !hasTemporaryLocation) {
-      errors.push('Standort ist erforderlich');
-  }
-
-
-  // ✅ FIX 2: Staff-Validierung nur für Admins, Staff wird automatisch gesetzt
-  if (props.currentUser?.role === 'admin' && !formData.value.staff_id) {
-    errors.push('Fahrlehrer ist erforderlich')
-  }
-  // Für Staff: Automatisch setzen falls nicht vorhanden
-  else if (props.currentUser?.role === 'staff' && !formData.value.staff_id) {
-    formData.value.staff_id = props.currentUser.id
-  }
-
-  return errors
-})
-
-const selectedAppointment = computed(() => props.eventData)
-
-
-// ============ METHODS ============
-const initializeFormData = () => {
-  console.log('🎯 EventModal - Initializing form data, mode:', props.mode)
-
-  if (props.mode === 'create') {
-    // Set defaults for new appointment
-    let startDate = ''
-    let startTime = '08:00'
-    let preselectedUserId = ''
-
-    // Check if we have calendar data
-    if (props.eventData) {
-      if (props.eventData.clickedDate) {
-        const clickedDate = new Date(props.eventData.clickedDate)
-        startDate = clickedDate.toISOString().split('T')[0]
-        startTime = clickedDate.toTimeString().slice(0, 5)
-      } else if (props.eventData.start) {
-        const startDateTime = new Date(props.eventData.start)
-        startDate = startDateTime.toISOString().split('T')[0]
-        startTime = startDateTime.toTimeString().slice(0, 5)
-      }
-
-      // Check for preselected student
-      if (props.eventData.user_id) {
-        preselectedUserId = props.eventData.user_id
-      } else if (props.eventData.extendedProps?.user_id) {
-        preselectedUserId = props.eventData.extendedProps.user_id
-      }
-    }
-
-    // Fallback to current date
-    if (!startDate) {
-      startDate = new Date().toISOString().split('T')[0]
-    }
-
-    formData.value.startDate = startDate
-    formData.value.startTime = startTime
-    formData.value.endTime = calculateEndTimeFromStart(startTime, 45)
-    formData.value.user_id = preselectedUserId
-
-    // Set default staff
-    if (props.currentUser?.role === 'staff' && !formData.value.staff_id) {
-    formData.value.staff_id = props.currentUser.id
-    console.log('🎯 Auto-set staff_id for logged-in staff:', props.currentUser.id)
-  }
-
-    // Load student if preselected
-    if (preselectedUserId) {
-      loadStudentData(preselectedUserId)
-    }
-
-  } else if (props.eventData) {
-    // Load existing appointment data
-    populateFormFromAppointment(props.eventData)
-
-    if (formData.value.user_id) {
-      loadStudentData(formData.value.user_id)
-    }
+const handleCategorySelected = (category: any) => {
+  console.log('🎯 Category selected:', category?.code)
+  if (category) {
+    formData.value.price_per_minute = category.price_per_lesson / 45
   }
 }
 
-const calculateEndTimeFromStart = (startTime: string, durationMinutes: number): string => {
-  if (!startTime) return ''
-
-  const [hours, minutes] = startTime.split(':').map(Number)
-  const startDate = new Date()
-  startDate.setHours(hours, minutes, 0, 0)
-
-  const endDate = new Date(startDate.getTime() + durationMinutes * 60000)
-  return endDate.toTimeString().slice(0, 5)
+const handlePriceChanged = (price: number) => {
+  formData.value.price_per_minute = price
 }
 
-const loadStudentData = async (userId: string) => {
+const handleDurationsChanged = (durations: number[]) => {
+  console.log('⏱️ Durations changed:', durations)
+  availableDurations.value = durations
+  
+  if (!durations.includes(formData.value.duration_minutes)) {
+    formData.value.duration_minutes = durations[0] || 45
+  }
+}
+
+const handleDurationChanged = (newDuration: number) => {
+  console.log('⏱️ Duration changed to:', newDuration)
+  formData.value.duration_minutes = newDuration
+  calculateEndTime()
+}
+
+const handleDiscountChanged = (discount: number, discountType: 'fixed', reason: string) => {
+  formData.value.discount = discount
+  formData.value.discount_type = discountType
+  formData.value.discount_reason = reason
+  console.log('💰 Discount changed:', { discount, discountType, reason })
+}
+
+const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => {
+  formData.value.is_paid = isPaid
+  console.log('💳 Payment status changed:', { isPaid, paymentMethod })
+  
+  // Hier können Sie zusätzliche Logik für das Speichern hinzufügen
+  // z.B. sofort in der Datenbank aktualisieren
+}
+
+const handleTimeChanged = (timeData: { startDate: string, startTime: string, endTime: string }) => {
+  console.log('🕐 Time changed:', timeData)
+  formData.value.startDate = timeData.startDate
+  formData.value.startTime = timeData.startTime
+  formData.value.endTime = timeData.endTime
+}
+
+const handleTitleGenerated = (title: string) => {
+  console.log('📝 Title auto-generated:', title)
+  formData.value.title = title
+}
+
+const handleOpenPaymentModal = () => {
+  console.log('💳 Opening payment modal for online payment')
+  // Hier würden Sie das PaymentModal öffnen
+  // emit('open-payment-modal') oder ein separates Modal anzeigen
+}
+
+const updateLocationId = (locationId: string | null) => {
+  formData.value.location_id = locationId || ''
+}
+
+const handleLocationSelected = (location: any) => {
+  console.log('📍 Location selected:', location)
+  selectedLocation.value = location
+  formData.value.location_id = location?.id || ''
+  
+  // Auto-generate title if we have student and location
+  generateTitleIfReady()
+}
+
+const generateTitleIfReady = () => {
+  if (formData.value.eventType === 'lesson' && selectedStudent.value && selectedLocation.value) {
+    const firstName = selectedStudent.value.first_name
+    const lastName = selectedStudent.value.last_name
+    const location = selectedLocation.value.name || selectedLocation.value.address || 'Treffpunkt'
+    const newTitle = `${firstName} ${lastName} - ${location}`
+    
+    formData.value.title = newTitle
+    console.log('🎯 Auto-generated title:', newTitle)
+  }
+}
+
+const calculateEndTime = () => {
+  if (formData.value.startTime && formData.value.duration_minutes) {
+    const [hours, minutes] = formData.value.startTime.split(':').map(Number)
+    const startDate = new Date()
+    startDate.setHours(hours, minutes, 0, 0)
+    
+    const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
+    formData.value.endTime = endDate.toTimeString().slice(0, 5)
+  }
+}
+
+const triggerStudentLoad = () => {
+  console.log('🔄 Triggering student load...')
+  if (studentSelectorRef.value?.loadStudents) {
+    studentSelectorRef.value.loadStudents()
+  }
+}
+
+const resetForm = () => {
+  selectedStudent.value = null
+  selectedLocation.value = null
+  showEventTypeSelection.value = false
+  formData.value = {
+    id: '',
+    title: '',
+    type: '',
+    startDate: '',
+    startTime: '',
+    endTime: '',
+    duration_minutes: 45,
+    location_id: '',
+    staff_id: props.currentUser?.id || '',
+    price_per_minute: 95/45,
+    user_id: '',
+    status: 'confirmed',
+    is_paid: false,
+    description: '',
+    eventType: 'lesson' as 'lesson' | 'staff_meeting' | 'other',
+    selectedSpecialType: '',
+    discount: 0,
+    discount_type: 'fixed' as const,
+    discount_reason: ''
+  }
+  error.value = ''
+  isLoading.value = false
+}
+
+// ============ SAVE LOGIC ============
+const handleSave = async () => {
+  console.log('💾 Saving appointment')
+  
+  if (!isFormValid.value) {
+    error.value = 'Bitte füllen Sie alle Felder aus'
+    return
+  }
+  
+  isLoading.value = true
+  error.value = ''
+  
   try {
-    const supabase = getSupabase()
+    // Create proper datetime strings
+    const localStart = new Date(`${formData.value.startDate}T${formData.value.startTime}`)
+    const localEnd = new Date(`${formData.value.startDate}T${formData.value.endTime}`)
+    
+    const appointmentData = {
+      title: formData.value.title,
+      start_time: localStart.toISOString(),
+      end_time: localEnd.toISOString(),
+      duration_minutes: formData.value.duration_minutes,
+      user_id: formData.value.user_id || formData.value.staff_id, // 🔥 FIX: Staff-ID als Fallback
+      staff_id: formData.value.staff_id,
+      location_id: formData.value.location_id,
+      type: formData.value.type,
+      status: formData.value.status,
+      is_paid: formData.value.is_paid,
+      price_per_minute: formData.value.price_per_minute,
+      description: formData.value.title || ''
+    }
+    
+    console.log('📋 Saving appointment data:', appointmentData)
+    
+    let result
+    if (props.mode === 'create') {
+      const { data, error: saveError } = await supabase
+        .from('appointments')
+        .insert([appointmentData])
+        .select()
+        .single()
+      
+      if (saveError) throw saveError
+      result = data
+      
+      console.log('✅ Appointment created:', result.id)
+      emit('appointment-saved', result)
+      
+    } else if (props.mode === 'edit') {
+      const { data, error: updateError } = await supabase
+        .from('appointments')
+        .update(appointmentData)
+        .eq('id', formData.value.id)
+        .select()
+        .single()
+      
+      if (updateError) throw updateError
+      result = data
+      
+      console.log('✅ Appointment updated:', result.id)
+      emit('appointment-updated', result)
+    }
+    
+    // Emit additional events for compatibility
+    emit('save', result)
+    emit('save-event', result)
+    
+    console.log('✅ All save events emitted for mode:', props.mode)
+    
+    // Show success message briefly
+    setTimeout(() => {
+      handleClose()
+    }, 500)
+    
+  } catch (err: any) {
+    console.error('❌ Save error:', err)
+    error.value = err.message || 'Fehler beim Speichern des Termins'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const handleClose = () => {
+  console.log('🚪 Closing modal')
+  resetForm()
+  emit('close')
+}
+
+// ============ MODAL INITIALIZATION ============
+const initializeFormData = () => {
+  console.log('🎯 Initializing form data, mode:', props.mode)
+  
+  if (props.mode === 'edit' && props.eventData) {
+    // Edit mode - populate with existing data
+    formData.value.id = props.eventData.id || ''
+    formData.value.title = props.eventData.title || ''
+    formData.value.type = props.eventData.extendedProps?.category || ''
+    formData.value.user_id = props.eventData.extendedProps?.user_id || ''
+    formData.value.location_id = props.eventData.extendedProps?.location_id || ''
+    formData.value.duration_minutes = props.eventData.extendedProps?.duration_minutes || 45
+    formData.value.price_per_minute = props.eventData.extendedProps?.price_per_minute || 95/45
+    formData.value.status = props.eventData.extendedProps?.status || 'confirmed'
+    formData.value.is_paid = props.eventData.extendedProps?.is_paid || false
+    formData.value.description = props.eventData.extendedProps?.description || ''
+    
+    if (props.eventData.start) {
+      const startDate = new Date(props.eventData.start)
+      formData.value.startDate = startDate.toISOString().split('T')[0]
+      formData.value.startTime = startDate.toTimeString().slice(0, 5)
+    }
+    
+    if (props.eventData.end) {
+      const endDate = new Date(props.eventData.end)
+      formData.value.endTime = endDate.toTimeString().slice(0, 5)
+    }
+    
+    // Load student if available
+    if (formData.value.user_id) {
+      loadStudentForEdit(formData.value.user_id)
+    }
+    
+  } else if (props.mode === 'create' && props.eventData?.start) {
+    // Create mode with time data
+    const utcDate = new Date(props.eventData.start)
+    const year = utcDate.getFullYear()
+    const month = String(utcDate.getMonth() + 1).padStart(2, '0')
+    const day = String(utcDate.getDate()).padStart(2, '0')
+    const hours = String(utcDate.getHours()).padStart(2, '0')
+    const minutes = String(utcDate.getMinutes()).padStart(2, '0')
+    
+    formData.value.startDate = `${year}-${month}-${day}`
+    formData.value.startTime = `${hours}:${minutes}`
+    calculateEndTime()
+  }
+}
+
+const loadStudentForEdit = async (userId: string) => {
+  try {
     const { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('id', userId)
       .single()
-
+    
     if (error) throw error
-
+    
     if (data) {
       selectedStudent.value = data
-
-      // Auto-set category and price
-      if (data.category) {
-        const primaryCategory = data.category.split(',')[0].trim()
-        formData.value.type = primaryCategory
-      }
+      console.log('👤 Student loaded for edit mode:', data.first_name)
     }
   } catch (err) {
-    console.error('❌ Error loading student data:', err)
+    console.error('❌ Error loading student for edit:', err)
   }
 }
-
-const loadStaff = async () => {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email')
-      .eq('role', 'staff')
-      .eq('is_active', true)
-      .order('first_name')
-
-    if (error) throw error
-    availableStaff.value = data || []
-  } catch (err) {
-    console.error('❌ Error loading staff:', err)
-  }
-}
-
-const updateLocationId = (locationId: string | null) => {
-  formData.value.location_id = locationId || ''
-  console.log('📍 Location ID updated via model-value:', locationId)
-}
-
-// This handler seems redundant if handlePaymentSuccess already sets is_paid
-// const handlePaymentStatusChanged = (isPaid: boolean) => {
-//   formData.value.is_paid = isPaid
-// }
-
-// ============ EVENT HANDLERS ============
-const handleClose = () => {
-  console.log('🚪 EventModal - Closing')
-  resetForm()
-  showEventTypeSelection.value = false
-  emit('close')
-}
-
-const handleSave = async () => {
-  console.log('💾 EventModal - Saving appointment')
-  if (!isFormValid.value) {
-    error.value = 'Bitte füllen Sie alle erforderlichen Felder aus'
-    return
-  }
-
-  try {
-    const mode = props.mode === 'edit' ? 'edit' : 'create'
-    const eventId = props.mode === 'edit' ? formData.value.id : undefined
-    const result = await saveAppointment(mode, eventId)
-
-    console.log('✅ EventModal - Save successful, emitting events:', { mode, resultId: result?.id })
-
-    // Existing Emits
-    emit('save', result)
-
-    // 🔥 NEW: Calendar Refresh Emits
-    if (mode === 'edit') {
-      console.log('📤 Emitting appointment-updated')
-      emit('appointment-updated', result)
-    } else {
-      console.log('📤 Emitting appointment-saved')
-      emit('appointment-saved', result)
-    }
-
-    handleClose()
-  } catch (err: any) {
-    console.error('❌ EventModal - Save error:', err)
-    // Error is already set in the composable
-  }
-}
-
-const handleDelete = async () => {
-  try {
-    const eventId = props.eventData?.id
-    await deleteAppointment(eventId)
-
-    // Existing Emits
-    emit('delete', eventId)
-
-    // 🔥 NEW: Calendar Refresh Emit
-    emit('appointment-deleted', eventId)
-
-    handleClose()
-  } catch (err: any) {
-    console.error('❌ EventModal - Delete error:', err)
-  }
-}
-
-// handlePaymentStarted is now correctly destructured from useEventModalHandlers
-// and used directly in the template.
 
 // ============ WATCHERS ============
-// Auto-generate title when student changes
-watch(selectedStudent, () => {
-  if (formData.value.eventType === 'lesson' && selectedStudent.value) {
-    formData.value.title = getDefaultTitle?.() || `${selectedStudent.value.first_name} - Fahrstunde`
-    formData.value.user_id = selectedStudent.value.id
+watch(() => props.isVisible, (visible) => {
+  if (visible) {
+    console.log('✅ Modal opened:', {
+      mode: props.mode,
+      hasEventData: !!props.eventData
+    })
+    
+    if (props.mode === 'create') {
+      resetForm()
+      triggerStudentLoad()
+    }
+    
+    initializeFormData()
   }
 })
 
-// In EventModal.vue - neuer Watcher
-watch([() => formData.value.type, () => selectedCategory.value], ([categoryCode, category]) => {
-  if (categoryCode && category?.availableDurations) {
-    console.log('🔥 DIRECT FIX: Setting durations from category:', category.availableDurations)
-    availableDurations.value = [...category.availableDurations]
-  }
-}, { immediate: true, deep: true })
+watch(() => formData.value.duration_minutes, () => {
+  calculateEndTime()
+})
 
-// Modal visibility watcher
-watch(() => props.isVisible, (newValue) => {
-  if (newValue) {
-    console.log('👁️ EventModal - Modal opened')
-    resetForm()
-    initializeFormData()
-    loadStaff()
+watch(selectedStudent, (newStudent, oldStudent) => {
+  if (oldStudent && !newStudent && props.mode === 'create') {
+    console.log('🔄 Student cleared in create mode - triggering reload')
+    setTimeout(() => {
+      triggerStudentLoad()
+    }, 100)
   }
 })
 
@@ -721,13 +672,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
-input:focus, select:focus, textarea:focus {
+input:focus, select:focus {
   outline: none;
   border-color: #10b981;
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
-input:disabled, select:disabled, textarea:disabled {
+input:disabled, select:disabled {
   background-color: #f9fafb;
   color: #6b7280;
   cursor: not-allowed;
@@ -736,5 +687,14 @@ input:disabled, select:disabled, textarea:disabled {
 button:not(:disabled):hover {
   transform: translateY(-1px);
   transition: all 0.2s ease;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

@@ -1,4 +1,4 @@
-// composables/useEventModalWatchers.ts - OHNE HANDLERS DEPENDENCY
+// composables/useEventModalWatchers.ts - SIMPLIFIED VERSION
 import { watch, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 
@@ -6,7 +6,7 @@ export const useEventModalWatchers = (
   props: any,
   formData: any,
   selectedStudent: any,
-  selectedLocation: any, // Dieser Parameter ist korrekt hier
+  selectedLocation: any,
   availableLocations: any,
   appointmentNumber: any,
   actions: any
@@ -29,7 +29,7 @@ export const useEventModalWatchers = (
     }
   }
 
-  // 🔥 NEUE lokale Implementierung der getAppointmentNumber Funktion
+  // 🔥 LOCAL appointment number function
   const getAppointmentNumber = async (studentId: string): Promise<number> => {
     try {
       const supabase = getSupabase()
@@ -48,42 +48,41 @@ export const useEventModalWatchers = (
     }
   }
 
-  // ============ MODAL LIFECYCLE WATCHER ============
-  const setupModalWatcher = () => {
-    watch(() => props.isVisible, async (isVisible) => {
-      console.log('👀 Modal visibility changed to:', isVisible)
-
-      if (isVisible) {
-        console.log('🔄 Modal opening - starting initialization...')
-
-        try {
-          // Mode-based initialization
-          if (props.eventData && (props.mode === 'edit' || props.mode === 'view')) {
-            console.log('📝 Processing EDIT/VIEW mode...')
-            actions.populateFormFromAppointment(props.eventData)
-
-            // Handle student selection for edit mode
-            if (formData.value.user_id) {
-              await handleEditModeStudentSelection()
-            }
-          } else {
-            console.log('📅 Processing CREATE mode...')
-            await handleCreateModeInitialization()
+        // ============ MODAL LIFECYCLE WATCHER ============
+          const setupModalWatcher = () => {
+            watch(() => props.isVisible, async (isVisible) => {
+              console.log('👀 Modal visibility changed to:', isVisible)
+              
+              if (isVisible) {
+                console.log('🔄 Modal opening - starting initialization...')
+                
+                try {
+                  // Mode-based initialization
+                  if (props.eventData && (props.mode === 'edit' || props.mode === 'view')) {
+                    console.log('📝 Processing EDIT/VIEW mode...')
+                    actions.populateFormFromAppointment(props.eventData)
+                    
+                    // Handle student selection for edit mode
+                    if (formData.value.user_id) {
+                      await handleEditModeStudentSelection()
+                    }
+                  } else if (props.mode === 'create') {  // 🔥 WICHTIG: else if statt else!
+                    console.log('📅 Processing CREATE mode...')
+                    await handleCreateModeInitialization()
+                  }
+                  
+                  console.log('✅ Modal initialization completed')
+                  
+                } catch (error: unknown) {
+                  console.error('❌ Error during modal initialization:', error)
+                }
+              } else {
+                // Modal closed - reset state
+                console.log('❌ Modal closed - resetting state')
+                actions.resetForm()
+              }
+            }, { immediate: true })
           }
-
-          console.log('✅ Modal initialization completed')
-
-        } catch (error: unknown) {
-          console.error('❌ Error during modal initialization:', error)
-        }
-
-      } else {
-        // Modal closed - reset state
-        console.log('❌ Modal closed - resetting state')
-        actions.resetForm()
-      }
-    }, { immediate: true })
-  }
 
   // ============ FORM DATA WATCHERS ============
   const setupFormWatchers = () => {
@@ -106,13 +105,35 @@ export const useEventModalWatchers = (
       }
     }, { immediate: true })
 
+    // 🔥 NEW: Auto-load students when needed
+    watch(() => props.mode, (newMode) => {
+      if (newMode === 'create') {
+        console.log('🔄 Create mode detected - triggering student load')
+        // Trigger student loading for create mode
+        if (actions.triggerStudentLoad) {
+          actions.triggerStudentLoad()
+        }
+      }
+    }, { immediate: true })
+
+    // 🔥 NEW: Auto-reload students when student is cleared
+    watch(selectedStudent, (newStudent, oldStudent) => {
+      if (oldStudent && !newStudent) {
+        console.log('🔄 Student cleared - triggering student reload')
+        // Trigger student loading when student is cleared
+        if (actions.triggerStudentLoad) {
+          actions.triggerStudentLoad()
+        }
+      }
+    })
+
     // Time calculation watcher
     watch([
       () => formData.value.startTime,
       () => formData.value.duration_minutes
     ], () => {
       if (formData.value.startTime && formData.value.duration_minutes) {
-        calculateEndTime() // 🔥 Verwende lokale Funktion
+        calculateEndTime()
       }
     }, { immediate: true })
 
@@ -140,7 +161,7 @@ export const useEventModalWatchers = (
         // Load appointment number for pricing
         try {
           console.log('🔢 Loading appointment number for pricing...')
-          appointmentNumber.value = await getAppointmentNumber(newUserId) // 🔥 Verwende lokale Funktion
+          appointmentNumber.value = await getAppointmentNumber(newUserId)
           console.log('✅ Appointment number loaded:', appointmentNumber.value)
         } catch (err) {
           console.error('❌ Error loading appointment number:', err)
@@ -159,15 +180,12 @@ export const useEventModalWatchers = (
 
         // Force category update in edit mode
         await nextTick()
-
-        // You might need to trigger category selection here
-        // This depends on how your CategorySelector works
       }
     }, { immediate: true })
 
     // Duration change watcher
     watch(() => formData.value.duration_minutes, () => {
-      calculateEndTime() // 🔥 Verwende lokale Funktion
+      calculateEndTime()
     })
   }
 
@@ -177,16 +195,26 @@ export const useEventModalWatchers = (
     watch(() => formData.value.location_id, (newVal, oldVal) => {
       console.log('🔄 location_id changed:', oldVal, '→', newVal)
     })
+
+    // Selected student debugging
+    watch(selectedStudent, (newStudent, oldStudent) => {
+      console.log('🔄 selectedStudent changed:', 
+        oldStudent?.first_name || 'none', 
+        '→', 
+        newStudent?.first_name || 'none'
+      )
+    })
   }
 
   // ============ HELPER FUNCTIONS ============
   const handleEditModeStudentSelection = async () => {
-    // This would trigger student selection in edit mode
-    // Implementation depends on your StudentSelector component
     console.log('📝 Setting up student for edit mode:', formData.value.user_id)
-
-    // You might need to emit to parent or call a specific function
-    // to select the student in the StudentSelector component
+    
+    // This would typically trigger the StudentSelector to select the correct student
+    // The implementation depends on how your StudentSelector handles programmatic selection
+    
+    // Example: You might need to emit to parent or use a ref to StudentSelector
+    // to call selectStudentById(formData.value.user_id)
   }
 
   const handleCreateModeInitialization = async () => {
@@ -207,35 +235,39 @@ export const useEventModalWatchers = (
     formData.value.startTime = startTime
 
     console.log('📅 Create mode initialized with date/time:', startDate, startTime)
+    
+    // Calculate end time immediately
+    if (formData.value.duration_minutes) {
+      calculateEndTime()
+    }
   }
 
   const generateLessonTitle = (currentStudent: any, locationId: string, category: string) => {
-    // ✅ FIX: Sicherheitsprüfung hinzufügen, bevor .find aufgerufen wird
-    // Stelle sicher, dass availableLocations ein Array ist und Daten enthält
+    // Safety check for availableLocations
     const selectedLocationObject = Array.isArray(availableLocations.value) && availableLocations.value.length > 0
       ? availableLocations.value.find((loc: any) => loc.id === locationId)
-      : null;
+      : null
 
-    const locationName = selectedLocationObject?.name || '';
-    const currentCategory = category || '';
+    const locationName = selectedLocationObject?.name || ''
+    const currentCategory = category || ''
 
-    let title = 'Fahrstunde'; // Default title
+    let title = 'Fahrstunde' // Default title
 
     if (currentStudent?.first_name) {
-      title = `${currentStudent.first_name}`;
+      title = `${currentStudent.first_name}`
     }
 
     if (locationName) {
-      title += ` • ${locationName}`;
+      title += ` • ${locationName}`
     }
 
     if (currentCategory) {
-      title += ` (${currentCategory})`;
+      title += ` (${currentCategory})`
     }
 
-    console.log('✏️ Title generated:', title);
-    formData.value.title = title; // Set the generated title to formData
-  };
+    console.log('✏️ Title generated:', title)
+    formData.value.title = title
+  }
 
   // ============ PUBLIC API ============
   const setupAllWatchers = () => {
@@ -243,13 +275,16 @@ export const useEventModalWatchers = (
     setupFormWatchers()
     setupDebugWatchers()
 
-    console.log('⚡ All watchers initialized (without handlers dependency)')
+    console.log('⚡ All watchers initialized (simplified version)')
   }
 
   return {
     setupAllWatchers,
     setupModalWatcher,
     setupFormWatchers,
-    setupDebugWatchers
+    setupDebugWatchers,
+    calculateEndTime,
+    getAppointmentNumber,
+    generateLessonTitle
   }
 }

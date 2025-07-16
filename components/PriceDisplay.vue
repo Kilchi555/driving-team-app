@@ -168,6 +168,34 @@
       ⚠️ {{ priceWarning }}
     </div>
   </div>
+  <!-- Für Staff: Einfache Zahlungsmarkierung -->
+  <div v-if="currentUser?.role === 'staff' && !isPaid" class="mt-3 pt-3 border-t border-gray-200">
+    <div class="space-y-2">
+      <button
+        @click="markAsPaid('cash')"
+        class="w-full bg-green-600 text-white py-2 px-3 rounded text-sm hover:bg-green-700"
+      >
+        💰 Als bar bezahlt markieren
+      </button>
+      
+      <button
+        @click="markAsPaid('invoice')"
+        class="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700"
+      >
+        📄 Rechnung erstellt - als bezahlt markieren
+      </button>
+    </div>
+  </div>
+
+  <!-- Für Clients: Link zu PaymentModal -->
+  <div v-if="currentUser?.role === 'student' && !isPaid" class="mt-3 pt-3 border-t border-gray-200">
+    <button
+      @click="$emit('open-payment-modal')"
+      class="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700"
+    >
+      💳 Online bezahlen (Twint, Karte)
+    </button>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -192,12 +220,16 @@ interface Props {
   allowDiscountEdit?: boolean
   selectedDate?: string | null
   startTime?: string | null
+  currentUser?: any 
+
 }
 
 interface Emits {
   (e: 'update:modelValue', value: number): void
   (e: 'duration-changed', duration: number): void
   (e: 'discount-changed', discount: number, discountType: 'fixed', reason: string): void
+  (e: 'payment-status-changed', isPaid: boolean, paymentMethod?: string): void 
+  (e: 'open-payment-modal'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -214,7 +246,8 @@ const props = withDefaults(defineProps<Props>(), {
   discountReason: '',
   allowDiscountEdit: false,
   selectedDate: '',
-  startTime: ''
+  startTime: '',
+  currentUser: null
 })
 
 const emit = defineEmits<Emits>()
@@ -317,6 +350,14 @@ const priceWarning = computed(() => {
   }
   return null
 })
+
+const markAsPaid = (paymentMethod: 'cash' | 'invoice') => {
+  emit('payment-status-changed', true, paymentMethod)
+}
+
+const openPaymentModal = () => {
+  emit('open-payment-modal')
+}
 
 // Neue computed property hinzufügen:
 const tempDiscountInput = computed({

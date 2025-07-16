@@ -303,7 +303,7 @@ const loadRegularAppointments = async () => {
       const event = {
         id: apt.id,
         title: apt.title || `${apt.user?.first_name || 'Unbekannt'} - ${apt.type || 'Termin'}`,
-        start: new Date(apt.start_time).toISOString(), // Explizit als Date parsen und zurück zu ISO
+        start: new Date(apt.start_time).toISOString(), 
         end: new Date(apt.end_time).toISOString(),
         allDay: false,
         extendedProps: {
@@ -364,25 +364,6 @@ const loadRegularAppointments = async () => {
   } finally {
     isLoadingEvents.value = false
   }
-}
-
-// WICHTIG: EventClick für verschiedene Terminarten anpassen
-const handleEventClick = (clickInfo: any) => {
-  const appointmentData = calendarEvents.value.find(evt => evt.id === clickInfo.event.id)
-  
-  console.log('🖱️ Event clicked:', {
-    id: clickInfo.event.id,
-    title: clickInfo.event.title,
-    appointmentType: appointmentData?.extendedProps?.appointment_type,
-    isTeamInvite: appointmentData?.extendedProps?.is_team_invite
-  })
-  
-  isModalVisible.value = true
-  modalMode.value = 'edit'
-  modalEventData.value = appointmentData
-  
-  // Zeige Context Menu oder öffne Modal direkt
-  openMoveModal(clickInfo.event)
 }
 
 const handleMoveError = (error: string) => {
@@ -651,7 +632,8 @@ showConfirmDialog({
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
     initialView: 'timeGridWeek',
     locale: 'delocale',
-    timeZone: 'UTC',
+    timeZone: 'local',
+    
     allDaySlot: false,
     slotMinTime: '05:00:00',
     slotMaxTime: '23:00:00',
@@ -664,33 +646,45 @@ showConfirmDialog({
     eventDrop: handleEventDrop,
     eventResize: handleEventResize,
   // Klick auf leeren Zeitslot
-    dateClick: (arg) => {
-        console.log('🔍 CLICKED TIME:', {
+ dateClick: (arg) => {
+  console.log('🔍 FREE SLOT CLICKED:', {
     clickedDate: arg.date,
-    clickedISO: arg.date.toISOString(),
-    clickedUTC: arg.date.toISOString()
+    clickedISO: arg.date.toISOString()
   })
-  const clickedDate = new Date(arg.date.getTime() - (2 * 60 * 60 * 1000)) // -2 Stunden
+  
+  // ✅ FIX 1: Verwende originale Zeit (keine -2h Korrektur)
+  const clickedDate = arg.date
   const endDate = new Date(clickedDate.getTime() + 45 * 60000)
   
-  console.log('🔍 CORRECTED TIME:', {
-    originalDate: arg.date,
-    correctedDate: clickedDate,
-    correctedISO: clickedDate.toISOString()
-  })
-    isModalVisible.value = true
-    modalMode.value = 'create'
-    modalEventData.value = {
-      title: '',
-      start: clickedDate.toISOString(), 
-      end: endDate.toISOString(),
-      allDay: arg.allDay,
-      extendedProps: {
-        location: '',
-        staff_note: '',
-        client_note: ''
+  console.log('📅 CREATE MODE: Free slot clicked at', clickedDate.toISOString())
+  
+  isModalVisible.value = true
+  modalMode.value = 'create'
+  modalEventData.value = {
+    title: '',
+    start: clickedDate.toISOString(), 
+    end: endDate.toISOString(),
+    allDay: arg.allDay,
+    
+    // ✅ FIX 2: KRITISCH - Markierung für freien Slot
+    isFreeslotClick: true,
+    clickSource: 'calendar-free-slot',
+    
+    // ✅ FIX 3: Explizit KEINE Student-Daten
+    user_id: null,
+    selectedStudentId: null,
+    preselectedStudent: null,
+    
+    extendedProps: {
+      location: '',
+      staff_note: '',
+      client_note: '',
+      eventType: 'lesson',
+      isNewAppointment: true
     }
   }
+  
+  console.log('✅ FREE SLOT: Modal opened with clean data (no student preselection)')
 },
 
 eventContent: (arg) => {

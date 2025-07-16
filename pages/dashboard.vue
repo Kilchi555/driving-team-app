@@ -8,6 +8,8 @@ import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { usePendingTasks } from '~/composables/usePendingTasks'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
+import { useFeatureFlags } from '@/utils/useFeatureFlags'
+
 
 interface CalendarApi {
   today(): void
@@ -19,6 +21,8 @@ interface CalendarApi {
 
 // Composables
 const { currentUser, fetchCurrentUser, isLoading, userError, profileExists } = useCurrentUser()
+const { isEnabled } = useFeatureFlags()
+
 
 // WICHTIG: Hole das ganze Composable-Objekt für volle Reaktivität
 const pendingTasksComposable = usePendingTasks()
@@ -195,8 +199,12 @@ watch(pendingCount, (newCount, oldCount) => {
 }, { immediate: true })
 
 // onMounted
+// onMounted - UPDATED VERSION mit Feature Flags
 onMounted(async () => {
   console.log('🚀 Dashboard mounting...')
+
+    console.log('🔥 Feature Flags Debug:', isEnabled('AUTO_REFRESH_PENDING'))
+
   
   await fetchCurrentUser()
   
@@ -205,26 +213,40 @@ onMounted(async () => {
   console.log('Debug - userError:', userError.value)
 
   if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
-    // Initial load der Pending Data
+    console.log('🔄 About to refresh pending data...')
     await refreshPendingData()
+    console.log('✅ Pending data refresh completed')
+
   }
+  console.log('🔄 About to update today state...')
 
   updateTodayState()
   updateCurrentMonth()
+  console.log('✅ Today state updated')
 
-  // AUTO-REFRESH ERWEITERT:
-  if (process.client) {
-    console.log('🔄 Setting up auto-refresh interval...')
+
+// ✅ AUTO-REFRESH MIT FEATURE FLAG:
+  console.log('🔍 Checking auto-refresh conditions...')
+  console.log('🔍 process.client:', process.client)
+  console.log('🔍 isEnabled result:', isEnabled('AUTO_REFRESH_PENDING'))
+
+  if (process.client && isEnabled('AUTO_REFRESH_PENDING')) {
+    console.log('🔄 Setting up auto-refresh interval (Feature Flag enabled)...')
     refreshInterval.value = setInterval(async () => {
       if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
         console.log('🔄 Auto-refreshing pending data...')
         await refreshPendingData()
       }
     }, 5 * 60 * 1000) as unknown as number
+  } else if (process.client) {
+    console.log('⏸️ Auto-refresh disabled via Feature Flag')
+     } else {
+    console.log('⏸️ Auto-refresh disabled - not client side')
   }
+    console.log('✅ onMounted completed')
 })
 
-// Cleanup on unmount
+// Cleanup on unmount (bleibt gleich)
 onUnmounted(() => {
   if (refreshInterval.value) {
     clearInterval(refreshInterval.value)
