@@ -39,9 +39,8 @@
         <input
           :value="endTime"
           type="time"
-          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50"
-          :disabled="true"
-          readonly
+          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+          :disabled="disabled"
         />
         <div v-if="durationMinutes" class="text-xs text-gray-500 mt-1">
           Dauer: {{ durationMinutes }} Minuten
@@ -54,22 +53,6 @@
       <div class="flex items-center gap-2">
         <span class="text-yellow-600">⚠️</span>
         <span class="text-sm text-yellow-800">{{ timeConflictWarning }}</span>
-      </div>
-    </div>
-
-    <!-- Empfohlene Zeiten (falls verfügbar) -->
-    <div v-if="suggestedTimes.length > 0" class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-      <div class="text-sm font-medium text-blue-800 mb-2">💡 Empfohlene Zeiten:</div>
-      <div class="flex flex-wrap gap-2">
-        <button
-          v-for="time in suggestedTimes"
-          :key="time"
-          @click="selectSuggestedTime(time)"
-          class="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors"
-          :disabled="disabled"
-        >
-          {{ time }}
-        </button>
       </div>
     </div>
   </div>
