@@ -347,6 +347,8 @@ watch(userRole, (newRole: string | null) => { // <<< `newRole: string | null` Ty
     switch (newRole) {
       case 'admin':
         targetPath = '/admin';
+        console.log('🔄 Navigating admin to:', targetPath); // ← DIESE ZEILE HINZUFÜGEN
+
         break;
       case 'staff':
         targetPath = '/dashboard';
@@ -358,9 +360,10 @@ watch(userRole, (newRole: string | null) => { // <<< `newRole: string | null` Ty
         targetPath = '/';
     }
 
-    if (currentPath !== targetPath) {
-        navigateTo(targetPath);
-    }
+    console.log('🎯 Final navigation:', currentPath, '→', targetPath); // ← UND DIESE
+      if (currentPath !== targetPath) {
+          navigateTo(targetPath);
+      }
   }
 });
 

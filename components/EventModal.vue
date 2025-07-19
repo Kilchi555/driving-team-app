@@ -32,12 +32,43 @@
           />
         </div>
 
+        <!-- Lesson Type Selector -->
+        <div v-if="selectedStudent && formData.eventType === 'lesson'">
+          <LessonTypeSelector
+            v-model="selectedLessonType"
+            :disabled="mode === 'view'"
+            @lesson-type-selected="handleLessonTypeSelected"
+          />
+        </div>
+
         <!-- Event Type Selector -->
         <div v-if="showEventTypeSelector">
           <EventTypeSelector
             :selected-type="formData.selectedSpecialType"
             @event-type-selected="handleEventTypeSelected"
             @back-to-student="backToStudentSelection"
+          />
+        </div>
+
+        <!-- Staff Selector für andere Terminarten -->
+        <div v-if="formData.eventType === 'other' && formData.selectedSpecialType">
+          <StaffSelector
+            ref="staffSelectorRef"
+            v-model="invitedStaffIds"
+            :current-user="currentUser"
+            :disabled="mode === 'view'"
+            @selection-changed="handleStaffSelectionChanged"
+          />
+        </div>
+
+        <!-- Customer Invite Selector für andere Terminarten -->
+        <div v-if="formData.eventType === 'other' && formData.selectedSpecialType">
+          <CustomerInviteSelector
+            v-model="invitedCustomers"
+            :current-user="currentUser"
+            :disabled="mode === 'view'"
+            @customers-added="handleCustomersAdded"
+            @customers-cleared="handleCustomersCleared"
           />
         </div>
 
@@ -94,7 +125,7 @@
         />
 
         <!-- Location Section -->
-        <div v-if="formData.startDate && formData.startTime">
+        <div v-if="showTimeSection">
           <LocationSelector
             :model-value="formData.location_id"
             :selected-student-id="selectedStudent?.id"
@@ -108,11 +139,15 @@
         <!-- Price Display - nur für Fahrstunden -->
         <div v-if="selectedStudent && formData.duration_minutes && formData.eventType === 'lesson'">
           <PriceDisplay
+            ref="priceDisplayRef"
             :event-type="formData.eventType"
             :duration-minutes="formData.duration_minutes"
             :price-per-minute="formData.price_per_minute"
             :category-code="formData.type"
             :is-paid="formData.is_paid"
+            :admin-fee="120"
+            :is-second-or-later-appointment="false"
+            :appointment-number="1"
             :discount="formData.discount"
             :discount-type="formData.discount_type"
             :discount-reason="formData.discount_reason"
@@ -120,9 +155,13 @@
             :current-user="currentUser"
             :selected-date="formData.startDate"
             :start-time="formData.startTime"
+            :selected-student="selectedStudent"
+            :initial-payment-method="formData.payment_method"
             @discount-changed="handleDiscountChanged"
             @payment-status-changed="handlePaymentStatusChanged"
             @open-payment-modal="handleOpenPaymentModal"
+            @payment-mode-changed="handlePaymentModeChanged"
+            @invoice-data-changed="handleInvoiceDataChanged"
           />
         </div>
 
@@ -181,6 +220,12 @@ import LocationSelector from '~/components/LocationSelector.vue'
 import PriceDisplay from '~/components/PriceDisplay.vue'
 import TimeSelector from '~/components/TimeSelector.vue'
 import TitleInput from '~/components/TitleInput.vue'
+import LessonTypeSelector from '~/components/LessonTypeSelector.vue'
+import StaffSelector from '~/components/StaffSelector.vue'
+import CustomerInviteSelector from '~/components/CustomerInviteSelector.vue' 
+
+// Composables
+import { useCompanyBilling } from '~/composables/useCompanyBilling'
 
 // Types
 interface Student {
@@ -212,6 +257,9 @@ const emit = defineEmits<{
   'appointment-saved': [data: any]
   'appointment-updated': [data: any]
   'appointment-deleted': [id: string]
+  'default-billing-address-loaded': [address: any]
+  'payment-mode-changed': [paymentMode: string, data?: any]
+
 }>()
 
 // ============ REFS ============
@@ -223,11 +271,18 @@ const availableDurations = ref([45])
 const error = ref('')
 const isLoading = ref(false)
 const showEventTypeSelection = ref(false)
+const selectedLessonType = ref('lesson') 
+const staffSelectorRef = ref() 
+const invitedStaffIds = ref<string[]>([])
+const invitedCustomers = ref<any[]>([])  
+const defaultBillingAddress = ref(null) // NEU
+
 
 const formData = ref({
   id: '',
   title: '',
   type: '',
+  appointment_type: 'lesson',
   startDate: '',
   startTime: '',
   endTime: '',
@@ -243,8 +298,12 @@ const formData = ref({
   selectedSpecialType: '',
   discount: 0,
   discount_type: 'fixed' as const,
-  discount_reason: ''
+  discount_reason: '',
+  payment_method: 'online',
+  payment_data: null as any
 })
+
+const companyBilling = useCompanyBilling()
 
 // ============ COMPUTED ============
 const modalTitle = computed(() => {
@@ -257,6 +316,12 @@ const modalTitle = computed(() => {
 })
 
 const shouldAutoLoadStudents = computed(() => {
+  // ✅ FIX: Nicht auto-loaden wenn es ein free slot click ist
+  if (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') {
+    console.log('🚫 Free slot click detected - disabling auto student load')
+    return true
+  }
+  
   return formData.value.eventType === 'lesson' && (props.mode === 'create' || !selectedStudent.value)
 })
 
@@ -300,7 +365,7 @@ const totalPrice = computed(() => {
 })
 
 // ============ HANDLERS ============
-const handleStudentSelected = (student: Student | null) => {
+const handleStudentSelected = async (student: Student | null) => {
   console.log('👤 Student selected:', student?.first_name)
   selectedStudent.value = student
   formData.value.user_id = student?.id || ''
@@ -312,6 +377,17 @@ const handleStudentSelected = (student: Student | null) => {
   
   // Auto-generate title if we have student and location
   generateTitleIfReady()
+}
+
+const handleLessonTypeSelected = (lessonType: any) => {
+  console.log('🎯 Lesson type selected:', lessonType.name)
+  selectedLessonType.value = lessonType.code
+  
+  // ✅ NUR appointment_type setzen - Dauer bleibt über CategorySelector/DurationSelector
+  // Das appointment_type wird später in der DB als 'type' gespeichert
+  formData.value.appointment_type = lessonType.code
+  
+  console.log('📝 Appointment type set to:', lessonType.code)
 }
 
 const handleStudentCleared = () => {
@@ -445,20 +521,34 @@ const calculateEndTime = () => {
 }
 
 const triggerStudentLoad = () => {
+  // ✅ FIX: Nicht bei free slot clicks triggern
+  if (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') {
+    console.log('🚫 Triggering student load blocked - free slot click detected')
+    return
+  }
+  
   console.log('🔄 Triggering student load...')
-  if (studentSelectorRef.value?.loadStudents) {
+  if (studentSelectorRef.value) {
     studentSelectorRef.value.loadStudents()
   }
 }
 
 const resetForm = () => {
+  
   selectedStudent.value = null
   selectedLocation.value = null
   showEventTypeSelection.value = false
+
+    invitedStaffIds.value = []
+  if (staffSelectorRef.value?.resetSelection) {
+    staffSelectorRef.value.resetSelection()
+  }
+
   formData.value = {
     id: '',
     title: '',
     type: '',
+    appointment_type: 'lesson',
     startDate: '',
     startTime: '',
     endTime: '',
@@ -470,14 +560,41 @@ const resetForm = () => {
     status: 'confirmed',
     is_paid: false,
     description: '',
-    eventType: 'lesson' as 'lesson' | 'staff_meeting' | 'other',
+    eventType: 'lesson' as 'lesson',
     selectedSpecialType: '',
     discount: 0,
     discount_type: 'fixed' as const,
-    discount_reason: ''
+    discount_reason: '',
+    payment_method: props.eventData.payment_method || 'cash',
+    payment_data: props.eventData.payment_data || null
   }
   error.value = ''
   isLoading.value = false
+}
+
+// Staff Selection Handler
+const handleStaffSelectionChanged = (staffIds: string[], staffMembers: any[]) => {
+  console.log('👥 Staff selection changed:', { 
+    selectedIds: staffIds, 
+    selectedMembers: staffMembers.length 
+  })
+  
+  invitedStaffIds.value = staffIds
+  
+  // Optional: Weitere Logik für Team-Einladungen
+  if (staffIds.length > 0) {
+    console.log('✅ Team members selected for invitation')
+  }
+}
+
+// Customer Invite Handlers
+const handleCustomersAdded = (customers: any[]) => {
+  console.log('📞 Customers added to invite list:', customers.length)
+}
+
+const handleCustomersCleared = () => {
+  console.log('🗑️ Customer invite list cleared')
+  invitedCustomers.value = []
 }
 
 // ============ SAVE LOGIC ============
@@ -502,7 +619,7 @@ const handleSave = async () => {
       start_time: localStart.toISOString(),
       end_time: localEnd.toISOString(),
       duration_minutes: formData.value.duration_minutes,
-      user_id: formData.value.user_id || formData.value.staff_id, // 🔥 FIX: Staff-ID als Fallback
+      user_id: formData.value.user_id || formData.value.staff_id,
       staff_id: formData.value.staff_id,
       location_id: formData.value.location_id,
       type: formData.value.type,
@@ -513,6 +630,7 @@ const handleSave = async () => {
     }
     
     console.log('📋 Saving appointment data:', appointmentData)
+    console.log('👥 Selected staff for team invitations:', invitedStaffIds.value.length, 'members')
     
     let result
     if (props.mode === 'create') {
@@ -524,9 +642,7 @@ const handleSave = async () => {
       
       if (saveError) throw saveError
       result = data
-      
       console.log('✅ Appointment created:', result.id)
-      emit('appointment-saved', result)
       
     } else if (props.mode === 'edit') {
       const { data, error: updateError } = await supabase
@@ -538,21 +654,25 @@ const handleSave = async () => {
       
       if (updateError) throw updateError
       result = data
-      
       console.log('✅ Appointment updated:', result.id)
-      emit('appointment-updated', result)
     }
     
-    // Emit additional events for compatibility
-    emit('save', result)
-    emit('save-event', result)
+    // NEU: Team-Einladungen erstellen falls StaffSelector verwendet wurde
+    if (invitedStaffIds.value.length > 0 && staffSelectorRef.value && result?.id) {
+      console.log('📧 Creating team invites via StaffSelector...')
+      
+      try {
+        const teamInvites = await staffSelectorRef.value.createTeamInvites(appointmentData)
+        console.log('✅ Team invites created:', teamInvites.length)
+      } catch (inviteError) {
+        console.error('❌ Error creating team invites:', inviteError)
+        // Haupt-Termin ist gespeichert, auch wenn Team-Einladungen fehlschlagen
+      }
+    }
     
     console.log('✅ All save events emitted for mode:', props.mode)
-    
-    // Show success message briefly
-    setTimeout(() => {
-      handleClose()
-    }, 500)
+    emit('save-event', result)
+    handleClose()
     
   } catch (err: any) {
     console.error('❌ Save error:', err)
@@ -603,6 +723,8 @@ const initializeFormData = () => {
     
   } else if (props.mode === 'create' && props.eventData?.start) {
     // Create mode with time data
+    formData.value.eventType = 'lesson'  
+    showEventTypeSelection.value = false 
     const utcDate = new Date(props.eventData.start)
     const year = utcDate.getFullYear()
     const month = String(utcDate.getMonth() + 1).padStart(2, '0')
@@ -613,6 +735,11 @@ const initializeFormData = () => {
     formData.value.startDate = `${year}-${month}-${day}`
     formData.value.startTime = `${hours}:${minutes}`
     calculateEndTime()
+        // Auto-load students für lesson events
+    console.log('🔄 CREATE mode - triggering student load')
+    setTimeout(() => {
+      triggerStudentLoad()
+    }, 100)
   }
 }
 
@@ -633,6 +760,111 @@ const loadStudentForEdit = async (userId: string) => {
   } catch (err) {
     console.error('❌ Error loading student for edit:', err)
   }
+}
+
+// In EventModal.vue - erweitere die Funktion mit mehr Logs:
+const saveStudentPaymentPreferences = async (studentId: string, paymentMode: string, data?: any) => {
+ console.log('🔥 saveStudentPaymentPreferences called with:', {
+   studentId,
+   paymentMode,
+   data,
+   hasCurrentAddress: !!data?.currentAddress?.id
+ })
+ 
+ try {
+   const supabase = getSupabase()
+   
+   // 🔧 KORREKTUR: Richtiges Mapping für payment_methods
+   const paymentMethodMapping: Record<string, string> = {
+     'cash': 'cash',           // ✅ Existiert
+     'invoice': 'invoice',     // ✅ Existiert  
+     'online': 'twint'         // ❌ 'online' → 'twint' (Standard Online-Method)
+   }
+   
+   const actualMethodCode = paymentMethodMapping[paymentMode]
+   
+   if (!actualMethodCode) {
+     console.warn('⚠️ Unknown payment mode:', paymentMode)
+     return // Speichere nichts bei unbekannter Methode
+   }
+   
+   const updateData: any = {
+     preferred_payment_method: actualMethodCode  // ← WICHTIG: actualMethodCode statt paymentMode
+   }
+   
+   // Falls Rechnungsadresse gewählt und Adresse gespeichert
+   if (paymentMode === 'invoice' && data?.currentAddress?.id) {
+     updateData.default_company_billing_address_id = data.currentAddress.id
+     console.log('📋 Adding billing address ID:', data.currentAddress.id)
+   }
+   
+   console.log('💾 Mapping:', paymentMode, '→', actualMethodCode)
+   console.log('💾 Updating user with data:', updateData)
+   console.log('👤 For student ID:', studentId)
+   
+   const { error, data: result } = await supabase
+     .from('users')
+     .update(updateData)
+     .eq('id', studentId)
+     .select('id, preferred_payment_method') // ← Debug: Zeige was gespeichert wurde
+   
+   if (error) {
+     console.error('❌ Supabase error:', error)
+     throw error
+   }
+   
+   console.log('✅ Update result:', result)
+   console.log('✅ Payment preferences saved successfully!')
+   
+ } catch (err) {
+   console.error('❌ Error saving payment preferences:', err)
+ }
+}
+
+const handlePaymentModeChanged = (paymentMode: 'invoice' | 'cash' | 'online', data?: any) => {
+  console.log('💳 handlePaymentModeChanged called:', { paymentMode, data, selectedStudentId: selectedStudent.value?.id, selectedStudentName: selectedStudent.value?.first_name })
+  
+  // Store payment method
+  formData.value.payment_method = paymentMode
+  
+  // NEU: Wenn Invoice-Mode und wir haben eine Standard-Adresse geladen
+  if (paymentMode === 'invoice' && defaultBillingAddress.value && !data?.currentAddress) {
+    console.log('🏠 Using default billing address for invoice mode')
+    const address = defaultBillingAddress.value as any
+    data = {
+      formData: {
+        companyName: address.company_name,
+        contactPerson: address.contact_person,
+        email: address.email,
+        phone: address.phone || '',
+        street: address.street,
+        streetNumber: address.street_number || '',
+        zip: address.zip,
+        city: address.city,
+        country: address.country,
+        vatNumber: address.vat_number || '',
+        notes: address.notes || ''
+      },
+      currentAddress: address,
+      isValid: true
+    }
+  }
+  
+  // Save preferences if student selected
+  if (selectedStudent.value?.id) {
+    console.log('🎯 Calling saveStudentPaymentPreferences...')
+    saveStudentPaymentPreferences(selectedStudent.value.id, paymentMode, data)
+  }
+  
+  // Emit for PriceDisplay
+  emit('payment-mode-changed', paymentMode, data)
+}
+
+const handleInvoiceDataChanged = (invoiceData: any, isValid: boolean) => {
+  console.log('📄 Invoice data changed:', invoiceData, isValid)
+  // Hier kannst du die Rechnungsdaten speichern falls nötig
+  // formData.value.invoiceData = invoiceData
+  // formData.value.invoiceValid = isValid
 }
 
 // ============ WATCHERS ============

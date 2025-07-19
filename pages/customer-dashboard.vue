@@ -6,7 +6,7 @@
 <script setup>
 // Meta
 definePageMeta({
-  middleware: 'auth-check',
+  middleware: 'auth',
   layout: false // Use no layout for clean customer view
 })
 

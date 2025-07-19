@@ -634,6 +634,9 @@ const progressData = computed((): ProgressGroup[] => {
 })
 
 // Methods
+// ===== ALLE METHODS FÜR EnhancedStudentModal.vue =====
+
+// Basic Modal Methods
 const closeModal = () => {
   emit('close')
 }
@@ -650,6 +653,7 @@ const evaluateLesson = (lesson: any) => {
   emit('evaluate-lesson', lesson)
 }
 
+// ===== MAIN LOAD LESSONS FUNCTION =====
 const loadLessons = async () => {
   if (!props.selectedStudent?.id) return
 
@@ -701,7 +705,7 @@ const loadLessons = async () => {
       }
     }
 
-    // 3. Lade Notes mit Bewertungen (für Fortschritt)
+    // 3. Lade Notes mit Bewertungen (KORRIGIERTE VERSION)
     const appointmentIds = appointments.map(a => a.id)
     console.log('🔍 Searching notes for appointments:', appointmentIds)
 
@@ -711,11 +715,7 @@ const loadLessons = async () => {
         appointment_id,
         criteria_rating,
         criteria_note,
-        evaluation_criteria_id,
-        evaluation_criteria(
-          name,
-          short_code
-        )
+        evaluation_criteria_id
       `)
       .in('appointment_id', appointmentIds)
       .not('evaluation_criteria_id', 'is', null)
@@ -727,29 +727,73 @@ const loadLessons = async () => {
 
     console.log('✅ Notes loaded:', notes?.length || 0)
 
-    // 4. Verarbeite Notes zu Criteria Evaluations
+    // 4. NEUE SEPARATE QUERY FÜR KRITERIEN-NAMEN
+    let criteriaMap: Record<string, any> = {}
+   // ✅ DEBUG: Prüfe ob Kriterien in DB existieren
+if (notes && notes.length > 0) {
+  const criteriaIds = [...new Set(notes.map(n => n.evaluation_criteria_id).filter(Boolean))]
+  console.log('🔍 Loading criteria for IDs:', criteriaIds)
+  
+  // ✅ FÜGEN SIE DIESE DEBUG-QUERY HINZU:
+  const { data: allCriteria, error: allCriteriaError } = await supabase
+    .from('evaluation_criteria')
+    .select('id, name, short_code')
+    .limit(5)
+  
+  console.log('🔍 Sample criteria in database:', allCriteria)
+  console.log('🔍 Error loading all criteria:', allCriteriaError)
+  
+  const { data: criteriaData, error: criteriaError } = await supabase
+    .from('evaluation_criteria')
+    .select('id, name, short_code')
+    .in('id', criteriaIds)
+    
+  console.log('🔍 Criteria query result:', criteriaData)
+  console.log('🔍 Criteria query error:', criteriaError)
+    
+  if (!criteriaError && criteriaData) {
+    criteriaMap = criteriaData.reduce((acc, c) => {
+      acc[c.id] = c
+      return acc
+    }, {} as Record<string, any>)
+    console.log('✅ Criteria map loaded:', criteriaMap)
+  }
+}
+
+    // 5. Verarbeite Notes zu Criteria Evaluations (KORRIGIERTE VERSION)
     const notesByAppointment = (notes || []).reduce((acc: Record<string, CriteriaEvaluation[]>, note: any) => {
+      console.log('🔍 Processing note:', note)
+      
       if (!acc[note.appointment_id]) {
         acc[note.appointment_id] = []
       }
       
-      const evaluationCriteria = note.evaluation_criteria
+      const criteria = criteriaMap[note.evaluation_criteria_id]
       
-      if (note.evaluation_criteria_id && note.criteria_rating !== null && evaluationCriteria) {
+      if (note.evaluation_criteria_id && note.criteria_rating !== null && criteria) {
+        console.log('✅ Adding evaluation for appointment:', note.appointment_id)
         acc[note.appointment_id].push({
           criteria_id: note.evaluation_criteria_id,
-          criteria_name: evaluationCriteria.name || 'Unbekannt',
-          criteria_short_code: evaluationCriteria.short_code || null,
+          criteria_name: criteria.name || 'Unbekannt',
+          criteria_short_code: criteria.short_code || null,
           criteria_rating: note.criteria_rating,
           criteria_note: note.criteria_note,
           criteria_category_name: null
+        })
+      } else {
+        console.log('❌ Skipping note due to missing data:', { 
+          criteria_id: note.evaluation_criteria_id, 
+          rating: note.criteria_rating, 
+          criteria: criteria 
         })
       }
       
       return acc
     }, {} as Record<string, CriteriaEvaluation[]>)
 
-    // 5. Kombiniere alles
+    console.log('🔍 Notes by appointment:', notesByAppointment)
+
+    // 6. Kombiniere alles
     lessons.value = appointments.map(appointment => ({
       ...appointment,
       location_name: locationsMap[appointment.location_id] || null,
@@ -767,8 +811,7 @@ const loadLessons = async () => {
   }
 }
 
-
-
+// ===== UTILITY FUNCTIONS =====
 const groupedCriteriaEvaluations = (evaluations: CriteriaEvaluation[]) => {
   const grouped: Record<string, CriteriaEvaluation[]> = {}
   evaluations.forEach(evalItem => {
@@ -790,6 +833,7 @@ const showCriteriaNote = (criteria: CriteriaEvaluation) => {
   showNoteModal.value = true
 }
 
+// ===== RATING COLOR FUNCTIONS =====
 const getRatingColor = (rating: number | null | undefined): string => {
   if (rating === null || rating === undefined) return 'bg-gray-100 text-gray-700'
   const colors: Record<number, string> = {
@@ -868,6 +912,8 @@ const getRatingBgColor = (rating: number | null | undefined): string => {
   return colors[rating] || 'bg-gray-400'
 }
 
+// ===== CONTACT FUNCTIONS =====
+// ✅ NEUE VERSION (mit Parametern)
 const callStudent = (phone: string) => {
   if (phone) {
     window.open(`tel:${phone}`)
@@ -880,7 +926,7 @@ const emailStudent = (email: string) => {
   }
 }
 
-// Statistics (optional, falls benötigt)
+// ===== COMPUTED STATISTICS =====
 const totalLessons = computed(() => {
   return lessons.value.filter(lesson => 
     lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0

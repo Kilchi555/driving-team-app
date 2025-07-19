@@ -383,26 +383,21 @@ const editAppointment = (appointment: CalendarAppointment) => {
 
 const handleSaveEvent = async (eventData: CalendarEvent) => {
   console.log('💾 Event saved, refreshing calendar...')
+  
+  // View-Position speichern
+  const currentDate = calendar.value?.getApi()?.getDate()
+  
+  // Daten neu laden
   await loadAppointments()
   await loadStaffMeetings()
-
-    refreshCalendar()
   
-  // 🆕 Event nach oben emittieren
+  // View-Position wiederherstellen falls nötig
+  if (currentDate && calendar.value?.getApi) {
+    calendar.value.getApi().gotoDate(currentDate)
+    console.log('✅ View position preserved:', currentDate)
+  }
+  
   emit('appointment-changed', { type: 'saved', data: eventData })
-  isModalVisible.value = false
-}
-
-const handleDeleteEvent = async (eventData: CalendarEvent) => {
-  console.log('🗑 Event deleted, refreshing calendar...')
-  await loadAppointments()
-  await loadStaffMeetings()
-
-  refreshCalendar()
-
-  // 🆕 Event nach oben emittieren  
-  emit('appointment-changed', { type: 'deleted', data: eventData })
-  
   isModalVisible.value = false
 }
 
@@ -444,7 +439,6 @@ const updateModalFieldsIfOpen = (event: any) => {
 const eventModalRef = ref()
 const isUpdating = ref(false)
 const modalEventType = ref<'lesson' | 'staff_meeting'>('lesson')
-
 
 
 // Überarbeitete handleEventDrop mit schönem Dialog
@@ -756,21 +750,31 @@ const refreshCalendar = async () => {
   console.log('🔄 CalendarComponent - Refreshing calendar...')
   
   try {
-    // 1. Daten neu laden
+    // 1. Aktuelle View-Position speichern
+    const currentDate = calendar.value?.getApi()?.getDate()
+    
+    // 2. Daten neu laden
     await Promise.all([
       loadAppointments(),
       loadStaffMeetings()
     ])
     
-    // 2. Warte einen Moment für State-Updates
+    // 3. Warte einen Moment für State-Updates
     await nextTick()
     
-    // 3. Calendar events direkt setzen
-    if (calendar.value?.getApi) {
+    // 4. FullCalendar wird automatisch durch die watch(calendarEvents) aktualisiert
+    console.log('✅ Calendar data refreshed')
+    
+    // 5. View-Position wiederherstellen falls nötig
+    if (currentDate && calendar.value?.getApi) {
       const api = calendar.value.getApi()
-      api.removeAllEvents() // Alte Events entfernen
-      api.addEventSource(calendarEvents.value) // Neue Events hinzufügen
-      console.log('✅ Calendar events directly updated')
+      const currentViewDate = api.getDate()
+      
+      // Nur wiederherstellen falls sich Position geändert hat
+      if (Math.abs(currentDate.getTime() - currentViewDate.getTime()) > 24 * 60 * 60 * 1000) {
+        api.gotoDate(currentDate)
+        console.log('✅ View position restored to:', currentDate)
+      }
     }
     
   } catch (error) {
@@ -779,6 +783,19 @@ const refreshCalendar = async () => {
 }
 
 const isCalendarReady = ref(false)
+
+const handleDeleteEvent = async (eventData: CalendarEvent) => {
+  console.log('🗑 Event deleted, refreshing calendar...')
+  await loadAppointments()
+  await loadStaffMeetings()
+
+  refreshCalendar()
+
+  // 🆕 Event nach oben emittieren  
+  emit('appointment-changed', { type: 'deleted', data: eventData })
+  
+  isModalVisible.value = false
+}
 
 onMounted(async () => {
   console.log('📅 CalendarComponent mounted')
@@ -804,20 +821,28 @@ watch(() => props.currentUser, async (newUser) => {
   }
 }, { deep: true })
 
-
 watch(calendarEvents, (newEvents) => {
-  if (calendarOptions.value) {
-    calendarOptions.value.events = newEvents
-    calendar.value?.getApi()?.refetchEvents()
+  console.log('🔄 calendarEvents changed, updating FullCalendar:', newEvents.length)
+  
+  if (calendar.value?.getApi) {
+    const api = calendar.value.getApi()
+    
+    // Alle Events entfernen und neue hinzufügen
+    api.removeAllEvents()
+    api.addEventSource(newEvents)
+    
+    console.log('✅ FullCalendar events updated successfully')
   }
-}, { deep: true })
+}, { deep: true, immediate: true })
 
 
 defineExpose({
   getApi: () => calendar.value?.getApi?.(),
   loadAppointments,
   loadStaffMeetings,
-  refreshCalendar
+  refreshCalendar,  
+  handleSaveEvent,     // ← HINZUFÜGEN
+  handleDeleteEvent   
 })
 
 
@@ -846,8 +871,8 @@ defineExpose({
   :current-user="props.currentUser" 
   :event-type="modalEventType"
   @close="isModalVisible = false"
-  @save-event="handleSaveEvent"
-  @delete-event="handleDeleteEvent"
+  @save-event="handleSaveEvent"       
+  @delete-event="handleDeleteEvent"   
   @refresh-calendar="loadAppointments"
   @appointment-saved="refreshCalendar"    
   @appointment-updated="refreshCalendar"   

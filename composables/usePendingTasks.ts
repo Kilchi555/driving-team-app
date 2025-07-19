@@ -107,7 +107,7 @@ const fetchPendingTasks = async (staffId: string) => {
       .eq('staff_id', staffId)
       .lt('end_time', new Date().toISOString()) // Nur vergangene Termine
       .eq('status', 'completed') // Nur abgeschlossene Termine
-      .order('start_time', { ascending: false }) // Neueste zuerst
+      .order('start_time', { ascending: true }) // Neueste zuerst
 
     if (fetchError) throw fetchError
 
@@ -142,7 +142,7 @@ const fetchPendingTasks = async (staffId: string) => {
     console.log('🔥 Filtered pending appointments:', pending.length)
     
     // WICHTIG: Globalen State komplett ersetzen (nicht mutieren)
-    globalState.pendingAppointments.splice(0, globalState.pendingAppointments.length, ...pending)
+    globalState.pendingAppointments = [...pending]
     console.log('🔥 Global pending state updated, count:', pendingCount.value)
     
   } catch (err: any) {

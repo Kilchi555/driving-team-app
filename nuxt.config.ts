@@ -1,15 +1,30 @@
 // nuxt.config.ts
+import { defineNuxtConfig } from 'nuxt/config'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: false },
   ssr: true,
   
-  // --- Module Configuration (ohne @nuxtjs/supabase) ---
+  // --- Module Configuration (MIT @nuxtjs/supabase hinzugefügt) ---
   modules: [
     '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxt/eslint',
+    '@nuxtjs/supabase' // ✅ DIESE ZEILE HINZUFÜGEN
   ],
+  
+  // ✅ SUPABASE KONFIGURATION MIT UMGEBUNGSVARIABLEN
+  // @ts-ignore - Supabase Konfiguration wird vom @nuxtjs/supabase Modul erweitert
+  supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_ANON_KEY,
+    redirectOptions: {
+      login: '/',
+      callback: '/dashboard',
+      exclude: ['/']
+    }
+  },
   
   // --- Build Configuration ---
   build: {
@@ -44,7 +59,7 @@ export default defineNuxtConfig({
   vue: {
     compilerOptions: {
       // Suspense-Warnungen unterdrücken
-      isCustomElement: (tag) => false
+      isCustomElement: (tag: string) => false
     }
   },
   

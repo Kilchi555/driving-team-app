@@ -30,9 +30,10 @@
         <label class="block text-sm font-semibold text-gray-900">
           🎓 Fahrschüler auswählen
         </label>
-        <button 
-          @click="$emit('switch-to-other')" 
-          class="text-xs text-blue-600 font-bold hover:text-blue-800 border-solid border-blue-700"
+       <button 
+          @click="handleSwitchToOther"
+          :disabled="isLoading || availableStudents.length === 0"
+          class="text-xs text-blue-600 font-bold hover:text-blue-800 border-solid border-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed"
         >
           Andere Terminart
         </button>
@@ -406,6 +407,15 @@ const loadStudents = async (editStudentId?: string | null) => {
     availableStudents.value = []
   } finally {
     isLoading.value = false
+  }
+}
+
+const handleSwitchToOther = () => {
+  console.log('🔄 User manually clicked "Andere Terminart" button')
+  
+  // Nur wenn Studenten geladen sind und kein Student ausgewählt ist
+  if (!isLoading.value && availableStudents.value.length > 0 && !selectedStudent.value) {
+    emit('switch-to-other')
   }
 }
 

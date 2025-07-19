@@ -1,235 +1,445 @@
 <template>
-  <div v-if="shouldShowPrice" class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-2 shadow-sm">
-    <!-- Hauptpreis-Anzeige -->
-   <div class="flex items-center justify-between mb-3">
-      <span class="text-sm font-medium text-green-800 flex items-center gap-2" style="white-space: pre-line;">
-        {{ formattedAppointmentInfo }}
+  <div class="space-y-4 p-4 bg-white rounded-lg border border-gray-200">
+    <!-- Price Display -->
+    <div>
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-700">
+          {{ eventType === 'lesson' ? 'Fahrstunde' : 'Termin' }}
+        </h3>
+        <span class="text-xs text-gray-500">
+          {{ formattedAppointmentInfo }}
         </span>
-      <span class="text-md font-bold text-green-900">CHF {{ formattedLessonPrice }}</span>
-    </div>
-    
-    <!-- Detaillierte Preisaufschlüsselung -->
-    <div v-if="showDetails" class="space-y-2 pt-3 border-t border-green-200">
-      
-      <!-- Rabatt (falls vorhanden) -->
-        <div v-if="props.discount > 0" class="flex justify-between text-sm">
-            <span class="text-red-600 flex items-center gap-1">
-                Rabatt: - CHF {{ props.discount }}
-            <span v-if="allowDiscountEdit" class="flex items-center gap-1 ml-1">
-                <button
-                @click="removeDiscount"
-                class="text-red-500 hover:text-red-700 text-xs"
-                title="Rabatt entfernen"
-                >
-                🗑️
-                </button>
-            </span>
-            </span>
-            <span class="font-medium text-red-600">-CHF {{ formattedDiscountAmount }}</span>
-        </div>
-      
-      <!-- Rabatt-Grund -->
-      <div v-if="props.discount > 0 && props.discountReason" class="text-xs text-gray-500 italic">
-        Grund: {{ props.discountReason }}
       </div>
-      
-      <!-- Preis nach Rabatt -->
-      <div v-if="props.discount > 0" class="flex justify-between text-sm font-semibold pt-1 border-t border-gray-200">
-        <span class="text-gray-800">Lektionspreis nach Rabatt:</span>
-        <span class="text-gray-900">CHF {{ formattedDiscountedPrice }}</span>
+
+      <!-- Preis dieser Fahrstunde -->
+      <div class="flex justify-between items-center text-sm mt-2">
+        <span class="text-gray-600">Preis dieser Fahrstunde:</span>
+        <span class="font-medium">CHF {{ formatPrice(lessonPrice) }}</span>
       </div>
-      
-      <!-- Rabatt hinzufügen Button (nur für Staff) -->
-      <div v-if="allowDiscountEdit && props.discount === 0" class="pt-2 border-t border-gray-200">
-        <button 
-          @click="showDiscountEdit = true"
-          class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-        >
-          + Rabatt hinzufügen
-        </button>
-      </div>
-      
-      <!-- Admin-Pauschale (falls anwendbar) -->
-      <div v-if="shouldShowAdminFee" class="flex justify-between text-sm">
-        <span class="text-gray-600 flex items-center gap-1">
-          📋 Administrationspauschale
-          <button 
-            @click="showAdminFeeInfo = !showAdminFeeInfo"
-            class="text-blue-500 hover:text-blue-700 text-xs"
-          >
+
+      <!-- Versicherungsgebühr (falls vorhanden) -->
+      <div v-if="shouldShowAdminFee" class="flex justify-between items-center text-sm">
+        <div class="flex items-center space-x-1">
+          <span class="text-gray-600">Versicherungsgebühr:</span>
+          <button @click="showAdminFeeInfo = !showAdminFeeInfo" class="text-blue-500 hover:text-blue-700 text-xs">
             ℹ️
           </button>
-        </span>
-        <span class="font-medium">CHF {{ formattedAdminFee }}</span>
+        </div>
+        <span class="font-medium">CHF {{ formatPrice(adminFee) }}</span>
       </div>
-      
-      <!-- Admin-Fee Info -->
-      <div v-if="showAdminFeeInfo && shouldShowAdminFee" class="text-xs text-gray-500 bg-blue-50 p-2 rounded">
-        💡 Die Administrationspauschale wird beim 2. Termin automatisch verrechnet und deckt Versicherung, Prüfungsanmeldung und administrative Aufwände ab.
+
+      <!-- Rabatt (falls vorhanden) -->
+      <div v-if="props.discount > 0" class="flex justify-between items-center text-sm text-green-600">
+        <div class="flex items-center space-x-2">
+          <span>Rabatt</span>
+          <span v-if="props.discountReason" class="text-xs text-gray-500">({{ props.discountReason }})</span>
+          <button v-if="props.allowDiscountEdit" @click="removeDiscount" class="text-red-500 hover:text-red-700 text-xs">
+            ✕ 
+          </button>
+        </div>
+        <span class="font-medium">- CHF {{ formatPrice(props.discount) }}</span>
       </div>
-      
-      <!-- Gesamtsumme (mit Admin-Fee) -->
-      <div v-if="shouldShowAdminFee" class="flex justify-between text-sm font-semibold pt-2 border-t border-green-300">
-        <span class="text-green-800">Gesamtpreis (inkl. Admin-Pauschale):</span>
-        <span class="text-green-900">CHF {{ formattedTotalPrice }}</span>
+
+      <!-- Rabatt hinzufügen Button (falls kein Rabatt und editierbar) -->
+      <div v-if="props.allowDiscountEdit && props.discount === 0" class="flex justify-between items-center text-sm">
+        <button 
+          @click="showDiscountEdit = true"
+          class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+        >
+          ➕ Rabatt hinzufügen
+        </button>
       </div>
-      
-      <!-- Zahlungsstatus -->
-      <div class="flex items-center justify-between pt-2 border-t border-green-200">
-        <span class="text-xs text-gray-600">Zahlungsstatus:</span>
-        <span :class="paymentStatusClass">
-          {{ paymentStatusText }}
-        </span>
+
+      <!-- Gesamtpreis dieses Termins -->
+      <div class="flex justify-between items-center text-lg font-semibold border-t border-gray-200 pt-2 mt-2" 
+           :class="paymentStatusClass">
+        <span>Total:</span>
+        <div class="text-right">
+          <div>CHF {{ finalPrice }}</div>
+          <div class="text-xs font-normal">{{ paymentStatusText }}</div>
+        </div>
+      </div>
+
+      <!-- Admin Fee Info -->
+      <div v-if="showAdminFeeInfo" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+        <p><strong>Versicherungsgebühr:</strong></p>
+        <p v-if="props.appointmentNumber === 1">Entfällt beim ersten Termin.</p>
+        <p v-else>Wird ab dem 2. Termin einmalig erhoben.</p>
       </div>
     </div>
-    
-    <!-- Rabatt-Edit Modal -->
-    <div v-if="showDiscountEdit" class="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-      <div class="mb-3">        
-        <!-- Rabatt-Wert -->
-        <div class="mb-3">
-          <label class="block text-xs text-gray-600 mb-1">
-                Rabatt in CHF
-            </label>
-          <input
+
+    <!-- Rabatt-Bearbeitungs-Modal -->
+    <div v-if="showDiscountEdit" class="border-t border-gray-200 pt-4">
+      <h4 class="text-md font-medium text-gray-900 mb-3">Rabatt hinzufügen</h4>
+      
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Rabattbetrag (CHF)</label>
+          <input 
+            type="number" 
             v-model="tempDiscountInput"
-            @focus="($event.target as HTMLInputElement)?.select()"
             @blur="formatToTwoDecimals"
-            type="number"
-            :min="0"
-            :max="tempDiscountType === 'fixed' ? 100 : lessonPrice"
-            step="0.50"
-            class="w-full p-2 border border-gray-300 rounded text-sm"
-            :placeholder="'25.00'"
-          />
-        </div>
-        
-        <!-- Rabatt-Grund -->
-        <div class="mb-3">
-          <label class="block text-xs text-gray-600 mb-1">Grund (optional)</label>
-          <select
-            v-model="tempDiscountReason"
-            class="w-full p-2 border border-gray-300 rounded text-sm"
+            step="0.01"
+            min="0"
+            :max="maxDiscount"
+            placeholder="z.B. 20.00"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="">Grund wählen...</option>
-            <option value="Stammkunde">🏆 Stammkunde</option>
-            <option value="Mehrfachbuchung">📅 Mehrfachbuchung</option>
-            <option value="Kulanz">🤝 Kulanz</option>
-            <option value="Promotion">🎉 Promotion</option>
-            <option value="Sonstiges">📝 Sonstiges</option>
-          </select>
+          <p class="text-xs text-gray-500 mt-1">
+            Maximaler Rabatt: CHF {{ formatPrice(maxDiscount) }}
+          </p>
         </div>
         
-        <!-- Vorschau -->
-        <div class="mb-3 p-2 bg-white border border-gray-200 rounded text-xs">
-          <div class="flex justify-between">
-            <span>Ursprungspreis:</span>
-            <span>CHF {{ formattedLessonPrice }}</span>
-          </div>
-          <div class="flex justify-between text-red-600">
-            <span>Rabatt:</span>
-            <span>-CHF {{ getPreviewDiscountAmount() }}</span>
-          </div>
-          <div class="flex justify-between font-medium border-t pt-1 mt-1">
-            <span>Neuer Preis:</span>
-            <span>CHF {{ getPreviewFinalPrice() }}</span>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Grund für Rabatt</label>
+          <input 
+            type="text" 
+            v-model="tempDiscountReason"
+            placeholder="z.B. Treuebonus, Ausbildungsrabatt"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+        </div>
+
+        <!-- Rabatt-Vorschau -->
+        <div v-if="tempDiscount > 0" class="bg-gray-50 p-3 rounded-md">
+          <h5 class="text-sm font-medium text-gray-700 mb-2">Vorschau:</h5>
+          <div class="space-y-1 text-xs">
+            <div class="flex justify-between">
+              <span>Ursprungspreis:</span>
+              <span>CHF {{ formatPrice(totalPriceWithoutDiscount) }}</span>
+            </div>
+            <div class="flex justify-between text-green-600">
+              <span>Rabatt:</span>
+              <span>- CHF {{ formatPrice(tempDiscount) }}</span>
+            </div>
+            <div class="flex justify-between font-medium border-t border-gray-200 pt-1">
+              <span>Neuer Preis:</span>
+              <span>CHF {{ formatPrice(totalPriceWithoutDiscount - tempDiscount) }}</span>
+            </div>
           </div>
         </div>
-        
+
         <!-- Buttons -->
-        <div class="flex gap-2">
+        <div class="flex justify-end space-x-3 pb-2">
+          <button
+            @click="cancelDiscountEdit"
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Abbrechen
+          </button>
           <button
             @click="applyDiscount"
             :disabled="tempDiscount <= 0"
-            class="flex-1 bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            ✅ Rabatt anwenden
-          </button>
-          <button
-            @click="cancelDiscountEdit"
-            class="flex-1 bg-gray-300 text-gray-700 py-2 px-3 rounded text-sm hover:bg-gray-400"
-          >
-            ❌ Abbrechen
+            Rabatt anwenden
           </button>
         </div>
       </div>
     </div>
-    
-    <!-- Toggle für Details -->
-    <button 
-      @click="showDetails = !showDetails"
-      class="w-full mt-3 text-xs text-green-700 hover:text-green-900 transition-colors flex items-center justify-center gap-1"
-    >
-      {{ showDetails ? '▲ Weniger Details' : '▼ Details anzeigen' }}
-    </button>
-    
-    <!-- Warnung bei ungewöhnlichen Preisen -->
-    <div v-if="priceWarning" class="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-      ⚠️ {{ priceWarning }}
-    </div>
-  </div>
-  <!-- Für Staff: Einfache Zahlungsmarkierung -->
-  <div v-if="currentUser?.role === 'staff' && !isPaid" class="mt-3 pt-3 border-t border-gray-200">
-    <div class="space-y-2">
-      <button
-        @click="markAsPaid('cash')"
-        class="w-full bg-green-600 text-white py-2 px-3 rounded text-sm hover:bg-green-700"
-      >
-        💰 Als bar bezahlt markieren
-      </button>
+
+    <!-- Zahlungsart-Regler -->
+    <div class="border-t border-gray-200 pt-4">
+      <h4 class="text-md font-medium text-gray-900 mb-3">Zahlungsart wählen</h4>
       
+      <div class="space-y-3">
+        <!-- Rechnung Toggle -->
+        <div class="flex items-center justify-between p-3 border rounded-lg" 
+             :class="[
+               invoiceMode ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50'
+             ]">
+          <div class="flex items-center space-x-3">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <div>
+              <span class="font-medium text-gray-900">Rechnung</span>
+            </div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              v-model="invoiceMode" 
+              @change="onInvoiceModeChange"
+              class="sr-only peer"
+            >
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        <!-- Barzahlung Toggle -->
+        <div class="flex items-center justify-between p-3 border rounded-lg"
+             :class="[
+               cashMode ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 bg-gray-50'
+             ]">
+          <div class="flex items-center space-x-3">
+            <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            <div>
+              <span class="font-medium text-gray-900">Barzahlung</span>
+            </div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              v-model="cashMode" 
+              @change="onCashModeChange"
+              class="sr-only peer"
+            >
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-600"></div>
+          </label>
+        </div>
+
+        <!-- Online Zahlung (Standard wenn nichts aktiviert) -->
+        <div v-if="!invoiceMode && !cashMode" class="flex items-center justify-between p-3 border-2 border-green-500 bg-green-50 rounded-lg">
+          <div class="flex items-center space-x-3">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+            </svg>
+            <div>
+              <span class="font-medium text-gray-900">Online Zahlung</span>
+              <p class="text-sm text-gray-600">Twint, Kreditkarte über Wallee</p>
+            </div>
+          </div>
+          <span class="px-2 py-1 bg-green-600 text-white text-xs rounded-full">Aktiv</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rechnungsadresse Formular (nur wenn Rechnung aktiviert) -->
+    <div v-if="invoiceMode" class="border-t border-gray-200 pt-4">
+      <h4 class="text-md font-medium text-gray-900 mb-3">Firmenrechnungsadresse</h4>
+      
+      <!-- Bestehende Adresse auswählen -->
+      <div v-if="companyBilling.savedAddresses.value.length > 0" class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Gespeicherte Adresse verwenden</label>
+        <select 
+          @change="onSavedAddressSelected"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">Neue Adresse eingeben</option>
+          <option v-for="address in companyBilling.savedAddresses.value" :key="address.id" :value="address.id">
+            {{ companyBilling.getAddressPreview(address) }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Firmenadresse Formular -->
+      <div class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Firmenname *</label>
+            <input 
+              type="text" 
+              v-model="companyBilling.formData.value.companyName"
+              placeholder="z.B. Muster AG"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :class="{ 'border-red-300': companyBilling.validation.value.errors.companyName }"
+            >
+            <p v-if="companyBilling.validation.value.errors.companyName" class="text-xs text-red-600 mt-1">
+              {{ companyBilling.validation.value.errors.companyName }}
+            </p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ansprechperson *</label>
+            <input 
+              type="text" 
+              v-model="companyBilling.formData.value.contactPerson"
+              placeholder="z.B. Max Mustermann"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :class="{ 'border-red-300': companyBilling.validation.value.errors.contactPerson }"
+            >
+            <p v-if="companyBilling.validation.value.errors.contactPerson" class="text-xs text-red-600 mt-1">
+              {{ companyBilling.validation.value.errors.contactPerson }}
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
+            <input 
+              type="email" 
+              v-model="companyBilling.formData.value.email"
+              placeholder="rechnung@firma.ch"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :class="{ 'border-red-300': companyBilling.validation.value.errors.email }"
+            >
+            <p v-if="companyBilling.validation.value.errors.email" class="text-xs text-red-600 mt-1">
+              {{ companyBilling.validation.value.errors.email }}
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+            <input 
+              type="tel" 
+              v-model="companyBilling.formData.value.phone"
+              placeholder="+41 44 123 45 67"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+          </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-3">
+          <div class="col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Strasse *</label>
+            <input 
+              type="text" 
+              v-model="companyBilling.formData.value.street"
+              placeholder="Musterstrasse"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :class="{ 'border-red-300': companyBilling.validation.value.errors.street }"
+            >
+            <p v-if="companyBilling.validation.value.errors.street" class="text-xs text-red-600 mt-1">
+              {{ companyBilling.validation.value.errors.street }}
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nr.</label>
+            <input 
+              type="text" 
+              v-model="companyBilling.formData.value.streetNumber"
+              placeholder="123"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">PLZ *</label>
+            <input 
+              type="text" 
+              v-model="companyBilling.formData.value.zip"
+              placeholder="8000"
+              maxlength="4"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :class="{ 'border-red-300': companyBilling.validation.value.errors.zip }"
+            >
+            <p v-if="companyBilling.validation.value.errors.zip" class="text-xs text-red-600 mt-1">
+              {{ companyBilling.validation.value.errors.zip }}
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ort *</label>
+            <input 
+              type="text" 
+              v-model="companyBilling.formData.value.city"
+              placeholder="Zürich"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :class="{ 'border-red-300': companyBilling.validation.value.errors.city }"
+            >
+            <p v-if="companyBilling.validation.value.errors.city" class="text-xs text-red-600 mt-1">
+              {{ companyBilling.validation.value.errors.city }}
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">MwSt-Nummer</label>
+            <input 
+              type="text" 
+              v-model="companyBilling.formData.value.vatNumber"
+              placeholder="CHE-123.456.789 MWST"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+          </div>
+        </div>
+
+        <!-- Speichern Button -->
+        <div v-if="!companyBilling.currentAddress.value" class="pt-2">
+          <button
+            @click="saveCompanyAddress"
+            :disabled="!companyBilling.validation.value.isValid || companyBilling.isLoading.value"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          >
+            <span v-if="companyBilling.isLoading.value">⏳ Speichere...</span>
+            <span v-else>💾 Adresse speichern</span>
+          </button>
+        </div>
+
+        <!-- Validation Status -->
+        <div v-if="!companyBilling.validation.value.isValid && invoiceMode" class="text-sm text-red-600 bg-red-50 p-2 rounded">
+          ⚠️ Bitte füllen Sie alle Pflichtfelder korrekt aus
+        </div>
+        
+        <div v-if="companyBilling.validation.value.isValid && invoiceMode" class="text-sm text-green-600 bg-green-50 p-2 rounded">
+          ✅ Rechnungsadresse vollständig
+        </div>
+
+        <!-- Error Display -->
+        <div v-if="companyBilling.error.value" class="text-sm text-red-600 bg-red-50 p-2 rounded">
+          ❌ {{ companyBilling.error.value }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Statusmeldung -->
+    <div v-if="paymentModeStatus" class="text-sm p-3 rounded-lg" 
+         :class="[
+           paymentModeStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
+           paymentModeStatus.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
+           'bg-red-50 text-red-800 border border-red-200'
+         ]">
+      {{ paymentModeStatus.message }}
+    </div>
+
+    <!-- Für Clients: Link zu PaymentModal -->
+    <div v-if="currentUser?.role === 'student' && !isPaid" class="mt-3 pt-3 border-t border-gray-200">
       <button
-        @click="markAsPaid('invoice')"
+        @click="emit('open-payment-modal')"
         class="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700"
       >
-        📄 Rechnung erstellt - als bezahlt markieren
+        💳 Online bezahlen (Twint, Karte)
       </button>
     </div>
-  </div>
-
-  <!-- Für Clients: Link zu PaymentModal -->
-  <div v-if="currentUser?.role === 'student' && !isPaid" class="mt-3 pt-3 border-t border-gray-200">
-    <button
-      @click="$emit('open-payment-modal')"
-      class="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700"
-    >
-      💳 Online bezahlen (Twint, Karte)
-    </button>
+    <!-- Checkbox für automatisches Speichern hinzufügen -->
+    <div v-if="invoiceMode || cashMode" class="flex items-center mt-3 p-2 bg-gray-50 rounded">
+      <input 
+        type="checkbox" 
+        v-model="savePaymentPreference" 
+        id="save-payment-pref"
+        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+      >
+      <label for="save-payment-pref" class="ml-2 text-sm text-gray-600">
+        ✅ Als Standard für zukünftige Termine speichern
+      </label>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
+import { useCompanyBilling } from '~/composables/useCompanyBilling'
+import { getSupabase } from '~/utils/supabase'
 
 
+// Props - angepasst an bestehende Struktur
 interface Props {
-  eventType: string
+  eventType?: 'lesson' | 'meeting'
   durationMinutes: number
   pricePerMinute: number
-  categoryCode?: string
-  categoryInfo?: any
-  availableDurations?: number[]
-  isPaid?: boolean
-  adminFee?: number
-  isSecondOrLaterAppointment?: boolean
-  appointmentNumber?: number
+  isPaid: boolean
+  adminFee: number
+  isSecondOrLaterAppointment: boolean
+  appointmentNumber: number
   showAdminFeeByDefault?: boolean
-  discount?: number
-  discountType?: 'fixed'
-  discountReason?: string
-  allowDiscountEdit?: boolean
+  discount: number
+  discountType: 'fixed'
+  discountReason: string
+  allowDiscountEdit: boolean
   selectedDate?: string | null
   startTime?: string | null
-  currentUser?: any 
+  currentUser?: any
+  initialPaymentMethod?: string
+  selectedStudentId?: string
+  selectedStudent?: any  
 
-}
-
-interface Emits {
-  (e: 'update:modelValue', value: number): void
-  (e: 'duration-changed', duration: number): void
-  (e: 'discount-changed', discount: number, discountType: 'fixed', reason: string): void
-  (e: 'payment-status-changed', isPaid: boolean, paymentMethod?: string): void 
-  (e: 'open-payment-modal'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -250,240 +460,371 @@ const props = withDefaults(defineProps<Props>(), {
   currentUser: null
 })
 
-const emit = defineEmits<Emits>()
+// Emits - alle Events aus deiner bestehenden Komponente
+const emit = defineEmits([
+  'discount-changed', 
+  'update:discount', 
+  'update:discountReason',
+  'payment-status-changed',
+  'open-payment-modal',
+  'payment-mode-changed',
+  'invoice-data-changed'
+])
 
-// Reactive state
-const showDetails = ref(false)
+// Composables
+const companyBilling = useCompanyBilling()
+
+// State - angepasst an bestehende Logik
 const showAdminFeeInfo = ref(false)
 const showDiscountEdit = ref(false)
-const tempDiscount = ref(0)
-const tempDiscountType = ref<'fixed'>('fixed')
+
+// Temp discount for editing
+const tempDiscountInput = ref('')
 const tempDiscountReason = ref('')
 
-// Computed properties
-const shouldShowPrice = computed(() => {
-  return props.eventType === 'lesson' && props.pricePerMinute > 0 && props.durationMinutes > 0
-})
+// State - Neue Zahlungsart-Regler
+const invoiceMode = ref(false)
+const cashMode = ref(false)
+const selectedAddressId = ref('')
+const savePaymentPreference = ref(true)
+
+// Computed - angepasst an bestehende Props
+const tempDiscount = computed(() => parseFloat(tempDiscountInput.value) || 0)
 
 const lessonPrice = computed(() => {
   return props.durationMinutes * props.pricePerMinute
 })
 
-const discountAmount = computed(() => {
-  if (props.discount <= 0) return 0
-  // Da nur noch 'fixed' möglich ist, können wir direkt zurückgeben
-  return Math.min(props.discount, lessonPrice.value) // Rabatt kann nicht höher als Preis sein
-})
-
-const discountedLessonPrice = computed(() => {
-  return Math.max(0, lessonPrice.value - discountAmount.value)
-})
-
 const shouldShowAdminFee = computed(() => {
-  return props.appointmentNumber === 2 || props.showAdminFeeByDefault
+  return props.appointmentNumber === 2 || props.showAdminFeeByDefault || props.isSecondOrLaterAppointment
 })
 
-const totalPrice = computed(() => {
-  let total = discountedLessonPrice.value
+const totalPriceWithoutDiscount = computed(() => {
+  let total = lessonPrice.value
   if (shouldShowAdminFee.value) {
     total += props.adminFee
   }
   return total
 })
 
-const formattedLessonPrice = computed(() => {
-  return lessonPrice.value.toFixed(2)
-})
+const maxDiscount = computed(() => totalPriceWithoutDiscount.value)
 
-const formattedDiscountedPrice = computed(() => {
-  return discountedLessonPrice.value.toFixed(2)
-})
-
-const formattedDiscountAmount = computed(() => {
-  return discountAmount.value.toFixed(2)
-})
-
-const formattedTotalPrice = computed(() => {
-  return totalPrice.value.toFixed(2)
-})
-
-const formattedTotalWithAdmin = computed(() => {
-  return totalPrice.value.toFixed(2)
-})
-
-const formattedPricePerMinute = computed(() => {
-  return props.pricePerMinute.toFixed(2)
-})
-
-const formattedAdminFee = computed(() => {
-  return props.adminFee.toFixed(2)
+const finalPrice = computed(() => {
+  const total = totalPriceWithoutDiscount.value - props.discount
+  return formatPrice(total)
 })
 
 const paymentStatusClass = computed(() => {
-  return props.isPaid 
-    ? 'text-green-600 font-medium text-xs'
-    : 'text-orange-600 font-medium text-xs'
+  if (props.isPaid) return 'text-green-700'
+  return 'text-gray-900'
 })
 
 const paymentStatusText = computed(() => {
-  return props.isPaid ? '✅ Bezahlt' : '⏳ Offen'
-})
-
-const availableDurationsText = computed(() => {
-  if (!props.availableDurations || props.availableDurations.length === 0) {
-    return 'Nicht verfügbar'
-  }
-  return props.availableDurations.map(d => `${d}min`).join(', ')
-})
-
-const priceWarning = computed(() => {
-  // Warnung bei sehr niedrigen oder hohen Preisen
-  if (props.pricePerMinute < 1) {
-    return 'Ungewöhnlich niedriger Preis - bitte prüfen'
-  }
-  if (props.pricePerMinute > 5) {
-    return 'Ungewöhnlich hoher Preis - bitte prüfen'
-  }
-  // Warnung bei ungewöhnlichen Dauern
-  if (props.durationMinutes > 240) {
-    return 'Sehr lange Lektionsdauer - bitte prüfen'
-  }
-  return null
-})
-
-const markAsPaid = (paymentMethod: 'cash' | 'invoice') => {
-  emit('payment-status-changed', true, paymentMethod)
-}
-
-const openPaymentModal = () => {
-  emit('open-payment-modal')
-}
-
-// Neue computed property hinzufügen:
-const tempDiscountInput = computed({
-  get: () => {
-    return tempDiscount.value === 0 ? '' : tempDiscount.value.toString()
-  },
-  set: (value: string | number) => {
-    const numValue = typeof value === 'string' ? parseFloat(value) : value
-    tempDiscount.value = isNaN(numValue) ? 0 : numValue
-  }
+  if (props.isPaid) return 'Bezahlt'
+  return 'Offen'
 })
 
 const formattedAppointmentInfo = computed(() => {
- let parts = []
- 
- // Kategorie
- if (props.categoryInfo?.name) {
-   parts.push(props.categoryInfo.name)
- } else if (props.categoryCode) {
-   parts.push(`Kategorie ${props.categoryCode}`)
- }
- 
- // Datum
- if (props.selectedDate) {
-   const date = new Date(props.selectedDate)
-   parts.push(date.toLocaleDateString('de-CH'))
- }
- 
- // Zeit & Dauer mit Endzeit
- if (props.startTime) {
-   // Endzeit berechnen
-   const [hours, minutes] = props.startTime.split(':').map(Number)
-   const startMinutes = hours * 60 + minutes
-   const endMinutes = startMinutes + props.durationMinutes
-   const endHours = Math.floor(endMinutes / 60)
-   const endMins = endMinutes % 60
-   const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`
-   
-   parts.push(`${props.startTime} - ${endTime} (${props.durationMinutes}min)`)
- } else {
-   parts.push(`${props.durationMinutes}min`)
- }
- 
- return parts.join('\n')
+  let parts = []
+  
+  if (props.selectedDate) {
+    const date = new Date(props.selectedDate)
+    parts.push(date.toLocaleDateString('de-CH'))
+  }
+  
+  if (props.startTime) {
+    const [hours, minutes] = props.startTime.split(':').map(Number)
+    const startMinutes = hours * 60 + minutes
+    const endMinutes = startMinutes + props.durationMinutes
+    const endHours = Math.floor(endMinutes / 60)
+    const endMins = endMinutes % 60
+    const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`
+    
+    parts.push(`${props.startTime} - ${endTime} (${props.durationMinutes}min)`)
+  } else {
+    parts.push(`${props.durationMinutes}min`)
+  }
+  
+  return parts.join('\n')
 })
 
+// Computed - Neue Zahlungsart-Logik
+const invoiceDataValid = computed(() => {
+  return companyBilling.validation.value.isValid
+})
 
-// Neue Methode:
-const formatToTwoDecimals = () => {
-  if (tempDiscount.value > 0) {
-    tempDiscount.value = parseFloat(tempDiscount.value.toFixed(2))
+const paymentModeStatus = computed(() => {
+  if (invoiceMode.value && cashMode.value) {
+    return {
+      type: 'warning',
+      message: 'Bitte wählen Sie nur eine Zahlungsart aus.'
+    }
   }
-}
-
-const removeDiscount = () => {
-  // und den Grund auf leer.
-emit('discount-changed', 0, 'fixed', '') 
-  showDiscountEdit.value = false
-  // Optional: Setze die temporären Werte zurück, falls der Nutzer zuvor das Modal geöffnet hatte
-  tempDiscount.value = 0
-  tempDiscountType.value = 'fixed'
-  tempDiscountReason.value = ''
-  console.log('✅ Rabatt wurde entfernt.')
-}
+  
+  if (invoiceMode.value && !invoiceDataValid.value) {
+    return {
+      type: 'warning',
+      message: 'Bitte füllen Sie alle Pflichtfelder für die Rechnungsadresse aus.'
+    }
+  }
+  
+  if (invoiceMode.value && invoiceDataValid.value) {
+    return {
+      type: 'success',
+      message: 'Rechnung wird nach der Fahrstunde erstellt und versendet.'
+    }
+  }
+  
+  if (cashMode.value) {
+    return {
+      type: 'success',
+      message: 'Zahlung erfolgt bar beim Fahrlehrer.'
+    }
+  }
+  
+  return {
+    type: 'success',
+    message: 'Online-Zahlung über Customer Dashboard.'
+  }
+})
 
 // Methods
-const toggleDetails = () => {
-  showDetails.value = !showDetails.value
+const formatPrice = (amount: number): string => {
+  return amount.toFixed(2)
+}
+
+const formatToTwoDecimals = () => {
+  if (tempDiscountInput.value) {
+    tempDiscountInput.value = parseFloat(tempDiscountInput.value).toFixed(2)
+  }
 }
 
 const applyDiscount = () => {
-  if (tempDiscount.value > 0) {
-    // discountType ist jetzt immer 'fixed'
-    emit('discount-changed', tempDiscount.value, 'fixed', tempDiscountReason.value)
-  }
+  // Emit in bestehender Struktur
+  emit('discount-changed', tempDiscount.value, 'fixed', tempDiscountReason.value)
+  
   showDiscountEdit.value = false
+  tempDiscountInput.value = ''
+  tempDiscountReason.value = ''
 }
 
 const cancelDiscountEdit = () => {
   showDiscountEdit.value = false
-  tempDiscount.value = 0
-  tempDiscountType.value = 'fixed'
+  tempDiscountInput.value = ''
   tempDiscountReason.value = ''
 }
 
-const getPreviewDiscountAmount = () => {
-  if (tempDiscount.value <= 0) return '0.00'
-  // Da nur noch 'fixed' möglich ist
-  return Math.min(tempDiscount.value, lessonPrice.value).toFixed(2)
+const removeDiscount = () => {
+  emit('discount-changed', 0, 'fixed', '')
 }
 
-const getPreviewFinalPrice = () => {
-  const discountAmount = parseFloat(getPreviewDiscountAmount())
-  return Math.max(0, lessonPrice.value - discountAmount).toFixed(2)
+// Methods - Neue Zahlungsart-Logik
+// In PriceDisplay.vue - bei der onInvoiceModeChange Funktion:
+const onInvoiceModeChange = async () => {
+  if (invoiceMode.value && cashMode.value) {
+    cashMode.value = false
+  }
+  
+  // Lade gespeicherte Adressen wenn Invoice-Mode aktiviert wird
+  if (invoiceMode.value && props.currentUser?.id) {
+    await companyBilling.loadUserCompanyAddresses(props.currentUser.id)
+  }
+  
+  updatePaymentMode()
 }
 
-// Expose für Parent-Component
-defineExpose({
-  totalPrice,
-  lessonPrice,
-  toggleDetails,
-  showDetails
+// ============ PAYMENT PREFERENCES METHODS ============
+const loadUserPaymentPreferences = async (userId: string) => {
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('users')
+      .select('preferred_payment_method, default_company_billing_address_id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (error) throw error
+    
+    console.log('🔍 DB Result preferred_payment_method:', data?.preferred_payment_method)
+    console.log('🔍 DB Result default_company_billing_address_id:', data?.default_company_billing_address_id)
+    
+    // Store billing address ID for later use
+    let billingAddressData = null
+    
+    // NEU: Lade Standard-Rechnungsadresse zuerst (falls vorhanden)
+    if (data?.default_company_billing_address_id) {
+      billingAddressData = await loadDefaultBillingAddress(data.default_company_billing_address_id)
+    }
+    
+    if (data?.preferred_payment_method) {
+      // Bestehende Payment-Method Logik...
+      const uiMethodMapping: Record<string, string> = {
+        'cash': 'cash',
+        'invoice': 'invoice',
+        'twint': 'online',
+        'stripe_card': 'online',
+        'debit_card': 'online'
+      }
+      
+      const uiMethod = uiMethodMapping[data.preferred_payment_method] || 'online'
+      
+      console.log('✅ Loaded payment preference:', data.preferred_payment_method, '→', uiMethod)
+      
+      // Setze UI-Zustand basierend auf Preference
+      if (uiMethod === 'cash') {
+        cashMode.value = true
+        invoiceMode.value = false
+      } else if (uiMethod === 'invoice') {
+        invoiceMode.value = true
+        cashMode.value = false
+      } else {
+        cashMode.value = false
+        invoiceMode.value = false
+      }
+      
+      // Pass billing data if invoice method and address loaded
+      const paymentData = (uiMethod === 'invoice' && billingAddressData) ? billingAddressData : null
+      updatePaymentMode()
+      
+    } else {
+      console.log('📭 No payment preference found, setting to online')
+      cashMode.value = false
+      invoiceMode.value = false
+    }
+    
+  } catch (err) {
+    console.error('❌ Error loading payment preferences:', err)
+    cashMode.value = false
+    invoiceMode.value = false
+  }
+}
+
+const loadDefaultBillingAddress = async (addressId: string) => {
+  try {
+    await companyBilling.loadUserCompanyAddresses(props.currentUser.id)
+    
+    const address = companyBilling.savedAddresses.value.find(
+      (addr: any) => addr.id === addressId
+    )
+    
+    if (address) {
+      companyBilling.loadFormFromAddress(address)
+      selectedAddressId.value = addressId
+      console.log('✅ Auto-loaded default billing address')
+      return {
+        formData: companyBilling.formData.value,
+        currentAddress: address,
+        isValid: companyBilling.validation.value.isValid
+      }
+    }
+    
+    return null
+  } catch (err) {
+    console.error('❌ Error loading default billing:', err)
+    return null
+  }
+}
+
+const onCashModeChange = () => {
+  if (cashMode.value && invoiceMode.value) {
+    invoiceMode.value = false
+  }
+  updatePaymentMode()
+}
+
+const onSavedAddressSelected = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  const addressId = target.value
+  
+  if (addressId) {
+    const address = companyBilling.savedAddresses.value.find(addr => addr.id === addressId)
+    if (address) {
+      companyBilling.loadFormFromAddress(address)
+      selectedAddressId.value = addressId
+    }
+  } else {
+    companyBilling.resetForm()
+    selectedAddressId.value = ''
+  }
+}
+
+const saveCompanyAddress = async () => {
+  if (!props.currentUser?.id) {
+    companyBilling.error.value = 'Benutzer nicht angemeldet'
+    return
+  }
+
+  const result = await companyBilling.createCompanyBillingAddress(props.currentUser.id)
+  
+  if (result.success) {
+    // Erfolgreich gespeichert, lade Liste neu
+    await companyBilling.loadUserCompanyAddresses(props.currentUser.id)
+    selectedAddressId.value = result.data?.id || ''
+  }
+}
+
+const updatePaymentMode = () => {
+  let mode: 'invoice' | 'cash' | 'online' = 'online'
+  let data = undefined
+  
+  if (invoiceMode.value) {
+    mode = 'invoice'
+    data = {
+      formData: companyBilling.formData.value,
+      currentAddress: companyBilling.currentAddress.value,
+      isValid: companyBilling.validation.value.isValid
+    }
+  } else if (cashMode.value) {
+    mode = 'cash'
+  }
+  
+  emit('payment-mode-changed', mode, data)
+  
+  // Zusätzliches Event für Invoice-Data
+  if (mode === 'invoice') {
+    emit('invoice-data-changed', companyBilling.formData.value, companyBilling.validation.value.isValid)
+  }
+}
+
+
+
+// Watchers
+// Watcher für initialPaymentMethod
+watch(() => props.initialPaymentMethod, (newMethod) => {
+  
+  if (newMethod === 'cash') {
+    cashMode.value = true
+    invoiceMode.value = false
+  } else if (newMethod === 'invoice') {
+    invoiceMode.value = true
+    cashMode.value = false
+  } else {
+    cashMode.value = false
+    invoiceMode.value = false
+  }
+}, { immediate: true })
+
+watch([invoiceMode, cashMode], updatePaymentMode)
+
+watch(() => companyBilling.formData.value, () => {
+  if (invoiceMode.value) {
+    updatePaymentMode()
+  }
+}, { deep: true })
+
+// Watcher für selectedStudent
+watch(() => props.selectedStudent, async (newStudent) => {
+  if (newStudent?.id) {
+    console.log('👤 PriceDisplay: Loading payment preferences for:', newStudent.first_name)
+    await loadUserPaymentPreferences(newStudent.id)
+  }
+}, { immediate: true })
+
+// Lifecycle
+onMounted(async () => {
+  // Lade gespeicherte Adressen beim Component-Mount
+  if (props.currentUser?.id) {
+    await companyBilling.loadUserCompanyAddresses(props.currentUser.id)
+  }
 })
 </script>
-
-<style scoped>
-/* Smooth transitions */
-.transition-all {
-  transition: all 0.2s ease-in-out;
-}
-
-/* Gradient background animation */
-.bg-gradient-to-r {
-  background-size: 200% 200%;
-  animation: gradientShift 3s ease infinite;
-}
-
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* Custom scrollbar for details */
-.space-y-2 {
-  max-height: 300px;
-  overflow-y: auto;
-}
-</style>

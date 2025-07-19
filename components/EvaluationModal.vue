@@ -214,19 +214,25 @@ const criteriaRatings = ref<Record<string, number>>({})
 const criteriaNotes = ref<Record<string, string>>({})
 
 // Computed
+// ERSETZEN Sie Ihren bestehenden filteredCriteria computed mit diesem:
+
 const filteredCriteria = computed(() => {
-  if (!searchQuery.value) {
-    // Wenn Suchfeld leer ist, zeige alle Kriterien, die noch nicht ausgewählt sind
-    return allCriteria.value.filter(criteria => !selectedCriteriaOrder.value.includes(criteria.id))
+  // Zeige nur Kriterien, die NICHT bereits ausgewählt/bewertet sind
+  const unratedCriteria = allCriteria.value.filter(criteria => 
+    !selectedCriteriaOrder.value.includes(criteria.id)
+  )
+  
+  // Wenn kein Suchtext eingegeben, zeige alle unbewerteten
+  if (!searchQuery.value || searchQuery.value.trim() === '') {
+    return unratedCriteria
   }
   
+  // Filtere unbewertete Kriterien nach Suchtext
   const query = searchQuery.value.toLowerCase()
-  return allCriteria.value.filter(criteria => 
+  return unratedCriteria.filter(criteria => 
     (criteria.name?.toLowerCase().includes(query) ||
-    criteria.category_name?.toLowerCase().includes(query) ||
-    criteria.short_code?.toLowerCase().includes(query)) &&
-    // Don't show already selected criteria
-    !selectedCriteriaOrder.value.includes(criteria.id)
+     criteria.category_name?.toLowerCase().includes(query) ||
+     criteria.short_code?.toLowerCase().includes(query))
   )
 })
 
@@ -265,82 +271,93 @@ const closeModal = () => {
   emit('close')
 }
 
+// KOMPLETT SAUBERE VERSION - Ersetzen Sie Ihre gesamte loadAllCriteria Funktion mit dieser:
+
+// TEMPORÄRER DEBUG TEST - Fügen Sie das am Anfang Ihrer loadAllCriteria Funktion hinzu:
+
 const loadAllCriteria = async () => {
   if (!props.studentCategory) {
-    console.log('❌ No student category provided')
     return
   }
   
-  console.log('🔥 EvaluationModal - loadAllCriteria called with category:', props.studentCategory)
   isLoading.value = true
   error.value = null
   
   try {
-    // Da v_evaluation_matrix die category_id enthält, müssen wir hier die richtige Spalte verwenden
-    // Der Fehler bei evaluation_criteria_id im vorherigen Schritt deutet darauf hin,
-    // dass deine v_evaluation_matrix anders aufgebaut ist, als ich dachte.
-    // Wir müssen die korrekten Spaltennamen aus v_evaluation_matrix verwenden.
-    
-    // Die Spaltennamen sind typischerweise:
-    // id (der Kriterien-ID), name (Kriterienname), short_code, category_name (aus evaluation_categories)
-    // Wenn deine v_evaluation_matrix nur 'evaluation_criteria_id' und 'criteria_name' etc. hat, 
-    // dann müssen wir das entsprechend anpassen.
-    // Laut deiner letzten Ausgabe: item.evaluation_criteria_id, item.criteria_name, item.category_name
-    
-    const { data, error: supabaseError } = await supabase
-      .from('v_evaluation_matrix')
-      .select(`
-        evaluation_criteria_id,
-        criteria_name,
-        criteria_description,
-        short_code,
-        category_name
-      `)
-      // .eq('driving_category', props.studentCategory) // Diese Zeile könnte einen Fehler verursachen,
-      // da ich nicht sicher bin, ob 'driving_category' in v_evaluation_matrix existiert.
-      // Falls ja, lass sie drin. Falls nicht, kommentiere sie aus und füge sie später hinzu.
-      // Basierend auf den vorherigen Logs, scheint diese Spalte NICHT zu existieren in evaluation_criteria.
-      // Wenn evaluation_matrix eine View ist, die alles zusammenfügt, ist es wahrscheinlich,
-      // dass sie eine Spalte wie `driving_category` hat.
-      // Wenn der Fehler auftritt, liegt es an diesem .eq() Filter.
-      
-      // Ich gehe davon aus, dass deine v_evaluation_matrix das driving_category-Feld hat,
-      // da du es als Prop übergibst. Wenn nicht, melde dich!
-      .eq('driving_category', props.studentCategory) 
+    // Erste Abfrage: Hole alle category_criteria für die Kategorie
+    const { data: categoryCriteria, error: ccError } = await supabase
+      .from('category_criteria')
+      .select('evaluation_criteria_id, evaluation_category_id, driving_category, is_required, display_order')
+      .eq('driving_category', props.studentCategory)
 
+    if (ccError) throw ccError
 
-    if (supabaseError) {
-      console.error('❌ Supabase error loading evaluation criteria:', supabaseError)
-      throw supabaseError
-    }
-
-    if (!data || data.length === 0) {
-      console.log('⚠️ No criteria found for category', props.studentCategory)
+    if (!categoryCriteria || categoryCriteria.length === 0) {
       error.value = 'Keine Bewertungskriterien gefunden für Kategorie ' + props.studentCategory
       return
     }
 
-    // Mappe die Daten auf das erwartete Format
-    allCriteria.value = data.map(item => ({
-      id: item.evaluation_criteria_id, // Wichtig: Die ID des Kriteriums
-      name: item.criteria_name,
-      description: item.criteria_description,
-      short_code: item.short_code,
-      category_name: item.category_name, // Name der Kategorie
-      // Hier könntest du weitere Felder hinzufügen, falls aus v_evaluation_matrix vorhanden (z.B. min_rating, max_rating)
-    }));
+    // Extrahiere alle IDs für weitere Abfragen
+    const criteriaIds = categoryCriteria.map(cc => cc.evaluation_criteria_id)
+    const categoryIds = [...new Set(categoryCriteria.map(cc => cc.evaluation_category_id))]
 
-    console.log('✅ Loaded and processed criteria:', allCriteria.value.length)
-    console.log('📋 First few processed criteria:', allCriteria.value.slice(0, 3))
+    // Zweite Abfrage: Hole evaluation_criteria
+    const { data: criteria, error: cError } = await supabase
+      .from('evaluation_criteria')
+      .select('id, name, description, short_code, is_active')
+      .in('id', criteriaIds)
+      .eq('is_active', true)
+
+    if (cError) throw cError
+
+    // Dritte Abfrage: Hole evaluation_categories
+    const { data: categories, error: catError } = await supabase
+      .from('evaluation_categories')
+      .select('id, name, color, display_order, is_active')
+      .in('id', categoryIds)
+      .eq('is_active', true)
+
+    if (catError) throw catError
+
+    // Debug: Test der ersten Verknüpfung
+    const testCc = categoryCriteria[0]
+    const testCriterion = criteria?.find(c => c.id === testCc.evaluation_criteria_id)
+    const testCategory = categories?.find(cat => cat.id === testCc.evaluation_category_id)
+
+    // Kombiniere alle Daten
+    allCriteria.value = categoryCriteria.map(cc => {
+      const criterion = criteria?.find(c => c.id === cc.evaluation_criteria_id)
+      const category = categories?.find(cat => cat.id === cc.evaluation_category_id)
+      
+      return {
+        id: criterion?.id || '',
+        name: criterion?.name || '',
+        description: criterion?.description || '',
+        short_code: criterion?.short_code || '',
+        category_name: category?.name || '',
+        category_color: category?.color || '#gray',
+        category_order: category?.display_order || 0,
+        criteria_order: cc.display_order || 0,
+        is_required: cc.is_required || false,
+        min_rating: 1,
+        max_rating: 6
+      }
+    })
+    .filter(item => item.name) // Nur gültige Einträge
+    .sort((a, b) => {
+      // Sortiere nach Kategorie-Reihenfolge, dann nach Kriterien-Reihenfolge
+      if (a.category_order !== b.category_order) {
+        return a.category_order - b.category_order
+      }
+      return a.criteria_order - b.criteria_order
+    })
 
   } catch (err: any) {
-    console.error('❌ Error in loadAllCriteria:', err)
-    error.value = err.message
+    error.value = err.message || 'Fehler beim Laden der Bewertungskriterien'
   } finally {
     isLoading.value = false
   }
 }
-
 
 const selectCriteria = (criteria: any) => {
   // Add to beginning of array (newest first) only if not already selected
@@ -409,7 +426,14 @@ const getRatingText = (rating: number | null) => {
 }
 
 const loadExistingEvaluation = async () => {
-  if (!props.appointment?.id) return
+    console.log('🔍 DEBUG: loadExistingEvaluation called')
+  console.log('🔍 DEBUG: appointment id:', props.appointment?.id)
+
+  if (!props.appointment?.id) {
+    console.log('❌ No appointment ID')
+  return
+}
+      
   
   try {
     const { data, error: supabaseError } = await supabase
@@ -417,7 +441,11 @@ const loadExistingEvaluation = async () => {
       .select('evaluation_criteria_id, criteria_rating, criteria_note') // Nur die relevanten Spalten laden
       .eq('appointment_id', props.appointment.id)
       .not('evaluation_criteria_id', 'is', null) // Nur Kriterien-Bewertungen laden
-
+  
+      console.log('🔍 DEBUG: notes query result:', data)
+    console.log('🔍 DEBUG: notes query error:', supabaseError)
+    console.log('🔍 DEBUG: found notes count:', data?.length)
+    
     if (supabaseError) throw supabaseError
 
     // Lade existierende Kriterien-Bewertungen und ordne sie neu an (neueste zuerst)
@@ -427,8 +455,12 @@ const loadExistingEvaluation = async () => {
         selectedCriteriaOrder.value.unshift(note.evaluation_criteria_id) // Add to beginning
         criteriaRatings.value[note.evaluation_criteria_id] = note.criteria_rating || 0
         criteriaNotes.value[note.evaluation_criteria_id] = note.criteria_note || ''
+        console.log('🔍 DEBUG: loaded note for criteria:', note.evaluation_criteria_id, 'rating:', note.criteria_rating)
+
       }
     })
+    console.log('🔍 DEBUG: final selectedCriteriaOrder:', selectedCriteriaOrder.value)
+    console.log('🔍 DEBUG: final criteriaRatings:', criteriaRatings.value)
 
   } catch (err: any) {
     console.error('Error loading existing evaluation:', err)
@@ -486,6 +518,75 @@ const saveEvaluation = async () => {
   }
 }
 
+// KORRIGIERTE VERSION: Zwei separate Abfragen statt Subquery
+const loadStudentEvaluationHistory = async () => {
+  console.log('🔍 DEBUG: Loading student evaluation history')
+  console.log('🔍 DEBUG: student ID:', props.appointment?.user_id)
+  
+  if (!props.appointment?.user_id) {
+    console.log('❌ No student ID')
+    return
+  }
+  
+  try {
+    // Schritt 1: Hole alle appointment_ids für diesen Schüler
+    const { data: appointments, error: appointmentsError } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('user_id', props.appointment.user_id)
+
+    if (appointmentsError) throw appointmentsError
+    
+    const appointmentIds = appointments?.map(app => app.id) || []
+    console.log('🔍 DEBUG: found appointments for student:', appointmentIds.length)
+
+    if (appointmentIds.length === 0) return
+
+    // Schritt 2: Hole ALLE Bewertungen für diese Termine
+    const { data, error: supabaseError } = await supabase
+      .from('notes')
+      .select(`
+        evaluation_criteria_id,
+        criteria_rating,
+        criteria_note,
+        created_at,
+        appointment_id
+      `)
+      .in('appointment_id', appointmentIds)
+      .not('evaluation_criteria_id', 'is', null)
+      .order('created_at', { ascending: false }) // Neueste zuerst
+
+    console.log('🔍 DEBUG: student history query result:', data)
+    console.log('🔍 DEBUG: found historical notes:', data?.length)
+
+    if (supabaseError) throw supabaseError
+
+    // Gruppiere Bewertungen nach Kriterien (zeige die neueste pro Kriterium)
+    const latestByCriteria = new Map()
+    
+    data?.forEach(note => {
+      const criteriaId = note.evaluation_criteria_id
+      if (!latestByCriteria.has(criteriaId)) {
+        latestByCriteria.set(criteriaId, note)
+        console.log('🔍 DEBUG: latest for criteria', criteriaId, ':', note.criteria_rating)
+      }
+    })
+
+    // Setze die neuesten Bewertungen als "vorausgewählt"
+    selectedCriteriaOrder.value = []
+    latestByCriteria.forEach((note, criteriaId) => {
+      selectedCriteriaOrder.value.unshift(criteriaId)
+      criteriaRatings.value[criteriaId] = note.criteria_rating || 0
+      criteriaNotes.value[criteriaId] = note.criteria_note || ''
+    })
+
+    console.log('🔍 DEBUG: loaded historical criteria:', selectedCriteriaOrder.value.length)
+
+  } catch (err: any) {
+    console.error('❌ Error loading student history:', err)
+  }
+}
+
 // Click outside or escape key to close dropdown
 const handleClickOutside = (event: Event) => {
   const dropdown = document.querySelector('.criteria-dropdown')
@@ -516,9 +617,6 @@ watch(showDropdown, (isOpen) => {
 
 // Watchers
 watch(() => props.isOpen, (isOpen) => {
-  console.log('🔥 EvaluationModal - isOpen changed:', isOpen)
-  console.log('🔥 Student category:', props.studentCategory)
-  console.log('🔥 Appointment:', props.appointment)
   
   if (isOpen) {
     console.log('🔄 EvaluationModal - loading data...')
@@ -526,6 +624,7 @@ watch(() => props.isOpen, (isOpen) => {
     nextTick(() => {
       loadAllCriteria()
       loadExistingEvaluation()
+      loadStudentEvaluationHistory()
     })
   } else {
     console.log('🔥 EvaluationModal - resetting form...')
