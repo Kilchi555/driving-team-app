@@ -288,17 +288,17 @@
   </div>
 </div>
 
-       <div v-if="activeTab === 'lessons'">
-  <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
+       <div v-if="activeTab === 'lessons'" class="h-full overflow-y-auto">
+  <div v-if="isLoadingLessons" class="flex items-center justify-center p-2">
     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-    <span class="ml-2 text-gray-600">Lektionen werden geladen...</span>
+    <span class=" text-gray-600">Lektionen werden geladen...</span>
   </div>
 
   <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
     {{ lessonsError }}
   </div>
 
-  <div v-else-if="lessons.length === 0" class="text-center py-8">
+  <div v-else-if="lessons.length === 0" class="text-center">
     <div class="text-4xl mb-2">📚</div>
     <h4 class="font-semibold text-gray-900 mb-2">Noch keine Lektionen</h4>
     <p class="text-gray-600 mb-4">Dieser Schüler hat noch keine Fahrlektionen absolviert.</p>
@@ -310,25 +310,25 @@
     </button>
   </div>
 
-  <div v-else class="space-y-4">
-    <div class="text-sm text-gray-600 mb-4">{{ lessons.length }} Lektionen</div>
-
-    <div class="space-y-3">
+  <div v-else class="flex-1 overflow-y-auto p-2">
+    <div class="space-y-2">
       <div
         v-for="lesson in lessons"
         :key="lesson.id"
-        class="bg-white border rounded-lg p-4 hover:shadow-md transition-all"
+        class="bg-white border rounded-lg p-2 hover:shadow-md transition-all"
       >
+       
         <div class="flex items-center justify-between">
           <div class="flex-1">
-            <h4 class="font-semibold text-gray-900">
-              {{ formatDateTime(lesson.start_time) }}
+            <h4 class=" text-gray-900">
+              {{ getWeekday(lesson.start_time) }}  |  {{ formatDateTime(lesson.start_time) }}
               <span v-if="lesson.duration_minutes" class="ml-2">
-                |  {{ lesson.duration_minutes }}min
-              </span></h4>
-              <p class=" text-gray-600">
+              |   {{ lesson.duration_minutes }}min
+              </span>
+            </h4>
+            <p class="text-gray-600 text-xs">
               📍 {{ lesson.location_name || 'Treffpunkt nicht definiert' }}
-              </p>
+            </p>
           </div>
         </div>
       </div>
@@ -336,8 +336,8 @@
   </div>
 </div>
 
-        <div v-if="activeTab === 'progress'" class="space-y-4">
-          <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
+        <div v-if="activeTab === 'progress'" class="h-full overflow-y-auto p-2">
+          <div v-if="isLoadingLessons" class="flex items-center justify-center">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
             <span class="ml-2 text-gray-600">Lade Fortschrittsdaten...</span>
           </div>
@@ -354,19 +354,15 @@
 
           <div v-else-if="progressData.length === 0" class="text-center py-8">
             <div class="text-3xl mb-2">📊</div>
-            <h4 class="font-semibold text-gray-900 mb-2">Keine Kriterien-Bewertungen verfügbar</h4>
+            <h4 class="font-semibold text-gray-900 mb-2">Keine Bewertungen verfügbar</h4>
             <p class="text-gray-600 text-sm">
               {{ lessons.length }} Lektionen gefunden, aber noch keine Kriterien bewertet.
             </p>
           </div>
 
           <div v-else class="space-y-2">
-            <div class="flex items-center justify-between mb-4">
-              <h4 class="font-semibold text-gray-900">Lernfortschritt</h4>
-            </div>
-
             <div class="space-y-1">
-              <!-- KORRIGIERT: Iteriere über Gruppen und dann über Evaluationen -->
+              <!-- Iteriere über Gruppen und dann über Evaluationen -->
               <div
                 v-for="group in progressData"
                 :key="group.appointment_id"
@@ -401,7 +397,6 @@
                           :class="evaluation.textColorClass"
                         >
                           {{ evaluation.criteriaName }}
-                          <span v-if="evaluation.shortCode" class="text-gray-500 ml-1">({{ evaluation.shortCode }})</span>
                         </div>
                         <div
                           v-if="evaluation.note"
@@ -651,6 +646,13 @@ const createAppointment = (student: any) => {
 
 const evaluateLesson = (lesson: any) => {
   emit('evaluate-lesson', lesson)
+}
+
+// Kurze Wochentage
+const getWeekday = (dateString: string): string => {
+  const date = new Date(dateString)
+  const weekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+  return weekdays[date.getDay()]
 }
 
 // ===== MAIN LOAD LESSONS FUNCTION =====

@@ -17,16 +17,40 @@
         </div>
       </div>
 
+      <!-- Sortierungs-Regler -->
+      <div v-if="selectedCriteriaOrder.length > 1" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+        <div class="flex items-center space-x-3">
+          <span class="text-gray-500 text-xs font-semibold">Sortierung:</span>
+          <button
+            @click="sortByNewest = true"
+            :class="[
+              'px-3 py-1 text-xs rounded-md transition-colors',
+              sortByNewest ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
+            ]"
+          >
+          Nach Datum    </button>
+          <button
+            @click="sortByNewest = false"
+            :class="[
+              'px-3 py-1 text-xs rounded-md transition-colors',
+              !sortByNewest ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
+            ]"
+          >
+          Nach Bewertung    
+      </button>
+        </div>
+      </div>
+
       <div class="flex-1 overflow-y-auto p-4">
-        <div v-if="isLoading" class="flex items-center justify-center py-8">
+        <div v-if="isLoading" class="flex items-center justify-center py-4">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
 
-        <div v-else-if="error" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+        <div v-else-if="error" class="bg-red-50 border border-red-200 rounded p-2 text-red-700">
           {{ error }}
         </div>
 
-        <div v-else class="space-y-4">
+        <div v-else class="space-y-2">
           <div class="relative">
             <div class="relative">
               <input
@@ -35,7 +59,7 @@
                 @input="showDropdown = true"
                 type="text"
                 placeholder="Bewertungspunkt suchen und hinzufügen..."
-                class="search-input w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                class="search-input w-full pl-10 pr-2 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               >
               <div class="absolute left-3 top-3.5 text-gray-400">
                 🔍
@@ -67,7 +91,7 @@
 
           <div class="space-y-3">
             <div
-              v-for="(criteriaId, index) in selectedCriteriaOrder"
+              v-for="(criteriaId, index) in sortedCriteriaOrder"
               :key="criteriaId"
               class="bg-gray-50 rounded-lg p-4 border border-gray-200"
             >
@@ -76,8 +100,9 @@
                   <h4 class="font-medium text-gray-900">
                     {{ getCriteriaById(criteriaId)?.name }}
                   </h4>
-                  <p class="text-sm text-gray-600">
-                    {{ getCriteriaById(criteriaId)?.category_name }}
+                      <!-- NEU: Lektionsdatum hinzufügen -->
+                  <p v-if="criteriaAppointments[criteriaId]?.start_time" class="text-xs text-gray-500 mt-1">
+                    📅 Bewertung vom {{ formatLessonDate(criteriaId) }}
                   </p>
                 </div>
                 
@@ -92,9 +117,6 @@
               </div>
 
               <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Bewertung (1-6)
-                </label>
                 <div class="flex gap-2">
                   <button
                     v-for="rating in [1, 2, 3, 4, 5, 6]"
@@ -122,7 +144,7 @@
                 <textarea
                   v-model="criteriaNotes[criteriaId]"
                   :placeholder="`Notiz zu ${getCriteriaById(criteriaId)?.name}...`"
-                  class="w-full h-20 p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  class="w-full h-10 p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
                 ></textarea>
               </div>
             </div>
@@ -137,6 +159,8 @@
           </div>
         </div>
       </div>
+
+      
 
       <div class="bg-gray-50 px-4 py-3 border-t">
         <div class="flex gap-3">
@@ -156,7 +180,7 @@
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             ]"
           >
-            {{ isSaving ? 'Speichern...' : 'Bewertung speichern' }}
+            {{ isSaving ? 'Speichern...' : 'Speichern' }}
           </button>
         </div>
         
@@ -203,6 +227,7 @@ const isLoading = ref(false)
 const isSaving = ref(false)
 const error = ref<string | null>(null)
 
+
 // Search & Dropdown
 const searchQuery = ref('')
 const showDropdown = ref(false)
@@ -212,9 +237,12 @@ const allCriteria = ref<any[]>([]) // Wird von v_evaluation_matrix geladen
 const selectedCriteriaOrder = ref<string[]>([])
 const criteriaRatings = ref<Record<string, number>>({})
 const criteriaNotes = ref<Record<string, string>>({})
+const sortByNewest = ref(true) // true = neueste zuerst, false = schlechteste zuerst
+const criteriaTimestamps = ref<Record<string, string>>({}) // Neue ref für Timestamps
+const criteriaAppointments = ref<Record<string, { appointment_id: string, start_time: string }>>({})
+
 
 // Computed
-// ERSETZEN Sie Ihren bestehenden filteredCriteria computed mit diesem:
 
 const filteredCriteria = computed(() => {
   // Zeige nur Kriterien, die NICHT bereits ausgewählt/bewertet sind
@@ -265,6 +293,38 @@ const missingRequiredRatings = computed(() => {
   return missing
 })
 
+// Verbesserte sortedCriteriaOrder mit Lektionsdatum
+const sortedCriteriaOrder = computed(() => {
+  console.log('🔍 SORT DEBUG - sortByNewest:', sortByNewest.value)
+  console.log('🔍 SORT DEBUG - criteriaAppointments:', criteriaAppointments.value)
+  
+  if (!sortByNewest.value) {
+    // Sortiere nach Bewertung (schlechteste zuerst)
+    return [...selectedCriteriaOrder.value].sort((a, b) => {
+      const ratingA = criteriaRatings.value[a] || 7
+      const ratingB = criteriaRatings.value[b] || 7
+      console.log('🔍 RATING SORT:', a, ratingA, 'vs', b, ratingB)
+      return ratingA - ratingB
+    })
+  } else {
+    // Sortiere nach Lektionsdatum (neueste Lektionen zuerst)
+    return [...selectedCriteriaOrder.value].sort((a, b) => {
+      const appointmentA = criteriaAppointments.value[a]
+      const appointmentB = criteriaAppointments.value[b]
+      
+      if (appointmentA?.start_time && appointmentB?.start_time) {
+        console.log('🔍 DATE SORT:', appointmentA.start_time, 'vs', appointmentB.start_time)
+        return new Date(appointmentB.start_time).getTime() - new Date(appointmentA.start_time).getTime()
+      }
+      
+      console.log('🔍 FALLBACK SORT for:', a, b)
+      const indexA = selectedCriteriaOrder.value.indexOf(a)
+      const indexB = selectedCriteriaOrder.value.indexOf(b)
+      return indexA - indexB
+    })
+  }
+})
+
 // Methods
 const closeModal = () => {
   console.log('🔥 EvaluationModal - closing modal')
@@ -272,8 +332,6 @@ const closeModal = () => {
 }
 
 // KOMPLETT SAUBERE VERSION - Ersetzen Sie Ihre gesamte loadAllCriteria Funktion mit dieser:
-
-// TEMPORÄRER DEBUG TEST - Fügen Sie das am Anfang Ihrer loadAllCriteria Funktion hinzu:
 
 const loadAllCriteria = async () => {
   if (!props.studentCategory) {
@@ -359,21 +417,28 @@ const loadAllCriteria = async () => {
   }
 }
 
+// Beim Hinzufügen neuer Kriterien das aktuelle Appointment setzen
 const selectCriteria = (criteria: any) => {
-  // Add to beginning of array (newest first) only if not already selected
   if (!selectedCriteriaOrder.value.includes(criteria.id)) {
     selectedCriteriaOrder.value.unshift(criteria.id)
     
-    // Initialize rating and note if not exists
+    // Setze aktuelles Appointment für neue Kriterien
+    if (props.appointment) {
+      criteriaAppointments.value[criteria.id] = {
+        appointment_id: props.appointment.id,
+        start_time: props.appointment.start_time
+      }
+    }
+    
+    // Initialize rating and note
     if (!criteriaRatings.value[criteria.id]) {
-      criteriaRatings.value[criteria.id] = 0 // Standardwert 0 oder null
+      criteriaRatings.value[criteria.id] = 0
     }
     if (!criteriaNotes.value[criteria.id]) {
       criteriaNotes.value[criteria.id] = ''
     }
   }
   
-  // Clear search and hide dropdown
   searchQuery.value = ''
   showDropdown.value = false
 }
@@ -423,48 +488,6 @@ const getRatingText = (rating: number | null) => {
     6: 'Prüfungsreif'
   }
   return rating ? texts[rating as keyof typeof texts] || '' : ''
-}
-
-const loadExistingEvaluation = async () => {
-    console.log('🔍 DEBUG: loadExistingEvaluation called')
-  console.log('🔍 DEBUG: appointment id:', props.appointment?.id)
-
-  if (!props.appointment?.id) {
-    console.log('❌ No appointment ID')
-  return
-}
-      
-  
-  try {
-    const { data, error: supabaseError } = await supabase
-      .from('notes')
-      .select('evaluation_criteria_id, criteria_rating, criteria_note') // Nur die relevanten Spalten laden
-      .eq('appointment_id', props.appointment.id)
-      .not('evaluation_criteria_id', 'is', null) // Nur Kriterien-Bewertungen laden
-  
-      console.log('🔍 DEBUG: notes query result:', data)
-    console.log('🔍 DEBUG: notes query error:', supabaseError)
-    console.log('🔍 DEBUG: found notes count:', data?.length)
-    
-    if (supabaseError) throw supabaseError
-
-    // Lade existierende Kriterien-Bewertungen und ordne sie neu an (neueste zuerst)
-    selectedCriteriaOrder.value = [] // Zuerst leeren
-    data?.forEach(note => {
-      if (note.evaluation_criteria_id) {
-        selectedCriteriaOrder.value.unshift(note.evaluation_criteria_id) // Add to beginning
-        criteriaRatings.value[note.evaluation_criteria_id] = note.criteria_rating || 0
-        criteriaNotes.value[note.evaluation_criteria_id] = note.criteria_note || ''
-        console.log('🔍 DEBUG: loaded note for criteria:', note.evaluation_criteria_id, 'rating:', note.criteria_rating)
-
-      }
-    })
-    console.log('🔍 DEBUG: final selectedCriteriaOrder:', selectedCriteriaOrder.value)
-    console.log('🔍 DEBUG: final criteriaRatings:', criteriaRatings.value)
-
-  } catch (err: any) {
-    console.error('Error loading existing evaluation:', err)
-  }
 }
 
 const saveEvaluation = async () => {
@@ -517,30 +540,33 @@ const saveEvaluation = async () => {
     isSaving.value = false
   }
 }
-
-// KORRIGIERTE VERSION: Zwei separate Abfragen statt Subquery
 const loadStudentEvaluationHistory = async () => {
   console.log('🔍 DEBUG: Loading student evaluation history')
   console.log('🔍 DEBUG: student ID:', props.appointment?.user_id)
-  
   if (!props.appointment?.user_id) {
     console.log('❌ No student ID')
     return
   }
-  
+
   try {
-    // Schritt 1: Hole alle appointment_ids für diesen Schüler
+    // Schritt 1: Hole alle Termine für diesen Schüler MIT start_time
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
-      .select('id')
+      .select('id, start_time')
       .eq('user_id', props.appointment.user_id)
+      .order('start_time', { ascending: false }) // Neueste Termine zuerst
 
     if (appointmentsError) throw appointmentsError
-    
+
     const appointmentIds = appointments?.map(app => app.id) || []
     console.log('🔍 DEBUG: found appointments for student:', appointmentIds.length)
-
     if (appointmentIds.length === 0) return
+
+    // Erstelle ein Mapping von appointment_id zu start_time
+    const appointmentDateMap = new Map()
+    appointments?.forEach(apt => {
+      appointmentDateMap.set(apt.id, apt.start_time)
+    })
 
     // Schritt 2: Hole ALLE Bewertungen für diese Termine
     const { data, error: supabaseError } = await supabase
@@ -549,43 +575,76 @@ const loadStudentEvaluationHistory = async () => {
         evaluation_criteria_id,
         criteria_rating,
         criteria_note,
-        created_at,
         appointment_id
       `)
       .in('appointment_id', appointmentIds)
       .not('evaluation_criteria_id', 'is', null)
-      .order('created_at', { ascending: false }) // Neueste zuerst
 
-    console.log('🔍 DEBUG: student history query result:', data)
     console.log('🔍 DEBUG: found historical notes:', data?.length)
-
     if (supabaseError) throw supabaseError
 
     // Gruppiere Bewertungen nach Kriterien (zeige die neueste pro Kriterium)
     const latestByCriteria = new Map()
-    
     data?.forEach(note => {
       const criteriaId = note.evaluation_criteria_id
+      const appointmentDate = appointmentDateMap.get(note.appointment_id)
+      
       if (!latestByCriteria.has(criteriaId)) {
-        latestByCriteria.set(criteriaId, note)
-        console.log('🔍 DEBUG: latest for criteria', criteriaId, ':', note.criteria_rating)
+        latestByCriteria.set(criteriaId, { ...note, lesson_date: appointmentDate })
+      } else {
+        // Vergleiche Lektionsdaten - neuere Lektion überschreibt ältere
+        const existing = latestByCriteria.get(criteriaId)
+        const existingDate = existing.lesson_date
+        if (appointmentDate && existingDate && new Date(appointmentDate) > new Date(existingDate)) {
+          latestByCriteria.set(criteriaId, { ...note, lesson_date: appointmentDate })
+        }
       }
     })
 
-    // Setze die neuesten Bewertungen als "vorausgewählt"
-    selectedCriteriaOrder.value = []
+    // Sortiere nach Lektionsdatum (neueste Lektionen zuerst)
+    const sortedByLessonDate = Array.from(latestByCriteria.entries())
+      .sort(([, noteA], [, noteB]) => {
+        const dateA = noteA.lesson_date
+        const dateB = noteB.lesson_date
+        if (!dateA || !dateB) return 0
+        return new Date(dateB).getTime() - new Date(dateA).getTime()
+      })
+      .map(([criteriaId]) => criteriaId)
+
+    selectedCriteriaOrder.value = sortedByLessonDate
+
+    // Speichere Appointment-Daten für Sortierung
+    criteriaAppointments.value = {}
     latestByCriteria.forEach((note, criteriaId) => {
-      selectedCriteriaOrder.value.unshift(criteriaId)
       criteriaRatings.value[criteriaId] = note.criteria_rating || 0
       criteriaNotes.value[criteriaId] = note.criteria_note || ''
+      // Speichere Lektionsdatum für Sortierung
+      criteriaAppointments.value[criteriaId] = {
+        appointment_id: note.appointment_id,
+        start_time: note.lesson_date
+      }
     })
 
     console.log('🔍 DEBUG: loaded historical criteria:', selectedCriteriaOrder.value.length)
+    console.log('🔍 DEBUG: lesson dates saved:', criteriaAppointments.value)
 
   } catch (err: any) {
     console.error('❌ Error loading student history:', err)
   }
 }
+
+const formatLessonDate = (criteriaId: string) => {
+  const appointment = criteriaAppointments.value[criteriaId]
+  if (!appointment?.start_time) return ''
+  
+  const date = new Date(appointment.start_time)
+  return date.toLocaleDateString('de-CH', { 
+    day: '2-digit', 
+    month: '2-digit',
+    year: '2-digit'
+  })
+}
+
 
 // Click outside or escape key to close dropdown
 const handleClickOutside = (event: Event) => {
@@ -623,7 +682,6 @@ watch(() => props.isOpen, (isOpen) => {
     // Kleine Verzögerung um sicherzustellen dass alle Props gesetzt sind
     nextTick(() => {
       loadAllCriteria()
-      loadExistingEvaluation()
       loadStudentEvaluationHistory()
     })
   } else {
@@ -635,6 +693,7 @@ watch(() => props.isOpen, (isOpen) => {
     criteriaRatings.value = {}
     criteriaNotes.value = {}
     error.value = null
+    criteriaTimestamps.value = {}
     
     // Clean up event listeners
     document.removeEventListener('click', handleClickOutside)
