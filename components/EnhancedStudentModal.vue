@@ -675,7 +675,8 @@ const loadLessons = async () => {
         end_time,
         duration_minutes,
         status,
-        location_id
+        location_id,
+        type 
       `)
       .eq('user_id', props.selectedStudent.id)
       .in('status', ['completed', 'cancelled'])
@@ -683,6 +684,7 @@ const loadLessons = async () => {
 
     if (appointmentsError) throw appointmentsError
     console.log('✅ Appointments loaded:', appointments?.length || 0)
+    console.log('🔍 Sample appointment with type:', appointments?.[0])  // <- Diese Zeile hinzufügen
 
     if (!appointments || appointments.length === 0) {
       lessons.value = []

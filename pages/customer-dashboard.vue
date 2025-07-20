@@ -4,6 +4,8 @@
 </template>
 
 <script setup>
+import CustomerDashboard from '~/components/customer/CustomerDashboard.vue'
+
 // Meta
 definePageMeta({
   middleware: 'auth',
