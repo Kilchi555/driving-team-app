@@ -226,18 +226,16 @@ const loadAppointments = async () => {
     console.log('🔄 Loading all calendar events...')
     
     // Parallel laden
-    const [appointments, staffMeetings] = await Promise.all([
-      loadRegularAppointments(), // Deine bestehende Logik umbenennen
-      loadStaffMeetings()
+    const [appointments] = await Promise.all([
+      loadRegularAppointments(), 
     ])
 
     // Kombinieren
-    const allEvents = [...appointments, ...staffMeetings]
+    const allEvents = [...appointments]  
     calendarEvents.value = allEvents
 
     console.log('✅ Final calendar summary:', {
       appointments: appointments.length,
-      staffMeetings: staffMeetings.length,
       total: allEvents.length
     })
 
@@ -389,7 +387,6 @@ const handleSaveEvent = async (eventData: CalendarEvent) => {
   
   // Daten neu laden
   await loadAppointments()
-  await loadStaffMeetings()
   
   // View-Position wiederherstellen falls nötig
   if (currentDate && calendar.value?.getApi) {
@@ -486,7 +483,6 @@ const handleEventDrop = async (dropInfo: any) => {
       console.log('🔄 Reloading calendar events...')
         isUpdating.value = true
         await loadAppointments()
-        await loadStaffMeetings()
         isUpdating.value = false
 
       
@@ -573,7 +569,6 @@ const handleEventResize = async (resizeInfo: any) => {
       }
       
       await loadAppointments()
-      await loadStaffMeetings()
       
     } catch (err: any) {
       console.error('❌ Error resizing appointment:', err)
@@ -756,7 +751,6 @@ const refreshCalendar = async () => {
     // 2. Daten neu laden
     await Promise.all([
       loadAppointments(),
-      loadStaffMeetings()
     ])
     
     // 3. Warte einen Moment für State-Updates
@@ -787,7 +781,6 @@ const isCalendarReady = ref(false)
 const handleDeleteEvent = async (eventData: CalendarEvent) => {
   console.log('🗑 Event deleted, refreshing calendar...')
   await loadAppointments()
-  await loadStaffMeetings()
 
   refreshCalendar()
 
@@ -811,13 +804,11 @@ onMounted(async () => {
   
   console.log('🔄 Initial appointment loading...')
   await loadAppointments()
-  await loadStaffMeetings()
 })
 
 watch(() => props.currentUser, async (newUser) => {
   if (newUser) {
     await loadAppointments()
-    await loadStaffMeetings()
   }
 }, { deep: true })
 

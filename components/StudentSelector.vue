@@ -100,7 +100,7 @@
           <div 
             v-for="student in studentList" 
             :key="student.id"
-            @click="selectStudent(student)"
+            @click="selectStudent(student, true)"
             :class="[
               'p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors',
               'hover:bg-blue-50'
@@ -160,6 +160,7 @@ interface Props {
   placeholder?: string
   autoLoad?: boolean
   showAllStudents?: boolean
+  isFreeslotMode?: boolean  // ✅ NEU: Freeslot-Mode erkennung
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -167,7 +168,8 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   placeholder: 'Schüler suchen (Name, E-Mail oder Telefon)...',
   autoLoad: true,
-  showAllStudents: false
+  showAllStudents: false,
+  isFreeslotMode: false
 })
 
 // Emits
@@ -184,6 +186,7 @@ const availableStudents = ref<Student[]>([])
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 const showAllStudentsLocal = ref(props.showAllStudents)
+const loadTime = ref(0)
 
 // Computed
 const selectedStudent = computed({
@@ -205,7 +208,6 @@ const studentList = computed(() => {
   )
 })
 
-// 🔥 FIX: Better auto-load logic
 const shouldAutoLoadComputed = computed(() => {
   return props.autoLoad
 })
@@ -237,12 +239,14 @@ const loadStudents = async (editStudentId?: string | null) => {
     editStudentId: editStudentId,
     currentUserId: props.currentUser?.id,
     currentUserRole: props.currentUser?.role,
-    autoLoad: props.autoLoad
+    autoLoad: props.autoLoad,
+    isFreeslotMode: props.isFreeslotMode
   })
   
   if (isLoading.value) return
   isLoading.value = true
   error.value = null
+  loadTime.value = Date.now()
   
   try {
     console.log('📚 StudentSelector: Loading students...')
@@ -294,84 +298,45 @@ const loadStudents = async (editStudentId?: string | null) => {
         historyStudents: historyStudents.length
       })
 
-      // 3. Kombinieren und Duplikate entfernen
-      const allStudentIds = new Set<string>()
-      const combinedStudents: Student[] = []
+      // 3. Kombinieren und deduplizieren
+      const allStudents = [...(assignedStudents || []), ...historyStudents]
+      const uniqueStudents = allStudents.filter((student, index, self) => 
+        index === self.findIndex(s => s.id === student.id)
+      )
 
-      if (assignedStudents) {
-        assignedStudents.forEach((student: UserFromDB) => {
-          if (!allStudentIds.has(student.id)) {
-            allStudentIds.add(student.id)
-            combinedStudents.push({
-              id: student.id,
-              first_name: student.first_name || '',
-              last_name: student.last_name || '',
-              email: student.email || '',
-              phone: student.phone || '',
-              category: student.category || '',
-              assigned_staff_id: student.assigned_staff_id || '',
-              preferred_location_id: student.preferred_location_id || undefined
-            })
-          }
-        })
-      }
-
-      historyStudents.forEach(student => {
-        if (student && !allStudentIds.has(student.id)) {
-          allStudentIds.add(student.id)
-          combinedStudents.push({
-            id: student.id,
-            first_name: student.first_name || '',
-            last_name: student.last_name || '',
-            email: student.email || '',
-            phone: student.phone || '',
-            category: student.category || '',
-            assigned_staff_id: student.assigned_staff_id || '',
-            preferred_location_id: student.preferred_location_id || undefined
-          })
-        }
-      })
-
-      // 4. Edit-Mode: Spezifischen Student hinzufügen
-      if (editStudentId && !allStudentIds.has(editStudentId)) {
-        console.log('✏️ Loading specific student for edit mode:', editStudentId)
-        const { data: specificStudent, error: specificError } = await supabase
+      // 4. Falls ein editStudentId angegeben ist, diesen auch laden falls nicht enthalten
+      if (editStudentId && !uniqueStudents.find(s => s.id === editStudentId)) {
+        console.log('🔍 Loading specific student for edit mode:', editStudentId)
+        const { data: editStudent } = await supabase
           .from('users')
           .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
           .eq('id', editStudentId)
           .eq('role', 'client')
           .single()
 
-        if (!specificError && specificStudent) {
-          const typedSpecificStudent = specificStudent as UserFromDB
-          combinedStudents.push({
-            id: typedSpecificStudent.id,
-            first_name: typedSpecificStudent.first_name || '',
-            last_name: typedSpecificStudent.last_name || '',
-            email: typedSpecificStudent.email || '',
-            phone: typedSpecificStudent.phone || '',
-            category: typedSpecificStudent.category || '',
-            assigned_staff_id: typedSpecificStudent.assigned_staff_id || '',
-            preferred_location_id: typedSpecificStudent.preferred_location_id || undefined
-          })
+        if (editStudent) {
+          uniqueStudents.unshift(editStudent)
         }
       }
 
-      // Sortieren nach Vorname
-      combinedStudents.sort((a, b) => 
-        (a.first_name || '').localeCompare(b.first_name || '')
-      )
-
-      availableStudents.value = combinedStudents
-
-      console.log('✅ Staff students loaded:', {
-        total: combinedStudents.length,
-        assigned: combinedStudents.filter(s => s.assigned_staff_id === props.currentUser.id).length,
-        fromHistory: combinedStudents.filter(s => s.assigned_staff_id !== props.currentUser.id).length
-      })
+      const typedStudents: Student[] = uniqueStudents.map((user: UserFromDB) => ({
+        id: user.id,
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        category: user.category || '',
+        assigned_staff_id: user.assigned_staff_id || '',
+        preferred_location_id: user.preferred_location_id || undefined
+      }))
+      
+      availableStudents.value = typedStudents
+      console.log('✅ Staff students loaded:', availableStudents.value.length)
 
     } else {
-      // Standard-Logik für alle Schüler oder andere Rollen
+      // Admin oder "Alle anzeigen" Modus
+      console.log('👑 Loading all active students (Admin mode or show all)')
+      
       let query = supabase
         .from('users')
         .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
@@ -379,8 +344,9 @@ const loadStudents = async (editStudentId?: string | null) => {
         .eq('is_active', true)
         .order('first_name')
 
-      if (editStudentId && props.currentUser?.role === 'staff') {
-        query = query.or(`assigned_staff_id.eq.${props.currentUser.id},id.eq.${editStudentId}`)
+      if (props.currentUser?.role === 'staff') {
+        // Wenn Staff-Member "Alle anzeigen" aktiviert hat, begrenzen wir trotzdem auf sinnvolle Anzahl
+        query = query.limit(100)
       }
 
       const { data, error: fetchError } = await query
@@ -413,13 +379,18 @@ const loadStudents = async (editStudentId?: string | null) => {
 const handleSwitchToOther = () => {
   console.log('🔄 User manually clicked "Andere Terminart" button')
   
+  // ✅ FIX: Bei Freeslot-Mode nicht automatisch switchen
+  if (props.isFreeslotMode) {
+    console.log('🚫 Auto-switch blocked - freeslot mode active')
+    return
+  }
+  
   // Nur wenn Studenten geladen sind und kein Student ausgewählt ist
   if (!isLoading.value && availableStudents.value.length > 0 && !selectedStudent.value) {
     emit('switch-to-other')
   }
 }
 
-// 🔥 FIX: Enhanced Search Focus Handler
 const handleSearchFocus = () => {
   console.log('🔍 Search field focused, autoLoad:', shouldAutoLoadComputed.value)
   
@@ -436,11 +407,21 @@ const filterStudents = () => {
   // Wird aber für Kompatibilität beibehalten
 }
 
-const selectStudent = (student: Student) => {
+const selectStudent = (student: Student, isUserClick = false) => {
+  console.log('✅ StudentSelector: Student selected:', student.first_name, student.last_name)
+  console.log('🔍 DEBUG VALUES:', {
+    isUserClick: isUserClick,
+    isFreeslotMode: props.isFreeslotMode
+  })
+  
+  // ✅ FIX: Automatische Auswahl bei freien Zeitslots blockieren
+  if (props.isFreeslotMode && !isUserClick) {
+    console.log('🚫 Auto-selection blocked - freeslot mode detected')
+    return
+  }
+  
   selectedStudent.value = student
   searchQuery.value = ''
-  
-  console.log('✅ StudentSelector: Student selected:', student.first_name, student.last_name)
   emit('student-selected', student)
 }
 
@@ -474,7 +455,7 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
   const student = availableStudents.value.find(s => s.id === userId)
   
   if (student) {
-    selectStudent(student)
+    selectStudent(student, false)
     console.log('✅ StudentSelector: Student selected by ID:', student.first_name, student.last_name)
     return student
   } else {
@@ -494,7 +475,6 @@ watch(showAllStudentsLocal, async () => {
   await loadStudents()
 })
 
-// 🔥 FIX: Enhanced onMounted with better auto-load logic
 onMounted(() => {
   console.log('📚 StudentSelector mounted, autoLoad:', shouldAutoLoadComputed.value)
   
@@ -506,7 +486,6 @@ onMounted(() => {
   }
 })
 
-// 🔥 NEW: Watch for autoLoad prop changes
 watch(() => props.autoLoad, (newAutoLoad) => {
   console.log('🔄 autoLoad prop changed to:', newAutoLoad)
   

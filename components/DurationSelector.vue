@@ -102,55 +102,16 @@ const selectDuration = (duration: number) => {
 }
 
 // Watchers
-watch(() => props.selectedCategory, async (newCategory, oldCategory) => {
-  console.log('🔄 DurationSelector - Category watcher triggered:', {
-    old: oldCategory?.code,
-    new: newCategory?.code,
-    userId: props.currentUser?.id
-  })
-
-  // ✅ ADD: Debug selected category structure
-  if (newCategory) {
-    console.log('📊 Selected category full object:', newCategory)
-    console.log('📊 Available durations in category:', newCategory.availableDurations)
-  }
+watch(() => props.availableDurations, (newDurations) => {
+  console.log('🔄 DurationSelector - Available durations changed:', newDurations)
   
-  if (newCategory && props.currentUser?.id) {
-    console.log('🚗 Loading durations for staff:', {
-      staffId: props.currentUser.id,
-      categoryCode: newCategory.code
-    })
-    
-    try {
-      // ✅ KORRIGIERT - loadStaffDurations(staffId)
-      await loadStaffDurations(props.currentUser.id)
-      
-      const defaultDuration = getDefaultDuration()
-      console.log('🎯 Setting default duration:', defaultDuration)
-      
-      if (defaultDuration && defaultDuration !== props.modelValue) {
-        emit('update:modelValue', defaultDuration)
-        emit('duration-changed', defaultDuration)
-      }
-    } catch (error) {
-      console.error('❌ Error loading durations:', error)
-    }
+  // Nur prüfen ob aktuelle Auswahl noch gültig ist
+  if (newDurations.length > 0 && !newDurations.includes(props.modelValue)) {
+    console.log('⏱️ Auto-setting duration to first available:', newDurations[0])
+    emit('update:modelValue', newDurations[0])
+    emit('duration-changed', newDurations[0])
   }
 }, { immediate: true })
-
-// User change watcher
-watch(() => props.currentUser?.id, async (newUserId, oldUserId) => {
-  console.log('🔄 DurationSelector - User watcher triggered:', {
-    old: oldUserId,
-    new: newUserId,
-    categoryCode: props.selectedCategory?.code
-  })
-  
-  if (newUserId) {
-    // ✅ KORRIGIERT - loadStaffDurations(staffId)
-    await loadStaffDurations(newUserId)
-  }
-})
 </script>
 
 <style scoped>

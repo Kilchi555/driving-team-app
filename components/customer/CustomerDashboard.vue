@@ -227,15 +227,7 @@ const getUserDisplayName = () => {
 }
 
 // Methods
-// Ersetze die loadAppointments Funktion im CustomerDashboard:
 
-// Korrigierte loadAppointments Funktion:
-
-// Korrigierte loadAppointments Funktion:
-
-// Korrigierte loadAppointments Funktion:
-
-// Korrigierte loadAppointments Funktion:
 
 const loadAppointments = async () => {
   if (!currentUser.value?.id) return

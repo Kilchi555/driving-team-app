@@ -1,6 +1,8 @@
 import { ref, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { usePaymentMethods } from '~/composables/usePaymentMethods'
+import { useTimeCalculations } from '~/composables/useTimeCalculations'
+
 
 // Define constants for better readability and maintainability
 const DEFAULT_DURATION_MINUTES = 45
@@ -19,34 +21,43 @@ export const useEventModalHandlers = (
   const paymentMethods = usePaymentMethods()
 
   // ============ UTILITY FUNCTIONS (Defined first for better accessibility) ============
+const { calculateEndTime } = useTimeCalculations(formData)
 
-  /**
-   * Calculates the end time of the appointment based on start time and duration.
-   */
-  const calculateEndTime = () => {
-    if (formData.value.startTime && formData.value.duration_minutes) {
-      const [hours, minutes] = formData.value.startTime.split(':').map(Number)
-      const startDate = new Date()
-      startDate.setHours(hours, minutes, 0, 0)
-
-      const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000) // Convert minutes to milliseconds
-
-      const endHours = String(endDate.getHours()).padStart(2, '0')
-      const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
-
-      formData.value.endTime = `${endHours}:${endMinutes}`
-      console.log('⏰ End time calculated:', formData.value.endTime)
-    } else {
-      formData.value.endTime = '' // Clear end time if start time or duration is missing
-      console.log('⚠️ Cannot calculate end time: Missing start time or duration.')
-    }
-  }
 
   /**
    * Loads the duration of the last completed appointment for a given student.
    * @param studentId The ID of the student.
    * @returns The duration in minutes or null if no completed appointment is found.
    */
+
+  const getLastAppointmentCategory = async (studentId: string): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('type')
+      .eq('user_id', studentId)
+      .eq('status', 'completed')
+      .order('end_time', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      console.error('❌ Error fetching last appointment category:', error.message)
+      return null
+    }
+
+    if (!data) {
+      console.log('⚠️ No completed appointments found for student:', studentId)
+      return null
+    }
+
+    return data.type || null
+  } catch (err) {
+    console.error('❌ Unexpected error loading last appointment category:', err)
+    return null
+  }
+}
+
   const getLastAppointmentDuration = async (studentId: string): Promise<number | null> => {
     try {
       const { data, error } = await supabase
@@ -285,51 +296,82 @@ export const useEventModalHandlers = (
    * Updates price and loads staff durations based on the selected category.
    * @param category The selected category object.
    */
-  const handleCategorySelected = async (category: any) => {
-    console.log('🎯 Category selected:', category?.code)
+// In composables/useEventModalHandlers.ts - handleCategorySelected erweitern:
 
-    selectedCategory.value = category
-
-    if (category) {
-      // Load category data from categories table
-      try {
-        const { data: categoryData, error } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('code', category.code)
-          .eq('is_active', true)
-          .maybeSingle()
-
-        if (categoryData) {
-          formData.value.price_per_minute = categoryData.price_per_lesson / DEFAULT_DURATION_MINUTES
-          console.log('💰 Price from categories table:', categoryData.price_per_lesson)
-        } else {
-          // Fallback to static prices if not found in DB
-          const fallbackPrices: Record<string, number> = {
-            'B': 95, 'A1': 95, 'BE': 120, 'C1': 150, 'D1': 150, 'C': 170,
-            'CE': 200, 'D': 200, 'BPT': 100, 'Motorboot': 95
-          }
-          formData.value.price_per_minute = (fallbackPrices[category.code] || 95) / DEFAULT_DURATION_MINUTES
-          console.log('⚠️ Category not found in DB, using fallback price:', formData.value.price_per_minute * DEFAULT_DURATION_MINUTES)
+const handleCategorySelected = async (category: any) => {
+  console.log('🎯 Category selected:', category?.code)
+  selectedCategory.value = category
+  
+  if (category) {
+    // Load category data from categories table
+    try {
+      const { data: categoryData, error } = await supabase
+        .from('categories')
+        .select('*') // ✅ Holt bereits exam_duration_minutes mit
+        .eq('code', category.code)
+        .eq('is_active', true)
+        .maybeSingle()
+        
+      if (categoryData) {
+        formData.value.price_per_minute = categoryData.price_per_lesson / DEFAULT_DURATION_MINUTES
+        console.log('💰 Price from categories table:', categoryData.price_per_lesson)
+        
+        // ✅ NEU: Kategorie-Daten für Dauer-Berechnung speichern
+        selectedCategory.value = { ...category, ...categoryData }
+      } else {
+        // Fallback to static prices if not found in DB
+        const fallbackPrices: Record<string, number> = {
+          'B': 95, 'A1': 95, 'BE': 120, 'C1': 150, 'D1': 150, 'C': 170,
+          'CE': 200, 'D': 200, 'BPT': 100, 'Motorboot': 95
         }
-      } catch (err) {
-        console.error('❌ Error loading category from DB:', err)
-        formData.value.price_per_minute = FALLBACK_PRICE_PER_MINUTE // Fallback
+        formData.value.price_per_minute = (fallbackPrices[category.code] || 95) / DEFAULT_DURATION_MINUTES
+        console.log('⚠️ Category not found in DB, using fallback price:', formData.value.price_per_minute * DEFAULT_DURATION_MINUTES)
       }
-
-      // Load staff durations from staff_settings table if staff_id is present
-      if (formData.value.staff_id) {
-        try {
-          await loadStaffDurations(formData.value.staff_id)
-        } catch (err) {
-          console.log('⚠️ Could not load staff durations from DB, using defaults:', err)
-          availableDurations.value = [DEFAULT_DURATION_MINUTES, 90, 135] // Fallback
-        }
-      }
-
-      calculateEndTime()
+    } catch (err) {
+      console.error('❌ Error loading category from DB:', err)
+      formData.value.price_per_minute = FALLBACK_PRICE_PER_MINUTE // Fallback
     }
+
+    // ✅ NEU: Dauer basierend auf aktuellem Lesson Type setzen
+    if (formData.value.appointment_type) {
+      setDurationForLessonType(formData.value.appointment_type)
+    }
+    
+    calculateEndTime()
   }
+}
+
+
+const setDurationForLessonType = (lessonTypeCode: string) => {
+  console.log('⏱️ Setting duration for lesson type:', lessonTypeCode)
+  
+  switch (lessonTypeCode) {
+    case 'exam':
+      // ✅ Fallback falls selectedCategory nicht verfügbar
+      const examDuration = selectedCategory.value?.exam_duration_minutes || 180
+      console.log('📝 Auto-setting EXAM duration:', examDuration)
+      
+      formData.value.duration_minutes = examDuration
+      availableDurations.value = [examDuration]
+      calculateEndTime()
+      break
+      
+    case 'lesson':
+      console.log('✅ Switching back to normal lesson')
+      // Standard Category-Dauern wiederherstellen
+      availableDurations.value = [45, 90] // Fallback
+      formData.value.duration_minutes = 45
+      calculateEndTime()
+      break
+      
+    case 'theory':
+      console.log('🎓 Setting theory duration: 45min')
+      formData.value.duration_minutes = 45
+      availableDurations.value = [45]
+      calculateEndTime()
+      break
+  }
+}
 
   /**
    * Handles changes to the price per minute.
@@ -714,9 +756,11 @@ export const useEventModalHandlers = (
     handleCategorySelected,
     handlePriceChanged,
     handleDurationsChanged,
+    getLastAppointmentCategory,
     
     // Duration Handlers
     handleDurationChanged,
+    setDurationForLessonType,
 
     // Location Handlers
     handleLocationSelected,

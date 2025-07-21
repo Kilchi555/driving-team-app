@@ -1,6 +1,7 @@
 // composables/useEventModalWatchers.ts - SIMPLIFIED VERSION
 import { watch, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useTimeCalculations } from '~/composables/useTimeCalculations'
 
 export const useEventModalWatchers = (
   props: any,
@@ -13,21 +14,8 @@ export const useEventModalWatchers = (
 ) => {
 
   // ============ HELPER FUNCTIONS ============
-  const calculateEndTime = () => {
-    if (formData.value.startTime && formData.value.duration_minutes) {
-      const [hours, minutes] = formData.value.startTime.split(':').map(Number)
-      const startDate = new Date()
-      startDate.setHours(hours, minutes, 0, 0)
+const { calculateEndTime } = useTimeCalculations(formData)
 
-      const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
-
-      const endHours = String(endDate.getHours()).padStart(2, '0')
-      const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
-
-      formData.value.endTime = `${endHours}:${endMinutes}`
-      console.log('⏰ End time calculated:', formData.value.endTime)
-    }
-  }
 
   // 🔥 LOCAL appointment number function
   const getAppointmentNumber = async (studentId: string): Promise<number> => {

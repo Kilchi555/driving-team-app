@@ -1,6 +1,8 @@
 // composables/useEventModalForm.ts
 import { ref, computed, reactive } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useTimeCalculations } from '~/composables/useTimeCalculations'
+
 
 // Types (können später in separates types file)
 interface AppointmentData {
@@ -189,12 +191,8 @@ export const useEventModalForm = (currentUser?: any) => {
     console.log('✅ Form populated with type:', formData.value.type)
   }
 
-  const calculateEndTime = () => {
-    if (formData.value.startTime && formData.value.duration_minutes) {
-      formData.value.endTime = computedEndTime.value
-      console.log('⏰ End time calculated:', formData.value.endTime)
-    }
-  }
+const { calculateEndTime } = useTimeCalculations(formData)
+
 
   // ============ SAVE/DELETE LOGIC ============ 
   const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {

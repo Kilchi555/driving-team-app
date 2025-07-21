@@ -34,8 +34,167 @@
 
         <!-- Accordion Sections -->
         <div v-if="!isLoading" class="space-y-3">
+
+        <!-- Nur Arbeitsstunden für 4 Monate - KEINE lessons mehr! -->
+        <div class="border border-gray-200 rounded-lg">
+          <button  
+            @click="toggleSection('workingStats')" 
+            class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+          >
+            <span class="font-medium text-gray-900">⏰ Arbeitszeit-Übersicht</span>
+            <span class="text-gray-600 font-bold">{{ openSections.workingStats ? '−' : '+' }}</span>
+          </button>
           
-          <!-- 1. Treffpunkte/Standorte -->
+          <div v-if="openSections.workingStats" class="px-4 pb-4 border-t border-gray-100">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              <!-- Aktueller Monat -->
+              <div class="bg-blue-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-blue-900 mb-3">{{ currentMonthName }}</h4>
+                <div class="text-2xl font-bold text-blue-800">
+                  {{ monthlyStats.currentMonth.worked }}h
+                </div>
+              </div>
+              
+              <!-- Vormonat -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-gray-700 mb-3">{{ previousMonthName }}</h4>
+                <div class="text-2xl font-bold text-gray-800">
+                  {{ monthlyStats.previousMonth.worked }}h
+                </div>
+              </div>
+              
+              <!-- 2 Monate zurück -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-gray-700 mb-3">{{ twoMonthsAgoName }}</h4>
+                <div class="text-2xl font-bold text-gray-800">
+                  {{ monthlyStats.twoMonthsAgo.worked }}h
+                </div>
+              </div>
+              
+              <!-- 3 Monate zurück -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-gray-700 mb-3">{{ threeMonthsAgoName }}</h4>
+                <div class="text-2xl font-bold text-gray-800">
+                  {{ monthlyStats.threeMonthsAgo.worked }}h
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+       
+      <!-- 2. Prüfungsstandorte -->
+      <div class="border border-gray-200 rounded-lg">
+        <button
+          @click="toggleSection('examLocations')"
+          class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+        >
+          <span class="font-medium text-gray-900">🏛️ Prüfungsstandorte</span>
+          <span class="text-gray-600 font-bold">{{ openSections.examLocations ? '−' : '+' }}</span>
+        </button>
+      <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
+        <!-- Neue Prüfungsstandort hinzufügen -->
+        <div class="border border-gray-200 rounded-lg p-4 mb-4">
+          <h4 class="font-medium text-gray-900 mb-3">Neuen Prüfungsstandort hinzufügen</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input
+              v-model="newExamLocation.name"
+              type="text"
+              placeholder="Standort-Name (z.B. TCS Zürich)"
+              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+            <input
+              v-model="newExamLocation.address"
+              type="text"
+              placeholder="Adresse"
+              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+            <select
+              v-model="newExamLocation.categories"
+              multiple
+              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="B">Kategorie B</option>
+              <option value="A1">Kategorie A1</option>
+              <option value="A">Kategorie A</option>
+              <option value="BE">Kategorie BE</option>
+              <option value="C1">Kategorie C1</option>
+              <option value="C">Kategorie C</option>
+            </select>
+          </div>
+          <button
+            @click="addExamLocation"
+            :disabled="!newExamLocation.name || !newExamLocation.address"
+            class="mt-3 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Prüfungsstandort hinzufügen
+          </button>
+        </div>
+
+        <!-- Liste der Prüfungsstandorte -->
+        <div class="space-y-3">
+          <div v-if="examLocations.length === 0" class="text-center py-8 text-gray-500">
+            Noch keine Prüfungsstandorte definiert
+          </div>
+          
+          <div
+            v-for="location in examLocations"
+            :key="location.id"
+            class="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-3">
+                  <h4 class="font-medium text-gray-900">{{ location.name }}</h4>
+                  <button
+                    @click="toggleExamLocationStatus(location)"
+                    :class="[
+                      'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                      location.is_active ? 'bg-green-600' : 'bg-gray-200'
+                    ]"
+                  >
+                    <span
+                      :class="[
+                        'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+                        location.is_active ? 'translate-x-5' : 'translate-x-1'
+                      ]"
+                    />
+                  </button>
+                  <span :class="[
+                    'text-xs px-2 py-1 rounded-full',
+                    location.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                  ]">
+                    {{ location.is_active ? 'Aktiv' : 'Inaktiv' }}
+                  </span>
+                </div>
+                
+                <p class="text-sm text-gray-600 mt-1">{{ location.address }}</p>
+                
+                <div v-if="location.categories && location.categories.length > 0" class="flex gap-1 mt-2">
+                  <span
+                    v-for="category in location.categories"
+                    :key="category"
+                    class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                  >
+                    {{ category }}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                @click="removeExamLocation(location.id)"
+                class="ml-4 text-red-500 hover:text-red-700 text-sm"
+              >
+                🗑️ Entfernen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+          
+          <!-- 3. Treffpunkte/Standorte -->
           <div class="border border-gray-200 rounded-lg">
             <button
               @click="toggleSection('locations')"
@@ -322,8 +481,27 @@ const openSections = reactive({
   categories: false,
   durations: false,
   worktime: false,
-  notifications: false
+  notifications: false,
+  workingStats: false,    
+  examLocations: false 
 })
+
+// NEUE STATE für Prüfungsstandorte
+const examLocations = ref<any[]>([])
+const newExamLocation = ref({
+  name: '',
+  address: '',
+  categories: [] as string[]
+})
+
+// NEUE STATE für Arbeitszeit
+const monthlyStats = ref({
+  currentMonth: { worked: 0 },
+  previousMonth: { worked: 0 },
+  twoMonthsAgo: { worked: 0 },
+  threeMonthsAgo: { worked: 0 }
+})
+
 
 // Data
 const availableCategories = ref<any[]>([])
@@ -348,7 +526,151 @@ const filteredCategoriesForDurations = computed(() => {
   )
 })
 
+// computed properties:
+const currentMonthName = computed(() => {
+  const date = new Date()
+  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
+})
+
+const previousMonthName = computed(() => {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 1)
+  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
+})
+
+const twoMonthsAgoName = computed(() => {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 2)
+  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
+})
+
+const threeMonthsAgoName = computed(() => {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 3)
+  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
+})
+
 // Methods
+
+
+// NEUE FUNKTIONEN für Prüfungsstandorte
+const loadExamLocations = async () => {
+  if (!props.currentUser?.id) return
+
+  try {
+    const supabase = getSupabase()
+    
+    // Prüfungsstandorte aus einer neuen Tabelle laden (oder bestehende erweitern)
+    const { data: locations, error } = await supabase
+      .from('staff_exam_locations')
+      .select('*')
+      .eq('staff_id', props.currentUser.id)
+      .order('name')
+
+    if (error && !error.message.includes('does not exist')) {
+      throw error
+    }
+
+    examLocations.value = locations || []
+
+  } catch (err: any) {
+    console.error('❌ Error loading exam locations:', err)
+    // Fallback für fehlende Tabelle
+    examLocations.value = []
+  }
+}
+
+const addExamLocation = async () => {
+  if (!newExamLocation.value.name || !newExamLocation.value.address) return
+
+  try {
+    const supabase = getSupabase()
+    
+    const { data, error } = await supabase
+      .from('staff_exam_locations')
+      .insert({
+        staff_id: props.currentUser.id,
+        name: newExamLocation.value.name,
+        address: newExamLocation.value.address,
+        categories: newExamLocation.value.categories,
+        is_active: true
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    examLocations.value.push(data)
+    
+    // Reset form
+    newExamLocation.value = {
+      name: '',
+      address: '',
+      categories: []
+    }
+
+  } catch (err: any) {
+    console.error('❌ Error adding exam location:', err)
+    error.value = `Fehler beim Hinzufügen: ${err.message}`
+  }
+}
+
+const toggleExamLocationStatus = async (location: any) => {
+  try {
+    const supabase = getSupabase()
+    
+    const { error } = await supabase
+      .from('staff_exam_locations')
+      .update({ is_active: !location.is_active })
+      .eq('id', location.id)
+
+    if (error) throw error
+
+    location.is_active = !location.is_active
+
+  } catch (err: any) {
+    console.error('❌ Error toggling exam location:', err)
+    error.value = `Fehler beim Ändern des Status: ${err.message}`
+  }
+}
+
+const removeExamLocation = async (locationId: string) => {
+  try {
+    const supabase = getSupabase()
+    
+    const { error } = await supabase
+      .from('staff_exam_locations')
+      .delete()
+      .eq('id', locationId)
+
+    if (error) throw error
+
+    examLocations.value = examLocations.value.filter(loc => loc.id !== locationId)
+
+  } catch (err: any) {
+    console.error('❌ Error removing exam location:', err)
+    error.value = `Fehler beim Entfernen: ${err.message}`
+  }
+}
+
+// Data Loading
+const loadAllData = async () => {
+  isLoading.value = true
+  error.value = null
+
+  try {
+    await Promise.all([
+      loadExamLocations()
+      // + bestehende Load-Funktionen
+    ])
+  } catch (err: any) {
+    console.error('❌ Error loading data:', err)
+    error.value = err.message
+  } finally {
+    isLoading.value = false
+  }
+}
+
 const toggleSection = (section: keyof typeof openSections) => {
   openSections[section] = !openSections[section]
 }
@@ -553,6 +875,119 @@ const loadData = async () => {
   }
 }
 
+// Debug-Version der loadWorkingHoursData Funktion:
+
+// Vollständige Debug-Version für alle 4 Monate:
+
+const loadWorkingHoursData = async () => {
+  console.log('🔍 DEBUG: Starting loadWorkingHoursData')
+  
+  if (!props.currentUser?.id) {
+    console.log('❌ DEBUG: No currentUser.id found')
+    return
+  }
+  
+  try {
+    const supabase = getSupabase()
+    
+    console.log('🔍 DEBUG: Querying appointments for staff_id:', props.currentUser.id)
+    
+    const { data: appointments, error } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('staff_id', props.currentUser.id)
+    
+    if (error) {
+      console.error('❌ DEBUG: Database error:', error)
+      return
+    }
+    
+    console.log('🔍 DEBUG: Total appointments found:', appointments?.length || 0)
+    
+    if (!appointments || appointments.length === 0) {
+      console.log('⚠️ DEBUG: No appointments found')
+      return
+    }
+    
+    // Filter nur completed/confirmed Termine
+    const validAppointments = appointments.filter(apt => 
+      ['completed', 'confirmed'].includes(apt.status)
+    )
+    
+    console.log('🔍 DEBUG: Valid appointments:', validAppointments.length)
+    
+    if (validAppointments.length === 0) {
+      console.log('⚠️ DEBUG: No valid appointments found')
+      return
+    }
+    
+    // Berechne Stunden für jeden Monat
+    const now = new Date()
+    console.log('🔍 DEBUG: Current date:', now)
+    
+    // Alle 4 Monate definieren
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+    
+    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+    
+    const twoMonthsAgoStart = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+    const twoMonthsAgoEnd = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59)
+    
+    const threeMonthsAgoStart = new Date(now.getFullYear(), now.getMonth() - 3, 1)
+    const threeMonthsAgoEnd = new Date(now.getFullYear(), now.getMonth() - 2, 0, 23, 59, 59)
+    
+    // Hilfsfunktion zum Filtern und Berechnen
+    const calculateHoursForPeriod = (startDate: Date, endDate: Date, periodName: string) => {
+      console.log(`🔍 DEBUG: Calculating for ${periodName}:`, {
+        startDate: startDate,
+        endDate: endDate
+      })
+      
+      const filteredAppointments = validAppointments.filter(apt => {
+        const appointmentDate = new Date(apt.appointment_datetime || apt.start_time)
+        const isInRange = appointmentDate >= startDate && appointmentDate <= endDate
+        return isInRange
+      })
+      
+      console.log(`🔍 DEBUG: ${periodName} filtered appointments:`, filteredAppointments.length)
+      
+      const totalMinutes = filteredAppointments.reduce((sum, apt) => {
+        const minutes = apt.duration_minutes || 45
+        return sum + minutes
+      }, 0)
+      
+      const hours = Math.round((totalMinutes / 60) * 10) / 10
+      console.log(`🔍 DEBUG: ${periodName} total: ${totalMinutes} minutes = ${hours} hours`)
+      
+      return hours
+    }
+    
+    // Berechne für alle 4 Monate
+    const currentHours = calculateHoursForPeriod(currentMonthStart, currentMonthEnd, 'Current Month')
+    const previousHours = calculateHoursForPeriod(previousMonthStart, previousMonthEnd, 'Previous Month')
+    const twoMonthsAgoHours = calculateHoursForPeriod(twoMonthsAgoStart, twoMonthsAgoEnd, 'Two Months Ago')
+    const threeMonthsAgoHours = calculateHoursForPeriod(threeMonthsAgoStart, threeMonthsAgoEnd, 'Three Months Ago')
+    
+    // Setze alle Werte
+    monthlyStats.value.currentMonth.worked = currentHours
+    monthlyStats.value.previousMonth.worked = previousHours
+    monthlyStats.value.twoMonthsAgo.worked = twoMonthsAgoHours
+    monthlyStats.value.threeMonthsAgo.worked = threeMonthsAgoHours
+    
+    console.log('✅ DEBUG: Final working hours set:', {
+      current: monthlyStats.value.currentMonth.worked,
+      previous: monthlyStats.value.previousMonth.worked,
+      twoAgo: monthlyStats.value.twoMonthsAgo.worked,
+      threeAgo: monthlyStats.value.threeMonthsAgo.worked
+    })
+    
+  } catch (error) {
+    console.error('❌ DEBUG: Unexpected error:', error)
+  }
+}
+
 const saveAllSettings = async () => {
   if (!props.currentUser?.id) return
 
@@ -691,10 +1126,21 @@ const saveAllSettings = async () => {
 // Lifecycle
 onMounted(() => {
   loadData()
+  loadWorkingHoursData()
+
 })
 </script>
 
 <style scoped>
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Modal backdrop animation */
 .modal-backdrop {
   animation: fadeIn 0.3s ease-out;

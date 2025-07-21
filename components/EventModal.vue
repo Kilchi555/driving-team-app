@@ -26,6 +26,7 @@
             :current-user="currentUser"
             :disabled="mode === 'view'"
             :auto-load="shouldAutoLoadStudents"
+            :is-freeslot-mode="props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot'"
             @student-selected="handleStudentSelected"
             @student-cleared="handleStudentCleared"
             @switch-to-other="switchToOtherEventType"
@@ -226,6 +227,9 @@ import CustomerInviteSelector from '~/components/CustomerInviteSelector.vue'
 
 // Composables
 import { useCompanyBilling } from '~/composables/useCompanyBilling'
+import { useEventModalHandlers} from '~/composables/useEventModalHandlers'
+import { useTimeCalculations } from '~/composables/useTimeCalculations'
+
 
 // Types
 interface Student {
@@ -275,8 +279,8 @@ const selectedLessonType = ref('lesson')
 const staffSelectorRef = ref() 
 const invitedStaffIds = ref<string[]>([])
 const invitedCustomers = ref<any[]>([])  
-const defaultBillingAddress = ref(null) // NEU
-
+const defaultBillingAddress = ref(null)
+const selectedCategory = ref<any | null>(null)
 
 const formData = ref({
   id: '',
@@ -304,6 +308,21 @@ const formData = ref({
 })
 
 const companyBilling = useCompanyBilling()
+
+const handlers = useEventModalHandlers(
+  formData,
+  selectedStudent,
+  selectedCategory,
+  availableDurations,
+  { value: 1 }, // appointmentNumber placeholder
+  selectedLocation
+)
+
+const {
+  handleCategorySelected,
+  handleDurationsChanged,
+  setDurationForLessonType,
+} = handlers
 
 // ============ COMPUTED ============
 const modalTitle = computed(() => {
@@ -359,9 +378,8 @@ const showTimeSection = computed(() => {
   }
 })
 
-const totalPrice = computed(() => {
-  const total = formData.value.price_per_minute * formData.value.duration_minutes
-  return total.toFixed(2)
+const isFreeslotMode = computed(() => {
+  return props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot'
 })
 
 // ============ HANDLERS ============
@@ -372,22 +390,50 @@ const handleStudentSelected = async (student: Student | null) => {
   
   if (student?.category) {
     const primaryCategory = student.category.split(',')[0].trim()
+    console.log('🎯 Setting category from student:', primaryCategory)
     formData.value.type = primaryCategory
   }
   
-  // Auto-generate title if we have student and location
   generateTitleIfReady()
 }
 
-const handleLessonTypeSelected = (lessonType: any) => {
-  console.log('🎯 Lesson type selected:', lessonType.name)
-  selectedLessonType.value = lessonType.code
+const setDurationBasedOnType = (lessonTypeCode: string) => {
+  console.log('⏱️ Setting duration for lesson type:', lessonTypeCode)
   
-  // ✅ NUR appointment_type setzen - Dauer bleibt über CategorySelector/DurationSelector
-  // Das appointment_type wird später in der DB als 'type' gespeichert
-  formData.value.appointment_type = lessonType.code
+  let duration = 45 // Default
   
-  console.log('📝 Appointment type set to:', lessonType.code)
+  switch (lessonTypeCode) {
+    case 'lesson':
+      // Normale Fahrstunde: Verwende category lesson_duration_minutes
+      if (selectedStudent.value?.category && selectedCategory.value) {
+        duration = selectedCategory.value.lesson_duration_minutes || 45
+      }
+      break
+      
+    case 'exam':
+      // Prüfung: Verwende category exam_duration_minutes
+      if (selectedStudent.value?.category && selectedCategory.value) {
+        duration = selectedCategory.value.exam_duration_minutes || 180
+      } else {
+        duration = 180 // Standard-Prüfungsdauer
+      }
+      break
+      
+    case 'theory':
+      duration = 45 // Theorie immer 45min
+      break
+      
+    case 'meeting':
+      duration = 45 // Besprechung immer 45min
+      break
+      
+    default:
+      duration = 45
+  }
+    console.log('⏱️ Auto-setting duration to:', duration, 'minutes')
+  formData.value.duration_minutes = duration
+  availableDurations.value = [duration] // Nur diese Dauer verfügbar
+  calculateEndTime()
 }
 
 const handleStudentCleared = () => {
@@ -401,6 +447,13 @@ const handleStudentCleared = () => {
 
 const switchToOtherEventType = () => {
   console.log('🔄 Switching to other event types')
+  
+  // ✅ FIX: Nicht automatisch bei freien Zeitslots
+  if (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') {
+    console.log('🚫 Auto-switch blocked for free slot')
+    return
+  }
+  
   formData.value.eventType = 'other'
   showEventTypeSelection.value = true
   selectedStudent.value = null
@@ -425,24 +478,32 @@ const backToStudentSelection = () => {
   formData.value.type = ''
 }
 
-const handleCategorySelected = (category: any) => {
-  console.log('🎯 Category selected:', category?.code)
-  if (category) {
-    formData.value.price_per_minute = category.price_per_lesson / 45
+// ✅ IN EVENTMODAL.VUE:
+const handleLessonTypeSelected = (lessonType: any) => {
+  console.log('🎯 Lesson type selected:', lessonType.name)
+  selectedLessonType.value = lessonType.code
+  formData.value.appointment_type = lessonType.code
+  
+  // ✅ DEBUG: Prüfen was selectedCategory enthält
+  console.log('🔍 DEBUG selectedCategory:', {
+    selectedCategory: selectedCategory.value,
+    hasCategory: !!selectedCategory.value,
+    exam_duration: selectedCategory.value?.exam_duration_minutes,
+    lesson_duration: selectedCategory.value?.lesson_duration_minutes
+  })
+  
+  if (selectedCategory.value) {
+    console.log('✅ Category found, calling setDurationForLessonType')
+    handlers.setDurationForLessonType(lessonType.code)
+  } else {
+    console.log('❌ No selectedCategory - function not called')
   }
+  
+  console.log('📝 Appointment type set to:', lessonType.code)
 }
 
 const handlePriceChanged = (price: number) => {
   formData.value.price_per_minute = price
-}
-
-const handleDurationsChanged = (durations: number[]) => {
-  console.log('⏱️ Durations changed:', durations)
-  availableDurations.value = durations
-  
-  if (!durations.includes(formData.value.duration_minutes)) {
-    formData.value.duration_minutes = durations[0] || 45
-  }
 }
 
 const handleDurationChanged = (newDuration: number) => {
@@ -509,16 +570,8 @@ const generateTitleIfReady = () => {
   }
 }
 
-const calculateEndTime = () => {
-  if (formData.value.startTime && formData.value.duration_minutes) {
-    const [hours, minutes] = formData.value.startTime.split(':').map(Number)
-    const startDate = new Date()
-    startDate.setHours(hours, minutes, 0, 0)
-    
-    const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
-    formData.value.endTime = endDate.toTimeString().slice(0, 5)
-  }
-}
+const { calculateEndTime } = useTimeCalculations(formData)
+
 
 const triggerStudentLoad = () => {
   // ✅ FIX: Nicht bei free slot clicks triggern
@@ -595,6 +648,29 @@ const handleCustomersAdded = (customers: any[]) => {
 const handleCustomersCleared = () => {
   console.log('🗑️ Customer invite list cleared')
   invitedCustomers.value = []
+}
+
+const loadCategoryData = async (categoryCode: string) => {
+  try {
+    console.log('🔄 Loading category data for:', categoryCode)
+    const { data, error } = await supabase
+      .from('categories')
+      .select('code, lesson_duration_minutes, exam_duration_minutes')
+      .eq('code', categoryCode)
+      .eq('is_active', true)
+      .single()
+    
+    if (error) throw error
+    
+    selectedCategory.value = data
+    console.log('✅ Category data loaded:', data)
+    
+    return data
+  } catch (err) {
+    console.error('❌ Error loading category:', err)
+    selectedCategory.value = null
+    return null
+  }
 }
 
 // ============ SAVE LOGIC ============
@@ -717,9 +793,9 @@ const initializeFormData = () => {
     }
     
     // Load student if available
-    if (formData.value.user_id) {
-      loadStudentForEdit(formData.value.user_id)
-    }
+    if (formData.value.user_id && !props.eventData?.isFreeslotClick) {
+          loadStudentForEdit(formData.value.user_id)
+        }
     
   } else if (props.mode === 'create' && props.eventData?.start) {
     // Create mode with time data
@@ -736,10 +812,14 @@ const initializeFormData = () => {
     formData.value.startTime = `${hours}:${minutes}`
     calculateEndTime()
         // Auto-load students für lesson events
-    console.log('🔄 CREATE mode - triggering student load')
-    setTimeout(() => {
-      triggerStudentLoad()
-    }, 100)
+    if (!props.eventData?.isFreeslotClick && !props.eventData?.clickSource?.includes('calendar-free-slot')) {
+  console.log('🔄 CREATE mode - triggering student load')
+  setTimeout(() => {
+    triggerStudentLoad()
+  }, 100)
+} else {
+  console.log('🚫 FREE SLOT - skipping auto student load')
+}
   }
 }
 

@@ -215,7 +215,7 @@ const loadCategories = async () => {
    // Alle Kategorien laden
    const { data: categoriesData, error: categoriesError } = await supabase
      .from('categories')
-     .select('id, name, code, description, price_per_lesson, lesson_duration_minutes, color, is_active, display_order, price_unit')
+     .select('id, name, code, description, price_per_lesson, lesson_duration_minutes, color, is_active, display_order, price_unit, exam_duration_minutes')
      .eq('is_active', true)
      .order('display_order', { ascending: true })
      .order('name', { ascending: true })
@@ -318,42 +318,42 @@ const loadStaffCategoryDurations = async (staffId: string) => {
 }
 
 const handleCategoryChange = (event: Event) => {
- const target = event.target as HTMLSelectElement
- const newValue = target.value
- 
- console.log('🔄 CategorySelector - Manual category change:', newValue)
- 
- // ✅ Mark als User Interaction (verhindert andere Auto-Updates)
- isAutoEmitting.value = true
- 
- emit('update:modelValue', newValue)
- 
- const selected = availableCategoriesForUser.value.find(cat => cat.code === newValue) || null
- console.log('🎯 CategorySelector - Selected category:', selected)
- console.log('🎯 CategorySelector - Available durations:', selected?.availableDurations)
- 
- emit('category-selected', selected)
- 
- // Preis pro Minute berechnen (alle Preise sind auf 45min basis)
- if (selected) {
-   const pricePerMinute = selected.price_per_lesson / 45
-   emit('price-changed', pricePerMinute)
-   
-   // ✅ RACE-SAFE Durations Emit (User Selection erlaubt)
-   console.log('⏱️ CategorySelector - Emitting durations-changed:', selected.availableDurations)
-   emit('durations-changed', selected.availableDurations)
-   
-   console.log('💰 Price per minute:', pricePerMinute)
- } else {
-   console.log('❌ No category selected, emitting empty durations')
-   emit('price-changed', 0)
-   emit('durations-changed', [])
- }
- 
- // ✅ Reset Auto-Selecting Flag nach kurzer Zeit
- setTimeout(() => {
-   isAutoEmitting.value = false
- }, 300)
+  const target = event.target as HTMLSelectElement
+  const newValue = target.value
+  
+  console.log('🔄 CategorySelector - Manual category change:', newValue)
+  
+  // ✅ BLOCKIERE alle anderen Auto-Updates während User-Auswahl
+  isAutoEmitting.value = true
+  
+  emit('update:modelValue', newValue)
+  
+  const selected = availableCategoriesForUser.value.find(cat => cat.code === newValue) || null
+  console.log('🎯 CategorySelector - Selected category:', selected)
+  console.log('🎯 CategorySelector - Available durations:', selected?.availableDurations)
+  
+  emit('category-selected', selected)
+  
+  if (selected) {
+    const pricePerMinute = selected.price_per_lesson / 45
+    emit('price-changed', pricePerMinute)
+    
+    // ✅ FINAL: Dauern emittieren
+    console.log('⏱️ CategorySelector - FINAL Emitting durations-changed:', selected.availableDurations)
+    emit('durations-changed', selected.availableDurations)
+    
+    console.log('💰 Price per minute:', pricePerMinute)
+  } else {
+    console.log('❌ No category selected, emitting empty durations')
+    emit('price-changed', 0)
+    emit('durations-changed', [])
+  }
+  
+  // ✅ LÄNGERE Blockierung um andere Events zu verhindern
+  setTimeout(() => {
+    isAutoEmitting.value = false
+    console.log('✅ CategorySelector - User selection completed, auto-emit enabled')
+  }, 1000) // 1 Sekunde statt 300ms
 }
 
 // Watchers
@@ -361,20 +361,41 @@ const handleCategoryChange = (event: Event) => {
 // Ersetzen Sie den User-Watcher (Zeile 314-328) mit diesem korrigierten Code:
 
 watch(() => props.selectedUser, (newUser, oldUser) => {
- // ✅ Skip wenn User nicht wirklich geändert wurde
- if (!newUser || oldUser?.id === newUser.id) return
- 
- // ✅ Skip während Initialisierung
- if (isInitializing.value) {
-   console.log('🚫 Auto-category selection blocked - initializing')
-   return
- }
- 
- // ✅ Skip wenn bereits Kategorie gewählt (verhindert Überschreibung)
- if (props.modelValue) {
-   console.log('🚫 Auto-category selection blocked - category already selected')
-   return
- }
+  // ✅ Skip während Initialisierung
+  if (isInitializing.value) {
+    console.log('🚫 Auto-category selection blocked - initializing')
+    return
+  }
+  
+  // ✅ Skip wenn bereits Kategorie gewählt (verhindert Überschreibung)
+  if (props.modelValue) {
+    console.log('🚫 Auto-category selection blocked - category already selected')
+    return
+  }
+
+  // ✅ FIX: Bei freeslots (kein User) Standard-Kategorie 'B' laden
+  if (!newUser) {
+    console.log('🎯 No user selected - loading default category: B')
+    const defaultCategory = availableCategoriesForUser.value.find(cat => cat.code === 'B')
+    
+    if (defaultCategory) {
+      console.log('🎯 Auto-selected default category:', defaultCategory)
+      isAutoEmitting.value = true
+      
+      emit('update:modelValue', 'B')
+      emit('category-selected', defaultCategory)
+      emit('price-changed', defaultCategory.price_per_lesson / 45)
+      emit('durations-changed', defaultCategory.availableDurations)
+      
+      setTimeout(() => {
+        isAutoEmitting.value = false
+      }, 200)
+    }
+    return
+  }
+
+  if (oldUser?.id === newUser.id) return
+
  
  if (newUser?.category && newUser.category !== props.modelValue) {
    console.log('👤 User category detected:', newUser.category)
