@@ -54,10 +54,10 @@ export const usePricing = () => {
     pricingError.value = ''
 
     try {
-      // Lade ALLE pricing rules (base_price UND admin_fee)
       const { data, error } = await supabase
         .from('pricing_rules')
         .select('*')
+        .eq('rule_type', 'category_pricing')
         .eq('is_active', true)
         .order('category_code')
 
@@ -74,55 +74,19 @@ export const usePricing = () => {
         return
       }
 
-      // Gruppiere die Regeln nach category_code
-      const rulesByCategory = data.reduce((acc, rule) => {
-        if (!acc[rule.category_code]) {
-          acc[rule.category_code] = {}
-        }
-        acc[rule.category_code][rule.rule_type] = rule
-        return acc
-      }, {} as Record<string, Record<string, any>>)
-
-      // Kombiniere base_price und admin_fee Regeln
-      const combinedRules = Object.entries(rulesByCategory).map(([categoryCode, rules]) => {
-        const baseRule = (rules as any).base_price
-        const adminRule = (rules as any).admin_fee
-
-        console.log(`🔍 Combining rules for ${categoryCode}:`, {
-          hasBaseRule: !!baseRule,
-          hasAdminRule: !!adminRule,
-          basePrice: baseRule?.price_per_minute_rappen,
-          adminFee: adminRule?.admin_fee_rappen,
-          adminFeeFrom: adminRule?.admin_fee_applies_from,
-          baseRuleId: baseRule?.id,
-          adminRuleId: adminRule?.id
-        })
-
-        return {
-          id: baseRule?.id || adminRule?.id || `combined-${categoryCode}`,
-          category_code: categoryCode,
-          rule_name: `${categoryCode} - Kombiniert`,
-          price_per_minute_rappen: baseRule?.price_per_minute_rappen || 212,
-          admin_fee_rappen: adminRule?.admin_fee_rappen || (
-            // Motorrad-Kategorien haben keine Admin Fee
-            ['A', 'A1', 'A35kW'].includes(categoryCode) ? 0 : 12000
-          ),
-          admin_fee_applies_from: adminRule?.admin_fee_applies_from || (
-            // Motorrad-Kategorien: nie (999), andere: ab 2. Termin
-            ['A', 'A1', 'A35kW'].includes(categoryCode) ? 999 : 2
-          ),
-          base_duration_minutes: baseRule?.base_duration_minutes || 45,
-          is_active: true,
-          valid_from: baseRule?.valid_from || null,
-          valid_until: baseRule?.valid_until || null
-        }
+      // Filter nur gültige Regeln
+      const today = new Date().toISOString().split('T')[0]
+      const validRules = data.filter(rule => {
+        const validFrom = rule.valid_from || '1900-01-01'
+        const validUntil = rule.valid_until || '2099-12-31'
+        return today >= validFrom && today <= validUntil
       })
 
-      pricingRules.value = combinedRules
+      pricingRules.value = validRules
       lastLoaded.value = new Date()
 
-      console.log('✅ Pricing rules combined:', combinedRules.length, 'categories')
-      console.log('📊 Categories:', combinedRules.map(r => r.category_code))
+      console.log('✅ Pricing rules loaded:', validRules.length, 'rules')
+      console.log('📊 Categories:', validRules.map(r => r.category_code))
 
     } catch (err: any) {
       console.error('❌ Error loading pricing rules:', err)

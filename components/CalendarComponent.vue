@@ -818,11 +818,12 @@ watch(calendarEvents, (newEvents) => {
   if (calendar.value?.getApi) {
     const api = calendar.value.getApi()
     
-    // Alle Events entfernen und neue hinzufügen
+    // ✅ FIX: Alle Events komplett entfernen
     api.removeAllEvents()
-    api.addEventSource(newEvents)
+    api.removeAllEventSources()
     
-    console.log('✅ FullCalendar events updated successfully')
+    // ✅ FIX: Events direkt setzen, nicht als Source
+    newEvents.forEach(event => api.addEvent(event))
   }
 }, { deep: true, immediate: true })
 

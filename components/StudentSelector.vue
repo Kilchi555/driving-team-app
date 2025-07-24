@@ -97,15 +97,14 @@
 
         <!-- Schülerliste -->
         <div v-else class="max-h-64 overflow-y-auto">
-          <div 
-            v-for="student in studentList" 
-            :key="student.id"
-            @click="selectStudent(student, true)"
-            :class="[
-              'p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors',
-              'hover:bg-blue-50'
-            ]"
-          >
+           <div 
+              v-for="student in studentList" 
+              :key="student.id"
+              @click="handleStudentClick(student)"         
+             :class="[
+                'p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors hover:bg-blue-50'
+              ]"
+            >
             <div class="flex items-center justify-between">
               <div class="flex-1">
                 <div class="font-semibold text-gray-900">
@@ -160,7 +159,7 @@ interface Props {
   placeholder?: string
   autoLoad?: boolean
   showAllStudents?: boolean
-  isFreeslotMode?: boolean  // ✅ NEU: Freeslot-Mode erkennung
+  isFreeslotMode?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -378,14 +377,8 @@ const loadStudents = async (editStudentId?: string | null) => {
 
 const handleSwitchToOther = () => {
   console.log('🔄 User manually clicked "Andere Terminart" button')
+  console.log('📍 SWITCH CALL STACK:', new Error().stack)
   
-  // ✅ FIX: Bei Freeslot-Mode nicht automatisch switchen
-  if (props.isFreeslotMode) {
-    console.log('🚫 Auto-switch blocked - freeslot mode active')
-    return
-  }
-  
-  // Nur wenn Studenten geladen sind und kein Student ausgewählt ist
   if (!isLoading.value && availableStudents.value.length > 0 && !selectedStudent.value) {
     emit('switch-to-other')
   }
@@ -394,11 +387,10 @@ const handleSwitchToOther = () => {
 const handleSearchFocus = () => {
   console.log('🔍 Search field focused, autoLoad:', shouldAutoLoadComputed.value)
   
-  if (shouldAutoLoadComputed.value && availableStudents.value.length === 0) {
-    console.log('📚 Auto-loading students on search focus')
+  // ✅ Lade Studenten auch bei autoLoad=false wenn noch keine geladen sind
+  if (availableStudents.value.length === 0) {
+    console.log('📚 Loading students on search focus (no students loaded yet)')
     loadStudents()
-  } else if (!shouldAutoLoadComputed.value) {
-    console.log('🚫 Auto-load disabled - user must manually trigger loading')
   }
 }
 
@@ -407,14 +399,16 @@ const filterStudents = () => {
   // Wird aber für Kompatibilität beibehalten
 }
 
+
+// In StudentSelector.vue - Zurück zur ursprünglichen selectStudent Funktion:
 const selectStudent = (student: Student, isUserClick = false) => {
-  console.log('✅ StudentSelector: Student selected:', student.first_name, student.last_name)
   console.log('🔍 DEBUG VALUES:', {
     isUserClick: isUserClick,
-    isFreeslotMode: props.isFreeslotMode
+    isFreeslotMode: props.isFreeslotMode,
+    studentName: student.first_name + ' ' + student.last_name
   })
   
-  // ✅ FIX: Automatische Auswahl bei freien Zeitslots blockieren
+  // ✅ Block automatische Selections bei Free-Slots
   if (props.isFreeslotMode && !isUserClick) {
     console.log('🚫 Auto-selection blocked - freeslot mode detected')
     return
@@ -422,7 +416,20 @@ const selectStudent = (student: Student, isUserClick = false) => {
   
   selectedStudent.value = student
   searchQuery.value = ''
+  
+  console.log('✅ StudentSelector: Student selected:', student.first_name, student.last_name)
   emit('student-selected', student)
+}
+
+const handleStudentClick = (student: Student) => {
+  console.log('🔍 Student click attempted:', {
+    studentName: student.first_name,
+    isFreeslotMode: props.isFreeslotMode
+  })
+  
+  // Manuelle Klicks sollten erlaubt sein
+  console.log('✅ Manual student click allowed - selecting student')
+  selectStudent(student, true) // isUserClick=true bedeutet manueller Klick
 }
 
 const clearStudent = () => {
@@ -435,7 +442,16 @@ const clearStudent = () => {
 
 const selectStudentById = async (userId: string, retryCount = 0) => {
   const maxRetries = 3
+  
+  // ✅ DEBUG: Stack trace anzeigen
   console.log(`👨‍🎓 StudentSelector: Selecting student by ID: ${userId}, Retry: ${retryCount}`)
+  console.log('📍 CALL STACK:', new Error().stack)
+  
+  // ✅ FIX: Respektiere Free-Slot-Mode auch hier
+  if (props.isFreeslotMode) {
+    console.log('🚫 selectStudentById blocked - freeslot mode detected')
+    return null
+  }
   
   while (isLoading.value) {
     console.log('⏳ Waiting for current loading to finish...')
@@ -455,7 +471,7 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
   const student = availableStudents.value.find(s => s.id === userId)
   
   if (student) {
-    selectStudent(student, false)
+    selectStudent(student, false) // Diese Zeile wird jetzt von unserem selectStudent-Fix abgefangen
     console.log('✅ StudentSelector: Student selected by ID:', student.first_name, student.last_name)
     return student
   } else {

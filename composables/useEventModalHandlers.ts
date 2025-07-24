@@ -217,6 +217,32 @@ const { calculateEndTime } = useTimeCalculations(formData)
       const primaryCategory = student.category.split(',')[0].trim()
       formData.value.type = primaryCategory
       console.log('📚 Category from users table:', formData.value.type)
+
+    // ✅ NEU: Kategorie-Daten direkt aus DB laden für Dauer-Berechnung
+    try {
+      console.log('🔄 Loading category data for:', primaryCategory)
+      const { data, error } = await supabase
+        .from('categories')
+        .select('code, lesson_duration_minutes, exam_duration_minutes')
+        .eq('code', primaryCategory)
+        .eq('is_active', true)
+        .single()
+      
+      if (error) throw error
+      
+      if (data) {
+        selectedCategory.value = data
+        console.log('✅ Category data loaded for student:', data)
+      }
+    } catch (err) {
+      console.error('❌ Error loading category data:', err)
+      // Fallback: leeres Objekt mit Standard-Werten
+      selectedCategory.value = {
+        code: primaryCategory,
+        lesson_duration_minutes: 45,
+        exam_duration_minutes: 180
+      }
+    }
     }
 
     // Load preferred payment method from student profile using the paymentMethods composable
@@ -263,16 +289,7 @@ const { calculateEndTime } = useTimeCalculations(formData)
    * Auto-fills form data based on the selected student's profile.
    * @param student The selected student object.
    */
-  const handleStudentSelected = async (student: any) => {
-    console.log('🎯 Student selected:', student.first_name, student.id)
 
-    selectedStudent.value = student
-
-    // Auto-fill form data from student (only in CREATE mode, implicitly handled by initial state)
-    if (student) {
-      await autoFillFromStudent(student)
-    }
-  }
 
   /**
    * Handles clearing the selected student and resetting related form fields.
@@ -342,12 +359,14 @@ const handleCategorySelected = async (category: any) => {
 }
 
 
+// FIX für useEventModalHandlers.ts - setDurationForLessonType Funktion
+
 const setDurationForLessonType = (lessonTypeCode: string) => {
   console.log('⏱️ Setting duration for lesson type:', lessonTypeCode)
   
   switch (lessonTypeCode) {
     case 'exam':
-      // ✅ Fallback falls selectedCategory nicht verfügbar
+      // Prüfung: Verwende category exam_duration_minutes
       const examDuration = selectedCategory.value?.exam_duration_minutes || 180
       console.log('📝 Auto-setting EXAM duration:', examDuration)
       
@@ -357,17 +376,32 @@ const setDurationForLessonType = (lessonTypeCode: string) => {
       break
       
     case 'lesson':
-      console.log('✅ Switching back to normal lesson')
-      // Standard Category-Dauern wiederherstellen
-      availableDurations.value = [45, 90] // Fallback
-      formData.value.duration_minutes = 45
-      calculateEndTime()
-      break
+  if (selectedCategory.value?.lesson_duration_minutes) {
+    const standardDuration = selectedCategory.value.lesson_duration_minutes
+    formData.value.duration_minutes = standardDuration
+    availableDurations.value = [standardDuration, standardDuration * 2]
+  } else {
+    formData.value.duration_minutes = 45
+    availableDurations.value = [45, 90]
+  }
+  calculateEndTime()
+  break
       
     case 'theory':
       console.log('🎓 Setting theory duration: 45min')
       formData.value.duration_minutes = 45
       availableDurations.value = [45]
+      calculateEndTime()
+      break
+      
+    default:
+      console.log('❓ Unknown lesson type, using default')
+      if (availableDurations.value.length === 0) {
+        availableDurations.value = [45]
+      }
+      if (!formData.value.duration_minutes) {
+        formData.value.duration_minutes = availableDurations.value[0] || 45
+      }
       calculateEndTime()
       break
   }
@@ -748,7 +782,6 @@ const setDurationForLessonType = (lessonTypeCode: string) => {
 
   return {
     // Student Handlers
-    handleStudentSelected,
     handleStudentCleared,
     autoFillFromStudent,
 

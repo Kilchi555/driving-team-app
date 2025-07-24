@@ -26,8 +26,13 @@ export const useAuthStore = defineStore('authV2', () => {
   const isInitialized = ref<boolean>(false)
 
   // Computed Properties
-  const isLoggedIn = computed(() => !!user.value && !!userProfile.value)
-  const isAdmin = computed(() => userRole.value === 'admin')
+const isLoggedIn = computed(() => !!user.value && !!userProfile.value)
+
+const isAdmin = computed(() => {
+  const result = userRole.value === 'admin'
+  console.log('🔍 Auth Store - isAdmin:', result, 'Role:', userRole.value)
+  return result
+})
   const isStaff = computed(() => userRole.value === 'staff')
   const isClient = computed(() => userRole.value === 'client')
   const hasProfile = computed(() => !!userProfile.value)
@@ -47,6 +52,7 @@ export const useAuthStore = defineStore('authV2', () => {
   })
 
   // Actions
+
   const initializeAuthStore = (
     supabaseClient: SupabaseClient,
     supabaseUserRef: Ref<User | null>
@@ -83,6 +89,8 @@ export const useAuthStore = defineStore('authV2', () => {
     }
 
     isInitialized.value = true
+      console.log('✅ Auth Store initialization completed, isInitialized:', isInitialized.value)
+
   }
 
   const login = async (email: string, password: string, supabaseClient: SupabaseClient) => {

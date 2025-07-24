@@ -15,11 +15,11 @@
     "@fullcalendar/interaction": "^6.1.17",
     "@fullcalendar/timegrid": "^6.1.17",
     "@fullcalendar/vue3": "^6.1.17",
-    "@nuxt/ui": "^2.18.7",
+    "@nuxt/ui": "^2.22.1",
     "@nuxtjs/supabase": "^1.5.3",
     "@pinia/nuxt": "^0.5.5",
-    "@supabase/supabase-js": "^2.50.2",
-    "nuxt": "^3.17.5",
+    "@supabase/supabase-js": "^2.52.1",
+    "nuxt": "^3.17.7",
     "pinia": "^2.2.6"
   },
   "devDependencies": {
@@ -28,5 +28,19 @@
     "eslint": "^8.57.1",
     "typescript": "^5.8.3",
     "vue-tsc": "^2.2.12"
-  }
+  },
+  "version": "1.0.0",
+  "description": "Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.",
+  "main": "tailwind.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kilchi555/driving-team-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kilchi555/driving-team-app/issues"
+  },
+  "homepage": "https://github.com/Kilchi555/driving-team-app#readme"
 }

@@ -11,7 +11,7 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxt/eslint',
-    '@nuxtjs/supabase' // ✅ DIESE ZEILE HINZUFÜGEN
+    // '@nuxtjs/supabase' // ✅ DIESE ZEILE HINZUFÜGEN
   ],
   
   // ✅ SUPABASE KONFIGURATION MIT UMGEBUNGSVARIABLEN

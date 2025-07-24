@@ -1,7 +1,7 @@
 
 <template>
   <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-    <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+    <div class="fixed top-2 left-2 right-2 bottom-20 bg-white rounded-lg overflow-y-auto z-50" @click.stop>
       
       <!-- Header -->
       <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
@@ -26,8 +26,8 @@
             :current-user="currentUser"
             :disabled="mode === 'view'"
             :auto-load="shouldAutoLoadStudents"
-            :is-freeslot-mode="props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot'"
-            @student-selected="handleStudentSelected"
+            :is-freeslot-mode="isFreeslotMode"  
+           @student-selected="handleStudentSelected"
             @student-cleared="handleStudentCleared"
             @switch-to-other="switchToOtherEventType"
           />
@@ -139,31 +139,32 @@
 
         <!-- Price Display - nur für Fahrstunden -->
         <div v-if="selectedStudent && formData.duration_minutes && formData.eventType === 'lesson'">
-          <PriceDisplay
-            ref="priceDisplayRef"
-            :event-type="formData.eventType"
-            :duration-minutes="formData.duration_minutes"
-            :price-per-minute="formData.price_per_minute"
-            :category-code="formData.type"
-            :is-paid="formData.is_paid"
-            :admin-fee="120"
-            :is-second-or-later-appointment="false"
-            :appointment-number="1"
-            :discount="formData.discount"
-            :discount-type="formData.discount_type"
-            :discount-reason="formData.discount_reason"
-            :allow-discount-edit="currentUser?.role === 'staff' || currentUser?.role === 'admin'"
-            :current-user="currentUser"
-            :selected-date="formData.startDate"
-            :start-time="formData.startTime"
-            :selected-student="selectedStudent"
-            :initial-payment-method="formData.payment_method"
-            @discount-changed="handleDiscountChanged"
-            @payment-status-changed="handlePaymentStatusChanged"
-            @open-payment-modal="handleOpenPaymentModal"
-            @payment-mode-changed="handlePaymentModeChanged"
-            @invoice-data-changed="handleInvoiceDataChanged"
-          />
+            <PriceDisplay
+              :event-type="formData.eventType"
+              :duration-minutes="formData.duration_minutes"
+              :price-per-minute="dynamicPricing.pricePerMinute || formData.price_per_minute"
+              :is-paid="formData.is_paid"
+              :admin-fee="dynamicPricing.adminFeeChf || 0"
+              :appointment-number="dynamicPricing.appointmentNumber || 1"
+              :is-second-or-later-appointment="dynamicPricing.hasAdminFee || false"
+              :discount="formData.discount"
+              :discount-type="formData.discount_type"
+              :discount-reason="formData.discount_reason"
+              :allow-discount-edit="currentUser?.role === 'staff' || currentUser?.role === 'admin'"
+              :selected-date="formData.startDate"
+              :start-time="formData.startTime"
+              :end-time="formData.endTime"
+              :current-user="currentUser"
+              :selected-student="selectedStudent"
+              @discount-changed="handleDiscountChanged"
+              @payment-status-changed="handlePaymentStatusChanged"
+              @payment-mode-changed="handlePaymentModeChanged"
+            />
+
+             <!-- Debug Info (entfernbar) -->
+          <div v-if="dynamicPricing.error" class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+            ❌ {{ dynamicPricing.error }}
+          </div>
         </div>
 
         <!-- Error Display -->
@@ -181,29 +182,42 @@
 
       </div>
 
-      <!-- Footer -->
-      <div class="sticky bottom-0 bg-gray-50 px-6 py-4 border-t rounded-b-lg">
-        <div class="flex justify-end space-x-3">
-          <button
-            @click="handleClose"
-            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-            :disabled="isLoading"
-          >
-            {{ mode === 'view' ? 'Schließen' : 'Abbrechen' }}
-          </button>
+        <!-- Footer mit Actions -->
+        <div class="bg-gray-50 px-4 py-3 border-t flex justify-between">
+          <!-- Links: Löschen-Button (nur bei edit/view mode) -->
+          <div>
+            <button
+              v-if="mode !== 'create' && eventData?.id"
+              @click="handleDelete"
+              class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2 transition-colors"
+            >
+              <span></span>
+              <span>Löschen</span>
+            </button>
+          </div>
 
-          <button
-            v-if="mode !== 'view'"
-            @click="handleSave"
-            :disabled="!isFormValid || isLoading"
-            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2 transition-colors"
-          >
-            <span v-if="isLoading">⏳</span>
-            <span v-else>💾</span>
-            <span>{{ mode === 'create' ? 'Erstellen' : 'Speichern' }}</span>
-          </button>
+          <!-- Rechts: Schließen und Speichern Buttons -->
+          <div class="flex gap-2">
+            <button
+              @click="$emit('close')"
+              class="px-3 py-2 mx-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              {{ mode === 'view' ? 'Schließen' : 'Abbrechen' }}
+            </button>
+
+            <button
+              v-if="mode !== 'view'"
+              @click="handleSave"
+              :disabled="!isFormValid || isLoading"
+              class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2 transition-colors"
+            >
+              <span v-if="isLoading">⏳</span>
+              <span v-else></span>
+              <span>{{ mode === 'create' ? 'Erstellen' : 'Speichern' }}</span>
+            </button>
+          </div>
         </div>
-      </div>
+
     </div>
   </div>
 </template>
@@ -282,6 +296,7 @@ const invitedCustomers = ref<any[]>([])
 const defaultBillingAddress = ref(null)
 const selectedCategory = ref<any | null>(null)
 
+
 const formData = ref({
   id: '',
   title: '',
@@ -307,7 +322,16 @@ const formData = ref({
   payment_data: null as any
 })
 
-const companyBilling = useCompanyBilling()
+
+// Neue Dynamic Pricing Integration
+const dynamicPricing = ref({
+  pricePerMinute: 0,
+  adminFeeChf: 0,
+  appointmentNumber: 1,
+  hasAdminFee: false,
+  isLoading: false,
+  error: ''
+})
 
 const handlers = useEventModalHandlers(
   formData,
@@ -335,10 +359,9 @@ const modalTitle = computed(() => {
 })
 
 const shouldAutoLoadStudents = computed(() => {
-  // ✅ FIX: Nicht auto-loaden wenn es ein free slot click ist
   if (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') {
     console.log('🚫 Free slot click detected - disabling auto student load')
-    return true
+    return false  // ✅ MUSS FALSE SEIN
   }
   
   return formData.value.eventType === 'lesson' && (props.mode === 'create' || !selectedStudent.value)
@@ -378,62 +401,61 @@ const showTimeSection = computed(() => {
   }
 })
 
+// Irgendwo nach den imports und props, vor dem Template:
 const isFreeslotMode = computed(() => {
-  return props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot'
+  const result = !!(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')
+  console.log('🔍 isFreeslotMode computed:', {
+    result,
+    isFreeslotClick: props.eventData?.isFreeslotClick,
+    clickSource: props.eventData?.clickSource,
+    eventData: props.eventData
+  })
+  return result
 })
 
 // ============ HANDLERS ============
+// In EventModal.vue - ersetzen Sie die lokale handleStudentSelected Funktion mit:
+
+
+
 const handleStudentSelected = async (student: Student | null) => {
-  console.log('👤 Student selected:', student?.first_name)
+  console.log('👤 Student selected in EventModal:', student?.first_name)
   selectedStudent.value = student
   formData.value.user_id = student?.id || ''
   
   if (student?.category) {
     const primaryCategory = student.category.split(',')[0].trim()
-    console.log('🎯 Setting category from student:', primaryCategory)
     formData.value.type = primaryCategory
+    
+    // ✅ NEU: Kategorie-Daten direkt aus DB laden für Dauer-Berechnung
+    try {
+      console.log('🔄 Loading category data for student:', primaryCategory)
+      const { data, error } = await supabase
+        .from('categories')
+        .select('code, lesson_duration_minutes, exam_duration_minutes')
+        .eq('code', primaryCategory)
+        .eq('is_active', true)
+        .single()
+      
+      if (error) throw error
+      
+      if (data) {
+        selectedCategory.value = data
+        console.log('✅ Category data loaded for selected student:', data)
+      }
+    } catch (err) {
+      console.error('❌ Error loading category data for student:', err)
+      // Fallback: leeres Objekt mit Standard-Werten
+      selectedCategory.value = {
+        code: primaryCategory,
+        lesson_duration_minutes: 45,
+        exam_duration_minutes: 180
+      }
+      console.log('✅ Using fallback category data:', selectedCategory.value)
+    }
   }
   
   generateTitleIfReady()
-}
-
-const setDurationBasedOnType = (lessonTypeCode: string) => {
-  console.log('⏱️ Setting duration for lesson type:', lessonTypeCode)
-  
-  let duration = 45 // Default
-  
-  switch (lessonTypeCode) {
-    case 'lesson':
-      // Normale Fahrstunde: Verwende category lesson_duration_minutes
-      if (selectedStudent.value?.category && selectedCategory.value) {
-        duration = selectedCategory.value.lesson_duration_minutes || 45
-      }
-      break
-      
-    case 'exam':
-      // Prüfung: Verwende category exam_duration_minutes
-      if (selectedStudent.value?.category && selectedCategory.value) {
-        duration = selectedCategory.value.exam_duration_minutes || 180
-      } else {
-        duration = 180 // Standard-Prüfungsdauer
-      }
-      break
-      
-    case 'theory':
-      duration = 45 // Theorie immer 45min
-      break
-      
-    case 'meeting':
-      duration = 45 // Besprechung immer 45min
-      break
-      
-    default:
-      duration = 45
-  }
-    console.log('⏱️ Auto-setting duration to:', duration, 'minutes')
-  formData.value.duration_minutes = duration
-  availableDurations.value = [duration] // Nur diese Dauer verfügbar
-  calculateEndTime()
 }
 
 const handleStudentCleared = () => {
@@ -447,12 +469,7 @@ const handleStudentCleared = () => {
 
 const switchToOtherEventType = () => {
   console.log('🔄 Switching to other event types')
-  
-  // ✅ FIX: Nicht automatisch bei freien Zeitslots
-  if (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') {
-    console.log('🚫 Auto-switch blocked for free slot')
-    return
-  }
+  console.log('📍 SWITCH EVENTMODAL STACK:', new Error().stack)
   
   formData.value.eventType = 'other'
   showEventTypeSelection.value = true
@@ -674,6 +691,12 @@ const loadCategoryData = async (categoryCode: string) => {
 }
 
 // ============ SAVE LOGIC ============
+// ERSETZEN Sie die handleSave Funktion in EventModal.vue mit dieser korrigierten Version:
+
+// ERSETZEN Sie die handleSave Funktion in EventModal.vue mit dieser korrigierten Version:
+
+// ERSETZEN Sie die handleSave Funktion in EventModal.vue mit dieser korrigierten Version:
+
 const handleSave = async () => {
   console.log('💾 Saving appointment')
   
@@ -686,18 +709,68 @@ const handleSave = async () => {
   error.value = ''
   
   try {
+    // ✅ CRITICAL FIX: Handle temporary locations BEFORE saving appointment
+    let finalLocationId: string | undefined = formData.value.location_id
+
+    // Check if we have a temporary location that needs to be saved first
+    if (selectedLocation.value?.id?.startsWith('temp_')) {
+      console.log('🔄 Converting temporary location to permanent DB location...')
+      console.log('📍 Temporary location data:', selectedLocation.value)
+      
+      try {
+        const { data: newLocation, error: locationError } = await supabase
+          .from('locations')
+          .insert({
+            staff_id: formData.value.staff_id,
+            name: selectedLocation.value.name,
+            address: selectedLocation.value.address || '',
+            location_type: 'custom',
+            is_active: true,
+            // Optional: Add Google Places data if available
+            google_place_id: selectedLocation.value.place_id || null,
+            latitude: selectedLocation.value.latitude || null,
+            longitude: selectedLocation.value.longitude || null
+          })
+          .select()
+          .single()
+
+        if (locationError) {
+          console.error('❌ Error saving temporary location:', locationError)
+          throw locationError
+        }
+        
+        finalLocationId = newLocation.id
+        formData.value.location_id = finalLocationId || '' // ✅ FIX: Fallback to empty string
+        console.log('✅ Temporary location saved with permanent ID:', finalLocationId)
+        
+      } catch (locationSaveError) {
+        console.error('❌ Could not save temporary location:', locationSaveError)
+        // ✅ FIX: Set to undefined instead of null for TypeScript
+        finalLocationId = undefined
+        formData.value.location_id = ''
+        console.log('⚠️ Continuing without location due to save error')
+      }
+    }
+    
+    // ✅ VALIDATION: Never allow temp_ IDs to reach the database
+    if (finalLocationId && String(finalLocationId).startsWith('temp_')) {
+      console.error('❌ BLOCKING: Temporary ID detected before save:', finalLocationId)
+      finalLocationId = undefined
+      formData.value.location_id = ''
+    }
+
     // Create proper datetime strings
     const localStart = new Date(`${formData.value.startDate}T${formData.value.startTime}`)
     const localEnd = new Date(`${formData.value.startDate}T${formData.value.endTime}`)
     
-    const appointmentData = {
+    // ✅ FIX: Create appointment data with proper typing
+    const appointmentData: any = {
       title: formData.value.title,
       start_time: localStart.toISOString(),
       end_time: localEnd.toISOString(),
       duration_minutes: formData.value.duration_minutes,
       user_id: formData.value.user_id || formData.value.staff_id,
       staff_id: formData.value.staff_id,
-      location_id: formData.value.location_id,
       type: formData.value.type,
       status: formData.value.status,
       is_paid: formData.value.is_paid,
@@ -705,8 +778,13 @@ const handleSave = async () => {
       description: formData.value.title || ''
     }
     
+    // ✅ FIX: Only add location_id if we have a valid one
+    if (finalLocationId) {
+      appointmentData.location_id = finalLocationId
+    }
+    
     console.log('📋 Saving appointment data:', appointmentData)
-    console.log('👥 Selected staff for team invitations:', invitedStaffIds.value.length, 'members')
+    console.log('🔍 Final location_id being saved:', finalLocationId || 'none')
     
     let result
     if (props.mode === 'create') {
@@ -733,7 +811,7 @@ const handleSave = async () => {
       console.log('✅ Appointment updated:', result.id)
     }
     
-    // NEU: Team-Einladungen erstellen falls StaffSelector verwendet wurde
+    // Handle team invitations if any
     if (invitedStaffIds.value.length > 0 && staffSelectorRef.value && result?.id) {
       console.log('📧 Creating team invites via StaffSelector...')
       
@@ -742,7 +820,7 @@ const handleSave = async () => {
         console.log('✅ Team invites created:', teamInvites.length)
       } catch (inviteError) {
         console.error('❌ Error creating team invites:', inviteError)
-        // Haupt-Termin ist gespeichert, auch wenn Team-Einladungen fehlschlagen
+        // Main appointment is saved, continue even if team invites fail
       }
     }
     
@@ -762,6 +840,17 @@ const handleClose = () => {
   console.log('🚪 Closing modal')
   resetForm()
   emit('close')
+}
+
+// Neue Funktion für das Löschen hinzufügen:
+const handleDelete = () => {
+  if (!props.eventData?.id) return
+  
+  // Nutze das bereits existierende appointment-deleted Event
+  emit('appointment-deleted', props.eventData.id)
+  
+  // Modal schließen
+  handleClose()
 }
 
 // ============ MODAL INITIALIZATION ============
@@ -968,6 +1057,16 @@ watch(() => formData.value.duration_minutes, () => {
   calculateEndTime()
 })
 
+watch(() => selectedStudent.value, (newStudent, oldStudent) => {
+  if (newStudent && !oldStudent) {
+    console.log('🔍 AUTO STUDENT SELECTION DETECTED!')
+    console.log('🎯 Student automatically selected:', newStudent.first_name, newStudent.last_name)
+    console.log('📍 CALL STACK:', new Error().stack)
+    console.log('🔍 Is Free-Slot mode?', props.eventData?.isFreeslotClick)
+    console.log('🔍 Event data:', props.eventData)
+  }
+}, { immediate: true })
+
 watch(selectedStudent, (newStudent, oldStudent) => {
   if (oldStudent && !newStudent && props.mode === 'create') {
     console.log('🔄 Student cleared in create mode - triggering reload')
@@ -977,10 +1076,16 @@ watch(selectedStudent, (newStudent, oldStudent) => {
   }
 })
 
+watch(() => selectedStudent.value, (newStudent, oldStudent) => {
+  if (newStudent && !oldStudent) {
+    console.log('🚨 selectedStudent.value DIRECTLY SET!')
+    console.log('📍 WHO SET IT?', new Error().stack)
+    console.log('🔍 Is Free-Slot?', props.eventData?.isFreeslotClick)
+  }
+}, { immediate: false })
+
 // ============ LIFECYCLE ============
-onMounted(() => {
-  console.log('🔥 EventModal - Component mounted')
-})
+
 </script>
 
 <style scoped>

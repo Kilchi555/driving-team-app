@@ -287,7 +287,6 @@
                   >
                   <div>
                     <div class="font-medium text-gray-900">{{ category.code }}</div>
-                    <div class="text-xs text-gray-700">CHF {{ category.price_per_lesson }}/45min</div>
                   </div>
                 </label>
               </div>
@@ -396,38 +395,6 @@
                     </label>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 5. Benachrichtigungen -->
-          <div class="border border-gray-200 rounded-lg">
-            <button
-              @click="toggleSection('notifications')"
-              class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
-            >
-              <span class="font-medium text-gray-900">🔔 Benachrichtigungen</span>
-              <span class="text-gray-600 font-bold">{{ openSections.notifications ? '−' : '+' }}</span>
-            </button>
-            
-            <div v-if="openSections.notifications" class="px-4 pb-4 border-t border-gray-100">
-              <div class="space-y-3 mt-3">
-                <label class="flex items-center">
-                  <input
-                    type="checkbox"
-                    v-model="notifications.sms"
-                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  >
-                  <span class="ml-2 text-sm text-gray-800">SMS-Benachrichtigungen</span>
-                </label>
-                <label class="flex items-center">
-                  <input
-                    type="checkbox"
-                    v-model="notifications.email"
-                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  >
-                  <span class="ml-2 text-sm text-gray-800">E-Mail-Benachrichtigungen</span>
-                </label>
               </div>
             </div>
           </div>
@@ -975,13 +942,6 @@ const loadWorkingHoursData = async () => {
     monthlyStats.value.previousMonth.worked = previousHours
     monthlyStats.value.twoMonthsAgo.worked = twoMonthsAgoHours
     monthlyStats.value.threeMonthsAgo.worked = threeMonthsAgoHours
-    
-    console.log('✅ DEBUG: Final working hours set:', {
-      current: monthlyStats.value.currentMonth.worked,
-      previous: monthlyStats.value.previousMonth.worked,
-      twoAgo: monthlyStats.value.twoMonthsAgo.worked,
-      threeAgo: monthlyStats.value.threeMonthsAgo.worked
-    })
     
   } catch (error) {
     console.error('❌ DEBUG: Unexpected error:', error)

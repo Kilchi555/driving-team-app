@@ -1,145 +1,5 @@
-=== DRIVING TEAM PROJECT EXPORT ===
-Generated: Sat Jul 19 10:04:55 CEST 2025
-
-### ./package.json
-```json
-{
-  "name": "driving-team-app",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
-  },
-  "dependencies": {
-    "@fullcalendar/core": "^6.1.17",
-    "@fullcalendar/daygrid": "^6.1.17",
-    "@fullcalendar/interaction": "^6.1.17",
-    "@fullcalendar/timegrid": "^6.1.17",
-    "@fullcalendar/vue3": "^6.1.17",
-    "@nuxt/ui": "^2.18.7",
-    "@nuxtjs/supabase": "^1.5.3",
-    "@pinia/nuxt": "^0.5.5",
-    "@supabase/supabase-js": "^2.50.2",
-    "nuxt": "^3.17.5",
-    "pinia": "^2.2.6"
-  },
-  "devDependencies": {
-    "@nuxt/eslint": "^0.5.7",
-    "@types/node": "^24.0.12",
-    "eslint": "^8.57.1",
-    "typescript": "^5.8.3",
-    "vue-tsc": "^2.2.12"
-  }
-}
-```
-
-### ./nuxt.config.ts
-```typescript
-// nuxt.config.ts
-import { defineNuxtConfig } from 'nuxt/config'
-
-export default defineNuxtConfig({
-  compatibilityDate: '2025-05-15',
-  devtools: { enabled: false },
-  ssr: true,
-  
-  // --- Module Configuration (MIT @nuxtjs/supabase hinzugefügt) ---
-  modules: [
-    '@nuxt/ui',
-    '@pinia/nuxt',
-    '@nuxt/eslint',
-    '@nuxtjs/supabase' // ✅ DIESE ZEILE HINZUFÜGEN
-  ],
-  
-  // ✅ SUPABASE KONFIGURATION MIT UMGEBUNGSVARIABLEN
-  // @ts-ignore - Supabase Konfiguration wird vom @nuxtjs/supabase Modul erweitert
-  supabase: {
-    url: process.env.SUPABASE_URL,
-    key: process.env.SUPABASE_ANON_KEY,
-    redirectOptions: {
-      login: '/',
-      callback: '/dashboard',
-      exclude: ['/']
-    }
-  },
-  
-  // --- Build Configuration ---
-  build: {
-    transpile: [
-      '@fullcalendar/core',
-      '@fullcalendar/daygrid',
-      '@fullcalendar/timegrid',
-      '@fullcalendar/interaction',
-      '@fullcalendar/vue3',
-    ],
-  },
-  
-  // --- TypeScript Configuration ---
-  typescript: {
-    strict: true,
-    typeCheck: true
-  },
-  
-  // --- Nitro Configuration ---
-  nitro: {
-    experimental: {
-      wasm: true
-    }
-  },
-  
-  experimental: {
-    // Suspense explizit aktivieren
-    payloadExtraction: false
-  },
-  
-  // Vue-spezifische Konfiguration
-  vue: {
-    compilerOptions: {
-      // Suspense-Warnungen unterdrücken
-      isCustomElement: (tag: string) => false
-    }
-  },
-  
-  runtimeConfig: {
-    // Private keys (only available on server-side)
-    walleeSpaceId: process.env.WALLEE_SPACE_ID,
-    walleeApplicationUserId: process.env.WALLEE_APPLICATION_USER_ID,
-    walleeSecretKey: process.env.WALLEE_SECRET_KEY,
-    
-    // Public keys (exposed to client-side)
-    public: {
-      googleMapsApiKey: process.env.VITE_GOOGLE_MAPS_API_KEY,
-      walleeSpaceId: process.env.WALLEE_SPACE_ID,
-      walleeUserId: process.env.WALLEE_USER_ID
-    }
-  },
-  
-  app: {
-    head: {
-      script: [
-        {
-          src: `https://maps.googleapis.com/maps/api/js?key=${process.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=de&region=CH&v=beta&loading=async`,
-          async: true,
-          defer: true
-        }
-      ]
-    }
-  }
-})```
-
-### ./.env (Structure)
-```
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-VITE_GOOGLE_MAPS_API_KEY=your-maps-key
-WALLEE_SPACE_ID=your-space-id
-WALLEE_APPLICATION_USER_ID=your-user-id
-WALLEE_SECRET_KEY=your-secret-key
-```
+=== DRIVING TEAM PROJECT - AKTUELLER EXPORT ===
+Generated: Tue Jul 22 07:42:31 CEST 2025
 
 ### ./app.vue
 ```vue
@@ -866,18 +726,16 @@ const loadAppointments = async () => {
     console.log('🔄 Loading all calendar events...')
     
     // Parallel laden
-    const [appointments, staffMeetings] = await Promise.all([
-      loadRegularAppointments(), // Deine bestehende Logik umbenennen
-      loadStaffMeetings()
+    const [appointments] = await Promise.all([
+      loadRegularAppointments(), 
     ])
 
     // Kombinieren
-    const allEvents = [...appointments, ...staffMeetings]
+    const allEvents = [...appointments]  
     calendarEvents.value = allEvents
 
     console.log('✅ Final calendar summary:', {
       appointments: appointments.length,
-      staffMeetings: staffMeetings.length,
       total: allEvents.length
     })
 
@@ -1029,7 +887,6 @@ const handleSaveEvent = async (eventData: CalendarEvent) => {
   
   // Daten neu laden
   await loadAppointments()
-  await loadStaffMeetings()
   
   // View-Position wiederherstellen falls nötig
   if (currentDate && calendar.value?.getApi) {
@@ -1126,7 +983,6 @@ const handleEventDrop = async (dropInfo: any) => {
       console.log('🔄 Reloading calendar events...')
         isUpdating.value = true
         await loadAppointments()
-        await loadStaffMeetings()
         isUpdating.value = false
 
       
@@ -1213,7 +1069,6 @@ const handleEventResize = async (resizeInfo: any) => {
       }
       
       await loadAppointments()
-      await loadStaffMeetings()
       
     } catch (err: any) {
       console.error('❌ Error resizing appointment:', err)
@@ -1396,7 +1251,6 @@ const refreshCalendar = async () => {
     // 2. Daten neu laden
     await Promise.all([
       loadAppointments(),
-      loadStaffMeetings()
     ])
     
     // 3. Warte einen Moment für State-Updates
@@ -1427,7 +1281,6 @@ const isCalendarReady = ref(false)
 const handleDeleteEvent = async (eventData: CalendarEvent) => {
   console.log('🗑 Event deleted, refreshing calendar...')
   await loadAppointments()
-  await loadStaffMeetings()
 
   refreshCalendar()
 
@@ -1451,13 +1304,11 @@ onMounted(async () => {
   
   console.log('🔄 Initial appointment loading...')
   await loadAppointments()
-  await loadStaffMeetings()
 })
 
 watch(() => props.currentUser, async (newUser) => {
   if (newUser) {
     await loadAppointments()
-    await loadStaffMeetings()
   }
 }, { deep: true })
 
@@ -1467,11 +1318,12 @@ watch(calendarEvents, (newEvents) => {
   if (calendar.value?.getApi) {
     const api = calendar.value.getApi()
     
-    // Alle Events entfernen und neue hinzufügen
+    // ✅ FIX: Alle Events komplett entfernen
     api.removeAllEvents()
-    api.addEventSource(newEvents)
+    api.removeAllEventSources()
     
-    console.log('✅ FullCalendar events updated successfully')
+    // ✅ FIX: Events direkt setzen, nicht als Source
+    newEvents.forEach(event => api.addEvent(event))
   }
 }, { deep: true, immediate: true })
 
@@ -1992,7 +1844,7 @@ const loadCategories = async () => {
    // Alle Kategorien laden
    const { data: categoriesData, error: categoriesError } = await supabase
      .from('categories')
-     .select('id, name, code, description, price_per_lesson, lesson_duration_minutes, color, is_active, display_order, price_unit')
+     .select('id, name, code, description, price_per_lesson, lesson_duration_minutes, color, is_active, display_order, price_unit, exam_duration_minutes')
      .eq('is_active', true)
      .order('display_order', { ascending: true })
      .order('name', { ascending: true })
@@ -2095,42 +1947,42 @@ const loadStaffCategoryDurations = async (staffId: string) => {
 }
 
 const handleCategoryChange = (event: Event) => {
- const target = event.target as HTMLSelectElement
- const newValue = target.value
- 
- console.log('🔄 CategorySelector - Manual category change:', newValue)
- 
- // ✅ Mark als User Interaction (verhindert andere Auto-Updates)
- isAutoEmitting.value = true
- 
- emit('update:modelValue', newValue)
- 
- const selected = availableCategoriesForUser.value.find(cat => cat.code === newValue) || null
- console.log('🎯 CategorySelector - Selected category:', selected)
- console.log('🎯 CategorySelector - Available durations:', selected?.availableDurations)
- 
- emit('category-selected', selected)
- 
- // Preis pro Minute berechnen (alle Preise sind auf 45min basis)
- if (selected) {
-   const pricePerMinute = selected.price_per_lesson / 45
-   emit('price-changed', pricePerMinute)
-   
-   // ✅ RACE-SAFE Durations Emit (User Selection erlaubt)
-   console.log('⏱️ CategorySelector - Emitting durations-changed:', selected.availableDurations)
-   emit('durations-changed', selected.availableDurations)
-   
-   console.log('💰 Price per minute:', pricePerMinute)
- } else {
-   console.log('❌ No category selected, emitting empty durations')
-   emit('price-changed', 0)
-   emit('durations-changed', [])
- }
- 
- // ✅ Reset Auto-Selecting Flag nach kurzer Zeit
- setTimeout(() => {
-   isAutoEmitting.value = false
- }, 300)
+  const target = event.target as HTMLSelectElement
+  const newValue = target.value
+  
+  console.log('🔄 CategorySelector - Manual category change:', newValue)
+  
+  // ✅ BLOCKIERE alle anderen Auto-Updates während User-Auswahl
+  isAutoEmitting.value = true
+  
+  emit('update:modelValue', newValue)
+  
+  const selected = availableCategoriesForUser.value.find(cat => cat.code === newValue) || null
+  console.log('🎯 CategorySelector - Selected category:', selected)
+  console.log('🎯 CategorySelector - Available durations:', selected?.availableDurations)
+  
+  emit('category-selected', selected)
+  
+  if (selected) {
+    const pricePerMinute = selected.price_per_lesson / 45
+    emit('price-changed', pricePerMinute)
+    
+    // ✅ FINAL: Dauern emittieren
+    console.log('⏱️ CategorySelector - FINAL Emitting durations-changed:', selected.availableDurations)
+    emit('durations-changed', selected.availableDurations)
+    
+    console.log('💰 Price per minute:', pricePerMinute)
+  } else {
+    console.log('❌ No category selected, emitting empty durations')
+    emit('price-changed', 0)
+    emit('durations-changed', [])
+  }
+  
+  // ✅ LÄNGERE Blockierung um andere Events zu verhindern
+  setTimeout(() => {
+    isAutoEmitting.value = false
+    console.log('✅ CategorySelector - User selection completed, auto-emit enabled')
+  }, 1000) // 1 Sekunde statt 300ms
 }
 
 // Watchers
@@ -2138,20 +1990,41 @@ const handleCategoryChange = (event: Event) => {
 // Ersetzen Sie den User-Watcher (Zeile 314-328) mit diesem korrigierten Code:
 
 watch(() => props.selectedUser, (newUser, oldUser) => {
- // ✅ Skip wenn User nicht wirklich geändert wurde
- if (!newUser || oldUser?.id === newUser.id) return
- 
- // ✅ Skip während Initialisierung
- if (isInitializing.value) {
-   console.log('🚫 Auto-category selection blocked - initializing')
-   return
- }
- 
- // ✅ Skip wenn bereits Kategorie gewählt (verhindert Überschreibung)
- if (props.modelValue) {
-   console.log('🚫 Auto-category selection blocked - category already selected')
-   return
- }
+  // ✅ Skip während Initialisierung
+  if (isInitializing.value) {
+    console.log('🚫 Auto-category selection blocked - initializing')
+    return
+  }
+  
+  // ✅ Skip wenn bereits Kategorie gewählt (verhindert Überschreibung)
+  if (props.modelValue) {
+    console.log('🚫 Auto-category selection blocked - category already selected')
+    return
+  }
+
+  // ✅ FIX: Bei freeslots (kein User) Standard-Kategorie 'B' laden
+  if (!newUser) {
+    console.log('🎯 No user selected - loading default category: B')
+    const defaultCategory = availableCategoriesForUser.value.find(cat => cat.code === 'B')
+    
+    if (defaultCategory) {
+      console.log('🎯 Auto-selected default category:', defaultCategory)
+      isAutoEmitting.value = true
+      
+      emit('update:modelValue', 'B')
+      emit('category-selected', defaultCategory)
+      emit('price-changed', defaultCategory.price_per_lesson / 45)
+      emit('durations-changed', defaultCategory.availableDurations)
+      
+      setTimeout(() => {
+        isAutoEmitting.value = false
+      }, 200)
+    }
+    return
+  }
+
+  if (oldUser?.id === newUser.id) return
+
  
  if (newUser?.category && newUser.category !== props.modelValue) {
    console.log('👤 User category detected:', newUser.category)
@@ -2336,294 +2209,6 @@ const handleBackdropClick = () => {
   emit('close')
 }
 </script>```
-
-### ./components/CustomerDashboard.vue
-```vue
-<!-- components/CustomerDashboard.vue -->
-<template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-white shadow-sm border-b">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">
-              Hallo, {{ getUserDisplayName() }}
-            </h1>
-          </div>
-          <div class="flex items-center space-x-4">
-            <button 
-              @click="handleLogout"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-            >
-              Abmelden
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="isLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
-        <p class="mt-4 text-gray-600">Termine werden geladen...</p>
-      </div>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="bg-red-50 border border-red-200 rounded-md p-4">
-        <div class="flex">
-          <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ml-3">
-            <h3 class="text-sm font-medium text-red-800">Fehler beim Laden der Daten</h3>
-            <p class="mt-1 text-sm text-red-700">{{ error }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Content -->
-    <div v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-          <div class="p-5">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div class="ml-5 w-0 flex-1">
-                <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">Kommende Termine</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ upcomingAppointments.length }}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-          <div class="p-5">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div class="ml-5 w-0 flex-1">
-                <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">Absolvierte Lektionen</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ completedAppointments.length }}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-          <div class="p-5">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <svg class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-              <div class="ml-5 w-0 flex-1">
-                <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">Offene Rechnungen</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ unpaidAppointments.length }}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Rest of the template stays the same... -->
-      <!-- ... (Tab navigation and content from original component) ... -->
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { formatDate, formatTime } from '~/utils/dateUtils'
-import { getSupabase } from '~/utils/supabase'
-
-// Composables
-const authStore = useAuthStore()
-const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
-
-// State
-const isLoading = ref(true)
-const error = ref(null)
-const appointments = ref([])
-const locations = ref([])
-const staff = ref([])
-
-// Helper method to get user display name
-const getUserDisplayName = () => {
-  if (!currentUser.value) return 'Unbekannt'
-  
-  // Try user metadata first
-  const firstName = currentUser.value.user_metadata?.first_name || 
-                   currentUser.value.user_metadata?.firstName
-  const lastName = currentUser.value.user_metadata?.last_name || 
-                  currentUser.value.user_metadata?.lastName
-  
-  if (firstName && lastName) {
-    return `${firstName} ${lastName}`
-  }
-  
-  // Fallback to email
-  return currentUser.value.email || 'Unbekannt'
-}
-
-// Computed
-const upcomingAppointments = computed(() => {
-  const now = new Date()
-  return appointments.value.filter(apt => 
-    new Date(apt.start_time) > now
-  ).sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
-})
-
-const completedAppointments = computed(() => {
-  const now = new Date()
-  return appointments.value.filter(apt => 
-    new Date(apt.end_time) < now
-  ).sort((a, b) => new Date(b.start_time) - new Date(a.start_time))
-})
-
-const unpaidAppointments = computed(() => {
-  return appointments.value.filter(apt => !apt.is_paid)
-})
-
-// Methods
-const loadAppointments = async () => {
-  if (!currentUser.value?.id) return
-
-  try {
-    const supabase = getSupabase()
-    
-    // Get user data from users table to get internal user_id
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', currentUser.value.id)
-      .single()
-    
-    if (userError) throw userError
-    if (!userData) throw new Error('User nicht in Datenbank gefunden')
-
-    // Load appointments with internal user_id
-    const { data, error: fetchError } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        notes (
-          id,
-          staff_rating,
-          staff_note
-        )
-      `)
-      .eq('user_id', userData.id)
-      .order('start_time', { ascending: false })
-
-    if (fetchError) throw fetchError
-    appointments.value = data || []
-  } catch (err) {
-    console.error('❌ Error loading appointments:', err)
-    error.value = err.message
-  }
-}
-
-const loadLocations = async () => {
-  try {
-    const supabase = getSupabase()
-    const { data, error: fetchError } = await supabase
-      .from('locations')
-      .select('*')
-      .order('name')
-
-    if (fetchError) throw fetchError
-    locations.value = data || []
-  } catch (err) {
-    console.error('❌ Error loading locations:', err)
-  }
-}
-
-const loadStaff = async () => {
-  try {
-    const supabase = getSupabase()
-    const { data, error: fetchError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .eq('role', 'staff')
-      .eq('is_active', true)
-
-    if (fetchError) throw fetchError
-    staff.value = data || []
-  } catch (err) {
-    console.error('❌ Error loading staff:', err)
-  }
-}
-
-const handleLogout = async () => {
-  try {
-    const supabase = getSupabase()
-    await authStore.logout(supabase)
-    await navigateTo('/')
-  } catch (err) {
-    console.error('❌ Fehler beim Abmelden:', err)
-  }
-}
-
-// Lifecycle
-onMounted(async () => {
-  console.log('🔥 CustomerDashboard mounted')
-  
-  try {
-    // Check if user is a client
-    if (!isClient.value) {
-      console.warn('⚠️ User is not a client, redirecting...')
-      await navigateTo('/')
-      return
-    }
-
-    // Load all data in parallel
-    await Promise.all([
-      loadAppointments(),
-      loadLocations(),
-      loadStaff()
-    ])
-
-    console.log('✅ Customer dashboard data loaded successfully')
-  } catch (err) {
-    console.error('❌ Error loading customer dashboard:', err)
-    error.value = err.message
-  } finally {
-    isLoading.value = false
-  }
-})
-</script>
-
-<style scoped>
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-</style>```
 
 ### ./components/CustomerInviteSelector.vue
 ```vue
@@ -3296,55 +2881,16 @@ const selectDuration = (duration: number) => {
 }
 
 // Watchers
-watch(() => props.selectedCategory, async (newCategory, oldCategory) => {
-  console.log('🔄 DurationSelector - Category watcher triggered:', {
-    old: oldCategory?.code,
-    new: newCategory?.code,
-    userId: props.currentUser?.id
-  })
-
-  // ✅ ADD: Debug selected category structure
-  if (newCategory) {
-    console.log('📊 Selected category full object:', newCategory)
-    console.log('📊 Available durations in category:', newCategory.availableDurations)
-  }
+watch(() => props.availableDurations, (newDurations) => {
+  console.log('🔄 DurationSelector - Available durations changed:', newDurations)
   
-  if (newCategory && props.currentUser?.id) {
-    console.log('🚗 Loading durations for staff:', {
-      staffId: props.currentUser.id,
-      categoryCode: newCategory.code
-    })
-    
-    try {
-      // ✅ KORRIGIERT - loadStaffDurations(staffId)
-      await loadStaffDurations(props.currentUser.id)
-      
-      const defaultDuration = getDefaultDuration()
-      console.log('🎯 Setting default duration:', defaultDuration)
-      
-      if (defaultDuration && defaultDuration !== props.modelValue) {
-        emit('update:modelValue', defaultDuration)
-        emit('duration-changed', defaultDuration)
-      }
-    } catch (error) {
-      console.error('❌ Error loading durations:', error)
-    }
+  // Nur prüfen ob aktuelle Auswahl noch gültig ist
+  if (newDurations.length > 0 && !newDurations.includes(props.modelValue)) {
+    console.log('⏱️ Auto-setting duration to first available:', newDurations[0])
+    emit('update:modelValue', newDurations[0])
+    emit('duration-changed', newDurations[0])
   }
 }, { immediate: true })
-
-// User change watcher
-watch(() => props.currentUser?.id, async (newUserId, oldUserId) => {
-  console.log('🔄 DurationSelector - User watcher triggered:', {
-    old: oldUserId,
-    new: newUserId,
-    categoryCode: props.selectedCategory?.code
-  })
-  
-  if (newUserId) {
-    // ✅ KORRIGIERT - loadStaffDurations(staffId)
-    await loadStaffDurations(newUserId)
-  }
-})
 </script>
 
 <style scoped>
@@ -3658,17 +3204,17 @@ watch(() => props.currentUser?.id, async (newUserId, oldUserId) => {
   </div>
 </div>
 
-       <div v-if="activeTab === 'lessons'">
-  <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
+       <div v-if="activeTab === 'lessons'" class="h-full overflow-y-auto">
+  <div v-if="isLoadingLessons" class="flex items-center justify-center p-2">
     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-    <span class="ml-2 text-gray-600">Lektionen werden geladen...</span>
+    <span class=" text-gray-600">Lektionen werden geladen...</span>
   </div>
 
   <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
     {{ lessonsError }}
   </div>
 
-  <div v-else-if="lessons.length === 0" class="text-center py-8">
+  <div v-else-if="lessons.length === 0" class="text-center">
     <div class="text-4xl mb-2">📚</div>
     <h4 class="font-semibold text-gray-900 mb-2">Noch keine Lektionen</h4>
     <p class="text-gray-600 mb-4">Dieser Schüler hat noch keine Fahrlektionen absolviert.</p>
@@ -3680,25 +3226,25 @@ watch(() => props.currentUser?.id, async (newUserId, oldUserId) => {
     </button>
   </div>
 
-  <div v-else class="space-y-4">
-    <div class="text-sm text-gray-600 mb-4">{{ lessons.length }} Lektionen</div>
-
-    <div class="space-y-3">
+  <div v-else class="flex-1 overflow-y-auto p-2">
+    <div class="space-y-2">
       <div
         v-for="lesson in lessons"
         :key="lesson.id"
-        class="bg-white border rounded-lg p-4 hover:shadow-md transition-all"
+        class="bg-white border rounded-lg p-2 hover:shadow-md transition-all"
       >
+       
         <div class="flex items-center justify-between">
           <div class="flex-1">
-            <h4 class="font-semibold text-gray-900">
-              {{ formatDateTime(lesson.start_time) }}
+            <h4 class=" text-gray-900">
+              {{ getWeekday(lesson.start_time) }}  |  {{ formatDateTime(lesson.start_time) }}
               <span v-if="lesson.duration_minutes" class="ml-2">
-                |  {{ lesson.duration_minutes }}min
-              </span></h4>
-              <p class=" text-gray-600">
+              |   {{ lesson.duration_minutes }}min
+              </span>
+            </h4>
+            <p class="text-gray-600 text-xs">
               📍 {{ lesson.location_name || 'Treffpunkt nicht definiert' }}
-              </p>
+            </p>
           </div>
         </div>
       </div>
@@ -3706,8 +3252,8 @@ watch(() => props.currentUser?.id, async (newUserId, oldUserId) => {
   </div>
 </div>
 
-        <div v-if="activeTab === 'progress'" class="space-y-4">
-          <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
+        <div v-if="activeTab === 'progress'" class="h-full overflow-y-auto p-2">
+          <div v-if="isLoadingLessons" class="flex items-center justify-center">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
             <span class="ml-2 text-gray-600">Lade Fortschrittsdaten...</span>
           </div>
@@ -3724,19 +3270,15 @@ watch(() => props.currentUser?.id, async (newUserId, oldUserId) => {
 
           <div v-else-if="progressData.length === 0" class="text-center py-8">
             <div class="text-3xl mb-2">📊</div>
-            <h4 class="font-semibold text-gray-900 mb-2">Keine Kriterien-Bewertungen verfügbar</h4>
+            <h4 class="font-semibold text-gray-900 mb-2">Keine Bewertungen verfügbar</h4>
             <p class="text-gray-600 text-sm">
               {{ lessons.length }} Lektionen gefunden, aber noch keine Kriterien bewertet.
             </p>
           </div>
 
           <div v-else class="space-y-2">
-            <div class="flex items-center justify-between mb-4">
-              <h4 class="font-semibold text-gray-900">Lernfortschritt</h4>
-            </div>
-
             <div class="space-y-1">
-              <!-- KORRIGIERT: Iteriere über Gruppen und dann über Evaluationen -->
+              <!-- Iteriere über Gruppen und dann über Evaluationen -->
               <div
                 v-for="group in progressData"
                 :key="group.appointment_id"
@@ -3771,7 +3313,6 @@ watch(() => props.currentUser?.id, async (newUserId, oldUserId) => {
                           :class="evaluation.textColorClass"
                         >
                           {{ evaluation.criteriaName }}
-                          <span v-if="evaluation.shortCode" class="text-gray-500 ml-1">({{ evaluation.shortCode }})</span>
                         </div>
                         <div
                           v-if="evaluation.note"
@@ -4004,6 +3545,9 @@ const progressData = computed((): ProgressGroup[] => {
 })
 
 // Methods
+// ===== ALLE METHODS FÜR EnhancedStudentModal.vue =====
+
+// Basic Modal Methods
 const closeModal = () => {
   emit('close')
 }
@@ -4020,6 +3564,14 @@ const evaluateLesson = (lesson: any) => {
   emit('evaluate-lesson', lesson)
 }
 
+// Kurze Wochentage
+const getWeekday = (dateString: string): string => {
+  const date = new Date(dateString)
+  const weekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+  return weekdays[date.getDay()]
+}
+
+// ===== MAIN LOAD LESSONS FUNCTION =====
 const loadLessons = async () => {
   if (!props.selectedStudent?.id) return
 
@@ -4039,7 +3591,8 @@ const loadLessons = async () => {
         end_time,
         duration_minutes,
         status,
-        location_id
+        location_id,
+        type 
       `)
       .eq('user_id', props.selectedStudent.id)
       .in('status', ['completed', 'cancelled'])
@@ -4047,6 +3600,7 @@ const loadLessons = async () => {
 
     if (appointmentsError) throw appointmentsError
     console.log('✅ Appointments loaded:', appointments?.length || 0)
+    console.log('🔍 Sample appointment with type:', appointments?.[0])  // <- Diese Zeile hinzufügen
 
     if (!appointments || appointments.length === 0) {
       lessons.value = []
@@ -4071,7 +3625,7 @@ const loadLessons = async () => {
       }
     }
 
-    // 3. Lade Notes mit Bewertungen (für Fortschritt)
+    // 3. Lade Notes mit Bewertungen (KORRIGIERTE VERSION)
     const appointmentIds = appointments.map(a => a.id)
     console.log('🔍 Searching notes for appointments:', appointmentIds)
 
@@ -4081,11 +3635,7 @@ const loadLessons = async () => {
         appointment_id,
         criteria_rating,
         criteria_note,
-        evaluation_criteria_id,
-        evaluation_criteria(
-          name,
-          short_code
-        )
+        evaluation_criteria_id
       `)
       .in('appointment_id', appointmentIds)
       .not('evaluation_criteria_id', 'is', null)
@@ -4097,29 +3647,73 @@ const loadLessons = async () => {
 
     console.log('✅ Notes loaded:', notes?.length || 0)
 
-    // 4. Verarbeite Notes zu Criteria Evaluations
+    // 4. NEUE SEPARATE QUERY FÜR KRITERIEN-NAMEN
+    let criteriaMap: Record<string, any> = {}
+   // ✅ DEBUG: Prüfe ob Kriterien in DB existieren
+if (notes && notes.length > 0) {
+  const criteriaIds = [...new Set(notes.map(n => n.evaluation_criteria_id).filter(Boolean))]
+  console.log('🔍 Loading criteria for IDs:', criteriaIds)
+  
+  // ✅ FÜGEN SIE DIESE DEBUG-QUERY HINZU:
+  const { data: allCriteria, error: allCriteriaError } = await supabase
+    .from('evaluation_criteria')
+    .select('id, name, short_code')
+    .limit(5)
+  
+  console.log('🔍 Sample criteria in database:', allCriteria)
+  console.log('🔍 Error loading all criteria:', allCriteriaError)
+  
+  const { data: criteriaData, error: criteriaError } = await supabase
+    .from('evaluation_criteria')
+    .select('id, name, short_code')
+    .in('id', criteriaIds)
+    
+  console.log('🔍 Criteria query result:', criteriaData)
+  console.log('🔍 Criteria query error:', criteriaError)
+    
+  if (!criteriaError && criteriaData) {
+    criteriaMap = criteriaData.reduce((acc, c) => {
+      acc[c.id] = c
+      return acc
+    }, {} as Record<string, any>)
+    console.log('✅ Criteria map loaded:', criteriaMap)
+  }
+}
+
+    // 5. Verarbeite Notes zu Criteria Evaluations (KORRIGIERTE VERSION)
     const notesByAppointment = (notes || []).reduce((acc: Record<string, CriteriaEvaluation[]>, note: any) => {
+      console.log('🔍 Processing note:', note)
+      
       if (!acc[note.appointment_id]) {
         acc[note.appointment_id] = []
       }
       
-      const evaluationCriteria = note.evaluation_criteria
+      const criteria = criteriaMap[note.evaluation_criteria_id]
       
-      if (note.evaluation_criteria_id && note.criteria_rating !== null && evaluationCriteria) {
+      if (note.evaluation_criteria_id && note.criteria_rating !== null && criteria) {
+        console.log('✅ Adding evaluation for appointment:', note.appointment_id)
         acc[note.appointment_id].push({
           criteria_id: note.evaluation_criteria_id,
-          criteria_name: evaluationCriteria.name || 'Unbekannt',
-          criteria_short_code: evaluationCriteria.short_code || null,
+          criteria_name: criteria.name || 'Unbekannt',
+          criteria_short_code: criteria.short_code || null,
           criteria_rating: note.criteria_rating,
           criteria_note: note.criteria_note,
           criteria_category_name: null
+        })
+      } else {
+        console.log('❌ Skipping note due to missing data:', { 
+          criteria_id: note.evaluation_criteria_id, 
+          rating: note.criteria_rating, 
+          criteria: criteria 
         })
       }
       
       return acc
     }, {} as Record<string, CriteriaEvaluation[]>)
 
-    // 5. Kombiniere alles
+    console.log('🔍 Notes by appointment:', notesByAppointment)
+
+    // 6. Kombiniere alles
     lessons.value = appointments.map(appointment => ({
       ...appointment,
       location_name: locationsMap[appointment.location_id] || null,
@@ -4137,8 +3731,7 @@ const loadLessons = async () => {
   }
 }
 
-
-
+// ===== UTILITY FUNCTIONS =====
 const groupedCriteriaEvaluations = (evaluations: CriteriaEvaluation[]) => {
   const grouped: Record<string, CriteriaEvaluation[]> = {}
   evaluations.forEach(evalItem => {
@@ -4160,6 +3753,7 @@ const showCriteriaNote = (criteria: CriteriaEvaluation) => {
   showNoteModal.value = true
 }
 
+// ===== RATING COLOR FUNCTIONS =====
 const getRatingColor = (rating: number | null | undefined): string => {
   if (rating === null || rating === undefined) return 'bg-gray-100 text-gray-700'
   const colors: Record<number, string> = {
@@ -4238,6 +3832,8 @@ const getRatingBgColor = (rating: number | null | undefined): string => {
   return colors[rating] || 'bg-gray-400'
 }
 
+// ===== CONTACT FUNCTIONS =====
+// ✅ NEUE VERSION (mit Parametern)
 const callStudent = (phone: string) => {
   if (phone) {
     window.open(`tel:${phone}`)
@@ -4250,7 +3846,7 @@ const emailStudent = (email: string) => {
   }
 }
 
-// Statistics (optional, falls benötigt)
+// ===== COMPUTED STATISTICS =====
 const totalLessons = computed(() => {
   return lessons.value.filter(lesson => 
     lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0
@@ -4329,16 +3925,40 @@ watch(activeTab, (newTab) => {
         </div>
       </div>
 
+      <!-- Sortierungs-Regler -->
+      <div v-if="selectedCriteriaOrder.length > 1" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+        <div class="flex items-center space-x-3">
+          <span class="text-gray-500 text-xs font-semibold">Sortierung:</span>
+          <button
+            @click="sortByNewest = true"
+            :class="[
+              'px-3 py-1 text-xs rounded-md transition-colors',
+              sortByNewest ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
+            ]"
+          >
+          Nach Datum    </button>
+          <button
+            @click="sortByNewest = false"
+            :class="[
+              'px-3 py-1 text-xs rounded-md transition-colors',
+              !sortByNewest ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
+            ]"
+          >
+          Nach Bewertung    
+      </button>
+        </div>
+      </div>
+
       <div class="flex-1 overflow-y-auto p-4">
-        <div v-if="isLoading" class="flex items-center justify-center py-8">
+        <div v-if="isLoading" class="flex items-center justify-center py-4">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
 
-        <div v-else-if="error" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+        <div v-else-if="error" class="bg-red-50 border border-red-200 rounded p-2 text-red-700">
           {{ error }}
         </div>
 
-        <div v-else class="space-y-4">
+        <div v-else class="space-y-2">
           <div class="relative">
             <div class="relative">
               <input
@@ -4347,7 +3967,7 @@ watch(activeTab, (newTab) => {
                 @input="showDropdown = true"
                 type="text"
                 placeholder="Bewertungspunkt suchen und hinzufügen..."
-                class="search-input w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                class="search-input w-full pl-10 pr-2 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               >
               <div class="absolute left-3 top-3.5 text-gray-400">
                 🔍
@@ -4379,7 +3999,7 @@ watch(activeTab, (newTab) => {
 
           <div class="space-y-3">
             <div
-              v-for="(criteriaId, index) in selectedCriteriaOrder"
+              v-for="(criteriaId, index) in sortedCriteriaOrder"
               :key="criteriaId"
               class="bg-gray-50 rounded-lg p-4 border border-gray-200"
             >
@@ -4388,8 +4008,9 @@ watch(activeTab, (newTab) => {
                   <h4 class="font-medium text-gray-900">
                     {{ getCriteriaById(criteriaId)?.name }}
                   </h4>
-                  <p class="text-sm text-gray-600">
-                    {{ getCriteriaById(criteriaId)?.category_name }}
+                      <!-- NEU: Lektionsdatum hinzufügen -->
+                  <p v-if="criteriaAppointments[criteriaId]?.start_time" class="text-xs text-gray-500 mt-1">
+                    📅 Bewertung vom {{ formatLessonDate(criteriaId) }}
                   </p>
                 </div>
                 
@@ -4404,9 +4025,6 @@ watch(activeTab, (newTab) => {
               </div>
 
               <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Bewertung (1-6)
-                </label>
                 <div class="flex gap-2">
                   <button
                     v-for="rating in [1, 2, 3, 4, 5, 6]"
@@ -4434,7 +4052,7 @@ watch(activeTab, (newTab) => {
                 <textarea
                   v-model="criteriaNotes[criteriaId]"
                   :placeholder="`Notiz zu ${getCriteriaById(criteriaId)?.name}...`"
-                  class="w-full h-20 p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  class="w-full h-10 p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
                 ></textarea>
               </div>
             </div>
@@ -4449,6 +4067,8 @@ watch(activeTab, (newTab) => {
           </div>
         </div>
       </div>
+
+      
 
       <div class="bg-gray-50 px-4 py-3 border-t">
         <div class="flex gap-3">
@@ -4468,7 +4088,7 @@ watch(activeTab, (newTab) => {
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             ]"
           >
-            {{ isSaving ? 'Speichern...' : 'Bewertung speichern' }}
+            {{ isSaving ? 'Speichern...' : 'Speichern' }}
           </button>
         </div>
         
@@ -4515,6 +4135,7 @@ const isLoading = ref(false)
 const isSaving = ref(false)
 const error = ref<string | null>(null)
 
+
 // Search & Dropdown
 const searchQuery = ref('')
 const showDropdown = ref(false)
@@ -4524,21 +4145,30 @@ const allCriteria = ref<any[]>([]) // Wird von v_evaluation_matrix geladen
 const selectedCriteriaOrder = ref<string[]>([])
 const criteriaRatings = ref<Record<string, number>>({})
 const criteriaNotes = ref<Record<string, string>>({})
+const sortByNewest = ref(true) // true = neueste zuerst, false = schlechteste zuerst
+const criteriaTimestamps = ref<Record<string, string>>({}) // Neue ref für Timestamps
+const criteriaAppointments = ref<Record<string, { appointment_id: string, start_time: string }>>({})
+
 
 // Computed
+
 const filteredCriteria = computed(() => {
-  if (!searchQuery.value) {
-    // Wenn Suchfeld leer ist, zeige alle Kriterien, die noch nicht ausgewählt sind
-    return allCriteria.value.filter(criteria => !selectedCriteriaOrder.value.includes(criteria.id))
+  // Zeige nur Kriterien, die NICHT bereits ausgewählt/bewertet sind
+  const unratedCriteria = allCriteria.value.filter(criteria => 
+    !selectedCriteriaOrder.value.includes(criteria.id)
+  )
+  
+  // Wenn kein Suchtext eingegeben, zeige alle unbewerteten
+  if (!searchQuery.value || searchQuery.value.trim() === '') {
+    return unratedCriteria
   }
   
+  // Filtere unbewertete Kriterien nach Suchtext
   const query = searchQuery.value.toLowerCase()
-  return allCriteria.value.filter(criteria => 
+  return unratedCriteria.filter(criteria => 
     (criteria.name?.toLowerCase().includes(query) ||
-    criteria.category_name?.toLowerCase().includes(query) ||
-    criteria.short_code?.toLowerCase().includes(query)) &&
-    // Don't show already selected criteria
-    !selectedCriteriaOrder.value.includes(criteria.id)
+     criteria.category_name?.toLowerCase().includes(query) ||
+     criteria.short_code?.toLowerCase().includes(query))
   )
 })
 
@@ -4571,104 +4201,152 @@ const missingRequiredRatings = computed(() => {
   return missing
 })
 
+// Verbesserte sortedCriteriaOrder mit Lektionsdatum
+const sortedCriteriaOrder = computed(() => {
+  console.log('🔍 SORT DEBUG - sortByNewest:', sortByNewest.value)
+  console.log('🔍 SORT DEBUG - criteriaAppointments:', criteriaAppointments.value)
+  
+  if (!sortByNewest.value) {
+    // Sortiere nach Bewertung (schlechteste zuerst)
+    return [...selectedCriteriaOrder.value].sort((a, b) => {
+      const ratingA = criteriaRatings.value[a] || 7
+      const ratingB = criteriaRatings.value[b] || 7
+      console.log('🔍 RATING SORT:', a, ratingA, 'vs', b, ratingB)
+      return ratingA - ratingB
+    })
+  } else {
+    // Sortiere nach Lektionsdatum (neueste Lektionen zuerst)
+    return [...selectedCriteriaOrder.value].sort((a, b) => {
+      const appointmentA = criteriaAppointments.value[a]
+      const appointmentB = criteriaAppointments.value[b]
+      
+      if (appointmentA?.start_time && appointmentB?.start_time) {
+        console.log('🔍 DATE SORT:', appointmentA.start_time, 'vs', appointmentB.start_time)
+        return new Date(appointmentB.start_time).getTime() - new Date(appointmentA.start_time).getTime()
+      }
+      
+      console.log('🔍 FALLBACK SORT for:', a, b)
+      const indexA = selectedCriteriaOrder.value.indexOf(a)
+      const indexB = selectedCriteriaOrder.value.indexOf(b)
+      return indexA - indexB
+    })
+  }
+})
+
 // Methods
 const closeModal = () => {
   console.log('🔥 EvaluationModal - closing modal')
   emit('close')
 }
 
+// KOMPLETT SAUBERE VERSION - Ersetzen Sie Ihre gesamte loadAllCriteria Funktion mit dieser:
+
 const loadAllCriteria = async () => {
   if (!props.studentCategory) {
-    console.log('❌ No student category provided')
     return
   }
   
-  console.log('🔥 EvaluationModal - loadAllCriteria called with category:', props.studentCategory)
   isLoading.value = true
   error.value = null
   
   try {
-    // Da v_evaluation_matrix die category_id enthält, müssen wir hier die richtige Spalte verwenden
-    // Der Fehler bei evaluation_criteria_id im vorherigen Schritt deutet darauf hin,
-    // dass deine v_evaluation_matrix anders aufgebaut ist, als ich dachte.
-    // Wir müssen die korrekten Spaltennamen aus v_evaluation_matrix verwenden.
-    
-    // Die Spaltennamen sind typischerweise:
-    // id (der Kriterien-ID), name (Kriterienname), short_code, category_name (aus evaluation_categories)
-    // Wenn deine v_evaluation_matrix nur 'evaluation_criteria_id' und 'criteria_name' etc. hat, 
-    // dann müssen wir das entsprechend anpassen.
-    // Laut deiner letzten Ausgabe: item.evaluation_criteria_id, item.criteria_name, item.category_name
-    
-    const { data, error: supabaseError } = await supabase
-      .from('v_evaluation_matrix')
-      .select(`
-        evaluation_criteria_id,
-        criteria_name,
-        criteria_description,
-        short_code,
-        category_name
-      `)
-      // .eq('driving_category', props.studentCategory) // Diese Zeile könnte einen Fehler verursachen,
-      // da ich nicht sicher bin, ob 'driving_category' in v_evaluation_matrix existiert.
-      // Falls ja, lass sie drin. Falls nicht, kommentiere sie aus und füge sie später hinzu.
-      // Basierend auf den vorherigen Logs, scheint diese Spalte NICHT zu existieren in evaluation_criteria.
-      // Wenn evaluation_matrix eine View ist, die alles zusammenfügt, ist es wahrscheinlich,
-      // dass sie eine Spalte wie `driving_category` hat.
-      // Wenn der Fehler auftritt, liegt es an diesem .eq() Filter.
-      
-      // Ich gehe davon aus, dass deine v_evaluation_matrix das driving_category-Feld hat,
-      // da du es als Prop übergibst. Wenn nicht, melde dich!
-      .eq('driving_category', props.studentCategory) 
+    // Erste Abfrage: Hole alle category_criteria für die Kategorie
+    const { data: categoryCriteria, error: ccError } = await supabase
+      .from('category_criteria')
+      .select('evaluation_criteria_id, evaluation_category_id, driving_category, is_required, display_order')
+      .eq('driving_category', props.studentCategory)
 
+    if (ccError) throw ccError
 
-    if (supabaseError) {
-      console.error('❌ Supabase error loading evaluation criteria:', supabaseError)
-      throw supabaseError
-    }
-
-    if (!data || data.length === 0) {
-      console.log('⚠️ No criteria found for category', props.studentCategory)
+    if (!categoryCriteria || categoryCriteria.length === 0) {
       error.value = 'Keine Bewertungskriterien gefunden für Kategorie ' + props.studentCategory
       return
     }
 
-    // Mappe die Daten auf das erwartete Format
-    allCriteria.value = data.map(item => ({
-      id: item.evaluation_criteria_id, // Wichtig: Die ID des Kriteriums
-      name: item.criteria_name,
-      description: item.criteria_description,
-      short_code: item.short_code,
-      category_name: item.category_name, // Name der Kategorie
-      // Hier könntest du weitere Felder hinzufügen, falls aus v_evaluation_matrix vorhanden (z.B. min_rating, max_rating)
-    }));
+    // Extrahiere alle IDs für weitere Abfragen
+    const criteriaIds = categoryCriteria.map(cc => cc.evaluation_criteria_id)
+    const categoryIds = [...new Set(categoryCriteria.map(cc => cc.evaluation_category_id))]
 
-    console.log('✅ Loaded and processed criteria:', allCriteria.value.length)
-    console.log('📋 First few processed criteria:', allCriteria.value.slice(0, 3))
+    // Zweite Abfrage: Hole evaluation_criteria
+    const { data: criteria, error: cError } = await supabase
+      .from('evaluation_criteria')
+      .select('id, name, description, short_code, is_active')
+      .in('id', criteriaIds)
+      .eq('is_active', true)
+
+    if (cError) throw cError
+
+    // Dritte Abfrage: Hole evaluation_categories
+    const { data: categories, error: catError } = await supabase
+      .from('evaluation_categories')
+      .select('id, name, color, display_order, is_active')
+      .in('id', categoryIds)
+      .eq('is_active', true)
+
+    if (catError) throw catError
+
+    // Debug: Test der ersten Verknüpfung
+    const testCc = categoryCriteria[0]
+    const testCriterion = criteria?.find(c => c.id === testCc.evaluation_criteria_id)
+    const testCategory = categories?.find(cat => cat.id === testCc.evaluation_category_id)
+
+    // Kombiniere alle Daten
+    allCriteria.value = categoryCriteria.map(cc => {
+      const criterion = criteria?.find(c => c.id === cc.evaluation_criteria_id)
+      const category = categories?.find(cat => cat.id === cc.evaluation_category_id)
+      
+      return {
+        id: criterion?.id || '',
+        name: criterion?.name || '',
+        description: criterion?.description || '',
+        short_code: criterion?.short_code || '',
+        category_name: category?.name || '',
+        category_color: category?.color || '#gray',
+        category_order: category?.display_order || 0,
+        criteria_order: cc.display_order || 0,
+        is_required: cc.is_required || false,
+        min_rating: 1,
+        max_rating: 6
+      }
+    })
+    .filter(item => item.name) // Nur gültige Einträge
+    .sort((a, b) => {
+      // Sortiere nach Kategorie-Reihenfolge, dann nach Kriterien-Reihenfolge
+      if (a.category_order !== b.category_order) {
+        return a.category_order - b.category_order
+      }
+      return a.criteria_order - b.criteria_order
+    })
 
   } catch (err: any) {
-    console.error('❌ Error in loadAllCriteria:', err)
-    error.value = err.message
+    error.value = err.message || 'Fehler beim Laden der Bewertungskriterien'
   } finally {
     isLoading.value = false
   }
 }
 
-
+// Beim Hinzufügen neuer Kriterien das aktuelle Appointment setzen
 const selectCriteria = (criteria: any) => {
-  // Add to beginning of array (newest first) only if not already selected
   if (!selectedCriteriaOrder.value.includes(criteria.id)) {
     selectedCriteriaOrder.value.unshift(criteria.id)
     
-    // Initialize rating and note if not exists
+    // Setze aktuelles Appointment für neue Kriterien
+    if (props.appointment) {
+      criteriaAppointments.value[criteria.id] = {
+        appointment_id: props.appointment.id,
+        start_time: props.appointment.start_time
+      }
+    }
+    
+    // Initialize rating and note
     if (!criteriaRatings.value[criteria.id]) {
-      criteriaRatings.value[criteria.id] = 0 // Standardwert 0 oder null
+      criteriaRatings.value[criteria.id] = 0
     }
     if (!criteriaNotes.value[criteria.id]) {
       criteriaNotes.value[criteria.id] = ''
     }
   }
   
-  // Clear search and hide dropdown
   searchQuery.value = ''
   showDropdown.value = false
 }
@@ -4718,33 +4396,6 @@ const getRatingText = (rating: number | null) => {
     6: 'Prüfungsreif'
   }
   return rating ? texts[rating as keyof typeof texts] || '' : ''
-}
-
-const loadExistingEvaluation = async () => {
-  if (!props.appointment?.id) return
-  
-  try {
-    const { data, error: supabaseError } = await supabase
-      .from('notes')
-      .select('evaluation_criteria_id, criteria_rating, criteria_note') // Nur die relevanten Spalten laden
-      .eq('appointment_id', props.appointment.id)
-      .not('evaluation_criteria_id', 'is', null) // Nur Kriterien-Bewertungen laden
-
-    if (supabaseError) throw supabaseError
-
-    // Lade existierende Kriterien-Bewertungen und ordne sie neu an (neueste zuerst)
-    selectedCriteriaOrder.value = [] // Zuerst leeren
-    data?.forEach(note => {
-      if (note.evaluation_criteria_id) {
-        selectedCriteriaOrder.value.unshift(note.evaluation_criteria_id) // Add to beginning
-        criteriaRatings.value[note.evaluation_criteria_id] = note.criteria_rating || 0
-        criteriaNotes.value[note.evaluation_criteria_id] = note.criteria_note || ''
-      }
-    })
-
-  } catch (err: any) {
-    console.error('Error loading existing evaluation:', err)
-  }
 }
 
 const saveEvaluation = async () => {
@@ -4797,6 +4448,111 @@ const saveEvaluation = async () => {
     isSaving.value = false
   }
 }
+const loadStudentEvaluationHistory = async () => {
+  console.log('🔍 DEBUG: Loading student evaluation history')
+  console.log('🔍 DEBUG: student ID:', props.appointment?.user_id)
+  if (!props.appointment?.user_id) {
+    console.log('❌ No student ID')
+    return
+  }
+
+  try {
+    // Schritt 1: Hole alle Termine für diesen Schüler MIT start_time
+    const { data: appointments, error: appointmentsError } = await supabase
+      .from('appointments')
+      .select('id, start_time')
+      .eq('user_id', props.appointment.user_id)
+      .order('start_time', { ascending: false }) // Neueste Termine zuerst
+
+    if (appointmentsError) throw appointmentsError
+
+    const appointmentIds = appointments?.map(app => app.id) || []
+    console.log('🔍 DEBUG: found appointments for student:', appointmentIds.length)
+    if (appointmentIds.length === 0) return
+
+    // Erstelle ein Mapping von appointment_id zu start_time
+    const appointmentDateMap = new Map()
+    appointments?.forEach(apt => {
+      appointmentDateMap.set(apt.id, apt.start_time)
+    })
+
+    // Schritt 2: Hole ALLE Bewertungen für diese Termine
+    const { data, error: supabaseError } = await supabase
+      .from('notes')
+      .select(`
+        evaluation_criteria_id,
+        criteria_rating,
+        criteria_note,
+        appointment_id
+      `)
+      .in('appointment_id', appointmentIds)
+      .not('evaluation_criteria_id', 'is', null)
+
+    console.log('🔍 DEBUG: found historical notes:', data?.length)
+    if (supabaseError) throw supabaseError
+
+    // Gruppiere Bewertungen nach Kriterien (zeige die neueste pro Kriterium)
+    const latestByCriteria = new Map()
+    data?.forEach(note => {
+      const criteriaId = note.evaluation_criteria_id
+      const appointmentDate = appointmentDateMap.get(note.appointment_id)
+      
+      if (!latestByCriteria.has(criteriaId)) {
+        latestByCriteria.set(criteriaId, { ...note, lesson_date: appointmentDate })
+      } else {
+        // Vergleiche Lektionsdaten - neuere Lektion überschreibt ältere
+        const existing = latestByCriteria.get(criteriaId)
+        const existingDate = existing.lesson_date
+        if (appointmentDate && existingDate && new Date(appointmentDate) > new Date(existingDate)) {
+          latestByCriteria.set(criteriaId, { ...note, lesson_date: appointmentDate })
+        }
+      }
+    })
+
+    // Sortiere nach Lektionsdatum (neueste Lektionen zuerst)
+    const sortedByLessonDate = Array.from(latestByCriteria.entries())
+      .sort(([, noteA], [, noteB]) => {
+        const dateA = noteA.lesson_date
+        const dateB = noteB.lesson_date
+        if (!dateA || !dateB) return 0
+        return new Date(dateB).getTime() - new Date(dateA).getTime()
+      })
+      .map(([criteriaId]) => criteriaId)
+
+    selectedCriteriaOrder.value = sortedByLessonDate
+
+    // Speichere Appointment-Daten für Sortierung
+    criteriaAppointments.value = {}
+    latestByCriteria.forEach((note, criteriaId) => {
+      criteriaRatings.value[criteriaId] = note.criteria_rating || 0
+      criteriaNotes.value[criteriaId] = note.criteria_note || ''
+      // Speichere Lektionsdatum für Sortierung
+      criteriaAppointments.value[criteriaId] = {
+        appointment_id: note.appointment_id,
+        start_time: note.lesson_date
+      }
+    })
+
+    console.log('🔍 DEBUG: loaded historical criteria:', selectedCriteriaOrder.value.length)
+    console.log('🔍 DEBUG: lesson dates saved:', criteriaAppointments.value)
+
+  } catch (err: any) {
+    console.error('❌ Error loading student history:', err)
+  }
+}
+
+const formatLessonDate = (criteriaId: string) => {
+  const appointment = criteriaAppointments.value[criteriaId]
+  if (!appointment?.start_time) return ''
+  
+  const date = new Date(appointment.start_time)
+  return date.toLocaleDateString('de-CH', { 
+    day: '2-digit', 
+    month: '2-digit',
+    year: '2-digit'
+  })
+}
+
 
 // Click outside or escape key to close dropdown
 const handleClickOutside = (event: Event) => {
@@ -4828,16 +4584,13 @@ watch(showDropdown, (isOpen) => {
 
 // Watchers
 watch(() => props.isOpen, (isOpen) => {
-  console.log('🔥 EvaluationModal - isOpen changed:', isOpen)
-  console.log('🔥 Student category:', props.studentCategory)
-  console.log('🔥 Appointment:', props.appointment)
   
   if (isOpen) {
     console.log('🔄 EvaluationModal - loading data...')
     // Kleine Verzögerung um sicherzustellen dass alle Props gesetzt sind
     nextTick(() => {
       loadAllCriteria()
-      loadExistingEvaluation()
+      loadStudentEvaluationHistory()
     })
   } else {
     console.log('🔥 EvaluationModal - resetting form...')
@@ -4848,6 +4601,7 @@ watch(() => props.isOpen, (isOpen) => {
     criteriaRatings.value = {}
     criteriaNotes.value = {}
     error.value = null
+    criteriaTimestamps.value = {}
     
     // Clean up event listeners
     document.removeEventListener('click', handleClickOutside)
@@ -4925,7 +4679,8 @@ input:focus, textarea:focus {
             :current-user="currentUser"
             :disabled="mode === 'view'"
             :auto-load="shouldAutoLoadStudents"
-            @student-selected="handleStudentSelected"
+            :is-freeslot-mode="isFreeslotMode"  
+           @student-selected="handleStudentSelected"
             @student-cleared="handleStudentCleared"
             @switch-to-other="switchToOtherEventType"
           />
@@ -5125,6 +4880,9 @@ import CustomerInviteSelector from '~/components/CustomerInviteSelector.vue'
 
 // Composables
 import { useCompanyBilling } from '~/composables/useCompanyBilling'
+import { useEventModalHandlers} from '~/composables/useEventModalHandlers'
+import { useTimeCalculations } from '~/composables/useTimeCalculations'
+
 
 // Types
 interface Student {
@@ -5174,7 +4932,8 @@ const selectedLessonType = ref('lesson')
 const staffSelectorRef = ref() 
 const invitedStaffIds = ref<string[]>([])
 const invitedCustomers = ref<any[]>([])  
-const defaultBillingAddress = ref(null) // NEU
+const defaultBillingAddress = ref(null)
+const selectedCategory = ref<any | null>(null)
 
 
 const formData = ref({
@@ -5203,6 +4962,21 @@ const formData = ref({
 })
 
 const companyBilling = useCompanyBilling()
+
+const handlers = useEventModalHandlers(
+  formData,
+  selectedStudent,
+  selectedCategory,
+  availableDurations,
+  { value: 1 }, // appointmentNumber placeholder
+  selectedLocation
+)
+
+const {
+  handleCategorySelected,
+  handleDurationsChanged,
+  setDurationForLessonType,
+} = handlers
 
 // ============ COMPUTED ============
 const modalTitle = computed(() => {
@@ -5258,9 +5032,16 @@ const showTimeSection = computed(() => {
   }
 })
 
-const totalPrice = computed(() => {
-  const total = formData.value.price_per_minute * formData.value.duration_minutes
-  return total.toFixed(2)
+// Irgendwo nach den imports und props, vor dem Template:
+const isFreeslotMode = computed(() => {
+  const result = !!(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')
+  console.log('🔍 isFreeslotMode computed:', {
+    result,
+    isFreeslotClick: props.eventData?.isFreeslotClick,
+    clickSource: props.eventData?.clickSource,
+    eventData: props.eventData
+  })
+  return result
 })
 
 // ============ HANDLERS ============
@@ -5274,19 +5055,46 @@ const handleStudentSelected = async (student: Student | null) => {
     formData.value.type = primaryCategory
   }
   
-  // Auto-generate title if we have student and location
   generateTitleIfReady()
 }
 
-const handleLessonTypeSelected = (lessonType: any) => {
-  console.log('🎯 Lesson type selected:', lessonType.name)
-  selectedLessonType.value = lessonType.code
+const setDurationBasedOnType = (lessonTypeCode: string) => {
+  console.log('⏱️ Setting duration for lesson type:', lessonTypeCode)
   
-  // ✅ NUR appointment_type setzen - Dauer bleibt über CategorySelector/DurationSelector
-  // Das appointment_type wird später in der DB als 'type' gespeichert
-  formData.value.appointment_type = lessonType.code
+  let duration = 45 // Default
   
-  console.log('📝 Appointment type set to:', lessonType.code)
+  switch (lessonTypeCode) {
+    case 'lesson':
+      // Normale Fahrstunde: Verwende category lesson_duration_minutes
+      if (selectedStudent.value?.category && selectedCategory.value) {
+        duration = selectedCategory.value.lesson_duration_minutes || 45
+      }
+      break
+      
+    case 'exam':
+      // Prüfung: Verwende category exam_duration_minutes
+      if (selectedStudent.value?.category && selectedCategory.value) {
+        duration = selectedCategory.value.exam_duration_minutes || 180
+      } else {
+        duration = 180 // Standard-Prüfungsdauer
+      }
+      break
+      
+    case 'theory':
+      duration = 45 // Theorie immer 45min
+      break
+      
+    case 'meeting':
+      duration = 45 // Besprechung immer 45min
+      break
+      
+    default:
+      duration = 45
+  }
+    console.log('⏱️ Auto-setting duration to:', duration, 'minutes')
+  formData.value.duration_minutes = duration
+  availableDurations.value = [duration] // Nur diese Dauer verfügbar
+  calculateEndTime()
 }
 
 const handleStudentCleared = () => {
@@ -5300,6 +5108,8 @@ const handleStudentCleared = () => {
 
 const switchToOtherEventType = () => {
   console.log('🔄 Switching to other event types')
+  console.log('📍 SWITCH EVENTMODAL STACK:', new Error().stack)
+  
   formData.value.eventType = 'other'
   showEventTypeSelection.value = true
   selectedStudent.value = null
@@ -5324,24 +5134,32 @@ const backToStudentSelection = () => {
   formData.value.type = ''
 }
 
-const handleCategorySelected = (category: any) => {
-  console.log('🎯 Category selected:', category?.code)
-  if (category) {
-    formData.value.price_per_minute = category.price_per_lesson / 45
+// ✅ IN EVENTMODAL.VUE:
+const handleLessonTypeSelected = (lessonType: any) => {
+  console.log('🎯 Lesson type selected:', lessonType.name)
+  selectedLessonType.value = lessonType.code
+  formData.value.appointment_type = lessonType.code
+  
+  // ✅ DEBUG: Prüfen was selectedCategory enthält
+  console.log('🔍 DEBUG selectedCategory:', {
+    selectedCategory: selectedCategory.value,
+    hasCategory: !!selectedCategory.value,
+    exam_duration: selectedCategory.value?.exam_duration_minutes,
+    lesson_duration: selectedCategory.value?.lesson_duration_minutes
+  })
+  
+  if (selectedCategory.value) {
+    console.log('✅ Category found, calling setDurationForLessonType')
+    handlers.setDurationForLessonType(lessonType.code)
+  } else {
+    console.log('❌ No selectedCategory - function not called')
   }
+  
+  console.log('📝 Appointment type set to:', lessonType.code)
 }
 
 const handlePriceChanged = (price: number) => {
   formData.value.price_per_minute = price
-}
-
-const handleDurationsChanged = (durations: number[]) => {
-  console.log('⏱️ Durations changed:', durations)
-  availableDurations.value = durations
-  
-  if (!durations.includes(formData.value.duration_minutes)) {
-    formData.value.duration_minutes = durations[0] || 45
-  }
 }
 
 const handleDurationChanged = (newDuration: number) => {
@@ -5408,16 +5226,8 @@ const generateTitleIfReady = () => {
   }
 }
 
-const calculateEndTime = () => {
-  if (formData.value.startTime && formData.value.duration_minutes) {
-    const [hours, minutes] = formData.value.startTime.split(':').map(Number)
-    const startDate = new Date()
-    startDate.setHours(hours, minutes, 0, 0)
-    
-    const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
-    formData.value.endTime = endDate.toTimeString().slice(0, 5)
-  }
-}
+const { calculateEndTime } = useTimeCalculations(formData)
+
 
 const triggerStudentLoad = () => {
   // ✅ FIX: Nicht bei free slot clicks triggern
@@ -5486,7 +5296,7 @@ const handleStaffSelectionChanged = (staffIds: string[], staffMembers: any[]) =>
   }
 }
 
-// NEU: Customer Invite Handlers
+// Customer Invite Handlers
 const handleCustomersAdded = (customers: any[]) => {
   console.log('📞 Customers added to invite list:', customers.length)
 }
@@ -5494,6 +5304,29 @@ const handleCustomersAdded = (customers: any[]) => {
 const handleCustomersCleared = () => {
   console.log('🗑️ Customer invite list cleared')
   invitedCustomers.value = []
+}
+
+const loadCategoryData = async (categoryCode: string) => {
+  try {
+    console.log('🔄 Loading category data for:', categoryCode)
+    const { data, error } = await supabase
+      .from('categories')
+      .select('code, lesson_duration_minutes, exam_duration_minutes')
+      .eq('code', categoryCode)
+      .eq('is_active', true)
+      .single()
+    
+    if (error) throw error
+    
+    selectedCategory.value = data
+    console.log('✅ Category data loaded:', data)
+    
+    return data
+  } catch (err) {
+    console.error('❌ Error loading category:', err)
+    selectedCategory.value = null
+    return null
+  }
 }
 
 // ============ SAVE LOGIC ============
@@ -5616,9 +5449,9 @@ const initializeFormData = () => {
     }
     
     // Load student if available
-    if (formData.value.user_id) {
-      loadStudentForEdit(formData.value.user_id)
-    }
+    if (formData.value.user_id && !props.eventData?.isFreeslotClick) {
+          loadStudentForEdit(formData.value.user_id)
+        }
     
   } else if (props.mode === 'create' && props.eventData?.start) {
     // Create mode with time data
@@ -5635,10 +5468,14 @@ const initializeFormData = () => {
     formData.value.startTime = `${hours}:${minutes}`
     calculateEndTime()
         // Auto-load students für lesson events
-    console.log('🔄 CREATE mode - triggering student load')
-    setTimeout(() => {
-      triggerStudentLoad()
-    }, 100)
+    if (!props.eventData?.isFreeslotClick && !props.eventData?.clickSource?.includes('calendar-free-slot')) {
+  console.log('🔄 CREATE mode - triggering student load')
+  setTimeout(() => {
+    triggerStudentLoad()
+  }, 100)
+} else {
+  console.log('🚫 FREE SLOT - skipping auto student load')
+}
   }
 }
 
@@ -5787,6 +5624,16 @@ watch(() => formData.value.duration_minutes, () => {
   calculateEndTime()
 })
 
+watch(() => selectedStudent.value, (newStudent, oldStudent) => {
+  if (newStudent && !oldStudent) {
+    console.log('🔍 AUTO STUDENT SELECTION DETECTED!')
+    console.log('🎯 Student automatically selected:', newStudent.first_name, newStudent.last_name)
+    console.log('📍 CALL STACK:', new Error().stack)
+    console.log('🔍 Is Free-Slot mode?', props.eventData?.isFreeslotClick)
+    console.log('🔍 Event data:', props.eventData)
+  }
+}, { immediate: true })
+
 watch(selectedStudent, (newStudent, oldStudent) => {
   if (oldStudent && !newStudent && props.mode === 'create') {
     console.log('🔄 Student cleared in create mode - triggering reload')
@@ -5795,6 +5642,14 @@ watch(selectedStudent, (newStudent, oldStudent) => {
     }, 100)
   }
 })
+
+watch(() => selectedStudent.value, (newStudent, oldStudent) => {
+  if (newStudent && !oldStudent) {
+    console.log('🚨 selectedStudent.value DIRECTLY SET!')
+    console.log('📍 WHO SET IT?', new Error().stack)
+    console.log('🔍 Is Free-Slot?', props.eventData?.isFreeslotClick)
+  }
+}, { immediate: false })
 
 // ============ LIFECYCLE ============
 onMounted(() => {
@@ -6005,38 +5860,37 @@ defineExpose({
 ### ./components/LessonTypeSelector.vue
 ```vue
 <template>
-  <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-    <label class="block text-sm font-semibold text-gray-900 mb-3">
+  <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
+    <label class="block text-sm font-semibold text-gray-900 mb-2">
       🎯 Terminart auswählen
     </label>
-
+    
     <!-- Lesson Types Grid -->
-    <div class="grid grid-cols-2 gap-2">
+    <div class="grid grid-cols-3 gap-2">
       <button
-        v-for="lessonType in lessonTypes" 
+        v-for="lessonType in lessonTypes"
         :key="lessonType.code"
         @click="selectLessonType(lessonType)"
         :class="[
-          'p-3 text-sm rounded border text-left transition-colors duration-200',
+          'p-2 text-sm rounded border text-center transition-colors duration-200',
           selectedType === lessonType.code
             ? 'bg-blue-600 text-white border-blue-600'
             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
         ]"
       >
-        {{ lessonType.emoji }} {{ lessonType.name }}
+        {{ lessonType.name }}
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 
 // Types
 interface LessonType {
   code: string
   name: string
-  emoji: string
   description?: string
 }
 
@@ -6063,47 +5917,46 @@ const lessonTypes = ref<LessonType[]>([
   {
     code: 'lesson',
     name: 'Fahrstunde',
-    emoji: '🚗',
     description: 'Reguläre Fahrstunde'
   },
   {
     code: 'exam',
     name: 'Prüfung',
-    emoji: '📝',
     description: 'Praktische Fahrprüfung'
   },
   {
     code: 'theory',
     name: 'Theorie',
-    emoji: '📚',
     description: 'Theorieunterricht'
-  },
-  {
-    code: 'meeting',
-    name: 'Besprechung',
-    emoji: '💬',
-    description: 'Besprechung mit Schüler'
   }
 ])
 
 // Methods
 const selectLessonType = (lessonType: LessonType) => {
-  if (props.disabled) return
+  console.log('🎯 Lesson type selected:', lessonType)
   
+  // ✅ FIX: selectedType aktualisieren
   selectedType.value = lessonType.code
-  
-  console.log('🎯 Lesson type selected:', lessonType.name)
   
   emit('lesson-type-selected', lessonType)
   emit('update:modelValue', lessonType.code)
 }
 
+// ✅ Watch for prop changes
+watch(() => props.selectedType, (newType) => {
+  if (newType) {
+    selectedType.value = newType
+  }
+}, { immediate: true })
+
 // Initialize
 onMounted(() => {
-  // Auto-select default lesson type
-  const defaultType = lessonTypes.value.find(t => t.code === props.selectedType)
-  if (defaultType) {
-    selectLessonType(defaultType)
+  // ✅ Auto-select "lesson" als Default falls nicht gesetzt
+  if (!selectedType.value) {
+    const defaultType = lessonTypes.value.find(t => t.code === 'lesson')
+    if (defaultType) {
+      selectLessonType(defaultType)
+    }
   }
 })
 </script>```
@@ -11047,8 +10900,167 @@ input[type="checkbox"]:focus {
 
         <!-- Accordion Sections -->
         <div v-if="!isLoading" class="space-y-3">
+
+        <!-- Nur Arbeitsstunden für 4 Monate - KEINE lessons mehr! -->
+        <div class="border border-gray-200 rounded-lg">
+          <button  
+            @click="toggleSection('workingStats')" 
+            class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+          >
+            <span class="font-medium text-gray-900">⏰ Arbeitszeit-Übersicht</span>
+            <span class="text-gray-600 font-bold">{{ openSections.workingStats ? '−' : '+' }}</span>
+          </button>
           
-          <!-- 1. Treffpunkte/Standorte -->
+          <div v-if="openSections.workingStats" class="px-4 pb-4 border-t border-gray-100">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              <!-- Aktueller Monat -->
+              <div class="bg-blue-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-blue-900 mb-3">{{ currentMonthName }}</h4>
+                <div class="text-2xl font-bold text-blue-800">
+                  {{ monthlyStats.currentMonth.worked }}h
+                </div>
+              </div>
+              
+              <!-- Vormonat -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-gray-700 mb-3">{{ previousMonthName }}</h4>
+                <div class="text-2xl font-bold text-gray-800">
+                  {{ monthlyStats.previousMonth.worked }}h
+                </div>
+              </div>
+              
+              <!-- 2 Monate zurück -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-gray-700 mb-3">{{ twoMonthsAgoName }}</h4>
+                <div class="text-2xl font-bold text-gray-800">
+                  {{ monthlyStats.twoMonthsAgo.worked }}h
+                </div>
+              </div>
+              
+              <!-- 3 Monate zurück -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-gray-700 mb-3">{{ threeMonthsAgoName }}</h4>
+                <div class="text-2xl font-bold text-gray-800">
+                  {{ monthlyStats.threeMonthsAgo.worked }}h
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+       
+      <!-- 2. Prüfungsstandorte -->
+      <div class="border border-gray-200 rounded-lg">
+        <button
+          @click="toggleSection('examLocations')"
+          class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+        >
+          <span class="font-medium text-gray-900">🏛️ Prüfungsstandorte</span>
+          <span class="text-gray-600 font-bold">{{ openSections.examLocations ? '−' : '+' }}</span>
+        </button>
+      <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
+        <!-- Neue Prüfungsstandort hinzufügen -->
+        <div class="border border-gray-200 rounded-lg p-4 mb-4">
+          <h4 class="font-medium text-gray-900 mb-3">Neuen Prüfungsstandort hinzufügen</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input
+              v-model="newExamLocation.name"
+              type="text"
+              placeholder="Standort-Name (z.B. TCS Zürich)"
+              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+            <input
+              v-model="newExamLocation.address"
+              type="text"
+              placeholder="Adresse"
+              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+            <select
+              v-model="newExamLocation.categories"
+              multiple
+              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="B">Kategorie B</option>
+              <option value="A1">Kategorie A1</option>
+              <option value="A">Kategorie A</option>
+              <option value="BE">Kategorie BE</option>
+              <option value="C1">Kategorie C1</option>
+              <option value="C">Kategorie C</option>
+            </select>
+          </div>
+          <button
+            @click="addExamLocation"
+            :disabled="!newExamLocation.name || !newExamLocation.address"
+            class="mt-3 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Prüfungsstandort hinzufügen
+          </button>
+        </div>
+
+        <!-- Liste der Prüfungsstandorte -->
+        <div class="space-y-3">
+          <div v-if="examLocations.length === 0" class="text-center py-8 text-gray-500">
+            Noch keine Prüfungsstandorte definiert
+          </div>
+          
+          <div
+            v-for="location in examLocations"
+            :key="location.id"
+            class="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-3">
+                  <h4 class="font-medium text-gray-900">{{ location.name }}</h4>
+                  <button
+                    @click="toggleExamLocationStatus(location)"
+                    :class="[
+                      'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                      location.is_active ? 'bg-green-600' : 'bg-gray-200'
+                    ]"
+                  >
+                    <span
+                      :class="[
+                        'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+                        location.is_active ? 'translate-x-5' : 'translate-x-1'
+                      ]"
+                    />
+                  </button>
+                  <span :class="[
+                    'text-xs px-2 py-1 rounded-full',
+                    location.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                  ]">
+                    {{ location.is_active ? 'Aktiv' : 'Inaktiv' }}
+                  </span>
+                </div>
+                
+                <p class="text-sm text-gray-600 mt-1">{{ location.address }}</p>
+                
+                <div v-if="location.categories && location.categories.length > 0" class="flex gap-1 mt-2">
+                  <span
+                    v-for="category in location.categories"
+                    :key="category"
+                    class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                  >
+                    {{ category }}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                @click="removeExamLocation(location.id)"
+                class="ml-4 text-red-500 hover:text-red-700 text-sm"
+              >
+                🗑️ Entfernen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+          
+          <!-- 3. Treffpunkte/Standorte -->
           <div class="border border-gray-200 rounded-lg">
             <button
               @click="toggleSection('locations')"
@@ -11335,8 +11347,27 @@ const openSections = reactive({
   categories: false,
   durations: false,
   worktime: false,
-  notifications: false
+  notifications: false,
+  workingStats: false,    
+  examLocations: false 
 })
+
+// NEUE STATE für Prüfungsstandorte
+const examLocations = ref<any[]>([])
+const newExamLocation = ref({
+  name: '',
+  address: '',
+  categories: [] as string[]
+})
+
+// NEUE STATE für Arbeitszeit
+const monthlyStats = ref({
+  currentMonth: { worked: 0 },
+  previousMonth: { worked: 0 },
+  twoMonthsAgo: { worked: 0 },
+  threeMonthsAgo: { worked: 0 }
+})
+
 
 // Data
 const availableCategories = ref<any[]>([])
@@ -11361,7 +11392,151 @@ const filteredCategoriesForDurations = computed(() => {
   )
 })
 
+// computed properties:
+const currentMonthName = computed(() => {
+  const date = new Date()
+  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
+})
+
+const previousMonthName = computed(() => {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 1)
+  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
+})
+
+const twoMonthsAgoName = computed(() => {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 2)
+  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
+})
+
+const threeMonthsAgoName = computed(() => {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 3)
+  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
+})
+
 // Methods
+
+
+// NEUE FUNKTIONEN für Prüfungsstandorte
+const loadExamLocations = async () => {
+  if (!props.currentUser?.id) return
+
+  try {
+    const supabase = getSupabase()
+    
+    // Prüfungsstandorte aus einer neuen Tabelle laden (oder bestehende erweitern)
+    const { data: locations, error } = await supabase
+      .from('staff_exam_locations')
+      .select('*')
+      .eq('staff_id', props.currentUser.id)
+      .order('name')
+
+    if (error && !error.message.includes('does not exist')) {
+      throw error
+    }
+
+    examLocations.value = locations || []
+
+  } catch (err: any) {
+    console.error('❌ Error loading exam locations:', err)
+    // Fallback für fehlende Tabelle
+    examLocations.value = []
+  }
+}
+
+const addExamLocation = async () => {
+  if (!newExamLocation.value.name || !newExamLocation.value.address) return
+
+  try {
+    const supabase = getSupabase()
+    
+    const { data, error } = await supabase
+      .from('staff_exam_locations')
+      .insert({
+        staff_id: props.currentUser.id,
+        name: newExamLocation.value.name,
+        address: newExamLocation.value.address,
+        categories: newExamLocation.value.categories,
+        is_active: true
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    examLocations.value.push(data)
+    
+    // Reset form
+    newExamLocation.value = {
+      name: '',
+      address: '',
+      categories: []
+    }
+
+  } catch (err: any) {
+    console.error('❌ Error adding exam location:', err)
+    error.value = `Fehler beim Hinzufügen: ${err.message}`
+  }
+}
+
+const toggleExamLocationStatus = async (location: any) => {
+  try {
+    const supabase = getSupabase()
+    
+    const { error } = await supabase
+      .from('staff_exam_locations')
+      .update({ is_active: !location.is_active })
+      .eq('id', location.id)
+
+    if (error) throw error
+
+    location.is_active = !location.is_active
+
+  } catch (err: any) {
+    console.error('❌ Error toggling exam location:', err)
+    error.value = `Fehler beim Ändern des Status: ${err.message}`
+  }
+}
+
+const removeExamLocation = async (locationId: string) => {
+  try {
+    const supabase = getSupabase()
+    
+    const { error } = await supabase
+      .from('staff_exam_locations')
+      .delete()
+      .eq('id', locationId)
+
+    if (error) throw error
+
+    examLocations.value = examLocations.value.filter(loc => loc.id !== locationId)
+
+  } catch (err: any) {
+    console.error('❌ Error removing exam location:', err)
+    error.value = `Fehler beim Entfernen: ${err.message}`
+  }
+}
+
+// Data Loading
+const loadAllData = async () => {
+  isLoading.value = true
+  error.value = null
+
+  try {
+    await Promise.all([
+      loadExamLocations()
+      // + bestehende Load-Funktionen
+    ])
+  } catch (err: any) {
+    console.error('❌ Error loading data:', err)
+    error.value = err.message
+  } finally {
+    isLoading.value = false
+  }
+}
+
 const toggleSection = (section: keyof typeof openSections) => {
   openSections[section] = !openSections[section]
 }
@@ -11566,6 +11741,119 @@ const loadData = async () => {
   }
 }
 
+// Debug-Version der loadWorkingHoursData Funktion:
+
+// Vollständige Debug-Version für alle 4 Monate:
+
+const loadWorkingHoursData = async () => {
+  console.log('🔍 DEBUG: Starting loadWorkingHoursData')
+  
+  if (!props.currentUser?.id) {
+    console.log('❌ DEBUG: No currentUser.id found')
+    return
+  }
+  
+  try {
+    const supabase = getSupabase()
+    
+    console.log('🔍 DEBUG: Querying appointments for staff_id:', props.currentUser.id)
+    
+    const { data: appointments, error } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('staff_id', props.currentUser.id)
+    
+    if (error) {
+      console.error('❌ DEBUG: Database error:', error)
+      return
+    }
+    
+    console.log('🔍 DEBUG: Total appointments found:', appointments?.length || 0)
+    
+    if (!appointments || appointments.length === 0) {
+      console.log('⚠️ DEBUG: No appointments found')
+      return
+    }
+    
+    // Filter nur completed/confirmed Termine
+    const validAppointments = appointments.filter(apt => 
+      ['completed', 'confirmed'].includes(apt.status)
+    )
+    
+    console.log('🔍 DEBUG: Valid appointments:', validAppointments.length)
+    
+    if (validAppointments.length === 0) {
+      console.log('⚠️ DEBUG: No valid appointments found')
+      return
+    }
+    
+    // Berechne Stunden für jeden Monat
+    const now = new Date()
+    console.log('🔍 DEBUG: Current date:', now)
+    
+    // Alle 4 Monate definieren
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+    
+    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+    
+    const twoMonthsAgoStart = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+    const twoMonthsAgoEnd = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59)
+    
+    const threeMonthsAgoStart = new Date(now.getFullYear(), now.getMonth() - 3, 1)
+    const threeMonthsAgoEnd = new Date(now.getFullYear(), now.getMonth() - 2, 0, 23, 59, 59)
+    
+    // Hilfsfunktion zum Filtern und Berechnen
+    const calculateHoursForPeriod = (startDate: Date, endDate: Date, periodName: string) => {
+      console.log(`🔍 DEBUG: Calculating for ${periodName}:`, {
+        startDate: startDate,
+        endDate: endDate
+      })
+      
+      const filteredAppointments = validAppointments.filter(apt => {
+        const appointmentDate = new Date(apt.appointment_datetime || apt.start_time)
+        const isInRange = appointmentDate >= startDate && appointmentDate <= endDate
+        return isInRange
+      })
+      
+      console.log(`🔍 DEBUG: ${periodName} filtered appointments:`, filteredAppointments.length)
+      
+      const totalMinutes = filteredAppointments.reduce((sum, apt) => {
+        const minutes = apt.duration_minutes || 45
+        return sum + minutes
+      }, 0)
+      
+      const hours = Math.round((totalMinutes / 60) * 10) / 10
+      console.log(`🔍 DEBUG: ${periodName} total: ${totalMinutes} minutes = ${hours} hours`)
+      
+      return hours
+    }
+    
+    // Berechne für alle 4 Monate
+    const currentHours = calculateHoursForPeriod(currentMonthStart, currentMonthEnd, 'Current Month')
+    const previousHours = calculateHoursForPeriod(previousMonthStart, previousMonthEnd, 'Previous Month')
+    const twoMonthsAgoHours = calculateHoursForPeriod(twoMonthsAgoStart, twoMonthsAgoEnd, 'Two Months Ago')
+    const threeMonthsAgoHours = calculateHoursForPeriod(threeMonthsAgoStart, threeMonthsAgoEnd, 'Three Months Ago')
+    
+    // Setze alle Werte
+    monthlyStats.value.currentMonth.worked = currentHours
+    monthlyStats.value.previousMonth.worked = previousHours
+    monthlyStats.value.twoMonthsAgo.worked = twoMonthsAgoHours
+    monthlyStats.value.threeMonthsAgo.worked = threeMonthsAgoHours
+    
+    console.log('✅ DEBUG: Final working hours set:', {
+      current: monthlyStats.value.currentMonth.worked,
+      previous: monthlyStats.value.previousMonth.worked,
+      twoAgo: monthlyStats.value.twoMonthsAgo.worked,
+      threeAgo: monthlyStats.value.threeMonthsAgo.worked
+    })
+    
+  } catch (error) {
+    console.error('❌ DEBUG: Unexpected error:', error)
+  }
+}
+
 const saveAllSettings = async () => {
   if (!props.currentUser?.id) return
 
@@ -11704,10 +11992,21 @@ const saveAllSettings = async () => {
 // Lifecycle
 onMounted(() => {
   loadData()
+  loadWorkingHoursData()
+
 })
 </script>
 
 <style scoped>
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Modal backdrop animation */
 .modal-backdrop {
   animation: fadeIn 0.3s ease-out;
@@ -12229,15 +12528,14 @@ watch(() => props.show && props.student, (newValue) => {
 
         <!-- Schülerliste -->
         <div v-else class="max-h-64 overflow-y-auto">
-          <div 
-            v-for="student in studentList" 
-            :key="student.id"
-            @click="selectStudent(student)"
-            :class="[
-              'p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors',
-              'hover:bg-blue-50'
-            ]"
-          >
+           <div 
+              v-for="student in studentList" 
+              :key="student.id"
+              @click="handleStudentClick(student)"         
+             :class="[
+                'p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors hover:bg-blue-50'
+              ]"
+            >
             <div class="flex items-center justify-between">
               <div class="flex-1">
                 <div class="font-semibold text-gray-900">
@@ -12292,6 +12590,7 @@ interface Props {
   placeholder?: string
   autoLoad?: boolean
   showAllStudents?: boolean
+  isFreeslotMode?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -12299,7 +12598,8 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   placeholder: 'Schüler suchen (Name, E-Mail oder Telefon)...',
   autoLoad: true,
-  showAllStudents: false
+  showAllStudents: false,
+  isFreeslotMode: false
 })
 
 // Emits
@@ -12316,6 +12616,7 @@ const availableStudents = ref<Student[]>([])
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 const showAllStudentsLocal = ref(props.showAllStudents)
+const loadTime = ref(0)
 
 // Computed
 const selectedStudent = computed({
@@ -12337,7 +12638,6 @@ const studentList = computed(() => {
   )
 })
 
-// 🔥 FIX: Better auto-load logic
 const shouldAutoLoadComputed = computed(() => {
   return props.autoLoad
 })
@@ -12369,12 +12669,14 @@ const loadStudents = async (editStudentId?: string | null) => {
     editStudentId: editStudentId,
     currentUserId: props.currentUser?.id,
     currentUserRole: props.currentUser?.role,
-    autoLoad: props.autoLoad
+    autoLoad: props.autoLoad,
+    isFreeslotMode: props.isFreeslotMode
   })
   
   if (isLoading.value) return
   isLoading.value = true
   error.value = null
+  loadTime.value = Date.now()
   
   try {
     console.log('📚 StudentSelector: Loading students...')
@@ -12426,84 +12728,45 @@ const loadStudents = async (editStudentId?: string | null) => {
         historyStudents: historyStudents.length
       })
 
-      // 3. Kombinieren und Duplikate entfernen
-      const allStudentIds = new Set<string>()
-      const combinedStudents: Student[] = []
+      // 3. Kombinieren und deduplizieren
+      const allStudents = [...(assignedStudents || []), ...historyStudents]
+      const uniqueStudents = allStudents.filter((student, index, self) => 
+        index === self.findIndex(s => s.id === student.id)
+      )
 
-      if (assignedStudents) {
-        assignedStudents.forEach((student: UserFromDB) => {
-          if (!allStudentIds.has(student.id)) {
-            allStudentIds.add(student.id)
-            combinedStudents.push({
-              id: student.id,
-              first_name: student.first_name || '',
-              last_name: student.last_name || '',
-              email: student.email || '',
-              phone: student.phone || '',
-              category: student.category || '',
-              assigned_staff_id: student.assigned_staff_id || '',
-              preferred_location_id: student.preferred_location_id || undefined
-            })
-          }
-        })
-      }
-
-      historyStudents.forEach(student => {
-        if (student && !allStudentIds.has(student.id)) {
-          allStudentIds.add(student.id)
-          combinedStudents.push({
-            id: student.id,
-            first_name: student.first_name || '',
-            last_name: student.last_name || '',
-            email: student.email || '',
-            phone: student.phone || '',
-            category: student.category || '',
-            assigned_staff_id: student.assigned_staff_id || '',
-            preferred_location_id: student.preferred_location_id || undefined
-          })
-        }
-      })
-
-      // 4. Edit-Mode: Spezifischen Student hinzufügen
-      if (editStudentId && !allStudentIds.has(editStudentId)) {
-        console.log('✏️ Loading specific student for edit mode:', editStudentId)
-        const { data: specificStudent, error: specificError } = await supabase
+      // 4. Falls ein editStudentId angegeben ist, diesen auch laden falls nicht enthalten
+      if (editStudentId && !uniqueStudents.find(s => s.id === editStudentId)) {
+        console.log('🔍 Loading specific student for edit mode:', editStudentId)
+        const { data: editStudent } = await supabase
           .from('users')
           .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
           .eq('id', editStudentId)
           .eq('role', 'client')
           .single()
 
-        if (!specificError && specificStudent) {
-          const typedSpecificStudent = specificStudent as UserFromDB
-          combinedStudents.push({
-            id: typedSpecificStudent.id,
-            first_name: typedSpecificStudent.first_name || '',
-            last_name: typedSpecificStudent.last_name || '',
-            email: typedSpecificStudent.email || '',
-            phone: typedSpecificStudent.phone || '',
-            category: typedSpecificStudent.category || '',
-            assigned_staff_id: typedSpecificStudent.assigned_staff_id || '',
-            preferred_location_id: typedSpecificStudent.preferred_location_id || undefined
-          })
+        if (editStudent) {
+          uniqueStudents.unshift(editStudent)
         }
       }
 
-      // Sortieren nach Vorname
-      combinedStudents.sort((a, b) => 
-        (a.first_name || '').localeCompare(b.first_name || '')
-      )
-
-      availableStudents.value = combinedStudents
-
-      console.log('✅ Staff students loaded:', {
-        total: combinedStudents.length,
-        assigned: combinedStudents.filter(s => s.assigned_staff_id === props.currentUser.id).length,
-        fromHistory: combinedStudents.filter(s => s.assigned_staff_id !== props.currentUser.id).length
-      })
+      const typedStudents: Student[] = uniqueStudents.map((user: UserFromDB) => ({
+        id: user.id,
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        category: user.category || '',
+        assigned_staff_id: user.assigned_staff_id || '',
+        preferred_location_id: user.preferred_location_id || undefined
+      }))
+      
+      availableStudents.value = typedStudents
+      console.log('✅ Staff students loaded:', availableStudents.value.length)
 
     } else {
-      // Standard-Logik für alle Schüler oder andere Rollen
+      // Admin oder "Alle anzeigen" Modus
+      console.log('👑 Loading all active students (Admin mode or show all)')
+      
       let query = supabase
         .from('users')
         .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
@@ -12511,8 +12774,9 @@ const loadStudents = async (editStudentId?: string | null) => {
         .eq('is_active', true)
         .order('first_name')
 
-      if (editStudentId && props.currentUser?.role === 'staff') {
-        query = query.or(`assigned_staff_id.eq.${props.currentUser.id},id.eq.${editStudentId}`)
+      if (props.currentUser?.role === 'staff') {
+        // Wenn Staff-Member "Alle anzeigen" aktiviert hat, begrenzen wir trotzdem auf sinnvolle Anzahl
+        query = query.limit(100)
       }
 
       const { data, error: fetchError } = await query
@@ -12544,14 +12808,13 @@ const loadStudents = async (editStudentId?: string | null) => {
 
 const handleSwitchToOther = () => {
   console.log('🔄 User manually clicked "Andere Terminart" button')
+  console.log('📍 SWITCH CALL STACK:', new Error().stack)
   
-  // Nur wenn Studenten geladen sind und kein Student ausgewählt ist
   if (!isLoading.value && availableStudents.value.length > 0 && !selectedStudent.value) {
     emit('switch-to-other')
   }
 }
 
-// 🔥 FIX: Enhanced Search Focus Handler
 const handleSearchFocus = () => {
   console.log('🔍 Search field focused, autoLoad:', shouldAutoLoadComputed.value)
   
@@ -12568,12 +12831,41 @@ const filterStudents = () => {
   // Wird aber für Kompatibilität beibehalten
 }
 
-const selectStudent = (student: Student) => {
+
+// In StudentSelector.vue - Zurück zur ursprünglichen selectStudent Funktion:
+const selectStudent = (student: Student, isUserClick = false) => {
+  console.log('🔍 DEBUG VALUES:', {
+    isUserClick: isUserClick,
+    isFreeslotMode: props.isFreeslotMode,
+    studentName: student.first_name + ' ' + student.last_name
+  })
+  
+  // ✅ Block automatische Selections bei Free-Slots
+  if (props.isFreeslotMode && !isUserClick) {
+    console.log('🚫 Auto-selection blocked - freeslot mode detected')
+    return
+  }
+  
   selectedStudent.value = student
   searchQuery.value = ''
   
   console.log('✅ StudentSelector: Student selected:', student.first_name, student.last_name)
   emit('student-selected', student)
+}
+
+const handleStudentClick = (student: Student) => {
+  console.log('🔍 Student click attempted:', {
+    studentName: student.first_name,
+    isFreeslotMode: props.isFreeslotMode
+  })
+  
+  if (props.isFreeslotMode) {
+    console.log('🚫 Manual student click blocked in free-slot mode')
+    return
+  }
+  
+  console.log('✅ Student click allowed - selecting student')
+  selectStudent(student, true)
 }
 
 const clearStudent = () => {
@@ -12586,7 +12878,16 @@ const clearStudent = () => {
 
 const selectStudentById = async (userId: string, retryCount = 0) => {
   const maxRetries = 3
+  
+  // ✅ DEBUG: Stack trace anzeigen
   console.log(`👨‍🎓 StudentSelector: Selecting student by ID: ${userId}, Retry: ${retryCount}`)
+  console.log('📍 CALL STACK:', new Error().stack)
+  
+  // ✅ FIX: Respektiere Free-Slot-Mode auch hier
+  if (props.isFreeslotMode) {
+    console.log('🚫 selectStudentById blocked - freeslot mode detected')
+    return null
+  }
   
   while (isLoading.value) {
     console.log('⏳ Waiting for current loading to finish...')
@@ -12606,7 +12907,7 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
   const student = availableStudents.value.find(s => s.id === userId)
   
   if (student) {
-    selectStudent(student)
+    selectStudent(student, false) // Diese Zeile wird jetzt von unserem selectStudent-Fix abgefangen
     console.log('✅ StudentSelector: Student selected by ID:', student.first_name, student.last_name)
     return student
   } else {
@@ -12626,7 +12927,6 @@ watch(showAllStudentsLocal, async () => {
   await loadStudents()
 })
 
-// 🔥 FIX: Enhanced onMounted with better auto-load logic
 onMounted(() => {
   console.log('📚 StudentSelector mounted, autoLoad:', shouldAutoLoadComputed.value)
   
@@ -12638,7 +12938,6 @@ onMounted(() => {
   }
 })
 
-// 🔥 NEW: Watch for autoLoad prop changes
 watch(() => props.autoLoad, (newAutoLoad) => {
   console.log('🔄 autoLoad prop changed to:', newAutoLoad)
   
@@ -14447,6 +14746,6520 @@ onMounted(() => {
 })
 </script>```
 
+### ./components/customer/CustomerDashboard.vue
+```vue
+<!-- components/CustomerDashboard.vue -->
+<template>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center py-6">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">
+              Hallo, {{ getUserDisplayName() }}
+            </h1>
+          </div>
+          <div class="flex items-center space-x-4">
+            <button 
+              @click="handleLogout"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              Abmelden
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="isLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+        <p class="mt-4 text-gray-600">Termine werden geladen...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="bg-red-50 border border-red-200 rounded-md p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Fehler beim Laden der Daten</h3>
+            <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+             <!-- Bei "Kommende Termine" Section -->
+              <div class="bg-white rounded-lg shadow p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <div class="ml-4">
+                      <h3 class="text-sm font-medium text-gray-500 truncate">Kommende Termine</h3>
+                      <p class="text-lg font-medium text-gray-900">{{ upcomingAppointments.length }}</p>
+                    </div>
+                  </div>
+                  
+                  <!-- NEU: Klickbarer Button -->
+                  <button
+                    @click="showUpcomingLessonsModal = true"
+                    class="p-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm"
+                  >
+                    Details anzeigen
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+       <!-- Bei "Absolvierte Lektionen" Section - mache den Bereich klickbar -->
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="ml-4">
+                <h3 class="text-sm font-medium text-gray-500 truncate">Absolvierte Lektionen</h3>
+                <p class="text-lg font-medium text-gray-900">{{ completedLessonsCount }} </p>
+              </div>
+            </div>
+            
+            <!-- NEU: Klickbarer Button -->
+            <button
+              @click="showEvaluationsModal = true"
+              class="p-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
+            >Bewertungen anzeigen
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">Offene Rechnungen</dt>
+                  <dd class="text-lg font-medium text-gray-900">{{ unpaidAppointments.length }}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <!-- Modal Component -->
+  <EvaluationsOverviewModal 
+    :is-open="showEvaluationsModal"
+    :lessons="lessons"
+    @close="showEvaluationsModal = false"
+  />
+
+  <!-- Upcoming Lessons Modal -->
+  <UpcomingLessonsModal 
+    :is-open="showUpcomingLessonsModal"
+    :lessons="appointments"
+    @close="showUpcomingLessonsModal = false"
+  />
+
+    </div>
+  </div>
+</template>
+
+<!-- CustomerDashboard.vue - Router-Fehler beheben -->
+
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue'
+import { navigateTo } from '#app'
+import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
+import { storeToRefs } from 'pinia'
+import EvaluationsOverviewModal from './EvaluationsOverviewModal.vue'
+import UpcomingLessonsModal from './UpcomingLessonsModal.vue'
+// Composables
+const authStore = useAuthStore()
+const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
+
+// State
+const isLoading = ref(true)
+const error = ref<string | null>(null)
+const appointments = ref<any[]>([])
+const locations = ref<any[]>([])
+const staff = ref<any[]>([])
+const lessons = ref<any[]>([]) 
+const showEvaluationsModal = ref(false) 
+const showUpcomingLessonsModal = ref(false)
+// Computed properties
+const completedLessonsCount = computed(() => {
+  return appointments.value?.filter(apt => apt.status === 'completed').length || 0
+})
+
+const recentEvaluations = computed(() => {
+  // Erstmal leer - hier würden die echten Bewertungen kommen
+  const evaluations: any[] = []
+  
+  lessons.value?.forEach(lesson => {
+    if (lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0) {
+      lesson.criteria_evaluations.forEach((evaluation: any) => {
+        evaluations.push({
+          criteria_id: evaluation.criteria_id,
+          criteria_name: evaluation.criteria_name,
+          criteria_rating: evaluation.criteria_rating,
+          lesson_date: lesson.start_time,
+          sort_date: new Date(lesson.start_time).getTime()
+        })
+      })
+    }
+  })
+
+  // Sortiere nach Datum (neueste zuerst)
+  return evaluations.sort((a, b) => b.sort_date - a.sort_date)
+})
+
+const totalEvaluationsCount = computed(() => recentEvaluations.value.length)
+
+const upcomingAppointments = computed(() => {
+  const now = new Date()
+  return appointments.value.filter(apt => 
+    new Date(apt.start_time) > now
+  ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+})
+
+const completedAppointments = computed(() => {
+  const now = new Date()
+  return appointments.value.filter(apt => 
+    new Date(apt.end_time) < now
+  ).sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+})
+
+const unpaidAppointments = computed(() => {
+  return appointments.value.filter(apt => !apt.is_paid)
+})
+
+// Helper method to get user display name
+const getUserDisplayName = () => {
+  if (!currentUser.value) return 'Unbekannt'
+  
+  // Try user metadata first
+  const firstName = currentUser.value.user_metadata?.first_name || 
+                   currentUser.value.user_metadata?.firstName
+  const lastName = currentUser.value.user_metadata?.last_name || 
+                  currentUser.value.user_metadata?.lastName
+  
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`
+  }
+  
+  // Fallback to email
+  return currentUser.value.email || 'Unbekannt'
+}
+
+// Methods
+
+
+const loadAppointments = async () => {
+  if (!currentUser.value?.id) return
+
+  try {
+    const supabase = getSupabase()
+    
+    // Get user data from users table to get internal user_id
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', currentUser.value.id)
+      .single()
+    
+    if (userError) throw userError
+    if (!userData) throw new Error('User nicht in Datenbank gefunden')
+
+    console.log('🔍 Loading appointments for user:', userData.id)
+
+    // 1. Lade Appointments
+    const { data: appointmentsData, error: appointmentsError } = await supabase
+      .from('appointments')
+        .select(`
+        id,
+        title,
+        start_time,
+        end_time,
+        duration_minutes,
+        status,
+        location_id,
+        type,
+        user_id,
+        staff_id,
+        price_per_minute,
+        is_paid,
+        notes (
+          id,
+          staff_rating,
+          staff_note
+        )
+      `)
+      .eq('user_id', userData.id)
+      .order('start_time', { ascending: false })
+
+    if (appointmentsError) throw appointmentsError
+    console.log('✅ Appointments loaded:', appointmentsData?.length || 0)
+
+    // 2. Lade Locations separat
+    const locationIds = [...new Set(appointmentsData?.map(a => a.location_id).filter(Boolean))]
+    let locationsMap: Record<string, string> = {}
+    
+    if (locationIds.length > 0) {
+      const { data: locations, error: locationsError } = await supabase
+        .from('locations')
+        .select('id, name')
+        .in('id', locationIds)
+
+      if (!locationsError && locations) {
+        locationsMap = locations.reduce((acc, loc) => {
+          acc[loc.id] = loc.name
+          return acc
+        }, {} as Record<string, string>)
+      }
+    }
+
+    // 3. Lade Bewertungen - KORRIGIERTE QUERY
+    const appointmentIds = appointmentsData?.map(a => a.id) || []
+    console.log('🔍 Searching evaluations for appointments:', appointmentIds.length)
+
+    const { data: notes, error: notesError } = await supabase
+      .from('notes')
+      .select(`
+        appointment_id,
+        evaluation_criteria_id,
+        criteria_rating,
+        criteria_note
+      `)
+      .in('appointment_id', appointmentIds)
+      .not('evaluation_criteria_id', 'is', null)
+      .not('criteria_rating', 'is', null)
+
+    if (notesError) {
+      console.error('❌ Notes error:', notesError)
+      throw notesError
+    }
+
+    console.log('✅ Evaluations loaded:', notes?.length || 0)
+
+    // 4. Lade Criteria-Details separat - KORRIGIERT ohne category_id
+    const criteriaIds = [...new Set(notes?.map(n => n.evaluation_criteria_id).filter(Boolean))]
+    let criteriaMap: Record<string, any> = {}
+
+    if (criteriaIds.length > 0) {
+      console.log('🔍 Loading criteria details for:', criteriaIds.length, 'criteria')
+      
+      // Nur die verfügbaren Spalten laden
+      const { data: criteria, error: criteriaError } = await supabase
+        .from('evaluation_criteria')
+        .select('id, name, short_code')
+        .in('id', criteriaIds)
+
+      if (criteriaError) {
+        console.error('❌ Criteria error:', criteriaError)
+        // Fallback: Erstelle leere criteriaMap Einträge
+        criteriaIds.forEach(id => {
+          criteriaMap[id] = {
+            name: 'Bewertungskriterium',
+            short_code: null,
+            category_name: null
+          }
+        })
+      } else if (criteria) {
+        console.log('✅ Criteria loaded:', criteria.length)
+        console.log('📊 Sample criteria:', criteria[0])
+        
+        // Erstelle criteriaMap
+        criteriaMap = criteria.reduce((acc, crit) => {
+          acc[crit.id] = {
+            name: crit.name || 'Unbekanntes Kriterium',
+            short_code: crit.short_code,
+            category_name: null // Erstmal ohne Kategorien
+          }
+          return acc
+        }, {} as Record<string, any>)
+        
+        console.log('📊 CriteriaMap sample:', Object.values(criteriaMap)[0])
+      }
+    }
+
+    console.log('✅ Criteria details loaded:', Object.keys(criteriaMap).length)
+
+    // 5. Verarbeite Notes zu Criteria Evaluations
+    const notesByAppointment = (notes || []).reduce((acc: Record<string, any[]>, note: any) => {
+      if (!acc[note.appointment_id]) {
+        acc[note.appointment_id] = []
+      }
+      
+      const criteriaDetails = criteriaMap[note.evaluation_criteria_id]
+      
+      if (note.evaluation_criteria_id && note.criteria_rating !== null && criteriaDetails) {
+        acc[note.appointment_id].push({
+          criteria_id: note.evaluation_criteria_id,
+          criteria_name: criteriaDetails.name || 'Unbekannt',
+          criteria_short_code: criteriaDetails.short_code || null,
+          criteria_rating: note.criteria_rating,
+          criteria_note: note.criteria_note || '',
+          criteria_category_name: criteriaDetails.category_name || null
+        })
+      }
+      
+      return acc
+    }, {} as Record<string, any[]>)
+
+    // 6. Kombiniere alles
+    const lessonsWithEvaluations = (appointmentsData || []).map(appointment => ({
+      ...appointment,
+      location_name: locationsMap[appointment.location_id] || null,
+      criteria_evaluations: notesByAppointment[appointment.id] || []
+    }))
+
+    console.log('✅ Final lessons with evaluations:', lessonsWithEvaluations.length)
+    console.log('📊 Lessons with evaluations:', lessonsWithEvaluations.filter(l => l.criteria_evaluations.length > 0).length)
+
+    // Setze beide Arrays
+    appointments.value = lessonsWithEvaluations
+    lessons.value = lessonsWithEvaluations
+
+  } catch (err: any) {
+    console.error('❌ Error loading appointments:', err)
+    error.value = err.message
+  }
+}
+
+const loadLocations = async () => {
+  try {
+    const supabase = getSupabase()
+    const { data, error: fetchError } = await supabase
+      .from('locations')
+      .select('*')
+      .order('name')
+
+    if (fetchError) throw fetchError
+    locations.value = data || []
+  } catch (err: any) {
+    console.error('❌ Error loading locations:', err)
+  }
+}
+
+const loadStaff = async () => {
+  try {
+    const supabase = getSupabase()
+    const { data, error: fetchError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name')
+      .eq('role', 'staff')
+      .eq('is_active', true)
+
+    if (fetchError) throw fetchError
+    staff.value = data || []
+  } catch (err: any) {
+    console.error('❌ Error loading staff:', err)
+  }
+}
+
+const handleLogout = async () => {
+  try {
+    const supabase = getSupabase()
+    await authStore.logout(supabase)
+    await navigateTo('/') // Zurück zu navigateTo - das sollte in Nuxt 3 verfügbar sein
+  } catch (err: any) {
+    console.error('❌ Fehler beim Abmelden:', err)
+  }
+}
+
+const getRatingColorPreview = (rating: number) => {
+  const colors = {
+    1: 'bg-red-100 text-red-700',
+    2: 'bg-orange-100 text-orange-700',
+    3: 'bg-yellow-100 text-yellow-700',
+    4: 'bg-blue-100 text-blue-700',
+    5: 'bg-green-100 text-green-700',
+    6: 'bg-emerald-100 text-emerald-700'
+  }
+  return colors[rating as keyof typeof colors] || 'bg-gray-100 text-gray-700'
+}
+
+// Watch for user role changes and redirect if needed
+watch([currentUser, userRole], ([newUser, newRole]) => {
+  if (newUser && !isClient.value) {
+    console.log('🔄 User is not a client, redirecting to main dashboard')
+    navigateTo('/')
+  }
+}, { immediate: true })
+
+// Lifecycle
+onMounted(async () => {
+  console.log('🔥 CustomerDashboard mounted')
+  
+  try {
+    // Check if user is a client
+    if (!isClient.value) {
+      console.warn('⚠️ User is not a client, redirecting...')
+      await navigateTo('/')
+      return
+    }
+
+    // Load all data in parallel
+    await Promise.all([
+      loadAppointments(),
+      loadLocations(),
+      loadStaff()
+    ])
+
+    console.log('✅ Customer dashboard data loaded successfully')
+  } catch (err: any) {
+    console.error('❌ Error loading customer dashboard:', err)
+    error.value = err.message
+  } finally {
+    isLoading.value = false
+  }
+})
+</script>
+
+<style scoped>
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+</style>```
+
+### ./components/customer/EvaluationsOverviewModal.vue
+```vue
+<template>
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+    <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      
+      <!-- Header -->
+      <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-900">
+              Meine Bewertungen
+            </h3>
+            <p v-if="availableDrivingCategories.length > 0" class="text-sm text-gray-600 mt-1">
+              {{ availableDrivingCategories.length === 1 
+                ? `Kategorie ${availableDrivingCategories[0]}` 
+                : `Kategorien: ${availableDrivingCategories.join(', ')}` }}
+            </p>
+          </div>
+          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-2xl">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-6">
+
+        <!-- Filter und Sortierung -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            
+            <!-- Filter nach Fahrerkategorie -->
+            <div v-if="availableDrivingCategories.length > 1">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Fahrerkategorie</label>
+              <select
+                v-model="filterDrivingCategory"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
+              >
+                <option value="all" class="text-gray-600">Alle Kategorien</option>
+                <option v-for="category in availableDrivingCategories" :key="category" :value="category" class="text-gray-600">
+                  {{ category }}
+                </option>
+              </select>
+            </div>
+            
+            <!-- Filter nach Bewertungskategorie -->
+            <div v-if="availableCategories.length > 0">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Bewertungskategorie</label>
+              <select
+                v-model="filterCategory"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
+              >
+                <option value="all" class="text-gray-600">Alle Kategorien</option>
+                <option v-for="category in availableCategories" :key="category" :value="category" class="text-gray-600">
+                  {{ category }}
+                </option>
+              </select>
+            </div>
+            
+            <!-- Sortierung Switches nebeneinander -->
+            <div class="flex gap-6">
+              <!-- Sortierung nach Datum -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Datum</label>
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs text-gray-500">Alt</span>
+                  <button
+                    @click="toggleDateSort"
+                    :class="[
+                      'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                      sortBy === 'date' && sortOrder === 'desc' ? 'bg-blue-600' : 'bg-gray-200'
+                    ]"
+                  >
+                    <span
+                      :class="[
+                        'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+                        sortBy === 'date' && sortOrder === 'desc' ? 'translate-x-5' : 'translate-x-1'
+                      ]"
+                    />
+                  </button>
+                  <span class="text-xs text-gray-500">Neu</span>
+                </div>
+              </div>
+              
+              <!-- Sortierung nach Bewertung -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Bewertung</label>
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs text-gray-500">⭐</span>
+                  <button
+                    @click="toggleRatingSort"
+                    :class="[
+                      'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2',
+                      sortBy === 'rating' && sortOrder === 'desc' ? 'bg-green-600' : 'bg-gray-200'
+                    ]"
+                  >
+                    <span
+                      :class="[
+                        'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+                        sortBy === 'rating' && sortOrder === 'desc' ? 'translate-x-5' : 'translate-x-1'
+                      ]"
+                    />
+                  </button>
+                  <span class="text-xs text-gray-500">⭐⭐⭐</span>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+        <!-- Empty States -->
+        <div v-if="allEvaluations.length === 0" class="text-center py-12">
+          <div class="text-4xl mb-4">📊</div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">Noch keine Bewertungen</h3>
+          <p class="text-gray-500">Ihre Bewertungen werden hier angezeigt, sobald der Fahrlehrer sie erstellt hat.</p>
+        </div>
+
+        <div v-else-if="groupedByLesson.length === 0 && filterCategory !== 'all'" class="text-center py-12">
+          <div class="text-4xl mb-4">🔍</div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Bewertungen gefunden</h3>
+          <p class="text-gray-500 mb-4">Für die ausgewählte Kategorie "{{ filterCategory }}" wurden keine Bewertungen gefunden.</p>
+          <button
+            @click="filterCategory = 'all'"
+            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+          >
+            Alle Kategorien anzeigen
+          </button>
+        </div>
+
+        <!-- Bewertungsliste gruppiert nach Terminen -->
+        <div v-else class="space-y-6">
+          <div 
+            v-for="lessonGroup in groupedByLesson" 
+            :key="lessonGroup.lesson_id"
+            class="bg-white rounded-lg border border-gray-200 overflow-hidden"
+          >
+            <!-- Termin Header -->
+            <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h4 class="font-semibold text-gray-900">
+                      📅 {{ formatLessonDate(lessonGroup.lesson_date) }}
+                    </h4>
+                    <span 
+                      v-if="lessonGroup.driving_category" 
+                      class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                    >
+                      Kategorie {{ lessonGroup.driving_category }}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                    <span>🕐 {{ formatTimeRange(lessonGroup.start_time, lessonGroup.end_time) }}</span>
+                    <span v-if="lessonGroup.duration_minutes">⏱️ {{ lessonGroup.duration_minutes }} Min.</span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm text-gray-100">{{ lessonGroup.evaluations.length }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bewertungen für diesen Termin -->
+            <div class="p-4 space-y-3">
+              <div 
+                v-for="(evaluation, index) in lessonGroup.evaluations" 
+                :key="`${evaluation.criteria_id}-${index}`"
+                class="bg-gray-50 rounded-lg p-3 border border-gray-100"
+              >
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <h5 class="font-medium text-gray-900">
+                      {{ evaluation.criteria_name }}
+                    </h5>
+                    <p v-if="evaluation.criteria_category_name" class="text-sm text-gray-600 mt-1">
+                      {{ evaluation.criteria_category_name }}
+                    </p>
+                  </div>
+
+                  <div :class="[
+                    'px-3 py-1 rounded-full text-sm font-medium border',
+                    getRatingColor(evaluation.criteria_rating)
+                  ]">
+                    {{ evaluation.criteria_rating }} - {{ getRatingText(evaluation.criteria_rating) }}
+                  </div>
+                </div>
+
+                <div v-if="evaluation.criteria_note" class="mt-3 p-2 bg-white rounded-md border border-gray-100">
+                  <p class="text-sm text-gray-700">{{ evaluation.criteria_note }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+
+// Props & Emits
+interface Props {
+  isOpen: boolean
+  lessons: any[] // lessons enthalten bereits appointment.type (Kategorie)
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits(['close'])
+
+// State
+const sortBy = ref('date') // 'date' oder 'rating'
+const sortOrder = ref('desc') // 'asc' oder 'desc' 
+const filterCategory = ref('all') // Filter nach Bewertungskategorie
+const filterDrivingCategory = ref('all') // Filter nach Fahrerkategorie (appointment.type)
+
+// Helper functions
+const formatLessonDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('de-CH', { 
+    weekday: 'long',
+    day: '2-digit', 
+    month: 'long',
+    year: 'numeric'
+  })
+}
+
+const formatTimeRange = (startTime: string, endTime?: string) => {
+  const start = new Date(startTime)
+  const startStr = start.toLocaleTimeString('de-CH', { 
+    hour: '2-digit', 
+    minute: '2-digit'
+  })
+  
+  if (endTime) {
+    const end = new Date(endTime)
+    const endStr = end.toLocaleTimeString('de-CH', { 
+      hour: '2-digit', 
+      minute: '2-digit'
+    })
+    return `${startStr} - ${endStr}`
+  }
+  
+  return startStr
+}
+
+const extractCategoryFromTitle = (title: string): string | null => {
+  // Suche nach Kategorie in Klammern am Ende: (B), (A), (A1), etc.
+  const match = title.match(/\(([A-Z0-9]+)\)(?:\s*$|$)/)
+  return match ? match[1] : null
+}
+
+const getUniqueDrivingCategories = () => {
+  const categories = new Set<string>()
+  props.lessons?.forEach(lesson => {
+    if (lesson.type) {
+      categories.add(lesson.type)
+    } else {
+      // Fallback: Versuche Kategorie aus Titel zu extrahieren
+      const categoryFromTitle = extractCategoryFromTitle(lesson.title || '')
+      if (categoryFromTitle) {
+        categories.add(categoryFromTitle)
+      }
+    }
+  })
+  return Array.from(categories).sort()
+}
+
+// Toggle-Funktionen für die Switches
+const toggleDateSort = () => {
+  if (sortBy.value === 'date') {
+    sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
+  } else {
+    sortBy.value = 'date'
+    sortOrder.value = 'desc' // Standard: neueste zuerst
+  }
+}
+
+const toggleRatingSort = () => {
+  if (sortBy.value === 'rating') {
+    sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
+  } else {
+    sortBy.value = 'rating'
+    sortOrder.value = 'desc' // Standard: beste zuerst
+  }
+}
+
+const getRatingColor = (rating: number) => {
+  const colors = {
+    1: 'bg-red-100 text-red-700 border-red-200',
+    2: 'bg-orange-100 text-orange-700 border-orange-200',
+    3: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    4: 'bg-blue-100 text-blue-700 border-blue-200',
+    5: 'bg-green-100 text-green-700 border-green-200',
+    6: 'bg-emerald-100 text-emerald-700 border-emerald-200'
+  }
+  return colors[rating as keyof typeof colors] || 'bg-gray-100 text-gray-700 border-gray-200'
+}
+
+const getRatingText = (rating: number) => {
+  const texts = {
+    1: 'Besprochen',
+    2: 'Geübt', 
+    3: 'Ungenügend',
+    4: 'Genügend',
+    5: 'Gut',
+    6: 'Prüfungsreif'
+  }
+  return texts[rating as keyof typeof texts] || ''
+}
+
+const calculateAverageRating = (evaluations: any[]) => {
+  if (evaluations.length === 0) return 0
+  const sum = evaluations.reduce((total, evaluation) => total + evaluation.criteria_rating, 0)
+  return sum / evaluations.length
+}
+
+// Computed
+const allEvaluations = computed(() => {
+  const evaluations: any[] = []
+  
+  props.lessons?.forEach(lesson => {
+    if (lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0) {
+      lesson.criteria_evaluations.forEach((evaluation: any) => {
+        // Kategorie aus lesson.type oder als Fallback aus dem Titel
+        const drivingCategory = lesson.type || extractCategoryFromTitle(lesson.title || '') || ''
+        
+        evaluations.push({
+          ...evaluation,
+          lesson_id: lesson.id,
+          lesson_date: lesson.start_time,
+          lesson_title: lesson.title,
+          location_name: lesson.location_name,
+          driving_category: drivingCategory,
+          sort_date: new Date(lesson.start_time).getTime()
+        })
+      })
+    }
+  })
+
+  return evaluations
+})
+
+const availableCategories = computed(() => {
+  const categories = new Set<string>()
+  allEvaluations.value.forEach(evaluation => {
+    if (evaluation.criteria_category_name) {
+      categories.add(evaluation.criteria_category_name)
+    }
+  })
+  return Array.from(categories).sort()
+})
+
+const availableDrivingCategories = computed(() => {
+  return getUniqueDrivingCategories()
+})
+
+const groupedByLesson = computed(() => {
+  let filtered = [...allEvaluations.value]
+
+  // Filter nach Fahrerkategorie
+  if (filterDrivingCategory.value !== 'all') {
+    filtered = filtered.filter(evaluation => 
+      evaluation.driving_category === filterDrivingCategory.value
+    )
+  }
+
+  // Filter nach Bewertungskategorie
+  if (filterCategory.value !== 'all') {
+    filtered = filtered.filter(evaluation => 
+      evaluation.criteria_category_name === filterCategory.value
+    )
+  }
+
+  // Gruppierung nach Lektion/Termin
+  const grouped: Record<string, {
+    lesson_id: string
+    lesson_date: string
+    lesson_title: string
+    location_name: string
+    driving_category: string
+    start_time: string
+    end_time?: string
+    duration_minutes?: number
+    sort_date: number
+    evaluations: any[]
+  }> = {}
+
+  filtered.forEach(evaluation => {
+    const lessonId = evaluation.lesson_id
+    if (!grouped[lessonId]) {
+      // Finde die entsprechende Lektion für zusätzliche Infos
+      const lesson = props.lessons.find(l => l.id === lessonId)
+      grouped[lessonId] = {
+        lesson_id: lessonId,
+        lesson_date: evaluation.lesson_date,
+        lesson_title: evaluation.lesson_title || 'Fahrstunde',
+        location_name: evaluation.location_name || 'Treffpunkt nicht definiert',
+        driving_category: evaluation.driving_category || lesson?.type || '',
+        start_time: lesson?.start_time || evaluation.lesson_date,
+        end_time: lesson?.end_time,
+        duration_minutes: lesson?.duration_minutes,
+        sort_date: evaluation.sort_date,
+        evaluations: []
+      }
+    }
+    grouped[lessonId].evaluations.push(evaluation)
+  })
+
+  // Sortiere Lektionen
+  const sortedGroups = Object.values(grouped).sort((a, b) => {
+    if (sortBy.value === 'date') {
+      return sortOrder.value === 'desc' ? b.sort_date - a.sort_date : a.sort_date - b.sort_date
+    } else if (sortBy.value === 'rating') {
+      const avgA = calculateAverageRating(a.evaluations)
+      const avgB = calculateAverageRating(b.evaluations)
+      return sortOrder.value === 'desc' ? avgB - avgA : avgA - avgB
+    }
+    return 0
+  })
+
+  return sortedGroups
+})
+
+const sortedEvaluations = computed(() => {
+  // Für Rückwärtskompatibilität - falls die alte flache Liste noch benötigt wird
+  return groupedByLesson.value.flatMap(group => group.evaluations)
+})
+
+const stats = computed(() => {
+  if (allEvaluations.value.length === 0) return null
+
+  const ratings = allEvaluations.value.map(e => e.criteria_rating)
+  const average = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+  
+  const distribution = [1, 2, 3, 4, 5, 6].reduce((acc: Record<number, number>, rating) => {
+    acc[rating] = ratings.filter(r => r === rating).length
+    return acc
+  }, {} as Record<number, number>)
+
+  return {
+    total: allEvaluations.value.length,
+    average: average.toFixed(1),
+    distribution
+  }
+})
+</script>
+
+<style scoped>
+/* Smooth scrolling for modal content */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+</style>```
+
+### ./components/customer/UpcomingLessonsModal.vue
+```vue
+<!-- components/UpcomingLessonsModal.vue -->
+<template>
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+    <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      
+      <!-- Header -->
+      <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-900">
+              Kommende Lektionen
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">
+              {{ upcomingLessons.length }} geplante Termine
+            </p>
+          </div>
+          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-2xl">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-6">
+
+        <!-- Filter und Sortierung -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            
+            <!-- Filter nach Status -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                v-model="filterStatus"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
+              >
+                <option value="all" class="text-gray-600">Alle Termine</option>
+                <option value="upcoming" class="text-gray-600">Kommende</option>
+                <option value="today" class="text-gray-600">Heute</option>
+                <option value="this_week" class="text-gray-600">Diese Woche</option>
+              </select>
+            </div>
+            
+            <!-- Filter nach Kategorie -->
+            <div v-if="availableCategories.length > 1">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie</label>
+              <select
+                v-model="filterCategory"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
+              >
+                <option value="all" class="text-gray-600">Alle Kategorien</option>
+                <option v-for="category in availableCategories" :key="category" :value="category" class="text-gray-600">
+                  {{ category }}
+                </option>
+              </select>
+            </div>
+            
+            <!-- Sortierung Switch -->
+            <div class="flex gap-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Sortierung</label>
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs text-gray-500">Spät</span>
+                  <button
+                    @click="toggleSort"
+                    :class="[
+                      'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                      sortOrder === 'asc' ? 'bg-blue-600' : 'bg-gray-200'
+                    ]"
+                  >
+                    <span
+                      :class="[
+                        'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+                        sortOrder === 'asc' ? 'translate-x-5' : 'translate-x-1'
+                      ]"
+                    />
+                  </button>
+                  <span class="text-xs text-gray-500">Früh</span>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-if="filteredLessons.length === 0" class="text-center py-12">
+          <div class="text-4xl mb-4">📅</div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">Keine kommenden Termine</h3>
+          <p class="text-gray-500">{{ getEmptyStateMessage() }}</p>
+        </div>
+
+        <!-- Lektionsliste -->
+        <div v-else class="space-y-3">
+          <div 
+            v-for="lesson in filteredLessons" 
+            :key="lesson.id"
+            class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2">
+                  <h4 class="text-xs font-semibold text-gray-900">
+                    {{ formatLessonDate(lesson.start_time) }}
+                  </h4>
+                  <span 
+                    v-if="lesson.type" 
+                    class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                  >
+                    {{ lesson.type }}
+                  </span>
+                  <span 
+                    :class="[
+                      'inline-flex items-center px-2 py-1 text-xs font-medium rounded-full',
+                      getStatusColor(lesson)
+                    ]"
+                  >
+                    {{ getStatusText(lesson) }}
+                  </span>
+                </div>
+                
+                <div class="flex items-center gap-4 text-sm text-gray-600">
+                  <span>🕐 {{ formatTimeRange(lesson.start_time, lesson.end_time) }}</span>
+                  <span v-if="lesson.duration_minutes">⏱️ {{ lesson.duration_minutes }} Min.</span>
+                  <div class="font-semibold">                  <span>{{ getTimeUntil(lesson.start_time) }}</span>
+                    </div>
+                </div>
+              </div>
+            </div>
+                <div class="mt-2 text-sm text-gray-600">
+                    <span>📍 {{ lesson.location_name || 'Ort wird noch bekannt gegeben' }}</span>
+                </div>
+                <div v-if="lesson.price_per_minute && lesson.duration_minutes" class="text-right text-xs text-gray-500">
+                  CHF {{ calculatePrice(lesson).toFixed(2) }}
+                </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+
+// Props & Emits
+interface Props {
+  isOpen: boolean
+  lessons: any[]
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits(['close'])
+
+// State
+const filterStatus = ref('all')
+const filterCategory = ref('all')
+const sortOrder = ref('asc') // 'asc' = früh zuerst, 'desc' = spät zuerst
+
+// Helper functions
+const formatLessonDate = (dateString: string) => {
+  const date = new Date(dateString)
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
+  
+  if (date.toDateString() === today.toDateString()) {
+    return 'Heute'
+  } else if (date.toDateString() === tomorrow.toDateString()) {
+    return 'Morgen'
+  } else {
+    return date.toLocaleDateString('de-CH', { 
+      weekday: 'long',
+      day: '2-digit', 
+      month: 'long',
+      year: 'numeric'
+    })
+  }
+}
+
+const formatTimeRange = (startTime: string, endTime: string) => {
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  
+  const startStr = start.toLocaleTimeString('de-CH', { 
+    hour: '2-digit', 
+    minute: '2-digit'
+  })
+  const endStr = end.toLocaleTimeString('de-CH', { 
+    hour: '2-digit', 
+    minute: '2-digit'
+  })
+  
+  return `${startStr} - ${endStr}`
+}
+
+const getTimeUntil = (startTime: string) => {
+  const start = new Date(startTime)
+  const now = new Date()
+  const diffMs = start.getTime() - now.getTime()
+  
+  if (diffMs < 0) return 'Läuft'
+  
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffHours / 24)
+  
+  if (diffDays > 0) {
+    return `in ${diffDays} Tag${diffDays === 1 ? '' : 'en'}`
+  } else if (diffHours > 0) {
+    return `in ${diffHours}h`
+  } else {
+    const diffMinutes = Math.floor(diffMs / (1000 * 60))
+    return `in ${diffMinutes} Min.`
+  }
+}
+
+const getStatusColor = (lesson: any) => {
+  const now = new Date()
+  const start = new Date(lesson.start_time)
+  const end = new Date(lesson.end_time)
+  
+  if (now >= start && now <= end) {
+    return 'bg-green-100 text-green-700'
+  } else if (start.toDateString() === now.toDateString()) {
+    return 'bg-blue-100 text-blue-700'
+  } else {
+    return 'bg-gray-100 text-gray-700'
+  }
+}
+
+const getStatusText = (lesson: any) => {
+  const now = new Date()
+  const start = new Date(lesson.start_time)
+  const end = new Date(lesson.end_time)
+  
+  if (now >= start && now <= end) {
+    return 'Läuft'
+  } else if (start.toDateString() === now.toDateString()) {
+    return 'Heute'
+  } else {
+    return 'Geplant'
+  }
+}
+
+const calculatePrice = (lesson: any) => {
+  if (!lesson.price_per_minute || !lesson.duration_minutes) return 0
+  return lesson.price_per_minute * lesson.duration_minutes
+}
+
+const toggleSort = () => {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+}
+
+const getEmptyStateMessage = () => {
+  switch (filterStatus.value) {
+    case 'today':
+      return 'Heute sind keine Lektionen geplant.'
+    case 'this_week':
+      return 'Diese Woche sind keine Lektionen mehr geplant.'
+    default:
+      return 'Es sind aktuell keine Lektionen geplant.'
+  }
+}
+
+// Computed
+const upcomingLessons = computed(() => {
+  const now = new Date()
+  return props.lessons.filter(lesson => new Date(lesson.start_time) > now)
+})
+
+const availableCategories = computed(() => {
+  const categories = new Set<string>()
+  upcomingLessons.value.forEach(lesson => {
+    if (lesson.type) {
+      categories.add(lesson.type)
+    }
+  })
+  return Array.from(categories).sort()
+})
+
+const filteredLessons = computed(() => {
+  let filtered = [...upcomingLessons.value]
+  
+  // Filter nach Status
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const nextWeek = new Date(today)
+  nextWeek.setDate(today.getDate() + 7)
+  
+  switch (filterStatus.value) {
+    case 'today':
+      const tomorrow = new Date(today)
+      tomorrow.setDate(today.getDate() + 1)
+      filtered = filtered.filter(lesson => {
+        const lessonDate = new Date(lesson.start_time)
+        return lessonDate >= today && lessonDate < tomorrow
+      })
+      break
+    case 'this_week':
+      filtered = filtered.filter(lesson => {
+        const lessonDate = new Date(lesson.start_time)
+        return lessonDate >= today && lessonDate < nextWeek
+      })
+      break
+    case 'upcoming':
+      // Alle kommenden (Standard)
+      break
+  }
+  
+  // Filter nach Kategorie
+  if (filterCategory.value !== 'all') {
+    filtered = filtered.filter(lesson => lesson.type === filterCategory.value)
+  }
+  
+  // Sortierung
+  filtered.sort((a, b) => {
+    const dateA = new Date(a.start_time).getTime()
+    const dateB = new Date(b.start_time).getTime()
+    return sortOrder.value === 'asc' ? dateA - dateB : dateB - dateA
+  })
+  
+  return filtered
+})
+</script>
+
+<style scoped>
+/* Smooth scrolling for modal content */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+</style>```
+
+### ./composables/useAppointmentStatus.ts
+```ts
+// composables/useAppointmentStatus.ts - Status-Workflow Management
+import { ref } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+export const useAppointmentStatus = () => {
+  const supabase = getSupabase()
+  const isUpdating = ref(false)
+  const updateError = ref<string | null>(null)
+
+  /**
+   * Update appointments from 'confirmed' to 'completed' after end_time
+   * Läuft automatisch und updated alle überfälligen Termine
+   */
+const updateOverdueAppointments = async () => {
+  isUpdating.value = true
+  updateError.value = null
+  try {
+    console.log('🔄 Checking for overdue appointments...')
+    
+    const now = new Date().toISOString()
+    
+    // 🆕 ERWEITERT: Finde ALLE Termine die bereits beendet sind
+    const { data: overdueAppointments, error: findError } = await supabase
+      .from('appointments')
+      .select('id, title, start_time, end_time, staff_id, status')
+      .in('status', ['confirmed', 'scheduled', 'booked']) // 🆕 Alle relevanten Status
+      .lt('end_time', now) // Termine die bereits vorbei sind
+    
+    if (findError) {
+      throw new Error(`Error finding overdue appointments: ${findError.message}`)
+    }
+    
+    if (!overdueAppointments || overdueAppointments.length === 0) {
+      console.log('✅ No overdue appointments found')
+      return { updated: 0, appointments: [] }
+    }
+    
+    console.log(`📅 Found ${overdueAppointments.length} overdue appointments:`, overdueAppointments)
+    
+    // Update alle überfälligen Termine auf 'completed'
+    const appointmentIds = overdueAppointments.map(apt => apt.id)
+    
+    const { data: updatedAppointments, error: updateError } = await supabase
+      .from('appointments')
+      .update({ 
+        status: 'completed',
+        updated_at: new Date().toISOString()
+      })
+      .in('id', appointmentIds)
+      .select('id, title, status')
+    
+    if (updateError) {
+      throw new Error(`Error updating appointments: ${updateError.message}`)
+    }
+    
+    console.log(`✅ Successfully updated ${updatedAppointments?.length || 0} appointments to 'completed'`)
+    
+    return {
+      updated: updatedAppointments?.length || 0,
+      appointments: updatedAppointments || []
+    }
+  } catch (err: any) {
+    console.error('❌ Error updating overdue appointments:', err)
+    updateError.value = err.message
+    throw err
+  } finally {
+    isUpdating.value = false
+  }
+}
+
+  /**
+   * Update specific appointment to 'completed' status
+   * Für manuelles Update einzelner Termine
+   */
+  const markAppointmentCompleted = async (appointmentId: string) => {
+    isUpdating.value = true
+    updateError.value = null
+
+    try {
+      console.log(`🔄 Marking appointment ${appointmentId} as completed...`)
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({ 
+          status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointmentId)
+        .select('id, title, status')
+        .single()
+
+      if (error) {
+        throw new Error(`Error updating appointment: ${error.message}`)
+      }
+
+      console.log('✅ Appointment marked as completed:', data)
+      return data
+
+    } catch (err: any) {
+      console.error('❌ Error marking appointment completed:', err)
+      updateError.value = err.message
+      throw err
+    } finally {
+      isUpdating.value = false
+    }
+  }
+
+  /**
+   * Update appointment to 'evaluated' status after rating
+   * Nach dem Speichern einer Bewertung
+   */
+  const markAppointmentEvaluated = async (appointmentId: string) => {
+    isUpdating.value = true
+    updateError.value = null
+
+    try {
+      console.log(`🔄 Marking appointment ${appointmentId} as evaluated...`)
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({ 
+          status: 'evaluated',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointmentId)
+        .select('id, title, status')
+        .single()
+
+      if (error) {
+        throw new Error(`Error updating appointment: ${error.message}`)
+      }
+
+      console.log('✅ Appointment marked as evaluated:', data)
+      return data
+
+    } catch (err: any) {
+      console.error('❌ Error marking appointment evaluated:', err)
+      updateError.value = err.message
+      throw err
+    } finally {
+      isUpdating.value = false
+    }
+  }
+
+  /**
+   * Get appointment status statistics
+   * Für Dashboard/Debugging
+   */
+  const getStatusStatistics = async (staffId?: string) => {
+    try {
+      let query = supabase
+        .from('appointments')
+        .select('status')
+
+      if (staffId) {
+        query = query.eq('staff_id', staffId)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      const stats = data?.reduce((acc: Record<string, number>, appointment) => {
+        const status = appointment.status || 'unknown'
+        acc[status] = (acc[status] || 0) + 1
+        return acc
+      }, {}) || {}
+
+      console.log('📊 Appointment status statistics:', stats)
+      return stats
+
+    } catch (err: any) {
+      console.error('❌ Error getting status statistics:', err)
+      return {}
+    }
+  }
+
+  /**
+   * Batch status update with filters
+   * Erweiterte Update-Funktionen
+   */
+  const batchUpdateStatus = async (filters: {
+    fromStatus: string
+    toStatus: string
+    staffId?: string
+    beforeDate?: string
+    afterDate?: string
+  }) => {
+    isUpdating.value = true
+    updateError.value = null
+
+    try {
+      console.log('🔄 Batch updating appointment status...', filters)
+
+      let query = supabase
+        .from('appointments')
+        .update({ 
+          status: filters.toStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('status', filters.fromStatus)
+
+      if (filters.staffId) {
+        query = query.eq('staff_id', filters.staffId)
+      }
+
+      if (filters.beforeDate) {
+        query = query.lt('end_time', filters.beforeDate)
+      }
+
+      if (filters.afterDate) {
+        query = query.gt('start_time', filters.afterDate)
+      }
+
+      const { data, error } = await query.select('id, title, status')
+
+      if (error) {
+        throw new Error(`Batch update error: ${error.message}`)
+      }
+
+      console.log(`✅ Batch updated ${data?.length || 0} appointments from '${filters.fromStatus}' to '${filters.toStatus}'`)
+      
+      return {
+        updated: data?.length || 0,
+        appointments: data || []
+      }
+
+    } catch (err: any) {
+      console.error('❌ Error in batch status update:', err)
+      updateError.value = err.message
+      throw err
+    } finally {
+      isUpdating.value = false
+    }
+  }
+
+  return {
+    // State
+    isUpdating,
+    updateError,
+    
+    // Core Functions
+    updateOverdueAppointments,
+    markAppointmentCompleted,
+    markAppointmentEvaluated,
+    
+    // Utility Functions
+    getStatusStatistics,
+    batchUpdateStatus
+  }
+}```
+
+### ./composables/useCategoryData.ts
+```ts
+// composables/useCategoryData.ts - Mit Supabase Database
+
+import { ref, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+interface Category {
+  id: number
+  created_at: string
+  name: string
+  description?: string
+  code: string
+  price_per_lesson: number
+  price_unit: string
+  lesson_duration: number
+  color?: string
+  is_active: boolean
+  display_order: number
+}
+
+// Global shared state
+const allCategories = ref<Category[]>([])
+const isLoading = ref(false)
+const isLoaded = ref(false)
+
+export const useCategoryData = () => {
+  const supabase = getSupabase()
+
+  // Fallback data wenn DB nicht verfügbar
+  const fallbackCategories: Record<string, Partial<Category>> = {
+    'B': { name: 'Autoprüfung Kategorie B', price_per_lesson: 95, color: 'hellgrün' },
+    'A1': { name: 'Motorrad A1/A35kW/A', price_per_lesson: 95, color: 'hellgrün' },
+    'BE': { name: 'Anhänger BE', price_per_lesson: 120, color: 'orange' },
+    'C1': { name: 'LKW C1/D1', price_per_lesson: 150, color: 'gelb' },
+    'C': { name: 'LKW C', price_per_lesson: 170, color: 'rot' },
+    'CE': { name: 'LKW CE', price_per_lesson: 200, color: 'violett' },
+    'D': { name: 'Bus D', price_per_lesson: 200, color: 'türkis' },
+    'Motorboot': { name: 'Motorboot', price_per_lesson: 95, color: 'hellblau' },
+    'BPT': { name: 'Berufsprüfung Transport', price_per_lesson: 100, color: 'dunkelblau' }
+  }
+
+  // Admin Fees aus den Projektunterlagen
+  const adminFees: Record<string, number> = {
+    'B': 120, 'A1': 0, 'A35kW': 0, 'A': 0, 'BE': 120,
+    'C1': 200, 'D1': 200, 'C': 200, 'CE': 250, 'D': 300,
+    'Motorboot': 120, 'BPT': 120
+  }
+
+  // Kategorien aus Datenbank laden
+  const loadCategories = async () => {
+    if (isLoaded.value || isLoading.value) return
+    
+    isLoading.value = true
+    
+    try {
+      console.log('🔄 Loading categories from database...')
+      
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+        .order('name', { ascending: true })
+
+      if (error) throw error
+
+      allCategories.value = data || []
+      isLoaded.value = true
+      
+      console.log('✅ Categories loaded:', data?.length)
+      
+    } catch (err: any) {
+      console.error('❌ Error loading categories:', err)
+      // Bei Fehler: Fallback verwenden
+      allCategories.value = []
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Category by code finden
+  const getCategoryByCode = (code: string): Category | null => {
+    if (!code) return null
+    
+    // Aus geladenen Kategorien suchen
+    const dbCategory = allCategories.value.find(cat => cat.code === code)
+    if (dbCategory) return dbCategory
+    
+    // Fallback auf statische Daten
+    const fallback = fallbackCategories[code]
+    if (fallback) {
+      return {
+        id: 0,
+        code,
+        name: fallback.name || code,
+        price_per_lesson: fallback.price_per_lesson || 95,
+        lesson_duration: 45,
+        color: fallback.color || 'grau',
+        is_active: true,
+        display_order: 0,
+        price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      } as Category
+    }
+    
+    return null
+  }
+
+  // Helper Funktionen
+  const getCategoryName = (code: string): string => {
+    const category = getCategoryByCode(code)
+    return category?.name || code || 'Unbekannte Kategorie'
+  }
+
+  const getCategoryPrice = (code: string): number => {
+    const category = getCategoryByCode(code)
+    return category?.price_per_lesson || 95
+  }
+
+  const getCategoryColor = (code: string): string => {
+    const category = getCategoryByCode(code)
+    return category?.color || 'grau'
+  }
+
+  const getAdminFee = (code: string): number => {
+    return adminFees[code] || 120
+  }
+
+  const getCategoryIcon = (code: string): string => {
+    const icons: Record<string, string> = {
+      'B': '🚗', 'A1': '🏍️', 'A35kW': '🏍️', 'A': '🏍️',
+      'BE': '🚛', 'C1': '🚚', 'D1': '🚌', 'C': '🚚',
+      'CE': '🚛', 'D': '🚌', 'Motorboot': '🛥️', 'BPT': '📋'
+    }
+    return icons[code] || '🚗'
+  }
+
+  // Computed properties
+  const categoriesLoaded = computed(() => isLoaded.value)
+  const categoriesLoading = computed(() => isLoading.value)
+
+  return {
+    // State
+    allCategories: computed(() => allCategories.value),
+    categoriesLoaded,
+    categoriesLoading,
+
+    // Methods
+    loadCategories,
+    getCategoryByCode,
+    getCategoryName,
+    getCategoryPrice,
+    getCategoryColor,
+    getCategoryIcon,
+    getAdminFee
+  }
+}```
+
+### ./composables/useCompanyBilling.ts
+```ts
+// composables/useCompanyBilling.ts
+
+import { ref, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+import type { 
+  CompanyBillingAddress, 
+  CompanyBillingAddressInsert,
+  CompanyBillingFormData,
+  CompanyBillingValidation,
+  CreateCompanyBillingResponse,
+  CompanyBillingListResponse
+} from '~/types/companyBilling'
+
+export const useCompanyBilling = () => {
+  const supabase = getSupabase()
+  
+  // State
+  const isLoading = ref(false)
+  const error = ref<string>('')
+  const savedAddresses = ref<CompanyBillingAddress[]>([])
+  const currentAddress = ref<CompanyBillingAddress | null>(null)
+  
+  // Form Data
+  const formData = ref<CompanyBillingFormData>({
+    companyName: '',
+    contactPerson: '',
+    email: '',
+    phone: '',
+    street: '',
+    streetNumber: '',
+    zip: '',
+    city: '',
+    country: 'Schweiz',
+    vatNumber: '',
+    notes: ''
+  })
+
+  // Validation
+  const validation = computed((): CompanyBillingValidation => {
+    const errors: Record<string, string> = {}
+    
+    if (!formData.value.companyName.trim()) {
+      errors.companyName = 'Firmenname ist erforderlich'
+    }
+    
+    if (!formData.value.contactPerson.trim()) {
+      errors.contactPerson = 'Ansprechperson ist erforderlich'
+    }
+    
+    if (!formData.value.email.trim()) {
+      errors.email = 'E-Mail ist erforderlich'
+    } else if (!isValidEmail(formData.value.email)) {
+      errors.email = 'Gültige E-Mail-Adresse erforderlich'
+    }
+    
+    if (!formData.value.street.trim()) {
+      errors.street = 'Strasse ist erforderlich'
+    }
+    
+    if (!formData.value.zip.trim()) {
+      errors.zip = 'PLZ ist erforderlich'
+    } else if (!/^\d{4}$/.test(formData.value.zip)) {
+      errors.zip = 'PLZ muss 4 Ziffern haben'
+    }
+    
+    if (!formData.value.city.trim()) {
+      errors.city = 'Ort ist erforderlich'
+    }
+    
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
+    }
+  })
+
+  // Methods
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  const resetForm = () => {
+    formData.value = {
+      companyName: '',
+      contactPerson: '',
+      email: '',
+      phone: '',
+      street: '',
+      streetNumber: '',
+      zip: '',
+      city: '',
+      country: 'Schweiz',
+      vatNumber: '',
+      notes: ''
+    }
+    error.value = ''
+  }
+
+  const loadFormFromAddress = (address: CompanyBillingAddress) => {
+    formData.value = {
+      companyName: address.company_name,
+      contactPerson: address.contact_person,
+      email: address.email,
+      phone: address.phone || '',
+      street: address.street,
+      streetNumber: address.street_number || '',
+      zip: address.zip,
+      city: address.city,
+      country: address.country,
+      vatNumber: address.vat_number || '',
+      notes: address.notes || ''
+    }
+    currentAddress.value = address
+  }
+
+  const convertFormToInsert = (userId: string): CompanyBillingAddressInsert => {
+    return {
+      company_name: formData.value.companyName.trim(),
+      contact_person: formData.value.contactPerson.trim(),
+      email: formData.value.email.trim(),
+      phone: formData.value.phone.trim() || undefined,
+      street: formData.value.street.trim(),
+      street_number: formData.value.streetNumber.trim() || undefined,
+      zip: formData.value.zip.trim(),
+      city: formData.value.city.trim(),
+      country: formData.value.country.trim(),
+      vat_number: formData.value.vatNumber.trim() || undefined,
+      notes: formData.value.notes.trim() || undefined,
+      created_by: userId
+    }
+  }
+
+  // CRUD Operations
+  const createCompanyBillingAddress = async (userId: string): Promise<CreateCompanyBillingResponse> => {
+    if (!validation.value.isValid) {
+      return {
+        success: false,
+        error: 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
+      }
+    }
+
+    isLoading.value = true
+    error.value = ''
+
+    try {
+      const insertData = convertFormToInsert(userId)
+      
+      console.log('💾 Creating company billing address:', insertData)
+
+      const { data, error: supabaseError } = await supabase
+        .from('company_billing_addresses')
+        .insert(insertData)
+        .select()
+        .single()
+
+      if (supabaseError) {
+        console.error('❌ Supabase error:', supabaseError)
+        throw new Error(supabaseError.message)
+      }
+
+      if (!data) {
+        throw new Error('Keine Daten von der Datenbank erhalten')
+      }
+
+      currentAddress.value = data
+      console.log('✅ Company billing address created:', data)
+
+      return {
+        success: true,
+        data: data
+      }
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Fehler beim Speichern der Firmenadresse'
+      error.value = errorMessage
+      console.error('❌ Error creating company billing address:', err)
+      
+      return {
+        success: false,
+        error: errorMessage
+      }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const loadUserCompanyAddresses = async (userId: string): Promise<CompanyBillingListResponse> => {
+    isLoading.value = true
+    error.value = ''
+
+    try {
+      console.log('🔄 Loading company addresses for user:', userId)
+
+      const { data, error: supabaseError } = await supabase
+        .from('company_billing_addresses')
+        .select('*')
+        .eq('created_by', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+
+      if (supabaseError) {
+        console.error('❌ Supabase error:', supabaseError)
+        throw new Error(supabaseError.message)
+      }
+
+      savedAddresses.value = data || []
+      console.log('✅ Company addresses loaded:', savedAddresses.value.length)
+
+      return {
+        success: true,
+        data: data || []
+      }
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Fehler beim Laden der Firmenadresse'
+      error.value = errorMessage
+      console.error('❌ Error loading company addresses:', err)
+      
+      return {
+        success: false,
+        error: errorMessage
+      }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const updateCompanyBillingAddress = async (addressId: string): Promise<CreateCompanyBillingResponse> => {
+    if (!validation.value.isValid) {
+      return {
+        success: false,
+        error: 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
+      }
+    }
+
+    isLoading.value = true
+    error.value = ''
+
+    try {
+      const updateData = {
+        company_name: formData.value.companyName.trim(),
+        contact_person: formData.value.contactPerson.trim(),
+        email: formData.value.email.trim(),
+        phone: formData.value.phone.trim() || null,
+        street: formData.value.street.trim(),
+        street_number: formData.value.streetNumber.trim() || null,
+        zip: formData.value.zip.trim(),
+        city: formData.value.city.trim(),
+        country: formData.value.country.trim(),
+        vat_number: formData.value.vatNumber.trim() || null,
+        notes: formData.value.notes.trim() || null,
+        updated_at: new Date().toISOString()
+      }
+
+      console.log('💾 Updating company billing address:', addressId, updateData)
+
+      const { data, error: supabaseError } = await supabase
+        .from('company_billing_addresses')
+        .update(updateData)
+        .eq('id', addressId)
+        .select()
+        .single()
+
+      if (supabaseError) {
+        console.error('❌ Supabase error:', supabaseError)
+        throw new Error(supabaseError.message)
+      }
+
+      currentAddress.value = data
+      console.log('✅ Company billing address updated:', data)
+
+      return {
+        success: true,
+        data: data
+      }
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Fehler beim Aktualisieren der Firmenadresse'
+      error.value = errorMessage
+      console.error('❌ Error updating company billing address:', err)
+      
+      return {
+        success: false,
+        error: errorMessage
+      }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const deleteCompanyBillingAddress = async (addressId: string): Promise<{ success: boolean; error?: string }> => {
+    isLoading.value = true
+    error.value = ''
+
+    try {
+      console.log('🗑️ Deleting company billing address:', addressId)
+
+      const { error: supabaseError } = await supabase
+        .from('company_billing_addresses')
+        .update({ is_active: false })
+        .eq('id', addressId)
+
+      if (supabaseError) {
+        console.error('❌ Supabase error:', supabaseError)
+        throw new Error(supabaseError.message)
+      }
+
+      // Remove from local state
+      savedAddresses.value = savedAddresses.value.filter(addr => addr.id !== addressId)
+      
+      if (currentAddress.value?.id === addressId) {
+        currentAddress.value = null
+        resetForm()
+      }
+
+      console.log('✅ Company billing address deleted')
+
+      return { success: true }
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Fehler beim Löschen der Firmenadresse'
+      error.value = errorMessage
+      console.error('❌ Error deleting company billing address:', err)
+      
+      return {
+        success: false,
+        error: errorMessage
+      }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Utility Methods
+  const formatAddress = (address: CompanyBillingAddress): string => {
+    const parts = [
+      address.company_name,
+      address.contact_person,
+      `${address.street}${address.street_number ? ' ' + address.street_number : ''}`,
+      `${address.zip} ${address.city}`,
+      address.country
+    ]
+    return parts.join('\n')
+  }
+
+  const getAddressPreview = (address: CompanyBillingAddress): string => {
+    return `${address.company_name} - ${address.contact_person}`
+  }
+
+  return {
+    // State
+    formData,
+    currentAddress,
+    savedAddresses,
+    isLoading,
+    error,
+    validation,
+    
+    // Methods
+    createCompanyBillingAddress,
+    loadUserCompanyAddresses,
+    updateCompanyBillingAddress,
+    deleteCompanyBillingAddress,
+    loadFormFromAddress,
+    resetForm,
+    formatAddress,
+    getAddressPreview
+  }
+}```
+
+### ./composables/useCurrentUser.ts
+```ts
+// composables/useCurrentUser.ts
+import { ref } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+export const useCurrentUser = () => {
+  const currentUser = ref<any>(null)
+  const isLoading = ref(false)
+  const userError = ref<string | null>(null)
+  const profileExists = ref(false) // 🆕 NEU: Profil-Status
+
+  const fetchCurrentUser = async () => {
+    // Skip auf Login-Seite
+    if (process.client && window.location.pathname === '/') {
+      return
+    }
+
+    isLoading.value = true
+    userError.value = null
+    currentUser.value = null
+    profileExists.value = false // 🆕 Reset
+
+    try {
+      const supabase = getSupabase()
+      
+      // 1. Auth-User holen
+      const { data: authData, error: authError } = await supabase.auth.getUser()
+      const user = authData?.user
+
+      if (authError || !user?.email) {
+        userError.value = 'Nicht eingeloggt'
+        return
+      }
+
+      console.log('Auth-User gefunden:', user.email)
+
+      // 2. Database-User per E-Mail suchen
+      const { data: usersData, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', user.email)
+        .eq('is_active', true)
+
+      if (dbError) {
+        console.error('Database Error:', dbError)
+        userError.value = `Database-Fehler: ${dbError.message}`
+        return
+      }
+
+      if (!usersData || usersData.length === 0) {
+        console.log('Business-User nicht gefunden für:', user.email)
+        // 🆕 WICHTIGE ÄNDERUNG: Setze profileExists auf false, aber keinen userError
+        profileExists.value = false
+        currentUser.value = {
+          email: user.email,
+          auth_user_id: user.id
+        }
+        // 🚫 ENTFERNT: userError.value = `Kein Benutzerprofil für ${user.email} gefunden.`
+        return
+      }
+
+      // ✅ User gefunden
+      const userData = usersData[0]
+      console.log('✅ Business-User geladen:', userData)
+      
+      currentUser.value = {
+        ...userData,
+        auth_user_id: user.id
+      }
+      profileExists.value = true // 🆕 Profil existiert
+
+    } catch (err: any) {
+      console.error('Unerwarteter Fehler:', err)
+      userError.value = err?.message || 'Unbekannter Fehler'
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // 🆕 NEU: Funktion zum Erstellen des User-Profils
+  const createUserProfile = async (profileData: { company_name: string, role: string }) => {
+    isLoading.value = true
+    userError.value = null
+
+    try {
+      const supabase = getSupabase()
+      const { data: authData } = await supabase.auth.getUser()
+      const user = authData?.user
+
+      if (!user?.email) {
+        throw new Error('Kein authentifizierter Benutzer')
+      }
+
+      // Erstelle neuen User in der Datenbank
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          email: user.email,
+          auth_user_id: user.id,
+          company_name: profileData.company_name,
+          role: profileData.role,
+          is_active: true,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      console.log('✅ Profil erstellt:', data)
+      
+      // Update lokaler State
+      currentUser.value = {
+        ...data,
+        auth_user_id: user.id
+      }
+      profileExists.value = true
+
+      return data
+
+    } catch (err: any) {
+      console.error('Fehler beim Erstellen des Profils:', err)
+      userError.value = err?.message || 'Fehler beim Erstellen des Profils'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  return {
+    currentUser,
+    isLoading,
+    userError,
+    profileExists, // 🆕 NEU exportiert
+    fetchCurrentUser,
+    createUserProfile // 🆕 NEU exportiert
+  }
+}```
+
+### ./composables/useDurationManager.ts
+```ts
+// composables/useDurationManager.ts - Komplett neue Datei ohne Cache-Probleme
+import { ref, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+export const useDurationManager = () => {
+  // State
+  const availableDurations = ref<number[]>([])
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
+
+  // Computed - formatierte Dauern für UI
+  const formattedDurations = computed(() => {
+    return availableDurations.value.map(duration => ({
+      value: duration,
+      label: duration >= 120 
+        ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
+        : `${duration}min`
+    }))
+  })
+
+  // Staff-Dauern direkt laden - KEINE Kategorie-Abfrage!
+  const loadStaffDurations = async (staffId: string) => {
+    console.log('🚀 useDurationManager - Loading staff durations for:', staffId)
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const supabase = getSupabase()
+
+      // NUR Staff Settings laden - KEINE Categories!
+      console.log('📋 Querying ONLY staff_settings...')
+      const { data: staffSettings, error: staffError } = await supabase
+        .from('staff_settings')
+        .select('preferred_durations')
+        .eq('staff_id', staffId)
+        .maybeSingle()
+
+      console.log('📋 Staff settings result:', { data: staffSettings, error: staffError })
+
+      let finalDurations: number[] = []
+      
+      if (staffSettings?.preferred_durations) {
+        console.log('👤 Raw staff durations:', staffSettings.preferred_durations)
+        
+        try {
+          // Parse different formats
+          if (staffSettings.preferred_durations.startsWith('[') && staffSettings.preferred_durations.endsWith(']')) {
+            const jsonArray = JSON.parse(staffSettings.preferred_durations)
+            
+            finalDurations = jsonArray.map((item: any) => {
+              const num = typeof item === 'string' ? parseInt(item) : item
+              return isNaN(num) ? 0 : num
+            }).filter((d: number) => d > 0).sort((a: number, b: number) => a - b)
+            
+            console.log('✅ Parsed durations:', finalDurations)
+          } else if (staffSettings.preferred_durations.includes(',')) {
+            // CSV format: "45,60,75,90"
+            finalDurations = staffSettings.preferred_durations
+              .split(',')
+              .map((d: string) => parseInt(d.trim()))
+              .filter((d: number) => !isNaN(d) && d > 0)
+              .sort((a: number, b: number) => a - b)
+            
+            console.log('✅ Parsed CSV durations:', finalDurations)
+          } else {
+            // Single number
+            const singleDuration = parseInt(staffSettings.preferred_durations)
+            if (!isNaN(singleDuration) && singleDuration > 0) {
+              finalDurations = [singleDuration]
+              console.log('✅ Parsed single duration:', finalDurations)
+            } else {
+              console.log('⚠️ Invalid format, using fallback')
+              finalDurations = [45]
+            }
+          }
+        } catch (parseError) {
+          console.error('❌ Parse error:', parseError)
+          finalDurations = [45]
+        }
+      } else {
+        console.log('⚠️ No staff settings found, using default [45]')
+        finalDurations = [45]
+      }
+
+      availableDurations.value = finalDurations
+      console.log('🎯 Final available durations:', finalDurations)
+      return finalDurations
+
+    } catch (err: any) {
+      console.error('❌ Error loading staff durations:', err)
+      error.value = err.message
+      availableDurations.value = [45]
+      return [45]
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Staff preferred durations in DB updaten
+  const updateStaffDurations = async (staffId: string, newDurations: number[]) => {
+    console.log('🔄 Updating staff durations in DB:', newDurations)
+    
+    try {
+      const supabase = getSupabase()
+      // Als JSON Array speichern um konsistent mit bestehenden Daten zu sein
+      const durationsString = JSON.stringify(newDurations.sort((a: number, b: number) => a - b))
+      
+      const { error: upsertError } = await supabase
+        .from('staff_settings')
+        .upsert({
+          staff_id: staffId,
+          preferred_durations: durationsString,
+          updated_at: new Date().toISOString()
+        })
+
+      if (upsertError) throw upsertError
+
+      console.log('✅ Staff durations updated in DB as JSON:', durationsString)
+      
+      // State aktualisieren
+      availableDurations.value = newDurations.sort((a: number, b: number) => a - b)
+      
+    } catch (err: any) {
+      console.error('❌ Error updating staff durations:', err)
+      error.value = err.message
+      throw err
+    }
+  }
+
+  // Standard-Dauern für alle Kategorien aus DB laden (für Settings UI)
+  const loadAllPossibleDurations = async () => {
+    console.log('🔥 Loading all possible durations')
+    
+    try {
+      // Alle möglichen Dauern sammeln (15min steps von 45-240)
+      const allDurations = [45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240]
+      
+      return allDurations.map(duration => ({
+        value: duration,
+        label: duration >= 120 
+          ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
+          : `${duration}min`,
+        // Info für Settings UI
+        category: 'all'
+      }))
+
+    } catch (err: any) {
+      console.error('❌ Error loading possible durations:', err)
+      return []
+    }
+  }
+
+  // Staff-Settings für User laden
+  const loadStaffSettings = async (staffId: string) => {
+    console.log('🔥 Loading complete staff settings')
+    
+    try {
+      const supabase = getSupabase()
+      const { data, error } = await supabase
+        .from('staff_settings')
+        .select('*')
+        .eq('staff_id', staffId)
+        .maybeSingle()
+
+      if (error) throw error
+      
+      return data
+    } catch (err: any) {
+      console.error('❌ Error loading staff settings:', err)
+      return null
+    }
+  }
+
+  // Erstes verfügbares Dauer zurückgeben
+  const getDefaultDuration = () => {
+    return availableDurations.value.length > 0 ? availableDurations.value[0] : 45
+  }
+
+  // Check ob Dauer verfügbar ist
+  const isDurationAvailable = (duration: number) => {
+    return availableDurations.value.includes(duration)
+  }
+
+  // Reset state
+  const reset = () => {
+    availableDurations.value = []
+    isLoading.value = false
+    error.value = null
+  }
+
+  return {
+    // State
+    availableDurations: computed(() => availableDurations.value),
+    formattedDurations,
+    isLoading: computed(() => isLoading.value),
+    error: computed(() => error.value),
+
+    // Actions
+    loadStaffDurations,
+    updateStaffDurations,
+    loadAllPossibleDurations,
+    loadStaffSettings,
+    
+    // Utils
+    getDefaultDuration,
+    isDurationAvailable,
+    reset
+  }
+}```
+
+### ./composables/useEventModalForm.ts
+```ts
+// composables/useEventModalForm.ts
+import { ref, computed, reactive } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+import { useTimeCalculations } from '~/composables/useTimeCalculations'
+
+
+// Types (können später in separates types file)
+interface AppointmentData {
+  id?: string
+  title: string
+  description: string
+  type: string
+  startDate: string
+  startTime: string
+  endTime: string 
+  duration_minutes: number
+  user_id: string
+  staff_id: string
+  location_id: string
+  price_per_minute: number
+  status: string
+  eventType: string 
+  selectedSpecialType: string 
+  is_paid: boolean 
+  discount?: number
+  discount_type?: string
+  discount_reason?: string
+}
+
+interface Student {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  category: string
+  assigned_staff_id: string
+  preferred_location_id?: string
+  preferred_duration?: number 
+}
+
+export const useEventModalForm = (currentUser?: any) => {
+  
+  // ============ STATE ============
+  const formData = ref<AppointmentData>({
+    title: '',
+    description: '',
+    type: '',
+    startDate: '',
+    startTime: '',
+    endTime: '',
+    duration_minutes: 45,
+    user_id: '',
+    staff_id: '',
+    location_id: '',
+    price_per_minute: 0,
+    status: 'booked',
+    eventType: 'lesson',
+    selectedSpecialType: '',
+    is_paid: false,
+    discount: 0,
+    discount_type: 'fixed',
+    discount_reason: ''
+  })
+
+  const selectedStudent = ref<Student | null>(null)
+  const selectedCategory = ref<any>(null)
+  const selectedLocation = ref<any>(null)
+  const availableDurations = ref<number[]>([45])
+  const appointmentNumber = ref<number>(1)
+  
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
+
+  // ============ COMPUTED ============
+  const isFormValid = computed(() => {
+    const baseValid = formData.value.title && 
+                     formData.value.startDate && 
+                     formData.value.startTime &&
+                     formData.value.endTime
+
+    if (formData.value.eventType === 'lesson') {
+      return baseValid && 
+             selectedStudent.value && 
+             formData.value.type && 
+             formData.value.location_id &&
+             formData.value.duration_minutes > 0
+    } else {
+      return baseValid && formData.value.selectedSpecialType
+    }
+  })
+
+  const computedEndTime = computed(() => {
+    if (!formData.value.startTime || !formData.value.duration_minutes) return ''
+    
+    const [hours, minutes] = formData.value.startTime.split(':').map(Number)
+    const startDate = new Date()
+    startDate.setHours(hours, minutes, 0, 0)
+    
+    const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
+    
+    const endHours = String(endDate.getHours()).padStart(2, '0')
+    const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
+    
+    return `${endHours}:${endMinutes}`
+  })
+
+  const totalPrice = computed(() => {
+    const pricePerMinute = formData.value.price_per_minute || (95/45)
+    const total = pricePerMinute * (formData.value.duration_minutes || 45)
+    return total.toFixed(2)
+  })
+
+  // ============ FORM ACTIONS ============
+  const resetForm = () => {
+    console.log('🔄 Resetting form data')
+    
+    formData.value = {
+      title: '',
+      description: '',
+      type: '',
+      startDate: '',
+      startTime: '',
+      endTime: '',
+      duration_minutes: 45,
+      user_id: '',
+      staff_id: currentUser?.id || '',
+      location_id: '',
+      price_per_minute: 0,
+      status: 'booked',
+      eventType: 'lesson',
+      selectedSpecialType: '',
+      is_paid: false,
+      discount: 0,
+      discount_type: 'fixed',
+      discount_reason: ''
+    }
+    
+    selectedStudent.value = null
+    selectedCategory.value = null
+    selectedLocation.value = null
+    availableDurations.value = [45]
+    appointmentNumber.value = 1
+    error.value = null
+  }
+
+  const populateFormFromAppointment = (appointment: any) => {
+    console.log('📝 Populating form from appointment:', appointment?.id)
+    
+    // Event-Type Detection
+    const appointmentType = appointment.extendedProps?.type ||
+                           appointment.type ||
+                           appointment.extendedProps?.appointment_type ||
+                           'lesson'
+    
+    const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
+    const isOtherEvent = appointmentType && otherEventTypes.includes(appointmentType.toLowerCase())
+    
+    // Zeit-Verarbeitung
+    const startDateTime = new Date(appointment.start_time || appointment.start)
+    const endDateTime = appointment.end_time || appointment.end ? new Date(appointment.end_time || appointment.end) : null
+    const startDate = startDateTime.toISOString().split('T')[0]
+    const startTime = startDateTime.toTimeString().slice(0, 5)
+    const endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : ''
+    
+    let duration = appointment.duration_minutes || appointment.extendedProps?.duration_minutes
+    if (!duration && endDateTime) {
+      duration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60))
+    }
+    duration = duration || 45
+    
+    // Form Data setzen
+    formData.value = {
+      title: appointment.title || '',
+      description: appointment.description || appointment.extendedProps?.description || '',
+      type: appointmentType,
+      startDate: startDate,
+      startTime: startTime,
+      endTime: endTime,
+      duration_minutes: duration,
+      user_id: appointment.user_id || appointment.extendedProps?.user_id || '',
+      staff_id: appointment.staff_id || appointment.extendedProps?.staff_id || currentUser?.id || '',
+      location_id: appointment.location_id || appointment.extendedProps?.location_id || '',
+      price_per_minute: appointment.price_per_minute || appointment.extendedProps?.price_per_minute || 0,
+      status: appointment.status || appointment.extendedProps?.status || 'confirmed',
+      eventType: isOtherEvent ? 'other' : 'lesson',
+      selectedSpecialType: isOtherEvent ? appointmentType : '',
+      is_paid: appointment.is_paid || appointment.extendedProps?.is_paid || false
+    }
+    
+    console.log('✅ Form populated with type:', formData.value.type)
+  }
+
+const { calculateEndTime } = useTimeCalculations(formData)
+
+
+  // ============ SAVE/DELETE LOGIC ============ 
+  const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      if (!isFormValid.value) {
+        throw new Error('Bitte füllen Sie alle Pflichtfelder aus')
+      }
+      
+      const supabase = getSupabase()
+      
+      // Auth Check
+      const { data: authData, error: authError } = await supabase.auth.getUser()
+      if (!authData?.user) {
+        throw new Error('Nicht authentifiziert')
+      }
+      
+      // User Check
+      const { data: dbUser, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', authData.user.id)
+        .single()
+      
+      if (!dbUser) {
+        throw new Error('User-Profil nicht gefunden')
+      }
+      
+      // Appointment Data
+      const appointmentData = {
+        title: formData.value.title,
+        description: formData.value.description,
+        user_id: formData.value.user_id,
+        staff_id: formData.value.staff_id || dbUser.id,
+        location_id: formData.value.location_id,
+        start_time: `${formData.value.startDate}T${formData.value.startTime}:00`,
+        end_time: `${formData.value.startDate}T${formData.value.endTime}:00`,
+        duration_minutes: formData.value.duration_minutes,
+        type: formData.value.type,
+        status: formData.value.status,
+        price_per_minute: formData.value.price_per_minute,
+        is_paid: formData.value.is_paid
+      }
+      
+      console.log('💾 Saving appointment data:', appointmentData)
+      
+      let result
+      if (mode === 'edit' && eventId) {
+        // Update
+        const { data, error: updateError } = await supabase
+          .from('appointments')
+          .update(appointmentData)
+          .eq('id', eventId)
+          .select()
+          .single()
+        
+        if (updateError) throw updateError
+        result = data
+      } else {
+        // Create
+        const { data, error: insertError } = await supabase
+          .from('appointments')
+          .insert(appointmentData)
+          .select()
+          .single()
+        
+        if (insertError) throw insertError
+        result = data
+      }
+      
+      console.log('✅ Appointment saved:', result.id)
+      return result
+      
+    } catch (err: any) {
+      console.error('❌ Save error:', err)
+      error.value = err.message
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const deleteAppointment = async (eventId: string) => {
+    isLoading.value = true
+    
+    try {
+      const supabase = getSupabase()
+      const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', eventId)
+      
+      if (error) throw error
+      
+      console.log('✅ Appointment deleted:', eventId)
+      
+    } catch (err: any) {
+      console.error('❌ Delete error:', err)
+      error.value = err.message
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // ============ UTILS ============
+  const getAppointmentNumber = async (userId?: string) => {
+    const studentId = userId || formData.value.user_id
+    if (!studentId) return 1
+    
+    try {
+      const supabase = getSupabase()
+      const { count, error } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', studentId)
+        .in('status', ['completed', 'confirmed'])
+      
+      if (error) throw error
+      return (count || 0) + 1
+      
+    } catch (err) {
+      console.error('❌ Error counting appointments:', err)
+      return 1
+    }
+  }
+
+  return {
+    // State
+    formData,
+    selectedStudent,
+    selectedCategory,
+    selectedLocation,
+    availableDurations,
+    appointmentNumber,
+    isLoading,
+    error,
+    
+    // Computed
+    isFormValid,
+    computedEndTime,
+    totalPrice,
+    
+    // Actions
+    resetForm,
+    populateFormFromAppointment,
+    calculateEndTime,
+    saveAppointment,
+    deleteAppointment,
+    getAppointmentNumber
+  }
+}```
+
+### ./composables/useEventModalHandlers.ts
+```ts
+import { ref, nextTick } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+import { usePaymentMethods } from '~/composables/usePaymentMethods'
+import { useTimeCalculations } from '~/composables/useTimeCalculations'
+
+
+// Define constants for better readability and maintainability
+const DEFAULT_DURATION_MINUTES = 45
+const FALLBACK_PRICE_PER_MINUTE = 95 / DEFAULT_DURATION_MINUTES
+
+export const useEventModalHandlers = (
+  formData: any,
+  selectedStudent: any,
+  selectedCategory: any,
+  availableDurations: any,
+  appointmentNumber: any,
+  selectedLocation: any 
+) => {
+
+  const supabase = getSupabase()
+  const paymentMethods = usePaymentMethods()
+
+  // ============ UTILITY FUNCTIONS (Defined first for better accessibility) ============
+const { calculateEndTime } = useTimeCalculations(formData)
+
+
+  /**
+   * Loads the duration of the last completed appointment for a given student.
+   * @param studentId The ID of the student.
+   * @returns The duration in minutes or null if no completed appointment is found.
+   */
+
+  const getLastAppointmentCategory = async (studentId: string): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('type')
+      .eq('user_id', studentId)
+      .eq('status', 'completed')
+      .order('end_time', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      console.error('❌ Error fetching last appointment category:', error.message)
+      return null
+    }
+
+    if (!data) {
+      console.log('⚠️ No completed appointments found for student:', studentId)
+      return null
+    }
+
+    return data.type || null
+  } catch (err) {
+    console.error('❌ Unexpected error loading last appointment category:', err)
+    return null
+  }
+}
+
+  const getLastAppointmentDuration = async (studentId: string): Promise<number | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('duration_minutes')
+        .eq('user_id', studentId)
+        .eq('status', 'completed') // Only consider completed appointments
+        .order('end_time', { ascending: false }) // Get the most recent one
+        .limit(1)
+        .maybeSingle() // Expects zero or one record
+
+      if (error) {
+        console.error('❌ Error fetching last appointment duration:', error.message)
+        return null
+      }
+
+      if (!data) {
+        console.log('⚠️ No completed appointments found for student:', studentId)
+        return null
+      }
+
+      return data.duration_minutes || null
+    } catch (err) {
+      console.error('❌ Unexpected error loading last appointment duration:', err)
+      return null
+    }
+  }
+
+  /**
+   * Counts the number of completed or confirmed appointments for a student.
+   * Used to determine the appointment number for insurance fees.
+   * @param studentId The ID of the student.
+   * @returns The total count of relevant appointments + 1 (for the current appointment).
+   */
+  const getAppointmentNumber = async (studentId: string): Promise<number> => {
+    try {
+      const { count, error } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true }) // 'head: true' fetches no data, just the count
+        .eq('user_id', studentId)
+        .in('status', ['completed', 'confirmed']) // Count completed and confirmed appointments
+
+      if (error) throw error
+      return (count || 0) + 1 // +1 because the current appointment is the next one
+    } catch (err) {
+      console.error('❌ Error counting appointments from DB:', err)
+      return 1 // Default to 1 if counting fails
+    }
+  }
+
+  /**
+   * Loads preferred durations for a staff member from the 'staff_settings' table.
+   * @param staffId The ID of the staff member.
+   */
+  const loadStaffDurations = async (staffId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('staff_settings')
+        .select('preferred_durations')
+        .eq('staff_id', staffId)
+        .maybeSingle()
+
+      if (error || !data?.preferred_durations) {
+        console.log('⚠️ No staff durations found in DB or error, using defaults.')
+        availableDurations.value = [DEFAULT_DURATION_MINUTES, 90, 135]
+        return
+      }
+
+      // Parse preferred_durations (can be JSON string or comma-separated string)
+      let durations: number[] = []
+      try {
+        if (typeof data.preferred_durations === 'string' && data.preferred_durations.startsWith('[')) {
+          durations = JSON.parse(data.preferred_durations)
+        } else if (typeof data.preferred_durations === 'string') {
+          durations = data.preferred_durations.split(',').map((d: string) => parseInt(d.trim()))
+        } else if (Array.isArray(data.preferred_durations)) {
+          durations = data.preferred_durations
+        }
+        durations = durations.filter(d => !isNaN(d) && d > 0).sort((a, b) => a - b)
+      } catch (parseErr) {
+        console.error('❌ Error parsing staff durations:', parseErr)
+        durations = [DEFAULT_DURATION_MINUTES, 90, 135] // Fallback on parsing error
+      }
+
+      availableDurations.value = durations
+      console.log('✅ Staff durations loaded from DB:', durations)
+
+    } catch (err) {
+      console.error('❌ Error loading staff durations from DB:', err)
+      availableDurations.value = [DEFAULT_DURATION_MINUTES, 90, 135] // Fallback on fetch error
+    }
+  }
+
+  /**
+   * Generates a default title for the event based on event type and selected student.
+   * @returns The generated default title.
+   */
+  const getDefaultTitle = () => {
+    if (formData.value.eventType === 'lesson' && selectedStudent.value) {
+      return selectedStudent.value.first_name || 'Schüler'
+    }
+    if (formData.value.selectedSpecialType) {
+      return getEventTypeName(formData.value.selectedSpecialType)
+    }
+    return 'Neuer Termin'
+  }
+
+  /**
+   * Returns a human-readable name for an event type code.
+   * @param code The event type code.
+   * @returns The human-readable name.
+   */
+  const getEventTypeName = (code: string): string => {
+    const eventTypes: Record<string, string> = {
+      'meeting': 'Team-Meeting',
+      'course': 'Verkehrskunde',
+      'break': 'Pause',
+      'training': 'Weiterbildung',
+      'maintenance': 'Wartung',
+      'admin': 'Administration',
+      'other': 'Sonstiges'
+    }
+    return eventTypes[code] || code || 'Neuer Termin'
+  }
+
+  /**
+   * Retrieves the administrative fee for a given category.
+   * This is typically an insurance fee applied from the 2nd appointment onwards.
+   * @param categoryCode The code of the category.
+   * @returns The administrative fee amount.
+   */
+  const getAdminFeeForCategory = (categoryCode: string): number => {
+    // Insurance fee from project data - only from 2nd appointment
+    const adminFees: Record<string, number> = {
+      'B': 120, 'A1': 0, 'A35kW': 0, 'A': 0, 'BE': 120,
+      'C1': 200, 'D1': 200, 'C': 200, 'CE': 250, 'D': 300,
+      'Motorboot': 120, 'BPT': 120
+    }
+    return adminFees[categoryCode] || 0
+  }
+
+  // ============ STUDENT HANDLERS ============
+
+  /**
+   * Auto-fills form data based on the selected student's profile from Supabase.
+   * @param student The student object to auto-fill from.
+   */
+  const autoFillFromStudent = async (student: any) => {
+    console.log('🤖 Auto-filling form from student:', student.first_name)
+
+    // Set basic data from users table
+    formData.value.user_id = student.id
+    formData.value.staff_id = student.assigned_staff_id || formData.value.staff_id
+
+    // Set category from users.category (taking the primary category if multiple exist)
+    if (student.category) {
+      const primaryCategory = student.category.split(',')[0].trim()
+      formData.value.type = primaryCategory
+      console.log('📚 Category from users table:', formData.value.type)
+    }
+
+    // Load preferred payment method from student profile using the paymentMethods composable
+    const preferredPaymentMethod = await paymentMethods.loadStudentPaymentPreference(student.id)
+    formData.value.payment_method = preferredPaymentMethod
+    console.log('💳 Loaded payment preference:', preferredPaymentMethod)
+
+    // Load last appointment duration from appointments table
+    try {
+      const lastDuration = await getLastAppointmentDuration(student.id)
+      if (lastDuration) {
+        formData.value.duration_minutes = lastDuration
+        console.log('⏱️ Duration from last appointment:', lastDuration)
+      } else {
+        formData.value.duration_minutes = DEFAULT_DURATION_MINUTES // Default
+      }
+    } catch (err) {
+      console.log('⚠️ Could not load last duration, using default', DEFAULT_DURATION_MINUTES, 'min:', err)
+      formData.value.duration_minutes = DEFAULT_DURATION_MINUTES
+    }
+
+    // Update price based on category - from project data (static fallback)
+    const categoryPricing: Record<string, number> = {
+      'A': 95 / 45, 'A1': 95 / 45, 'A35kW': 95 / 45, 'B': 95 / 45,
+      'BE': 120 / 45, 'C1': 150 / 45, 'D1': 150 / 45, 'C': 170 / 45,
+      'CE': 200 / 45, 'D': 200 / 45, 'BPT': 100 / 45, 'Motorboot': 95 / 45
+    }
+    formData.value.price_per_minute = categoryPricing[formData.value.type] || FALLBACK_PRICE_PER_MINUTE
+
+    // Count appointments for this user (important for insurance fee from 2nd appointment)
+    try {
+      appointmentNumber.value = await getAppointmentNumber(student.id)
+      console.log('📈 Appointment number from DB:', appointmentNumber.value)
+    } catch (err) {
+      console.error('❌ Error counting appointments:', err)
+      appointmentNumber.value = 1 // Default to 1 if counting fails
+    }
+
+    console.log('✅ Auto-fill from Supabase completed')
+  }
+
+  /**
+   * Handles the selection of a student.
+   * Auto-fills form data based on the selected student's profile.
+   * @param student The selected student object.
+   */
+  const handleStudentSelected = async (student: any) => {
+    console.log('🎯 Student selected:', student.first_name, student.id)
+
+    selectedStudent.value = student
+
+    // Auto-fill form data from student (only in CREATE mode, implicitly handled by initial state)
+    if (student) {
+      await autoFillFromStudent(student)
+    }
+  }
+
+  /**
+   * Handles clearing the selected student and resetting related form fields.
+   */
+  const handleStudentCleared = () => {
+    console.log('🗑️ Student cleared')
+
+    selectedStudent.value = null
+    formData.value.title = ''
+    formData.value.type = ''
+    formData.value.user_id = ''
+    formData.value.location_id = ''
+    formData.value.price_per_minute = 0
+    formData.value.payment_method = 'cash' // Default payment method
+  }
+
+  // ============ CATEGORY HANDLERS ============
+
+  /**
+   * Handles the selection of a category.
+   * Updates price and loads staff durations based on the selected category.
+   * @param category The selected category object.
+   */
+// In composables/useEventModalHandlers.ts - handleCategorySelected erweitern:
+
+const handleCategorySelected = async (category: any) => {
+  console.log('🎯 Category selected:', category?.code)
+  selectedCategory.value = category
+  
+  if (category) {
+    // Load category data from categories table
+    try {
+      const { data: categoryData, error } = await supabase
+        .from('categories')
+        .select('*') // ✅ Holt bereits exam_duration_minutes mit
+        .eq('code', category.code)
+        .eq('is_active', true)
+        .maybeSingle()
+        
+      if (categoryData) {
+        formData.value.price_per_minute = categoryData.price_per_lesson / DEFAULT_DURATION_MINUTES
+        console.log('💰 Price from categories table:', categoryData.price_per_lesson)
+        
+        // ✅ NEU: Kategorie-Daten für Dauer-Berechnung speichern
+        selectedCategory.value = { ...category, ...categoryData }
+      } else {
+        // Fallback to static prices if not found in DB
+        const fallbackPrices: Record<string, number> = {
+          'B': 95, 'A1': 95, 'BE': 120, 'C1': 150, 'D1': 150, 'C': 170,
+          'CE': 200, 'D': 200, 'BPT': 100, 'Motorboot': 95
+        }
+        formData.value.price_per_minute = (fallbackPrices[category.code] || 95) / DEFAULT_DURATION_MINUTES
+        console.log('⚠️ Category not found in DB, using fallback price:', formData.value.price_per_minute * DEFAULT_DURATION_MINUTES)
+      }
+    } catch (err) {
+      console.error('❌ Error loading category from DB:', err)
+      formData.value.price_per_minute = FALLBACK_PRICE_PER_MINUTE // Fallback
+    }
+
+    // ✅ NEU: Dauer basierend auf aktuellem Lesson Type setzen
+    if (formData.value.appointment_type) {
+      setDurationForLessonType(formData.value.appointment_type)
+    }
+    
+    calculateEndTime()
+  }
+}
+
+
+const setDurationForLessonType = (lessonTypeCode: string) => {
+  console.log('⏱️ Setting duration for lesson type:', lessonTypeCode)
+  
+  switch (lessonTypeCode) {
+    case 'exam':
+      // ✅ Fallback falls selectedCategory nicht verfügbar
+      const examDuration = selectedCategory.value?.exam_duration_minutes || 180
+      console.log('📝 Auto-setting EXAM duration:', examDuration)
+      
+      formData.value.duration_minutes = examDuration
+      availableDurations.value = [examDuration]
+      calculateEndTime()
+      break
+      
+    case 'lesson':
+      console.log('✅ Switching back to normal lesson')
+      // Standard Category-Dauern wiederherstellen
+      availableDurations.value = [45, 90] // Fallback
+      formData.value.duration_minutes = 45
+      calculateEndTime()
+      break
+      
+    case 'theory':
+      console.log('🎓 Setting theory duration: 45min')
+      formData.value.duration_minutes = 45
+      availableDurations.value = [45]
+      calculateEndTime()
+      break
+  }
+}
+
+  /**
+   * Handles changes to the price per minute.
+   * @param pricePerMinute The new price per minute.
+   */
+  const handlePriceChanged = (pricePerMinute: number) => {
+    console.log('💰 Price changed:', pricePerMinute)
+    formData.value.price_per_minute = pricePerMinute
+  }
+
+  /**
+   * Handles changes to the available durations.
+   * Adjusts the current duration if it's no longer available.
+   * @param durations An array of available durations in minutes.
+   */
+  const handleDurationsChanged = (durations: number[]) => {
+    console.log('📥 Durations changed to:', durations)
+
+    availableDurations.value = [...durations]
+
+    // If current duration not available, select first available
+    if (durations.length > 0 && !durations.includes(formData.value.duration_minutes)) {
+      formData.value.duration_minutes = durations[0]
+      calculateEndTime()
+      console.log('✅ Updated duration to:', durations[0])
+    }
+  }
+
+  // ============ DURATION HANDLERS ============
+
+  /**
+   * Handles changes to the selected duration.
+   * Recalculates the end time.
+   * @param duration The new duration in minutes.
+   */
+  const handleDurationChanged = (duration: number) => {
+    console.log('⏱️ Duration changed to:', duration)
+    formData.value.duration_minutes = duration
+    calculateEndTime()
+  }
+
+  // ============ LOCATION HANDLERS ============
+
+  /**
+   * Handles the selection of a location.
+   * Saves new Google Places locations to the 'locations' table.
+   * @param location The selected location object.
+   */
+  const handleLocationSelected = async (location: any) => {
+    console.log('📍 Location selected:', location?.name)
+
+    selectedLocation.value = location; // WICHTIG: selectedLocation Ref aktualisieren
+
+    if (!location) {
+      formData.value.location_id = ''
+      return
+    }
+
+    // Existing location from 'locations' table
+    if (location.id && !String(location.id).startsWith('temp_')) {
+      formData.value.location_id = location.id
+      console.log('✅ Location ID from locations table:', location.id)
+    }
+    // New location from Google Places - save to 'locations' table
+    else if (location.id && String(location.id).startsWith('temp_') && formData.value.staff_id) {
+      try {
+        const { data: newLocation, error } = await supabase
+          .from('locations')
+          .insert({
+            staff_id: formData.value.staff_id,
+            name: location.name,
+            adress: location.address || location.formatted_address || '' // Use 'address' or 'formatted_address'
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        formData.value.location_id = newLocation.id
+        console.log('✅ New location saved to DB:', newLocation.id)
+      } catch (err) {
+        console.error('❌ Could not save location to DB:', err)
+        formData.value.location_id = ''
+      }
+    }
+    // Temporary location (will be handled when the appointment is saved)
+    else {
+      formData.value.location_id = ''
+      console.log('⚠️ Temporary location, will handle on save or if staff_id is missing.')
+    }
+  }
+
+  // ============ EVENT TYPE HANDLERS ============
+
+  /**
+   * Handles the selection of a special event type (e.g., meeting, break).
+   * @param eventType The selected event type object.
+   */
+  const handleEventTypeSelected = (eventType: any) => {
+    console.log('📋 Event type selected:', eventType?.code)
+
+    formData.value.selectedSpecialType = eventType.code
+    formData.value.duration_minutes = eventType.default_duration_minutes || DEFAULT_DURATION_MINUTES
+
+    if (eventType.auto_generate_title) {
+      formData.value.title = eventType.name || 'Neuer Termin'
+    }
+
+    calculateEndTime()
+  }
+
+  /**
+   * Switches the event type to 'other' and resets related fields.
+   */
+  const switchToOtherEventType = () => {
+    formData.value.eventType = 'other'
+    formData.value.selectedSpecialType = ''
+    formData.value.title = ''
+  }
+
+  /**
+   * Switches the event type back to 'lesson' and resets related fields.
+   */
+  const backToStudentSelection = () => {
+    formData.value.eventType = 'lesson'
+    formData.value.selectedSpecialType = ''
+    formData.value.title = ''
+  }
+
+  // ============ PAYMENT HANDLERS ============
+
+  /**
+   * Handles a successful payment.
+   * Optionally saves a payment record to the 'payments' table.
+   * @param paymentData Data related to the successful payment.
+   */
+  const handlePaymentSuccess = async (paymentData: any) => {
+    console.log('✅ Payment successful:', paymentData)
+    formData.value.is_paid = true
+
+    // Optional: Save payment record to payments table
+    if (paymentData.transactionId && formData.value.id) {
+      try {
+        await supabase
+          .from('payments')
+          .insert({
+            appointment_id: formData.value.id,
+            user_id: formData.value.user_id,
+            staff_id: formData.value.staff_id,
+            amount_rappen: Math.round(formData.value.price_per_minute * formData.value.duration_minutes * 100),
+            payment_method: paymentData.method || 'wallee',
+            payment_status: 'completed',
+            wallee_transaction_id: paymentData.transactionId
+          })
+
+        console.log('💾 Payment record saved to DB')
+      } catch (err) {
+        console.error('❌ Could not save payment record:', err)
+      }
+    }
+  }
+
+  /**
+   * Handles a payment error.
+   * @param error The error message.
+   */
+  const handlePaymentError = (error: string) => {
+    console.error('❌ Payment error:', error)
+    formData.value.is_paid = false
+  }
+
+  /**
+   * Handles the start of a payment process.
+   * @param method The payment method used.
+   */
+  const handlePaymentStarted = (method: string) => {
+    console.log('🔄 Payment started with method:', method)
+  }
+
+  /**
+   * Signals that the appointment needs to be saved before payment processing can occur.
+   * This is crucial for obtaining a real UUID for the appointment.
+   * @param appointmentData The current appointment data.
+   * @returns A Promise resolving with a flag indicating save is required.
+   */
+  const handleSaveRequired = async (appointmentData: any) => {
+    console.log('💾 Save required for payment processing')
+
+    // IMPORTANT: Appointment must be saved FIRST to get a real UUID
+    return new Promise((resolve) => {
+      // Signal parent that appointment needs to be saved first
+      resolve({
+        ...appointmentData,
+        requiresSave: true,
+        message: 'Appointment must be saved before payment'
+      })
+    })
+  }
+
+  // ============ PAYMENT METHOD HANDLERS ============
+
+  /**
+   * Handles the selection of a payment method.
+   * Updates the form data and optionally saves the preference for the student.
+   * @param paymentMethod The selected payment method string.
+   */
+  const handlePaymentMethodSelected = async (paymentMethod: string) => {
+    console.log('💳 Payment method selected:', paymentMethod)
+
+    // Use payment composable to handle selection (e.g., saving preference)
+    if (selectedStudent.value?.id) {
+      await paymentMethods.selectPaymentMethod(paymentMethod, selectedStudent.value.id)
+    }
+
+    // Update form data
+    formData.value.payment_method = paymentMethod
+    formData.value.payment_status = 'pending'
+    formData.value.is_paid = false // Reset paid status
+
+    console.log('💳 Payment method configured:', {
+      method: paymentMethod,
+      status: formData.value.payment_status,
+      paid: formData.value.is_paid
+    })
+  }
+
+  /**
+   * Retrieves the available payment method options from the paymentMethods composable.
+   * @returns An array of payment method options.
+   */
+  const getPaymentMethodOptions = () => {
+    return paymentMethods.paymentMethodOptions.value
+  }
+
+  /**
+   * Calculates the payment breakdown (total, discounts, fees) for the current appointment.
+   * @returns The payment breakdown object or null if data is insufficient.
+   */
+  const calculatePaymentBreakdown = () => {
+    if (!formData.value.type || !formData.value.duration_minutes) {
+      console.warn('⚠️ Cannot calculate payment breakdown: Missing type or duration.')
+      return null
+    }
+
+    const discount = formData.value.discount ? {
+      amount: formData.value.discount,
+      type: formData.value.discount_type || 'fixed',
+      reason: formData.value.discount_reason
+    } : undefined
+
+    return paymentMethods.calculatePaymentBreakdown(
+      formData.value.type,
+      formData.value.duration_minutes,
+      appointmentNumber.value,
+      discount
+    )
+  }
+
+  /**
+   * Processes the payment after the appointment has been successfully saved.
+   * Delegates to specific payment processing functions based on the selected method.
+   * @param savedAppointment The appointment object returned after being saved to the DB.
+   * @returns The result of the payment processing, potentially including a redirect flag for online payments.
+   * @throws Error if payment calculation fails or processing encounters an issue.
+   */
+  const processPaymentAfterSave = async (savedAppointment: any) => {
+    const paymentMethod = formData.value.payment_method
+
+    if (!paymentMethod || paymentMethod === 'none') {
+      console.log('ℹ️ No payment processing needed (method is none or not set).')
+      return null // No payment processing needed
+    }
+
+    const calculation = calculatePaymentBreakdown()
+    if (!calculation) {
+      throw new Error('Could not calculate payment breakdown before processing.')
+    }
+
+    const appointmentData = {
+      appointmentId: savedAppointment.id,
+      userId: formData.value.user_id,
+      staffId: formData.value.staff_id,
+      category: formData.value.type,
+      duration: formData.value.duration_minutes,
+      appointmentNumber: appointmentNumber.value,
+      calculation // Pass the calculated breakdown
+    }
+
+    try {
+      switch (paymentMethod) {
+        case 'cash':
+          return await paymentMethods.processCashPayment(appointmentData)
+
+        case 'invoice':
+          return await paymentMethods.processInvoicePayment(appointmentData)
+
+        case 'online':
+          const result = await paymentMethods.processOnlinePayment(appointmentData)
+
+          if (result.needsWalleeRedirect) {
+            // Return data for Wallee integration in parent component
+            return {
+              ...result,
+              redirectToWallee: true,
+              amount: calculation.totalAmount,
+              currency: 'CHF' // Assuming CHF as currency
+            }
+          }
+
+          return result
+
+        default:
+          console.log('⚠️ Unknown payment method:', paymentMethod)
+          return null
+      }
+    } catch (err) {
+      console.error('❌ Payment processing error:', err)
+      throw err // Re-throw to be handled by the calling component
+    }
+  }
+
+  /**
+   * Handles changes to discount values.
+   * @param discount The discount amount.
+   * @param discountType The type of discount ('fixed' or 'percentage').
+   * @param reason The reason for the discount.
+   */
+  const handleDiscountChanged = (discount: number, discountType: string, reason: string) => {
+    console.log('🏷️ Discount changed:', { discount, discountType, reason })
+
+    formData.value.discount = discount
+    formData.value.discount_type = discountType
+    formData.value.discount_reason = reason
+  }
+
+  // ============ TEAM HANDLERS (TAGS/EINLADUNGEN) ============
+
+  /**
+   * Toggles the invitation status for a staff member.
+   * @param staffId The ID of the staff member to toggle.
+   * @param invitedStaff A ref containing an array of invited staff IDs.
+   */
+  const handleTeamInviteToggle = (staffId: string, invitedStaff: any) => {
+    console.log('👥 Team invite toggled for staff ID:', staffId)
+
+    const index = invitedStaff.value.indexOf(staffId)
+    if (index > -1) {
+      invitedStaff.value.splice(index, 1)
+      console.log('➖ Staff removed from invite list.')
+    } else {
+      invitedStaff.value.push(staffId)
+      console.log('➕ Staff added to invite list.')
+    }
+  }
+
+  /**
+   * Clears all staff invites.
+   * @param invitedStaff A ref containing an array of invited staff IDs.
+   */
+  const clearAllInvites = (invitedStaff: any) => {
+    invitedStaff.value = []
+    console.log('🗑️ All team invites cleared.')
+  }
+
+  /**
+   * Invites all available staff members.
+   * @param availableStaff A ref containing an array of all available staff members.
+   * @param invitedStaff A ref containing an array of invited staff IDs.
+   */
+  const inviteAllStaff = (availableStaff: any, invitedStaff: any) => {
+    invitedStaff.value = availableStaff.value.map((s: any) => s.id)
+    console.log('👥 All staff invited:', invitedStaff.value.length, 'staff members.')
+  }
+
+  return {
+    // Student Handlers
+    handleStudentSelected,
+    handleStudentCleared,
+    autoFillFromStudent,
+
+    // Category Handlers
+    handleCategorySelected,
+    handlePriceChanged,
+    handleDurationsChanged,
+    getLastAppointmentCategory,
+    
+    // Duration Handlers
+    handleDurationChanged,
+    setDurationForLessonType,
+
+    // Location Handlers
+    handleLocationSelected,
+
+    // Event Type Handlers
+    handleEventTypeSelected,
+    switchToOtherEventType,
+    backToStudentSelection,
+
+    // Payment Handlers
+    handlePaymentSuccess,
+    handlePaymentError,
+    handlePaymentStarted, // <-- NEU: Jetzt exportiert
+    handleSaveRequired,
+
+    // Payment Method Handlers
+    handlePaymentMethodSelected,
+    getPaymentMethodOptions,
+    calculatePaymentBreakdown, // Expose for external use
+    processPaymentAfterSave,   // Expose for external use
+
+    // Discount Handlers
+    handleDiscountChanged,
+
+    // Team Handlers (Tags/Einladungen)
+    handleTeamInviteToggle,
+    clearAllInvites,
+    inviteAllStaff,
+
+    // Utilities
+    calculateEndTime,
+    getLastAppointmentDuration,
+    getAppointmentNumber,
+    loadStaffDurations,
+    getDefaultTitle,
+    getEventTypeName,
+    getAdminFeeForCategory
+  }
+}
+```
+
+### ./composables/useEventModalState.ts
+```ts
+// composables/useEventModalState.ts
+import { ref, reactive, computed, nextTick } from 'vue'
+
+// Centralized State mit Race Condition Prevention
+export const useEventModalState = () => {
+  
+  // === LOADING STATES ===
+  const isInitializing = ref(false)
+  const isUserInteraction = ref(false)
+  const updateQueue = ref<string[]>([])
+  
+  // === CORE DATA ===
+  const formData = reactive({
+    selectedStudent: null,
+    selectedCategory: null,
+    selectedDuration: 45,
+    availableDurations: [45],
+    isAutoSelecting: false
+  })
+  
+  // === RACE CONDITION PREVENTION ===
+  const preventRaceCondition = async (operation: string, callback: () => void) => {
+    if (isInitializing.value) {
+      console.log(`🚫 Race prevented: ${operation} during initialization`)
+      return
+    }
+    
+    if (updateQueue.value.includes(operation)) {
+      console.log(`🚫 Race prevented: ${operation} already in queue`)
+      return
+    }
+    
+    updateQueue.value.push(operation)
+    
+    try {
+      await nextTick()
+      callback()
+    } finally {
+      updateQueue.value = updateQueue.value.filter(op => op !== operation)
+    }
+  }
+  
+  // === DEBOUNCED OPERATIONS ===
+  let durationUpdateTimeout: any = null
+  
+  const setDurationsDebounced = (durations: number[], source: string) => {
+    clearTimeout(durationUpdateTimeout)
+    
+    durationUpdateTimeout = setTimeout(() => {
+      preventRaceCondition(`duration-update-${source}`, () => {
+        console.log(`⏱️ Setting durations from ${source}:`, durations)
+        formData.availableDurations = [...durations]
+        
+        // Auto-select first duration only if none selected
+        if (!formData.selectedDuration || !durations.includes(formData.selectedDuration)) {
+          formData.selectedDuration = durations[0] || 45
+          console.log(`✅ Auto-selected duration: ${formData.selectedDuration}`)
+        }
+      })
+    }, 100) // 100ms debounce
+  }
+  
+  // === STUDENT SELECTION WITH LOCK ===
+  const selectStudent = async (student: any) => {
+    if (formData.isAutoSelecting) {
+      console.log('🚫 Student selection blocked - auto-selection in progress')
+      return
+    }
+    
+    isUserInteraction.value = true
+    formData.isAutoSelecting = true
+    
+    try {
+      console.log('👤 Manual student selection:', student?.first_name)
+      formData.selectedStudent = student
+      
+      // Clear dependent selections
+      formData.selectedCategory = null
+      formData.availableDurations = [45]
+      formData.selectedDuration = 45
+      
+      await nextTick()
+      
+      // Auto-select category if student has one
+      if (student?.category && !isInitializing.value) {
+        setTimeout(() => {
+          preventRaceCondition('auto-category-from-student', () => {
+            console.log('🎯 Auto-selecting category from student:', student.category)
+            // Emit to parent to trigger category selection
+          })
+        }, 150) // Delayed auto-selection
+      }
+      
+    } finally {
+      formData.isAutoSelecting = false
+      isUserInteraction.value = false
+    }
+  }
+  
+  // === CATEGORY SELECTION WITH LOCK ===
+  const selectCategory = async (category: any, isAutomatic = false) => {
+    if (formData.isAutoSelecting && !isAutomatic) {
+      console.log('🚫 Category selection blocked - auto-selection in progress')
+      return
+    }
+    
+    preventRaceCondition('category-selection', () => {
+      console.log('🎯 Category selected:', category?.code)
+      formData.selectedCategory = category
+      
+      if (category?.availableDurations) {
+        setDurationsDebounced(category.availableDurations, 'category-selection')
+      }
+    })
+  }
+  
+  // === INITIALIZATION MODE ===
+  const startInitialization = () => {
+    console.log('🔄 Starting initialization mode')
+    isInitializing.value = true
+    updateQueue.value = []
+  }
+  
+  const finishInitialization = async () => {
+    await nextTick()
+    isInitializing.value = false
+    console.log('✅ Initialization completed')
+  }
+  
+  // === COMPUTED HELPERS ===
+  const canAutoSelect = computed(() => {
+    return !isInitializing.value && !formData.isAutoSelecting
+  })
+  
+  const isInUserInteraction = computed(() => {
+    return isUserInteraction.value
+  })
+  
+  return {
+    // State
+    formData,
+    isInitializing,
+    canAutoSelect,
+    isInUserInteraction,
+    
+    // Methods
+    selectStudent,
+    selectCategory,
+    setDurationsDebounced,
+    preventRaceCondition,
+    startInitialization,
+    finishInitialization
+  }
+}```
+
+### ./composables/useEventModalWatchers.ts
+```ts
+// composables/useEventModalWatchers.ts - SIMPLIFIED VERSION
+import { watch, nextTick } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+import { useTimeCalculations } from '~/composables/useTimeCalculations'
+
+export const useEventModalWatchers = (
+  props: any,
+  formData: any,
+  selectedStudent: any,
+  selectedLocation: any,
+  availableLocations: any,
+  appointmentNumber: any,
+  actions: any
+) => {
+
+  // ============ HELPER FUNCTIONS ============
+const { calculateEndTime } = useTimeCalculations(formData)
+
+
+  // 🔥 LOCAL appointment number function
+  const getAppointmentNumber = async (studentId: string): Promise<number> => {
+    try {
+      const supabase = getSupabase()
+      const { count, error } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', studentId)
+        .in('status', ['completed', 'confirmed'])
+
+      if (error) throw error
+      return (count || 0) + 1
+
+    } catch (err) {
+      console.error('❌ Error counting appointments:', err)
+      return 1
+    }
+  }
+
+        // ============ MODAL LIFECYCLE WATCHER ============
+          const setupModalWatcher = () => {
+            watch(() => props.isVisible, async (isVisible) => {
+              console.log('👀 Modal visibility changed to:', isVisible)
+              
+              if (isVisible) {
+                console.log('🔄 Modal opening - starting initialization...')
+                
+                try {
+                  // Mode-based initialization
+                  if (props.eventData && (props.mode === 'edit' || props.mode === 'view')) {
+                    console.log('📝 Processing EDIT/VIEW mode...')
+                    actions.populateFormFromAppointment(props.eventData)
+                    
+                    // Handle student selection for edit mode
+                    if (formData.value.user_id) {
+                      await handleEditModeStudentSelection()
+                    }
+                  } else if (props.mode === 'create') {  // 🔥 WICHTIG: else if statt else!
+                    console.log('📅 Processing CREATE mode...')
+                    await handleCreateModeInitialization()
+                  }
+                  
+                  console.log('✅ Modal initialization completed')
+                  
+                } catch (error: unknown) {
+                  console.error('❌ Error during modal initialization:', error)
+                }
+              } else {
+                // Modal closed - reset state
+                console.log('❌ Modal closed - resetting state')
+                actions.resetForm()
+              }
+            }, { immediate: true })
+          }
+
+  // ============ FORM DATA WATCHERS ============
+  const setupFormWatchers = () => {
+
+    // Title generation watcher
+    watch([
+      () => selectedStudent.value,
+      () => formData.value.location_id,
+      () => formData.value.type,
+      () => formData.value.eventType,
+    ], ([currentStudent, locationId, category, eventType]) => {
+
+      // Skip title generation in edit/view mode
+      if (props.mode === 'edit' || props.mode === 'view') {
+        return
+      }
+
+      if (eventType === 'lesson' && currentStudent) {
+        generateLessonTitle(currentStudent, locationId, category)
+      }
+    }, { immediate: true })
+
+    // 🔥 NEW: Auto-load students when needed
+    watch(() => props.mode, (newMode) => {
+      if (newMode === 'create') {
+        console.log('🔄 Create mode detected - triggering student load')
+        // Trigger student loading for create mode
+        if (actions.triggerStudentLoad) {
+          actions.triggerStudentLoad()
+        }
+      }
+    }, { immediate: true })
+
+    // 🔥 NEW: Auto-reload students when student is cleared
+    watch(selectedStudent, (newStudent, oldStudent) => {
+      if (oldStudent && !newStudent) {
+        console.log('🔄 Student cleared - triggering student reload')
+        // Trigger student loading when student is cleared
+        if (actions.triggerStudentLoad) {
+          actions.triggerStudentLoad()
+        }
+      }
+    })
+
+    // Time calculation watcher
+    watch([
+      () => formData.value.startTime,
+      () => formData.value.duration_minutes
+    ], () => {
+      if (formData.value.startTime && formData.value.duration_minutes) {
+        calculateEndTime()
+      }
+    }, { immediate: true })
+
+    // Event type change watcher
+    watch(() => formData.value.eventType, (newType) => {
+      console.log('👀 Event type changed to:', newType)
+
+      // Reset form when switching types
+      if (newType !== 'lesson') {
+        formData.value.user_id = ''
+        formData.value.type = ''
+        selectedStudent.value = null
+      }
+    })
+
+    // User ID change watcher (for appointment number)
+    watch(() => formData.value.user_id, async (newUserId) => {
+      // Skip in edit/view mode
+      if (props.mode === 'edit' || props.mode === 'view') {
+        console.log(`📝 ${props.mode} mode detected - skipping auto-operations`)
+        return
+      }
+
+      if (newUserId && formData.value.eventType === 'lesson') {
+        // Load appointment number for pricing
+        try {
+          console.log('🔢 Loading appointment number for pricing...')
+          appointmentNumber.value = await getAppointmentNumber(newUserId)
+          console.log('✅ Appointment number loaded:', appointmentNumber.value)
+        } catch (err) {
+          console.error('❌ Error loading appointment number:', err)
+          appointmentNumber.value = 1
+        }
+      } else if (!newUserId) {
+        appointmentNumber.value = 1
+        console.log('🔄 Reset appointment number to 1')
+      }
+    })
+
+    // Category type watcher
+    watch(() => formData.value.type, async (newType) => {
+      if (newType && props.mode === 'edit') {
+        console.log('👀 Category type changed in edit mode:', newType)
+
+        // Force category update in edit mode
+        await nextTick()
+      }
+    }, { immediate: true })
+
+    // Duration change watcher
+    watch(() => formData.value.duration_minutes, () => {
+      calculateEndTime()
+    })
+  }
+
+  // ============ DEBUG WATCHERS ============
+  const setupDebugWatchers = () => {
+    // Location debugging
+    watch(() => formData.value.location_id, (newVal, oldVal) => {
+      console.log('🔄 location_id changed:', oldVal, '→', newVal)
+    })
+
+    // Selected student debugging
+    watch(selectedStudent, (newStudent, oldStudent) => {
+      console.log('🔄 selectedStudent changed:', 
+        oldStudent?.first_name || 'none', 
+        '→', 
+        newStudent?.first_name || 'none'
+      )
+    })
+  }
+
+  // ============ HELPER FUNCTIONS ============
+  const handleEditModeStudentSelection = async () => {
+    console.log('📝 Setting up student for edit mode:', formData.value.user_id)
+    
+    // This would typically trigger the StudentSelector to select the correct student
+    // The implementation depends on how your StudentSelector handles programmatic selection
+    
+    // Example: You might need to emit to parent or use a ref to StudentSelector
+    // to call selectStudentById(formData.value.user_id)
+  }
+
+  const handleCreateModeInitialization = async () => {
+    // Initialize create mode with default values
+    let startDate, startTime
+
+    if (props.eventData?.start) {
+      const clickedDateTime = new Date(props.eventData.start)
+      startDate = clickedDateTime.toISOString().split('T')[0]
+      startTime = clickedDateTime.toTimeString().slice(0, 5)
+    } else {
+      const now = new Date()
+      startDate = now.toISOString().split('T')[0]
+      startTime = now.toTimeString().slice(0, 5)
+    }
+
+    formData.value.startDate = startDate
+    formData.value.startTime = startTime
+
+    console.log('📅 Create mode initialized with date/time:', startDate, startTime)
+    
+    // Calculate end time immediately
+    if (formData.value.duration_minutes) {
+      calculateEndTime()
+    }
+  }
+
+  const generateLessonTitle = (currentStudent: any, locationId: string, category: string) => {
+    // Safety check for availableLocations
+    const selectedLocationObject = Array.isArray(availableLocations.value) && availableLocations.value.length > 0
+      ? availableLocations.value.find((loc: any) => loc.id === locationId)
+      : null
+
+    const locationName = selectedLocationObject?.name || ''
+    const currentCategory = category || ''
+
+    let title = 'Fahrstunde' // Default title
+
+    if (currentStudent?.first_name) {
+      title = `${currentStudent.first_name}`
+    }
+
+    if (locationName) {
+      title += ` • ${locationName}`
+    }
+
+    if (currentCategory) {
+      title += ` (${currentCategory})`
+    }
+
+    console.log('✏️ Title generated:', title)
+    formData.value.title = title
+  }
+
+  // ============ PUBLIC API ============
+  const setupAllWatchers = () => {
+    setupModalWatcher()
+    setupFormWatchers()
+    setupDebugWatchers()
+
+    console.log('⚡ All watchers initialized (simplified version)')
+  }
+
+  return {
+    setupAllWatchers,
+    setupModalWatcher,
+    setupFormWatchers,
+    setupDebugWatchers,
+    calculateEndTime,
+    getAppointmentNumber,
+    generateLessonTitle
+  }
+}```
+
+### ./composables/usePaymentMethods.ts
+```ts
+// composables/usePaymentMethods.ts
+import { ref, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+interface PaymentMethod {
+  value: string
+  label: string
+  icon: string
+  description: string
+  color: string
+}
+
+interface PaymentCalculation {
+  basePrice: number
+  adminFee: number
+  discountAmount: number
+  totalAmount: number
+  pricePerMinute: number
+}
+
+export const usePaymentMethods = () => {
+  const supabase = getSupabase()
+  
+  // State
+  const selectedPaymentMethod = ref<string>('cash')
+  const isProcessingPayment = ref(false)
+  const paymentError = ref<string>('')
+  const paymentSuccess = ref<any>(null)
+
+  // Available Payment Methods
+  const paymentMethodOptions = computed((): PaymentMethod[] => [
+    {
+      value: 'cash',
+      label: 'Bar beim Fahrlehrer',
+      icon: 'i-heroicons-banknotes',
+      description: 'Zahlung vor Ort beim Fahrlehrer',
+      color: 'yellow'
+    },
+    {
+      value: 'invoice',
+      label: 'Rechnung',
+      icon: 'i-heroicons-document-text',
+      description: 'Rechnung wird erstellt und versendet',
+      color: 'blue'
+    },
+    {
+      value: 'online',
+      label: 'Online bezahlen',
+      icon: 'i-heroicons-credit-card',
+      description: 'Sofortige Zahlung mit Kreditkarte/Twint',
+      color: 'green'
+    }
+  ])
+
+  // Get payment method by value
+  const getPaymentMethod = (value: string): PaymentMethod | undefined => {
+    return paymentMethodOptions.value.find(method => method.value === value)
+  }
+
+  // Load student's preferred payment method
+  const loadStudentPaymentPreference = async (studentId: string): Promise<string> => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('preferred_payment_method')
+        .eq('id', studentId)
+        .maybeSingle()
+
+      if (error) throw error
+      
+      const preference = data?.preferred_payment_method || 'cash'
+      selectedPaymentMethod.value = preference
+      
+      console.log('💳 Loaded payment preference:', preference)
+      return preference
+
+    } catch (err) {
+      console.error('❌ Error loading payment preference:', err)
+      selectedPaymentMethod.value = 'cash'
+      return 'cash'
+    }
+  }
+
+  // Save payment method preference to student profile
+  const saveStudentPaymentPreference = async (studentId: string, paymentMethod: string) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ preferred_payment_method: paymentMethod })
+        .eq('id', studentId)
+
+      if (error) throw error
+      
+      console.log('✅ Payment preference saved:', paymentMethod)
+      
+    } catch (err) {
+      console.error('❌ Error saving payment preference:', err)
+      // Non-critical error - don't throw
+    }
+  }
+
+  // Select payment method and save preference
+  const selectPaymentMethod = async (method: string, studentId?: string) => {
+    selectedPaymentMethod.value = method
+    
+    // Save to student profile if studentId provided
+    if (studentId) {
+      await saveStudentPaymentPreference(studentId, method)
+    }
+    
+    console.log('💳 Payment method selected:', method)
+  }
+
+  // Calculate price breakdown
+  const calculatePaymentBreakdown = (
+    category: string,
+    duration: number,
+    appointmentNumber: number,
+    discount?: { amount: number, type: 'fixed' | 'percentage', reason?: string }
+  ): PaymentCalculation => {
+    
+    // Base prices from project data
+    const categoryPricing: Record<string, number> = {
+      'A': 95, 'A1': 95, 'A35kW': 95, 'B': 95,
+      'BE': 120, 'C1': 150, 'D1': 150, 'C': 170,
+      'CE': 200, 'D': 200, 'BPT': 100, 'Motorboot': 95
+    }
+
+    // Admin fees - only from 2nd appointment
+    const adminFees: Record<string, number> = {
+      'B': 120, 'A1': 0, 'A35kW': 0, 'A': 0, 'BE': 120,
+      'C1': 200, 'D1': 200, 'C': 200, 'CE': 250, 'D': 300,
+      'Motorboot': 120, 'BPT': 120
+    }
+
+    const basePriceFor45Min = categoryPricing[category] || 95
+    const basePrice = (basePriceFor45Min / 45) * duration
+    const pricePerMinute = basePriceFor45Min / 45
+    
+    const adminFee = appointmentNumber > 1 ? (adminFees[category] || 0) : 0
+    
+    let discountAmount = 0
+    if (discount && discount.amount > 0) {
+      if (discount.type === 'percentage') {
+        discountAmount = basePrice * (discount.amount / 100)
+      } else {
+        discountAmount = discount.amount
+      }
+    }
+    
+    const totalAmount = Math.max(0, basePrice + adminFee - discountAmount)
+    
+    return {
+      basePrice,
+      adminFee,
+      discountAmount,
+      totalAmount,
+      pricePerMinute
+    }
+  }
+
+  // Create pending payment record for admin dashboard
+  const createPendingPaymentRecord = async (appointmentData: {
+    appointmentId: string
+    userId: string
+    staffId: string
+    category: string
+    duration: number
+    appointmentNumber: number
+    paymentMethod: string
+    calculation: PaymentCalculation
+  }) => {
+    try {
+      const paymentRecord = {
+        appointment_id: appointmentData.appointmentId,
+        user_id: appointmentData.userId,
+        staff_id: appointmentData.staffId,
+        amount_rappen: Math.round(appointmentData.calculation.basePrice * 100),
+        admin_fee_rappen: Math.round(appointmentData.calculation.adminFee * 100),
+        total_amount_rappen: Math.round(appointmentData.calculation.totalAmount * 100),
+        payment_method: appointmentData.paymentMethod,
+        payment_status: 'pending',
+        description: `Fahrstunde ${appointmentData.category} - ${appointmentData.duration} Min`,
+        metadata: {
+          category: appointmentData.category,
+          duration: appointmentData.duration,
+          appointment_number: appointmentData.appointmentNumber,
+          price_breakdown: appointmentData.calculation,
+          created_at: new Date().toISOString()
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('payments')
+        .insert(paymentRecord)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      console.log('✅ Pending payment record created:', data.id)
+      return data
+
+    } catch (err) {
+      console.error('❌ Error creating pending payment record:', err)
+      throw err
+    }
+  }
+
+  // Process cash payment
+  const processCashPayment = async (appointmentData: any) => {
+    isProcessingPayment.value = true
+    paymentError.value = ''
+    
+    try {
+      // Create pending payment record
+      const paymentRecord = await createPendingPaymentRecord({
+        ...appointmentData,
+        paymentMethod: 'cash'
+      })
+
+      // Update appointment
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          payment_method: 'cash',
+          payment_status: 'pending',
+          is_paid: false
+        })
+        .eq('id', appointmentData.appointmentId)
+
+      if (error) throw error
+
+      paymentSuccess.value = {
+        type: 'cash',
+        message: 'Barzahlung erfasst - Zahlung erfolgt beim Fahrlehrer',
+        paymentId: paymentRecord.id
+      }
+
+      return paymentRecord
+
+    } catch (err: any) {
+      paymentError.value = err.message
+      throw err
+    } finally {
+      isProcessingPayment.value = false
+    }
+  }
+
+  // Process invoice payment
+  const processInvoicePayment = async (appointmentData: any) => {
+    isProcessingPayment.value = true
+    paymentError.value = ''
+    
+    try {
+      // Create pending payment record
+      const paymentRecord = await createPendingPaymentRecord({
+        ...appointmentData,
+        paymentMethod: 'invoice'
+      })
+
+      // Update appointment
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          payment_method: 'invoice',
+          payment_status: 'pending',
+          is_paid: false
+        })
+        .eq('id', appointmentData.appointmentId)
+
+      if (error) throw error
+
+      paymentSuccess.value = {
+        type: 'invoice',
+        message: 'Rechnung wird erstellt und per E-Mail versendet',
+        paymentId: paymentRecord.id
+      }
+
+      return paymentRecord
+
+    } catch (err: any) {
+      paymentError.value = err.message
+      throw err
+    } finally {
+      isProcessingPayment.value = false
+    }
+  }
+
+  // Process online payment (requires appointment to be saved first)
+  const processOnlinePayment = async (appointmentData: any) => {
+    isProcessingPayment.value = true
+    paymentError.value = ''
+    
+    try {
+      if (!appointmentData.appointmentId || appointmentData.appointmentId.startsWith('temp_')) {
+        throw new Error('Termin muss zuerst gespeichert werden für Online-Zahlung')
+      }
+
+      // Create pending payment record
+      const paymentRecord = await createPendingPaymentRecord({
+        ...appointmentData,
+        paymentMethod: 'online'
+      })
+
+      // Update appointment
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          payment_method: 'online',
+          payment_status: 'pending',
+          is_paid: false
+        })
+        .eq('id', appointmentData.appointmentId)
+
+      if (error) throw error
+
+      // Return data for Wallee integration
+      return {
+        paymentRecord,
+        appointmentId: appointmentData.appointmentId,
+        amount: appointmentData.calculation.totalAmount,
+        needsWalleeRedirect: true
+      }
+
+    } catch (err: any) {
+      paymentError.value = err.message
+      throw err
+    } finally {
+      isProcessingPayment.value = false
+    }
+  }
+
+  // Mark payment as completed (called after successful online payment)
+  const markPaymentCompleted = async (appointmentId: string, transactionData?: any) => {
+    try {
+      // Update appointment
+      const { error: appointmentError } = await supabase
+        .from('appointments')
+        .update({
+          payment_status: 'completed',
+          is_paid: true
+        })
+        .eq('id', appointmentId)
+
+      if (appointmentError) throw appointmentError
+
+      // Update payment record
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .update({
+          payment_status: 'completed',
+          paid_at: new Date().toISOString(),
+          wallee_transaction_id: transactionData?.transactionId || null,
+          metadata: {
+            ...transactionData,
+            completed_at: new Date().toISOString()
+          }
+        })
+        .eq('appointment_id', appointmentId)
+
+      if (paymentError) throw paymentError
+
+      paymentSuccess.value = {
+        type: 'online',
+        message: 'Online-Zahlung erfolgreich abgeschlossen',
+        transactionId: transactionData?.transactionId
+      }
+
+      console.log('✅ Payment marked as completed:', appointmentId)
+
+    } catch (err) {
+      console.error('❌ Error marking payment completed:', err)
+      throw err
+    }
+  }
+
+  // Get pending payments for admin dashboard
+  const getPendingPayments = async (staffId?: string) => {
+    try {
+      let query = supabase
+        .from('payments')
+        .select(`
+          *,
+          appointments (
+            title,
+            start_time,
+            end_time,
+            type
+          ),
+          users!payments_user_id_fkey (
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('payment_status', 'pending')
+        .order('created_at', { ascending: false })
+
+      if (staffId) {
+        query = query.eq('staff_id', staffId)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      return data || []
+
+    } catch (err) {
+      console.error('❌ Error loading pending payments:', err)
+      return []
+    }
+  }
+
+  // Clear state
+  const clearPaymentState = () => {
+    paymentError.value = ''
+    paymentSuccess.value = null
+    isProcessingPayment.value = false
+  }
+
+  return {
+    // State
+    selectedPaymentMethod,
+    isProcessingPayment: computed(() => isProcessingPayment.value),
+    paymentError: computed(() => paymentError.value),
+    paymentSuccess: computed(() => paymentSuccess.value),
+    
+    // Options
+    paymentMethodOptions,
+    getPaymentMethod,
+    
+    // Student Preferences
+    loadStudentPaymentPreference,
+    saveStudentPaymentPreference,
+    selectPaymentMethod,
+    
+    // Calculations
+    calculatePaymentBreakdown,
+    
+    // Payment Processing
+    processCashPayment,
+    processInvoicePayment,
+    processOnlinePayment,
+    markPaymentCompleted,
+    
+    // Admin
+    getPendingPayments,
+    createPendingPaymentRecord,
+    
+    // Utils
+    clearPaymentState
+  }
+}```
+
+### ./composables/usePayments.ts
+```ts
+// composables/usePayments.ts - Gemeinsame Payment Logic
+import { ref, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+interface CalculatedPrice {
+  base_price_rappen: number
+  admin_fee_rappen: number
+  total_rappen: number
+  base_price_chf: string
+  admin_fee_chf: string
+  total_chf: string
+  category_code: string
+  duration_minutes: number
+}
+
+interface PaymentMethod {
+  method_code: string
+  display_name: string
+  description: string
+  icon_name: string
+  is_active: boolean
+  is_online: boolean
+  display_order: number
+}
+
+interface PaymentData {
+  appointment_id: string
+  user_id: string
+  staff_id?: string
+  amount_rappen: number
+  admin_fee_rappen: number
+  total_amount_rappen: number
+  payment_method: string
+  payment_status: string
+  description: string
+  metadata: Record<string, any>
+}
+
+export const usePayments = () => {
+  const supabase = getSupabase()
+  
+  // State
+  const isLoadingPrice = ref(false)
+  const isProcessing = ref(false)
+  const calculatedPrice = ref<CalculatedPrice | null>(null)
+  const priceError = ref<string>('')
+
+  // Payment Methods (could be loaded from database)
+  const availablePaymentMethods = ref<PaymentMethod[]>([
+    {
+      method_code: 'wallee',
+      display_name: 'Online Zahlung',
+      description: 'Kreditkarte, Twint, etc.',
+      icon_name: 'credit-card',
+      is_active: true,
+      is_online: true,
+      display_order: 1
+    },
+    {
+      method_code: 'cash',
+      display_name: 'Bar',
+      description: 'Zahlung beim Fahrlehrer',
+      icon_name: 'cash',
+      is_active: true,
+      is_online: false,
+      display_order: 2
+    },
+    {
+      method_code: 'invoice',
+      display_name: 'Rechnung',
+      description: 'Firmenrechnung',
+      icon_name: 'document',
+      is_active: true,
+      is_online: false,
+      display_order: 3
+    }
+  ])
+
+  // Category-specific pricing (from your project data)
+  const categoryPricing: Record<string, { base: number, admin: number }> = {
+    'B': { base: 95, admin: 120 },
+    'A1': { base: 95, admin: 0 },
+    'A35kW': { base: 95, admin: 0 },
+    'A': { base: 95, admin: 0 },
+    'BE': { base: 120, admin: 120 },
+    'C1': { base: 150, admin: 200 },
+    'D1': { base: 150, admin: 200 },
+    'C': { base: 170, admin: 200 },
+    'CE': { base: 200, admin: 250 },
+    'D': { base: 200, admin: 300 },
+    'Motorboot': { base: 95, admin: 120 },
+    'BPT': { base: 100, admin: 120 }
+  }
+
+  // Get appointment count for a user
+  const getAppointmentCount = async (userId: string): Promise<number> => {
+    try {
+      const { count, error } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .in('status', ['completed', 'confirmed'])
+
+      if (error) throw error
+      return (count || 0) + 1
+    } catch (error) {
+      console.error('Error getting appointment count:', error)
+      return 1
+    }
+  }
+
+  // Calculate price based on category, duration, and appointment count
+  const calculatePrice = async (
+    category: string, 
+    duration: number, 
+    userId?: string
+  ): Promise<CalculatedPrice> => {
+    isLoadingPrice.value = true
+    priceError.value = ''
+
+    try {
+      // Get appointment count if userId provided
+      const appointmentCount = userId ? await getAppointmentCount(userId) : 1
+      
+      // Get category pricing
+      const pricing = categoryPricing[category] || categoryPricing['B']
+      
+      // Calculate base price (per 45min, scaled to duration)
+      const basePriceChf = (pricing.base / 45) * duration
+      const basePriceRappen = Math.round(basePriceChf * 100)
+      
+      // Admin fee only from 2nd appointment (except for A1/A35kW/A)
+      const adminFeeChf = (appointmentCount > 1 && pricing.admin > 0) ? pricing.admin : 0
+      const adminFeeRappen = adminFeeChf * 100
+      
+      // Total
+      const totalRappen = basePriceRappen + adminFeeRappen
+      const totalChf = totalRappen / 100
+
+      const result: CalculatedPrice = {
+        base_price_rappen: basePriceRappen,
+        admin_fee_rappen: adminFeeRappen,
+        total_rappen: totalRappen,
+        base_price_chf: basePriceChf.toFixed(2),
+        admin_fee_chf: adminFeeChf.toFixed(2),
+        total_chf: totalChf.toFixed(2),
+        category_code: category,
+        duration_minutes: duration
+      }
+
+      calculatedPrice.value = result
+      return result
+
+    } catch (error: any) {
+      priceError.value = error.message || 'Fehler bei der Preisberechnung'
+      throw error
+    } finally {
+      isLoadingPrice.value = false
+    }
+  }
+
+  // Create payment record in database
+  const createPaymentRecord = async (data: Partial<PaymentData>): Promise<any> => {
+    try {
+      const { data: payment, error } = await supabase
+        .from('payments')
+        .insert(data)
+        .select()
+        .single()
+
+      if (error) throw error
+      return payment
+    } catch (error) {
+      console.error('Error creating payment record:', error)
+      throw error
+    }
+  }
+
+  // Handle cash payment
+  const processCashPayment = async (
+    appointmentId: string,
+    userId: string,
+    staffId: string,
+    price: CalculatedPrice
+  ) => {
+    isProcessing.value = true
+
+    try {
+      const paymentData: Partial<PaymentData> = {
+        appointment_id: appointmentId,
+        user_id: userId,
+        staff_id: staffId,
+        amount_rappen: price.base_price_rappen,
+        admin_fee_rappen: price.admin_fee_rappen,
+        total_amount_rappen: price.total_rappen,
+        payment_method: 'cash',
+        payment_status: 'completed', // Cash is immediately completed
+        description: `Fahrlektion ${price.category_code} - ${price.duration_minutes} Min`,
+        metadata: {
+          category: price.category_code,
+          duration: price.duration_minutes,
+          processed_at: new Date().toISOString()
+        }
+      }
+
+      const payment = await createPaymentRecord(paymentData)
+
+      // Update appointment as paid
+      await updateAppointmentPaymentStatus(appointmentId, true, 'cash')
+
+      return payment
+    } finally {
+      isProcessing.value = false
+    }
+  }
+
+  // Handle invoice payment
+  const processInvoicePayment = async (
+    appointmentId: string,
+    userId: string,
+    staffId: string,
+    price: CalculatedPrice,
+    invoiceData: Record<string, any>
+  ) => {
+    isProcessing.value = true
+
+    try {
+      const paymentData: Partial<PaymentData> = {
+        appointment_id: appointmentId,
+        user_id: userId,
+        staff_id: staffId,
+        amount_rappen: price.base_price_rappen,
+        admin_fee_rappen: price.admin_fee_rappen,
+        total_amount_rappen: price.total_rappen,
+        payment_method: 'invoice',
+        payment_status: 'pending', // Invoice starts as pending
+        description: `Fahrlektion ${price.category_code} - ${price.duration_minutes} Min`,
+        metadata: {
+          category: price.category_code,
+          duration: price.duration_minutes,
+          invoice_data: invoiceData,
+          created_at: new Date().toISOString()
+        }
+      }
+
+      const payment = await createPaymentRecord(paymentData)
+
+      // Don't mark appointment as paid yet (wait for invoice payment)
+      
+      return payment
+    } finally {
+      isProcessing.value = false
+    }
+  }
+
+  // Update appointment payment status
+  const updateAppointmentPaymentStatus = async (
+    appointmentId: string,
+    isPaid: boolean,
+    paymentMethod?: string
+  ) => {
+    try {
+      const updateData: any = { is_paid: isPaid }
+      
+      if (paymentMethod) {
+        updateData.payment_method = paymentMethod
+      }
+
+      const { error } = await supabase
+        .from('appointments')
+        .update(updateData)
+        .eq('id', appointmentId)
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error updating appointment payment status:', error)
+      throw error
+    }
+  }
+
+  // Get payment history for appointment
+  const getPaymentHistory = async (appointmentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('appointment_id', appointmentId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error getting payment history:', error)
+      return []
+    }
+  }
+
+  // Get payment method icon class
+  const getPaymentMethodIconClass = (methodCode: string): string => {
+    const classes: Record<string, string> = {
+      wallee: 'bg-blue-100 text-blue-600',
+      cash: 'bg-yellow-100 text-yellow-600',
+      invoice: 'bg-gray-100 text-gray-600',
+      card: 'bg-purple-100 text-purple-600',
+      twint: 'bg-blue-100 text-blue-600'
+    }
+    return classes[methodCode] || 'bg-gray-100 text-gray-600'
+  }
+
+  // Get payment button text
+  const getPaymentButtonText = (methodCode: string): string => {
+    const texts: Record<string, string> = {
+      wallee: 'Online bezahlen',
+      cash: 'Bar bezahlen',
+      invoice: 'Rechnung erstellen',
+      card: 'Mit Karte bezahlen',
+      twint: 'Mit Twint bezahlen'
+    }
+    return texts[methodCode] || 'Bezahlen'
+  }
+
+  return {
+    // State
+    isLoadingPrice: computed(() => isLoadingPrice.value),
+    isProcessing: computed(() => isProcessing.value),
+    calculatedPrice: computed(() => calculatedPrice.value),
+    priceError: computed(() => priceError.value),
+    availablePaymentMethods: computed(() => availablePaymentMethods.value),
+
+    // Methods
+    calculatePrice,
+    getAppointmentCount,
+    createPaymentRecord,
+    processCashPayment,
+    processInvoicePayment,
+    updateAppointmentPaymentStatus,
+    getPaymentHistory,
+
+    // Utilities
+    getPaymentMethodIconClass,
+    getPaymentButtonText,
+
+    // Reset
+    clearErrors: () => {
+      priceError.value = ''
+    }
+  }
+}```
+
+### ./composables/usePendingTasks.ts
+```ts
+// composables/usePendingTasks.ts
+import { ref, computed, reactive } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+// Typen für bessere Typsicherheit
+interface PendingAppointment {
+  id: string
+  title: string
+  start_time: string
+  end_time: string
+  user_id: string
+  status: string
+  users: {
+    first_name: string
+    last_name: string
+  }
+  // Da wir nur Kriterien-Bewertungen wollen, passen wir den Typ an
+  // Die notes Property sollte hier nur die Kriterien-spezifischen Notizen halten
+  notes: Array<{
+    id: string
+    criteria_rating?: number
+    criteria_note?: string
+    evaluation_criteria_id?: string
+  }>
+}
+
+// Typ für die Daten, die von saveCriteriaEvaluations erwartet werden
+export interface CriteriaEvaluationData {
+  criteria_id: string; // evaluation_criteria_id
+  rating: number;     // criteria_rating
+  note: string;       // criteria_note
+}
+
+// SINGLETON PATTERN - Globaler reaktiver State
+const globalState = reactive({
+  pendingAppointments: [] as PendingAppointment[],
+  isLoading: false,
+  error: null as string | null
+})
+
+// Computed values basierend auf globalem State
+const pendingCount = computed(() => globalState.pendingAppointments.length)
+
+const buttonClasses = computed(() =>
+  `text-white font-bold px-4 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200
+  ${pendingCount.value > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-green-500 hover:bg-green-600'}`
+)
+
+const buttonText = computed(() => 
+  `Pendenzen${pendingCount.value > 0 ? `(${pendingCount.value})` : '(0)'}`
+)
+
+// Hilfsfunktion für formatierte Anzeige
+const getFormattedAppointment = (appointment: PendingAppointment) => {
+  const startDate = new Date(appointment.start_time)
+  const endDate = new Date(appointment.end_time)
+  
+  return {
+    ...appointment,
+    formattedDate: startDate.toLocaleDateString('de-CH'),
+    formattedStartTime: startDate.toLocaleTimeString('de-CH', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
+    formattedEndTime: endDate.toLocaleTimeString('de-CH', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
+    studentName: `${appointment.users.first_name} ${appointment.users.last_name}`,
+    duration: Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60)) // Minuten
+  }
+}
+
+// Computed für direkt formatierte Appointments
+const formattedAppointments = computed(() => {
+  return globalState.pendingAppointments.map(appointment => getFormattedAppointment(appointment))
+})
+
+// SINGLETON FUNCTIONS - Funktionen operieren auf globalem State
+const fetchPendingTasks = async (staffId: string) => {
+  console.log('🔥 fetchPendingTasks starting for staff:', staffId)
+  globalState.isLoading = true
+  globalState.error = null
+
+  try {
+    const supabase = getSupabase()
+    
+    // Vergangene Termine des Fahrlehrers abrufen
+    const { data, error: fetchError } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        title,
+        start_time,
+        end_time,
+        user_id,
+        status,
+        users!appointments_user_id_fkey (
+          first_name,
+          last_name
+        ),
+        notes (
+          evaluation_criteria_id,
+          criteria_rating
+        )
+      `)
+      .eq('staff_id', staffId)
+      .lt('end_time', new Date().toISOString()) // Nur vergangene Termine
+      .eq('status', 'completed') // Nur abgeschlossene Termine
+      .order('start_time', { ascending: true }) // Neueste zuerst
+
+    if (fetchError) throw fetchError
+
+    console.log('🔥 Fetched appointments (raw data):', data?.length)
+
+    // Termine ohne Kriterienbewertung filtern
+    const pending: PendingAppointment[] = (data || []).filter((appointment: any) => {
+      // Ein Termin ist "pending", wenn er KEINE Kriterien-Bewertung hat.
+      // Wir definieren "Kriterien-Bewertung" als einen Note-Eintrag, 
+      // bei dem evaluation_criteria_id und criteria_rating gesetzt sind.
+      const hasCriteriaEvaluation = appointment.notes && 
+        appointment.notes.some((note: any) => 
+          note.evaluation_criteria_id !== null && 
+          note.criteria_rating !== null
+        );
+
+      // Hier ignorieren wir alte staff_rating Einträge komplett für die Pendenzen-Logik
+      console.log(`🔥 Appointment ${appointment.id}: hasCriteriaEvaluation=${hasCriteriaEvaluation}`)
+      return !hasCriteriaEvaluation; // Pending, wenn keine Kriterien-Bewertung vorhanden ist
+    }).map((appointment: any): PendingAppointment => ({
+      id: appointment.id,
+      title: appointment.title,
+      start_time: appointment.start_time,
+      end_time: appointment.end_time,
+      user_id: appointment.user_id,
+      status: appointment.status,
+      users: appointment.users,
+      // Wichtig: Filtere hier die notes, damit nur relevante Kriterien-notes enthalten sind
+      notes: appointment.notes.filter((note: any) => note.evaluation_criteria_id !== null)
+    }))
+
+    console.log('🔥 Filtered pending appointments:', pending.length)
+    
+    // WICHTIG: Globalen State komplett ersetzen (nicht mutieren)
+    globalState.pendingAppointments = [...pending]
+    console.log('🔥 Global pending state updated, count:', pendingCount.value)
+    
+  } catch (err: any) {
+    globalState.error = err?.message || 'Fehler beim Laden der Pendenzen'
+    console.error('❌ Fehler beim Laden der Pendenzen:', err)
+  } finally {
+    globalState.isLoading = false
+  }
+}
+
+// NEUE Funktion zum Speichern der Kriterien-Bewertungen
+const saveCriteriaEvaluations = async (
+  appointmentId: string,
+  evaluations: CriteriaEvaluationData[], // Array von Kriterien-Bewertungen
+  currentUserId?: string
+) => {
+  try {
+    const supabase = getSupabase();
+    
+    // Validierung der übergebenen Daten
+    if (!evaluations || evaluations.length === 0) {
+      throw new Error('Es müssen Bewertungen für mindestens ein Kriterium angegeben werden.');
+    }
+
+    const notesToInsert = evaluations.map(evalData => {
+      // Validierung für jede einzelne Kriterienbewertung
+      if (evalData.rating < 1 || evalData.rating > 6) {
+        throw new Error(`Bewertung für Kriterium ${evalData.criteria_id} muss zwischen 1 und 6 liegen.`);
+      }
+      if (typeof evalData.note !== 'string') { // Stellen Sie sicher, dass note ein String ist
+        evalData.note = String(evalData.note);
+      }
+      if (evalData.note.trim().length === 0) { // Eine Notiz ist nicht mehr zwingend
+        evalData.note = ''; // Sicherstellen, dass es ein leerer String ist
+      }
+
+      return {
+        appointment_id: appointmentId,
+        evaluation_criteria_id: evalData.criteria_id,
+        criteria_rating: evalData.rating,
+        criteria_note: evalData.note.trim(),
+        // staff_rating und staff_note bleiben NULL, da nicht mehr verwendet
+        staff_rating: null,
+        staff_note: '',
+        last_updated_by_user_id: currentUserId || null,
+        last_updated_at: new Date().toISOString()
+      };
+    });
+
+    console.log('Attempting to upsert notes:', notesToInsert);
+
+    // Verwende upsert für mehrere Einträge
+    const { error: upsertError } = await supabase
+      .from('notes')
+      .upsert(notesToInsert, { onConflict: 'appointment_id,evaluation_criteria_id' }); // Conflict auf diesen beiden Spalten
+                                                                                        // um Updates zu ermöglichen
+    if (upsertError) throw upsertError;
+
+    // Nach erfolgreichem Speichern: Aktualisiere die Pendenzen
+    // Ein Termin ist NICHT mehr pending, wenn er mindestens eine Kriterien-Bewertung hat.
+    // Die fetchPendingTasks Funktion wird das übernehmen.
+    await fetchPendingTasks(currentUserId || ''); // Aktualisiere die Liste nach dem Speichern
+
+    console.log('✅ Kriterien-Bewertungen erfolgreich gespeichert und Pendenzen aktualisiert:', appointmentId);
+
+  } catch (err: any) {
+    globalState.error = err?.message || 'Fehler beim Speichern der Kriterien-Bewertungen';
+    console.error('❌ Fehler beim Speichern der Kriterien-Bewertungen:', err);
+    throw err;
+  }
+};
+
+
+// Die markAsCompleted und markMultipleAsCompleted Funktionen sind obsolet,
+// da wir keine Gesamtbewertungen mehr speichern.
+// Ich habe sie hier entfernt, damit sie nicht mehr versehentlich aufgerufen werden.
+// Wenn du sie noch irgendwo im Code hast, wo sie aufgerufen werden, musst du diese Aufrufe ändern.
+
+const refreshPendingTasks = async (staffId: string) => {
+  await fetchPendingTasks(staffId)
+}
+
+const clearError = () => {
+  globalState.error = null
+}
+
+// SINGLETON EXPORT - Immer dieselbe Instanz zurückgeben
+export const usePendingTasks = () => {
+  console.log('🔄 usePendingTasks called - returning singleton instance')
+  console.log('🔥 Current global pending count:', pendingCount.value)
+  
+  return {
+    // Reactive state - direkte Referenzen auf reactive state
+    pendingAppointments: computed(() => globalState.pendingAppointments),
+    formattedAppointments,
+    pendingCount,
+    buttonClasses,
+    buttonText,
+    isLoading: computed(() => globalState.isLoading),
+    error: computed(() => globalState.error),
+    
+    // Actions
+    fetchPendingTasks,
+    saveCriteriaEvaluations, // Die neue Funktion zum Export hinzufügen
+    refreshPendingTasks,
+    clearError,
+    
+    // Utilities
+    getFormattedAppointment
+  }
+}```
+
+### ./composables/usePricing.ts
+```ts
+// composables/usePricing.ts
+
+import { ref, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+// Types
+interface PricingRule {
+  id: string
+  category_code: string
+  price_per_minute_rappen: number
+  admin_fee_rappen: number
+  admin_fee_applies_from: number
+  base_duration_minutes: number
+  is_active: boolean
+  valid_from: string | null
+  valid_until: string | null
+  rule_name: string
+}
+
+interface CalculatedPrice {
+  base_price_rappen: number
+  admin_fee_rappen: number
+  total_rappen: number
+  base_price_chf: string
+  admin_fee_chf: string
+  total_chf: string
+  category_code: string
+  duration_minutes: number
+  appointment_number: number
+}
+
+export const usePricing = () => {
+  const supabase = getSupabase()
+  
+  // State
+  const pricingRules = ref<PricingRule[]>([])
+  const isLoadingPrices = ref(false)
+  const pricingError = ref<string>('')
+  const lastLoaded = ref<Date | null>(null)
+  
+  // Cache für 5 Minuten
+  const CACHE_DURATION = 5 * 60 * 1000 // 5 Minuten
+
+  // Load pricing rules from database
+  const loadPricingRules = async (forceReload = false): Promise<void> => {
+    // Prüfe Cache
+    if (!forceReload && lastLoaded.value && 
+        (Date.now() - lastLoaded.value.getTime()) < CACHE_DURATION) {
+      return // Cache noch gültig
+    }
+
+    isLoadingPrices.value = true
+    pricingError.value = ''
+
+    try {
+      console.log('🔄 Loading pricing rules from database...')
+
+      const { data, error } = await supabase
+        .from('pricing_rules')
+        .select('*')
+        .eq('rule_type', 'category_pricing')
+        .eq('is_active', true)
+        .order('category_code')
+
+      if (error) {
+        console.error('❌ Database error:', error)
+        throw new Error(`Database error: ${error.message}`)
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('⚠️ No pricing rules found, using fallback')
+        await createFallbackPricingRules()
+        return
+      }
+
+      // Filter nur gültige Regeln (Datumsbereich)
+      const today = new Date().toISOString().split('T')[0]
+      const validRules = data.filter(rule => {
+        const validFrom = rule.valid_from || '1900-01-01'
+        const validUntil = rule.valid_until || '2099-12-31'
+        return today >= validFrom && today <= validUntil
+      })
+
+      pricingRules.value = validRules
+      lastLoaded.value = new Date()
+
+      console.log('✅ Pricing rules loaded:', validRules.length, 'rules')
+      console.log('📊 Categories:', validRules.map(r => r.category_code))
+
+    } catch (err: any) {
+      console.error('❌ Error loading pricing rules:', err)
+      pricingError.value = err.message || 'Fehler beim Laden der Preisregeln'
+      
+      // Fallback auf hard-coded Werte bei Fehler
+      await createFallbackPricingRules()
+    } finally {
+      isLoadingPrices.value = false
+    }
+  }
+
+  // Fallback: Hard-coded Werte in Memory laden
+  const createFallbackPricingRules = async (): Promise<void> => {
+    console.log('🔄 Using fallback pricing rules...')
+    
+    const fallbackRules: PricingRule[] = [
+      { id: 'fallback-B', category_code: 'B', price_per_minute_rappen: 211, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback B' },
+      { id: 'fallback-A1', category_code: 'A1', price_per_minute_rappen: 211, admin_fee_rappen: 0, admin_fee_applies_from: 999, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A1' },
+      { id: 'fallback-A35kW', category_code: 'A35kW', price_per_minute_rappen: 211, admin_fee_rappen: 0, admin_fee_applies_from: 999, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A35kW' },
+      { id: 'fallback-A', category_code: 'A', price_per_minute_rappen: 211, admin_fee_rappen: 0, admin_fee_applies_from: 999, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A' },
+      { id: 'fallback-BE', category_code: 'BE', price_per_minute_rappen: 267, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback BE' },
+      { id: 'fallback-C1', category_code: 'C1', price_per_minute_rappen: 333, admin_fee_rappen: 20000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback C1' },
+      { id: 'fallback-D1', category_code: 'D1', price_per_minute_rappen: 333, admin_fee_rappen: 20000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D1' },
+      { id: 'fallback-C', category_code: 'C', price_per_minute_rappen: 378, admin_fee_rappen: 20000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback C' },
+      { id: 'fallback-CE', category_code: 'CE', price_per_minute_rappen: 444, admin_fee_rappen: 25000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback CE' },
+      { id: 'fallback-D', category_code: 'D', price_per_minute_rappen: 444, admin_fee_rappen: 30000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D' },
+      { id: 'fallback-Motorboot', category_code: 'Motorboot', price_per_minute_rappen: 211, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback Motorboot' },
+      { id: 'fallback-BPT', category_code: 'BPT', price_per_minute_rappen: 222, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback BPT' }
+    ]
+    
+    pricingRules.value = fallbackRules
+    lastLoaded.value = new Date()
+    console.log('✅ Fallback pricing rules loaded')
+  }
+
+  // Get pricing rule for specific category
+  const getPricingRule = (categoryCode: string): PricingRule | null => {
+    const rule = pricingRules.value.find(rule => rule.category_code === categoryCode)
+    if (!rule) {
+      console.warn(`⚠️ No pricing rule found for category: ${categoryCode}`)
+      return null
+    }
+    return rule
+  }
+
+  // Get appointment count for user
+  const getAppointmentCount = async (userId: string): Promise<number> => {
+    try {
+      const { count, error } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .in('status', ['completed', 'confirmed'])
+
+      if (error) {
+        console.error('❌ Error counting appointments:', error)
+        return 1
+      }
+
+      return (count || 0) + 1
+    } catch (error) {
+      console.error('❌ Error in getAppointmentCount:', error)
+      return 1
+    }
+  }
+
+  // Calculate price based on category, duration, and appointment count
+  const calculatePrice = async (
+    categoryCode: string,
+    durationMinutes: number,
+    userId?: string
+  ): Promise<CalculatedPrice> => {
+    // Lade Pricing Rules falls noch nicht geladen
+    if (pricingRules.value.length === 0) {
+      await loadPricingRules()
+    }
+
+    const rule = getPricingRule(categoryCode)
+    if (!rule) {
+      throw new Error(`Keine Preisregel für Kategorie ${categoryCode} gefunden`)
+    }
+
+    // Appointment count ermitteln
+    const appointmentNumber = userId ? await getAppointmentCount(userId) : 1
+
+    // Grundpreis berechnen (skaliert auf Dauer)
+    const basePriceRappen = Math.round(rule.price_per_minute_rappen * durationMinutes)
+    
+    // Admin-Fee nur ab entsprechendem Termin
+    const adminFeeRappen = appointmentNumber >= rule.admin_fee_applies_from ? rule.admin_fee_rappen : 0
+    
+    // Gesamtpreis
+    const totalRappen = basePriceRappen + adminFeeRappen
+
+    const result: CalculatedPrice = {
+      base_price_rappen: basePriceRappen,
+      admin_fee_rappen: adminFeeRappen,
+      total_rappen: totalRappen,
+      base_price_chf: (basePriceRappen / 100).toFixed(2),
+      admin_fee_chf: (adminFeeRappen / 100).toFixed(2),
+      total_chf: (totalRappen / 100).toFixed(2),
+      category_code: categoryCode,
+      duration_minutes: durationMinutes,
+      appointment_number: appointmentNumber
+    }
+
+    console.log('💰 Price calculated:', {
+      category: categoryCode,
+      duration: durationMinutes,
+      appointment: appointmentNumber,
+      basePrice: result.base_price_chf,
+      adminFee: result.admin_fee_chf,
+      total: result.total_chf
+    })
+
+    return result
+  }
+
+  // Get admin fee for category (legacy support)
+  const getAdminFeeForCategory = (categoryCode: string): number => {
+    const rule = getPricingRule(categoryCode)
+    return rule ? rule.admin_fee_rappen / 100 : 0
+  }
+
+  // Get price per minute for category
+  const getPricePerMinuteForCategory = (categoryCode: string): number => {
+    const rule = getPricingRule(categoryCode)
+    return rule ? rule.price_per_minute_rappen / 100 : 0
+  }
+
+  // Get all available categories
+  const getAvailableCategories = (): string[] => {
+    return pricingRules.value.map(rule => rule.category_code).sort()
+  }
+
+  // Update single pricing rule
+  const updatePricingRule = async (
+    categoryCode: string, 
+    updates: Partial<Pick<PricingRule, 'price_per_minute_rappen' | 'admin_fee_rappen' | 'admin_fee_applies_from'>>
+  ): Promise<boolean> => {
+    try {
+      console.log('💾 Updating pricing rule:', categoryCode, updates)
+
+      const { error } = await supabase
+        .from('pricing_rules')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('category_code', categoryCode)
+        .eq('rule_type', 'category_pricing')
+
+      if (error) {
+        console.error('❌ Error updating pricing rule:', error)
+        throw new Error(error.message)
+      }
+
+      // Cache invalidieren und neu laden
+      await loadPricingRules(true)
+      
+      console.log('✅ Pricing rule updated successfully')
+      return true
+
+    } catch (err: any) {
+      console.error('❌ Error in updatePricingRule:', err)
+      pricingError.value = err.message || 'Fehler beim Aktualisieren der Preisregel'
+      return false
+    }
+  }
+
+  // Computed
+  const isLoaded = computed(() => pricingRules.value.length > 0)
+  const categoriesCount = computed(() => pricingRules.value.length)
+
+  return {
+    // State
+    pricingRules,
+    isLoadingPrices,
+    pricingError,
+    isLoaded,
+    categoriesCount,
+    
+    // Methods
+    loadPricingRules,
+    calculatePrice,
+    getPricingRule,
+    getAdminFeeForCategory,
+    getPricePerMinuteForCategory,
+    getAvailableCategories,
+    updatePricingRule,
+    
+    // Legacy support
+    getAppointmentCount
+  }
+}```
+
+### ./composables/useStaffCategoryDurations.ts
+```ts
+// composables/useStaffCategoryDurations.ts - Neue saubere DB-Struktur
+import { ref, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+interface StaffCategoryDuration {
+  id: string
+  created_at: string
+  staff_id: string
+  category_code: string
+  duration_minutes: number
+  is_active: boolean
+  display_order: number
+}
+
+export const useStaffCategoryDurations = () => {
+  // State
+  const availableDurations = ref<number[]>([])
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
+
+  // Computed - formatierte Dauern für UI
+  const formattedDurations = computed(() => {
+    return availableDurations.value.map(duration => ({
+      value: duration,
+      label: duration >= 120 
+        ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
+        : `${duration}min`
+    }))
+  })
+
+  // Dauern für Staff + Kategorie laden
+  const loadStaffCategoryDurations = async (staffId: string, categoryCode: string) => {
+    console.log('🚀 Loading staff category durations:', { staffId, categoryCode })
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const supabase = getSupabase()
+
+      const { data, error: fetchError } = await supabase
+        .from('staff_category_durations')
+        .select('duration_minutes')
+        .eq('staff_id', staffId)
+        .eq('category_code', categoryCode)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+
+      if (fetchError) throw fetchError
+
+      const durations = data?.map(item => item.duration_minutes) || []
+      
+      // Fallback wenn keine spezifischen Dauern gefunden
+      if (durations.length === 0) {
+        console.log('⚠️ No specific durations found, using category default')
+        
+        // Hole Standard-Dauer aus categories Tabelle
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('categories')
+          .select('lesson_duration_minutes')
+          .eq('code', categoryCode)
+          .eq('is_active', true)
+          .maybeSingle()
+
+        if (categoryError) throw categoryError
+        
+        const defaultDuration = categoryData?.lesson_duration_minutes || 45
+        availableDurations.value = [defaultDuration]
+      } else {
+        availableDurations.value = durations.sort((a: number, b: number) => a - b)
+      }
+
+      console.log('✅ Loaded durations:', availableDurations.value)
+      return availableDurations.value
+
+    } catch (err: any) {
+      console.error('❌ Error loading staff category durations:', err)
+      error.value = err.message
+      // Absoluter Fallback
+      availableDurations.value = [45]
+      return [45]
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Dauern für Staff + Kategorie speichern
+  const saveStaffCategoryDurations = async (
+    staffId: string, 
+    categoryCode: string, 
+    durations: number[]
+  ) => {
+    console.log('💾 Saving staff category durations:', { staffId, categoryCode, durations })
+    
+    try {
+      const supabase = getSupabase()
+
+      // Erst alle bestehenden Einträge für diesen Staff + Kategorie löschen
+      const { error: deleteError } = await supabase
+        .from('staff_category_durations')
+        .delete()
+        .eq('staff_id', staffId)
+        .eq('category_code', categoryCode)
+
+      if (deleteError) throw deleteError
+
+      // Neue Einträge einfügen
+      const insertData = durations.map((duration, index) => ({
+        staff_id: staffId,
+        category_code: categoryCode,
+        duration_minutes: duration,
+        display_order: index + 1,
+        is_active: true
+      }))
+
+      const { error: insertError } = await supabase
+        .from('staff_category_durations')
+        .insert(insertData)
+
+      if (insertError) throw insertError
+
+      // State aktualisieren
+      availableDurations.value = durations.sort((a: number, b: number) => a - b)
+      
+      console.log('✅ Staff category durations saved successfully')
+
+    } catch (err: any) {
+      console.error('❌ Error saving staff category durations:', err)
+      error.value = err.message
+      throw err
+    }
+  }
+
+  // Alle Dauern eines Staff laden (für Settings)
+  const loadAllStaffDurations = async (staffId: string) => {
+    console.log('📋 Loading all staff durations for settings')
+    
+    try {
+      const supabase = getSupabase()
+
+      const { data, error: fetchError } = await supabase
+        .from('staff_category_durations')
+        .select(`
+          category_code,
+          duration_minutes,
+          display_order,
+          categories (name)
+        `)
+        .eq('staff_id', staffId)
+        .eq('is_active', true)
+        .order('category_code')
+        .order('display_order')
+
+      if (fetchError) throw fetchError
+
+      // Gruppiere nach Kategorie
+      const groupedDurations = data?.reduce((acc: any, item: any) => {
+        if (!acc[item.category_code]) {
+          acc[item.category_code] = {
+            categoryCode: item.category_code,
+            categoryName: item.categories?.name || item.category_code,
+            durations: []
+          }
+        }
+        acc[item.category_code].durations.push(item.duration_minutes)
+        return acc
+      }, {}) || {}
+
+      return Object.values(groupedDurations)
+
+    } catch (err: any) {
+      console.error('❌ Error loading all staff durations:', err)
+      return []
+    }
+  }
+
+  // Standard-Dauern für neue Staff erstellen
+  const createDefaultDurations = async (staffId: string) => {
+    console.log('🏗️ Creating default durations for new staff')
+    
+    try {
+      const supabase = getSupabase()
+
+      // Lade alle aktiven Kategorien
+      const { data: categories, error: categoriesError } = await supabase
+        .from('categories')
+        .select('code, lesson_duration_minutes')
+        .eq('is_active', true)
+
+      if (categoriesError) throw categoriesError
+
+      // Erstelle Standard-Dauern für jede Kategorie
+      const defaultDurations = categories?.flatMap(category => {
+        const baseDuration = category.lesson_duration_minutes || 45
+        
+        // Erstelle 2-3 Standard-Optionen basierend auf der Kategorie
+        const durations = [baseDuration]
+        if (baseDuration >= 45) durations.push(baseDuration + 45) // +45min
+        if (baseDuration <= 135) durations.push(baseDuration + 90) // +90min
+        
+        return durations.map((duration, index) => ({
+          staff_id: staffId,
+          category_code: category.code,
+          duration_minutes: duration,
+          display_order: index + 1,
+          is_active: true
+        }))
+      }) || []
+
+      const { error: insertError } = await supabase
+        .from('staff_category_durations')
+        .insert(defaultDurations)
+
+      if (insertError) throw insertError
+
+      console.log('✅ Default durations created for all categories')
+
+    } catch (err: any) {
+      console.error('❌ Error creating default durations:', err)
+      throw err
+    }
+  }
+
+  // Erstes verfügbares Dauer zurückgeben
+  const getDefaultDuration = () => {
+    return availableDurations.value.length > 0 ? availableDurations.value[0] : 45
+  }
+
+  // Check ob Dauer verfügbar ist
+  const isDurationAvailable = (duration: number) => {
+    return availableDurations.value.includes(duration)
+  }
+
+  // Reset state
+  const reset = () => {
+    availableDurations.value = []
+    isLoading.value = false
+    error.value = null
+  }
+
+  return {
+    // State
+    availableDurations: computed(() => availableDurations.value),
+    formattedDurations,
+    isLoading: computed(() => isLoading.value),
+    error: computed(() => error.value),
+
+    // Actions
+    loadStaffCategoryDurations,
+    saveStaffCategoryDurations,
+    loadAllStaffDurations,
+    createDefaultDurations,
+    
+    // Utils
+    getDefaultDuration,
+    isDurationAvailable,
+    reset
+  }
+}```
+
+### ./composables/useStaffDurations.ts
+```ts
+// composables/useStaffDurations.ts - Komplett Datenbank-getrieben
+import { ref, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+export const useStaffDurations = () => {
+  // State
+  const availableDurations = ref<number[]>([])
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
+
+  // Computed - formatierte Dauern für UI
+  const formattedDurations = computed(() => {
+    return availableDurations.value.map(duration => ({
+      value: duration,
+      label: duration >= 120 
+        ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
+        : `${duration}min`
+    }))
+  })
+
+  // Verfügbare Dauern für Staff + Kategorie aus Datenbank laden
+  const loadAvailableDurations = async (categoryCode: string, staffId: string) => {
+    console.log('🔥 Loading durations from DB for:', categoryCode, 'staff:', staffId)
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const supabase = getSupabase()
+
+      // 1. Staff Settings laden (preferred_durations)
+      const { data: staffSettings, error: staffError } = await supabase
+        .from('staff_settings')
+        .select('preferred_durations')
+        .eq('staff_id', staffId)
+        .maybeSingle()
+
+      if (staffError) {
+        console.log('⚠️ No staff settings found, will use category defaults')
+      }
+
+      // 2. Kategorie aus DB laden (für Fallback-Dauer)
+      const { data: category, error: categoryError } = await supabase
+        .from('categories')
+        .select('lesson_duration, code')
+        .eq('code', categoryCode)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (categoryError) throw categoryError
+
+      if (!category) {
+        throw new Error(`Kategorie ${categoryCode} nicht gefunden`)
+      }
+
+      // 3. Staff preferred_durations parsen
+      let finalDurations: number[] = []
+      
+      if (staffSettings?.preferred_durations) {
+        // Staff hat eigene Dauern konfiguriert
+        finalDurations = staffSettings.preferred_durations
+          .split(',')
+          .map((d: string) => parseInt(d.trim()))
+          .filter((d: number) => !isNaN(d) && d > 0)
+          .sort((a: number, b: number) => a - b)
+        
+        console.log('✅ Using staff configured durations:', finalDurations)
+      } else {
+        // Fallback: Standard-Dauer der Kategorie
+        finalDurations = [category.lesson_duration || 45]
+        console.log('⚠️ No staff durations found, using category default:', finalDurations)
+      }
+
+      availableDurations.value = finalDurations
+      return finalDurations
+
+    } catch (err: any) {
+      console.error('❌ Error loading durations from DB:', err)
+      error.value = err.message
+      // Absoluter Fallback
+      availableDurations.value = [45]
+      return [45]
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Staff preferred durations in DB updaten
+  const updateStaffDurations = async (staffId: string, newDurations: number[]) => {
+    console.log('🔄 Updating staff durations in DB:', newDurations)
+    
+    try {
+      const supabase = getSupabase()
+      // Als JSON Array speichern um konsistent mit bestehenden Daten zu sein
+      const durationsString = JSON.stringify(newDurations.sort((a: number, b: number) => a - b))
+      
+      const { error: upsertError } = await supabase
+        .from('staff_settings')
+        .upsert({
+          staff_id: staffId,
+          preferred_durations: durationsString,
+          updated_at: new Date().toISOString()
+        })
+
+      if (upsertError) throw upsertError
+
+      console.log('✅ Staff durations updated in DB as JSON:', durationsString)
+      
+      // State aktualisieren
+      availableDurations.value = newDurations.sort((a: number, b: number) => a - b)
+      
+    } catch (err: any) {
+      console.error('❌ Error updating staff durations:', err)
+      error.value = err.message
+      throw err
+    }
+  }
+
+  // Standard-Dauern für alle Kategorien aus DB laden (für Settings UI)
+  const loadAllPossibleDurations = async () => {
+    console.log('🔥 Loading all possible durations from DB')
+    
+    try {
+      const supabase = getSupabase()
+      
+      // Alle aktiven Kategorien laden
+      const { data: categories, error } = await supabase
+        .from('categories')
+        .select('code, lesson_duration')
+        .eq('is_active', true)
+        .order('display_order')
+
+      if (error) throw error
+
+      // Alle möglichen Dauern sammeln (15min steps von 45-240)
+      const allDurations = [45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240]
+      
+      return allDurations.map(duration => ({
+        value: duration,
+        label: duration >= 120 
+          ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
+          : `${duration}min`,
+        // Zeige welche Kategorien diese Dauer unterstützen (Info für Settings)
+        supportedCategories: categories?.filter(cat => {
+          // Logik welche Kategorien welche Dauern unterstützen kann in DB erweitert werden
+          return duration >= (cat.lesson_duration || 45)
+        }).map(cat => cat.code) || []
+      }))
+
+    } catch (err: any) {
+      console.error('❌ Error loading possible durations:', err)
+      return []
+    }
+  }
+
+  // Staff-Settings für User laden
+  const loadStaffSettings = async (staffId: string) => {
+    console.log('🔥 Loading complete staff settings from DB')
+    
+    try {
+      const supabase = getSupabase()
+      const { data, error } = await supabase
+        .from('staff_settings')
+        .select('*')
+        .eq('staff_id', staffId)
+        .maybeSingle()
+
+      if (error) throw error
+      
+      return data
+    } catch (err: any) {
+      console.error('❌ Error loading staff settings:', err)
+      return null
+    }
+  }
+
+  // Erstes verfügbares Dauer zurückgeben
+  const getDefaultDuration = () => {
+    return availableDurations.value.length > 0 ? availableDurations.value[0] : 45
+  }
+
+  // Check ob Dauer verfügbar ist
+  const isDurationAvailable = (duration: number) => {
+    return availableDurations.value.includes(duration)
+  }
+
+  // Reset state
+  const reset = () => {
+    availableDurations.value = []
+    isLoading.value = false
+    error.value = null
+  }
+
+  return {
+    // State
+    availableDurations: computed(() => availableDurations.value),
+    formattedDurations,
+    isLoading: computed(() => isLoading.value),
+    error: computed(() => error.value),
+
+    // Actions
+    loadAvailableDurations,
+    calculateAvailableDurations: loadAvailableDurations, // Alias für Kompatibilität
+    updateStaffDurations,
+    loadAllPossibleDurations,
+    loadStaffSettings,
+    
+    // Utils
+    getDefaultDuration,
+    isDurationAvailable,
+    reset
+  }
+}```
+
+### ./composables/useStudents.ts
+```ts
+// composables/useStudents.ts
+import { ref, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+import type { User } from '~/types'
+
+export const useStudents = () => {
+  const students = ref<User[]>([])
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
+  const searchQuery = ref('')
+  const showInactive = ref(false)
+  const showAllStudents = ref(false) // false = nur eigene, true = alle
+
+  // Computed: Gefilterte Schülerliste
+  const filteredStudents = computed(() => {
+    let filtered = students.value
+
+    // Suche nach Name/Email
+    if (searchQuery.value.trim()) {
+      const query = searchQuery.value.toLowerCase()
+      filtered = filtered.filter(student =>
+        `${student.first_name} ${student.last_name}`.toLowerCase().includes(query) ||
+        student.email?.toLowerCase().includes(query)
+      )
+    }
+
+    // Aktiv/Inaktiv Filter
+    if (!showInactive.value) {
+      filtered = filtered.filter(student => student.is_active)
+    }
+
+    return filtered
+  })
+
+  // Statistiken
+  const totalStudents = computed(() => students.value.length)
+  const activeStudents = computed(() => students.value.filter(s => s.is_active).length)
+  const inactiveStudents = computed(() => students.value.filter(s => !s.is_active).length)
+
+  // Schüler laden
+  const fetchStudents = async (currentUserId: string, userRole: string) => {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const supabase = getSupabase()
+      let query = supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'client')
+
+      // Staff sieht nur eigene Schüler, außer showAllStudents ist true
+      if (userRole === 'staff' && !showAllStudents.value) {
+        query = query.eq('assigned_staff_id', currentUserId)
+      }
+
+      // Sortierung nach Nachname, Vorname
+      query = query.order('last_name').order('first_name')
+
+      const { data, error: fetchError } = await query
+
+      if (fetchError) throw fetchError
+
+      students.value = data || []
+
+    } catch (err: any) {
+      error.value = err.message
+      console.error('Fehler beim Laden der Schüler:', err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Einzelnen Schüler laden
+  const fetchStudent = async (studentId: string) => {
+    try {
+      const supabase = getSupabase()
+      
+      const { data, error: fetchError } = await supabase
+        .from('users')
+        .select(`
+          *,
+          assigned_staff:users!users_assigned_staff_id_fkey (
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('id', studentId)
+        .eq('role', 'client')
+        .single()
+
+      if (fetchError) throw fetchError
+
+      return data
+
+    } catch (err: any) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  // Schüler-Termine laden
+  const fetchStudentAppointments = async (studentId: string) => {
+    try {
+      const supabase = getSupabase()
+      
+      const { data, error: fetchError } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          staff:users!appointments_staff_id_fkey (
+            first_name,
+            last_name
+          ),
+          notes (
+            staff_rating,
+            staff_note,
+            last_updated_at
+          )
+        `)
+        .eq('user_id', studentId)
+        .order('start_time', { ascending: false })
+
+      if (fetchError) throw fetchError
+
+      return data || []
+
+    } catch (err: any) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  // Schüler aktivieren/deaktivieren
+  const toggleStudentStatus = async (studentId: string, isActive: boolean) => {
+    try {
+      const supabase = getSupabase()
+      
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ is_active: isActive })
+        .eq('id', studentId)
+
+      if (updateError) throw updateError
+
+      // Lokale Liste aktualisieren
+      const student = students.value.find(s => s.id === studentId)
+      if (student) {
+        student.is_active = isActive
+      }
+
+    } catch (err: any) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  // Neuen Schüler hinzufügen
+  const addStudent = async (studentData: Partial<User>) => {
+    try {
+      const supabase = getSupabase()
+      
+      const { data, error: insertError } = await supabase
+        .from('users')
+        .insert([{
+          ...studentData,
+          role: 'client',
+          is_active: true
+        }])
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      // Zur lokalen Liste hinzufügen
+      students.value.unshift(data)
+
+      return data
+
+    } catch (err: any) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  // Schüler bearbeiten
+  const updateStudent = async (studentId: string, updates: Partial<User>) => {
+    try {
+      const supabase = getSupabase()
+      
+      const { data, error: updateError } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', studentId)
+        .select()
+        .single()
+
+      if (updateError) throw updateError
+
+      // Lokale Liste aktualisieren
+      const index = students.value.findIndex(s => s.id === studentId)
+      if (index !== -1) {
+        students.value[index] = { ...students.value[index], ...data }
+      }
+
+      return data
+
+    } catch (err: any) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  return {
+    // State
+    students,
+    isLoading,
+    error,
+    searchQuery,
+    showInactive,
+    showAllStudents,
+
+    // Computed
+    filteredStudents,
+    totalStudents,
+    activeStudents,
+    inactiveStudents,
+
+    // Methods
+    fetchStudents,
+    fetchStudent,
+    fetchStudentAppointments,
+    toggleStudentStatus,
+    addStudent,
+    updateStudent
+  }
+}```
+
+### ./composables/useTimeCalculations.ts
+```ts
+export const useTimeCalculations = (formData: any) => {
+  const calculateEndTime = () => {
+    if (!formData.value.startTime || !formData.value.duration_minutes) {
+      formData.value.endTime = ''
+      return
+    }
+
+    const [hours, minutes] = formData.value.startTime.split(':').map(Number)
+    const startDate = new Date()
+    startDate.setHours(hours, minutes, 0, 0)
+
+    const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
+
+    const endHours = String(endDate.getHours()).padStart(2, '0')
+    const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
+
+    formData.value.endTime = `${endHours}:${endMinutes}`
+    console.log('⏰ End time calculated:', formData.value.endTime)
+  }
+
+  return { calculateEndTime }
+}```
+
+### ./composables/useUsers.ts
+```ts
+// composables/useUsers.ts
+import { ref } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+export const useUsers = () => {
+  const users = ref<any[]>([])
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
+
+  // Soft Delete - User deaktivieren
+  const deactivateUser = async (userId: string, reason?: string) => {
+    try {
+      const supabase = getSupabase()
+      
+      const { error } = await supabase
+        .from('users')
+        .update({
+          is_active: false,
+          deleted_at: new Date().toISOString(),
+          deletion_reason: reason || 'Deaktiviert'
+        })
+        .eq('id', userId)
+        
+      if (error) throw error
+      console.log('User deaktiviert (Soft Delete)')
+      
+      // Liste aktualisieren
+      await getActiveUsers()
+      
+    } catch (err: any) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  // User reaktivieren
+  const reactivateUser = async (userId: string) => {
+    try {
+      const supabase = getSupabase()
+      
+      const { error } = await supabase
+        .from('users')
+        .update({
+          is_active: true,
+          deleted_at: null,
+          deletion_reason: null
+        })
+        .eq('id', userId)
+        
+      if (error) throw error
+      console.log('User reaktiviert')
+      
+      // Liste aktualisieren
+      await getActiveUsers()
+      
+    } catch (err: any) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  // Nur aktive User laden (Standard)
+  const getActiveUsers = async () => {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      const supabase = getSupabase()
+      
+      const { data, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('is_active', true)
+        .order('last_name')
+        .order('first_name')
+        
+      if (fetchError) throw fetchError
+      
+      users.value = data || []
+      return data
+      
+    } catch (err: any) {
+      error.value = err.message
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Alle User inkl. inaktive (für Admin)
+  const getAllUsers = async () => {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      const supabase = getSupabase()
+      
+      const { data, error: fetchError } = await supabase
+        .from('users')
+        .select('*, deleted_at')
+        .order('is_active', { ascending: false })
+        .order('last_name')
+        .order('first_name')
+        
+      if (fetchError) throw fetchError
+      
+      users.value = data || []
+      return data
+      
+    } catch (err: any) {
+      error.value = err.message
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // User nach ID suchen
+  const getUserById = async (userId: string) => {
+    try {
+      const supabase = getSupabase()
+      
+      const { data, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single()
+        
+      if (fetchError) throw fetchError
+      return data
+      
+    } catch (err: any) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  return {
+    // State
+    users,
+    isLoading,
+    error,
+    
+    // Methods
+    deactivateUser,
+    reactivateUser,
+    getActiveUsers,
+    getAllUsers,
+    getUserById
+  }
+}```
+
+### ./composables/useWallee.ts
+```ts
+// composables/useWallee.ts - Updated Version
+
+import { useRuntimeConfig } from '#app'
+
+interface WalleeTransactionResult {
+  success: boolean
+  error: string | null
+  transactionId?: string
+  paymentUrl?: string
+  transaction?: any
+}
+
+interface WalleeConnectionResult {
+  success: boolean
+  error: string | null
+  connected?: boolean
+  spaceId?: string
+}
+
+interface WalleeTransactionRequest {
+  appointmentId: string
+  amount: number
+  currency?: string
+  customerId: string
+  customerEmail: string
+  lineItems?: Array<{
+    uniqueId: string
+    name: string
+    quantity: number
+    amountIncludingTax: number
+    type: string
+  }>
+  successUrl?: string
+  failedUrl?: string
+}
+
+export const useWallee = () => {
+  const createTransaction = async (request: WalleeTransactionRequest): Promise<WalleeTransactionResult> => {
+    try {
+      console.log('🔄 Creating Wallee transaction:', request)
+      
+      // Validierung der erforderlichen Felder
+      if (!request.appointmentId || !request.amount || !request.customerId || !request.customerEmail) {
+        throw new Error('Missing required fields: appointmentId, amount, customerId, customerEmail')
+      }
+
+      // API Call zu deiner Wallee Route
+      const response = await $fetch('/api/wallee/create-transaction', {
+        method: 'POST',
+        body: {
+          appointmentId: request.appointmentId,
+          amount: request.amount,
+          currency: request.currency || 'CHF',
+          customerId: request.customerId,
+          customerEmail: request.customerEmail,
+          lineItems: request.lineItems || [
+            {
+              uniqueId: `appointment-${request.appointmentId}`,
+              name: 'Fahrstunde',
+              quantity: 1,
+              amountIncludingTax: request.amount,
+              type: 'PRODUCT'
+            }
+          ],
+          successUrl: request.successUrl,
+          failedUrl: request.failedUrl
+        }
+      })  as any
+
+      console.log('✅ Wallee transaction created successfully:', response)
+
+      return {
+        success: true,
+        transactionId: response.transactionId,
+        paymentUrl: response.paymentUrl,
+        transaction: response.transaction,
+        error: null
+      }
+
+    } catch (error: any) {
+      console.error('❌ Wallee Transaction Error:', error)
+      
+      return {
+        success: false,
+        error: error.data?.message || error.message || 'Transaction creation failed'
+      }
+    }
+  }
+
+  const testConnection = async (): Promise<WalleeConnectionResult> => {
+    try {
+      console.log('🔄 Testing Wallee connection...')
+      
+      // Test mit einer minimalen Transaction oder Connection Check
+      const testResponse = await $fetch('/api/wallee/test-connection', {
+        method: 'GET'
+      }) as any
+
+      return {
+        success: true,
+        connected: true,
+        spaceId: testResponse.spaceId,
+        error: null
+      }
+
+    } catch (error: any) {
+      console.error('❌ Wallee Connection Error:', error)
+      
+      return {
+        success: false,
+        connected: false,
+        error: error.message || 'Connection test failed'
+      }
+    }
+  }
+
+  const isWalleeAvailable = (): boolean => {
+    // Check if environment variables are available
+    const config = useRuntimeConfig()
+    return !!(config.public.walleeEnabled || process.env.WALLEE_SPACE_ID)
+  }
+
+  // Neue Utility-Funktionen
+  const calculateAppointmentPrice = (category: string, duration: number, isSecondAppointment: boolean = false): number => {
+    // Preise basierend auf deinen Projektdaten
+    const categoryPrices: Record<string, { base: number, admin: number }> = {
+      'B': { base: 95, admin: 120 },
+      'A1': { base: 95, admin: 0 },
+      'A35kW': { base: 95, admin: 0 },
+      'A': { base: 95, admin: 0 },
+      'BE': { base: 120, admin: 120 },
+      'C1': { base: 150, admin: 200 },
+      'D1': { base: 150, admin: 200 },
+      'C': { base: 170, admin: 200 },
+      'CE': { base: 200, admin: 250 },
+      'D': { base: 200, admin: 300 },
+      'Motorboot': { base: 95, admin: 120 },
+      'BPT': { base: 100, admin: 120 }
+    }
+
+    const priceInfo = categoryPrices[category] || { base: 95, admin: 120 }
+    
+    // Preis pro 45min auf gewünschte Dauer umrechnen
+    const lessonPrice = (priceInfo.base / 45) * duration
+    
+    // Versicherungspauschale ab 2. Termin (außer bei Motorrad-Kategorien)
+    const adminFee = isSecondAppointment ? priceInfo.admin : 0
+    
+    return Math.round((lessonPrice + adminFee) * 100) / 100 // Auf 2 Dezimalstellen runden
+  }
+
+  const createAppointmentPayment = async (
+    appointment: any, 
+    user: any, 
+    isSecondAppointment: boolean = false
+  ): Promise<WalleeTransactionResult> => {
+    const amount = calculateAppointmentPrice(
+      appointment.type || 'B', 
+      appointment.duration_minutes || 45, 
+      isSecondAppointment
+    )
+
+    return await createTransaction({
+      appointmentId: appointment.id,
+      amount: amount,
+      currency: 'CHF',
+      customerId: user.id,
+      customerEmail: user.email,
+      lineItems: [
+        {
+          uniqueId: `appointment-${appointment.id}`,
+          name: `Fahrstunde ${appointment.type || 'B'} (${appointment.duration_minutes || 45}min)`,
+          quantity: 1,
+          amountIncludingTax: amount,
+          type: 'PRODUCT'
+        }
+      ]
+    })
+  }
+
+  return {
+    // Core functions
+    createTransaction,
+    testConnection,
+    isWalleeAvailable,
+    
+    // Utility functions
+    calculateAppointmentPrice,
+    createAppointmentPayment
+  }
+}```
+
 ### ./layouts/default.vue
 ```vue
 <!-- layouts/default.vue -->
@@ -14468,6 +21281,245 @@ onMounted(() => {
     <slot />
   </div>
 </template>```
+
+### ./middleware/auth.ts
+```ts
+// middleware/auth.ts
+import { defineNuxtRouteMiddleware, navigateTo } from '#app'
+import { useAuthStore } from '~/stores/auth'
+
+export default defineNuxtRouteMiddleware(async (to, from) => {
+  console.log('🔥 Auth middleware for:', to.path)
+  
+  // Skip auf Server
+  if (process.server) return
+
+  const authStore = useAuthStore()
+
+  // Warte kurz auf Store-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 50) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ Not logged in, redirecting to /')
+    if (to.path !== '/') {
+      return navigateTo('/')
+    }
+    return
+  }
+
+  // Prüfe ob User ein Profil hat
+  if (!authStore.hasProfile && to.path !== '/profile-setup') {
+    console.log('📝 No profile found, redirecting to setup')
+    return navigateTo('/profile-setup')
+  }
+
+  // Wenn User Profil hat aber auf Setup-Seite ist
+  if (authStore.hasProfile && to.path === '/profile-setup') {
+    console.log('✅ Profile exists, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+
+  console.log('✅ Auth check passed for role:', authStore.userRole)
+})
+
+// middleware/admin.ts
+export const adminMiddleware = defineNuxtRouteMiddleware((to, from) => {
+  console.log('🔐 Admin middleware for:', to.path)
+  
+  if (process.server) return
+
+  const authStore = useAuthStore()
+
+  // Basis-Auth prüfen
+  if (!authStore.isLoggedIn) {
+    console.log('❌ Not authenticated')
+    return navigateTo('/')
+  }
+
+  // Admin/Staff Berechtigung prüfen
+  if (!authStore.isAdmin && !authStore.isStaff) {
+    console.log('❌ Insufficient permissions. Role:', authStore.userRole)
+    return navigateTo('/dashboard')
+  }
+
+  console.log('✅ Admin access granted for role:', authStore.userRole)
+})
+
+// middleware/staff.ts
+export const staffMiddleware = defineNuxtRouteMiddleware((to, from) => {
+  console.log('👨‍🏫 Staff middleware for:', to.path)
+  
+  if (process.server) return
+
+  const authStore = useAuthStore()
+
+  if (!authStore.isLoggedIn) {
+    console.log('❌ Not authenticated')
+    return navigateTo('/')
+  }
+
+  if (!authStore.isStaff && !authStore.isAdmin) {
+    console.log('❌ Staff access denied. Role:', authStore.userRole)
+    return navigateTo('/dashboard')
+  }
+
+  console.log('✅ Staff access granted for role:', authStore.userRole)
+})
+
+// middleware/client.ts  
+export const clientMiddleware = defineNuxtRouteMiddleware((to, from) => {
+  console.log('👤 Client middleware for:', to.path)
+  
+  if (process.server) return
+
+  const authStore = useAuthStore()
+
+  if (!authStore.isLoggedIn) {
+    console.log('❌ Not authenticated')
+    return navigateTo('/')
+  }
+
+  // Clients können nur auf ihre eigenen Daten zugreifen
+  if (authStore.isClient) {
+    // Zusätzliche Client-spezifische Checks hier
+    console.log('✅ Client access granted')
+  }
+})```
+
+### ./nuxt.config.ts
+```ts
+// nuxt.config.ts
+import { defineNuxtConfig } from 'nuxt/config'
+
+export default defineNuxtConfig({
+  compatibilityDate: '2025-05-15',
+  devtools: { enabled: false },
+  ssr: true,
+  
+  // --- Module Configuration (MIT @nuxtjs/supabase hinzugefügt) ---
+  modules: [
+    '@nuxt/ui',
+    '@pinia/nuxt',
+    '@nuxt/eslint',
+    '@nuxtjs/supabase' // ✅ DIESE ZEILE HINZUFÜGEN
+  ],
+  
+  // ✅ SUPABASE KONFIGURATION MIT UMGEBUNGSVARIABLEN
+  // @ts-ignore - Supabase Konfiguration wird vom @nuxtjs/supabase Modul erweitert
+  supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_ANON_KEY,
+    redirectOptions: {
+      login: '/',
+      callback: '/dashboard',
+      exclude: ['/']
+    }
+  },
+  
+  // --- Build Configuration ---
+  build: {
+    transpile: [
+      '@fullcalendar/core',
+      '@fullcalendar/daygrid',
+      '@fullcalendar/timegrid',
+      '@fullcalendar/interaction',
+      '@fullcalendar/vue3',
+    ],
+  },
+  
+  // --- TypeScript Configuration ---
+  typescript: {
+    strict: true,
+    typeCheck: true
+  },
+  
+  // --- Nitro Configuration ---
+  nitro: {
+    experimental: {
+      wasm: true
+    }
+  },
+  
+  experimental: {
+    // Suspense explizit aktivieren
+    payloadExtraction: false
+  },
+  
+  // Vue-spezifische Konfiguration
+  vue: {
+    compilerOptions: {
+      // Suspense-Warnungen unterdrücken
+      isCustomElement: (tag: string) => false
+    }
+  },
+  
+  runtimeConfig: {
+    // Private keys (only available on server-side)
+    walleeSpaceId: process.env.WALLEE_SPACE_ID,
+    walleeApplicationUserId: process.env.WALLEE_APPLICATION_USER_ID,
+    walleeSecretKey: process.env.WALLEE_SECRET_KEY,
+    
+    // Public keys (exposed to client-side)
+    public: {
+      googleMapsApiKey: process.env.VITE_GOOGLE_MAPS_API_KEY,
+      walleeSpaceId: process.env.WALLEE_SPACE_ID,
+      walleeUserId: process.env.WALLEE_USER_ID
+    }
+  },
+  
+  app: {
+    head: {
+      script: [
+        {
+          src: `https://maps.googleapis.com/maps/api/js?key=${process.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=de&region=CH&v=beta&loading=async`,
+          async: true,
+          defer: true
+        }
+      ]
+    }
+  }
+})```
+
+### ./package.json
+```json
+{
+  "name": "driving-team-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@fullcalendar/core": "^6.1.17",
+    "@fullcalendar/daygrid": "^6.1.17",
+    "@fullcalendar/interaction": "^6.1.17",
+    "@fullcalendar/timegrid": "^6.1.17",
+    "@fullcalendar/vue3": "^6.1.17",
+    "@nuxt/ui": "^2.18.7",
+    "@nuxtjs/supabase": "^1.5.3",
+    "@pinia/nuxt": "^0.5.5",
+    "@supabase/supabase-js": "^2.50.2",
+    "nuxt": "^3.17.5",
+    "pinia": "^2.2.6"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^0.5.7",
+    "@types/node": "^24.0.12",
+    "eslint": "^8.57.1",
+    "typescript": "^5.8.3",
+    "vue-tsc": "^2.2.12"
+  }
+}
+```
 
 ### ./pages/AdminEventTypes.vue
 ```vue
@@ -14880,9 +21932,11 @@ definePageMeta({
 </template>
 
 <script setup>
+import CustomerDashboard from '~/components/customer/CustomerDashboard.vue'
+
 // Meta
 definePageMeta({
-  middleware: 'auth-check',
+  middleware: 'auth',
   layout: false // Use no layout for clean customer view
 })
 
@@ -18052,5242 +25106,8 @@ onMounted(async () => {
 })
 </script>```
 
-### ./composables/useAppointmentStatus.ts
-```typescript
-// composables/useAppointmentStatus.ts - Status-Workflow Management
-import { ref } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-export const useAppointmentStatus = () => {
-  const supabase = getSupabase()
-  const isUpdating = ref(false)
-  const updateError = ref<string | null>(null)
-
-  /**
-   * Update appointments from 'confirmed' to 'completed' after end_time
-   * Läuft automatisch und updated alle überfälligen Termine
-   */
-const updateOverdueAppointments = async () => {
-  isUpdating.value = true
-  updateError.value = null
-  try {
-    console.log('🔄 Checking for overdue appointments...')
-    
-    const now = new Date().toISOString()
-    
-    // 🆕 ERWEITERT: Finde ALLE Termine die bereits beendet sind
-    const { data: overdueAppointments, error: findError } = await supabase
-      .from('appointments')
-      .select('id, title, start_time, end_time, staff_id, status')
-      .in('status', ['confirmed', 'scheduled', 'booked']) // 🆕 Alle relevanten Status
-      .lt('end_time', now) // Termine die bereits vorbei sind
-    
-    if (findError) {
-      throw new Error(`Error finding overdue appointments: ${findError.message}`)
-    }
-    
-    if (!overdueAppointments || overdueAppointments.length === 0) {
-      console.log('✅ No overdue appointments found')
-      return { updated: 0, appointments: [] }
-    }
-    
-    console.log(`📅 Found ${overdueAppointments.length} overdue appointments:`, overdueAppointments)
-    
-    // Update alle überfälligen Termine auf 'completed'
-    const appointmentIds = overdueAppointments.map(apt => apt.id)
-    
-    const { data: updatedAppointments, error: updateError } = await supabase
-      .from('appointments')
-      .update({ 
-        status: 'completed',
-        updated_at: new Date().toISOString()
-      })
-      .in('id', appointmentIds)
-      .select('id, title, status')
-    
-    if (updateError) {
-      throw new Error(`Error updating appointments: ${updateError.message}`)
-    }
-    
-    console.log(`✅ Successfully updated ${updatedAppointments?.length || 0} appointments to 'completed'`)
-    
-    return {
-      updated: updatedAppointments?.length || 0,
-      appointments: updatedAppointments || []
-    }
-  } catch (err: any) {
-    console.error('❌ Error updating overdue appointments:', err)
-    updateError.value = err.message
-    throw err
-  } finally {
-    isUpdating.value = false
-  }
-}
-
-  /**
-   * Update specific appointment to 'completed' status
-   * Für manuelles Update einzelner Termine
-   */
-  const markAppointmentCompleted = async (appointmentId: string) => {
-    isUpdating.value = true
-    updateError.value = null
-
-    try {
-      console.log(`🔄 Marking appointment ${appointmentId} as completed...`)
-
-      const { data, error } = await supabase
-        .from('appointments')
-        .update({ 
-          status: 'completed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', appointmentId)
-        .select('id, title, status')
-        .single()
-
-      if (error) {
-        throw new Error(`Error updating appointment: ${error.message}`)
-      }
-
-      console.log('✅ Appointment marked as completed:', data)
-      return data
-
-    } catch (err: any) {
-      console.error('❌ Error marking appointment completed:', err)
-      updateError.value = err.message
-      throw err
-    } finally {
-      isUpdating.value = false
-    }
-  }
-
-  /**
-   * Update appointment to 'evaluated' status after rating
-   * Nach dem Speichern einer Bewertung
-   */
-  const markAppointmentEvaluated = async (appointmentId: string) => {
-    isUpdating.value = true
-    updateError.value = null
-
-    try {
-      console.log(`🔄 Marking appointment ${appointmentId} as evaluated...`)
-
-      const { data, error } = await supabase
-        .from('appointments')
-        .update({ 
-          status: 'evaluated',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', appointmentId)
-        .select('id, title, status')
-        .single()
-
-      if (error) {
-        throw new Error(`Error updating appointment: ${error.message}`)
-      }
-
-      console.log('✅ Appointment marked as evaluated:', data)
-      return data
-
-    } catch (err: any) {
-      console.error('❌ Error marking appointment evaluated:', err)
-      updateError.value = err.message
-      throw err
-    } finally {
-      isUpdating.value = false
-    }
-  }
-
-  /**
-   * Get appointment status statistics
-   * Für Dashboard/Debugging
-   */
-  const getStatusStatistics = async (staffId?: string) => {
-    try {
-      let query = supabase
-        .from('appointments')
-        .select('status')
-
-      if (staffId) {
-        query = query.eq('staff_id', staffId)
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-
-      const stats = data?.reduce((acc: Record<string, number>, appointment) => {
-        const status = appointment.status || 'unknown'
-        acc[status] = (acc[status] || 0) + 1
-        return acc
-      }, {}) || {}
-
-      console.log('📊 Appointment status statistics:', stats)
-      return stats
-
-    } catch (err: any) {
-      console.error('❌ Error getting status statistics:', err)
-      return {}
-    }
-  }
-
-  /**
-   * Batch status update with filters
-   * Erweiterte Update-Funktionen
-   */
-  const batchUpdateStatus = async (filters: {
-    fromStatus: string
-    toStatus: string
-    staffId?: string
-    beforeDate?: string
-    afterDate?: string
-  }) => {
-    isUpdating.value = true
-    updateError.value = null
-
-    try {
-      console.log('🔄 Batch updating appointment status...', filters)
-
-      let query = supabase
-        .from('appointments')
-        .update({ 
-          status: filters.toStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('status', filters.fromStatus)
-
-      if (filters.staffId) {
-        query = query.eq('staff_id', filters.staffId)
-      }
-
-      if (filters.beforeDate) {
-        query = query.lt('end_time', filters.beforeDate)
-      }
-
-      if (filters.afterDate) {
-        query = query.gt('start_time', filters.afterDate)
-      }
-
-      const { data, error } = await query.select('id, title, status')
-
-      if (error) {
-        throw new Error(`Batch update error: ${error.message}`)
-      }
-
-      console.log(`✅ Batch updated ${data?.length || 0} appointments from '${filters.fromStatus}' to '${filters.toStatus}'`)
-      
-      return {
-        updated: data?.length || 0,
-        appointments: data || []
-      }
-
-    } catch (err: any) {
-      console.error('❌ Error in batch status update:', err)
-      updateError.value = err.message
-      throw err
-    } finally {
-      isUpdating.value = false
-    }
-  }
-
-  return {
-    // State
-    isUpdating,
-    updateError,
-    
-    // Core Functions
-    updateOverdueAppointments,
-    markAppointmentCompleted,
-    markAppointmentEvaluated,
-    
-    // Utility Functions
-    getStatusStatistics,
-    batchUpdateStatus
-  }
-}```
-
-### ./composables/useCategoryData.ts
-```typescript
-// composables/useCategoryData.ts - Mit Supabase Database
-
-import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-interface Category {
-  id: number
-  created_at: string
-  name: string
-  description?: string
-  code: string
-  price_per_lesson: number
-  price_unit: string
-  lesson_duration: number
-  color?: string
-  is_active: boolean
-  display_order: number
-}
-
-// Global shared state
-const allCategories = ref<Category[]>([])
-const isLoading = ref(false)
-const isLoaded = ref(false)
-
-export const useCategoryData = () => {
-  const supabase = getSupabase()
-
-  // Fallback data wenn DB nicht verfügbar
-  const fallbackCategories: Record<string, Partial<Category>> = {
-    'B': { name: 'Autoprüfung Kategorie B', price_per_lesson: 95, color: 'hellgrün' },
-    'A1': { name: 'Motorrad A1/A35kW/A', price_per_lesson: 95, color: 'hellgrün' },
-    'BE': { name: 'Anhänger BE', price_per_lesson: 120, color: 'orange' },
-    'C1': { name: 'LKW C1/D1', price_per_lesson: 150, color: 'gelb' },
-    'C': { name: 'LKW C', price_per_lesson: 170, color: 'rot' },
-    'CE': { name: 'LKW CE', price_per_lesson: 200, color: 'violett' },
-    'D': { name: 'Bus D', price_per_lesson: 200, color: 'türkis' },
-    'Motorboot': { name: 'Motorboot', price_per_lesson: 95, color: 'hellblau' },
-    'BPT': { name: 'Berufsprüfung Transport', price_per_lesson: 100, color: 'dunkelblau' }
-  }
-
-  // Admin Fees aus den Projektunterlagen
-  const adminFees: Record<string, number> = {
-    'B': 120, 'A1': 0, 'A35kW': 0, 'A': 0, 'BE': 120,
-    'C1': 200, 'D1': 200, 'C': 200, 'CE': 250, 'D': 300,
-    'Motorboot': 120, 'BPT': 120
-  }
-
-  // Kategorien aus Datenbank laden
-  const loadCategories = async () => {
-    if (isLoaded.value || isLoading.value) return
-    
-    isLoading.value = true
-    
-    try {
-      console.log('🔄 Loading categories from database...')
-      
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true })
-        .order('name', { ascending: true })
-
-      if (error) throw error
-
-      allCategories.value = data || []
-      isLoaded.value = true
-      
-      console.log('✅ Categories loaded:', data?.length)
-      
-    } catch (err: any) {
-      console.error('❌ Error loading categories:', err)
-      // Bei Fehler: Fallback verwenden
-      allCategories.value = []
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Category by code finden
-  const getCategoryByCode = (code: string): Category | null => {
-    if (!code) return null
-    
-    // Aus geladenen Kategorien suchen
-    const dbCategory = allCategories.value.find(cat => cat.code === code)
-    if (dbCategory) return dbCategory
-    
-    // Fallback auf statische Daten
-    const fallback = fallbackCategories[code]
-    if (fallback) {
-      return {
-        id: 0,
-        code,
-        name: fallback.name || code,
-        price_per_lesson: fallback.price_per_lesson || 95,
-        lesson_duration: 45,
-        color: fallback.color || 'grau',
-        is_active: true,
-        display_order: 0,
-        price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      } as Category
-    }
-    
-    return null
-  }
-
-  // Helper Funktionen
-  const getCategoryName = (code: string): string => {
-    const category = getCategoryByCode(code)
-    return category?.name || code || 'Unbekannte Kategorie'
-  }
-
-  const getCategoryPrice = (code: string): number => {
-    const category = getCategoryByCode(code)
-    return category?.price_per_lesson || 95
-  }
-
-  const getCategoryColor = (code: string): string => {
-    const category = getCategoryByCode(code)
-    return category?.color || 'grau'
-  }
-
-  const getAdminFee = (code: string): number => {
-    return adminFees[code] || 120
-  }
-
-  const getCategoryIcon = (code: string): string => {
-    const icons: Record<string, string> = {
-      'B': '🚗', 'A1': '🏍️', 'A35kW': '🏍️', 'A': '🏍️',
-      'BE': '🚛', 'C1': '🚚', 'D1': '🚌', 'C': '🚚',
-      'CE': '🚛', 'D': '🚌', 'Motorboot': '🛥️', 'BPT': '📋'
-    }
-    return icons[code] || '🚗'
-  }
-
-  // Computed properties
-  const categoriesLoaded = computed(() => isLoaded.value)
-  const categoriesLoading = computed(() => isLoading.value)
-
-  return {
-    // State
-    allCategories: computed(() => allCategories.value),
-    categoriesLoaded,
-    categoriesLoading,
-
-    // Methods
-    loadCategories,
-    getCategoryByCode,
-    getCategoryName,
-    getCategoryPrice,
-    getCategoryColor,
-    getCategoryIcon,
-    getAdminFee
-  }
-}```
-
-### ./composables/useCompanyBilling.ts
-```typescript
-// composables/useCompanyBilling.ts
-
-import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-import type { 
-  CompanyBillingAddress, 
-  CompanyBillingAddressInsert,
-  CompanyBillingFormData,
-  CompanyBillingValidation,
-  CreateCompanyBillingResponse,
-  CompanyBillingListResponse
-} from '~/types/companyBilling'
-
-export const useCompanyBilling = () => {
-  const supabase = getSupabase()
-  
-  // State
-  const isLoading = ref(false)
-  const error = ref<string>('')
-  const savedAddresses = ref<CompanyBillingAddress[]>([])
-  const currentAddress = ref<CompanyBillingAddress | null>(null)
-  
-  // Form Data
-  const formData = ref<CompanyBillingFormData>({
-    companyName: '',
-    contactPerson: '',
-    email: '',
-    phone: '',
-    street: '',
-    streetNumber: '',
-    zip: '',
-    city: '',
-    country: 'Schweiz',
-    vatNumber: '',
-    notes: ''
-  })
-
-  // Validation
-  const validation = computed((): CompanyBillingValidation => {
-    const errors: Record<string, string> = {}
-    
-    if (!formData.value.companyName.trim()) {
-      errors.companyName = 'Firmenname ist erforderlich'
-    }
-    
-    if (!formData.value.contactPerson.trim()) {
-      errors.contactPerson = 'Ansprechperson ist erforderlich'
-    }
-    
-    if (!formData.value.email.trim()) {
-      errors.email = 'E-Mail ist erforderlich'
-    } else if (!isValidEmail(formData.value.email)) {
-      errors.email = 'Gültige E-Mail-Adresse erforderlich'
-    }
-    
-    if (!formData.value.street.trim()) {
-      errors.street = 'Strasse ist erforderlich'
-    }
-    
-    if (!formData.value.zip.trim()) {
-      errors.zip = 'PLZ ist erforderlich'
-    } else if (!/^\d{4}$/.test(formData.value.zip)) {
-      errors.zip = 'PLZ muss 4 Ziffern haben'
-    }
-    
-    if (!formData.value.city.trim()) {
-      errors.city = 'Ort ist erforderlich'
-    }
-    
-    return {
-      isValid: Object.keys(errors).length === 0,
-      errors
-    }
-  })
-
-  // Methods
-  const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
-  }
-
-  const resetForm = () => {
-    formData.value = {
-      companyName: '',
-      contactPerson: '',
-      email: '',
-      phone: '',
-      street: '',
-      streetNumber: '',
-      zip: '',
-      city: '',
-      country: 'Schweiz',
-      vatNumber: '',
-      notes: ''
-    }
-    error.value = ''
-  }
-
-  const loadFormFromAddress = (address: CompanyBillingAddress) => {
-    formData.value = {
-      companyName: address.company_name,
-      contactPerson: address.contact_person,
-      email: address.email,
-      phone: address.phone || '',
-      street: address.street,
-      streetNumber: address.street_number || '',
-      zip: address.zip,
-      city: address.city,
-      country: address.country,
-      vatNumber: address.vat_number || '',
-      notes: address.notes || ''
-    }
-    currentAddress.value = address
-  }
-
-  const convertFormToInsert = (userId: string): CompanyBillingAddressInsert => {
-    return {
-      company_name: formData.value.companyName.trim(),
-      contact_person: formData.value.contactPerson.trim(),
-      email: formData.value.email.trim(),
-      phone: formData.value.phone.trim() || undefined,
-      street: formData.value.street.trim(),
-      street_number: formData.value.streetNumber.trim() || undefined,
-      zip: formData.value.zip.trim(),
-      city: formData.value.city.trim(),
-      country: formData.value.country.trim(),
-      vat_number: formData.value.vatNumber.trim() || undefined,
-      notes: formData.value.notes.trim() || undefined,
-      created_by: userId
-    }
-  }
-
-  // CRUD Operations
-  const createCompanyBillingAddress = async (userId: string): Promise<CreateCompanyBillingResponse> => {
-    if (!validation.value.isValid) {
-      return {
-        success: false,
-        error: 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
-      }
-    }
-
-    isLoading.value = true
-    error.value = ''
-
-    try {
-      const insertData = convertFormToInsert(userId)
-      
-      console.log('💾 Creating company billing address:', insertData)
-
-      const { data, error: supabaseError } = await supabase
-        .from('company_billing_addresses')
-        .insert(insertData)
-        .select()
-        .single()
-
-      if (supabaseError) {
-        console.error('❌ Supabase error:', supabaseError)
-        throw new Error(supabaseError.message)
-      }
-
-      if (!data) {
-        throw new Error('Keine Daten von der Datenbank erhalten')
-      }
-
-      currentAddress.value = data
-      console.log('✅ Company billing address created:', data)
-
-      return {
-        success: true,
-        data: data
-      }
-
-    } catch (err: any) {
-      const errorMessage = err.message || 'Fehler beim Speichern der Firmenadresse'
-      error.value = errorMessage
-      console.error('❌ Error creating company billing address:', err)
-      
-      return {
-        success: false,
-        error: errorMessage
-      }
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  const loadUserCompanyAddresses = async (userId: string): Promise<CompanyBillingListResponse> => {
-    isLoading.value = true
-    error.value = ''
-
-    try {
-      console.log('🔄 Loading company addresses for user:', userId)
-
-      const { data, error: supabaseError } = await supabase
-        .from('company_billing_addresses')
-        .select('*')
-        .eq('created_by', userId)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-
-      if (supabaseError) {
-        console.error('❌ Supabase error:', supabaseError)
-        throw new Error(supabaseError.message)
-      }
-
-      savedAddresses.value = data || []
-      console.log('✅ Company addresses loaded:', savedAddresses.value.length)
-
-      return {
-        success: true,
-        data: data || []
-      }
-
-    } catch (err: any) {
-      const errorMessage = err.message || 'Fehler beim Laden der Firmenadresse'
-      error.value = errorMessage
-      console.error('❌ Error loading company addresses:', err)
-      
-      return {
-        success: false,
-        error: errorMessage
-      }
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  const updateCompanyBillingAddress = async (addressId: string): Promise<CreateCompanyBillingResponse> => {
-    if (!validation.value.isValid) {
-      return {
-        success: false,
-        error: 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
-      }
-    }
-
-    isLoading.value = true
-    error.value = ''
-
-    try {
-      const updateData = {
-        company_name: formData.value.companyName.trim(),
-        contact_person: formData.value.contactPerson.trim(),
-        email: formData.value.email.trim(),
-        phone: formData.value.phone.trim() || null,
-        street: formData.value.street.trim(),
-        street_number: formData.value.streetNumber.trim() || null,
-        zip: formData.value.zip.trim(),
-        city: formData.value.city.trim(),
-        country: formData.value.country.trim(),
-        vat_number: formData.value.vatNumber.trim() || null,
-        notes: formData.value.notes.trim() || null,
-        updated_at: new Date().toISOString()
-      }
-
-      console.log('💾 Updating company billing address:', addressId, updateData)
-
-      const { data, error: supabaseError } = await supabase
-        .from('company_billing_addresses')
-        .update(updateData)
-        .eq('id', addressId)
-        .select()
-        .single()
-
-      if (supabaseError) {
-        console.error('❌ Supabase error:', supabaseError)
-        throw new Error(supabaseError.message)
-      }
-
-      currentAddress.value = data
-      console.log('✅ Company billing address updated:', data)
-
-      return {
-        success: true,
-        data: data
-      }
-
-    } catch (err: any) {
-      const errorMessage = err.message || 'Fehler beim Aktualisieren der Firmenadresse'
-      error.value = errorMessage
-      console.error('❌ Error updating company billing address:', err)
-      
-      return {
-        success: false,
-        error: errorMessage
-      }
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  const deleteCompanyBillingAddress = async (addressId: string): Promise<{ success: boolean; error?: string }> => {
-    isLoading.value = true
-    error.value = ''
-
-    try {
-      console.log('🗑️ Deleting company billing address:', addressId)
-
-      const { error: supabaseError } = await supabase
-        .from('company_billing_addresses')
-        .update({ is_active: false })
-        .eq('id', addressId)
-
-      if (supabaseError) {
-        console.error('❌ Supabase error:', supabaseError)
-        throw new Error(supabaseError.message)
-      }
-
-      // Remove from local state
-      savedAddresses.value = savedAddresses.value.filter(addr => addr.id !== addressId)
-      
-      if (currentAddress.value?.id === addressId) {
-        currentAddress.value = null
-        resetForm()
-      }
-
-      console.log('✅ Company billing address deleted')
-
-      return { success: true }
-
-    } catch (err: any) {
-      const errorMessage = err.message || 'Fehler beim Löschen der Firmenadresse'
-      error.value = errorMessage
-      console.error('❌ Error deleting company billing address:', err)
-      
-      return {
-        success: false,
-        error: errorMessage
-      }
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Utility Methods
-  const formatAddress = (address: CompanyBillingAddress): string => {
-    const parts = [
-      address.company_name,
-      address.contact_person,
-      `${address.street}${address.street_number ? ' ' + address.street_number : ''}`,
-      `${address.zip} ${address.city}`,
-      address.country
-    ]
-    return parts.join('\n')
-  }
-
-  const getAddressPreview = (address: CompanyBillingAddress): string => {
-    return `${address.company_name} - ${address.contact_person}`
-  }
-
-  return {
-    // State
-    formData,
-    currentAddress,
-    savedAddresses,
-    isLoading,
-    error,
-    validation,
-    
-    // Methods
-    createCompanyBillingAddress,
-    loadUserCompanyAddresses,
-    updateCompanyBillingAddress,
-    deleteCompanyBillingAddress,
-    loadFormFromAddress,
-    resetForm,
-    formatAddress,
-    getAddressPreview
-  }
-}```
-
-### ./composables/useCurrentUser.ts
-```typescript
-// composables/useCurrentUser.ts
-import { ref } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-export const useCurrentUser = () => {
-  const currentUser = ref<any>(null)
-  const isLoading = ref(false)
-  const userError = ref<string | null>(null)
-  const profileExists = ref(false) // 🆕 NEU: Profil-Status
-
-  const fetchCurrentUser = async () => {
-    // Skip auf Login-Seite
-    if (process.client && window.location.pathname === '/') {
-      return
-    }
-
-    isLoading.value = true
-    userError.value = null
-    currentUser.value = null
-    profileExists.value = false // 🆕 Reset
-
-    try {
-      const supabase = getSupabase()
-      
-      // 1. Auth-User holen
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      const user = authData?.user
-
-      if (authError || !user?.email) {
-        userError.value = 'Nicht eingeloggt'
-        return
-      }
-
-      console.log('Auth-User gefunden:', user.email)
-
-      // 2. Database-User per E-Mail suchen
-      const { data: usersData, error: dbError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', user.email)
-        .eq('is_active', true)
-
-      if (dbError) {
-        console.error('Database Error:', dbError)
-        userError.value = `Database-Fehler: ${dbError.message}`
-        return
-      }
-
-      if (!usersData || usersData.length === 0) {
-        console.log('Business-User nicht gefunden für:', user.email)
-        // 🆕 WICHTIGE ÄNDERUNG: Setze profileExists auf false, aber keinen userError
-        profileExists.value = false
-        currentUser.value = {
-          email: user.email,
-          auth_user_id: user.id
-        }
-        // 🚫 ENTFERNT: userError.value = `Kein Benutzerprofil für ${user.email} gefunden.`
-        return
-      }
-
-      // ✅ User gefunden
-      const userData = usersData[0]
-      console.log('✅ Business-User geladen:', userData)
-      
-      currentUser.value = {
-        ...userData,
-        auth_user_id: user.id
-      }
-      profileExists.value = true // 🆕 Profil existiert
-
-    } catch (err: any) {
-      console.error('Unerwarteter Fehler:', err)
-      userError.value = err?.message || 'Unbekannter Fehler'
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // 🆕 NEU: Funktion zum Erstellen des User-Profils
-  const createUserProfile = async (profileData: { company_name: string, role: string }) => {
-    isLoading.value = true
-    userError.value = null
-
-    try {
-      const supabase = getSupabase()
-      const { data: authData } = await supabase.auth.getUser()
-      const user = authData?.user
-
-      if (!user?.email) {
-        throw new Error('Kein authentifizierter Benutzer')
-      }
-
-      // Erstelle neuen User in der Datenbank
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          email: user.email,
-          auth_user_id: user.id,
-          company_name: profileData.company_name,
-          role: profileData.role,
-          is_active: true,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-
-      if (error) {
-        throw error
-      }
-
-      console.log('✅ Profil erstellt:', data)
-      
-      // Update lokaler State
-      currentUser.value = {
-        ...data,
-        auth_user_id: user.id
-      }
-      profileExists.value = true
-
-      return data
-
-    } catch (err: any) {
-      console.error('Fehler beim Erstellen des Profils:', err)
-      userError.value = err?.message || 'Fehler beim Erstellen des Profils'
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  return {
-    currentUser,
-    isLoading,
-    userError,
-    profileExists, // 🆕 NEU exportiert
-    fetchCurrentUser,
-    createUserProfile // 🆕 NEU exportiert
-  }
-}```
-
-### ./composables/useDurationManager.ts
-```typescript
-// composables/useDurationManager.ts - Komplett neue Datei ohne Cache-Probleme
-import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-export const useDurationManager = () => {
-  // State
-  const availableDurations = ref<number[]>([])
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
-
-  // Computed - formatierte Dauern für UI
-  const formattedDurations = computed(() => {
-    return availableDurations.value.map(duration => ({
-      value: duration,
-      label: duration >= 120 
-        ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
-        : `${duration}min`
-    }))
-  })
-
-  // Staff-Dauern direkt laden - KEINE Kategorie-Abfrage!
-  const loadStaffDurations = async (staffId: string) => {
-    console.log('🚀 useDurationManager - Loading staff durations for:', staffId)
-    isLoading.value = true
-    error.value = null
-
-    try {
-      const supabase = getSupabase()
-
-      // NUR Staff Settings laden - KEINE Categories!
-      console.log('📋 Querying ONLY staff_settings...')
-      const { data: staffSettings, error: staffError } = await supabase
-        .from('staff_settings')
-        .select('preferred_durations')
-        .eq('staff_id', staffId)
-        .maybeSingle()
-
-      console.log('📋 Staff settings result:', { data: staffSettings, error: staffError })
-
-      let finalDurations: number[] = []
-      
-      if (staffSettings?.preferred_durations) {
-        console.log('👤 Raw staff durations:', staffSettings.preferred_durations)
-        
-        try {
-          // Parse different formats
-          if (staffSettings.preferred_durations.startsWith('[') && staffSettings.preferred_durations.endsWith(']')) {
-            const jsonArray = JSON.parse(staffSettings.preferred_durations)
-            
-            finalDurations = jsonArray.map((item: any) => {
-              const num = typeof item === 'string' ? parseInt(item) : item
-              return isNaN(num) ? 0 : num
-            }).filter((d: number) => d > 0).sort((a: number, b: number) => a - b)
-            
-            console.log('✅ Parsed durations:', finalDurations)
-          } else if (staffSettings.preferred_durations.includes(',')) {
-            // CSV format: "45,60,75,90"
-            finalDurations = staffSettings.preferred_durations
-              .split(',')
-              .map((d: string) => parseInt(d.trim()))
-              .filter((d: number) => !isNaN(d) && d > 0)
-              .sort((a: number, b: number) => a - b)
-            
-            console.log('✅ Parsed CSV durations:', finalDurations)
-          } else {
-            // Single number
-            const singleDuration = parseInt(staffSettings.preferred_durations)
-            if (!isNaN(singleDuration) && singleDuration > 0) {
-              finalDurations = [singleDuration]
-              console.log('✅ Parsed single duration:', finalDurations)
-            } else {
-              console.log('⚠️ Invalid format, using fallback')
-              finalDurations = [45]
-            }
-          }
-        } catch (parseError) {
-          console.error('❌ Parse error:', parseError)
-          finalDurations = [45]
-        }
-      } else {
-        console.log('⚠️ No staff settings found, using default [45]')
-        finalDurations = [45]
-      }
-
-      availableDurations.value = finalDurations
-      console.log('🎯 Final available durations:', finalDurations)
-      return finalDurations
-
-    } catch (err: any) {
-      console.error('❌ Error loading staff durations:', err)
-      error.value = err.message
-      availableDurations.value = [45]
-      return [45]
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Staff preferred durations in DB updaten
-  const updateStaffDurations = async (staffId: string, newDurations: number[]) => {
-    console.log('🔄 Updating staff durations in DB:', newDurations)
-    
-    try {
-      const supabase = getSupabase()
-      // Als JSON Array speichern um konsistent mit bestehenden Daten zu sein
-      const durationsString = JSON.stringify(newDurations.sort((a: number, b: number) => a - b))
-      
-      const { error: upsertError } = await supabase
-        .from('staff_settings')
-        .upsert({
-          staff_id: staffId,
-          preferred_durations: durationsString,
-          updated_at: new Date().toISOString()
-        })
-
-      if (upsertError) throw upsertError
-
-      console.log('✅ Staff durations updated in DB as JSON:', durationsString)
-      
-      // State aktualisieren
-      availableDurations.value = newDurations.sort((a: number, b: number) => a - b)
-      
-    } catch (err: any) {
-      console.error('❌ Error updating staff durations:', err)
-      error.value = err.message
-      throw err
-    }
-  }
-
-  // Standard-Dauern für alle Kategorien aus DB laden (für Settings UI)
-  const loadAllPossibleDurations = async () => {
-    console.log('🔥 Loading all possible durations')
-    
-    try {
-      // Alle möglichen Dauern sammeln (15min steps von 45-240)
-      const allDurations = [45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240]
-      
-      return allDurations.map(duration => ({
-        value: duration,
-        label: duration >= 120 
-          ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
-          : `${duration}min`,
-        // Info für Settings UI
-        category: 'all'
-      }))
-
-    } catch (err: any) {
-      console.error('❌ Error loading possible durations:', err)
-      return []
-    }
-  }
-
-  // Staff-Settings für User laden
-  const loadStaffSettings = async (staffId: string) => {
-    console.log('🔥 Loading complete staff settings')
-    
-    try {
-      const supabase = getSupabase()
-      const { data, error } = await supabase
-        .from('staff_settings')
-        .select('*')
-        .eq('staff_id', staffId)
-        .maybeSingle()
-
-      if (error) throw error
-      
-      return data
-    } catch (err: any) {
-      console.error('❌ Error loading staff settings:', err)
-      return null
-    }
-  }
-
-  // Erstes verfügbares Dauer zurückgeben
-  const getDefaultDuration = () => {
-    return availableDurations.value.length > 0 ? availableDurations.value[0] : 45
-  }
-
-  // Check ob Dauer verfügbar ist
-  const isDurationAvailable = (duration: number) => {
-    return availableDurations.value.includes(duration)
-  }
-
-  // Reset state
-  const reset = () => {
-    availableDurations.value = []
-    isLoading.value = false
-    error.value = null
-  }
-
-  return {
-    // State
-    availableDurations: computed(() => availableDurations.value),
-    formattedDurations,
-    isLoading: computed(() => isLoading.value),
-    error: computed(() => error.value),
-
-    // Actions
-    loadStaffDurations,
-    updateStaffDurations,
-    loadAllPossibleDurations,
-    loadStaffSettings,
-    
-    // Utils
-    getDefaultDuration,
-    isDurationAvailable,
-    reset
-  }
-}```
-
-### ./composables/useEventModalForm.ts
-```typescript
-// composables/useEventModalForm.ts
-import { ref, computed, reactive } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-// Types (können später in separates types file)
-interface AppointmentData {
-  id?: string
-  title: string
-  description: string
-  type: string
-  startDate: string
-  startTime: string
-  endTime: string 
-  duration_minutes: number
-  user_id: string
-  staff_id: string
-  location_id: string
-  price_per_minute: number
-  status: string
-  eventType: string 
-  selectedSpecialType: string 
-  is_paid: boolean 
-  discount?: number
-  discount_type?: string
-  discount_reason?: string
-}
-
-interface Student {
-  id: string
-  first_name: string
-  last_name: string
-  email: string
-  phone: string
-  category: string
-  assigned_staff_id: string
-  preferred_location_id?: string
-  preferred_duration?: number 
-}
-
-export const useEventModalForm = (currentUser?: any) => {
-  
-  // ============ STATE ============
-  const formData = ref<AppointmentData>({
-    title: '',
-    description: '',
-    type: '',
-    startDate: '',
-    startTime: '',
-    endTime: '',
-    duration_minutes: 45,
-    user_id: '',
-    staff_id: '',
-    location_id: '',
-    price_per_minute: 0,
-    status: 'booked',
-    eventType: 'lesson',
-    selectedSpecialType: '',
-    is_paid: false,
-    discount: 0,
-    discount_type: 'fixed',
-    discount_reason: ''
-  })
-
-  const selectedStudent = ref<Student | null>(null)
-  const selectedCategory = ref<any>(null)
-  const selectedLocation = ref<any>(null)
-  const availableDurations = ref<number[]>([45])
-  const appointmentNumber = ref<number>(1)
-  
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
-
-  // ============ COMPUTED ============
-  const isFormValid = computed(() => {
-    const baseValid = formData.value.title && 
-                     formData.value.startDate && 
-                     formData.value.startTime &&
-                     formData.value.endTime
-
-    if (formData.value.eventType === 'lesson') {
-      return baseValid && 
-             selectedStudent.value && 
-             formData.value.type && 
-             formData.value.location_id &&
-             formData.value.duration_minutes > 0
-    } else {
-      return baseValid && formData.value.selectedSpecialType
-    }
-  })
-
-  const computedEndTime = computed(() => {
-    if (!formData.value.startTime || !formData.value.duration_minutes) return ''
-    
-    const [hours, minutes] = formData.value.startTime.split(':').map(Number)
-    const startDate = new Date()
-    startDate.setHours(hours, minutes, 0, 0)
-    
-    const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
-    
-    const endHours = String(endDate.getHours()).padStart(2, '0')
-    const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
-    
-    return `${endHours}:${endMinutes}`
-  })
-
-  const totalPrice = computed(() => {
-    const pricePerMinute = formData.value.price_per_minute || (95/45)
-    const total = pricePerMinute * (formData.value.duration_minutes || 45)
-    return total.toFixed(2)
-  })
-
-  // ============ FORM ACTIONS ============
-  const resetForm = () => {
-    console.log('🔄 Resetting form data')
-    
-    formData.value = {
-      title: '',
-      description: '',
-      type: '',
-      startDate: '',
-      startTime: '',
-      endTime: '',
-      duration_minutes: 45,
-      user_id: '',
-      staff_id: currentUser?.id || '',
-      location_id: '',
-      price_per_minute: 0,
-      status: 'booked',
-      eventType: 'lesson',
-      selectedSpecialType: '',
-      is_paid: false,
-      discount: 0,
-      discount_type: 'fixed',
-      discount_reason: ''
-    }
-    
-    selectedStudent.value = null
-    selectedCategory.value = null
-    selectedLocation.value = null
-    availableDurations.value = [45]
-    appointmentNumber.value = 1
-    error.value = null
-  }
-
-  const populateFormFromAppointment = (appointment: any) => {
-    console.log('📝 Populating form from appointment:', appointment?.id)
-    
-    // Event-Type Detection
-    const appointmentType = appointment.extendedProps?.type ||
-                           appointment.type ||
-                           appointment.extendedProps?.appointment_type ||
-                           'lesson'
-    
-    const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
-    const isOtherEvent = appointmentType && otherEventTypes.includes(appointmentType.toLowerCase())
-    
-    // Zeit-Verarbeitung
-    const startDateTime = new Date(appointment.start_time || appointment.start)
-    const endDateTime = appointment.end_time || appointment.end ? new Date(appointment.end_time || appointment.end) : null
-    const startDate = startDateTime.toISOString().split('T')[0]
-    const startTime = startDateTime.toTimeString().slice(0, 5)
-    const endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : ''
-    
-    let duration = appointment.duration_minutes || appointment.extendedProps?.duration_minutes
-    if (!duration && endDateTime) {
-      duration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60))
-    }
-    duration = duration || 45
-    
-    // Form Data setzen
-    formData.value = {
-      title: appointment.title || '',
-      description: appointment.description || appointment.extendedProps?.description || '',
-      type: appointmentType,
-      startDate: startDate,
-      startTime: startTime,
-      endTime: endTime,
-      duration_minutes: duration,
-      user_id: appointment.user_id || appointment.extendedProps?.user_id || '',
-      staff_id: appointment.staff_id || appointment.extendedProps?.staff_id || currentUser?.id || '',
-      location_id: appointment.location_id || appointment.extendedProps?.location_id || '',
-      price_per_minute: appointment.price_per_minute || appointment.extendedProps?.price_per_minute || 0,
-      status: appointment.status || appointment.extendedProps?.status || 'confirmed',
-      eventType: isOtherEvent ? 'other' : 'lesson',
-      selectedSpecialType: isOtherEvent ? appointmentType : '',
-      is_paid: appointment.is_paid || appointment.extendedProps?.is_paid || false
-    }
-    
-    console.log('✅ Form populated with type:', formData.value.type)
-  }
-
-  const calculateEndTime = () => {
-    if (formData.value.startTime && formData.value.duration_minutes) {
-      formData.value.endTime = computedEndTime.value
-      console.log('⏰ End time calculated:', formData.value.endTime)
-    }
-  }
-
-  // ============ SAVE/DELETE LOGIC ============ 
-  const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {
-    isLoading.value = true
-    error.value = null
-    
-    try {
-      if (!isFormValid.value) {
-        throw new Error('Bitte füllen Sie alle Pflichtfelder aus')
-      }
-      
-      const supabase = getSupabase()
-      
-      // Auth Check
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      if (!authData?.user) {
-        throw new Error('Nicht authentifiziert')
-      }
-      
-      // User Check
-      const { data: dbUser, error: dbError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_user_id', authData.user.id)
-        .single()
-      
-      if (!dbUser) {
-        throw new Error('User-Profil nicht gefunden')
-      }
-      
-      // Appointment Data
-      const appointmentData = {
-        title: formData.value.title,
-        description: formData.value.description,
-        user_id: formData.value.user_id,
-        staff_id: formData.value.staff_id || dbUser.id,
-        location_id: formData.value.location_id,
-        start_time: `${formData.value.startDate}T${formData.value.startTime}:00`,
-        end_time: `${formData.value.startDate}T${formData.value.endTime}:00`,
-        duration_minutes: formData.value.duration_minutes,
-        type: formData.value.type,
-        status: formData.value.status,
-        price_per_minute: formData.value.price_per_minute,
-        is_paid: formData.value.is_paid
-      }
-      
-      console.log('💾 Saving appointment data:', appointmentData)
-      
-      let result
-      if (mode === 'edit' && eventId) {
-        // Update
-        const { data, error: updateError } = await supabase
-          .from('appointments')
-          .update(appointmentData)
-          .eq('id', eventId)
-          .select()
-          .single()
-        
-        if (updateError) throw updateError
-        result = data
-      } else {
-        // Create
-        const { data, error: insertError } = await supabase
-          .from('appointments')
-          .insert(appointmentData)
-          .select()
-          .single()
-        
-        if (insertError) throw insertError
-        result = data
-      }
-      
-      console.log('✅ Appointment saved:', result.id)
-      return result
-      
-    } catch (err: any) {
-      console.error('❌ Save error:', err)
-      error.value = err.message
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  const deleteAppointment = async (eventId: string) => {
-    isLoading.value = true
-    
-    try {
-      const supabase = getSupabase()
-      const { error } = await supabase
-        .from('appointments')
-        .delete()
-        .eq('id', eventId)
-      
-      if (error) throw error
-      
-      console.log('✅ Appointment deleted:', eventId)
-      
-    } catch (err: any) {
-      console.error('❌ Delete error:', err)
-      error.value = err.message
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // ============ UTILS ============
-  const getAppointmentNumber = async (userId?: string) => {
-    const studentId = userId || formData.value.user_id
-    if (!studentId) return 1
-    
-    try {
-      const supabase = getSupabase()
-      const { count, error } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', studentId)
-        .in('status', ['completed', 'confirmed'])
-      
-      if (error) throw error
-      return (count || 0) + 1
-      
-    } catch (err) {
-      console.error('❌ Error counting appointments:', err)
-      return 1
-    }
-  }
-
-  return {
-    // State
-    formData,
-    selectedStudent,
-    selectedCategory,
-    selectedLocation,
-    availableDurations,
-    appointmentNumber,
-    isLoading,
-    error,
-    
-    // Computed
-    isFormValid,
-    computedEndTime,
-    totalPrice,
-    
-    // Actions
-    resetForm,
-    populateFormFromAppointment,
-    calculateEndTime,
-    saveAppointment,
-    deleteAppointment,
-    getAppointmentNumber
-  }
-}```
-
-### ./composables/useEventModalHandlers.ts
-```typescript
-import { ref, nextTick } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-import { usePaymentMethods } from '~/composables/usePaymentMethods'
-
-// Define constants for better readability and maintainability
-const DEFAULT_DURATION_MINUTES = 45
-const FALLBACK_PRICE_PER_MINUTE = 95 / DEFAULT_DURATION_MINUTES
-
-export const useEventModalHandlers = (
-  formData: any,
-  selectedStudent: any,
-  selectedCategory: any,
-  availableDurations: any,
-  appointmentNumber: any,
-  selectedLocation: any 
-) => {
-
-  const supabase = getSupabase()
-  const paymentMethods = usePaymentMethods()
-
-  // ============ UTILITY FUNCTIONS (Defined first for better accessibility) ============
-
-  /**
-   * Calculates the end time of the appointment based on start time and duration.
-   */
-  const calculateEndTime = () => {
-    if (formData.value.startTime && formData.value.duration_minutes) {
-      const [hours, minutes] = formData.value.startTime.split(':').map(Number)
-      const startDate = new Date()
-      startDate.setHours(hours, minutes, 0, 0)
-
-      const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000) // Convert minutes to milliseconds
-
-      const endHours = String(endDate.getHours()).padStart(2, '0')
-      const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
-
-      formData.value.endTime = `${endHours}:${endMinutes}`
-      console.log('⏰ End time calculated:', formData.value.endTime)
-    } else {
-      formData.value.endTime = '' // Clear end time if start time or duration is missing
-      console.log('⚠️ Cannot calculate end time: Missing start time or duration.')
-    }
-  }
-
-  /**
-   * Loads the duration of the last completed appointment for a given student.
-   * @param studentId The ID of the student.
-   * @returns The duration in minutes or null if no completed appointment is found.
-   */
-  const getLastAppointmentDuration = async (studentId: string): Promise<number | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('duration_minutes')
-        .eq('user_id', studentId)
-        .eq('status', 'completed') // Only consider completed appointments
-        .order('end_time', { ascending: false }) // Get the most recent one
-        .limit(1)
-        .maybeSingle() // Expects zero or one record
-
-      if (error) {
-        console.error('❌ Error fetching last appointment duration:', error.message)
-        return null
-      }
-
-      if (!data) {
-        console.log('⚠️ No completed appointments found for student:', studentId)
-        return null
-      }
-
-      return data.duration_minutes || null
-    } catch (err) {
-      console.error('❌ Unexpected error loading last appointment duration:', err)
-      return null
-    }
-  }
-
-  /**
-   * Counts the number of completed or confirmed appointments for a student.
-   * Used to determine the appointment number for insurance fees.
-   * @param studentId The ID of the student.
-   * @returns The total count of relevant appointments + 1 (for the current appointment).
-   */
-  const getAppointmentNumber = async (studentId: string): Promise<number> => {
-    try {
-      const { count, error } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true }) // 'head: true' fetches no data, just the count
-        .eq('user_id', studentId)
-        .in('status', ['completed', 'confirmed']) // Count completed and confirmed appointments
-
-      if (error) throw error
-      return (count || 0) + 1 // +1 because the current appointment is the next one
-    } catch (err) {
-      console.error('❌ Error counting appointments from DB:', err)
-      return 1 // Default to 1 if counting fails
-    }
-  }
-
-  /**
-   * Loads preferred durations for a staff member from the 'staff_settings' table.
-   * @param staffId The ID of the staff member.
-   */
-  const loadStaffDurations = async (staffId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('staff_settings')
-        .select('preferred_durations')
-        .eq('staff_id', staffId)
-        .maybeSingle()
-
-      if (error || !data?.preferred_durations) {
-        console.log('⚠️ No staff durations found in DB or error, using defaults.')
-        availableDurations.value = [DEFAULT_DURATION_MINUTES, 90, 135]
-        return
-      }
-
-      // Parse preferred_durations (can be JSON string or comma-separated string)
-      let durations: number[] = []
-      try {
-        if (typeof data.preferred_durations === 'string' && data.preferred_durations.startsWith('[')) {
-          durations = JSON.parse(data.preferred_durations)
-        } else if (typeof data.preferred_durations === 'string') {
-          durations = data.preferred_durations.split(',').map((d: string) => parseInt(d.trim()))
-        } else if (Array.isArray(data.preferred_durations)) {
-          durations = data.preferred_durations
-        }
-        durations = durations.filter(d => !isNaN(d) && d > 0).sort((a, b) => a - b)
-      } catch (parseErr) {
-        console.error('❌ Error parsing staff durations:', parseErr)
-        durations = [DEFAULT_DURATION_MINUTES, 90, 135] // Fallback on parsing error
-      }
-
-      availableDurations.value = durations
-      console.log('✅ Staff durations loaded from DB:', durations)
-
-    } catch (err) {
-      console.error('❌ Error loading staff durations from DB:', err)
-      availableDurations.value = [DEFAULT_DURATION_MINUTES, 90, 135] // Fallback on fetch error
-    }
-  }
-
-  /**
-   * Generates a default title for the event based on event type and selected student.
-   * @returns The generated default title.
-   */
-  const getDefaultTitle = () => {
-    if (formData.value.eventType === 'lesson' && selectedStudent.value) {
-      return selectedStudent.value.first_name || 'Schüler'
-    }
-    if (formData.value.selectedSpecialType) {
-      return getEventTypeName(formData.value.selectedSpecialType)
-    }
-    return 'Neuer Termin'
-  }
-
-  /**
-   * Returns a human-readable name for an event type code.
-   * @param code The event type code.
-   * @returns The human-readable name.
-   */
-  const getEventTypeName = (code: string): string => {
-    const eventTypes: Record<string, string> = {
-      'meeting': 'Team-Meeting',
-      'course': 'Verkehrskunde',
-      'break': 'Pause',
-      'training': 'Weiterbildung',
-      'maintenance': 'Wartung',
-      'admin': 'Administration',
-      'other': 'Sonstiges'
-    }
-    return eventTypes[code] || code || 'Neuer Termin'
-  }
-
-  /**
-   * Retrieves the administrative fee for a given category.
-   * This is typically an insurance fee applied from the 2nd appointment onwards.
-   * @param categoryCode The code of the category.
-   * @returns The administrative fee amount.
-   */
-  const getAdminFeeForCategory = (categoryCode: string): number => {
-    // Insurance fee from project data - only from 2nd appointment
-    const adminFees: Record<string, number> = {
-      'B': 120, 'A1': 0, 'A35kW': 0, 'A': 0, 'BE': 120,
-      'C1': 200, 'D1': 200, 'C': 200, 'CE': 250, 'D': 300,
-      'Motorboot': 120, 'BPT': 120
-    }
-    return adminFees[categoryCode] || 0
-  }
-
-  // ============ STUDENT HANDLERS ============
-
-  /**
-   * Auto-fills form data based on the selected student's profile from Supabase.
-   * @param student The student object to auto-fill from.
-   */
-  const autoFillFromStudent = async (student: any) => {
-    console.log('🤖 Auto-filling form from student:', student.first_name)
-
-    // Set basic data from users table
-    formData.value.user_id = student.id
-    formData.value.staff_id = student.assigned_staff_id || formData.value.staff_id
-
-    // Set category from users.category (taking the primary category if multiple exist)
-    if (student.category) {
-      const primaryCategory = student.category.split(',')[0].trim()
-      formData.value.type = primaryCategory
-      console.log('📚 Category from users table:', formData.value.type)
-    }
-
-    // Load preferred payment method from student profile using the paymentMethods composable
-    const preferredPaymentMethod = await paymentMethods.loadStudentPaymentPreference(student.id)
-    formData.value.payment_method = preferredPaymentMethod
-    console.log('💳 Loaded payment preference:', preferredPaymentMethod)
-
-    // Load last appointment duration from appointments table
-    try {
-      const lastDuration = await getLastAppointmentDuration(student.id)
-      if (lastDuration) {
-        formData.value.duration_minutes = lastDuration
-        console.log('⏱️ Duration from last appointment:', lastDuration)
-      } else {
-        formData.value.duration_minutes = DEFAULT_DURATION_MINUTES // Default
-      }
-    } catch (err) {
-      console.log('⚠️ Could not load last duration, using default', DEFAULT_DURATION_MINUTES, 'min:', err)
-      formData.value.duration_minutes = DEFAULT_DURATION_MINUTES
-    }
-
-    // Update price based on category - from project data (static fallback)
-    const categoryPricing: Record<string, number> = {
-      'A': 95 / 45, 'A1': 95 / 45, 'A35kW': 95 / 45, 'B': 95 / 45,
-      'BE': 120 / 45, 'C1': 150 / 45, 'D1': 150 / 45, 'C': 170 / 45,
-      'CE': 200 / 45, 'D': 200 / 45, 'BPT': 100 / 45, 'Motorboot': 95 / 45
-    }
-    formData.value.price_per_minute = categoryPricing[formData.value.type] || FALLBACK_PRICE_PER_MINUTE
-
-    // Count appointments for this user (important for insurance fee from 2nd appointment)
-    try {
-      appointmentNumber.value = await getAppointmentNumber(student.id)
-      console.log('📈 Appointment number from DB:', appointmentNumber.value)
-    } catch (err) {
-      console.error('❌ Error counting appointments:', err)
-      appointmentNumber.value = 1 // Default to 1 if counting fails
-    }
-
-    console.log('✅ Auto-fill from Supabase completed')
-  }
-
-  /**
-   * Handles the selection of a student.
-   * Auto-fills form data based on the selected student's profile.
-   * @param student The selected student object.
-   */
-  const handleStudentSelected = async (student: any) => {
-    console.log('🎯 Student selected:', student.first_name, student.id)
-
-    selectedStudent.value = student
-
-    // Auto-fill form data from student (only in CREATE mode, implicitly handled by initial state)
-    if (student) {
-      await autoFillFromStudent(student)
-    }
-  }
-
-  /**
-   * Handles clearing the selected student and resetting related form fields.
-   */
-  const handleStudentCleared = () => {
-    console.log('🗑️ Student cleared')
-
-    selectedStudent.value = null
-    formData.value.title = ''
-    formData.value.type = ''
-    formData.value.user_id = ''
-    formData.value.location_id = ''
-    formData.value.price_per_minute = 0
-    formData.value.payment_method = 'cash' // Default payment method
-  }
-
-  // ============ CATEGORY HANDLERS ============
-
-  /**
-   * Handles the selection of a category.
-   * Updates price and loads staff durations based on the selected category.
-   * @param category The selected category object.
-   */
-  const handleCategorySelected = async (category: any) => {
-    console.log('🎯 Category selected:', category?.code)
-
-    selectedCategory.value = category
-
-    if (category) {
-      // Load category data from categories table
-      try {
-        const { data: categoryData, error } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('code', category.code)
-          .eq('is_active', true)
-          .maybeSingle()
-
-        if (categoryData) {
-          formData.value.price_per_minute = categoryData.price_per_lesson / DEFAULT_DURATION_MINUTES
-          console.log('💰 Price from categories table:', categoryData.price_per_lesson)
-        } else {
-          // Fallback to static prices if not found in DB
-          const fallbackPrices: Record<string, number> = {
-            'B': 95, 'A1': 95, 'BE': 120, 'C1': 150, 'D1': 150, 'C': 170,
-            'CE': 200, 'D': 200, 'BPT': 100, 'Motorboot': 95
-          }
-          formData.value.price_per_minute = (fallbackPrices[category.code] || 95) / DEFAULT_DURATION_MINUTES
-          console.log('⚠️ Category not found in DB, using fallback price:', formData.value.price_per_minute * DEFAULT_DURATION_MINUTES)
-        }
-      } catch (err) {
-        console.error('❌ Error loading category from DB:', err)
-        formData.value.price_per_minute = FALLBACK_PRICE_PER_MINUTE // Fallback
-      }
-
-      // Load staff durations from staff_settings table if staff_id is present
-      if (formData.value.staff_id) {
-        try {
-          await loadStaffDurations(formData.value.staff_id)
-        } catch (err) {
-          console.log('⚠️ Could not load staff durations from DB, using defaults:', err)
-          availableDurations.value = [DEFAULT_DURATION_MINUTES, 90, 135] // Fallback
-        }
-      }
-
-      calculateEndTime()
-    }
-  }
-
-  /**
-   * Handles changes to the price per minute.
-   * @param pricePerMinute The new price per minute.
-   */
-  const handlePriceChanged = (pricePerMinute: number) => {
-    console.log('💰 Price changed:', pricePerMinute)
-    formData.value.price_per_minute = pricePerMinute
-  }
-
-  /**
-   * Handles changes to the available durations.
-   * Adjusts the current duration if it's no longer available.
-   * @param durations An array of available durations in minutes.
-   */
-  const handleDurationsChanged = (durations: number[]) => {
-    console.log('📥 Durations changed to:', durations)
-
-    availableDurations.value = [...durations]
-
-    // If current duration not available, select first available
-    if (durations.length > 0 && !durations.includes(formData.value.duration_minutes)) {
-      formData.value.duration_minutes = durations[0]
-      calculateEndTime()
-      console.log('✅ Updated duration to:', durations[0])
-    }
-  }
-
-  // ============ DURATION HANDLERS ============
-
-  /**
-   * Handles changes to the selected duration.
-   * Recalculates the end time.
-   * @param duration The new duration in minutes.
-   */
-  const handleDurationChanged = (duration: number) => {
-    console.log('⏱️ Duration changed to:', duration)
-    formData.value.duration_minutes = duration
-    calculateEndTime()
-  }
-
-  // ============ LOCATION HANDLERS ============
-
-  /**
-   * Handles the selection of a location.
-   * Saves new Google Places locations to the 'locations' table.
-   * @param location The selected location object.
-   */
-  const handleLocationSelected = async (location: any) => {
-    console.log('📍 Location selected:', location?.name)
-
-    selectedLocation.value = location; // WICHTIG: selectedLocation Ref aktualisieren
-
-    if (!location) {
-      formData.value.location_id = ''
-      return
-    }
-
-    // Existing location from 'locations' table
-    if (location.id && !String(location.id).startsWith('temp_')) {
-      formData.value.location_id = location.id
-      console.log('✅ Location ID from locations table:', location.id)
-    }
-    // New location from Google Places - save to 'locations' table
-    else if (location.id && String(location.id).startsWith('temp_') && formData.value.staff_id) {
-      try {
-        const { data: newLocation, error } = await supabase
-          .from('locations')
-          .insert({
-            staff_id: formData.value.staff_id,
-            name: location.name,
-            adress: location.address || location.formatted_address || '' // Use 'address' or 'formatted_address'
-          })
-          .select()
-          .single()
-
-        if (error) throw error
-
-        formData.value.location_id = newLocation.id
-        console.log('✅ New location saved to DB:', newLocation.id)
-      } catch (err) {
-        console.error('❌ Could not save location to DB:', err)
-        formData.value.location_id = ''
-      }
-    }
-    // Temporary location (will be handled when the appointment is saved)
-    else {
-      formData.value.location_id = ''
-      console.log('⚠️ Temporary location, will handle on save or if staff_id is missing.')
-    }
-  }
-
-  // ============ EVENT TYPE HANDLERS ============
-
-  /**
-   * Handles the selection of a special event type (e.g., meeting, break).
-   * @param eventType The selected event type object.
-   */
-  const handleEventTypeSelected = (eventType: any) => {
-    console.log('📋 Event type selected:', eventType?.code)
-
-    formData.value.selectedSpecialType = eventType.code
-    formData.value.duration_minutes = eventType.default_duration_minutes || DEFAULT_DURATION_MINUTES
-
-    if (eventType.auto_generate_title) {
-      formData.value.title = eventType.name || 'Neuer Termin'
-    }
-
-    calculateEndTime()
-  }
-
-  /**
-   * Switches the event type to 'other' and resets related fields.
-   */
-  const switchToOtherEventType = () => {
-    formData.value.eventType = 'other'
-    formData.value.selectedSpecialType = ''
-    formData.value.title = ''
-  }
-
-  /**
-   * Switches the event type back to 'lesson' and resets related fields.
-   */
-  const backToStudentSelection = () => {
-    formData.value.eventType = 'lesson'
-    formData.value.selectedSpecialType = ''
-    formData.value.title = ''
-  }
-
-  // ============ PAYMENT HANDLERS ============
-
-  /**
-   * Handles a successful payment.
-   * Optionally saves a payment record to the 'payments' table.
-   * @param paymentData Data related to the successful payment.
-   */
-  const handlePaymentSuccess = async (paymentData: any) => {
-    console.log('✅ Payment successful:', paymentData)
-    formData.value.is_paid = true
-
-    // Optional: Save payment record to payments table
-    if (paymentData.transactionId && formData.value.id) {
-      try {
-        await supabase
-          .from('payments')
-          .insert({
-            appointment_id: formData.value.id,
-            user_id: formData.value.user_id,
-            staff_id: formData.value.staff_id,
-            amount_rappen: Math.round(formData.value.price_per_minute * formData.value.duration_minutes * 100),
-            payment_method: paymentData.method || 'wallee',
-            payment_status: 'completed',
-            wallee_transaction_id: paymentData.transactionId
-          })
-
-        console.log('💾 Payment record saved to DB')
-      } catch (err) {
-        console.error('❌ Could not save payment record:', err)
-      }
-    }
-  }
-
-  /**
-   * Handles a payment error.
-   * @param error The error message.
-   */
-  const handlePaymentError = (error: string) => {
-    console.error('❌ Payment error:', error)
-    formData.value.is_paid = false
-  }
-
-  /**
-   * Handles the start of a payment process.
-   * @param method The payment method used.
-   */
-  const handlePaymentStarted = (method: string) => {
-    console.log('🔄 Payment started with method:', method)
-  }
-
-  /**
-   * Signals that the appointment needs to be saved before payment processing can occur.
-   * This is crucial for obtaining a real UUID for the appointment.
-   * @param appointmentData The current appointment data.
-   * @returns A Promise resolving with a flag indicating save is required.
-   */
-  const handleSaveRequired = async (appointmentData: any) => {
-    console.log('💾 Save required for payment processing')
-
-    // IMPORTANT: Appointment must be saved FIRST to get a real UUID
-    return new Promise((resolve) => {
-      // Signal parent that appointment needs to be saved first
-      resolve({
-        ...appointmentData,
-        requiresSave: true,
-        message: 'Appointment must be saved before payment'
-      })
-    })
-  }
-
-  // ============ PAYMENT METHOD HANDLERS ============
-
-  /**
-   * Handles the selection of a payment method.
-   * Updates the form data and optionally saves the preference for the student.
-   * @param paymentMethod The selected payment method string.
-   */
-  const handlePaymentMethodSelected = async (paymentMethod: string) => {
-    console.log('💳 Payment method selected:', paymentMethod)
-
-    // Use payment composable to handle selection (e.g., saving preference)
-    if (selectedStudent.value?.id) {
-      await paymentMethods.selectPaymentMethod(paymentMethod, selectedStudent.value.id)
-    }
-
-    // Update form data
-    formData.value.payment_method = paymentMethod
-    formData.value.payment_status = 'pending'
-    formData.value.is_paid = false // Reset paid status
-
-    console.log('💳 Payment method configured:', {
-      method: paymentMethod,
-      status: formData.value.payment_status,
-      paid: formData.value.is_paid
-    })
-  }
-
-  /**
-   * Retrieves the available payment method options from the paymentMethods composable.
-   * @returns An array of payment method options.
-   */
-  const getPaymentMethodOptions = () => {
-    return paymentMethods.paymentMethodOptions.value
-  }
-
-  /**
-   * Calculates the payment breakdown (total, discounts, fees) for the current appointment.
-   * @returns The payment breakdown object or null if data is insufficient.
-   */
-  const calculatePaymentBreakdown = () => {
-    if (!formData.value.type || !formData.value.duration_minutes) {
-      console.warn('⚠️ Cannot calculate payment breakdown: Missing type or duration.')
-      return null
-    }
-
-    const discount = formData.value.discount ? {
-      amount: formData.value.discount,
-      type: formData.value.discount_type || 'fixed',
-      reason: formData.value.discount_reason
-    } : undefined
-
-    return paymentMethods.calculatePaymentBreakdown(
-      formData.value.type,
-      formData.value.duration_minutes,
-      appointmentNumber.value,
-      discount
-    )
-  }
-
-  /**
-   * Processes the payment after the appointment has been successfully saved.
-   * Delegates to specific payment processing functions based on the selected method.
-   * @param savedAppointment The appointment object returned after being saved to the DB.
-   * @returns The result of the payment processing, potentially including a redirect flag for online payments.
-   * @throws Error if payment calculation fails or processing encounters an issue.
-   */
-  const processPaymentAfterSave = async (savedAppointment: any) => {
-    const paymentMethod = formData.value.payment_method
-
-    if (!paymentMethod || paymentMethod === 'none') {
-      console.log('ℹ️ No payment processing needed (method is none or not set).')
-      return null // No payment processing needed
-    }
-
-    const calculation = calculatePaymentBreakdown()
-    if (!calculation) {
-      throw new Error('Could not calculate payment breakdown before processing.')
-    }
-
-    const appointmentData = {
-      appointmentId: savedAppointment.id,
-      userId: formData.value.user_id,
-      staffId: formData.value.staff_id,
-      category: formData.value.type,
-      duration: formData.value.duration_minutes,
-      appointmentNumber: appointmentNumber.value,
-      calculation // Pass the calculated breakdown
-    }
-
-    try {
-      switch (paymentMethod) {
-        case 'cash':
-          return await paymentMethods.processCashPayment(appointmentData)
-
-        case 'invoice':
-          return await paymentMethods.processInvoicePayment(appointmentData)
-
-        case 'online':
-          const result = await paymentMethods.processOnlinePayment(appointmentData)
-
-          if (result.needsWalleeRedirect) {
-            // Return data for Wallee integration in parent component
-            return {
-              ...result,
-              redirectToWallee: true,
-              amount: calculation.totalAmount,
-              currency: 'CHF' // Assuming CHF as currency
-            }
-          }
-
-          return result
-
-        default:
-          console.log('⚠️ Unknown payment method:', paymentMethod)
-          return null
-      }
-    } catch (err) {
-      console.error('❌ Payment processing error:', err)
-      throw err // Re-throw to be handled by the calling component
-    }
-  }
-
-  /**
-   * Handles changes to discount values.
-   * @param discount The discount amount.
-   * @param discountType The type of discount ('fixed' or 'percentage').
-   * @param reason The reason for the discount.
-   */
-  const handleDiscountChanged = (discount: number, discountType: string, reason: string) => {
-    console.log('🏷️ Discount changed:', { discount, discountType, reason })
-
-    formData.value.discount = discount
-    formData.value.discount_type = discountType
-    formData.value.discount_reason = reason
-  }
-
-  // ============ TEAM HANDLERS (TAGS/EINLADUNGEN) ============
-
-  /**
-   * Toggles the invitation status for a staff member.
-   * @param staffId The ID of the staff member to toggle.
-   * @param invitedStaff A ref containing an array of invited staff IDs.
-   */
-  const handleTeamInviteToggle = (staffId: string, invitedStaff: any) => {
-    console.log('👥 Team invite toggled for staff ID:', staffId)
-
-    const index = invitedStaff.value.indexOf(staffId)
-    if (index > -1) {
-      invitedStaff.value.splice(index, 1)
-      console.log('➖ Staff removed from invite list.')
-    } else {
-      invitedStaff.value.push(staffId)
-      console.log('➕ Staff added to invite list.')
-    }
-  }
-
-  /**
-   * Clears all staff invites.
-   * @param invitedStaff A ref containing an array of invited staff IDs.
-   */
-  const clearAllInvites = (invitedStaff: any) => {
-    invitedStaff.value = []
-    console.log('🗑️ All team invites cleared.')
-  }
-
-  /**
-   * Invites all available staff members.
-   * @param availableStaff A ref containing an array of all available staff members.
-   * @param invitedStaff A ref containing an array of invited staff IDs.
-   */
-  const inviteAllStaff = (availableStaff: any, invitedStaff: any) => {
-    invitedStaff.value = availableStaff.value.map((s: any) => s.id)
-    console.log('👥 All staff invited:', invitedStaff.value.length, 'staff members.')
-  }
-
-  return {
-    // Student Handlers
-    handleStudentSelected,
-    handleStudentCleared,
-    autoFillFromStudent,
-
-    // Category Handlers
-    handleCategorySelected,
-    handlePriceChanged,
-    handleDurationsChanged,
-    
-    // Duration Handlers
-    handleDurationChanged,
-
-    // Location Handlers
-    handleLocationSelected,
-
-    // Event Type Handlers
-    handleEventTypeSelected,
-    switchToOtherEventType,
-    backToStudentSelection,
-
-    // Payment Handlers
-    handlePaymentSuccess,
-    handlePaymentError,
-    handlePaymentStarted, // <-- NEU: Jetzt exportiert
-    handleSaveRequired,
-
-    // Payment Method Handlers
-    handlePaymentMethodSelected,
-    getPaymentMethodOptions,
-    calculatePaymentBreakdown, // Expose for external use
-    processPaymentAfterSave,   // Expose for external use
-
-    // Discount Handlers
-    handleDiscountChanged,
-
-    // Team Handlers (Tags/Einladungen)
-    handleTeamInviteToggle,
-    clearAllInvites,
-    inviteAllStaff,
-
-    // Utilities
-    calculateEndTime,
-    getLastAppointmentDuration,
-    getAppointmentNumber,
-    loadStaffDurations,
-    getDefaultTitle,
-    getEventTypeName,
-    getAdminFeeForCategory
-  }
-}
-```
-
-### ./composables/useEventModalState.ts
-```typescript
-// composables/useEventModalState.ts
-import { ref, reactive, computed, nextTick } from 'vue'
-
-// Centralized State mit Race Condition Prevention
-export const useEventModalState = () => {
-  
-  // === LOADING STATES ===
-  const isInitializing = ref(false)
-  const isUserInteraction = ref(false)
-  const updateQueue = ref<string[]>([])
-  
-  // === CORE DATA ===
-  const formData = reactive({
-    selectedStudent: null,
-    selectedCategory: null,
-    selectedDuration: 45,
-    availableDurations: [45],
-    isAutoSelecting: false
-  })
-  
-  // === RACE CONDITION PREVENTION ===
-  const preventRaceCondition = async (operation: string, callback: () => void) => {
-    if (isInitializing.value) {
-      console.log(`🚫 Race prevented: ${operation} during initialization`)
-      return
-    }
-    
-    if (updateQueue.value.includes(operation)) {
-      console.log(`🚫 Race prevented: ${operation} already in queue`)
-      return
-    }
-    
-    updateQueue.value.push(operation)
-    
-    try {
-      await nextTick()
-      callback()
-    } finally {
-      updateQueue.value = updateQueue.value.filter(op => op !== operation)
-    }
-  }
-  
-  // === DEBOUNCED OPERATIONS ===
-  let durationUpdateTimeout: any = null
-  
-  const setDurationsDebounced = (durations: number[], source: string) => {
-    clearTimeout(durationUpdateTimeout)
-    
-    durationUpdateTimeout = setTimeout(() => {
-      preventRaceCondition(`duration-update-${source}`, () => {
-        console.log(`⏱️ Setting durations from ${source}:`, durations)
-        formData.availableDurations = [...durations]
-        
-        // Auto-select first duration only if none selected
-        if (!formData.selectedDuration || !durations.includes(formData.selectedDuration)) {
-          formData.selectedDuration = durations[0] || 45
-          console.log(`✅ Auto-selected duration: ${formData.selectedDuration}`)
-        }
-      })
-    }, 100) // 100ms debounce
-  }
-  
-  // === STUDENT SELECTION WITH LOCK ===
-  const selectStudent = async (student: any) => {
-    if (formData.isAutoSelecting) {
-      console.log('🚫 Student selection blocked - auto-selection in progress')
-      return
-    }
-    
-    isUserInteraction.value = true
-    formData.isAutoSelecting = true
-    
-    try {
-      console.log('👤 Manual student selection:', student?.first_name)
-      formData.selectedStudent = student
-      
-      // Clear dependent selections
-      formData.selectedCategory = null
-      formData.availableDurations = [45]
-      formData.selectedDuration = 45
-      
-      await nextTick()
-      
-      // Auto-select category if student has one
-      if (student?.category && !isInitializing.value) {
-        setTimeout(() => {
-          preventRaceCondition('auto-category-from-student', () => {
-            console.log('🎯 Auto-selecting category from student:', student.category)
-            // Emit to parent to trigger category selection
-          })
-        }, 150) // Delayed auto-selection
-      }
-      
-    } finally {
-      formData.isAutoSelecting = false
-      isUserInteraction.value = false
-    }
-  }
-  
-  // === CATEGORY SELECTION WITH LOCK ===
-  const selectCategory = async (category: any, isAutomatic = false) => {
-    if (formData.isAutoSelecting && !isAutomatic) {
-      console.log('🚫 Category selection blocked - auto-selection in progress')
-      return
-    }
-    
-    preventRaceCondition('category-selection', () => {
-      console.log('🎯 Category selected:', category?.code)
-      formData.selectedCategory = category
-      
-      if (category?.availableDurations) {
-        setDurationsDebounced(category.availableDurations, 'category-selection')
-      }
-    })
-  }
-  
-  // === INITIALIZATION MODE ===
-  const startInitialization = () => {
-    console.log('🔄 Starting initialization mode')
-    isInitializing.value = true
-    updateQueue.value = []
-  }
-  
-  const finishInitialization = async () => {
-    await nextTick()
-    isInitializing.value = false
-    console.log('✅ Initialization completed')
-  }
-  
-  // === COMPUTED HELPERS ===
-  const canAutoSelect = computed(() => {
-    return !isInitializing.value && !formData.isAutoSelecting
-  })
-  
-  const isInUserInteraction = computed(() => {
-    return isUserInteraction.value
-  })
-  
-  return {
-    // State
-    formData,
-    isInitializing,
-    canAutoSelect,
-    isInUserInteraction,
-    
-    // Methods
-    selectStudent,
-    selectCategory,
-    setDurationsDebounced,
-    preventRaceCondition,
-    startInitialization,
-    finishInitialization
-  }
-}```
-
-### ./composables/useEventModalWatchers.ts
-```typescript
-// composables/useEventModalWatchers.ts - SIMPLIFIED VERSION
-import { watch, nextTick } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-export const useEventModalWatchers = (
-  props: any,
-  formData: any,
-  selectedStudent: any,
-  selectedLocation: any,
-  availableLocations: any,
-  appointmentNumber: any,
-  actions: any
-) => {
-
-  // ============ HELPER FUNCTIONS ============
-  const calculateEndTime = () => {
-    if (formData.value.startTime && formData.value.duration_minutes) {
-      const [hours, minutes] = formData.value.startTime.split(':').map(Number)
-      const startDate = new Date()
-      startDate.setHours(hours, minutes, 0, 0)
-
-      const endDate = new Date(startDate.getTime() + formData.value.duration_minutes * 60000)
-
-      const endHours = String(endDate.getHours()).padStart(2, '0')
-      const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
-
-      formData.value.endTime = `${endHours}:${endMinutes}`
-      console.log('⏰ End time calculated:', formData.value.endTime)
-    }
-  }
-
-  // 🔥 LOCAL appointment number function
-  const getAppointmentNumber = async (studentId: string): Promise<number> => {
-    try {
-      const supabase = getSupabase()
-      const { count, error } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', studentId)
-        .in('status', ['completed', 'confirmed'])
-
-      if (error) throw error
-      return (count || 0) + 1
-
-    } catch (err) {
-      console.error('❌ Error counting appointments:', err)
-      return 1
-    }
-  }
-
-        // ============ MODAL LIFECYCLE WATCHER ============
-          const setupModalWatcher = () => {
-            watch(() => props.isVisible, async (isVisible) => {
-              console.log('👀 Modal visibility changed to:', isVisible)
-              
-              if (isVisible) {
-                console.log('🔄 Modal opening - starting initialization...')
-                
-                try {
-                  // Mode-based initialization
-                  if (props.eventData && (props.mode === 'edit' || props.mode === 'view')) {
-                    console.log('📝 Processing EDIT/VIEW mode...')
-                    actions.populateFormFromAppointment(props.eventData)
-                    
-                    // Handle student selection for edit mode
-                    if (formData.value.user_id) {
-                      await handleEditModeStudentSelection()
-                    }
-                  } else if (props.mode === 'create') {  // 🔥 WICHTIG: else if statt else!
-                    console.log('📅 Processing CREATE mode...')
-                    await handleCreateModeInitialization()
-                  }
-                  
-                  console.log('✅ Modal initialization completed')
-                  
-                } catch (error: unknown) {
-                  console.error('❌ Error during modal initialization:', error)
-                }
-              } else {
-                // Modal closed - reset state
-                console.log('❌ Modal closed - resetting state')
-                actions.resetForm()
-              }
-            }, { immediate: true })
-          }
-
-  // ============ FORM DATA WATCHERS ============
-  const setupFormWatchers = () => {
-
-    // Title generation watcher
-    watch([
-      () => selectedStudent.value,
-      () => formData.value.location_id,
-      () => formData.value.type,
-      () => formData.value.eventType,
-    ], ([currentStudent, locationId, category, eventType]) => {
-
-      // Skip title generation in edit/view mode
-      if (props.mode === 'edit' || props.mode === 'view') {
-        return
-      }
-
-      if (eventType === 'lesson' && currentStudent) {
-        generateLessonTitle(currentStudent, locationId, category)
-      }
-    }, { immediate: true })
-
-    // 🔥 NEW: Auto-load students when needed
-    watch(() => props.mode, (newMode) => {
-      if (newMode === 'create') {
-        console.log('🔄 Create mode detected - triggering student load')
-        // Trigger student loading for create mode
-        if (actions.triggerStudentLoad) {
-          actions.triggerStudentLoad()
-        }
-      }
-    }, { immediate: true })
-
-    // 🔥 NEW: Auto-reload students when student is cleared
-    watch(selectedStudent, (newStudent, oldStudent) => {
-      if (oldStudent && !newStudent) {
-        console.log('🔄 Student cleared - triggering student reload')
-        // Trigger student loading when student is cleared
-        if (actions.triggerStudentLoad) {
-          actions.triggerStudentLoad()
-        }
-      }
-    })
-
-    // Time calculation watcher
-    watch([
-      () => formData.value.startTime,
-      () => formData.value.duration_minutes
-    ], () => {
-      if (formData.value.startTime && formData.value.duration_minutes) {
-        calculateEndTime()
-      }
-    }, { immediate: true })
-
-    // Event type change watcher
-    watch(() => formData.value.eventType, (newType) => {
-      console.log('👀 Event type changed to:', newType)
-
-      // Reset form when switching types
-      if (newType !== 'lesson') {
-        formData.value.user_id = ''
-        formData.value.type = ''
-        selectedStudent.value = null
-      }
-    })
-
-    // User ID change watcher (for appointment number)
-    watch(() => formData.value.user_id, async (newUserId) => {
-      // Skip in edit/view mode
-      if (props.mode === 'edit' || props.mode === 'view') {
-        console.log(`📝 ${props.mode} mode detected - skipping auto-operations`)
-        return
-      }
-
-      if (newUserId && formData.value.eventType === 'lesson') {
-        // Load appointment number for pricing
-        try {
-          console.log('🔢 Loading appointment number for pricing...')
-          appointmentNumber.value = await getAppointmentNumber(newUserId)
-          console.log('✅ Appointment number loaded:', appointmentNumber.value)
-        } catch (err) {
-          console.error('❌ Error loading appointment number:', err)
-          appointmentNumber.value = 1
-        }
-      } else if (!newUserId) {
-        appointmentNumber.value = 1
-        console.log('🔄 Reset appointment number to 1')
-      }
-    })
-
-    // Category type watcher
-    watch(() => formData.value.type, async (newType) => {
-      if (newType && props.mode === 'edit') {
-        console.log('👀 Category type changed in edit mode:', newType)
-
-        // Force category update in edit mode
-        await nextTick()
-      }
-    }, { immediate: true })
-
-    // Duration change watcher
-    watch(() => formData.value.duration_minutes, () => {
-      calculateEndTime()
-    })
-  }
-
-  // ============ DEBUG WATCHERS ============
-  const setupDebugWatchers = () => {
-    // Location debugging
-    watch(() => formData.value.location_id, (newVal, oldVal) => {
-      console.log('🔄 location_id changed:', oldVal, '→', newVal)
-    })
-
-    // Selected student debugging
-    watch(selectedStudent, (newStudent, oldStudent) => {
-      console.log('🔄 selectedStudent changed:', 
-        oldStudent?.first_name || 'none', 
-        '→', 
-        newStudent?.first_name || 'none'
-      )
-    })
-  }
-
-  // ============ HELPER FUNCTIONS ============
-  const handleEditModeStudentSelection = async () => {
-    console.log('📝 Setting up student for edit mode:', formData.value.user_id)
-    
-    // This would typically trigger the StudentSelector to select the correct student
-    // The implementation depends on how your StudentSelector handles programmatic selection
-    
-    // Example: You might need to emit to parent or use a ref to StudentSelector
-    // to call selectStudentById(formData.value.user_id)
-  }
-
-  const handleCreateModeInitialization = async () => {
-    // Initialize create mode with default values
-    let startDate, startTime
-
-    if (props.eventData?.start) {
-      const clickedDateTime = new Date(props.eventData.start)
-      startDate = clickedDateTime.toISOString().split('T')[0]
-      startTime = clickedDateTime.toTimeString().slice(0, 5)
-    } else {
-      const now = new Date()
-      startDate = now.toISOString().split('T')[0]
-      startTime = now.toTimeString().slice(0, 5)
-    }
-
-    formData.value.startDate = startDate
-    formData.value.startTime = startTime
-
-    console.log('📅 Create mode initialized with date/time:', startDate, startTime)
-    
-    // Calculate end time immediately
-    if (formData.value.duration_minutes) {
-      calculateEndTime()
-    }
-  }
-
-  const generateLessonTitle = (currentStudent: any, locationId: string, category: string) => {
-    // Safety check for availableLocations
-    const selectedLocationObject = Array.isArray(availableLocations.value) && availableLocations.value.length > 0
-      ? availableLocations.value.find((loc: any) => loc.id === locationId)
-      : null
-
-    const locationName = selectedLocationObject?.name || ''
-    const currentCategory = category || ''
-
-    let title = 'Fahrstunde' // Default title
-
-    if (currentStudent?.first_name) {
-      title = `${currentStudent.first_name}`
-    }
-
-    if (locationName) {
-      title += ` • ${locationName}`
-    }
-
-    if (currentCategory) {
-      title += ` (${currentCategory})`
-    }
-
-    console.log('✏️ Title generated:', title)
-    formData.value.title = title
-  }
-
-  // ============ PUBLIC API ============
-  const setupAllWatchers = () => {
-    setupModalWatcher()
-    setupFormWatchers()
-    setupDebugWatchers()
-
-    console.log('⚡ All watchers initialized (simplified version)')
-  }
-
-  return {
-    setupAllWatchers,
-    setupModalWatcher,
-    setupFormWatchers,
-    setupDebugWatchers,
-    calculateEndTime,
-    getAppointmentNumber,
-    generateLessonTitle
-  }
-}```
-
-### ./composables/usePaymentMethods.ts
-```typescript
-// composables/usePaymentMethods.ts
-import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-interface PaymentMethod {
-  value: string
-  label: string
-  icon: string
-  description: string
-  color: string
-}
-
-interface PaymentCalculation {
-  basePrice: number
-  adminFee: number
-  discountAmount: number
-  totalAmount: number
-  pricePerMinute: number
-}
-
-export const usePaymentMethods = () => {
-  const supabase = getSupabase()
-  
-  // State
-  const selectedPaymentMethod = ref<string>('cash')
-  const isProcessingPayment = ref(false)
-  const paymentError = ref<string>('')
-  const paymentSuccess = ref<any>(null)
-
-  // Available Payment Methods
-  const paymentMethodOptions = computed((): PaymentMethod[] => [
-    {
-      value: 'cash',
-      label: 'Bar beim Fahrlehrer',
-      icon: 'i-heroicons-banknotes',
-      description: 'Zahlung vor Ort beim Fahrlehrer',
-      color: 'yellow'
-    },
-    {
-      value: 'invoice',
-      label: 'Rechnung',
-      icon: 'i-heroicons-document-text',
-      description: 'Rechnung wird erstellt und versendet',
-      color: 'blue'
-    },
-    {
-      value: 'online',
-      label: 'Online bezahlen',
-      icon: 'i-heroicons-credit-card',
-      description: 'Sofortige Zahlung mit Kreditkarte/Twint',
-      color: 'green'
-    }
-  ])
-
-  // Get payment method by value
-  const getPaymentMethod = (value: string): PaymentMethod | undefined => {
-    return paymentMethodOptions.value.find(method => method.value === value)
-  }
-
-  // Load student's preferred payment method
-  const loadStudentPaymentPreference = async (studentId: string): Promise<string> => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('preferred_payment_method')
-        .eq('id', studentId)
-        .maybeSingle()
-
-      if (error) throw error
-      
-      const preference = data?.preferred_payment_method || 'cash'
-      selectedPaymentMethod.value = preference
-      
-      console.log('💳 Loaded payment preference:', preference)
-      return preference
-
-    } catch (err) {
-      console.error('❌ Error loading payment preference:', err)
-      selectedPaymentMethod.value = 'cash'
-      return 'cash'
-    }
-  }
-
-  // Save payment method preference to student profile
-  const saveStudentPaymentPreference = async (studentId: string, paymentMethod: string) => {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ preferred_payment_method: paymentMethod })
-        .eq('id', studentId)
-
-      if (error) throw error
-      
-      console.log('✅ Payment preference saved:', paymentMethod)
-      
-    } catch (err) {
-      console.error('❌ Error saving payment preference:', err)
-      // Non-critical error - don't throw
-    }
-  }
-
-  // Select payment method and save preference
-  const selectPaymentMethod = async (method: string, studentId?: string) => {
-    selectedPaymentMethod.value = method
-    
-    // Save to student profile if studentId provided
-    if (studentId) {
-      await saveStudentPaymentPreference(studentId, method)
-    }
-    
-    console.log('💳 Payment method selected:', method)
-  }
-
-  // Calculate price breakdown
-  const calculatePaymentBreakdown = (
-    category: string,
-    duration: number,
-    appointmentNumber: number,
-    discount?: { amount: number, type: 'fixed' | 'percentage', reason?: string }
-  ): PaymentCalculation => {
-    
-    // Base prices from project data
-    const categoryPricing: Record<string, number> = {
-      'A': 95, 'A1': 95, 'A35kW': 95, 'B': 95,
-      'BE': 120, 'C1': 150, 'D1': 150, 'C': 170,
-      'CE': 200, 'D': 200, 'BPT': 100, 'Motorboot': 95
-    }
-
-    // Admin fees - only from 2nd appointment
-    const adminFees: Record<string, number> = {
-      'B': 120, 'A1': 0, 'A35kW': 0, 'A': 0, 'BE': 120,
-      'C1': 200, 'D1': 200, 'C': 200, 'CE': 250, 'D': 300,
-      'Motorboot': 120, 'BPT': 120
-    }
-
-    const basePriceFor45Min = categoryPricing[category] || 95
-    const basePrice = (basePriceFor45Min / 45) * duration
-    const pricePerMinute = basePriceFor45Min / 45
-    
-    const adminFee = appointmentNumber > 1 ? (adminFees[category] || 0) : 0
-    
-    let discountAmount = 0
-    if (discount && discount.amount > 0) {
-      if (discount.type === 'percentage') {
-        discountAmount = basePrice * (discount.amount / 100)
-      } else {
-        discountAmount = discount.amount
-      }
-    }
-    
-    const totalAmount = Math.max(0, basePrice + adminFee - discountAmount)
-    
-    return {
-      basePrice,
-      adminFee,
-      discountAmount,
-      totalAmount,
-      pricePerMinute
-    }
-  }
-
-  // Create pending payment record for admin dashboard
-  const createPendingPaymentRecord = async (appointmentData: {
-    appointmentId: string
-    userId: string
-    staffId: string
-    category: string
-    duration: number
-    appointmentNumber: number
-    paymentMethod: string
-    calculation: PaymentCalculation
-  }) => {
-    try {
-      const paymentRecord = {
-        appointment_id: appointmentData.appointmentId,
-        user_id: appointmentData.userId,
-        staff_id: appointmentData.staffId,
-        amount_rappen: Math.round(appointmentData.calculation.basePrice * 100),
-        admin_fee_rappen: Math.round(appointmentData.calculation.adminFee * 100),
-        total_amount_rappen: Math.round(appointmentData.calculation.totalAmount * 100),
-        payment_method: appointmentData.paymentMethod,
-        payment_status: 'pending',
-        description: `Fahrstunde ${appointmentData.category} - ${appointmentData.duration} Min`,
-        metadata: {
-          category: appointmentData.category,
-          duration: appointmentData.duration,
-          appointment_number: appointmentData.appointmentNumber,
-          price_breakdown: appointmentData.calculation,
-          created_at: new Date().toISOString()
-        }
-      }
-
-      const { data, error } = await supabase
-        .from('payments')
-        .insert(paymentRecord)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      console.log('✅ Pending payment record created:', data.id)
-      return data
-
-    } catch (err) {
-      console.error('❌ Error creating pending payment record:', err)
-      throw err
-    }
-  }
-
-  // Process cash payment
-  const processCashPayment = async (appointmentData: any) => {
-    isProcessingPayment.value = true
-    paymentError.value = ''
-    
-    try {
-      // Create pending payment record
-      const paymentRecord = await createPendingPaymentRecord({
-        ...appointmentData,
-        paymentMethod: 'cash'
-      })
-
-      // Update appointment
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          payment_method: 'cash',
-          payment_status: 'pending',
-          is_paid: false
-        })
-        .eq('id', appointmentData.appointmentId)
-
-      if (error) throw error
-
-      paymentSuccess.value = {
-        type: 'cash',
-        message: 'Barzahlung erfasst - Zahlung erfolgt beim Fahrlehrer',
-        paymentId: paymentRecord.id
-      }
-
-      return paymentRecord
-
-    } catch (err: any) {
-      paymentError.value = err.message
-      throw err
-    } finally {
-      isProcessingPayment.value = false
-    }
-  }
-
-  // Process invoice payment
-  const processInvoicePayment = async (appointmentData: any) => {
-    isProcessingPayment.value = true
-    paymentError.value = ''
-    
-    try {
-      // Create pending payment record
-      const paymentRecord = await createPendingPaymentRecord({
-        ...appointmentData,
-        paymentMethod: 'invoice'
-      })
-
-      // Update appointment
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          payment_method: 'invoice',
-          payment_status: 'pending',
-          is_paid: false
-        })
-        .eq('id', appointmentData.appointmentId)
-
-      if (error) throw error
-
-      paymentSuccess.value = {
-        type: 'invoice',
-        message: 'Rechnung wird erstellt und per E-Mail versendet',
-        paymentId: paymentRecord.id
-      }
-
-      return paymentRecord
-
-    } catch (err: any) {
-      paymentError.value = err.message
-      throw err
-    } finally {
-      isProcessingPayment.value = false
-    }
-  }
-
-  // Process online payment (requires appointment to be saved first)
-  const processOnlinePayment = async (appointmentData: any) => {
-    isProcessingPayment.value = true
-    paymentError.value = ''
-    
-    try {
-      if (!appointmentData.appointmentId || appointmentData.appointmentId.startsWith('temp_')) {
-        throw new Error('Termin muss zuerst gespeichert werden für Online-Zahlung')
-      }
-
-      // Create pending payment record
-      const paymentRecord = await createPendingPaymentRecord({
-        ...appointmentData,
-        paymentMethod: 'online'
-      })
-
-      // Update appointment
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          payment_method: 'online',
-          payment_status: 'pending',
-          is_paid: false
-        })
-        .eq('id', appointmentData.appointmentId)
-
-      if (error) throw error
-
-      // Return data for Wallee integration
-      return {
-        paymentRecord,
-        appointmentId: appointmentData.appointmentId,
-        amount: appointmentData.calculation.totalAmount,
-        needsWalleeRedirect: true
-      }
-
-    } catch (err: any) {
-      paymentError.value = err.message
-      throw err
-    } finally {
-      isProcessingPayment.value = false
-    }
-  }
-
-  // Mark payment as completed (called after successful online payment)
-  const markPaymentCompleted = async (appointmentId: string, transactionData?: any) => {
-    try {
-      // Update appointment
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .update({
-          payment_status: 'completed',
-          is_paid: true
-        })
-        .eq('id', appointmentId)
-
-      if (appointmentError) throw appointmentError
-
-      // Update payment record
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .update({
-          payment_status: 'completed',
-          paid_at: new Date().toISOString(),
-          wallee_transaction_id: transactionData?.transactionId || null,
-          metadata: {
-            ...transactionData,
-            completed_at: new Date().toISOString()
-          }
-        })
-        .eq('appointment_id', appointmentId)
-
-      if (paymentError) throw paymentError
-
-      paymentSuccess.value = {
-        type: 'online',
-        message: 'Online-Zahlung erfolgreich abgeschlossen',
-        transactionId: transactionData?.transactionId
-      }
-
-      console.log('✅ Payment marked as completed:', appointmentId)
-
-    } catch (err) {
-      console.error('❌ Error marking payment completed:', err)
-      throw err
-    }
-  }
-
-  // Get pending payments for admin dashboard
-  const getPendingPayments = async (staffId?: string) => {
-    try {
-      let query = supabase
-        .from('payments')
-        .select(`
-          *,
-          appointments (
-            title,
-            start_time,
-            end_time,
-            type
-          ),
-          users!payments_user_id_fkey (
-            first_name,
-            last_name,
-            email
-          )
-        `)
-        .eq('payment_status', 'pending')
-        .order('created_at', { ascending: false })
-
-      if (staffId) {
-        query = query.eq('staff_id', staffId)
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-
-      return data || []
-
-    } catch (err) {
-      console.error('❌ Error loading pending payments:', err)
-      return []
-    }
-  }
-
-  // Clear state
-  const clearPaymentState = () => {
-    paymentError.value = ''
-    paymentSuccess.value = null
-    isProcessingPayment.value = false
-  }
-
-  return {
-    // State
-    selectedPaymentMethod,
-    isProcessingPayment: computed(() => isProcessingPayment.value),
-    paymentError: computed(() => paymentError.value),
-    paymentSuccess: computed(() => paymentSuccess.value),
-    
-    // Options
-    paymentMethodOptions,
-    getPaymentMethod,
-    
-    // Student Preferences
-    loadStudentPaymentPreference,
-    saveStudentPaymentPreference,
-    selectPaymentMethod,
-    
-    // Calculations
-    calculatePaymentBreakdown,
-    
-    // Payment Processing
-    processCashPayment,
-    processInvoicePayment,
-    processOnlinePayment,
-    markPaymentCompleted,
-    
-    // Admin
-    getPendingPayments,
-    createPendingPaymentRecord,
-    
-    // Utils
-    clearPaymentState
-  }
-}```
-
-### ./composables/usePayments.ts
-```typescript
-// composables/usePayments.ts - Gemeinsame Payment Logic
-import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-interface CalculatedPrice {
-  base_price_rappen: number
-  admin_fee_rappen: number
-  total_rappen: number
-  base_price_chf: string
-  admin_fee_chf: string
-  total_chf: string
-  category_code: string
-  duration_minutes: number
-}
-
-interface PaymentMethod {
-  method_code: string
-  display_name: string
-  description: string
-  icon_name: string
-  is_active: boolean
-  is_online: boolean
-  display_order: number
-}
-
-interface PaymentData {
-  appointment_id: string
-  user_id: string
-  staff_id?: string
-  amount_rappen: number
-  admin_fee_rappen: number
-  total_amount_rappen: number
-  payment_method: string
-  payment_status: string
-  description: string
-  metadata: Record<string, any>
-}
-
-export const usePayments = () => {
-  const supabase = getSupabase()
-  
-  // State
-  const isLoadingPrice = ref(false)
-  const isProcessing = ref(false)
-  const calculatedPrice = ref<CalculatedPrice | null>(null)
-  const priceError = ref<string>('')
-
-  // Payment Methods (could be loaded from database)
-  const availablePaymentMethods = ref<PaymentMethod[]>([
-    {
-      method_code: 'wallee',
-      display_name: 'Online Zahlung',
-      description: 'Kreditkarte, Twint, etc.',
-      icon_name: 'credit-card',
-      is_active: true,
-      is_online: true,
-      display_order: 1
-    },
-    {
-      method_code: 'cash',
-      display_name: 'Bar',
-      description: 'Zahlung beim Fahrlehrer',
-      icon_name: 'cash',
-      is_active: true,
-      is_online: false,
-      display_order: 2
-    },
-    {
-      method_code: 'invoice',
-      display_name: 'Rechnung',
-      description: 'Firmenrechnung',
-      icon_name: 'document',
-      is_active: true,
-      is_online: false,
-      display_order: 3
-    }
-  ])
-
-  // Category-specific pricing (from your project data)
-  const categoryPricing: Record<string, { base: number, admin: number }> = {
-    'B': { base: 95, admin: 120 },
-    'A1': { base: 95, admin: 0 },
-    'A35kW': { base: 95, admin: 0 },
-    'A': { base: 95, admin: 0 },
-    'BE': { base: 120, admin: 120 },
-    'C1': { base: 150, admin: 200 },
-    'D1': { base: 150, admin: 200 },
-    'C': { base: 170, admin: 200 },
-    'CE': { base: 200, admin: 250 },
-    'D': { base: 200, admin: 300 },
-    'Motorboot': { base: 95, admin: 120 },
-    'BPT': { base: 100, admin: 120 }
-  }
-
-  // Get appointment count for a user
-  const getAppointmentCount = async (userId: string): Promise<number> => {
-    try {
-      const { count, error } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .in('status', ['completed', 'confirmed'])
-
-      if (error) throw error
-      return (count || 0) + 1
-    } catch (error) {
-      console.error('Error getting appointment count:', error)
-      return 1
-    }
-  }
-
-  // Calculate price based on category, duration, and appointment count
-  const calculatePrice = async (
-    category: string, 
-    duration: number, 
-    userId?: string
-  ): Promise<CalculatedPrice> => {
-    isLoadingPrice.value = true
-    priceError.value = ''
-
-    try {
-      // Get appointment count if userId provided
-      const appointmentCount = userId ? await getAppointmentCount(userId) : 1
-      
-      // Get category pricing
-      const pricing = categoryPricing[category] || categoryPricing['B']
-      
-      // Calculate base price (per 45min, scaled to duration)
-      const basePriceChf = (pricing.base / 45) * duration
-      const basePriceRappen = Math.round(basePriceChf * 100)
-      
-      // Admin fee only from 2nd appointment (except for A1/A35kW/A)
-      const adminFeeChf = (appointmentCount > 1 && pricing.admin > 0) ? pricing.admin : 0
-      const adminFeeRappen = adminFeeChf * 100
-      
-      // Total
-      const totalRappen = basePriceRappen + adminFeeRappen
-      const totalChf = totalRappen / 100
-
-      const result: CalculatedPrice = {
-        base_price_rappen: basePriceRappen,
-        admin_fee_rappen: adminFeeRappen,
-        total_rappen: totalRappen,
-        base_price_chf: basePriceChf.toFixed(2),
-        admin_fee_chf: adminFeeChf.toFixed(2),
-        total_chf: totalChf.toFixed(2),
-        category_code: category,
-        duration_minutes: duration
-      }
-
-      calculatedPrice.value = result
-      return result
-
-    } catch (error: any) {
-      priceError.value = error.message || 'Fehler bei der Preisberechnung'
-      throw error
-    } finally {
-      isLoadingPrice.value = false
-    }
-  }
-
-  // Create payment record in database
-  const createPaymentRecord = async (data: Partial<PaymentData>): Promise<any> => {
-    try {
-      const { data: payment, error } = await supabase
-        .from('payments')
-        .insert(data)
-        .select()
-        .single()
-
-      if (error) throw error
-      return payment
-    } catch (error) {
-      console.error('Error creating payment record:', error)
-      throw error
-    }
-  }
-
-  // Handle cash payment
-  const processCashPayment = async (
-    appointmentId: string,
-    userId: string,
-    staffId: string,
-    price: CalculatedPrice
-  ) => {
-    isProcessing.value = true
-
-    try {
-      const paymentData: Partial<PaymentData> = {
-        appointment_id: appointmentId,
-        user_id: userId,
-        staff_id: staffId,
-        amount_rappen: price.base_price_rappen,
-        admin_fee_rappen: price.admin_fee_rappen,
-        total_amount_rappen: price.total_rappen,
-        payment_method: 'cash',
-        payment_status: 'completed', // Cash is immediately completed
-        description: `Fahrlektion ${price.category_code} - ${price.duration_minutes} Min`,
-        metadata: {
-          category: price.category_code,
-          duration: price.duration_minutes,
-          processed_at: new Date().toISOString()
-        }
-      }
-
-      const payment = await createPaymentRecord(paymentData)
-
-      // Update appointment as paid
-      await updateAppointmentPaymentStatus(appointmentId, true, 'cash')
-
-      return payment
-    } finally {
-      isProcessing.value = false
-    }
-  }
-
-  // Handle invoice payment
-  const processInvoicePayment = async (
-    appointmentId: string,
-    userId: string,
-    staffId: string,
-    price: CalculatedPrice,
-    invoiceData: Record<string, any>
-  ) => {
-    isProcessing.value = true
-
-    try {
-      const paymentData: Partial<PaymentData> = {
-        appointment_id: appointmentId,
-        user_id: userId,
-        staff_id: staffId,
-        amount_rappen: price.base_price_rappen,
-        admin_fee_rappen: price.admin_fee_rappen,
-        total_amount_rappen: price.total_rappen,
-        payment_method: 'invoice',
-        payment_status: 'pending', // Invoice starts as pending
-        description: `Fahrlektion ${price.category_code} - ${price.duration_minutes} Min`,
-        metadata: {
-          category: price.category_code,
-          duration: price.duration_minutes,
-          invoice_data: invoiceData,
-          created_at: new Date().toISOString()
-        }
-      }
-
-      const payment = await createPaymentRecord(paymentData)
-
-      // Don't mark appointment as paid yet (wait for invoice payment)
-      
-      return payment
-    } finally {
-      isProcessing.value = false
-    }
-  }
-
-  // Update appointment payment status
-  const updateAppointmentPaymentStatus = async (
-    appointmentId: string,
-    isPaid: boolean,
-    paymentMethod?: string
-  ) => {
-    try {
-      const updateData: any = { is_paid: isPaid }
-      
-      if (paymentMethod) {
-        updateData.payment_method = paymentMethod
-      }
-
-      const { error } = await supabase
-        .from('appointments')
-        .update(updateData)
-        .eq('id', appointmentId)
-
-      if (error) throw error
-    } catch (error) {
-      console.error('Error updating appointment payment status:', error)
-      throw error
-    }
-  }
-
-  // Get payment history for appointment
-  const getPaymentHistory = async (appointmentId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('appointment_id', appointmentId)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      return data || []
-    } catch (error) {
-      console.error('Error getting payment history:', error)
-      return []
-    }
-  }
-
-  // Get payment method icon class
-  const getPaymentMethodIconClass = (methodCode: string): string => {
-    const classes: Record<string, string> = {
-      wallee: 'bg-blue-100 text-blue-600',
-      cash: 'bg-yellow-100 text-yellow-600',
-      invoice: 'bg-gray-100 text-gray-600',
-      card: 'bg-purple-100 text-purple-600',
-      twint: 'bg-blue-100 text-blue-600'
-    }
-    return classes[methodCode] || 'bg-gray-100 text-gray-600'
-  }
-
-  // Get payment button text
-  const getPaymentButtonText = (methodCode: string): string => {
-    const texts: Record<string, string> = {
-      wallee: 'Online bezahlen',
-      cash: 'Bar bezahlen',
-      invoice: 'Rechnung erstellen',
-      card: 'Mit Karte bezahlen',
-      twint: 'Mit Twint bezahlen'
-    }
-    return texts[methodCode] || 'Bezahlen'
-  }
-
-  return {
-    // State
-    isLoadingPrice: computed(() => isLoadingPrice.value),
-    isProcessing: computed(() => isProcessing.value),
-    calculatedPrice: computed(() => calculatedPrice.value),
-    priceError: computed(() => priceError.value),
-    availablePaymentMethods: computed(() => availablePaymentMethods.value),
-
-    // Methods
-    calculatePrice,
-    getAppointmentCount,
-    createPaymentRecord,
-    processCashPayment,
-    processInvoicePayment,
-    updateAppointmentPaymentStatus,
-    getPaymentHistory,
-
-    // Utilities
-    getPaymentMethodIconClass,
-    getPaymentButtonText,
-
-    // Reset
-    clearErrors: () => {
-      priceError.value = ''
-    }
-  }
-}```
-
-### ./composables/usePendingTasks.ts
-```typescript
-// composables/usePendingTasks.ts
-import { ref, computed, reactive } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-// Typen für bessere Typsicherheit
-interface PendingAppointment {
-  id: string
-  title: string
-  start_time: string
-  end_time: string
-  user_id: string
-  status: string
-  users: {
-    first_name: string
-    last_name: string
-  }
-  // Da wir nur Kriterien-Bewertungen wollen, passen wir den Typ an
-  // Die notes Property sollte hier nur die Kriterien-spezifischen Notizen halten
-  notes: Array<{
-    id: string
-    criteria_rating?: number
-    criteria_note?: string
-    evaluation_criteria_id?: string
-  }>
-}
-
-// Typ für die Daten, die von saveCriteriaEvaluations erwartet werden
-export interface CriteriaEvaluationData {
-  criteria_id: string; // evaluation_criteria_id
-  rating: number;     // criteria_rating
-  note: string;       // criteria_note
-}
-
-// SINGLETON PATTERN - Globaler reaktiver State
-const globalState = reactive({
-  pendingAppointments: [] as PendingAppointment[],
-  isLoading: false,
-  error: null as string | null
-})
-
-// Computed values basierend auf globalem State
-const pendingCount = computed(() => globalState.pendingAppointments.length)
-
-const buttonClasses = computed(() =>
-  `text-white font-bold px-4 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200
-  ${pendingCount.value > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-green-500 hover:bg-green-600'}`
-)
-
-const buttonText = computed(() => 
-  `Pendenzen${pendingCount.value > 0 ? `(${pendingCount.value})` : '(0)'}`
-)
-
-// Hilfsfunktion für formatierte Anzeige
-const getFormattedAppointment = (appointment: PendingAppointment) => {
-  const startDate = new Date(appointment.start_time)
-  const endDate = new Date(appointment.end_time)
-  
-  return {
-    ...appointment,
-    formattedDate: startDate.toLocaleDateString('de-CH'),
-    formattedStartTime: startDate.toLocaleTimeString('de-CH', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    }),
-    formattedEndTime: endDate.toLocaleTimeString('de-CH', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    }),
-    studentName: `${appointment.users.first_name} ${appointment.users.last_name}`,
-    duration: Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60)) // Minuten
-  }
-}
-
-// Computed für direkt formatierte Appointments
-const formattedAppointments = computed(() => {
-  return globalState.pendingAppointments.map(appointment => getFormattedAppointment(appointment))
-})
-
-// SINGLETON FUNCTIONS - Funktionen operieren auf globalem State
-const fetchPendingTasks = async (staffId: string) => {
-  console.log('🔥 fetchPendingTasks starting for staff:', staffId)
-  globalState.isLoading = true
-  globalState.error = null
-
-  try {
-    const supabase = getSupabase()
-    
-    // Vergangene Termine des Fahrlehrers abrufen
-    const { data, error: fetchError } = await supabase
-      .from('appointments')
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        user_id,
-        status,
-        users!appointments_user_id_fkey (
-          first_name,
-          last_name
-        ),
-        notes (
-          evaluation_criteria_id,
-          criteria_rating
-        )
-      `)
-      .eq('staff_id', staffId)
-      .lt('end_time', new Date().toISOString()) // Nur vergangene Termine
-      .eq('status', 'completed') // Nur abgeschlossene Termine
-      .order('start_time', { ascending: false }) // Neueste zuerst
-
-    if (fetchError) throw fetchError
-
-    console.log('🔥 Fetched appointments (raw data):', data?.length)
-
-    // Termine ohne Kriterienbewertung filtern
-    const pending: PendingAppointment[] = (data || []).filter((appointment: any) => {
-      // Ein Termin ist "pending", wenn er KEINE Kriterien-Bewertung hat.
-      // Wir definieren "Kriterien-Bewertung" als einen Note-Eintrag, 
-      // bei dem evaluation_criteria_id und criteria_rating gesetzt sind.
-      const hasCriteriaEvaluation = appointment.notes && 
-        appointment.notes.some((note: any) => 
-          note.evaluation_criteria_id !== null && 
-          note.criteria_rating !== null
-        );
-
-      // Hier ignorieren wir alte staff_rating Einträge komplett für die Pendenzen-Logik
-      console.log(`🔥 Appointment ${appointment.id}: hasCriteriaEvaluation=${hasCriteriaEvaluation}`)
-      return !hasCriteriaEvaluation; // Pending, wenn keine Kriterien-Bewertung vorhanden ist
-    }).map((appointment: any): PendingAppointment => ({
-      id: appointment.id,
-      title: appointment.title,
-      start_time: appointment.start_time,
-      end_time: appointment.end_time,
-      user_id: appointment.user_id,
-      status: appointment.status,
-      users: appointment.users,
-      // Wichtig: Filtere hier die notes, damit nur relevante Kriterien-notes enthalten sind
-      notes: appointment.notes.filter((note: any) => note.evaluation_criteria_id !== null)
-    }))
-
-    console.log('🔥 Filtered pending appointments:', pending.length)
-    
-    // WICHTIG: Globalen State komplett ersetzen (nicht mutieren)
-    globalState.pendingAppointments = [...pending]
-    console.log('🔥 Global pending state updated, count:', pendingCount.value)
-    
-  } catch (err: any) {
-    globalState.error = err?.message || 'Fehler beim Laden der Pendenzen'
-    console.error('❌ Fehler beim Laden der Pendenzen:', err)
-  } finally {
-    globalState.isLoading = false
-  }
-}
-
-// NEUE Funktion zum Speichern der Kriterien-Bewertungen
-const saveCriteriaEvaluations = async (
-  appointmentId: string,
-  evaluations: CriteriaEvaluationData[], // Array von Kriterien-Bewertungen
-  currentUserId?: string
-) => {
-  try {
-    const supabase = getSupabase();
-    
-    // Validierung der übergebenen Daten
-    if (!evaluations || evaluations.length === 0) {
-      throw new Error('Es müssen Bewertungen für mindestens ein Kriterium angegeben werden.');
-    }
-
-    const notesToInsert = evaluations.map(evalData => {
-      // Validierung für jede einzelne Kriterienbewertung
-      if (evalData.rating < 1 || evalData.rating > 6) {
-        throw new Error(`Bewertung für Kriterium ${evalData.criteria_id} muss zwischen 1 und 6 liegen.`);
-      }
-      if (typeof evalData.note !== 'string') { // Stellen Sie sicher, dass note ein String ist
-        evalData.note = String(evalData.note);
-      }
-      if (evalData.note.trim().length === 0) { // Eine Notiz ist nicht mehr zwingend
-        evalData.note = ''; // Sicherstellen, dass es ein leerer String ist
-      }
-
-      return {
-        appointment_id: appointmentId,
-        evaluation_criteria_id: evalData.criteria_id,
-        criteria_rating: evalData.rating,
-        criteria_note: evalData.note.trim(),
-        // staff_rating und staff_note bleiben NULL, da nicht mehr verwendet
-        staff_rating: null,
-        staff_note: '',
-        last_updated_by_user_id: currentUserId || null,
-        last_updated_at: new Date().toISOString()
-      };
-    });
-
-    console.log('Attempting to upsert notes:', notesToInsert);
-
-    // Verwende upsert für mehrere Einträge
-    const { error: upsertError } = await supabase
-      .from('notes')
-      .upsert(notesToInsert, { onConflict: 'appointment_id,evaluation_criteria_id' }); // Conflict auf diesen beiden Spalten
-                                                                                        // um Updates zu ermöglichen
-    if (upsertError) throw upsertError;
-
-    // Nach erfolgreichem Speichern: Aktualisiere die Pendenzen
-    // Ein Termin ist NICHT mehr pending, wenn er mindestens eine Kriterien-Bewertung hat.
-    // Die fetchPendingTasks Funktion wird das übernehmen.
-    await fetchPendingTasks(currentUserId || ''); // Aktualisiere die Liste nach dem Speichern
-
-    console.log('✅ Kriterien-Bewertungen erfolgreich gespeichert und Pendenzen aktualisiert:', appointmentId);
-
-  } catch (err: any) {
-    globalState.error = err?.message || 'Fehler beim Speichern der Kriterien-Bewertungen';
-    console.error('❌ Fehler beim Speichern der Kriterien-Bewertungen:', err);
-    throw err;
-  }
-};
-
-
-// Die markAsCompleted und markMultipleAsCompleted Funktionen sind obsolet,
-// da wir keine Gesamtbewertungen mehr speichern.
-// Ich habe sie hier entfernt, damit sie nicht mehr versehentlich aufgerufen werden.
-// Wenn du sie noch irgendwo im Code hast, wo sie aufgerufen werden, musst du diese Aufrufe ändern.
-
-const refreshPendingTasks = async (staffId: string) => {
-  await fetchPendingTasks(staffId)
-}
-
-const clearError = () => {
-  globalState.error = null
-}
-
-// SINGLETON EXPORT - Immer dieselbe Instanz zurückgeben
-export const usePendingTasks = () => {
-  console.log('🔄 usePendingTasks called - returning singleton instance')
-  console.log('🔥 Current global pending count:', pendingCount.value)
-  
-  return {
-    // Reactive state - direkte Referenzen auf reactive state
-    pendingAppointments: computed(() => globalState.pendingAppointments),
-    formattedAppointments,
-    pendingCount,
-    buttonClasses,
-    buttonText,
-    isLoading: computed(() => globalState.isLoading),
-    error: computed(() => globalState.error),
-    
-    // Actions
-    fetchPendingTasks,
-    saveCriteriaEvaluations, // Die neue Funktion zum Export hinzufügen
-    refreshPendingTasks,
-    clearError,
-    
-    // Utilities
-    getFormattedAppointment
-  }
-}```
-
-### ./composables/usePricing.ts
-```typescript
-// composables/usePricing.ts
-
-import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-// Types
-interface PricingRule {
-  id: string
-  category_code: string
-  price_per_minute_rappen: number
-  admin_fee_rappen: number
-  admin_fee_applies_from: number
-  base_duration_minutes: number
-  is_active: boolean
-  valid_from: string | null
-  valid_until: string | null
-  rule_name: string
-}
-
-interface CalculatedPrice {
-  base_price_rappen: number
-  admin_fee_rappen: number
-  total_rappen: number
-  base_price_chf: string
-  admin_fee_chf: string
-  total_chf: string
-  category_code: string
-  duration_minutes: number
-  appointment_number: number
-}
-
-export const usePricing = () => {
-  const supabase = getSupabase()
-  
-  // State
-  const pricingRules = ref<PricingRule[]>([])
-  const isLoadingPrices = ref(false)
-  const pricingError = ref<string>('')
-  const lastLoaded = ref<Date | null>(null)
-  
-  // Cache für 5 Minuten
-  const CACHE_DURATION = 5 * 60 * 1000 // 5 Minuten
-
-  // Load pricing rules from database
-  const loadPricingRules = async (forceReload = false): Promise<void> => {
-    // Prüfe Cache
-    if (!forceReload && lastLoaded.value && 
-        (Date.now() - lastLoaded.value.getTime()) < CACHE_DURATION) {
-      return // Cache noch gültig
-    }
-
-    isLoadingPrices.value = true
-    pricingError.value = ''
-
-    try {
-      console.log('🔄 Loading pricing rules from database...')
-
-      const { data, error } = await supabase
-        .from('pricing_rules')
-        .select('*')
-        .eq('rule_type', 'category_pricing')
-        .eq('is_active', true)
-        .order('category_code')
-
-      if (error) {
-        console.error('❌ Database error:', error)
-        throw new Error(`Database error: ${error.message}`)
-      }
-
-      if (!data || data.length === 0) {
-        console.warn('⚠️ No pricing rules found, using fallback')
-        await createFallbackPricingRules()
-        return
-      }
-
-      // Filter nur gültige Regeln (Datumsbereich)
-      const today = new Date().toISOString().split('T')[0]
-      const validRules = data.filter(rule => {
-        const validFrom = rule.valid_from || '1900-01-01'
-        const validUntil = rule.valid_until || '2099-12-31'
-        return today >= validFrom && today <= validUntil
-      })
-
-      pricingRules.value = validRules
-      lastLoaded.value = new Date()
-
-      console.log('✅ Pricing rules loaded:', validRules.length, 'rules')
-      console.log('📊 Categories:', validRules.map(r => r.category_code))
-
-    } catch (err: any) {
-      console.error('❌ Error loading pricing rules:', err)
-      pricingError.value = err.message || 'Fehler beim Laden der Preisregeln'
-      
-      // Fallback auf hard-coded Werte bei Fehler
-      await createFallbackPricingRules()
-    } finally {
-      isLoadingPrices.value = false
-    }
-  }
-
-  // Fallback: Hard-coded Werte in Memory laden
-  const createFallbackPricingRules = async (): Promise<void> => {
-    console.log('🔄 Using fallback pricing rules...')
-    
-    const fallbackRules: PricingRule[] = [
-      { id: 'fallback-B', category_code: 'B', price_per_minute_rappen: 211, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback B' },
-      { id: 'fallback-A1', category_code: 'A1', price_per_minute_rappen: 211, admin_fee_rappen: 0, admin_fee_applies_from: 999, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A1' },
-      { id: 'fallback-A35kW', category_code: 'A35kW', price_per_minute_rappen: 211, admin_fee_rappen: 0, admin_fee_applies_from: 999, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A35kW' },
-      { id: 'fallback-A', category_code: 'A', price_per_minute_rappen: 211, admin_fee_rappen: 0, admin_fee_applies_from: 999, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A' },
-      { id: 'fallback-BE', category_code: 'BE', price_per_minute_rappen: 267, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback BE' },
-      { id: 'fallback-C1', category_code: 'C1', price_per_minute_rappen: 333, admin_fee_rappen: 20000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback C1' },
-      { id: 'fallback-D1', category_code: 'D1', price_per_minute_rappen: 333, admin_fee_rappen: 20000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D1' },
-      { id: 'fallback-C', category_code: 'C', price_per_minute_rappen: 378, admin_fee_rappen: 20000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback C' },
-      { id: 'fallback-CE', category_code: 'CE', price_per_minute_rappen: 444, admin_fee_rappen: 25000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback CE' },
-      { id: 'fallback-D', category_code: 'D', price_per_minute_rappen: 444, admin_fee_rappen: 30000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D' },
-      { id: 'fallback-Motorboot', category_code: 'Motorboot', price_per_minute_rappen: 211, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback Motorboot' },
-      { id: 'fallback-BPT', category_code: 'BPT', price_per_minute_rappen: 222, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback BPT' }
-    ]
-    
-    pricingRules.value = fallbackRules
-    lastLoaded.value = new Date()
-    console.log('✅ Fallback pricing rules loaded')
-  }
-
-  // Get pricing rule for specific category
-  const getPricingRule = (categoryCode: string): PricingRule | null => {
-    const rule = pricingRules.value.find(rule => rule.category_code === categoryCode)
-    if (!rule) {
-      console.warn(`⚠️ No pricing rule found for category: ${categoryCode}`)
-      return null
-    }
-    return rule
-  }
-
-  // Get appointment count for user
-  const getAppointmentCount = async (userId: string): Promise<number> => {
-    try {
-      const { count, error } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .in('status', ['completed', 'confirmed'])
-
-      if (error) {
-        console.error('❌ Error counting appointments:', error)
-        return 1
-      }
-
-      return (count || 0) + 1
-    } catch (error) {
-      console.error('❌ Error in getAppointmentCount:', error)
-      return 1
-    }
-  }
-
-  // Calculate price based on category, duration, and appointment count
-  const calculatePrice = async (
-    categoryCode: string,
-    durationMinutes: number,
-    userId?: string
-  ): Promise<CalculatedPrice> => {
-    // Lade Pricing Rules falls noch nicht geladen
-    if (pricingRules.value.length === 0) {
-      await loadPricingRules()
-    }
-
-    const rule = getPricingRule(categoryCode)
-    if (!rule) {
-      throw new Error(`Keine Preisregel für Kategorie ${categoryCode} gefunden`)
-    }
-
-    // Appointment count ermitteln
-    const appointmentNumber = userId ? await getAppointmentCount(userId) : 1
-
-    // Grundpreis berechnen (skaliert auf Dauer)
-    const basePriceRappen = Math.round(rule.price_per_minute_rappen * durationMinutes)
-    
-    // Admin-Fee nur ab entsprechendem Termin
-    const adminFeeRappen = appointmentNumber >= rule.admin_fee_applies_from ? rule.admin_fee_rappen : 0
-    
-    // Gesamtpreis
-    const totalRappen = basePriceRappen + adminFeeRappen
-
-    const result: CalculatedPrice = {
-      base_price_rappen: basePriceRappen,
-      admin_fee_rappen: adminFeeRappen,
-      total_rappen: totalRappen,
-      base_price_chf: (basePriceRappen / 100).toFixed(2),
-      admin_fee_chf: (adminFeeRappen / 100).toFixed(2),
-      total_chf: (totalRappen / 100).toFixed(2),
-      category_code: categoryCode,
-      duration_minutes: durationMinutes,
-      appointment_number: appointmentNumber
-    }
-
-    console.log('💰 Price calculated:', {
-      category: categoryCode,
-      duration: durationMinutes,
-      appointment: appointmentNumber,
-      basePrice: result.base_price_chf,
-      adminFee: result.admin_fee_chf,
-      total: result.total_chf
-    })
-
-    return result
-  }
-
-  // Get admin fee for category (legacy support)
-  const getAdminFeeForCategory = (categoryCode: string): number => {
-    const rule = getPricingRule(categoryCode)
-    return rule ? rule.admin_fee_rappen / 100 : 0
-  }
-
-  // Get price per minute for category
-  const getPricePerMinuteForCategory = (categoryCode: string): number => {
-    const rule = getPricingRule(categoryCode)
-    return rule ? rule.price_per_minute_rappen / 100 : 0
-  }
-
-  // Get all available categories
-  const getAvailableCategories = (): string[] => {
-    return pricingRules.value.map(rule => rule.category_code).sort()
-  }
-
-  // Update single pricing rule
-  const updatePricingRule = async (
-    categoryCode: string, 
-    updates: Partial<Pick<PricingRule, 'price_per_minute_rappen' | 'admin_fee_rappen' | 'admin_fee_applies_from'>>
-  ): Promise<boolean> => {
-    try {
-      console.log('💾 Updating pricing rule:', categoryCode, updates)
-
-      const { error } = await supabase
-        .from('pricing_rules')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('category_code', categoryCode)
-        .eq('rule_type', 'category_pricing')
-
-      if (error) {
-        console.error('❌ Error updating pricing rule:', error)
-        throw new Error(error.message)
-      }
-
-      // Cache invalidieren und neu laden
-      await loadPricingRules(true)
-      
-      console.log('✅ Pricing rule updated successfully')
-      return true
-
-    } catch (err: any) {
-      console.error('❌ Error in updatePricingRule:', err)
-      pricingError.value = err.message || 'Fehler beim Aktualisieren der Preisregel'
-      return false
-    }
-  }
-
-  // Computed
-  const isLoaded = computed(() => pricingRules.value.length > 0)
-  const categoriesCount = computed(() => pricingRules.value.length)
-
-  return {
-    // State
-    pricingRules,
-    isLoadingPrices,
-    pricingError,
-    isLoaded,
-    categoriesCount,
-    
-    // Methods
-    loadPricingRules,
-    calculatePrice,
-    getPricingRule,
-    getAdminFeeForCategory,
-    getPricePerMinuteForCategory,
-    getAvailableCategories,
-    updatePricingRule,
-    
-    // Legacy support
-    getAppointmentCount
-  }
-}```
-
-### ./composables/useStaffCategoryDurations.ts
-```typescript
-// composables/useStaffCategoryDurations.ts - Neue saubere DB-Struktur
-import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-interface StaffCategoryDuration {
-  id: string
-  created_at: string
-  staff_id: string
-  category_code: string
-  duration_minutes: number
-  is_active: boolean
-  display_order: number
-}
-
-export const useStaffCategoryDurations = () => {
-  // State
-  const availableDurations = ref<number[]>([])
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
-
-  // Computed - formatierte Dauern für UI
-  const formattedDurations = computed(() => {
-    return availableDurations.value.map(duration => ({
-      value: duration,
-      label: duration >= 120 
-        ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
-        : `${duration}min`
-    }))
-  })
-
-  // Dauern für Staff + Kategorie laden
-  const loadStaffCategoryDurations = async (staffId: string, categoryCode: string) => {
-    console.log('🚀 Loading staff category durations:', { staffId, categoryCode })
-    isLoading.value = true
-    error.value = null
-
-    try {
-      const supabase = getSupabase()
-
-      const { data, error: fetchError } = await supabase
-        .from('staff_category_durations')
-        .select('duration_minutes')
-        .eq('staff_id', staffId)
-        .eq('category_code', categoryCode)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true })
-
-      if (fetchError) throw fetchError
-
-      const durations = data?.map(item => item.duration_minutes) || []
-      
-      // Fallback wenn keine spezifischen Dauern gefunden
-      if (durations.length === 0) {
-        console.log('⚠️ No specific durations found, using category default')
-        
-        // Hole Standard-Dauer aus categories Tabelle
-        const { data: categoryData, error: categoryError } = await supabase
-          .from('categories')
-          .select('lesson_duration_minutes')
-          .eq('code', categoryCode)
-          .eq('is_active', true)
-          .maybeSingle()
-
-        if (categoryError) throw categoryError
-        
-        const defaultDuration = categoryData?.lesson_duration_minutes || 45
-        availableDurations.value = [defaultDuration]
-      } else {
-        availableDurations.value = durations.sort((a: number, b: number) => a - b)
-      }
-
-      console.log('✅ Loaded durations:', availableDurations.value)
-      return availableDurations.value
-
-    } catch (err: any) {
-      console.error('❌ Error loading staff category durations:', err)
-      error.value = err.message
-      // Absoluter Fallback
-      availableDurations.value = [45]
-      return [45]
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Dauern für Staff + Kategorie speichern
-  const saveStaffCategoryDurations = async (
-    staffId: string, 
-    categoryCode: string, 
-    durations: number[]
-  ) => {
-    console.log('💾 Saving staff category durations:', { staffId, categoryCode, durations })
-    
-    try {
-      const supabase = getSupabase()
-
-      // Erst alle bestehenden Einträge für diesen Staff + Kategorie löschen
-      const { error: deleteError } = await supabase
-        .from('staff_category_durations')
-        .delete()
-        .eq('staff_id', staffId)
-        .eq('category_code', categoryCode)
-
-      if (deleteError) throw deleteError
-
-      // Neue Einträge einfügen
-      const insertData = durations.map((duration, index) => ({
-        staff_id: staffId,
-        category_code: categoryCode,
-        duration_minutes: duration,
-        display_order: index + 1,
-        is_active: true
-      }))
-
-      const { error: insertError } = await supabase
-        .from('staff_category_durations')
-        .insert(insertData)
-
-      if (insertError) throw insertError
-
-      // State aktualisieren
-      availableDurations.value = durations.sort((a: number, b: number) => a - b)
-      
-      console.log('✅ Staff category durations saved successfully')
-
-    } catch (err: any) {
-      console.error('❌ Error saving staff category durations:', err)
-      error.value = err.message
-      throw err
-    }
-  }
-
-  // Alle Dauern eines Staff laden (für Settings)
-  const loadAllStaffDurations = async (staffId: string) => {
-    console.log('📋 Loading all staff durations for settings')
-    
-    try {
-      const supabase = getSupabase()
-
-      const { data, error: fetchError } = await supabase
-        .from('staff_category_durations')
-        .select(`
-          category_code,
-          duration_minutes,
-          display_order,
-          categories (name)
-        `)
-        .eq('staff_id', staffId)
-        .eq('is_active', true)
-        .order('category_code')
-        .order('display_order')
-
-      if (fetchError) throw fetchError
-
-      // Gruppiere nach Kategorie
-      const groupedDurations = data?.reduce((acc: any, item: any) => {
-        if (!acc[item.category_code]) {
-          acc[item.category_code] = {
-            categoryCode: item.category_code,
-            categoryName: item.categories?.name || item.category_code,
-            durations: []
-          }
-        }
-        acc[item.category_code].durations.push(item.duration_minutes)
-        return acc
-      }, {}) || {}
-
-      return Object.values(groupedDurations)
-
-    } catch (err: any) {
-      console.error('❌ Error loading all staff durations:', err)
-      return []
-    }
-  }
-
-  // Standard-Dauern für neue Staff erstellen
-  const createDefaultDurations = async (staffId: string) => {
-    console.log('🏗️ Creating default durations for new staff')
-    
-    try {
-      const supabase = getSupabase()
-
-      // Lade alle aktiven Kategorien
-      const { data: categories, error: categoriesError } = await supabase
-        .from('categories')
-        .select('code, lesson_duration_minutes')
-        .eq('is_active', true)
-
-      if (categoriesError) throw categoriesError
-
-      // Erstelle Standard-Dauern für jede Kategorie
-      const defaultDurations = categories?.flatMap(category => {
-        const baseDuration = category.lesson_duration_minutes || 45
-        
-        // Erstelle 2-3 Standard-Optionen basierend auf der Kategorie
-        const durations = [baseDuration]
-        if (baseDuration >= 45) durations.push(baseDuration + 45) // +45min
-        if (baseDuration <= 135) durations.push(baseDuration + 90) // +90min
-        
-        return durations.map((duration, index) => ({
-          staff_id: staffId,
-          category_code: category.code,
-          duration_minutes: duration,
-          display_order: index + 1,
-          is_active: true
-        }))
-      }) || []
-
-      const { error: insertError } = await supabase
-        .from('staff_category_durations')
-        .insert(defaultDurations)
-
-      if (insertError) throw insertError
-
-      console.log('✅ Default durations created for all categories')
-
-    } catch (err: any) {
-      console.error('❌ Error creating default durations:', err)
-      throw err
-    }
-  }
-
-  // Erstes verfügbares Dauer zurückgeben
-  const getDefaultDuration = () => {
-    return availableDurations.value.length > 0 ? availableDurations.value[0] : 45
-  }
-
-  // Check ob Dauer verfügbar ist
-  const isDurationAvailable = (duration: number) => {
-    return availableDurations.value.includes(duration)
-  }
-
-  // Reset state
-  const reset = () => {
-    availableDurations.value = []
-    isLoading.value = false
-    error.value = null
-  }
-
-  return {
-    // State
-    availableDurations: computed(() => availableDurations.value),
-    formattedDurations,
-    isLoading: computed(() => isLoading.value),
-    error: computed(() => error.value),
-
-    // Actions
-    loadStaffCategoryDurations,
-    saveStaffCategoryDurations,
-    loadAllStaffDurations,
-    createDefaultDurations,
-    
-    // Utils
-    getDefaultDuration,
-    isDurationAvailable,
-    reset
-  }
-}```
-
-### ./composables/useStaffDurations.ts
-```typescript
-// composables/useStaffDurations.ts - Komplett Datenbank-getrieben
-import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-export const useStaffDurations = () => {
-  // State
-  const availableDurations = ref<number[]>([])
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
-
-  // Computed - formatierte Dauern für UI
-  const formattedDurations = computed(() => {
-    return availableDurations.value.map(duration => ({
-      value: duration,
-      label: duration >= 120 
-        ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
-        : `${duration}min`
-    }))
-  })
-
-  // Verfügbare Dauern für Staff + Kategorie aus Datenbank laden
-  const loadAvailableDurations = async (categoryCode: string, staffId: string) => {
-    console.log('🔥 Loading durations from DB for:', categoryCode, 'staff:', staffId)
-    isLoading.value = true
-    error.value = null
-
-    try {
-      const supabase = getSupabase()
-
-      // 1. Staff Settings laden (preferred_durations)
-      const { data: staffSettings, error: staffError } = await supabase
-        .from('staff_settings')
-        .select('preferred_durations')
-        .eq('staff_id', staffId)
-        .maybeSingle()
-
-      if (staffError) {
-        console.log('⚠️ No staff settings found, will use category defaults')
-      }
-
-      // 2. Kategorie aus DB laden (für Fallback-Dauer)
-      const { data: category, error: categoryError } = await supabase
-        .from('categories')
-        .select('lesson_duration, code')
-        .eq('code', categoryCode)
-        .eq('is_active', true)
-        .maybeSingle()
-
-      if (categoryError) throw categoryError
-
-      if (!category) {
-        throw new Error(`Kategorie ${categoryCode} nicht gefunden`)
-      }
-
-      // 3. Staff preferred_durations parsen
-      let finalDurations: number[] = []
-      
-      if (staffSettings?.preferred_durations) {
-        // Staff hat eigene Dauern konfiguriert
-        finalDurations = staffSettings.preferred_durations
-          .split(',')
-          .map((d: string) => parseInt(d.trim()))
-          .filter((d: number) => !isNaN(d) && d > 0)
-          .sort((a: number, b: number) => a - b)
-        
-        console.log('✅ Using staff configured durations:', finalDurations)
-      } else {
-        // Fallback: Standard-Dauer der Kategorie
-        finalDurations = [category.lesson_duration || 45]
-        console.log('⚠️ No staff durations found, using category default:', finalDurations)
-      }
-
-      availableDurations.value = finalDurations
-      return finalDurations
-
-    } catch (err: any) {
-      console.error('❌ Error loading durations from DB:', err)
-      error.value = err.message
-      // Absoluter Fallback
-      availableDurations.value = [45]
-      return [45]
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Staff preferred durations in DB updaten
-  const updateStaffDurations = async (staffId: string, newDurations: number[]) => {
-    console.log('🔄 Updating staff durations in DB:', newDurations)
-    
-    try {
-      const supabase = getSupabase()
-      // Als JSON Array speichern um konsistent mit bestehenden Daten zu sein
-      const durationsString = JSON.stringify(newDurations.sort((a: number, b: number) => a - b))
-      
-      const { error: upsertError } = await supabase
-        .from('staff_settings')
-        .upsert({
-          staff_id: staffId,
-          preferred_durations: durationsString,
-          updated_at: new Date().toISOString()
-        })
-
-      if (upsertError) throw upsertError
-
-      console.log('✅ Staff durations updated in DB as JSON:', durationsString)
-      
-      // State aktualisieren
-      availableDurations.value = newDurations.sort((a: number, b: number) => a - b)
-      
-    } catch (err: any) {
-      console.error('❌ Error updating staff durations:', err)
-      error.value = err.message
-      throw err
-    }
-  }
-
-  // Standard-Dauern für alle Kategorien aus DB laden (für Settings UI)
-  const loadAllPossibleDurations = async () => {
-    console.log('🔥 Loading all possible durations from DB')
-    
-    try {
-      const supabase = getSupabase()
-      
-      // Alle aktiven Kategorien laden
-      const { data: categories, error } = await supabase
-        .from('categories')
-        .select('code, lesson_duration')
-        .eq('is_active', true)
-        .order('display_order')
-
-      if (error) throw error
-
-      // Alle möglichen Dauern sammeln (15min steps von 45-240)
-      const allDurations = [45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240]
-      
-      return allDurations.map(duration => ({
-        value: duration,
-        label: duration >= 120 
-          ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
-          : `${duration}min`,
-        // Zeige welche Kategorien diese Dauer unterstützen (Info für Settings)
-        supportedCategories: categories?.filter(cat => {
-          // Logik welche Kategorien welche Dauern unterstützen kann in DB erweitert werden
-          return duration >= (cat.lesson_duration || 45)
-        }).map(cat => cat.code) || []
-      }))
-
-    } catch (err: any) {
-      console.error('❌ Error loading possible durations:', err)
-      return []
-    }
-  }
-
-  // Staff-Settings für User laden
-  const loadStaffSettings = async (staffId: string) => {
-    console.log('🔥 Loading complete staff settings from DB')
-    
-    try {
-      const supabase = getSupabase()
-      const { data, error } = await supabase
-        .from('staff_settings')
-        .select('*')
-        .eq('staff_id', staffId)
-        .maybeSingle()
-
-      if (error) throw error
-      
-      return data
-    } catch (err: any) {
-      console.error('❌ Error loading staff settings:', err)
-      return null
-    }
-  }
-
-  // Erstes verfügbares Dauer zurückgeben
-  const getDefaultDuration = () => {
-    return availableDurations.value.length > 0 ? availableDurations.value[0] : 45
-  }
-
-  // Check ob Dauer verfügbar ist
-  const isDurationAvailable = (duration: number) => {
-    return availableDurations.value.includes(duration)
-  }
-
-  // Reset state
-  const reset = () => {
-    availableDurations.value = []
-    isLoading.value = false
-    error.value = null
-  }
-
-  return {
-    // State
-    availableDurations: computed(() => availableDurations.value),
-    formattedDurations,
-    isLoading: computed(() => isLoading.value),
-    error: computed(() => error.value),
-
-    // Actions
-    loadAvailableDurations,
-    calculateAvailableDurations: loadAvailableDurations, // Alias für Kompatibilität
-    updateStaffDurations,
-    loadAllPossibleDurations,
-    loadStaffSettings,
-    
-    // Utils
-    getDefaultDuration,
-    isDurationAvailable,
-    reset
-  }
-}```
-
-### ./composables/useStudents.ts
-```typescript
-// composables/useStudents.ts
-import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-import type { User } from '~/types'
-
-export const useStudents = () => {
-  const students = ref<User[]>([])
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
-  const searchQuery = ref('')
-  const showInactive = ref(false)
-  const showAllStudents = ref(false) // false = nur eigene, true = alle
-
-  // Computed: Gefilterte Schülerliste
-  const filteredStudents = computed(() => {
-    let filtered = students.value
-
-    // Suche nach Name/Email
-    if (searchQuery.value.trim()) {
-      const query = searchQuery.value.toLowerCase()
-      filtered = filtered.filter(student =>
-        `${student.first_name} ${student.last_name}`.toLowerCase().includes(query) ||
-        student.email?.toLowerCase().includes(query)
-      )
-    }
-
-    // Aktiv/Inaktiv Filter
-    if (!showInactive.value) {
-      filtered = filtered.filter(student => student.is_active)
-    }
-
-    return filtered
-  })
-
-  // Statistiken
-  const totalStudents = computed(() => students.value.length)
-  const activeStudents = computed(() => students.value.filter(s => s.is_active).length)
-  const inactiveStudents = computed(() => students.value.filter(s => !s.is_active).length)
-
-  // Schüler laden
-  const fetchStudents = async (currentUserId: string, userRole: string) => {
-    isLoading.value = true
-    error.value = null
-
-    try {
-      const supabase = getSupabase()
-      let query = supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'client')
-
-      // Staff sieht nur eigene Schüler, außer showAllStudents ist true
-      if (userRole === 'staff' && !showAllStudents.value) {
-        query = query.eq('assigned_staff_id', currentUserId)
-      }
-
-      // Sortierung nach Nachname, Vorname
-      query = query.order('last_name').order('first_name')
-
-      const { data, error: fetchError } = await query
-
-      if (fetchError) throw fetchError
-
-      students.value = data || []
-
-    } catch (err: any) {
-      error.value = err.message
-      console.error('Fehler beim Laden der Schüler:', err)
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Einzelnen Schüler laden
-  const fetchStudent = async (studentId: string) => {
-    try {
-      const supabase = getSupabase()
-      
-      const { data, error: fetchError } = await supabase
-        .from('users')
-        .select(`
-          *,
-          assigned_staff:users!users_assigned_staff_id_fkey (
-            first_name,
-            last_name,
-            email
-          )
-        `)
-        .eq('id', studentId)
-        .eq('role', 'client')
-        .single()
-
-      if (fetchError) throw fetchError
-
-      return data
-
-    } catch (err: any) {
-      error.value = err.message
-      throw err
-    }
-  }
-
-  // Schüler-Termine laden
-  const fetchStudentAppointments = async (studentId: string) => {
-    try {
-      const supabase = getSupabase()
-      
-      const { data, error: fetchError } = await supabase
-        .from('appointments')
-        .select(`
-          *,
-          staff:users!appointments_staff_id_fkey (
-            first_name,
-            last_name
-          ),
-          notes (
-            staff_rating,
-            staff_note,
-            last_updated_at
-          )
-        `)
-        .eq('user_id', studentId)
-        .order('start_time', { ascending: false })
-
-      if (fetchError) throw fetchError
-
-      return data || []
-
-    } catch (err: any) {
-      error.value = err.message
-      throw err
-    }
-  }
-
-  // Schüler aktivieren/deaktivieren
-  const toggleStudentStatus = async (studentId: string, isActive: boolean) => {
-    try {
-      const supabase = getSupabase()
-      
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ is_active: isActive })
-        .eq('id', studentId)
-
-      if (updateError) throw updateError
-
-      // Lokale Liste aktualisieren
-      const student = students.value.find(s => s.id === studentId)
-      if (student) {
-        student.is_active = isActive
-      }
-
-    } catch (err: any) {
-      error.value = err.message
-      throw err
-    }
-  }
-
-  // Neuen Schüler hinzufügen
-  const addStudent = async (studentData: Partial<User>) => {
-    try {
-      const supabase = getSupabase()
-      
-      const { data, error: insertError } = await supabase
-        .from('users')
-        .insert([{
-          ...studentData,
-          role: 'client',
-          is_active: true
-        }])
-        .select()
-        .single()
-
-      if (insertError) throw insertError
-
-      // Zur lokalen Liste hinzufügen
-      students.value.unshift(data)
-
-      return data
-
-    } catch (err: any) {
-      error.value = err.message
-      throw err
-    }
-  }
-
-  // Schüler bearbeiten
-  const updateStudent = async (studentId: string, updates: Partial<User>) => {
-    try {
-      const supabase = getSupabase()
-      
-      const { data, error: updateError } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', studentId)
-        .select()
-        .single()
-
-      if (updateError) throw updateError
-
-      // Lokale Liste aktualisieren
-      const index = students.value.findIndex(s => s.id === studentId)
-      if (index !== -1) {
-        students.value[index] = { ...students.value[index], ...data }
-      }
-
-      return data
-
-    } catch (err: any) {
-      error.value = err.message
-      throw err
-    }
-  }
-
-  return {
-    // State
-    students,
-    isLoading,
-    error,
-    searchQuery,
-    showInactive,
-    showAllStudents,
-
-    // Computed
-    filteredStudents,
-    totalStudents,
-    activeStudents,
-    inactiveStudents,
-
-    // Methods
-    fetchStudents,
-    fetchStudent,
-    fetchStudentAppointments,
-    toggleStudentStatus,
-    addStudent,
-    updateStudent
-  }
-}```
-
-### ./composables/useUsers.ts
-```typescript
-// composables/useUsers.ts
-import { ref } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-
-export const useUsers = () => {
-  const users = ref<any[]>([])
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
-
-  // Soft Delete - User deaktivieren
-  const deactivateUser = async (userId: string, reason?: string) => {
-    try {
-      const supabase = getSupabase()
-      
-      const { error } = await supabase
-        .from('users')
-        .update({
-          is_active: false,
-          deleted_at: new Date().toISOString(),
-          deletion_reason: reason || 'Deaktiviert'
-        })
-        .eq('id', userId)
-        
-      if (error) throw error
-      console.log('User deaktiviert (Soft Delete)')
-      
-      // Liste aktualisieren
-      await getActiveUsers()
-      
-    } catch (err: any) {
-      error.value = err.message
-      throw err
-    }
-  }
-
-  // User reaktivieren
-  const reactivateUser = async (userId: string) => {
-    try {
-      const supabase = getSupabase()
-      
-      const { error } = await supabase
-        .from('users')
-        .update({
-          is_active: true,
-          deleted_at: null,
-          deletion_reason: null
-        })
-        .eq('id', userId)
-        
-      if (error) throw error
-      console.log('User reaktiviert')
-      
-      // Liste aktualisieren
-      await getActiveUsers()
-      
-    } catch (err: any) {
-      error.value = err.message
-      throw err
-    }
-  }
-
-  // Nur aktive User laden (Standard)
-  const getActiveUsers = async () => {
-    isLoading.value = true
-    error.value = null
-    
-    try {
-      const supabase = getSupabase()
-      
-      const { data, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('is_active', true)
-        .order('last_name')
-        .order('first_name')
-        
-      if (fetchError) throw fetchError
-      
-      users.value = data || []
-      return data
-      
-    } catch (err: any) {
-      error.value = err.message
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Alle User inkl. inaktive (für Admin)
-  const getAllUsers = async () => {
-    isLoading.value = true
-    error.value = null
-    
-    try {
-      const supabase = getSupabase()
-      
-      const { data, error: fetchError } = await supabase
-        .from('users')
-        .select('*, deleted_at')
-        .order('is_active', { ascending: false })
-        .order('last_name')
-        .order('first_name')
-        
-      if (fetchError) throw fetchError
-      
-      users.value = data || []
-      return data
-      
-    } catch (err: any) {
-      error.value = err.message
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // User nach ID suchen
-  const getUserById = async (userId: string) => {
-    try {
-      const supabase = getSupabase()
-      
-      const { data, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single()
-        
-      if (fetchError) throw fetchError
-      return data
-      
-    } catch (err: any) {
-      error.value = err.message
-      throw err
-    }
-  }
-
-  return {
-    // State
-    users,
-    isLoading,
-    error,
-    
-    // Methods
-    deactivateUser,
-    reactivateUser,
-    getActiveUsers,
-    getAllUsers,
-    getUserById
-  }
-}```
-
-### ./composables/useWallee.ts
-```typescript
-// composables/useWallee.ts - Updated Version
-
-import { useRuntimeConfig } from '#app'
-
-interface WalleeTransactionResult {
-  success: boolean
-  error: string | null
-  transactionId?: string
-  paymentUrl?: string
-  transaction?: any
-}
-
-interface WalleeConnectionResult {
-  success: boolean
-  error: string | null
-  connected?: boolean
-  spaceId?: string
-}
-
-interface WalleeTransactionRequest {
-  appointmentId: string
-  amount: number
-  currency?: string
-  customerId: string
-  customerEmail: string
-  lineItems?: Array<{
-    uniqueId: string
-    name: string
-    quantity: number
-    amountIncludingTax: number
-    type: string
-  }>
-  successUrl?: string
-  failedUrl?: string
-}
-
-export const useWallee = () => {
-  const createTransaction = async (request: WalleeTransactionRequest): Promise<WalleeTransactionResult> => {
-    try {
-      console.log('🔄 Creating Wallee transaction:', request)
-      
-      // Validierung der erforderlichen Felder
-      if (!request.appointmentId || !request.amount || !request.customerId || !request.customerEmail) {
-        throw new Error('Missing required fields: appointmentId, amount, customerId, customerEmail')
-      }
-
-      // API Call zu deiner Wallee Route
-      const response = await $fetch('/api/wallee/create-transaction', {
-        method: 'POST',
-        body: {
-          appointmentId: request.appointmentId,
-          amount: request.amount,
-          currency: request.currency || 'CHF',
-          customerId: request.customerId,
-          customerEmail: request.customerEmail,
-          lineItems: request.lineItems || [
-            {
-              uniqueId: `appointment-${request.appointmentId}`,
-              name: 'Fahrstunde',
-              quantity: 1,
-              amountIncludingTax: request.amount,
-              type: 'PRODUCT'
-            }
-          ],
-          successUrl: request.successUrl,
-          failedUrl: request.failedUrl
-        }
-      })  as any
-
-      console.log('✅ Wallee transaction created successfully:', response)
-
-      return {
-        success: true,
-        transactionId: response.transactionId,
-        paymentUrl: response.paymentUrl,
-        transaction: response.transaction,
-        error: null
-      }
-
-    } catch (error: any) {
-      console.error('❌ Wallee Transaction Error:', error)
-      
-      return {
-        success: false,
-        error: error.data?.message || error.message || 'Transaction creation failed'
-      }
-    }
-  }
-
-  const testConnection = async (): Promise<WalleeConnectionResult> => {
-    try {
-      console.log('🔄 Testing Wallee connection...')
-      
-      // Test mit einer minimalen Transaction oder Connection Check
-      const testResponse = await $fetch('/api/wallee/test-connection', {
-        method: 'GET'
-      }) as any
-
-      return {
-        success: true,
-        connected: true,
-        spaceId: testResponse.spaceId,
-        error: null
-      }
-
-    } catch (error: any) {
-      console.error('❌ Wallee Connection Error:', error)
-      
-      return {
-        success: false,
-        connected: false,
-        error: error.message || 'Connection test failed'
-      }
-    }
-  }
-
-  const isWalleeAvailable = (): boolean => {
-    // Check if environment variables are available
-    const config = useRuntimeConfig()
-    return !!(config.public.walleeEnabled || process.env.WALLEE_SPACE_ID)
-  }
-
-  // Neue Utility-Funktionen
-  const calculateAppointmentPrice = (category: string, duration: number, isSecondAppointment: boolean = false): number => {
-    // Preise basierend auf deinen Projektdaten
-    const categoryPrices: Record<string, { base: number, admin: number }> = {
-      'B': { base: 95, admin: 120 },
-      'A1': { base: 95, admin: 0 },
-      'A35kW': { base: 95, admin: 0 },
-      'A': { base: 95, admin: 0 },
-      'BE': { base: 120, admin: 120 },
-      'C1': { base: 150, admin: 200 },
-      'D1': { base: 150, admin: 200 },
-      'C': { base: 170, admin: 200 },
-      'CE': { base: 200, admin: 250 },
-      'D': { base: 200, admin: 300 },
-      'Motorboot': { base: 95, admin: 120 },
-      'BPT': { base: 100, admin: 120 }
-    }
-
-    const priceInfo = categoryPrices[category] || { base: 95, admin: 120 }
-    
-    // Preis pro 45min auf gewünschte Dauer umrechnen
-    const lessonPrice = (priceInfo.base / 45) * duration
-    
-    // Versicherungspauschale ab 2. Termin (außer bei Motorrad-Kategorien)
-    const adminFee = isSecondAppointment ? priceInfo.admin : 0
-    
-    return Math.round((lessonPrice + adminFee) * 100) / 100 // Auf 2 Dezimalstellen runden
-  }
-
-  const createAppointmentPayment = async (
-    appointment: any, 
-    user: any, 
-    isSecondAppointment: boolean = false
-  ): Promise<WalleeTransactionResult> => {
-    const amount = calculateAppointmentPrice(
-      appointment.type || 'B', 
-      appointment.duration_minutes || 45, 
-      isSecondAppointment
-    )
-
-    return await createTransaction({
-      appointmentId: appointment.id,
-      amount: amount,
-      currency: 'CHF',
-      customerId: user.id,
-      customerEmail: user.email,
-      lineItems: [
-        {
-          uniqueId: `appointment-${appointment.id}`,
-          name: `Fahrstunde ${appointment.type || 'B'} (${appointment.duration_minutes || 45}min)`,
-          quantity: 1,
-          amountIncludingTax: amount,
-          type: 'PRODUCT'
-        }
-      ]
-    })
-  }
-
-  return {
-    // Core functions
-    createTransaction,
-    testConnection,
-    isWalleeAvailable,
-    
-    // Utility functions
-    calculateAppointmentPrice,
-    createAppointmentPayment
-  }
-}```
-
-### ./middleware/auth.ts
-```typescript
-// middleware/auth.ts
-import { defineNuxtRouteMiddleware, navigateTo } from '#app'
-import { useAuthStore } from '~/stores/auth'
-
-export default defineNuxtRouteMiddleware(async (to, from) => {
-  console.log('🔥 Auth middleware for:', to.path)
-  
-  // Skip auf Server
-  if (process.server) return
-
-  const authStore = useAuthStore()
-
-  // Warte kurz auf Store-Initialisierung
-  let attempts = 0
-  while (!authStore.isInitialized && attempts < 50) {
-    await new Promise(resolve => setTimeout(resolve, 100))
-    attempts++
-  }
-
-  // Prüfe ob User eingeloggt ist
-  if (!authStore.isLoggedIn) {
-    console.log('❌ Not logged in, redirecting to /')
-    if (to.path !== '/') {
-      return navigateTo('/')
-    }
-    return
-  }
-
-  // Prüfe ob User ein Profil hat
-  if (!authStore.hasProfile && to.path !== '/profile-setup') {
-    console.log('📝 No profile found, redirecting to setup')
-    return navigateTo('/profile-setup')
-  }
-
-  // Wenn User Profil hat aber auf Setup-Seite ist
-  if (authStore.hasProfile && to.path === '/profile-setup') {
-    console.log('✅ Profile exists, redirecting to dashboard')
-    return navigateTo('/dashboard')
-  }
-
-  console.log('✅ Auth check passed for role:', authStore.userRole)
-})
-
-// middleware/admin.ts
-export const adminMiddleware = defineNuxtRouteMiddleware((to, from) => {
-  console.log('🔐 Admin middleware for:', to.path)
-  
-  if (process.server) return
-
-  const authStore = useAuthStore()
-
-  // Basis-Auth prüfen
-  if (!authStore.isLoggedIn) {
-    console.log('❌ Not authenticated')
-    return navigateTo('/')
-  }
-
-  // Admin/Staff Berechtigung prüfen
-  if (!authStore.isAdmin && !authStore.isStaff) {
-    console.log('❌ Insufficient permissions. Role:', authStore.userRole)
-    return navigateTo('/dashboard')
-  }
-
-  console.log('✅ Admin access granted for role:', authStore.userRole)
-})
-
-// middleware/staff.ts
-export const staffMiddleware = defineNuxtRouteMiddleware((to, from) => {
-  console.log('👨‍🏫 Staff middleware for:', to.path)
-  
-  if (process.server) return
-
-  const authStore = useAuthStore()
-
-  if (!authStore.isLoggedIn) {
-    console.log('❌ Not authenticated')
-    return navigateTo('/')
-  }
-
-  if (!authStore.isStaff && !authStore.isAdmin) {
-    console.log('❌ Staff access denied. Role:', authStore.userRole)
-    return navigateTo('/dashboard')
-  }
-
-  console.log('✅ Staff access granted for role:', authStore.userRole)
-})
-
-// middleware/client.ts  
-export const clientMiddleware = defineNuxtRouteMiddleware((to, from) => {
-  console.log('👤 Client middleware for:', to.path)
-  
-  if (process.server) return
-
-  const authStore = useAuthStore()
-
-  if (!authStore.isLoggedIn) {
-    console.log('❌ Not authenticated')
-    return navigateTo('/')
-  }
-
-  // Clients können nur auf ihre eigenen Daten zugreifen
-  if (authStore.isClient) {
-    // Zusätzliche Client-spezifische Checks hier
-    console.log('✅ Client access granted')
-  }
-})```
-
 ### ./plugins/wallee.client.ts
-```typescript
+```ts
 // plugins/wallee.client.ts
 import { defineNuxtPlugin } from '#app'
 import type { WalleeService, WalleeTransactionResult, WalleeConnectionResult } from '~/types/wallee'
@@ -23361,7 +25181,7 @@ export default defineNuxtPlugin(() => {
 })```
 
 ### ./server/api/payments/receipt.post.ts
-```typescript
+```ts
 // PDF Receipt Generation API
 
 import { defineEventHandler, readBody } from 'h3'
@@ -23491,7 +25311,7 @@ WALLEE_TWINT_METHOD_ID=your_twint_method_configuration_id
 */```
 
 ### ./server/api/wallee/create-transaction.post.ts
-```typescript
+```ts
 // server/api/wallee/create-transaction.post.ts
 export default defineEventHandler(async (event) => {
   try {
@@ -23650,7 +25470,7 @@ export default defineEventHandler(async (event) => {
 })```
 
 ### ./server/api/wallee/debug-credentials.get.ts
-```typescript
+```ts
 // server/api/wallee/debug-credentials.get.ts
 export default defineEventHandler(async (event) => {
   console.log('🔥 Debug Wallee Credentials')
@@ -23702,7 +25522,7 @@ export default defineEventHandler(async (event) => {
 })```
 
 ### ./server/api/wallee/test-auth.post.ts
-```typescript
+```ts
 // server/api/wallee/test-auth.post.ts
 export default defineEventHandler(async (event) => {
   console.log('🔥 Wallee Auth Test started')
@@ -23785,7 +25605,7 @@ export default defineEventHandler(async (event) => {
 })```
 
 ### ./server/api/wallee/test-connection.get.ts
-```typescript
+```ts
 // server/api/wallee/test-connection.get.ts
 export default defineEventHandler(async (event) => {
   try {
@@ -23866,7 +25686,7 @@ export default defineEventHandler(async (event) => {
 })```
 
 ### ./server/api/wallee/transaction-debug.post.ts
-```typescript
+```ts
 // server/api/wallee/transaction-debug.post.ts
 export default defineEventHandler(async (event) => {
   console.log('🔥 Transaction Debug API called')
@@ -23962,7 +25782,7 @@ export default defineEventHandler(async (event) => {
 })```
 
 ### ./stores/auth.ts
-```typescript
+```ts
 // stores/auth.ts
 import { ref, computed, watch, readonly } from 'vue'
 import { defineStore } from 'pinia'
@@ -24305,7 +26125,7 @@ export const useAuthStore = defineStore('authV2', () => {
 })```
 
 ### ./stores/ui.ts
-```typescript
+```ts
 // stores/ui.ts
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
@@ -24519,24 +26339,8 @@ export const useUIStore = defineStore('ui', () => {
   }
 })```
 
-### ./tailwind.config.js
-```typescript
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    './components/**/*.{vue,js,ts}',
-    './pages/**/*.{vue,js,ts}',
-    './app.vue',
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-```
-
 ### ./types/UserProfile.ts
-```typescript
+```ts
 // types/UserProfile.ts
 export interface UserProfile {
   id: string;
@@ -24557,7 +26361,7 @@ export interface UserProfile {
 }```
 
 ### ./types/companyBilling.ts
-```typescript
+```ts
 // types/companyBilling.ts
 
 import type { User } from './index'
@@ -24733,7 +26537,7 @@ export type RequiredCompanyBillingFields = 'companyName' | 'contactPerson' | 'em
 export type OptionalCompanyBillingFields = Exclude<CompanyBillingField, RequiredCompanyBillingFields>```
 
 ### ./types/eventType.ts
-```typescript
+```ts
 // types/eventTypes.ts
 export interface EventType {
   code: string
@@ -24747,7 +26551,7 @@ export interface EventType {
 }```
 
 ### ./types/h3.d.ts
-```typescript
+```ts
 // types/h3.d.ts
 declare global {
   // Nuxt 3 Server API Global Functions
@@ -24761,7 +26565,7 @@ declare global {
 export {}```
 
 ### ./types/index.ts
-```typescript
+```ts
 // types/index.ts (oder eine ähnliche Datei)
 // Füge dies zu deinen bestehenden Typen hinzu
 
@@ -24808,7 +26612,7 @@ export interface DashboardState {
 }```
 
 ### ./types/students.ts
-```typescript
+```ts
 // types/student.ts - Geteilte Student-Types für die gesamte Anwendung
 
 export interface Student {
@@ -24868,7 +26672,7 @@ export function isStudent(obj: any): obj is Student {
 }```
 
 ### ./types/supabase.ts
-```typescript
+```ts
 export type Json =
   | string
   | number
@@ -25280,7 +27084,7 @@ export const Constants = {
 ```
 
 ### ./types/wallee.ts
-```typescript
+```ts
 // types/wallee.ts
 export interface WalleeTransactionResult {
   success: boolean
@@ -25341,7 +27145,7 @@ export interface WalleeResponse {
 }```
 
 ### ./utils/dateUtils.ts
-```typescript
+```ts
 // utils/dateUtils.ts
 
 // Beispiel für eine Funktion, die du bereits hast und korrekt exportieren könntest
@@ -25393,7 +27197,7 @@ export const formatTimeShort = (dateString: string): string => {
 };```
 
 ### ./utils/supabase.ts
-```typescript
+```ts
 // utils/supabase.ts
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
@@ -25411,8 +27215,35 @@ export const getSupabase = (): SupabaseClient => {
 
 export default getSupabase```
 
+### ./utils/timeCalculations.ts
+```ts
+export const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+  if (!startTime || !durationMinutes) {
+    console.log('⚠️ Cannot calculate end time: Missing start time or duration')
+    return ''
+  }
+
+  try {
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const startDate = new Date()
+    startDate.setHours(hours, minutes, 0, 0)
+
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60000)
+
+    const endHours = String(endDate.getHours()).padStart(2, '0')
+    const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
+
+    const result = `${endHours}:${endMinutes}`
+    console.log('⏰ End time calculated:', result)
+    return result
+  } catch (error) {
+    console.error('❌ Error calculating end time:', error)
+    return ''
+  }
+}```
+
 ### ./utils/useFeatureFlags.ts
-```typescript
+```ts
 // utils/useFeatureFlags.ts
 export const FEATURE_FLAGS = {
   // Debug & Development
@@ -25445,7 +27276,7 @@ export const useFeatureFlags = () => {
 }```
 
 ### ./utils/walleeService.ts
-```typescript
+```ts
 // utils/walleeService.ts
 interface WalleeConfig {
   spaceId?: string
