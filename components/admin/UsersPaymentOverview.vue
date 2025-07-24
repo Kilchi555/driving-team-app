@@ -7,7 +7,6 @@
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-3xl font-bold text-gray-900">💰 Zahlungsübersicht</h1>
-            <p class="mt-2 text-gray-600">Übersicht aller Schüler mit Zahlungsstatus und offenen Beträgen</p>
           </div>
           
           <!-- Refresh Button -->

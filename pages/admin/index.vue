@@ -1,15 +1,5 @@
 <template>
-  <div class="p-6">
-    <!-- Page Header -->
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">
-        🏠 Admin Dashboard
-      </h1>
-      <p class="text-gray-600">
-        Übersicht über Ihr Driving Team - {{ new Date().toLocaleDateString('de-CH') }}
-      </p>
-    </div>
-
+  <div class="p-4">
     <!-- Loading State -->
     <div v-if="isLoading" class="flex justify-center items-center py-12">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -164,45 +154,6 @@
                 <p class="text-xs text-gray-500">{{ activity.time }}</p>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="bg-white rounded-lg shadow-sm border">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900">
-            ⚡ Schnellaktionen
-          </h3>
-        </div>
-        <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <NuxtLink to="/admin/pricing" 
-                      class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">
-              <span class="text-2xl">💰</span>
-              <div>
-                <div class="font-medium text-gray-900">Preise verwalten</div>
-                <div class="text-sm text-gray-500">Kategorienpreise anpassen</div>
-              </div>
-            </NuxtLink>
-            
-            <NuxtLink to="/admin/payment-overview" 
-                      class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors">
-              <span class="text-2xl">💳</span>
-              <div>
-                <div class="font-medium text-gray-900">Zahlungen prüfen</div>
-                <div class="text-sm text-gray-500">Offene Zahlungen bearbeiten</div>
-              </div>
-            </NuxtLink>
-            
-            <NuxtLink to="/admin/users" 
-                      class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors">
-              <span class="text-2xl">👥</span>
-              <div>
-                <div class="font-medium text-gray-900">Benutzer verwalten</div>
-                <div class="text-sm text-gray-500">Profile und Rollen</div>
-              </div>
-            </NuxtLink>
           </div>
         </div>
       </div>

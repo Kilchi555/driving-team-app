@@ -5,9 +5,6 @@
       <h1 class="text-3xl font-bold text-gray-900 mb-2">
         👥 Benutzerverwaltung
       </h1>
-      <p class="text-gray-600">
-        Verwalten Sie alle Benutzer, Rollen und Berechtigungen
-      </p>
     </div>
 
     <!-- Stats Cards -->
@@ -125,8 +122,6 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rolle</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kontakt</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Termine</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Offene Zahlung</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aktionen</th>
             </tr>
           </thead>
@@ -165,25 +160,6 @@
                       class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
                   {{ user.is_active ? 'Aktiv' : 'Inaktiv' }}
                 </span>
-              </td>
-
-              <td class="px-6 py-4">
-                <div class="text-sm font-medium">{{ user.appointment_count || 0 }}</div>
-                <div class="text-xs text-gray-500">
-                  {{ user.completed_appointments || 0 }} abgeschlossen
-                </div>
-              </td>
-
-              <td class="px-6 py-4">
-                <div v-if="(user.unpaid_amount ?? 0) > 0" class="text-sm">                  
-                    <div class="font-medium text-red-600">
-                    CHF {{ ((user.unpaid_amount ?? 0) / 100).toFixed(2) }}                 
-                 </div>
-                  <div class="text-xs text-gray-500">
-                    {{ user.unpaid_count }} Termine
-                  </div>
-                </div>
-                <div v-else class="text-sm text-gray-500">-</div>
               </td>
 
               <td class="px-6 py-4">

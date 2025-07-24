@@ -4,9 +4,6 @@
       <h1 class="text-3xl font-bold text-gray-900 mb-2">
         💰 Preismanagement
       </h1>
-      <p class="text-gray-600">
-        Verwalten Sie Kategorienpreise und Versicherungsgebühren
-      </p>
     </div>
 
     <!-- Loading State -->

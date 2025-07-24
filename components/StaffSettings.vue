@@ -84,115 +84,115 @@
           </div>
         </div>
        
-      <!-- 2. Prüfungsstandorte -->
-      <div class="border border-gray-200 rounded-lg">
-        <button
-          @click="toggleSection('examLocations')"
-          class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
-        >
-          <span class="font-medium text-gray-900">🏛️ Prüfungsstandorte</span>
-          <span class="text-gray-600 font-bold">{{ openSections.examLocations ? '−' : '+' }}</span>
-        </button>
-      <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
-        <!-- Neue Prüfungsstandort hinzufügen -->
-        <div class="border border-gray-200 rounded-lg p-4 mb-4">
-          <h4 class="font-medium text-gray-900 mb-3">Neuen Prüfungsstandort hinzufügen</h4>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input
-              v-model="newExamLocation.name"
-              type="text"
-              placeholder="Standort-Name (z.B. TCS Zürich)"
-              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        <!-- 6. Prüfungsstandorte -->
+          <div class="border border-gray-200 rounded-lg">
+            <button
+              @click="toggleSection('examLocations')"
+              class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
             >
-            <input
-              v-model="newExamLocation.address"
-              type="text"
-              placeholder="Adresse"
-              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-            <select
-              v-model="newExamLocation.categories"
-              multiple
-              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="B">Kategorie B</option>
-              <option value="A1">Kategorie A1</option>
-              <option value="A">Kategorie A</option>
-              <option value="BE">Kategorie BE</option>
-              <option value="C1">Kategorie C1</option>
-              <option value="C">Kategorie C</option>
-            </select>
-          </div>
-          <button
-            @click="addExamLocation"
-            :disabled="!newExamLocation.name || !newExamLocation.address"
-            class="mt-3 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Prüfungsstandort hinzufügen
-          </button>
-        </div>
-
-        <!-- Liste der Prüfungsstandorte -->
-        <div class="space-y-3">
-          <div v-if="examLocations.length === 0" class="text-center py-8 text-gray-500">
-            Noch keine Prüfungsstandorte definiert
-          </div>
-          
-          <div
-            v-for="location in examLocations"
-            :key="location.id"
-            class="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
-          >
-            <div class="flex items-center justify-between">
-              <div class="flex-1">
-                <div class="flex items-center gap-3">
-                  <h4 class="font-medium text-gray-900">{{ location.name }}</h4>
-                  <button
-                    @click="toggleExamLocationStatus(location)"
-                    :class="[
-                      'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                      location.is_active ? 'bg-green-600' : 'bg-gray-200'
-                    ]"
-                  >
-                    <span
-                      :class="[
-                        'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
-                        location.is_active ? 'translate-x-5' : 'translate-x-1'
-                      ]"
-                    />
-                  </button>
-                  <span :class="[
-                    'text-xs px-2 py-1 rounded-full',
-                    location.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                  ]">
-                    {{ location.is_active ? 'Aktiv' : 'Inaktiv' }}
-                  </span>
+              <span class="font-medium text-gray-900">🏛️ Prüfungsstandorte</span>
+              <span class="text-gray-600 font-bold">{{ openSections.examLocations ? '−' : '+' }}</span>
+            </button>
+            
+            <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
+              <div class="space-y-4 mt-4">
+                
+                <!-- Info Text -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p class="text-sm text-blue-800">
+                    📍 Aktivieren Sie die Prüfungsstandorte, die Sie für Ihre Schüler nutzen möchten.
+                  </p>
                 </div>
-                
-                <p class="text-sm text-gray-600 mt-1">{{ location.address }}</p>
-                
-                <div v-if="location.categories && location.categories.length > 0" class="flex gap-1 mt-2">
-                  <span
-                    v-for="category in location.categories"
-                    :key="category"
-                    class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+
+                <!-- Loading State -->
+                <div v-if="isLoadingExamLocations" class="text-center py-8">
+                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p class="text-gray-600">Prüfungsstandorte werden geladen...</p>
+                </div>
+
+                <!-- Verfügbare Prüfungsstandorte -->
+                <div v-else class="space-y-3">
+                  <div v-if="availableExamLocations.length === 0" class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">🏛️</div>
+                    <p>Keine Prüfungsstandorte verfügbar</p>
+                    <p class="text-xs mt-1">Kontaktieren Sie Ihren Administrator</p>
+                  </div>
+                  
+                  <div
+                    v-for="location in availableExamLocations"
+                    :key="location.id"
+                    class="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
                   >
-                    {{ category }}
-                  </span>
+                    <div class="flex items-start justify-between">
+                      <div class="flex-1">
+                        <!-- Standort Info -->
+                        <div class="flex items-center gap-3 mb-2">
+                          <h4 class="font-semibold text-gray-900">{{ location.name }}</h4>
+                          
+                          <!-- Toggle Switch -->
+                          <button
+                            @click="toggleExamLocation(location)"
+                            :disabled="isSavingExamLocation"
+                            :class="[
+                              'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                              isExamLocationActive(location.id) 
+                                ? 'bg-green-600' 
+                                : 'bg-gray-300'
+                            ]"
+                          >
+                            <span
+                              :class="[
+                                'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+                                isExamLocationActive(location.id) ? 'translate-x-5' : 'translate-x-1'
+                              ]"
+                            />
+                          </button>
+                          
+                          <!-- Status Badge -->
+                          <span 
+                            :class="[
+                              'text-xs px-2 py-1 rounded-full font-medium',
+                              isExamLocationActive(location.id) 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-gray-100 text-gray-600'
+                            ]"
+                          >
+                            {{ isExamLocationActive(location.id) ? 'Für mich aktiv' : 'Inaktiv' }}
+                          </span>
+                        </div>
+                        
+                        <!-- Adresse -->
+                        <p class="text-sm text-gray-600 mb-2">
+                          📍 {{ location.address }}
+                        </p>
+                        
+                        <!-- Verfügbare Kategorien -->
+                        <div v-if="location.available_categories && location.available_categories.length > 0" class="flex flex-wrap gap-1 mb-2">
+                          <span
+                            v-for="category in location.available_categories"
+                            :key="category"
+                            class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                          >
+                            {{ category }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Aktive Standorte Zusammenfassung -->
+                <div v-if="activeExamLocationsCount > 0" class="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div class="flex items-center gap-2">
+                    <span class="text-green-600 text-lg">✅</span>
+                    <span class="text-sm font-medium text-green-800">
+                      {{ activeExamLocationsCount }} von {{ availableExamLocations.length }} Prüfungsstandorten aktiviert
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              <button
-                @click="removeExamLocation(location.id)"
-                class="ml-4 text-red-500 hover:text-red-700 text-sm"
-              >
-                🗑️ Entfernen
-              </button>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
           
           <!-- 3. Treffpunkte/Standorte -->
           <div class="border border-gray-200 rounded-lg">
@@ -429,6 +429,26 @@ interface Props {
   currentUser: any
 }
 
+interface ExamLocation {
+  id: string
+  name: string
+  address: string
+  city?: string
+  canton?: string
+  postal_code?: string
+  available_categories?: string[]
+  is_active: boolean
+  display_order?: number
+}
+
+interface StaffExamLocation {
+  id: string
+  staff_id: string
+  exam_location_id: string
+  is_active: boolean
+  created_at?: string
+}
+
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
@@ -441,6 +461,10 @@ const isLoading = ref(false)
 const isSaving = ref(false)
 const error = ref<string | null>(null)
 const saveSuccess = ref(false)
+const availableExamLocations = ref<ExamLocation[]>([])
+const staffExamLocations = ref<StaffExamLocation[]>([])
+const isLoadingExamLocations = ref(false)
+const isSavingExamLocation = ref(false)
 
 // Accordion State
 const openSections = reactive({
@@ -493,6 +517,10 @@ const filteredCategoriesForDurations = computed(() => {
   )
 })
 
+const activeExamLocationsCount = computed(() => {
+  return availableExamLocations.value.filter(loc => isExamLocationActive(loc.id)).length
+})
+
 // computed properties:
 const currentMonthName = computed(() => {
   const date = new Date()
@@ -518,117 +546,53 @@ const threeMonthsAgoName = computed(() => {
 })
 
 // Methods
-
-
-// NEUE FUNKTIONEN für Prüfungsstandorte
 const loadExamLocations = async () => {
   if (!props.currentUser?.id) return
 
+  isLoadingExamLocations.value = true
   try {
     const supabase = getSupabase()
     
-    // Prüfungsstandorte aus einer neuen Tabelle laden (oder bestehende erweitern)
-    const { data: locations, error } = await supabase
+    // 1. Alle verfügbaren Prüfungsstandorte laden
+    const { data: allLocations, error: locationsError } = await supabase
+      .from('exam_locations')
+      .select('*')
+      .eq('is_active', true)
+      .order('name')
+
+    if (locationsError) throw locationsError
+    availableExamLocations.value = allLocations || []
+    
+    // 2. Aktivierte Standorte dieses Staff laden
+    const { data: staffLocations, error: staffError } = await supabase
       .from('staff_exam_locations')
       .select('*')
       .eq('staff_id', props.currentUser.id)
-      .order('name')
 
-    if (error && !error.message.includes('does not exist')) {
-      throw error
-    }
+    if (staffError) throw staffError
+    staffExamLocations.value = staffLocations || []
 
-    examLocations.value = locations || []
+    console.log('✅ Exam locations loaded:', {
+      available: availableExamLocations.value.length,
+      staffActivated: staffExamLocations.value.length
+    })
 
   } catch (err: any) {
     console.error('❌ Error loading exam locations:', err)
-    // Fallback für fehlende Tabelle
-    examLocations.value = []
+    error.value = `Fehler beim Laden der Prüfungsstandorte: ${err.message}`
+  } finally {
+    isLoadingExamLocations.value = false
   }
 }
 
-const addExamLocation = async () => {
-  if (!newExamLocation.value.name || !newExamLocation.value.address) return
 
-  try {
-    const supabase = getSupabase()
-    
-    const { data, error } = await supabase
-      .from('staff_exam_locations')
-      .insert({
-        staff_id: props.currentUser.id,
-        name: newExamLocation.value.name,
-        address: newExamLocation.value.address,
-        categories: newExamLocation.value.categories,
-        is_active: true
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    examLocations.value.push(data)
-    
-    // Reset form
-    newExamLocation.value = {
-      name: '',
-      address: '',
-      categories: []
-    }
-
-  } catch (err: any) {
-    console.error('❌ Error adding exam location:', err)
-    error.value = `Fehler beim Hinzufügen: ${err.message}`
-  }
-}
-
-const toggleExamLocationStatus = async (location: any) => {
-  try {
-    const supabase = getSupabase()
-    
-    const { error } = await supabase
-      .from('staff_exam_locations')
-      .update({ is_active: !location.is_active })
-      .eq('id', location.id)
-
-    if (error) throw error
-
-    location.is_active = !location.is_active
-
-  } catch (err: any) {
-    console.error('❌ Error toggling exam location:', err)
-    error.value = `Fehler beim Ändern des Status: ${err.message}`
-  }
-}
-
-const removeExamLocation = async (locationId: string) => {
-  try {
-    const supabase = getSupabase()
-    
-    const { error } = await supabase
-      .from('staff_exam_locations')
-      .delete()
-      .eq('id', locationId)
-
-    if (error) throw error
-
-    examLocations.value = examLocations.value.filter(loc => loc.id !== locationId)
-
-  } catch (err: any) {
-    console.error('❌ Error removing exam location:', err)
-    error.value = `Fehler beim Entfernen: ${err.message}`
-  }
-}
-
-// Data Loading
 const loadAllData = async () => {
   isLoading.value = true
   error.value = null
 
   try {
     await Promise.all([
-      loadExamLocations()
-      // + bestehende Load-Funktionen
+      loadExamLocations() // ✅ HINZUFÜGEN
     ])
   } catch (err: any) {
     console.error('❌ Error loading data:', err)
@@ -637,6 +601,19 @@ const loadAllData = async () => {
     isLoading.value = false
   }
 }
+
+const isExamLocationActive = (examLocationId: string): boolean => {
+  const staffLocation = staffExamLocations.value.find(sl => 
+    sl.exam_location_id === examLocationId && sl.is_active
+  )
+  return !!staffLocation
+}
+
+const getExamLocationMapsUrl = (location: any): string => {
+  const query = encodeURIComponent(location.address)
+  return `https://maps.google.com/maps?q=${query}`
+}
+
 
 const toggleSection = (section: keyof typeof openSections) => {
   openSections[section] = !openSections[section]
@@ -727,6 +704,113 @@ const addLocation = async () => {
   } catch (err: any) {
     console.error('❌ Error adding location:', err)
     error.value = `Fehler beim Hinzufügen: ${err.message}`
+  }
+}
+
+// Füge diese Funktionen zu deinem StaffSettings.vue Script hinzu:
+
+const addExamLocation = async () => {
+  if (!newExamLocation.value.name || !newExamLocation.value.address) return
+
+  try {
+    const supabase = getSupabase()
+    
+    const { data, error } = await supabase
+      .from('staff_exam_locations')
+      .insert({
+        staff_id: props.currentUser.id,
+        name: newExamLocation.value.name,
+        address: newExamLocation.value.address,
+        categories: newExamLocation.value.categories,
+        is_active: true
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    examLocations.value.push(data)
+    
+    // Reset form
+    newExamLocation.value = {
+      name: '',
+      address: '',
+      categories: []
+    }
+
+    console.log('✅ Exam location added:', data)
+
+  } catch (err: any) {
+    console.error('❌ Error adding exam location:', err)
+    error.value = `Fehler beim Hinzufügen: ${err.message}`
+  }
+}
+
+const toggleExamLocation = async (examLocation: any) => {
+  if (isSavingExamLocation.value) return
+
+  isSavingExamLocation.value = true
+  try {
+    const supabase = getSupabase()
+    const currentlyActive = isExamLocationActive(examLocation.id)
+    const existingStaffLocation = staffExamLocations.value.find(sl => 
+      sl.exam_location_id === examLocation.id
+    )
+
+    if (existingStaffLocation) {
+      // Update existing record
+      const { error } = await supabase
+        .from('staff_exam_locations')
+        .update({ is_active: !currentlyActive })
+        .eq('id', existingStaffLocation.id)
+
+      if (error) throw error
+      
+      existingStaffLocation.is_active = !currentlyActive
+    } else {
+      // Create new record - Staff aktiviert zum ersten Mal
+      const { data, error } = await supabase
+        .from('staff_exam_locations')
+        .insert({
+          staff_id: props.currentUser.id,
+          exam_location_id: examLocation.id,
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      
+      staffExamLocations.value.push(data)
+    }
+
+    console.log(`✅ Exam location ${!currentlyActive ? 'activated' : 'deactivated'}:`, examLocation.name)
+
+  } catch (err: any) {
+    console.error('❌ Error toggling exam location:', err)
+    error.value = `Fehler beim Ändern des Prüfungsstandorts: ${err.message}`
+  } finally {
+    isSavingExamLocation.value = false
+  }
+}
+
+const removeExamLocation = async (locationId: string) => {
+  try {
+    const supabase = getSupabase()
+    
+    const { error } = await supabase
+      .from('staff_exam_locations')
+      .delete()
+      .eq('id', locationId)
+
+    if (error) throw error
+
+    examLocations.value = examLocations.value.filter(loc => loc.id !== locationId)
+    console.log('✅ Exam location removed:', locationId)
+
+  } catch (err: any) {
+    console.error('❌ Error removing exam location:', err)
+    error.value = `Fehler beim Entfernen: ${err.message}`
   }
 }
 
@@ -840,6 +924,7 @@ const loadData = async () => {
   } finally {
     isLoading.value = false
   }
+   await loadExamLocations() 
 }
 
 // Debug-Version der loadWorkingHoursData Funktion:
@@ -1087,6 +1172,7 @@ const saveAllSettings = async () => {
 onMounted(() => {
   loadData()
   loadWorkingHoursData()
+  loadExamLocations() 
 
 })
 </script>
