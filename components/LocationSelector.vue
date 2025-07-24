@@ -44,15 +44,15 @@
       <!-- Standard Locations (Fahrschule) -->
       <optgroup label="🏢 Fahrschule-Standorte" v-if="standardLocations.length > 0">
         <option v-for="location in standardLocations" :key="`standard-${location.id}`" :value="location.id">
-          {{ location.name }} - {{ location.address }}
+          {{ location.address }}
         </option>
       </optgroup>
       
       <!-- Pickup Locations (Schüler) -->
       <optgroup label="📍 Gespeicherte Treffpunkte" v-if="studentPickupLocations.length > 0 && selectedStudentId">
-        <option v-for="location in studentPickupLocations" :key="`pickup-${location.id}`" :value="location.id">
-          {{ location.name }} - {{ location.address }}
-        </option>
+          <option v-for="location in studentPickupLocations" :key="`pickup-${location.id}`" :value="location.id">
+          {{ location.address }}
+          </option>
       </optgroup>
       
       <!-- Loading State -->

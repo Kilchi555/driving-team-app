@@ -75,23 +75,7 @@ const { calculateEndTime } = useTimeCalculations(formData)
   // ============ FORM DATA WATCHERS ============
   const setupFormWatchers = () => {
 
-    // Title generation watcher
-    watch([
-      () => selectedStudent.value,
-      () => formData.value.location_id,
-      () => formData.value.type,
-      () => formData.value.eventType,
-    ], ([currentStudent, locationId, category, eventType]) => {
-
-      // Skip title generation in edit/view mode
-      if (props.mode === 'edit' || props.mode === 'view') {
-        return
-      }
-
-      if (eventType === 'lesson' && currentStudent) {
-        generateLessonTitle(currentStudent, locationId, category)
-      }
-    }, { immediate: true })
+   
 
     // 🔥 NEW: Auto-load students when needed
     watch(() => props.mode, (newMode) => {
@@ -230,33 +214,6 @@ const { calculateEndTime } = useTimeCalculations(formData)
     }
   }
 
-  const generateLessonTitle = (currentStudent: any, locationId: string, category: string) => {
-    // Safety check for availableLocations
-    const selectedLocationObject = Array.isArray(availableLocations.value) && availableLocations.value.length > 0
-      ? availableLocations.value.find((loc: any) => loc.id === locationId)
-      : null
-
-    const locationName = selectedLocationObject?.name || ''
-    const currentCategory = category || ''
-
-    let title = 'Fahrstunde' // Default title
-
-    if (currentStudent?.first_name) {
-      title = `${currentStudent.first_name}`
-    }
-
-    if (locationName) {
-      title += ` • ${locationName}`
-    }
-
-    if (currentCategory) {
-      title += ` (${currentCategory})`
-    }
-
-    console.log('✏️ Title generated:', title)
-    formData.value.title = title
-  }
-
   // ============ PUBLIC API ============
   const setupAllWatchers = () => {
     setupModalWatcher()
@@ -273,6 +230,5 @@ const { calculateEndTime } = useTimeCalculations(formData)
     setupDebugWatchers,
     calculateEndTime,
     getAppointmentNumber,
-    generateLessonTitle
   }
 }

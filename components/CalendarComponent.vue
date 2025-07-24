@@ -295,46 +295,55 @@ const loadRegularAppointments = async () => {
     
     console.log('✅ Filtered appointments:', filteredAppointments.length)
     
-    const convertedEvents = filteredAppointments.map((apt) => {
-      const isTeamInvite = apt.type === 'team_invite'
-      
-      const event = {
-        id: apt.id,
-        title: apt.title || `${apt.user?.first_name || 'Unbekannt'} - ${apt.type || 'Termin'}`,
-        start: new Date(apt.start_time).toISOString(), 
-        end: new Date(apt.end_time).toISOString(),
-        allDay: false,
-        extendedProps: {
-          location: apt.location?.name || 'Kein Ort',
-          staff_note: apt.description || '',
-          client_note: '',
-          category: apt.type,
-          instructor: `${apt.staff?.first_name || ''} ${apt.staff?.last_name || ''}`.trim(),
-          student: `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim(),
-          price: (apt.price_per_minute || 0) * (apt.duration_minutes || 45),
-          user_id: apt.user_id,
-          staff_id: apt.staff_id,
-          location_id: apt.location_id,
-          duration_minutes: apt.duration_minutes,
-          price_per_minute: apt.price_per_minute,
-          status: apt.status,
-          is_paid: apt.is_paid,
-          // WICHTIG: Typ-Informationen für Modal
-          appointment_type: apt.type,
-          is_team_invite: isTeamInvite,
-          original_type: apt.type
-        }
-      }
-      
-      console.log('🔍 TIME COMPARISON:', {
-        dbStartTime: apt.start_time,
-        eventStartTime: event.start,
-        parsedDate: new Date(apt.start_time),
-        parsedISOString: new Date(apt.start_time).toISOString()
-      })
-      
-      return event
-    })
+    // In CalendarComponent.vue, ersetze die eventContent Funktion:
+
+// ENTFERNE die eventContent Funktion komplett
+// und nutze stattdessen nur den Standard-Titel von FullCalendar
+
+// Stattdessen passen wir die Event-Erstellung in loadRegularAppointments an:
+const convertedEvents = appointments.map((apt) => {
+  const isTeamInvite = apt.type === 'team_invite'
+  
+  // ✅ Für Fahrlektionen: Student Name als Titel
+  let eventTitle = ''
+  if (apt.type === 'lesson' || !apt.type) {
+    eventTitle = `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim() || 'Fahrlektion'
+  } 
+  // ✅ Für andere Terminarten: Den echten Event-Titel verwenden
+  else {
+    eventTitle = apt.title || apt.type || 'Termin'
+  }
+  
+  const event = {
+    id: apt.id,
+    title: eventTitle,
+    start: new Date(apt.start_time).toISOString(), 
+    end: new Date(apt.end_time).toISOString(),
+    allDay: false,
+    extendedProps: {
+      location: apt.location?.address || apt.location?.name || 'Kein Ort',      
+      staff_note: apt.description || '',
+      client_note: '',
+      category: apt.type,
+      instructor: `${apt.staff?.first_name || ''} ${apt.staff?.last_name || ''}`.trim(),
+      student: `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim(),
+      price: (apt.price_per_minute || 0) * (apt.duration_minutes || 45),
+      user_id: apt.user_id,
+      staff_id: apt.staff_id,
+      location_id: apt.location_id,
+      duration_minutes: apt.duration_minutes,
+      price_per_minute: apt.price_per_minute,
+      status: apt.status,
+      is_paid: apt.is_paid,
+      appointment_type: apt.type,
+      is_team_invite: isTeamInvite,
+      original_type: apt.type,
+      eventType: apt.type // ← Wichtig für die Farb-Zuordnung
+    }
+  }
+  
+  return event
+})
     
     calendarEvents.value = convertedEvents
     
@@ -375,9 +384,6 @@ const editAppointment = (appointment: CalendarAppointment) => {
   // emit('edit-appointment', appointment)
   showToast('Edit-Funktion noch nicht implementiert')
 }
-
-// Im calendarOptions eventClick ersetzen:
-// eventClick: handleEventClick,
 
 const handleSaveEvent = async (eventData: CalendarEvent) => {
   console.log('💾 Event saved, refreshing calendar...')
@@ -627,7 +633,7 @@ showConfirmDialog({
     slotMinTime: '05:00:00',
     slotMaxTime: '23:00:00',
     firstDay: 1,
-    displayEventTime: true,
+    displayEventTime: false,
     forceEventDuration: true, 
     selectable: true,
     editable: true,
@@ -677,15 +683,14 @@ showConfirmDialog({
 },
 
 eventContent: (arg) => {
-  const student = arg.event.extendedProps?.student || ''
-  const location = arg.event.extendedProps?.location || ''
+  const extendedProps = arg.event.extendedProps
+  const location = extendedProps?.location || ''
   
   return {
     html: `
       <div class="custom-event">
-        <div class="event-name">${student}</div>
-          <div class="event-location"> ${location}</div>
-        </div>
+        <div class="event-name">${arg.event.title}</div>
+        <div class="event-location">${location}</div>
       </div>
     `
   }

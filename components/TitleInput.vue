@@ -45,7 +45,7 @@ const props = withDefaults(defineProps<Props>(), {
   maxLength: 100,
   showSuggestions: true,
   showCharacterCount: true,
-  autoGenerate: true
+  autoGenerate: false
 })
 
 const emit = defineEmits<Emits>()

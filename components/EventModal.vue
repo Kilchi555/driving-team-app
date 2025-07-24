@@ -454,8 +454,6 @@ const handleStudentSelected = async (student: Student | null) => {
       console.log('✅ Using fallback category data:', selectedCategory.value)
     }
   }
-  
-  generateTitleIfReady()
 }
 
 const handleStudentCleared = () => {
@@ -570,21 +568,6 @@ const handleLocationSelected = (location: any) => {
   console.log('📍 Location selected:', location)
   selectedLocation.value = location
   formData.value.location_id = location?.id || ''
-  
-  // Auto-generate title if we have student and location
-  generateTitleIfReady()
-}
-
-const generateTitleIfReady = () => {
-  if (formData.value.eventType === 'lesson' && selectedStudent.value && selectedLocation.value) {
-    const firstName = selectedStudent.value.first_name
-    const lastName = selectedStudent.value.last_name
-    const location = selectedLocation.value.name || selectedLocation.value.address || 'Treffpunkt'
-    const newTitle = `${firstName} ${lastName} - ${location}`
-    
-    formData.value.title = newTitle
-    console.log('🎯 Auto-generated title:', newTitle)
-  }
 }
 
 const { calculateEndTime } = useTimeCalculations(formData)
@@ -698,6 +681,10 @@ const loadCategoryData = async (categoryCode: string) => {
 // ERSETZEN Sie die handleSave Funktion in EventModal.vue mit dieser korrigierten Version:
 
 const handleSave = async () => {
+   if (!formData.value.title && selectedStudent.value) {
+    formData.value.title = `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}`
+  }
+  
   console.log('💾 Saving appointment')
   
   if (!isFormValid.value) {

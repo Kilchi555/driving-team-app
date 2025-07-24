@@ -798,6 +798,16 @@ const loadRegularAppointments = async () => {
     const convertedEvents = filteredAppointments.map((apt) => {
       const isTeamInvite = apt.type === 'team_invite'
       
+      // ✅ Bessere Titel-Logik
+      let eventTitle = ''
+      if (apt.type === 'lesson' || !apt.type) {
+        // Für Fahrlektionen: Nur "Vorname Nachname"
+        eventTitle = `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim() || 'Fahrlektion'
+      } else {
+        // Für andere Terminarten: Den echten Event-Titel verwenden
+        eventTitle = apt.title || apt.type || 'Termin'
+      }
+      
       const event = {
         id: apt.id,
         title: apt.title || `${apt.user?.first_name || 'Unbekannt'} - ${apt.type || 'Termin'}`,
@@ -1177,15 +1187,14 @@ showConfirmDialog({
 },
 
 eventContent: (arg) => {
-  const student = arg.event.extendedProps?.student || ''
-  const location = arg.event.extendedProps?.location || ''
+  const extendedProps = arg.event.extendedProps
+  const location = extendedProps?.location || ''
   
   return {
     html: `
       <div class="custom-event">
-        <div class="event-name">${student}</div>
-          <div class="event-location"> ${location}</div>
-        </div>
+        <div class="event-name">${arg.event.title}</div>
+        <div class="event-location">${location}</div>
       </div>
     `
   }
