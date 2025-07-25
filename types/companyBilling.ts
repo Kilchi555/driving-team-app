@@ -83,6 +83,7 @@ export interface CompanyBillingFormData {
   country: string
   vatNumber: string
   notes: string
+  payment_method?: string
 }
 
 // Validation Interface

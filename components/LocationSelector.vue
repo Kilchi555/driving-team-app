@@ -26,8 +26,69 @@
             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
         ]"
       >
-        🔍 Google Suche
+        🔍 Adresse eingeben
       </button>
+    </div>
+
+    <!-- Offline Manual Input -->
+    <div v-if="!useStandardLocations" class="space-y-3">
+      <!-- Offline-Indikator nur wenn tatsächlich offline -->
+      <div v-if="error && error.includes('Offline')" class="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 p-2 rounded">
+        <span>📴</span>
+        <span>{{ error }}</span>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          📍 Treffpunkt / Adresse manuell eingeben
+        </label>
+        <input
+          v-model="manualLocationInput"
+          @input="onLocationSearch"
+          @blur="handleManualLocationSubmit"
+          @keyup.enter="handleManualLocationSubmit"
+          @focus="showLocationSuggestions = true"
+          type="text"
+          placeholder="z.B. Zürich HB, Bahnhofstrasse 1, 8001 Zürich"
+          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+        />
+        <div class="text-xs text-gray-500 mt-1">
+          Vollständige Adresse oder bekannten Ort eingeben
+        </div>
+      </div>
+
+      <!-- Google Places Suggestions (online) -->
+      <div v-if="showLocationSuggestions && locationSuggestions.length > 0" class="relative">
+        <div class="absolute top-0 left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+          <div
+            v-for="suggestion in locationSuggestions"
+            :key="suggestion.place_id"
+            @click="selectLocationSuggestion(suggestion)"
+            class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+          >
+            <div class="font-medium text-gray-900">
+              {{ suggestion.structured_formatting?.main_text || suggestion.description }}
+            </div>
+            <div class="text-sm text-gray-600">
+              {{ suggestion.structured_formatting?.secondary_text || '' }}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Current manual location display -->
+      <div v-if="selectedCustomLocation && selectedCustomLocation.id && selectedCustomLocation.id.includes('manual')" 
+           class="p-3 bg-green-50 border border-green-200 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div class="flex-1">
+            <div class="font-medium text-green-800">✅ {{ selectedCustomLocation.name }}</div>
+            <div class="text-sm text-green-600">{{ selectedCustomLocation.address }}</div>
+          </div>
+          <button @click="clearManualLocation" class="text-red-500 hover:text-red-700">
+            ✕
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Kombinierter Dropdown für Standard + Pickup Locations -->
@@ -59,60 +120,6 @@
       <option v-if="isLoadingLocations" disabled>Lade Standorte...</option>
     </select>
 
-    <!-- Google Places Input -->
-    <div v-else class="relative">
-      <input
-        ref="googlePlacesInput"
-        v-model="locationSearchQuery"
-        @input="onLocationSearch"
-        @focus="showLocationSuggestions = true"
-        @blur="hideLocationSuggestionsDelayed"
-        type="text"
-        placeholder="Adresse eingeben... (z.B. Bahnhofstrasse 1, Zürich)"
-        class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-        autocomplete="off"
-      />
-      
-      <!-- Loading -->
-      <div v-if="isLoadingGooglePlaces" class="absolute right-3 top-3">
-        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
-      </div>
-
-      <!-- Google Suggestions -->
-      <div 
-        v-if="showLocationSuggestions && locationSuggestions.length > 0" 
-        class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto"
-      >
-        <div
-          v-for="suggestion in locationSuggestions"
-          :key="suggestion.place_id"
-          @mousedown="selectLocationSuggestion(suggestion)"
-          class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-        >
-          <div class="flex items-start gap-3">
-            <span class="text-lg mt-0.5">📍</span>
-            <div class="flex-1">
-              <div class="font-medium text-gray-900">
-                {{ suggestion.structured_formatting?.main_text || suggestion.description }}
-              </div>
-              <div class="text-sm text-gray-500">
-                {{ suggestion.structured_formatting?.secondary_text || '' }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- No Results -->
-      <div 
-        v-if="showLocationSuggestions && locationSearchQuery.length > 2 && locationSuggestions.length === 0 && !isLoadingGooglePlaces"
-        class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-center text-gray-500"
-      >
-        <span class="text-2xl block mb-2">🔍</span>
-        <p>Keine Ergebnisse für "{{ locationSearchQuery }}"</p>
-      </div>
-    </div>
-
     <!-- Selected Custom Location Preview -->
     <div v-if="!useStandardLocations && selectedCustomLocation" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
       <div class="flex items-start gap-3">
@@ -121,7 +128,7 @@
           <div class="font-medium text-green-800">{{ selectedCustomLocation.name }}</div>
           <div class="text-sm text-green-600">{{ selectedCustomLocation.address }}</div>
           <div class="flex gap-2 mt-2">
-            <a :href="getLocationMapsUrl(selectedCustomLocation)" target="_blank" 
+            <a :href="getLocationMapsUrl(selectedCustomLocation)" target="_blank"
                class="text-xs text-blue-600 hover:text-blue-800">
               🗺️ In Google Maps öffnen
             </a>
@@ -225,12 +232,13 @@ const supabase = getSupabase()
 // Reactive state
 const useStandardLocations = ref(true)
 const selectedLocationId = ref('')
+const manualLocationInput = ref('')
 const locationSearchQuery = ref('')
 const showLocationSuggestions = ref(false)
 const isLoadingGooglePlaces = ref(false)
 const isLoadingLocations = ref(false)
 const locationSuggestions = ref<GooglePlaceSuggestion[]>([])
-const selectedCustomLocation = ref<Location | null>(null)
+const selectedCustomLocation = ref<any>(null)
 const googlePlacesInput = ref<HTMLInputElement | null>(null)
 const error = ref<string | null>(null)
 
@@ -248,6 +256,60 @@ const currentSelectedLocation = computed(() => {
 
 // Google Places Service
 let placesLibrary: any = null
+
+// === MANUAL LOCATION FUNCTIONS ===
+
+const handleOfflineError = (error: any) => {
+  console.log('🔍 Checking if error is offline-related:', error)
+  
+  const isOfflineError = 
+    error.message?.includes('Failed to fetch') ||
+    error.message?.includes('ERR_INTERNET_DISCONNECTED') ||
+    error.message?.includes('ERR_NETWORK') ||
+    !navigator.onLine
+
+  if (isOfflineError) {
+    console.log('📴 Offline detected - switching to manual mode')
+    useStandardLocations.value = false
+    error.value = '📴 Offline-Modus: Bitte Treffpunkt manuell eingeben'
+    return true
+  }
+  
+  return false
+}
+
+const handleManualLocationSubmit = () => {
+  const input = manualLocationInput.value.trim()
+  
+  if (!input) return
+  
+  const tempLocation = {
+    id: `temp_manual_${Date.now()}`,
+    name: input.split(',')[0].trim() || input,
+    address: input,
+    place_id: `manual_${Date.now()}`,
+    latitude: null,
+    longitude: null,
+    location_type: 'pickup' as const,
+    source: 'google' as const
+  }
+  
+  selectedCustomLocation.value = tempLocation
+  locationSearchQuery.value = input
+  
+  emit('update:modelValue', null)
+  emit('locationSelected', tempLocation)
+  
+  console.log('📝 Manual location created:', tempLocation)
+}
+
+const clearManualLocation = () => {
+  manualLocationInput.value = ''
+  selectedCustomLocation.value = null
+  locationSearchQuery.value = ''
+  emit('update:modelValue', null)
+  emit('locationSelected', null)
+}
 
 // === DATABASE FUNCTIONS ===
 
@@ -278,8 +340,49 @@ const loadStandardLocations = async () => {
     console.log('✅ Standard locations loaded:', data?.length)
     
   } catch (err: any) {
-    error.value = `Fehler beim Laden der Standard-Standorte: ${err.message}`
     console.error('❌ Error loading standard locations:', err)
+    
+    if (!handleOfflineError(err)) {
+      error.value = `Fehler beim Laden der Standard-Standorte: ${err.message}`
+    }
+  }
+}
+
+const loadLastUsedLocation = async (userId: string, staffId: string): Promise<any> => {
+  try {
+    console.log('🔍 Loading last used location for student:', userId, 'staff:', staffId)
+    
+    if (!userId || !staffId || staffId === '') {
+      console.log('⚠️ Missing or empty staffId, skipping last location load')
+      return null
+    }
+    
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('location_id, custom_location_name, custom_location_address')
+      .eq('user_id', userId)
+      .eq('staff_id', staffId)
+      .eq('status', 'completed')
+      .order('start_time', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    
+    if (error) {
+      console.log('❌ Error loading appointments:', error)
+      return null
+    }
+    
+    if (!data) {
+      console.log('ℹ️ No completed appointments found')
+      return null
+    }
+    
+    console.log('✅ Last used location data:', data)
+    return data
+    
+  } catch (err: any) {
+    console.log('❌ Error loading last location:', err)
+    return null
   }
 }
 
@@ -339,8 +442,11 @@ const loadStudentPickupLocations = async (studentId: string) => {
     }
     
   } catch (err: any) {
-    error.value = `Fehler beim Laden der Treffpunkte: ${err.message}`
     console.error('❌ Error loading pickup locations:', err)
+    
+    if (!handleOfflineError(err)) {
+      error.value = `Fehler beim Laden der Treffpunkte: ${err.message}`
+    }
   }
 }
 
@@ -390,45 +496,6 @@ const savePickupLocation = async (locationData: any, studentId: string) => {
   }
 }
 
-// ✅ Korrigierte loadLastUsedLocation Funktion
-const loadLastUsedLocation = async (userId: string, staffId: string): Promise<any> => {
-  try {
-    console.log('🔍 Loading last used location for student:', userId, 'staff:', staffId)
-    
-    if (!userId || !staffId || staffId === '') {
-      console.log('⚠️ Missing or empty staffId, skipping last location load')
-      return null
-    }
-    
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('location_id, custom_location_name, custom_location_address')
-      .eq('user_id', userId)
-      .eq('staff_id', staffId)
-      .eq('status', 'completed')
-      .order('start_time', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    
-    if (error) {
-      console.log('❌ Error loading appointments:', error)
-      return null
-    }
-    
-    if (!data) {
-      console.log('ℹ️ No completed appointments found')
-      return null
-    }
-    
-    console.log('✅ Last used location data:', data)
-    return data
-    
-  } catch (err: any) {
-    console.log('❌ Error loading last location:', err)
-    return null
-  }
-}
-
 // === GOOGLE PLACES FUNCTIONS ===
 
 const initializeGooglePlaces = async () => {
@@ -447,7 +514,7 @@ const initializeGooglePlaces = async () => {
 }
 
 const onLocationSearch = async () => {
-  const query = locationSearchQuery.value.trim()
+  const query = manualLocationInput.value.trim()
   
   if (query.length < 3) {
     locationSuggestions.value = []
@@ -489,7 +556,7 @@ const onLocationSearch = async () => {
     }
 
     // Fallback to legacy API
-    if (window.google && window.google.maps && window.google.maps.places && window.google.maps.places.AutocompleteService) {
+    if (typeof window !== 'undefined' && window.google && window.google.maps && window.google.maps.places && window.google.maps.places.AutocompleteService) {
       const autocompleteService = new window.google.maps.places.AutocompleteService()
       
       const request = {
@@ -515,18 +582,8 @@ const onLocationSearch = async () => {
         }
       })
     } else {
-      // Final fallback
-      locationSuggestions.value = [
-        {
-          place_id: `fallback_${Date.now()}`,
-          description: `${query}, Zürich, Schweiz`,
-          structured_formatting: {
-            main_text: query,
-            secondary_text: 'Zürich, Schweiz'
-          }
-        }
-      ]
-      showLocationSuggestions.value = true
+      // Final fallback - just show the typed text as manual entry
+      console.log('📴 Google Places not available - using manual input')
       isLoadingGooglePlaces.value = false
     }
   } catch (err: any) {
@@ -556,7 +613,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       // Use existing pickup location
       selectedLocationId.value = existingLocation.id
       useStandardLocations.value = true
-      locationSearchQuery.value = ''
+      manualLocationInput.value = ''
       selectedCustomLocation.value = null
       
       emit('update:modelValue', existingLocation.id)
@@ -569,7 +626,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       
       selectedLocationId.value = savedLocation.id
       useStandardLocations.value = true
-      locationSearchQuery.value = ''
+      manualLocationInput.value = ''
       selectedCustomLocation.value = null
       
       emit('update:modelValue', savedLocation.id)
@@ -590,7 +647,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       }
       
       selectedCustomLocation.value = tempLocation
-      locationSearchQuery.value = suggestion.description
+      manualLocationInput.value = suggestion.description
       
       emit('update:modelValue', null)
       emit('locationSelected', tempLocation)
@@ -621,7 +678,7 @@ const onLocationChange = () => {
 
 const clearCustomLocation = () => {
   selectedCustomLocation.value = null
-  locationSearchQuery.value = ''
+  manualLocationInput.value = ''
   emit('update:modelValue', null)
   emit('locationSelected', null)
 }

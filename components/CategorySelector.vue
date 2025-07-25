@@ -35,11 +35,13 @@ import { getSupabase } from '~/utils/supabase'
 
 interface Category {
   id: number
+  created_at?: string
   name: string
   code: string
   description?: string
   price_per_lesson: number
   lesson_duration_minutes: number
+  exam_duration_minutes?: number  // ✅ NEU HINZUGEFÜGT
   color?: string
   is_active: boolean
   display_order: number
@@ -202,64 +204,175 @@ const availableCategoriesForUser = computed(() => {
 
 
 // Methods
+// ✅ 1. CategorySelector.vue - Verbesserte loadCategories Funktion
+// CategorySelector.vue - Korrigierte loadCategories Funktion (NUR CategorySelector Code)
+
 const loadCategories = async () => {
- console.log('🔥 CategorySelector - loadCategories called')
- 
- isLoading.value = true
- isInitializing.value = true  // ✅ Initialization Mode
- error.value = null
- 
- try {
-   const supabase = getSupabase()
-   
-   // Alle Kategorien laden
-   const { data: categoriesData, error: categoriesError } = await supabase
-     .from('categories')
-     .select('id, name, code, description, price_per_lesson, lesson_duration_minutes, color, is_active, display_order, price_unit, exam_duration_minutes')
-     .eq('is_active', true)
-     .order('display_order', { ascending: true })
-     .order('name', { ascending: true })
+  console.log('🔥 CategorySelector - loadCategories called')
+  
+  isLoading.value = true
+  isInitializing.value = true
+  error.value = null
+  
+  try {
+    const supabase = getSupabase()
+    
+    // ✅ KORREKTE REIHENFOLGE: Query zuerst definieren
+    const queryPromise = supabase
+      .from('categories')
+      .select(`
+        id, 
+        name, 
+        code, 
+        description, 
+        price_per_lesson, 
+        lesson_duration_minutes, 
+        color, 
+        is_active, 
+        display_order, 
+        price_unit, 
+        exam_duration_minutes,
+        created_at
+      `)
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+      .order('name', { ascending: true })
 
-   if (categoriesError) throw categoriesError
+    // ✅ Dann Timeout definieren
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Network timeout - using offline mode')), 3000)
+    )
 
-   allCategories.value = categoriesData || []
-   console.log('✅ All categories loaded:', categoriesData?.length)
+    // ✅ Race zwischen Query und Timeout
+    const result = await Promise.race([
+      queryPromise,
+      timeoutPromise
+    ])
 
-   // Wenn es ein Staff-Benutzer ist, seine spezifischen Kategorie-Dauern laden
-   if (props.currentUserRole === 'staff' && props.currentUser?.id) {
-     await loadStaffCategoryDurations(props.currentUser.id)
-   }
+    // ✅ KORREKTE PROPERTY-ZUGRIFFE
+    if (result.error) {
+      console.error('❌ Database error:', result.error)
+      throw result.error
+    }
 
- } catch (err: any) {
-   console.error('❌ Error loading categories:', err)
-   error.value = err.message || 'Fehler beim Laden der Kategorien'
- } finally {
-   isLoading.value = false
-   
-   // ✅ NACH dem Laden prüfen ob Durations emittiert werden müssen
-   if (props.modelValue) {
-     console.log('🔄 Categories loaded, checking current selection:', props.modelValue)
-     const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
-     
-     if (selected) {
-       console.log('✅ Re-emitting durations for loaded category:', selected.availableDurations)
-       
-       // ✅ RACE-SAFE Emit mit Verzögerung
-       setTimeout(() => {
-         if (!isAutoEmitting.value) {
-           emit('durations-changed', selected.availableDurations)
-         }
-       }, 100)
-     }
-   }
-   
-   // ✅ Initialization Mode beenden
-   setTimeout(() => {
-     isInitializing.value = false
-     console.log('✅ CategorySelector initialization completed')
-   }, 200)
- }
+    allCategories.value = result.data || []
+    console.log('✅ All categories loaded from database:', result.data?.length)
+
+    // Staff-spezifische Dauern laden falls nötig
+    if (props.currentUserRole === 'staff' && props.currentUser?.id) {
+      await loadStaffCategoryDurations(props.currentUser.id)
+    }
+
+  } catch (err: any) {
+    console.error('❌ Error loading categories (switching to offline mode):', err)
+    error.value = err.message || 'Offline-Modus: Verwende lokale Kategorien'
+    
+    // ✅ SOFORTIGER OFFLINE-FALLBACK (CategorySelector hat kein dynamicPricing/formData!)
+    console.log('🔄 Using complete offline fallback categories')
+    allCategories.value = [
+      { 
+        id: 1, code: 'B', name: 'B - Auto', description: 'Autoprüfung Kategorie B',
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        color: 'hellgrün', is_active: true, display_order: 1, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 2, code: 'A1', name: 'A1 - Motorrad 125cc', description: 'Motorrad A1',
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        color: 'hellgrün', is_active: true, display_order: 2, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 3, code: 'A35kW', name: 'A35kW - Motorrad 35kW', description: 'Motorrad A35kW',
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        color: 'hellgrün', is_active: true, display_order: 3, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 4, code: 'A', name: 'A - Motorrad', description: 'Motorrad A',
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        color: 'hellgrün', is_active: true, display_order: 4, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 5, code: 'BE', name: 'BE - Anhänger', description: 'Anhänger BE',
+        price_per_lesson: 120, lesson_duration_minutes: 45, exam_duration_minutes: 90,
+        color: 'orange', is_active: true, display_order: 5, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 6, code: 'C1', name: 'C1 - LKW klein', description: 'LKW C1',
+        price_per_lesson: 150, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        color: 'gelb', is_active: true, display_order: 6, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 7, code: 'D1', name: 'D1 - Bus klein', description: 'Bus D1',
+        price_per_lesson: 150, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        color: 'gelb', is_active: true, display_order: 7, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 8, code: 'C', name: 'C - LKW', description: 'LKW C',
+        price_per_lesson: 170, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        color: 'rot', is_active: true, display_order: 8, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 9, code: 'CE', name: 'CE - LKW mit Anhänger', description: 'LKW CE',
+        price_per_lesson: 200, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        color: 'violett', is_active: true, display_order: 9, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 10, code: 'D', name: 'D - Bus', description: 'Bus D',
+        price_per_lesson: 200, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        color: 'türkis', is_active: true, display_order: 10, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 11, code: 'Motorboot', name: 'Motorboot', description: 'Motorboot',
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        color: 'hellblau', is_active: true, display_order: 11, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 12, code: 'BPT', name: 'BPT - Berufsprüfung Transport', description: 'Berufsprüfung Transport',
+        price_per_lesson: 100, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        color: 'dunkelblau', is_active: true, display_order: 12, price_unit: 'per_lesson',
+        created_at: new Date().toISOString()
+      }
+    ]
+    
+  } finally {
+    isLoading.value = false
+    
+    // ✅ GARANTIERTE DURATION-EMISSION IM OFFLINE-MODUS
+    if (props.modelValue) {
+      console.log('🔄 Categories loaded (offline), checking current selection:', props.modelValue)
+      const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
+      
+      if (selected) {
+        console.log('✅ Re-emitting durations for loaded category (offline):', selected.availableDurations)
+        
+        // ✅ Sofortige Emission im Offline-Modus
+        setTimeout(() => {
+          if (!isAutoEmitting.value) {
+            emit('durations-changed', selected.availableDurations)
+          }
+        }, 50)  // Kürzere Verzögerung im Offline-Modus
+      }
+    }
+    
+    // Initialization Mode beenden
+    setTimeout(() => {
+      isInitializing.value = false
+      console.log('✅ CategorySelector initialization completed (offline mode)')
+    }, 100)  // Kürzere Verzögerung im Offline-Modus
+  }
 }
+
+
 
 const loadStaffCategoryDurations = async (staffId: string) => {
  console.log('🔄 Loading staff category durations for:', staffId)

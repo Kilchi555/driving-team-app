@@ -226,6 +226,7 @@ const supabase = getSupabase()
 const isLoading = ref(false)
 const isSaving = ref(false)
 const error = ref<string | null>(null)
+const showDeleteConfirmation = ref(false)
 
 
 // Search & Dropdown

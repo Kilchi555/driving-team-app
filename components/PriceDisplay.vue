@@ -475,8 +475,8 @@
         Als Standard für zukünftige Termine speichern
       </label>
     </div>
- <!-- HIER der neue Billing-Button einfügen -->
-    <div class="mt-4 pt-3 border-t border-gray-200">
+    <!-- HIER der neue Billing-Button - NUR wenn Rechnungsadresse gespeichert UND Invoice-Mode aktiv -->
+    <div v-if="invoiceMode && billingAddressSaved" class="mt-4 pt-3 border-t border-gray-200">
       <button
         @click="toggleBillingEditMode"
         class="w-full flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -488,7 +488,7 @@
       >
         <span v-if="isBillingEditMode" class="mr-2">💾</span>
         <span v-else class="mr-2">✏️</span>
-        {{ isBillingEditMode ? 'Speichern' : 'Bearbeiten' }}
+        {{ isBillingEditMode ? 'Speichern' : 'Rechnungsadresse bearbeiten' }}
       </button>
     </div>
   </div>

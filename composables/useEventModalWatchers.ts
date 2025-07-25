@@ -1,104 +1,189 @@
-// composables/useEventModalWatchers.ts - SIMPLIFIED VERSION
-import { watch, nextTick } from 'vue'
+// composables/useEventModalWatchers.ts - KORRIGIERTE VERSION
+import { watch, nextTick, type Ref } from 'vue'
+import { usePricing } from '~/composables/usePricing'
 import { getSupabase } from '~/utils/supabase'
-import { useTimeCalculations } from '~/composables/useTimeCalculations'
 
-export const useEventModalWatchers = (
-  props: any,
-  formData: any,
-  selectedStudent: any,
-  selectedLocation: any,
-  availableLocations: any,
-  appointmentNumber: any,
-  actions: any
-) => {
+interface EventModalWatchersParams {
+  formData: Ref<any>
+  selectedStudent: Ref<any>
+  selectedCategory: Ref<any>
+  dynamicPricing: Ref<any>
+  isLoading: Ref<boolean>
+  appointmentNumber: Ref<number>
+  calculateEndTime: () => void
+  props: {
+    mode: 'create' | 'edit' | 'view'
+    eventData?: any
+    isOpen?: boolean
+  }
+}
 
-  // ============ HELPER FUNCTIONS ============
-const { calculateEndTime } = useTimeCalculations(formData)
+export const useEventModalWatchers = ({
+  formData,
+  selectedStudent,
+  selectedCategory,
+  dynamicPricing,
+  isLoading,
+  appointmentNumber,
+  calculateEndTime,
+  props
+}: EventModalWatchersParams) => {
 
-
-  // 🔥 LOCAL appointment number function
-  const getAppointmentNumber = async (studentId: string): Promise<number> => {
+  // ✅ GET APPOINTMENT NUMBER HELPER
+  const getAppointmentNumber = async (userId: string): Promise<number> => {
     try {
       const supabase = getSupabase()
       const { count, error } = await supabase
         .from('appointments')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', studentId)
+        .eq('user_id', userId)
         .in('status', ['completed', 'confirmed'])
 
-      if (error) throw error
-      return (count || 0) + 1
+      if (error) {
+        console.error('❌ Error counting appointments:', error)
+        return 1
+      }
 
-    } catch (err) {
-      console.error('❌ Error counting appointments:', err)
+      return (count || 0) + 1
+    } catch (error) {
+      console.error('❌ Error in getAppointmentCount:', error)
       return 1
     }
   }
 
-        // ============ MODAL LIFECYCLE WATCHER ============
-          const setupModalWatcher = () => {
-            watch(() => props.isVisible, async (isVisible) => {
-              console.log('👀 Modal visibility changed to:', isVisible)
-              
-              if (isVisible) {
-                console.log('🔄 Modal opening - starting initialization...')
-                
-                try {
-                  // Mode-based initialization
-                  if (props.eventData && (props.mode === 'edit' || props.mode === 'view')) {
-                    console.log('📝 Processing EDIT/VIEW mode...')
-                    actions.populateFormFromAppointment(props.eventData)
-                    
-                    // Handle student selection for edit mode
-                    if (formData.value.user_id) {
-                      await handleEditModeStudentSelection()
-                    }
-                  } else if (props.mode === 'create') {  // 🔥 WICHTIG: else if statt else!
-                    console.log('📅 Processing CREATE mode...')
-                    await handleCreateModeInitialization()
-                  }
-                  
-                  console.log('✅ Modal initialization completed')
-                  
-                } catch (error: unknown) {
-                  console.error('❌ Error during modal initialization:', error)
-                }
-              } else {
-                // Modal closed - reset state
-                console.log('❌ Modal closed - resetting state')
-                actions.resetForm()
-              }
-            }, { immediate: true })
-          }
-
-  // ============ FORM DATA WATCHERS ============
-  const setupFormWatchers = () => {
-
-   
-
-    // 🔥 NEW: Auto-load students when needed
-    watch(() => props.mode, (newMode) => {
-      if (newMode === 'create') {
-        console.log('🔄 Create mode detected - triggering student load')
-        // Trigger student loading for create mode
-        if (actions.triggerStudentLoad) {
-          actions.triggerStudentLoad()
-        }
+  // ✅ REACTIVE PRICE CALCULATION WATCHER
+  const setupPriceWatcher = () => {
+    watch([
+      () => formData.value.duration_minutes,
+      () => formData.value.type,
+      () => formData.value.user_id
+    ], async ([newDuration, newCategory, newUserId], [oldDuration, oldCategory, oldUserId]) => {
+      
+      // Skip if in view mode or during initialization
+      if (props.mode === 'view' || isLoading.value) {
+        console.log('🚫 Price recalculation skipped - view mode or loading')
+        return
       }
-    }, { immediate: true })
 
-    // 🔥 NEW: Auto-reload students when student is cleared
-    watch(selectedStudent, (newStudent, oldStudent) => {
-      if (oldStudent && !newStudent) {
-        console.log('🔄 Student cleared - triggering student reload')
-        // Trigger student loading when student is cleared
-        if (actions.triggerStudentLoad) {
-          actions.triggerStudentLoad()
-        }
+      // Skip if no essential data
+      if (!newCategory || !newDuration || formData.value.eventType !== 'lesson') {
+        console.log('🚫 Price recalculation skipped - missing data')
+        return
       }
-    })
 
+      // Check if any relevant value actually changed
+      const durationChanged = newDuration !== oldDuration
+      const categoryChanged = newCategory !== oldCategory
+      const userChanged = newUserId !== oldUserId
+
+      if (!durationChanged && !categoryChanged && !userChanged) {
+        console.log('🚫 Price recalculation skipped - no relevant changes')
+        return
+      }
+
+      console.log('💰 Recalculating price due to changes:', {
+        durationChanged: durationChanged ? `${oldDuration}min → ${newDuration}min` : false,
+        categoryChanged: categoryChanged ? `${oldCategory} → ${newCategory}` : false,
+        userChanged: userChanged ? `${oldUserId} → ${newUserId}` : false
+      })
+
+      try {
+        // Load pricing composable
+        const { calculatePrice, loadPricingRules } = usePricing()
+        
+        // Ensure pricing rules are loaded
+        await loadPricingRules()
+        
+        // Calculate new price
+        const priceResult = await calculatePrice(
+          newCategory,
+          newDuration,
+          newUserId || undefined
+        )
+
+        // Update dynamic pricing
+        dynamicPricing.value = {
+          pricePerMinute: priceResult.base_price_rappen / newDuration / 100,
+          adminFeeChf: parseFloat(priceResult.admin_fee_chf),
+          appointmentNumber: priceResult.appointment_number,
+          hasAdminFee: priceResult.admin_fee_rappen > 0,
+          totalPriceChf: priceResult.total_chf,
+          category: newCategory,
+          duration: newDuration,
+          isLoading: false,
+          error: ''
+        }
+
+        // Also update form data for fallback
+        formData.value.price_per_minute = dynamicPricing.value.pricePerMinute
+
+        console.log('✅ Price recalculated:', {
+          duration: `${newDuration}min`,
+          basePrice: priceResult.base_price_chf,
+          adminFee: priceResult.admin_fee_chf,
+          totalPrice: priceResult.total_chf,
+          appointmentNumber: priceResult.appointment_number
+        })
+
+      } catch (error: any) {
+        console.error('❌ Error recalculating price:', error)
+        
+        // Update dynamic pricing with error state
+        dynamicPricing.value = {
+          ...dynamicPricing.value,
+          isLoading: false,
+          error: error?.message || 'Fehler bei Preisberechnung'
+        }
+        
+        // Fallback to static pricing if dynamic fails
+        const fallbackPrices: Record<string, number> = {
+          'B': 95/45, 'A1': 95/45, 'BE': 120/45, 'C1': 150/45, 
+          'D1': 150/45, 'C': 170/45, 'CE': 200/45, 'D': 200/45, 
+          'BPT': 100/45, 'Motorboot': 95/45
+        }
+        
+        formData.value.price_per_minute = fallbackPrices[newCategory] || 95/45
+        console.log('⚠️ Using fallback price due to calculation error')
+      }
+      
+    }, { immediate: false, deep: false })
+  }
+
+  // ✅ TIME CHANGE WATCHER
+  const setupTimeWatcher = () => {
+    watch([
+      () => formData.value.startTime,
+      () => formData.value.endTime
+    ], ([newStartTime, newEndTime], [oldStartTime, oldEndTime]) => {
+      
+      if (!newStartTime || !newEndTime) return
+      
+      // Calculate duration from time change
+      const startTime = new Date(`1970-01-01T${newStartTime}:00`)
+      const endTime = new Date(`1970-01-01T${newEndTime}:00`)
+      
+      // Handle day overflow (end time next day)
+      if (endTime < startTime) {
+        endTime.setDate(endTime.getDate() + 1)
+      }
+      
+      const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
+      
+      // Update duration if it changed due to time modification
+      if (durationMinutes > 0 && durationMinutes !== formData.value.duration_minutes) {
+        console.log('⏰ Duration changed via time selector:', 
+          `${formData.value.duration_minutes}min → ${durationMinutes}min`)
+        
+        formData.value.duration_minutes = durationMinutes
+        
+        // The duration watcher above will automatically trigger price recalculation
+      }
+      
+    }, { immediate: false })
+  }
+
+  // ✅ STANDARD WATCHERS (unchanged)
+  const setupStandardWatchers = () => {
     // Time calculation watcher
     watch([
       () => formData.value.startTime,
@@ -149,19 +234,12 @@ const { calculateEndTime } = useTimeCalculations(formData)
     watch(() => formData.value.type, async (newType) => {
       if (newType && props.mode === 'edit') {
         console.log('👀 Category type changed in edit mode:', newType)
-
-        // Force category update in edit mode
         await nextTick()
       }
     }, { immediate: true })
-
-    // Duration change watcher
-    watch(() => formData.value.duration_minutes, () => {
-      calculateEndTime()
-    })
   }
 
-  // ============ DEBUG WATCHERS ============
+  // ✅ DEBUG WATCHERS
   const setupDebugWatchers = () => {
     // Location debugging
     watch(() => formData.value.location_id, (newVal, oldVal) => {
@@ -176,59 +254,33 @@ const { calculateEndTime } = useTimeCalculations(formData)
         newStudent?.first_name || 'none'
       )
     })
+
+    // Dynamic pricing debugging
+    watch(dynamicPricing, (newPricing, oldPricing) => {
+      console.log('💰 dynamicPricing changed:', {
+        oldTotal: oldPricing?.totalPriceChf,
+        newTotal: newPricing?.totalPriceChf,
+        hasAdminFee: newPricing?.hasAdminFee
+      })
+    }, { deep: true })
   }
 
-  // ============ HELPER FUNCTIONS ============
-  const handleEditModeStudentSelection = async () => {
-    console.log('📝 Setting up student for edit mode:', formData.value.user_id)
-    
-    // This would typically trigger the StudentSelector to select the correct student
-    // The implementation depends on how your StudentSelector handles programmatic selection
-    
-    // Example: You might need to emit to parent or use a ref to StudentSelector
-    // to call selectStudentById(formData.value.user_id)
-  }
-
-  const handleCreateModeInitialization = async () => {
-    // Initialize create mode with default values
-    let startDate, startTime
-
-    if (props.eventData?.start) {
-      const clickedDateTime = new Date(props.eventData.start)
-      startDate = clickedDateTime.toISOString().split('T')[0]
-      startTime = clickedDateTime.toTimeString().slice(0, 5)
-    } else {
-      const now = new Date()
-      startDate = now.toISOString().split('T')[0]
-      startTime = now.toTimeString().slice(0, 5)
-    }
-
-    formData.value.startDate = startDate
-    formData.value.startTime = startTime
-
-    console.log('📅 Create mode initialized with date/time:', startDate, startTime)
-    
-    // Calculate end time immediately
-    if (formData.value.duration_minutes) {
-      calculateEndTime()
-    }
-  }
-
-  // ============ PUBLIC API ============
+  // ✅ SETUP ALL WATCHERS
   const setupAllWatchers = () => {
-    setupModalWatcher()
-    setupFormWatchers()
+    setupPriceWatcher()
+    setupTimeWatcher() 
+    setupStandardWatchers()
     setupDebugWatchers()
-
-    console.log('⚡ All watchers initialized (simplified version)')
+    
+    console.log('⚡ All enhanced watchers initialized with price reactivity')
   }
 
   return {
     setupAllWatchers,
-    setupModalWatcher,
-    setupFormWatchers,
+    setupPriceWatcher,
+    setupTimeWatcher,
+    setupStandardWatchers,
     setupDebugWatchers,
-    calculateEndTime,
-    getAppointmentNumber,
+    getAppointmentNumber
   }
 }

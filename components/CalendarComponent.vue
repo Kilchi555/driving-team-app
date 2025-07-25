@@ -257,20 +257,18 @@ const loadRegularAppointments = async () => {
     console.log('🔄 Loading appointments from Supabase...')
     console.log('👤 Current user:', props.currentUser?.id)
     
-    // Erweiterte Abfrage: Eigene Termine UND Team-Einladungen
+    // ✅ Erweiterte Abfrage mit manueller Location-Auflösung
     let query = supabase
       .from('appointments')
       .select(`
         *,
         user:user_id(first_name, last_name),
-        staff:staff_id(first_name, last_name),
-        location:location_id(name, address)
+        staff:staff_id(first_name, last_name)
       `)
       .or(`staff_id.eq.${props.currentUser?.id}`) // Eigene Termine (als staff_id)
       .order('start_time')
     
     const { data: appointments, error } = await query
-    
     console.log('📊 Raw appointments from DB:', appointments?.length || 0)
     
     if (error) throw error
@@ -295,84 +293,89 @@ const loadRegularAppointments = async () => {
     
     console.log('✅ Filtered appointments:', filteredAppointments.length)
     
-    // In CalendarComponent.vue, ersetze die eventContent Funktion:
-
-// ENTFERNE die eventContent Funktion komplett
-// und nutze stattdessen nur den Standard-Titel von FullCalendar
-
-// Stattdessen passen wir die Event-Erstellung in loadRegularAppointments an:
-const convertedEvents = appointments.map((apt) => {
-  const isTeamInvite = apt.type === 'team_invite'
-  
-  // ✅ Für Fahrlektionen: Student Name als Titel
-  let eventTitle = ''
-  if (apt.type === 'lesson' || !apt.type) {
-    eventTitle = `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim() || 'Fahrlektion'
-  } 
-  // ✅ Für andere Terminarten: Den echten Event-Titel verwenden
-  else {
-    eventTitle = apt.title || apt.type || 'Termin'
-  }
-  
-  const event = {
-    id: apt.id,
-    title: eventTitle,
-    start: new Date(apt.start_time).toISOString(), 
-    end: new Date(apt.end_time).toISOString(),
-    allDay: false,
-    extendedProps: {
-      location: apt.location?.address || apt.location?.name || 'Kein Ort',      
-      staff_note: apt.description || '',
-      client_note: '',
-      category: apt.type,
-      instructor: `${apt.staff?.first_name || ''} ${apt.staff?.last_name || ''}`.trim(),
-      student: `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim(),
-      price: (apt.price_per_minute || 0) * (apt.duration_minutes || 45),
-      user_id: apt.user_id,
-      staff_id: apt.staff_id,
-      location_id: apt.location_id,
-      duration_minutes: apt.duration_minutes,
-      price_per_minute: apt.price_per_minute,
-      status: apt.status,
-      is_paid: apt.is_paid,
-      appointment_type: apt.type,
-      is_team_invite: isTeamInvite,
-      original_type: apt.type,
-      eventType: apt.type // ← Wichtig für die Farb-Zuordnung
+    // ✅ Location-Daten für alle Termine laden (für alte Termine)
+    const locationIds = [...new Set(appointments
+      .filter(apt => apt.location_id && !apt.location_name)
+      .map(apt => apt.location_id)
+    )]
+    
+    let locationsMap: Record<string, {name: string, address: string}> = {}
+    if (locationIds.length > 0) {
+      console.log('🔄 Loading location data for', locationIds.length, 'locations')
+      const { data: locations, error: locError } = await supabase
+        .from('locations')
+        .select('id, name, adress')
+        .in('id', locationIds)
+      
+      if (!locError && locations) {
+        locationsMap = Object.fromEntries(
+          locations.map(loc => [loc.id, { name: loc.name, address: loc.adress }])
+        )
+        console.log('✅ Locations loaded:', Object.keys(locationsMap).length)
+      }
     }
-  }
-  
-  return event
-})
     
-    calendarEvents.value = convertedEvents
-    
-    
-    console.log('✅ Final calendar summary:', {
-      totalEvents: convertedEvents.length,
-      teamInvites: convertedEvents.filter(e => e.extendedProps.is_team_invite).length,
-      regularTermine: convertedEvents.filter(e => !e.extendedProps.is_team_invite).length,
-      lessons: convertedEvents.filter(e => e.extendedProps.appointment_type === 'lesson').length,
-      others: convertedEvents.filter(e => !['lesson', 'team_invite'].includes(e.extendedProps.appointment_type)).length
+    const convertedEvents = appointments.map((apt) => {
+      const isTeamInvite = apt.type === 'team_invite'
+      
+      // ✅ Für Fahrlektionen: Student Name als Titel
+      let eventTitle = ''
+      if (apt.type === 'lesson' || !apt.type) {
+        eventTitle = `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim() || 'Fahrlektion'
+      }
+      // ✅ Für andere Terminarten: Den echten Event-Titel verwenden
+      else {
+        eventTitle = apt.title || apt.type || 'Termin'
+      }
+      
+      const event = {
+        id: apt.id,
+        title: eventTitle,
+        start: new Date(apt.start_time).toISOString(),
+        end: new Date(apt.end_time).toISOString(),
+        allDay: false,
+        extendedProps: {
+          // ✅ Hybride Location-Auflösung: Neue Felder oder aus locations-Map
+        location: apt.location_name || 
+          apt.location_address || 
+          (apt.location_id ? locationsMap[apt.location_id]?.name : '') || 
+          (apt.location_id ? locationsMap[apt.location_id]?.address : '') || 
+          'Kein Ort',
+          staff_note: apt.description || '',
+          client_note: '',
+          category: apt.type,
+          instructor: `${apt.staff?.first_name || ''} ${apt.staff?.last_name || ''}`.trim(),
+          student: `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim(),
+          price: (apt.price_per_minute || 0) * (apt.duration_minutes || 45),
+          user_id: apt.user_id,
+          staff_id: apt.staff_id,
+          location_id: apt.location_id,
+          location_name: apt.location_name || (apt.location_id ? locationsMap[apt.location_id]?.name : '') || '',
+          location_address: apt.location_address || (apt.location_id ? locationsMap[apt.location_id]?.address : '') || '',
+          duration_minutes: apt.duration_minutes,
+          price_per_minute: apt.price_per_minute,
+          status: apt.status,
+          is_paid: apt.is_paid,
+          appointment_type: apt.type,
+          is_team_invite: isTeamInvite,
+          original_type: apt.type,
+          eventType: apt.type // ← Wichtig für die Farb-Zuordnung
+        }
+      }
+      
+      return event
     })
     
-    
-    if (calendar.value?.getApi) {
-      const calendarApi = calendar.value.getApi()
-      calendarApi.refetchEvents()
-      console.log('🔄 Calendar events refetched')
-    }
-    return convertedEvents 
-
+    return convertedEvents
     
   } catch (error) {
     console.error('❌ Error loading appointments:', error)
-    return [] 
+    throw error
   } finally {
     isLoadingEvents.value = false
   }
 }
-
+    
 const handleMoveError = (error: string) => {
   console.error('❌ Move error:', error)
   showToast('❌ Fehler beim Verschieben: ' + error)
@@ -795,6 +798,11 @@ const handleDeleteEvent = async (eventData: CalendarEvent) => {
   isModalVisible.value = false
 }
 
+const handleEventDeleted = (id: string) => {
+  console.log('🗑️ Event deleted:', id)
+  loadAppointments() // Kalender neu laden
+}
+
 onMounted(async () => {
   console.log('📅 CalendarComponent mounted')
   isCalendarReady.value = true
@@ -869,7 +877,7 @@ defineExpose({
   :event-type="modalEventType"
   @close="isModalVisible = false"
   @save-event="handleSaveEvent"       
-  @delete-event="handleDeleteEvent"   
+  @delete-event="handleEventDeleted"
   @refresh-calendar="loadAppointments"
   @appointment-saved="refreshCalendar"    
   @appointment-updated="refreshCalendar"   

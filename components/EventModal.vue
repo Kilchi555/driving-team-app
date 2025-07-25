@@ -37,8 +37,18 @@
         <div v-if="selectedStudent && formData.eventType === 'lesson'">
           <LessonTypeSelector
             v-model="selectedLessonType"
+            :selected-type="selectedLessonType"
             :disabled="mode === 'view'"
             @lesson-type-selected="handleLessonTypeSelected"
+          />
+        </div>
+
+        <!-- Prüfungsstandort Auswahl (nur bei Prüfungen) -->
+        <div v-if="formData.appointment_type === 'exam'" class="space-y-2">
+          <ExamLocationSelector
+            :current-staff-id="currentUser?.id || ''"
+            v-model="selectedExamLocation"
+            @update:modelValue="handleExamLocationSelected"
           />
         </div>
 
@@ -76,7 +86,7 @@
        <!-- Title Input -->
         <TitleInput
           :title="formData.title"
-          :event-type="formData.eventType"
+          :event-type="formData.eventType as 'lesson' | 'staff_meeting' | 'other'"
           :selected-student="selectedStudent"
           :selected-special-type="formData.selectedSpecialType"
           :category-code="formData.type"
@@ -107,35 +117,36 @@
             @duration-changed="handleDurationChanged"
           />
         </div>
+          <!-- Time Section -->
+          <div v-if="showTimeSection">
+            <TimeSelector
+              :start-date="formData.startDate"
+              :start-time="formData.startTime"
+              :end-time="formData.endTime"
+              :duration-minutes="formData.duration_minutes"
+              :event-type="(formData.eventType as 'lesson' | 'staff_meeting' | 'other')"
+              :selected-student="selectedStudent"
+              :selected-special-type="formData.selectedSpecialType"
+              :disabled="mode === 'view'"
+              :mode="mode"
+              @update:start-date="handleStartDateUpdate"
+              @update:start-time="handleStartTimeUpdate"
+              @update:end-time="handleEndTimeUpdate"
+              @time-changed="handleTimeChanged"
+            />
+          </div>
 
-        <!-- Time Section -->
-        <TimeSelector
-          :start-date="formData.startDate"
-          :start-time="formData.startTime"
-          :end-time="formData.endTime"
-          :duration-minutes="formData.duration_minutes"
-          :event-type="formData.eventType"
-          :selected-student="selectedStudent"
-          :selected-special-type="formData.selectedSpecialType"
-          :disabled="mode === 'view'"
-          :mode="mode"
-          @update:start-date="formData.startDate = $event"
-          @update:start-time="formData.startTime = $event"
-          @update:end-time="formData.endTime = $event"
-          @time-changed="handleTimeChanged"
-        />
-
-        <!-- Location Section -->
-        <div v-if="showTimeSection">
-          <LocationSelector
-            :model-value="formData.location_id"
-            :selected-student-id="selectedStudent?.id"
-            :current-staff-id="formData.staff_id"
-            :disabled="mode === 'view'"
-            @update:model-value="updateLocationId"
-            @location-selected="handleLocationSelected"
-          />
-        </div>
+          <!-- Location Section -->
+          <div v-if="showTimeSection">
+            <LocationSelector
+              :model-value="formData.location_id"
+              :selected-student-id="selectedStudent?.id"
+              :current-staff-id="formData.staff_id"
+              :disabled="mode === 'view'"
+              @update:model-value="updateLocationId"
+              @location-selected="handleLocationSelected"
+            />
+          </div>
 
         <!-- Price Display - nur für Fahrstunden -->
         <div v-if="selectedStudent && formData.duration_minutes && formData.eventType === 'lesson'">
@@ -147,9 +158,9 @@
               :admin-fee="dynamicPricing.adminFeeChf || 0"
               :appointment-number="dynamicPricing.appointmentNumber || 1"
               :is-second-or-later-appointment="dynamicPricing.hasAdminFee || false"
-              :discount="formData.discount"
-              :discount-type="formData.discount_type"
-              :discount-reason="formData.discount_reason"
+              :discount="formData.discount || 0"
+              :discount-type="(formData.discount_type as 'fixed') || 'fixed'"
+              :discount-reason="formData.discount_reason || ''"
               :allow-discount-edit="currentUser?.role === 'staff' || currentUser?.role === 'admin'"
               :selected-date="formData.startDate"
               :start-time="formData.startTime"
@@ -220,6 +231,23 @@
 
     </div>
   </div>
+
+          <!-- ConfirmationDialog für Löschen -->
+        <ConfirmationDialog
+          :is-visible="showDeleteConfirmation"
+          title="Termin löschen"
+          :message="`Möchten Sie diesen Termin wirklich löschen?`"
+          :details="`<strong>Termin:</strong> ${props.eventData?.title || 'Unbenannt'}<br>
+                    <strong>Datum:</strong> ${props.eventData?.start ? new Date(props.eventData.start).toLocaleDateString('de-CH') : ''}<br>
+                    <strong>Zeit:</strong> ${props.eventData?.start ? new Date(props.eventData.start).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) : ''}`"
+          icon="🗑️"
+          type="danger"
+          confirm-text="Löschen"
+          cancel-text="Abbrechen"
+          @confirm="confirmDelete"
+          @cancel="cancelDelete"
+          @close="cancelDelete"
+        />
 </template>
 
 <script setup lang="ts">
@@ -238,12 +266,21 @@ import TitleInput from '~/components/TitleInput.vue'
 import LessonTypeSelector from '~/components/LessonTypeSelector.vue'
 import StaffSelector from '~/components/StaffSelector.vue'
 import CustomerInviteSelector from '~/components/CustomerInviteSelector.vue' 
+import ExamLocationSelector from '~/components/ExamLocationSelector.vue'
+import ConfirmationDialog from './ConfirmationDialog.vue'
+
 
 // Composables
 import { useCompanyBilling } from '~/composables/useCompanyBilling'
 import { useEventModalHandlers} from '~/composables/useEventModalHandlers'
 import { useTimeCalculations } from '~/composables/useTimeCalculations'
+import { useEventModalForm } from '~/composables/useEventModalForm'
+import { usePricing } from '~/composables/usePricing'
 
+
+
+//Utils
+import { saveWithOfflineSupport } from '~/utils/offlineSupport'
 
 // Types
 interface Student {
@@ -277,15 +314,13 @@ const emit = defineEmits<{
   'appointment-deleted': [id: string]
   'default-billing-address-loaded': [address: any]
   'payment-mode-changed': [paymentMode: string, data?: any]
-
+  'delete-event': [id: string]      // ← Diese Zeile hinzufügen
+  'refresh-calendar': [] 
 }>()
 
 // ============ REFS ============
 const supabase = getSupabase()
 const studentSelectorRef = ref()
-const selectedStudent = ref<Student | null>(null)
-const selectedLocation = ref<any | null>(null)
-const availableDurations = ref([45])
 const error = ref('')
 const isLoading = ref(false)
 const showEventTypeSelection = ref(false)
@@ -295,32 +330,11 @@ const invitedStaffIds = ref<string[]>([])
 const invitedCustomers = ref<any[]>([])  
 const defaultBillingAddress = ref(null)
 const selectedCategory = ref<any | null>(null)
-
-
-const formData = ref({
-  id: '',
-  title: '',
-  type: '',
-  appointment_type: 'lesson',
-  startDate: '',
-  startTime: '',
-  endTime: '',
-  duration_minutes: 45,
-  location_id: '',
-  staff_id: props.currentUser?.id || '',
-  price_per_minute: 95/45,
-  user_id: '',
-  status: 'confirmed',
-  is_paid: false,
-  description: '',
-  eventType: 'lesson' as 'lesson' | 'staff_meeting' | 'other',
-  selectedSpecialType: '',
-  discount: 0,
-  discount_type: 'fixed' as const,
-  discount_reason: '',
-  payment_method: 'online',
-  payment_data: null as any
-})
+const selectedExamLocation = ref(null)
+const modalForm = useEventModalForm(props.currentUser)
+const showDeleteConfirmation = ref(false)
+const appointmentNumber = ref(1)
+const availableDurations = ref([45])
 
 
 // Neue Dynamic Pricing Integration
@@ -329,9 +343,20 @@ const dynamicPricing = ref({
   adminFeeChf: 0,
   appointmentNumber: 1,
   hasAdminFee: false,
+  totalPriceChf: '0.00',
+  category: '',
+  duration: 45,
   isLoading: false,
   error: ''
 })
+
+const { 
+  formData, 
+  selectedStudent,        
+  selectedLocation,
+  populateFormFromAppointment,
+  calculateEndTime 
+} = modalForm
 
 const handlers = useEventModalHandlers(
   formData,
@@ -368,7 +393,8 @@ const shouldAutoLoadStudents = computed(() => {
 })
 
 const isFormValid = computed(() => {
-  if (formData.value.eventType === 'lesson') {
+  const lessonTypes = ['lesson', 'exam', 'theory']
+  if (lessonTypes.includes(formData.value.eventType)) {
     return selectedStudent.value && 
            formData.value.type && 
            formData.value.startDate && 
@@ -385,14 +411,37 @@ const isFormValid = computed(() => {
   }
 })
 
+// showStudentSelector computed:
 const showStudentSelector = computed(() => {
+  console.log('🔍 showStudentSelector:', {
+    eventType: formData.value.eventType,
+    isLessonType: formData.value.eventType === 'lesson',
+    showEventTypeSelection: showEventTypeSelection.value,
+    mode: props.mode,
+    hasUserId: !!formData.value.user_id,
+    hasSelectedStudent: !!selectedStudent.value,
+    result: formData.value.eventType === 'lesson' && !showEventTypeSelection.value
+  })
+  
+  // ✅ EINFACHE LOGIK: Zeige StudentSelector für alle Lesson Types
+  // Egal ob Edit oder Create, egal ob Student bereits geladen oder nicht
   return formData.value.eventType === 'lesson' && !showEventTypeSelection.value
 })
 
 const showEventTypeSelector = computed(() => {
-  return showEventTypeSelection.value
+  const lessonTypes = ['lesson', 'exam', 'theory']
+  const result = !lessonTypes.includes(formData.value.eventType) || showEventTypeSelection.value
+  console.log('🔍 showEventTypeSelector:', {
+    eventType: formData.value.eventType,
+    isLessonType: lessonTypes.includes(formData.value.eventType),
+    showEventTypeSelection: showEventTypeSelection.value,
+    result
+  })
+  return result
 })
 
+// showTimeSection computed:
+// In EventModal.vue - prüfen Sie diese computed property:
 const showTimeSection = computed(() => {
   if (formData.value.eventType === 'lesson') {
     return !!selectedStudent.value
@@ -415,8 +464,134 @@ const isFreeslotMode = computed(() => {
 
 // ============ HANDLERS ============
 // In EventModal.vue - ersetzen Sie die lokale handleStudentSelected Funktion mit:
+// EventModal.vue - FÜGEN SIE DIESE FUNKTIONEN HINZU:
 
+// ✅ 1. START DATE HANDLER
+const handleStartDateUpdate = (newStartDate: string) => {
+  console.log('📅 START DATE DIRECTLY UPDATED:', newStartDate)
+  formData.value.startDate = newStartDate
+  
+  // Trigger time recalculation if we have start/end times
+  if (formData.value.startTime && formData.value.endTime) {
+    handleEndTimeUpdate(formData.value.endTime)
+  }
+}
 
+// ✅ 2. START TIME HANDLER
+const handleStartTimeUpdate = (newStartTime: string) => {
+  console.log('🕐 START TIME DIRECTLY UPDATED:', newStartTime)
+  formData.value.startTime = newStartTime
+  
+  // Trigger duration recalculation if we have end time
+  if (formData.value.endTime && newStartTime) {
+    handleEndTimeUpdate(formData.value.endTime)
+  }
+}
+
+// ✅ 3. END TIME HANDLER (mit vollständiger Logik)
+const handleEndTimeUpdate = (newEndTime: string) => {
+  console.log('🔥 DEBUG: handleEndTimeUpdate called with:', newEndTime)
+  console.log('🔥 DEBUG: Current formData.endTime before update:', formData.value.endTime)
+  
+  formData.value.endTime = newEndTime
+  
+  console.log('🔥 DEBUG: Current formData after update:', {
+    startTime: formData.value.startTime,
+    endTime: formData.value.endTime,
+    duration: formData.value.duration_minutes
+  })
+  
+  // Test ob Duration-Berechnung funktioniert
+  if (formData.value.startTime && newEndTime) {
+    const startTime = new Date(`1970-01-01T${formData.value.startTime}:00`)
+    const endTime = new Date(`1970-01-01T${newEndTime}:00`)
+    
+    if (endTime < startTime) {
+      endTime.setDate(endTime.getDate() + 1)
+    }
+    
+    const newDurationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
+    console.log('🔥 DEBUG: Calculated duration:', newDurationMinutes)
+    
+    if (newDurationMinutes > 0) {
+      formData.value.duration_minutes = newDurationMinutes
+      console.log('🔥 DEBUG: Duration updated to:', newDurationMinutes)
+    }
+  }
+}
+
+// ✅ 4. ZENTRALE PREISBERECHNUNG (falls noch nicht vorhanden)
+const calculatePriceForCurrentData = async () => {
+  if (!formData.value.type || !formData.value.duration_minutes || formData.value.eventType !== 'lesson') {
+    console.log('🚫 Skipping price calculation - missing data:', {
+      type: formData.value.type,
+      duration: formData.value.duration_minutes,
+      eventType: formData.value.eventType
+    })
+    return
+  }
+
+  const appointmentNum = appointmentNumber?.value || 1
+  
+  console.log('💰 Calculating price for current data:', {
+    category: formData.value.type,
+    duration: formData.value.duration_minutes,
+    appointmentNumber: appointmentNum,
+    online: navigator.onLine
+  })
+
+  try {
+    if (navigator.onLine) {
+      // ✅ Online Berechnung
+      const { calculatePrice } = usePricing()
+      const priceResult = await calculatePrice(
+        formData.value.type, 
+        formData.value.duration_minutes, 
+        formData.value.user_id || undefined
+      )
+      
+      console.log('✅ Online price calculated:', priceResult)
+      
+      // Update dynamic pricing
+      dynamicPricing.value = {
+        pricePerMinute: priceResult.base_price_rappen / formData.value.duration_minutes / 100,
+        adminFeeChf: parseFloat(priceResult.admin_fee_chf),
+        appointmentNumber: priceResult.appointment_number,
+        hasAdminFee: priceResult.admin_fee_rappen > 0,
+        totalPriceChf: priceResult.total_chf,
+        category: formData.value.type,
+        duration: formData.value.duration_minutes,
+        isLoading: false,
+        error: ''
+      }
+      
+      formData.value.price_per_minute = dynamicPricing.value.pricePerMinute
+      
+    } else {
+      // ✅ Offline Berechnung
+      console.log('📱 Using offline calculation')
+      calculateOfflinePrice(formData.value.type, formData.value.duration_minutes, appointmentNum)
+    }
+  } catch (error) {
+    console.log('🔄 Price calculation failed, using offline fallback:', error)
+    calculateOfflinePrice(formData.value.type, formData.value.duration_minutes, appointmentNum)
+  }
+}
+
+// ✅ 6. TEST BUTTON (temporär für Debugging)
+const testManualTimeChange = () => {
+  console.log('🧪 TESTING manual time change...')
+  handleEndTimeUpdate('15:30')
+}
+
+// ✅ 7. STELLEN SIE SICHER, dass diese Imports vorhanden sind:
+// import { usePricing } from '~/composables/usePricing'
+
+const handleExamLocationSelected = (location: any) => {
+  selectedExamLocation.value = location
+  console.log('🏛️ Exam location selected in modal:', location)
+  // Hier können Sie zusätzliche Logik hinzufügen, z.B. in formData speichern
+}
 
 const handleStudentSelected = async (student: Student | null) => {
   console.log('👤 Student selected in EventModal:', student?.first_name)
@@ -469,11 +644,14 @@ const switchToOtherEventType = () => {
   console.log('🔄 Switching to other event types')
   console.log('📍 SWITCH EVENTMODAL STACK:', new Error().stack)
   
-  formData.value.eventType = 'other'
+  formData.value.eventType = 'other' // Wird später überschrieben wenn User wählt
   showEventTypeSelection.value = true
   selectedStudent.value = null
   formData.value.user_id = ''
+  formData.value.selectedSpecialType = ''
 }
+
+
 
 const handleEventTypeSelected = (eventType: any) => {
   console.log('🎯 Event type selected:', eventType)
@@ -542,11 +720,131 @@ const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => 
   // z.B. sofort in der Datenbank aktualisieren
 }
 
+const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, appointmentNum: number = 1) => {
+  console.log('💰 Calculating offline price:', { categoryCode, durationMinutes, appointmentNum })
+  
+  const offlinePrices: Record<string, { pricePerLesson: number, adminFee: number, adminFrom: number }> = {
+    'B': { pricePerLesson: 95, adminFee: 120, adminFrom: 2 },
+    'A1': { pricePerLesson: 95, adminFee: 0, adminFrom: 999 },
+    'A35kW': { pricePerLesson: 95, adminFee: 0, adminFrom: 999 },
+    'A': { pricePerLesson: 95, adminFee: 0, adminFrom: 999 },
+    'BE': { pricePerLesson: 120, adminFee: 120, adminFrom: 2 },
+    'C1': { pricePerLesson: 150, adminFee: 200, adminFrom: 2 },
+    'D1': { pricePerLesson: 150, adminFee: 200, adminFrom: 2 },
+    'C': { pricePerLesson: 170, adminFee: 200, adminFrom: 2 },
+    'CE': { pricePerLesson: 200, adminFee: 250, adminFrom: 2 },
+    'D': { pricePerLesson: 200, adminFee: 300, adminFrom: 2 },
+    'Motorboot': { pricePerLesson: 95, adminFee: 120, adminFrom: 2 },
+    'BPT': { pricePerLesson: 100, adminFee: 120, adminFrom: 2 }
+  }
+  
+  const priceData = offlinePrices[categoryCode] || offlinePrices['B']
+  const pricePerMinute = priceData.pricePerLesson / 45
+  const basePrice = pricePerMinute * durationMinutes
+  const adminFee = appointmentNum >= priceData.adminFrom ? priceData.adminFee : 0
+  const totalPrice = basePrice + adminFee
+  
+  // Update dynamic pricing
+  dynamicPricing.value = {
+    pricePerMinute: pricePerMinute,
+    adminFeeChf: adminFee,
+    appointmentNumber: appointmentNum,
+    hasAdminFee: adminFee > 0,
+    totalPriceChf: totalPrice.toFixed(2),
+    category: categoryCode,
+    duration: durationMinutes,
+    isLoading: false,
+    error: ''
+  }
+  
+  formData.value.price_per_minute = pricePerMinute
+  
+  console.log('✅ Offline price calculated:', {
+    basePrice: basePrice.toFixed(2),
+    adminFee: adminFee.toFixed(2),
+    totalPrice: totalPrice.toFixed(2)
+  })
+}
+
 const handleTimeChanged = (timeData: { startDate: string, startTime: string, endTime: string }) => {
-  console.log('🕐 Time changed:', timeData)
+  console.log('🕐 Time manually changed:', timeData)
+  
+  // ✅ 1. Update form data
   formData.value.startDate = timeData.startDate
   formData.value.startTime = timeData.startTime
   formData.value.endTime = timeData.endTime
+  
+  // ✅ 2. KRITISCH: Calculate duration from manual time changes
+  if (timeData.startTime && timeData.endTime) {
+    console.log('⏰ Calculating duration from time change...')
+    
+    const startTime = new Date(`1970-01-01T${timeData.startTime}:00`)
+    const endTime = new Date(`1970-01-01T${timeData.endTime}:00`)
+    
+    // Handle day overflow (end time next day)
+    if (endTime < startTime) {
+      endTime.setDate(endTime.getDate() + 1)
+    }
+    
+    const newDurationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
+    
+    if (newDurationMinutes > 0 && newDurationMinutes !== formData.value.duration_minutes) {
+      console.log('⏰ Duration calculated from manual time change:', 
+        `${formData.value.duration_minutes}min → ${newDurationMinutes}min`)
+      
+      // ✅ 3. Update duration (this will trigger price recalculation via watcher)
+      formData.value.duration_minutes = newDurationMinutes
+      
+      // ✅ 4. Add custom duration to available options
+      if (!availableDurations.value.includes(newDurationMinutes)) {
+        availableDurations.value = [...availableDurations.value, newDurationMinutes].sort((a, b) => a - b)
+        console.log('⏱️ Added custom duration to available options:', availableDurations.value)
+      }
+      
+      // ✅ 5. SOFORTIGE Preisberechnung (online + offline)
+      if (formData.value.type && formData.value.eventType === 'lesson') {
+        const appointmentNum = appointmentNumber?.value || 1
+        
+        try {
+          // ✅ Versuche zuerst online Preisberechnung
+          if (navigator.onLine) {
+            const { calculatePrice } = usePricing()
+            
+            calculatePrice(formData.value.type, newDurationMinutes, formData.value.user_id || undefined)
+              .then(priceResult => {
+                console.log('✅ Online price calculated:', priceResult.total_chf)
+                
+                // Update dynamic pricing mit online Daten
+                dynamicPricing.value = {
+                  pricePerMinute: priceResult.base_price_rappen / newDurationMinutes / 100,
+                  adminFeeChf: parseFloat(priceResult.admin_fee_chf),
+                  appointmentNumber: priceResult.appointment_number,
+                  hasAdminFee: priceResult.admin_fee_rappen > 0,
+                  totalPriceChf: priceResult.total_chf,
+                  category: formData.value.type,
+                  duration: newDurationMinutes,
+                  isLoading: false,
+                  error: ''
+                }
+                
+                formData.value.price_per_minute = dynamicPricing.value.pricePerMinute
+              })
+              .catch(error => {
+                console.log('🔄 Online pricing failed, using offline calculation:', error)
+                calculateOfflinePrice(formData.value.type, newDurationMinutes, appointmentNum)
+              })
+          } else {
+            // ✅ Offline: Direkte Offline-Berechnung
+            console.log('📱 Offline mode detected, using offline calculation')
+            calculateOfflinePrice(formData.value.type, newDurationMinutes, appointmentNum)
+          }
+        } catch (error) {
+          console.log('🔄 Error in price calculation, using offline fallback:', error)
+          calculateOfflinePrice(formData.value.type, newDurationMinutes, appointmentNum)
+        }
+      }
+    }
+  }
 }
 
 const handleTitleGenerated = (title: string) => {
@@ -569,9 +867,6 @@ const handleLocationSelected = (location: any) => {
   selectedLocation.value = location
   formData.value.location_id = location?.id || ''
 }
-
-const { calculateEndTime } = useTimeCalculations(formData)
-
 
 const triggerStudentLoad = () => {
   // ✅ FIX: Nicht bei free slot clicks triggern
@@ -674,17 +969,11 @@ const loadCategoryData = async (categoryCode: string) => {
 }
 
 // ============ SAVE LOGIC ============
-// ERSETZEN Sie die handleSave Funktion in EventModal.vue mit dieser korrigierten Version:
-
-// ERSETZEN Sie die handleSave Funktion in EventModal.vue mit dieser korrigierten Version:
-
-// ERSETZEN Sie die handleSave Funktion in EventModal.vue mit dieser korrigierten Version:
-
 const handleSave = async () => {
-   if (!formData.value.title && selectedStudent.value) {
+  if (!formData.value.title && selectedStudent.value) {
     formData.value.title = `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}`
   }
-  
+
   console.log('💾 Saving appointment')
   
   if (!isFormValid.value) {
@@ -695,44 +984,58 @@ const handleSave = async () => {
   isLoading.value = true
   error.value = ''
   
+  // ✅ appointmentData hier definieren (außerhalb try-catch für Scope)
+  let finalLocationId: string | undefined = formData.value.location_id
+  
+  // Create proper datetime strings
+  const localStart = new Date(`${formData.value.startDate}T${formData.value.startTime}`)
+  const localEnd = new Date(`${formData.value.startDate}T${formData.value.endTime}`)
+  
+  // ✅ appointmentData außerhalb des try-blocks definieren
+  const appointmentData: any = {
+    title: formData.value.title,
+    start_time: localStart.toISOString(),
+    end_time: localEnd.toISOString(),
+    duration_minutes: formData.value.duration_minutes,
+    user_id: formData.value.user_id || formData.value.staff_id,
+    staff_id: formData.value.staff_id,
+    type: formData.value.eventType === 'lesson' ? (formData.value.appointment_type || formData.value.type) : formData.value.type,
+    status: formData.value.status,
+    is_paid: formData.value.is_paid,
+    price_per_minute: formData.value.price_per_minute,
+    description: formData.value.title || ''
+  }
+  
   try {
     // ✅ CRITICAL FIX: Handle temporary locations BEFORE saving appointment
-    let finalLocationId: string | undefined = formData.value.location_id
-
-    // Check if we have a temporary location that needs to be saved first
     if (selectedLocation.value?.id?.startsWith('temp_')) {
       console.log('🔄 Converting temporary location to permanent DB location...')
       console.log('📍 Temporary location data:', selectedLocation.value)
       
       try {
-        const { data: newLocation, error: locationError } = await supabase
-          .from('locations')
-          .insert({
+        const locationResult = await saveWithOfflineSupport(
+          'locations',
+          {
             staff_id: formData.value.staff_id,
             name: selectedLocation.value.name,
             address: selectedLocation.value.address || '',
             location_type: 'custom',
             is_active: true,
-            // Optional: Add Google Places data if available
             google_place_id: selectedLocation.value.place_id || null,
             latitude: selectedLocation.value.latitude || null,
             longitude: selectedLocation.value.longitude || null
-          })
-          .select()
-          .single()
-
-        if (locationError) {
-          console.error('❌ Error saving temporary location:', locationError)
-          throw locationError
-        }
+          },
+          'insert',
+          undefined,  // ✅ undefined statt null
+          `Standort "${selectedLocation.value.name}" speichern`
+        )
         
-        finalLocationId = newLocation.id
-        formData.value.location_id = finalLocationId || '' // ✅ FIX: Fallback to empty string
+        finalLocationId = locationResult?.data?.id
+        formData.value.location_id = finalLocationId || ''
         console.log('✅ Temporary location saved with permanent ID:', finalLocationId)
         
       } catch (locationSaveError) {
         console.error('❌ Could not save temporary location:', locationSaveError)
-        // ✅ FIX: Set to undefined instead of null for TypeScript
         finalLocationId = undefined
         formData.value.location_id = ''
         console.log('⚠️ Continuing without location due to save error')
@@ -746,25 +1049,6 @@ const handleSave = async () => {
       formData.value.location_id = ''
     }
 
-    // Create proper datetime strings
-    const localStart = new Date(`${formData.value.startDate}T${formData.value.startTime}`)
-    const localEnd = new Date(`${formData.value.startDate}T${formData.value.endTime}`)
-    
-    // ✅ FIX: Create appointment data with proper typing
-    const appointmentData: any = {
-      title: formData.value.title,
-      start_time: localStart.toISOString(),
-      end_time: localEnd.toISOString(),
-      duration_minutes: formData.value.duration_minutes,
-      user_id: formData.value.user_id || formData.value.staff_id,
-      staff_id: formData.value.staff_id,
-      type: formData.value.type,
-      status: formData.value.status,
-      is_paid: formData.value.is_paid,
-      price_per_minute: formData.value.price_per_minute,
-      description: formData.value.title || ''
-    }
-    
     // ✅ FIX: Only add location_id if we have a valid one
     if (finalLocationId) {
       appointmentData.location_id = finalLocationId
@@ -775,33 +1059,29 @@ const handleSave = async () => {
     
     let result
     if (props.mode === 'create') {
-      const { data, error: saveError } = await supabase
-        .from('appointments')
-        .insert([appointmentData])
-        .select()
-        .single()
-      
-      if (saveError) throw saveError
-      result = data
-      console.log('✅ Appointment created:', result.id)
+      result = await saveWithOfflineSupport(
+        'appointments',
+        appointmentData,
+        'insert',
+        undefined,  // ✅ undefined statt null
+        `Termin "${appointmentData.title}" erstellen`
+      )
+      console.log('✅ Appointment created:', result?.data?.id || 'offline')
       
     } else if (props.mode === 'edit') {
-      const { data, error: updateError } = await supabase
-        .from('appointments')
-        .update(appointmentData)
-        .eq('id', formData.value.id)
-        .select()
-        .single()
-      
-      if (updateError) throw updateError
-      result = data
-      console.log('✅ Appointment updated:', result.id)
+      result = await saveWithOfflineSupport(
+        'appointments',
+        appointmentData,
+        'update',
+        { id: formData.value.id },
+        `Termin "${appointmentData.title}" bearbeiten`
+      )
+      console.log('✅ Appointment updated:', result?.data?.id || 'offline')
     }
     
-    // Handle team invitations if any
-    if (invitedStaffIds.value.length > 0 && staffSelectorRef.value && result?.id) {
+    // Handle team invitations if any (nur bei echten IDs, nicht temp_)
+    if (invitedStaffIds.value.length > 0 && staffSelectorRef.value && result?.data?.id && !String(result.data.id).startsWith('temp_')) {
       console.log('📧 Creating team invites via StaffSelector...')
-      
       try {
         const teamInvites = await staffSelectorRef.value.createTeamInvites(appointmentData)
         console.log('✅ Team invites created:', teamInvites.length)
@@ -809,15 +1089,31 @@ const handleSave = async () => {
         console.error('❌ Error creating team invites:', inviteError)
         // Main appointment is saved, continue even if team invites fail
       }
+    } else if (invitedStaffIds.value.length > 0 && String(result?.data?.id).startsWith('temp_')) {
+      console.log('📦 Team invites will be created when synced online')
     }
     
+    // ✅ DIESE ZEILEN MÜSSEN HIER STEHEN (INNERHALB des try-blocks)
     console.log('✅ All save events emitted for mode:', props.mode)
-    emit('save-event', result)
+    emit('save-event', result?.data || appointmentData)
     handleClose()
     
   } catch (err: any) {
     console.error('❌ Save error:', err)
-    error.value = err.message || 'Fehler beim Speichern des Termins'
+    
+    // Bei Offline: Benutzerfreundliche Behandlung
+    if (err.message?.includes('synchronisiert')) {
+      console.log('📦 Appointment will be synced when online')
+      // Nicht als Fehler behandeln - optimistic update
+      error.value = ''
+      
+      // ✅ appointmentData ist hier verfügbar, da außerhalb definiert!
+      emit('save-event', appointmentData)
+      handleClose()
+    } else {
+      // Echte Fehler normal behandeln
+      error.value = err.message || 'Fehler beim Speichern des Termins'
+    }
   } finally {
     isLoading.value = false
   }
@@ -829,73 +1125,93 @@ const handleClose = () => {
   emit('close')
 }
 
-// Neue Funktion für das Löschen hinzufügen:
-const handleDelete = () => {
-  if (!props.eventData?.id) return
+// In EventModal.vue - ersetze die handleDelete Funktion:
+
+const handleDelete = async () => {
+  if (!props.eventData?.id) {
+    console.log('❌ No event ID found for deletion')
+    return
+  }
   
-  // Nutze das bereits existierende appointment-deleted Event
-  emit('appointment-deleted', props.eventData.id)
-  
-  // Modal schließen
-  handleClose()
+  // Zeige Confirmation Dialog anstelle von window.confirm
+  showDeleteConfirmation.value = true
 }
 
-// ============ MODAL INITIALIZATION ============
-const initializeFormData = () => {
+const confirmDelete = async () => {
+  if (!props.eventData?.id) return
+  
+  console.log('🗑️ Deleting appointment:', props.eventData.id)
+  
+  try {
+    isLoading.value = true
+    
+    // Appointment aus Datenbank löschen
+    const { error } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('id', props.eventData.id)
+    
+    if (error) throw error
+    
+    console.log('✅ Appointment deleted successfully:', props.eventData.id)
+    
+    // Events emittieren
+    emit('appointment-deleted', props.eventData.id)
+    emit('save-event', { type: 'deleted', id: props.eventData.id })
+    
+    // Modal schließen
+    handleClose()
+    
+  } catch (err: any) {
+    console.error('❌ Delete error:', err)
+    error.value = err.message || 'Fehler beim Löschen des Termins'
+  } finally {
+    isLoading.value = false
+    showDeleteConfirmation.value = false
+  }
+}
+
+// 4. Handler für Cancel
+const cancelDelete = () => {
+  showDeleteConfirmation.value = false
+  console.log('🚫 Deletion cancelled by user')
+}
+
+// initializeFormData function:
+const initializeFormData = async () => {
   console.log('🎯 Initializing form data, mode:', props.mode)
   
   if (props.mode === 'edit' && props.eventData) {
-    // Edit mode - populate with existing data
-    formData.value.id = props.eventData.id || ''
-    formData.value.title = props.eventData.title || ''
-    formData.value.type = props.eventData.extendedProps?.category || ''
-    formData.value.user_id = props.eventData.extendedProps?.user_id || ''
-    formData.value.location_id = props.eventData.extendedProps?.location_id || ''
-    formData.value.duration_minutes = props.eventData.extendedProps?.duration_minutes || 45
-    formData.value.price_per_minute = props.eventData.extendedProps?.price_per_minute || 95/45
-    formData.value.status = props.eventData.extendedProps?.status || 'confirmed'
-    formData.value.is_paid = props.eventData.extendedProps?.is_paid || false
-    formData.value.description = props.eventData.extendedProps?.description || ''
+    // ✅ SCHRITT 1: Form populieren
+    await populateFormFromAppointment(props.eventData)
+    console.log('🔍 AFTER populate - eventType:', formData.value.eventType)
     
-    if (props.eventData.start) {
-      const startDate = new Date(props.eventData.start)
-      formData.value.startDate = startDate.toISOString().split('T')[0]
-      formData.value.startTime = startDate.toTimeString().slice(0, 5)
+    // ✅ SCHRITT 2: LessonType NUR bei Edit-Mode setzen
+    if (formData.value.eventType === 'lesson' && formData.value.appointment_type) {
+      selectedLessonType.value = formData.value.appointment_type
+      console.log('🎯 EDIT MODE: Set selectedLessonType to:', formData.value.appointment_type)
+      
+      // ✅ KURZE PAUSE damit LessonTypeSelector sich aktualisiert
+      await new Promise(resolve => setTimeout(resolve, 200))
     }
-    
-    if (props.eventData.end) {
-      const endDate = new Date(props.eventData.end)
-      formData.value.endTime = endDate.toTimeString().slice(0, 5)
-    }
-    
-    // Load student if available
-    if (formData.value.user_id && !props.eventData?.isFreeslotClick) {
-          loadStudentForEdit(formData.value.user_id)
-        }
     
   } else if (props.mode === 'create' && props.eventData?.start) {
-    // Create mode with time data
-    formData.value.eventType = 'lesson'  
-    showEventTypeSelection.value = false 
+    formData.value.eventType = 'lesson'
+    showEventTypeSelection.value = false
+    
+    // ✅ NEU: Bei Create-Mode selectedLessonType auf Standard setzen
+    selectedLessonType.value = 'lesson'
+    console.log('🎯 CREATE MODE: Set selectedLessonType to default: lesson')
+    
     const utcDate = new Date(props.eventData.start)
     const year = utcDate.getFullYear()
     const month = String(utcDate.getMonth() + 1).padStart(2, '0')
     const day = String(utcDate.getDate()).padStart(2, '0')
     const hours = String(utcDate.getHours()).padStart(2, '0')
     const minutes = String(utcDate.getMinutes()).padStart(2, '0')
-    
     formData.value.startDate = `${year}-${month}-${day}`
     formData.value.startTime = `${hours}:${minutes}`
     calculateEndTime()
-        // Auto-load students für lesson events
-    if (!props.eventData?.isFreeslotClick && !props.eventData?.clickSource?.includes('calendar-free-slot')) {
-  console.log('🔄 CREATE mode - triggering student load')
-  setTimeout(() => {
-    triggerStudentLoad()
-  }, 100)
-} else {
-  console.log('🚫 FREE SLOT - skipping auto student load')
-}
   }
 }
 
@@ -916,6 +1232,15 @@ const loadStudentForEdit = async (userId: string) => {
   } catch (err) {
     console.error('❌ Error loading student for edit:', err)
   }
+}
+
+const testTimeChange = () => {
+  console.log('🧪 Testing time change...')
+  handleTimeChanged({
+    startDate: formData.value.startDate,
+    startTime: '14:00',
+    endTime: '15:30'  // 90 Minuten
+  })
 }
 
 // In EventModal.vue - erweitere die Funktion mit mehr Logs:
@@ -1071,7 +1396,17 @@ watch(() => selectedStudent.value, (newStudent, oldStudent) => {
   }
 }, { immediate: false })
 
+// ✅ Im EventModal.vue - bei den anderen Watchers hinzufügen:
+watch(() => formData.value.eventType, (newVal, oldVal) => {
+  console.log('🚨 formData.eventType CHANGED:', {
+    from: oldVal,
+    to: newVal,
+    stack: new Error().stack
+  })
+}, { immediate: true })
+
 // ============ LIFECYCLE ============
+
 
 </script>
 

@@ -38,15 +38,15 @@
         </label>
         <input
           :value="endTime"
+          @input="updateEndTime(($event.target as HTMLInputElement)?.value || '')"
           type="time"
           class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
           :disabled="disabled"
         />
-        <div v-if="durationMinutes" class="text-xs text-gray-500 mt-1">
+          <div v-if="durationMinutes" class="text-xs text-gray-500 mt-1">
           Dauer: {{ durationMinutes }} Minuten
         </div>
       </div>
-    </div>
 
     <!-- Zeitkonflikt Warnung -->
     <div v-if="timeConflictWarning" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
@@ -56,6 +56,7 @@
       </div>
     </div>
   </div>
+</div>
 </template>
 
 <script setup lang="ts">
@@ -77,7 +78,7 @@ interface Emits {
   (e: 'update:startDate', value: string): void
   (e: 'update:startTime', value: string): void
   (e: 'update:endTime', value: string): void
-  (e: 'time-changed', data: { startDate: string, startTime: string, endTime: string }): void
+  (e: 'time-changed', data: { startDate: string, startTime: string, endTime: string, durationMinutes?: number }): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -171,6 +172,28 @@ const calculateEndTime = (date: string, time: string) => {
     startTime: time,
     endTime: endTime
   })
+}
+
+const updateEndTime = (value: string) => {
+  emit('update:endTime', value)
+  
+  // Berechne neue Dauer basierend auf Start- und Endzeit
+  if (props.startDate && props.startTime && value) {
+    const startDateTime = new Date(`${props.startDate}T${props.startTime}`)
+    const endDateTime = new Date(`${props.startDate}T${value}`)
+    
+    const durationMs = endDateTime.getTime() - startDateTime.getTime()
+    const newDurationMinutes = Math.round(durationMs / (1000 * 60))
+    
+    if (newDurationMinutes > 0) {
+      // Emittiere time-changed mit der neuen Dauer
+      emit('time-changed', {
+        startDate: props.startDate,
+        startTime: props.startTime,
+        endTime: value
+      })
+    }
+  }
 }
 
 const selectSuggestedTime = (time: string) => {

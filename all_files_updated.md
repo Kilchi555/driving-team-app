@@ -1,11 +1,13 @@
 === DRIVING TEAM PROJECT - AKTUELLER EXPORT ===
-Generated: Tue Jul 22 07:42:31 CEST 2025
+Generated: Thu Jul 24 20:00:31 CEST 2025
 
 ### ./app.vue
 ```vue
 <template>
   <div>
-    <NuxtPage />
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </div>
 </template>
 
@@ -795,56 +797,55 @@ const loadRegularAppointments = async () => {
     
     console.log('✅ Filtered appointments:', filteredAppointments.length)
     
-    const convertedEvents = filteredAppointments.map((apt) => {
-      const isTeamInvite = apt.type === 'team_invite'
-      
-      // ✅ Bessere Titel-Logik
-      let eventTitle = ''
-      if (apt.type === 'lesson' || !apt.type) {
-        // Für Fahrlektionen: Nur "Vorname Nachname"
-        eventTitle = `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim() || 'Fahrlektion'
-      } else {
-        // Für andere Terminarten: Den echten Event-Titel verwenden
-        eventTitle = apt.title || apt.type || 'Termin'
-      }
-      
-      const event = {
-        id: apt.id,
-        title: apt.title || `${apt.user?.first_name || 'Unbekannt'} - ${apt.type || 'Termin'}`,
-        start: new Date(apt.start_time).toISOString(), 
-        end: new Date(apt.end_time).toISOString(),
-        allDay: false,
-        extendedProps: {
-          location: apt.location?.name || 'Kein Ort',
-          staff_note: apt.description || '',
-          client_note: '',
-          category: apt.type,
-          instructor: `${apt.staff?.first_name || ''} ${apt.staff?.last_name || ''}`.trim(),
-          student: `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim(),
-          price: (apt.price_per_minute || 0) * (apt.duration_minutes || 45),
-          user_id: apt.user_id,
-          staff_id: apt.staff_id,
-          location_id: apt.location_id,
-          duration_minutes: apt.duration_minutes,
-          price_per_minute: apt.price_per_minute,
-          status: apt.status,
-          is_paid: apt.is_paid,
-          // WICHTIG: Typ-Informationen für Modal
-          appointment_type: apt.type,
-          is_team_invite: isTeamInvite,
-          original_type: apt.type
-        }
-      }
-      
-      console.log('🔍 TIME COMPARISON:', {
-        dbStartTime: apt.start_time,
-        eventStartTime: event.start,
-        parsedDate: new Date(apt.start_time),
-        parsedISOString: new Date(apt.start_time).toISOString()
-      })
-      
-      return event
-    })
+    // In CalendarComponent.vue, ersetze die eventContent Funktion:
+
+// ENTFERNE die eventContent Funktion komplett
+// und nutze stattdessen nur den Standard-Titel von FullCalendar
+
+// Stattdessen passen wir die Event-Erstellung in loadRegularAppointments an:
+const convertedEvents = appointments.map((apt) => {
+  const isTeamInvite = apt.type === 'team_invite'
+  
+  // ✅ Für Fahrlektionen: Student Name als Titel
+  let eventTitle = ''
+  if (apt.type === 'lesson' || !apt.type) {
+    eventTitle = `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim() || 'Fahrlektion'
+  } 
+  // ✅ Für andere Terminarten: Den echten Event-Titel verwenden
+  else {
+    eventTitle = apt.title || apt.type || 'Termin'
+  }
+  
+  const event = {
+    id: apt.id,
+    title: eventTitle,
+    start: new Date(apt.start_time).toISOString(), 
+    end: new Date(apt.end_time).toISOString(),
+    allDay: false,
+    extendedProps: {
+      location: apt.location?.address || apt.location?.name || 'Kein Ort',      
+      staff_note: apt.description || '',
+      client_note: '',
+      category: apt.type,
+      instructor: `${apt.staff?.first_name || ''} ${apt.staff?.last_name || ''}`.trim(),
+      student: `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim(),
+      price: (apt.price_per_minute || 0) * (apt.duration_minutes || 45),
+      user_id: apt.user_id,
+      staff_id: apt.staff_id,
+      location_id: apt.location_id,
+      duration_minutes: apt.duration_minutes,
+      price_per_minute: apt.price_per_minute,
+      status: apt.status,
+      is_paid: apt.is_paid,
+      appointment_type: apt.type,
+      is_team_invite: isTeamInvite,
+      original_type: apt.type,
+      eventType: apt.type // ← Wichtig für die Farb-Zuordnung
+    }
+  }
+  
+  return event
+})
     
     calendarEvents.value = convertedEvents
     
@@ -885,9 +886,6 @@ const editAppointment = (appointment: CalendarAppointment) => {
   // emit('edit-appointment', appointment)
   showToast('Edit-Funktion noch nicht implementiert')
 }
-
-// Im calendarOptions eventClick ersetzen:
-// eventClick: handleEventClick,
 
 const handleSaveEvent = async (eventData: CalendarEvent) => {
   console.log('💾 Event saved, refreshing calendar...')
@@ -1137,7 +1135,7 @@ showConfirmDialog({
     slotMinTime: '05:00:00',
     slotMaxTime: '23:00:00',
     firstDay: 1,
-    displayEventTime: true,
+    displayEventTime: false,
     forceEventDuration: true, 
     selectable: true,
     editable: true,
@@ -4663,7 +4661,7 @@ input:focus, textarea:focus {
 
 <template>
   <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-    <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+    <div class="fixed top-2 left-2 right-2 bottom-20 bg-white rounded-lg overflow-y-auto z-50" @click.stop>
       
       <!-- Header -->
       <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
@@ -4801,31 +4799,32 @@ input:focus, textarea:focus {
 
         <!-- Price Display - nur für Fahrstunden -->
         <div v-if="selectedStudent && formData.duration_minutes && formData.eventType === 'lesson'">
-          <PriceDisplay
-            ref="priceDisplayRef"
-            :event-type="formData.eventType"
-            :duration-minutes="formData.duration_minutes"
-            :price-per-minute="formData.price_per_minute"
-            :category-code="formData.type"
-            :is-paid="formData.is_paid"
-            :admin-fee="120"
-            :is-second-or-later-appointment="false"
-            :appointment-number="1"
-            :discount="formData.discount"
-            :discount-type="formData.discount_type"
-            :discount-reason="formData.discount_reason"
-            :allow-discount-edit="currentUser?.role === 'staff' || currentUser?.role === 'admin'"
-            :current-user="currentUser"
-            :selected-date="formData.startDate"
-            :start-time="formData.startTime"
-            :selected-student="selectedStudent"
-            :initial-payment-method="formData.payment_method"
-            @discount-changed="handleDiscountChanged"
-            @payment-status-changed="handlePaymentStatusChanged"
-            @open-payment-modal="handleOpenPaymentModal"
-            @payment-mode-changed="handlePaymentModeChanged"
-            @invoice-data-changed="handleInvoiceDataChanged"
-          />
+            <PriceDisplay
+              :event-type="formData.eventType"
+              :duration-minutes="formData.duration_minutes"
+              :price-per-minute="dynamicPricing.pricePerMinute || formData.price_per_minute"
+              :is-paid="formData.is_paid"
+              :admin-fee="dynamicPricing.adminFeeChf || 0"
+              :appointment-number="dynamicPricing.appointmentNumber || 1"
+              :is-second-or-later-appointment="dynamicPricing.hasAdminFee || false"
+              :discount="formData.discount"
+              :discount-type="formData.discount_type"
+              :discount-reason="formData.discount_reason"
+              :allow-discount-edit="currentUser?.role === 'staff' || currentUser?.role === 'admin'"
+              :selected-date="formData.startDate"
+              :start-time="formData.startTime"
+              :end-time="formData.endTime"
+              :current-user="currentUser"
+              :selected-student="selectedStudent"
+              @discount-changed="handleDiscountChanged"
+              @payment-status-changed="handlePaymentStatusChanged"
+              @payment-mode-changed="handlePaymentModeChanged"
+            />
+
+             <!-- Debug Info (entfernbar) -->
+          <div v-if="dynamicPricing.error" class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+            ❌ {{ dynamicPricing.error }}
+          </div>
         </div>
 
         <!-- Error Display -->
@@ -4843,29 +4842,42 @@ input:focus, textarea:focus {
 
       </div>
 
-      <!-- Footer -->
-      <div class="sticky bottom-0 bg-gray-50 px-6 py-4 border-t rounded-b-lg">
-        <div class="flex justify-end space-x-3">
-          <button
-            @click="handleClose"
-            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-            :disabled="isLoading"
-          >
-            {{ mode === 'view' ? 'Schließen' : 'Abbrechen' }}
-          </button>
+        <!-- Footer mit Actions -->
+        <div class="bg-gray-50 px-4 py-3 border-t flex justify-between">
+          <!-- Links: Löschen-Button (nur bei edit/view mode) -->
+          <div>
+            <button
+              v-if="mode !== 'create' && eventData?.id"
+              @click="handleDelete"
+              class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2 transition-colors"
+            >
+              <span></span>
+              <span>Löschen</span>
+            </button>
+          </div>
 
-          <button
-            v-if="mode !== 'view'"
-            @click="handleSave"
-            :disabled="!isFormValid || isLoading"
-            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2 transition-colors"
-          >
-            <span v-if="isLoading">⏳</span>
-            <span v-else>💾</span>
-            <span>{{ mode === 'create' ? 'Erstellen' : 'Speichern' }}</span>
-          </button>
+          <!-- Rechts: Schließen und Speichern Buttons -->
+          <div class="flex gap-2">
+            <button
+              @click="$emit('close')"
+              class="px-3 py-2 mx-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              {{ mode === 'view' ? 'Schließen' : 'Abbrechen' }}
+            </button>
+
+            <button
+              v-if="mode !== 'view'"
+              @click="handleSave"
+              :disabled="!isFormValid || isLoading"
+              class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2 transition-colors"
+            >
+              <span v-if="isLoading">⏳</span>
+              <span v-else></span>
+              <span>{{ mode === 'create' ? 'Erstellen' : 'Speichern' }}</span>
+            </button>
+          </div>
         </div>
-      </div>
+
     </div>
   </div>
 </template>
@@ -4970,7 +4982,16 @@ const formData = ref({
   payment_data: null as any
 })
 
-const companyBilling = useCompanyBilling()
+
+// Neue Dynamic Pricing Integration
+const dynamicPricing = ref({
+  pricePerMinute: 0,
+  adminFeeChf: 0,
+  appointmentNumber: 1,
+  hasAdminFee: false,
+  isLoading: false,
+  error: ''
+})
 
 const handlers = useEventModalHandlers(
   formData,
@@ -4998,10 +5019,9 @@ const modalTitle = computed(() => {
 })
 
 const shouldAutoLoadStudents = computed(() => {
-  // ✅ FIX: Nicht auto-loaden wenn es ein free slot click ist
   if (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') {
     console.log('🚫 Free slot click detected - disabling auto student load')
-    return true
+    return false  // ✅ MUSS FALSE SEIN
   }
   
   return formData.value.eventType === 'lesson' && (props.mode === 'create' || !selectedStudent.value)
@@ -5054,56 +5074,46 @@ const isFreeslotMode = computed(() => {
 })
 
 // ============ HANDLERS ============
+// In EventModal.vue - ersetzen Sie die lokale handleStudentSelected Funktion mit:
+
+
+
 const handleStudentSelected = async (student: Student | null) => {
-  console.log('👤 Student selected:', student?.first_name)
+  console.log('👤 Student selected in EventModal:', student?.first_name)
   selectedStudent.value = student
   formData.value.user_id = student?.id || ''
   
   if (student?.category) {
     const primaryCategory = student.category.split(',')[0].trim()
     formData.value.type = primaryCategory
-  }
-  
-  generateTitleIfReady()
-}
-
-const setDurationBasedOnType = (lessonTypeCode: string) => {
-  console.log('⏱️ Setting duration for lesson type:', lessonTypeCode)
-  
-  let duration = 45 // Default
-  
-  switch (lessonTypeCode) {
-    case 'lesson':
-      // Normale Fahrstunde: Verwende category lesson_duration_minutes
-      if (selectedStudent.value?.category && selectedCategory.value) {
-        duration = selectedCategory.value.lesson_duration_minutes || 45
+    
+    // ✅ NEU: Kategorie-Daten direkt aus DB laden für Dauer-Berechnung
+    try {
+      console.log('🔄 Loading category data for student:', primaryCategory)
+      const { data, error } = await supabase
+        .from('categories')
+        .select('code, lesson_duration_minutes, exam_duration_minutes')
+        .eq('code', primaryCategory)
+        .eq('is_active', true)
+        .single()
+      
+      if (error) throw error
+      
+      if (data) {
+        selectedCategory.value = data
+        console.log('✅ Category data loaded for selected student:', data)
       }
-      break
-      
-    case 'exam':
-      // Prüfung: Verwende category exam_duration_minutes
-      if (selectedStudent.value?.category && selectedCategory.value) {
-        duration = selectedCategory.value.exam_duration_minutes || 180
-      } else {
-        duration = 180 // Standard-Prüfungsdauer
+    } catch (err) {
+      console.error('❌ Error loading category data for student:', err)
+      // Fallback: leeres Objekt mit Standard-Werten
+      selectedCategory.value = {
+        code: primaryCategory,
+        lesson_duration_minutes: 45,
+        exam_duration_minutes: 180
       }
-      break
-      
-    case 'theory':
-      duration = 45 // Theorie immer 45min
-      break
-      
-    case 'meeting':
-      duration = 45 // Besprechung immer 45min
-      break
-      
-    default:
-      duration = 45
+      console.log('✅ Using fallback category data:', selectedCategory.value)
+    }
   }
-    console.log('⏱️ Auto-setting duration to:', duration, 'minutes')
-  formData.value.duration_minutes = duration
-  availableDurations.value = [duration] // Nur diese Dauer verfügbar
-  calculateEndTime()
 }
 
 const handleStudentCleared = () => {
@@ -5218,21 +5228,6 @@ const handleLocationSelected = (location: any) => {
   console.log('📍 Location selected:', location)
   selectedLocation.value = location
   formData.value.location_id = location?.id || ''
-  
-  // Auto-generate title if we have student and location
-  generateTitleIfReady()
-}
-
-const generateTitleIfReady = () => {
-  if (formData.value.eventType === 'lesson' && selectedStudent.value && selectedLocation.value) {
-    const firstName = selectedStudent.value.first_name
-    const lastName = selectedStudent.value.last_name
-    const location = selectedLocation.value.name || selectedLocation.value.address || 'Treffpunkt'
-    const newTitle = `${firstName} ${lastName} - ${location}`
-    
-    formData.value.title = newTitle
-    console.log('🎯 Auto-generated title:', newTitle)
-  }
 }
 
 const { calculateEndTime } = useTimeCalculations(formData)
@@ -5339,7 +5334,17 @@ const loadCategoryData = async (categoryCode: string) => {
 }
 
 // ============ SAVE LOGIC ============
+// ERSETZEN Sie die handleSave Funktion in EventModal.vue mit dieser korrigierten Version:
+
+// ERSETZEN Sie die handleSave Funktion in EventModal.vue mit dieser korrigierten Version:
+
+// ERSETZEN Sie die handleSave Funktion in EventModal.vue mit dieser korrigierten Version:
+
 const handleSave = async () => {
+   if (!formData.value.title && selectedStudent.value) {
+    formData.value.title = `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}`
+  }
+  
   console.log('💾 Saving appointment')
   
   if (!isFormValid.value) {
@@ -5351,18 +5356,68 @@ const handleSave = async () => {
   error.value = ''
   
   try {
+    // ✅ CRITICAL FIX: Handle temporary locations BEFORE saving appointment
+    let finalLocationId: string | undefined = formData.value.location_id
+
+    // Check if we have a temporary location that needs to be saved first
+    if (selectedLocation.value?.id?.startsWith('temp_')) {
+      console.log('🔄 Converting temporary location to permanent DB location...')
+      console.log('📍 Temporary location data:', selectedLocation.value)
+      
+      try {
+        const { data: newLocation, error: locationError } = await supabase
+          .from('locations')
+          .insert({
+            staff_id: formData.value.staff_id,
+            name: selectedLocation.value.name,
+            address: selectedLocation.value.address || '',
+            location_type: 'custom',
+            is_active: true,
+            // Optional: Add Google Places data if available
+            google_place_id: selectedLocation.value.place_id || null,
+            latitude: selectedLocation.value.latitude || null,
+            longitude: selectedLocation.value.longitude || null
+          })
+          .select()
+          .single()
+
+        if (locationError) {
+          console.error('❌ Error saving temporary location:', locationError)
+          throw locationError
+        }
+        
+        finalLocationId = newLocation.id
+        formData.value.location_id = finalLocationId || '' // ✅ FIX: Fallback to empty string
+        console.log('✅ Temporary location saved with permanent ID:', finalLocationId)
+        
+      } catch (locationSaveError) {
+        console.error('❌ Could not save temporary location:', locationSaveError)
+        // ✅ FIX: Set to undefined instead of null for TypeScript
+        finalLocationId = undefined
+        formData.value.location_id = ''
+        console.log('⚠️ Continuing without location due to save error')
+      }
+    }
+    
+    // ✅ VALIDATION: Never allow temp_ IDs to reach the database
+    if (finalLocationId && String(finalLocationId).startsWith('temp_')) {
+      console.error('❌ BLOCKING: Temporary ID detected before save:', finalLocationId)
+      finalLocationId = undefined
+      formData.value.location_id = ''
+    }
+
     // Create proper datetime strings
     const localStart = new Date(`${formData.value.startDate}T${formData.value.startTime}`)
     const localEnd = new Date(`${formData.value.startDate}T${formData.value.endTime}`)
     
-    const appointmentData = {
+    // ✅ FIX: Create appointment data with proper typing
+    const appointmentData: any = {
       title: formData.value.title,
       start_time: localStart.toISOString(),
       end_time: localEnd.toISOString(),
       duration_minutes: formData.value.duration_minutes,
       user_id: formData.value.user_id || formData.value.staff_id,
       staff_id: formData.value.staff_id,
-      location_id: formData.value.location_id,
       type: formData.value.type,
       status: formData.value.status,
       is_paid: formData.value.is_paid,
@@ -5370,8 +5425,13 @@ const handleSave = async () => {
       description: formData.value.title || ''
     }
     
+    // ✅ FIX: Only add location_id if we have a valid one
+    if (finalLocationId) {
+      appointmentData.location_id = finalLocationId
+    }
+    
     console.log('📋 Saving appointment data:', appointmentData)
-    console.log('👥 Selected staff for team invitations:', invitedStaffIds.value.length, 'members')
+    console.log('🔍 Final location_id being saved:', finalLocationId || 'none')
     
     let result
     if (props.mode === 'create') {
@@ -5398,7 +5458,7 @@ const handleSave = async () => {
       console.log('✅ Appointment updated:', result.id)
     }
     
-    // NEU: Team-Einladungen erstellen falls StaffSelector verwendet wurde
+    // Handle team invitations if any
     if (invitedStaffIds.value.length > 0 && staffSelectorRef.value && result?.id) {
       console.log('📧 Creating team invites via StaffSelector...')
       
@@ -5407,7 +5467,7 @@ const handleSave = async () => {
         console.log('✅ Team invites created:', teamInvites.length)
       } catch (inviteError) {
         console.error('❌ Error creating team invites:', inviteError)
-        // Haupt-Termin ist gespeichert, auch wenn Team-Einladungen fehlschlagen
+        // Main appointment is saved, continue even if team invites fail
       }
     }
     
@@ -5427,6 +5487,17 @@ const handleClose = () => {
   console.log('🚪 Closing modal')
   resetForm()
   emit('close')
+}
+
+// Neue Funktion für das Löschen hinzufügen:
+const handleDelete = () => {
+  if (!props.eventData?.id) return
+  
+  // Nutze das bereits existierende appointment-deleted Event
+  emit('appointment-deleted', props.eventData.id)
+  
+  // Modal schließen
+  handleClose()
 }
 
 // ============ MODAL INITIALIZATION ============
@@ -5661,9 +5732,7 @@ watch(() => selectedStudent.value, (newStudent, oldStudent) => {
 }, { immediate: false })
 
 // ============ LIFECYCLE ============
-onMounted(() => {
-  console.log('🔥 EventModal - Component mounted')
-})
+
 </script>
 
 <style scoped>
@@ -6018,15 +6087,15 @@ onMounted(() => {
       <!-- Standard Locations (Fahrschule) -->
       <optgroup label="🏢 Fahrschule-Standorte" v-if="standardLocations.length > 0">
         <option v-for="location in standardLocations" :key="`standard-${location.id}`" :value="location.id">
-          {{ location.name }} - {{ location.address }}
+          {{ location.address }}
         </option>
       </optgroup>
       
       <!-- Pickup Locations (Schüler) -->
       <optgroup label="📍 Gespeicherte Treffpunkte" v-if="studentPickupLocations.length > 0 && selectedStudentId">
-        <option v-for="location in studentPickupLocations" :key="`pickup-${location.id}`" :value="location.id">
-          {{ location.name }} - {{ location.address }}
-        </option>
+          <option v-for="location in studentPickupLocations" :key="`pickup-${location.id}`" :value="location.id">
+          {{ location.address }}
+          </option>
       </optgroup>
       
       <!-- Loading State -->
@@ -9048,81 +9117,90 @@ onMounted(() => {
 
 ### ./components/PriceDisplay.vue
 ```vue
+<!-- Verbesserte PriceDisplay.vue Template Sektion -->
 <template>
   <div class="space-y-4 p-4 bg-white rounded-lg border border-gray-200">
-    <!-- Price Display -->
-    <div>
-      <!-- Header -->
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-gray-700">
-          {{ eventType === 'lesson' ? 'Fahrstunde' : 'Termin' }}
-        </h3>
-        <span class="text-xs text-gray-500">
-          {{ formattedAppointmentInfo }}
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <h3 class="text-sm font-semibold text-gray-700">
+        💰 {{ eventType === 'lesson' ? 'Preisübersicht Fahrstunde' : 'Preisübersicht Termin' }}
+      </h3>
+    </div>
+
+    <!-- HAUPTPREIS-ANZEIGE -->
+    <div class="space-y-3">
+      
+      <!-- 1. FAHRSTUNDEN-GRUNDPREIS -->
+      <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+        <div class="flex-1">
+          <!-- Datum, Zeit, Dauer -->
+          <div class="text-xs text-blue-700 space-y-0.5">
+            <div v-if="selectedDate">📅 {{ formatSelectedDate(selectedDate) }}</div>
+            <div v-if="startTime && endTime">🕐 {{ startTime }} - {{ endTime }}</div>
+            <div>⏱️ {{ durationMinutes }} Minuten</div>
+          </div>
+        </div>
+        <span class="text-lg font-bold text-blue-900 ml-4">
+          CHF {{ formatPrice(lessonPrice) }}
         </span>
       </div>
 
-      <!-- Preis dieser Fahrstunde -->
-      <div class="flex justify-between items-center text-sm mt-2">
-        <span class="text-gray-600">Preis dieser Fahrstunde:</span>
-        <span class="font-medium">CHF {{ formatPrice(lessonPrice) }}</span>
-      </div>
-
-      <!-- Versicherungsgebühr (falls vorhanden) -->
-      <div v-if="shouldShowAdminFee" class="flex justify-between items-center text-sm">
-        <div class="flex items-center space-x-1">
-          <span class="text-gray-600">Versicherungsgebühr:</span>
+      <!-- 2. VERSICHERUNGSGEBÜHR (falls vorhanden) -->
+      <div v-if="shouldShowAdminFee" class="flex justify-between items-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+        <div class="flex items-center space-x-2">
+          <span class="text-sm font-medium text-gray-900">Versicherungsgebühr</span>
           <button @click="showAdminFeeInfo = !showAdminFeeInfo" class="text-blue-500 hover:text-blue-700 text-xs">
             ℹ️
           </button>
         </div>
-        <span class="font-medium">CHF {{ formatPrice(adminFee) }}</span>
+        <span class="text-lg font-bold text-yellow-800">
+          CHF {{ formatPrice(adminFee) }}
+        </span>
       </div>
 
-      <!-- Rabatt (falls vorhanden) -->
-      <div v-if="props.discount > 0" class="flex justify-between items-center text-sm text-green-600">
+      <!-- 4. RABATT (falls vorhanden) -->
+      <div v-if="props.discount > 0" class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
         <div class="flex items-center space-x-2">
-          <span>Rabatt</span>
-          <span v-if="props.discountReason" class="text-xs text-gray-500">({{ props.discountReason }})</span>
+          <span class="text-sm font-medium text-green-800">Rabatt</span>
+          <span v-if="props.discountReason" class="text-xs text-green-600">({{ props.discountReason }})</span>
           <button v-if="props.allowDiscountEdit" @click="removeDiscount" class="text-red-500 hover:text-red-700 text-xs">
             ✕ 
           </button>
         </div>
-        <span class="font-medium">- CHF {{ formatPrice(props.discount) }}</span>
+        <span class="text-lg font-bold text-green-700">
+          - CHF {{ formatPrice(props.discount) }}
+        </span>
       </div>
 
-      <!-- Rabatt hinzufügen Button (falls kein Rabatt und editierbar) -->
-      <div v-if="props.allowDiscountEdit && props.discount === 0" class="flex justify-between items-center text-sm">
+      <!-- 5. RABATT HINZUFÜGEN BUTTON -->
+      <div v-if="props.allowDiscountEdit && props.discount === 0" class="flex justify-center">
         <button 
           @click="showDiscountEdit = true"
-          class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          class="text-blue-600 hover:text-blue-800 text-sm font-medium py-2 px-4 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors"
         >
           ➕ Rabatt hinzufügen
         </button>
       </div>
 
-      <!-- Gesamtpreis dieses Termins -->
-      <div class="flex justify-between items-center text-lg font-semibold border-t border-gray-200 pt-2 mt-2" 
+      <!-- 6. GESAMTPREIS (nur wenn Rabatt vorhanden) -->
+      <div v-if="props.discount > 0" class="flex justify-between items-center p-4 bg-gray-900 rounded-lg border-2 border-gray-800" 
            :class="paymentStatusClass">
-        <span>Total:</span>
+        <span class="text-lg font-bold text-white">TOTAL:</span>
         <div class="text-right">
-          <div>CHF {{ finalPrice }}</div>
-          <div class="text-xs font-normal">{{ paymentStatusText }}</div>
+          <div class="text-2xl font-bold text-white">CHF {{ finalPrice }}</div>
         </div>
-      </div>
-
-      <!-- Admin Fee Info -->
-      <div v-if="showAdminFeeInfo" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-        <p><strong>Versicherungsgebühr:</strong></p>
-        <p v-if="props.appointmentNumber === 1">Entfällt beim ersten Termin.</p>
-        <p v-else>Wird ab dem 2. Termin einmalig erhoben.</p>
       </div>
     </div>
 
-    <!-- Rabatt-Bearbeitungs-Modal -->
-    <div v-if="showDiscountEdit" class="border-t border-gray-200 pt-4">
-      <h4 class="text-md font-medium text-gray-900 mb-3">Rabatt hinzufügen</h4>
-      
+    <!-- ADMIN FEE INFO EXPANDABLE -->
+    <div v-if="showAdminFeeInfo" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+      <p><strong>Versicherungsgebühr:</strong></p>
+      <p v-if="props.appointmentNumber === 1">Entfällt beim ersten Termin.</p>
+      <p v-else>Wird ab dem 2. Termin einmalig erhoben.</p>
+    </div>
+
+    <!-- RABATT-BEARBEITUNGS-SEKTION -->
+    <div v-if="showDiscountEdit" class="border-t border-gray-200 pt-4">      
       <div class="space-y-3">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Rabattbetrag (CHF)</label>
@@ -9151,27 +9229,35 @@ onMounted(() => {
           >
         </div>
 
-        <!-- Rabatt-Vorschau -->
-        <div v-if="tempDiscount > 0" class="bg-gray-50 p-3 rounded-md">
-          <h5 class="text-sm font-medium text-gray-700 mb-2">Vorschau:</h5>
+        <!-- RABATT-VORSCHAU -->
+        <div v-if="tempDiscount > 0" class="bg-gray-50 p-3 rounded-md border">
+          <h5 class="text-sm font-medium text-gray-700 mb-2">📊 Vorschau:</h5>
           <div class="space-y-1 text-xs">
-            <div class="flex justify-between">
-              <span>Ursprungspreis:</span>
+            <div class="flex justify-between text-gray-500">
+              <span>Fahrstunde:</span>
+              <span>CHF {{ formatPrice(lessonPrice) }}</span>
+            </div>
+            <div v-if="shouldShowAdminFee" class="flex justify-between text-gray-500">
+              <span>Versicherung:</span>
+              <span>CHF {{ formatPrice(adminFee) }}</span>
+            </div>
+            <div class="flex justify-between border-t pt-1 text-gray-600">
+              <span>Subtotal:</span>
               <span>CHF {{ formatPrice(totalPriceWithoutDiscount) }}</span>
             </div>
             <div class="flex justify-between text-green-600">
               <span>Rabatt:</span>
               <span>- CHF {{ formatPrice(tempDiscount) }}</span>
             </div>
-            <div class="flex justify-between font-medium border-t border-gray-200 pt-1">
+            <div class="flex justify-between font-bold text-lg border-t border-gray-300 pt-1 text-gray-500">
               <span>Neuer Preis:</span>
               <span>CHF {{ formatPrice(totalPriceWithoutDiscount - tempDiscount) }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Buttons -->
-        <div class="flex justify-end space-x-3 pb-2">
+        <!-- BUTTONS -->
+        <div class="flex justify-end space-x-3">
           <button
             @click="cancelDiscountEdit"
             class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -9188,6 +9274,7 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
 
     <!-- Zahlungsart-Regler -->
     <div class="border-t border-gray-200 pt-4">
@@ -9258,14 +9345,61 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Rechnungsadresse Formular (nur wenn Rechnung aktiviert) -->
-    <div v-if="invoiceMode" class="border-t border-gray-200 pt-4">
-      <h4 class="text-md font-medium text-gray-900 mb-3">Firmenrechnungsadresse</h4>
+    <!-- Neue einklappbare Rechnungsadresse Section - ERSETZT die alte Section -->
+    <div v-if="invoiceMode" class="mt-4 border border-gray-200 rounded-lg">
+      <!-- Kollapsible Header - Mobile Responsive -->
+      <div class="p-3 cursor-pointer hover:bg-gray-50 transition-colors" @click="toggleBillingSection">
+        
+        <!-- Desktop Version (md+) -->
+        <div class="hidden md:flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">📄</span>
+            <label class="text-sm font-semibold text-gray-900 cursor-pointer">
+              Firmenrechnungsadresse
+            </label>
+            <!-- Status Indikator -->
+            <span v-if="billingAddressSaved" class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+              ✅ Gespeichert
+            </span>
+            <span v-else-if="companyBilling.validation.value.isValid" class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
+              ⚠️ Nicht gespeichert
+            </span>
+            <span v-else class="text-xs bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full">
+              ❌ Unvollständig
+            </span>
+          </div>
+        </div>
+
+        <!-- Mobile Version (bis md) -->
+        <div class="md:hidden">
+          <!-- Erste Zeile: Icon, Titel und Pfeil -->
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📄</span>
+              <label class="text-sm font-semibold text-gray-900 cursor-pointer">
+                Firmenrechnungsadresse
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Eingeklappte Ansicht - Kurze Zusammenfassung -->
+      <div v-if="!isBillingSectionExpanded && billingAddressSaved" class="px-3 pb-3">
+        <div class="text-sm text-gray-600 bg-green-50 p-2 rounded">
+          <div class="font-medium">{{ companyBilling.formData.value.companyName }}</div>
+          <div>{{ companyBilling.formData.value.street }} {{ companyBilling.formData.value.streetNumber }}</div>
+          <div>{{ companyBilling.formData.value.zip }} {{ companyBilling.formData.value.city }}</div>
+        </div>
+      </div>
+
+    <!-- Erweiterte Ansicht - Vollständiges Formular -->
+    <div v-if="isBillingSectionExpanded" class="p-4 border-t border-gray-200 bg-gray-50">
       
-      <!-- Bestehende Adresse auswählen -->
+      <!-- Gespeicherte Adressen Dropdown - IHRE BESTEHENDE LOGIK -->
       <div v-if="companyBilling.savedAddresses.value.length > 0" class="mb-4">
         <label class="block text-sm font-medium text-gray-700 mb-2">Gespeicherte Adresse verwenden</label>
-        <select 
+        <select
           @change="onSavedAddressSelected"
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
@@ -9401,33 +9535,33 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Speichern Button -->
-        <div v-if="!companyBilling.currentAddress.value" class="pt-2">
-          <button
-            @click="saveCompanyAddress"
-            :disabled="!companyBilling.validation.value.isValid || companyBilling.isLoading.value"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-          >
-            <span v-if="companyBilling.isLoading.value">⏳ Speichere...</span>
-            <span v-else>💾 Adresse speichern</span>
-          </button>
-        </div>
+        <!-- Speichern Button - Erweitert um Auto-Collapse -->
+            <div v-if="!companyBilling.currentAddress.value" class="pt-4">
+              <button
+                @click="saveAndCollapseBilling"
+                :disabled="!companyBilling.validation.value.isValid || companyBilling.isLoading.value"
+                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span v-if="companyBilling.isLoading.value">⏳ Speichere...</span>
+                <span v-else>💾 Speichern & Einklappen</span>
+              </button>
+            </div>
 
-        <!-- Validation Status -->
-        <div v-if="!companyBilling.validation.value.isValid && invoiceMode" class="text-sm text-red-600 bg-red-50 p-2 rounded">
-          ⚠️ Bitte füllen Sie alle Pflichtfelder korrekt aus
-        </div>
-        
-        <div v-if="companyBilling.validation.value.isValid && invoiceMode" class="text-sm text-green-600 bg-green-50 p-2 rounded">
-          ✅ Rechnungsadresse vollständig
-        </div>
+            <!-- Validation & Error Messages - IHRE BESTEHENDE LOGIK -->
+            <div v-if="!companyBilling.validation.value.isValid" class="mt-3 text-sm text-red-600 bg-red-50 p-2 rounded">
+              ⚠️ Bitte füllen Sie alle Pflichtfelder korrekt aus
+            </div>
+            
+            <div v-if="companyBilling.validation.value.isValid" class="mt-3 text-sm text-green-600 bg-green-50 p-2 rounded">
+              ✅ Rechnungsadresse vollständig
+            </div>
 
-        <!-- Error Display -->
-        <div v-if="companyBilling.error.value" class="text-sm text-red-600 bg-red-50 p-2 rounded">
-          ❌ {{ companyBilling.error.value }}
+            <div v-if="companyBilling.error.value" class="mt-3 text-sm text-red-600 bg-red-50 p-2 rounded">
+              ❌ {{ companyBilling.error.value }}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+        </div>
 
     <!-- Statusmeldung -->
     <div v-if="paymentModeStatus" class="text-sm p-3 rounded-lg" 
@@ -9457,8 +9591,24 @@ onMounted(() => {
         class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
       >
       <label for="save-payment-pref" class="ml-2 text-sm text-gray-600">
-        ✅ Als Standard für zukünftige Termine speichern
+        Als Standard für zukünftige Termine speichern
       </label>
+    </div>
+ <!-- HIER der neue Billing-Button einfügen -->
+    <div class="mt-4 pt-3 border-t border-gray-200">
+      <button
+        @click="toggleBillingEditMode"
+        class="w-full flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors"
+        :class="[
+          isBillingEditMode 
+            ? 'bg-green-600 text-white hover:bg-green-700' 
+            : 'bg-blue-600 text-white hover:bg-blue-700'
+        ]"
+      >
+        <span v-if="isBillingEditMode" class="mr-2">💾</span>
+        <span v-else class="mr-2">✏️</span>
+        {{ isBillingEditMode ? 'Speichern' : 'Bearbeiten' }}
+      </button>
     </div>
   </div>
 </template>
@@ -9485,10 +9635,12 @@ interface Props {
   allowDiscountEdit: boolean
   selectedDate?: string | null
   startTime?: string | null
+  endTime?: string | null
   currentUser?: any
   initialPaymentMethod?: string
   selectedStudentId?: string
   selectedStudent?: any  
+ 
 
 }
 
@@ -9537,9 +9689,64 @@ const invoiceMode = ref(false)
 const cashMode = ref(false)
 const selectedAddressId = ref('')
 const savePaymentPreference = ref(true)
+const isBillingSectionExpanded = ref(false) 
+const billingAddressSaved = ref(false) 
 
 // Computed - angepasst an bestehende Props
 const tempDiscount = computed(() => parseFloat(tempDiscountInput.value) || 0)
+
+const isEditMode = ref(false)
+const isBillingEditMode = ref(false)
+
+const toggleBillingEditMode = () => {
+  if (isBillingEditMode.value) {
+    // SPEICHERN-MODUS: Rechnungsadresse speichern
+    if (companyBilling.validation.value.isValid) {
+      saveAndCollapseBilling()
+    }
+    isBillingEditMode.value = false
+  } else {
+    // BEARBEITEN-MODUS: Billing-Bereich öffnen
+    isBillingEditMode.value = true
+    isBillingSectionExpanded.value = true
+  }
+}
+
+
+// Toggle-Funktion hinzufügen
+const toggleEditMode = () => {
+  console.log('🔄 toggleEditMode called, current state:', isEditMode.value)
+  
+  if (isEditMode.value) {
+    // SPEICHERN-MODUS: Alle offenen Editierungen anwenden
+    console.log('💾 Speichern-Modus aktiviert')
+    
+    // Rabatt speichern falls offen
+    if (showDiscountEdit.value && tempDiscountInput.value) {
+      console.log('💰 Applying discount...')
+      applyDiscount()
+    }
+    
+    // Alle Edit-Bereiche schließen
+    showDiscountEdit.value = false
+    showAdminFeeInfo.value = false
+    
+    // Edit-Mode beenden
+    isEditMode.value = false
+    console.log('✅ Edit-Mode beendet')
+    
+  } else {
+    // BEARBEITEN-MODUS: Edit-Mode aktivieren
+    console.log('✏️ Bearbeiten-Modus aktiviert')
+    isEditMode.value = true
+    
+    // Optional: Rabatt-Edit automatisch öffnen wenn erlaubt
+    if (props.allowDiscountEdit && props.discount === 0) {
+      showDiscountEdit.value = true
+      console.log('📝 Rabatt-Edit automatisch geöffnet')
+    }
+  }
+}
 
 const lessonPrice = computed(() => {
   return props.durationMinutes * props.pricePerMinute
@@ -9597,6 +9804,23 @@ const formattedAppointmentInfo = computed(() => {
   
   return parts.join('\n')
 })
+
+// Neue Funktion für Datum-Formatierung hinzufügen:
+const formatSelectedDate = (dateString: string) => {
+  if (!dateString) return ''
+  
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('de-CH', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+  } catch (error) {
+    return dateString
+  }
+}
 
 // Computed - Neue Zahlungsart-Logik
 const invoiceDataValid = computed(() => {
@@ -9836,6 +10060,58 @@ const updatePaymentMode = () => {
   }
 }
 
+const toggleBillingSection = () => {
+  isBillingSectionExpanded.value = !isBillingSectionExpanded.value
+}
+
+const expandBillingSection = () => {
+  isBillingSectionExpanded.value = true
+}
+
+const saveAndCollapseBilling = async () => {
+  if (!props.currentUser?.id) {
+    companyBilling.error.value = 'Benutzer nicht angemeldet'
+    return
+  }
+
+  try {
+    let result
+
+    if (companyBilling.currentAddress.value?.id) {
+      // ✅ UPDATE: Bestehende Adresse aktualisieren
+      console.log('🔄 Updating existing billing address:', companyBilling.currentAddress.value.id)
+      result = await companyBilling.updateCompanyBillingAddress(companyBilling.currentAddress.value.id)
+    } else {
+      // ✅ CREATE: Neue Adresse erstellen
+      console.log('➕ Creating new billing address...')
+      result = await companyBilling.createCompanyBillingAddress(props.currentUser.id)
+    }
+
+    if (result.success && !companyBilling.error.value) {
+      isBillingSectionExpanded.value = false
+      console.log('✅ Billing address saved and collapsed')
+      
+      // Liste neu laden um aktuelle Daten zu haben
+      await companyBilling.loadUserCompanyAddresses(props.currentUser.id)
+    } else {
+      console.error('❌ Failed to save billing address:', result.error || companyBilling.error.value)
+    }
+
+  } catch (err: any) {
+    console.error('❌ Error in saveAndCollapseBilling:', err)
+    companyBilling.error.value = err.message || 'Unbekannter Fehler beim Speichern'
+  }
+}
+
+// Bestehende Funktionen modifizieren um Edit-Mode zu berücksichtigen
+const startDiscountEdit = () => {
+  if (!isEditMode.value) {
+    isEditMode.value = true
+  }
+  showDiscountEdit.value = true
+  tempDiscountInput.value = props.discount > 0 ? props.discount.toString() : ''
+  tempDiscountReason.value = props.discountReason
+}
 
 
 // Watchers
@@ -9869,6 +10145,31 @@ watch(() => props.selectedStudent, async (newStudent) => {
     await loadUserPaymentPreferences(newStudent.id)
   }
 }, { immediate: true })
+
+watch(() => companyBilling.currentAddress.value, (newAddress) => {
+  billingAddressSaved.value = !!newAddress
+  
+  // Automatisch einklappen wenn eine Adresse geladen wurde
+  if (newAddress) {
+    isBillingSectionExpanded.value = false
+  }
+}, { immediate: true })
+
+// Beim Wechsel zu Invoice-Mode erweitern (falls noch nicht gespeichert)
+watch(() => invoiceMode.value, (isInvoice) => {
+  if (isInvoice && !billingAddressSaved.value) {
+    isBillingSectionExpanded.value = true
+  }
+})
+
+// Optional: Watch für Edit-Mode um UI-Elemente zu steuern
+watch(isEditMode, (newMode) => {
+  if (!newMode) {
+    // Beim Verlassen des Edit-Mode alle Dialoge schließen
+    showDiscountEdit.value = false
+    showAdminFeeInfo.value = false
+  }
+})
 
 // Lifecycle
 onMounted(async () => {
@@ -10499,7 +10800,6 @@ input[type="checkbox"]:checked + span {
               type="text"
               :placeholder="placeholder"
               :disabled="disabled"
-              @focus="handleSearchFocus"
               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
             />
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -10728,15 +11028,6 @@ const loadStaff = async () => {
   }
 }
 
-const handleSearchFocus = () => {
-  console.log('🔍 Staff search field focused')
-  
-  if (props.autoLoad && availableStaff.value.length === 0) {
-    console.log('📚 Auto-loading staff on search focus')
-    loadStaff()
-  }
-}
-
 const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value
   console.log('🔄 StaffSelector expanded:', isExpanded.value)
@@ -10959,115 +11250,115 @@ input[type="checkbox"]:focus {
           </div>
         </div>
        
-      <!-- 2. Prüfungsstandorte -->
-      <div class="border border-gray-200 rounded-lg">
-        <button
-          @click="toggleSection('examLocations')"
-          class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
-        >
-          <span class="font-medium text-gray-900">🏛️ Prüfungsstandorte</span>
-          <span class="text-gray-600 font-bold">{{ openSections.examLocations ? '−' : '+' }}</span>
-        </button>
-      <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
-        <!-- Neue Prüfungsstandort hinzufügen -->
-        <div class="border border-gray-200 rounded-lg p-4 mb-4">
-          <h4 class="font-medium text-gray-900 mb-3">Neuen Prüfungsstandort hinzufügen</h4>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input
-              v-model="newExamLocation.name"
-              type="text"
-              placeholder="Standort-Name (z.B. TCS Zürich)"
-              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        <!-- 6. Prüfungsstandorte -->
+          <div class="border border-gray-200 rounded-lg">
+            <button
+              @click="toggleSection('examLocations')"
+              class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
             >
-            <input
-              v-model="newExamLocation.address"
-              type="text"
-              placeholder="Adresse"
-              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-            <select
-              v-model="newExamLocation.categories"
-              multiple
-              class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="B">Kategorie B</option>
-              <option value="A1">Kategorie A1</option>
-              <option value="A">Kategorie A</option>
-              <option value="BE">Kategorie BE</option>
-              <option value="C1">Kategorie C1</option>
-              <option value="C">Kategorie C</option>
-            </select>
-          </div>
-          <button
-            @click="addExamLocation"
-            :disabled="!newExamLocation.name || !newExamLocation.address"
-            class="mt-3 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Prüfungsstandort hinzufügen
-          </button>
-        </div>
-
-        <!-- Liste der Prüfungsstandorte -->
-        <div class="space-y-3">
-          <div v-if="examLocations.length === 0" class="text-center py-8 text-gray-500">
-            Noch keine Prüfungsstandorte definiert
-          </div>
-          
-          <div
-            v-for="location in examLocations"
-            :key="location.id"
-            class="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
-          >
-            <div class="flex items-center justify-between">
-              <div class="flex-1">
-                <div class="flex items-center gap-3">
-                  <h4 class="font-medium text-gray-900">{{ location.name }}</h4>
-                  <button
-                    @click="toggleExamLocationStatus(location)"
-                    :class="[
-                      'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                      location.is_active ? 'bg-green-600' : 'bg-gray-200'
-                    ]"
-                  >
-                    <span
-                      :class="[
-                        'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
-                        location.is_active ? 'translate-x-5' : 'translate-x-1'
-                      ]"
-                    />
-                  </button>
-                  <span :class="[
-                    'text-xs px-2 py-1 rounded-full',
-                    location.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                  ]">
-                    {{ location.is_active ? 'Aktiv' : 'Inaktiv' }}
-                  </span>
+              <span class="font-medium text-gray-900">🏛️ Prüfungsstandorte</span>
+              <span class="text-gray-600 font-bold">{{ openSections.examLocations ? '−' : '+' }}</span>
+            </button>
+            
+            <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
+              <div class="space-y-4 mt-4">
+                
+                <!-- Info Text -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p class="text-sm text-blue-800">
+                    📍 Aktivieren Sie die Prüfungsstandorte, die Sie für Ihre Schüler nutzen möchten.
+                  </p>
                 </div>
-                
-                <p class="text-sm text-gray-600 mt-1">{{ location.address }}</p>
-                
-                <div v-if="location.categories && location.categories.length > 0" class="flex gap-1 mt-2">
-                  <span
-                    v-for="category in location.categories"
-                    :key="category"
-                    class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+
+                <!-- Loading State -->
+                <div v-if="isLoadingExamLocations" class="text-center py-8">
+                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p class="text-gray-600">Prüfungsstandorte werden geladen...</p>
+                </div>
+
+                <!-- Verfügbare Prüfungsstandorte -->
+                <div v-else class="space-y-3">
+                  <div v-if="availableExamLocations.length === 0" class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">🏛️</div>
+                    <p>Keine Prüfungsstandorte verfügbar</p>
+                    <p class="text-xs mt-1">Kontaktieren Sie Ihren Administrator</p>
+                  </div>
+                  
+                  <div
+                    v-for="location in availableExamLocations"
+                    :key="location.id"
+                    class="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
                   >
-                    {{ category }}
-                  </span>
+                    <div class="flex items-start justify-between">
+                      <div class="flex-1">
+                        <!-- Standort Info -->
+                        <div class="flex items-center gap-3 mb-2">
+                          <h4 class="font-semibold text-gray-900">{{ location.name }}</h4>
+                          
+                          <!-- Toggle Switch -->
+                          <button
+                            @click="toggleExamLocation(location)"
+                            :disabled="isSavingExamLocation"
+                            :class="[
+                              'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                              isExamLocationActive(location.id) 
+                                ? 'bg-green-600' 
+                                : 'bg-gray-300'
+                            ]"
+                          >
+                            <span
+                              :class="[
+                                'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+                                isExamLocationActive(location.id) ? 'translate-x-5' : 'translate-x-1'
+                              ]"
+                            />
+                          </button>
+                          
+                          <!-- Status Badge -->
+                          <span 
+                            :class="[
+                              'text-xs px-2 py-1 rounded-full font-medium',
+                              isExamLocationActive(location.id) 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-gray-100 text-gray-600'
+                            ]"
+                          >
+                            {{ isExamLocationActive(location.id) ? 'Für mich aktiv' : 'Inaktiv' }}
+                          </span>
+                        </div>
+                        
+                        <!-- Adresse -->
+                        <p class="text-sm text-gray-600 mb-2">
+                          📍 {{ location.address }}
+                        </p>
+                        
+                        <!-- Verfügbare Kategorien -->
+                        <div v-if="location.available_categories && location.available_categories.length > 0" class="flex flex-wrap gap-1 mb-2">
+                          <span
+                            v-for="category in location.available_categories"
+                            :key="category"
+                            class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                          >
+                            {{ category }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Aktive Standorte Zusammenfassung -->
+                <div v-if="activeExamLocationsCount > 0" class="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div class="flex items-center gap-2">
+                    <span class="text-green-600 text-lg">✅</span>
+                    <span class="text-sm font-medium text-green-800">
+                      {{ activeExamLocationsCount }} von {{ availableExamLocations.length }} Prüfungsstandorten aktiviert
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              <button
-                @click="removeExamLocation(location.id)"
-                class="ml-4 text-red-500 hover:text-red-700 text-sm"
-              >
-                🗑️ Entfernen
-              </button>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
           
           <!-- 3. Treffpunkte/Standorte -->
           <div class="border border-gray-200 rounded-lg">
@@ -11162,7 +11453,6 @@ input[type="checkbox"]:focus {
                   >
                   <div>
                     <div class="font-medium text-gray-900">{{ category.code }}</div>
-                    <div class="text-xs text-gray-700">CHF {{ category.price_per_lesson }}/45min</div>
                   </div>
                 </label>
               </div>
@@ -11274,38 +11564,6 @@ input[type="checkbox"]:focus {
               </div>
             </div>
           </div>
-
-          <!-- 5. Benachrichtigungen -->
-          <div class="border border-gray-200 rounded-lg">
-            <button
-              @click="toggleSection('notifications')"
-              class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
-            >
-              <span class="font-medium text-gray-900">🔔 Benachrichtigungen</span>
-              <span class="text-gray-600 font-bold">{{ openSections.notifications ? '−' : '+' }}</span>
-            </button>
-            
-            <div v-if="openSections.notifications" class="px-4 pb-4 border-t border-gray-100">
-              <div class="space-y-3 mt-3">
-                <label class="flex items-center">
-                  <input
-                    type="checkbox"
-                    v-model="notifications.sms"
-                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  >
-                  <span class="ml-2 text-sm text-gray-800">SMS-Benachrichtigungen</span>
-                </label>
-                <label class="flex items-center">
-                  <input
-                    type="checkbox"
-                    v-model="notifications.email"
-                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  >
-                  <span class="ml-2 text-sm text-gray-800">E-Mail-Benachrichtigungen</span>
-                </label>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -11337,6 +11595,26 @@ interface Props {
   currentUser: any
 }
 
+interface ExamLocation {
+  id: string
+  name: string
+  address: string
+  city?: string
+  canton?: string
+  postal_code?: string
+  available_categories?: string[]
+  is_active: boolean
+  display_order?: number
+}
+
+interface StaffExamLocation {
+  id: string
+  staff_id: string
+  exam_location_id: string
+  is_active: boolean
+  created_at?: string
+}
+
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
@@ -11349,6 +11627,10 @@ const isLoading = ref(false)
 const isSaving = ref(false)
 const error = ref<string | null>(null)
 const saveSuccess = ref(false)
+const availableExamLocations = ref<ExamLocation[]>([])
+const staffExamLocations = ref<StaffExamLocation[]>([])
+const isLoadingExamLocations = ref(false)
+const isSavingExamLocation = ref(false)
 
 // Accordion State
 const openSections = reactive({
@@ -11401,6 +11683,10 @@ const filteredCategoriesForDurations = computed(() => {
   )
 })
 
+const activeExamLocationsCount = computed(() => {
+  return availableExamLocations.value.filter(loc => isExamLocationActive(loc.id)).length
+})
+
 // computed properties:
 const currentMonthName = computed(() => {
   const date = new Date()
@@ -11426,117 +11712,53 @@ const threeMonthsAgoName = computed(() => {
 })
 
 // Methods
-
-
-// NEUE FUNKTIONEN für Prüfungsstandorte
 const loadExamLocations = async () => {
   if (!props.currentUser?.id) return
 
+  isLoadingExamLocations.value = true
   try {
     const supabase = getSupabase()
     
-    // Prüfungsstandorte aus einer neuen Tabelle laden (oder bestehende erweitern)
-    const { data: locations, error } = await supabase
+    // 1. Alle verfügbaren Prüfungsstandorte laden
+    const { data: allLocations, error: locationsError } = await supabase
+      .from('exam_locations')
+      .select('*')
+      .eq('is_active', true)
+      .order('name')
+
+    if (locationsError) throw locationsError
+    availableExamLocations.value = allLocations || []
+    
+    // 2. Aktivierte Standorte dieses Staff laden
+    const { data: staffLocations, error: staffError } = await supabase
       .from('staff_exam_locations')
       .select('*')
       .eq('staff_id', props.currentUser.id)
-      .order('name')
 
-    if (error && !error.message.includes('does not exist')) {
-      throw error
-    }
+    if (staffError) throw staffError
+    staffExamLocations.value = staffLocations || []
 
-    examLocations.value = locations || []
+    console.log('✅ Exam locations loaded:', {
+      available: availableExamLocations.value.length,
+      staffActivated: staffExamLocations.value.length
+    })
 
   } catch (err: any) {
     console.error('❌ Error loading exam locations:', err)
-    // Fallback für fehlende Tabelle
-    examLocations.value = []
+    error.value = `Fehler beim Laden der Prüfungsstandorte: ${err.message}`
+  } finally {
+    isLoadingExamLocations.value = false
   }
 }
 
-const addExamLocation = async () => {
-  if (!newExamLocation.value.name || !newExamLocation.value.address) return
 
-  try {
-    const supabase = getSupabase()
-    
-    const { data, error } = await supabase
-      .from('staff_exam_locations')
-      .insert({
-        staff_id: props.currentUser.id,
-        name: newExamLocation.value.name,
-        address: newExamLocation.value.address,
-        categories: newExamLocation.value.categories,
-        is_active: true
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    examLocations.value.push(data)
-    
-    // Reset form
-    newExamLocation.value = {
-      name: '',
-      address: '',
-      categories: []
-    }
-
-  } catch (err: any) {
-    console.error('❌ Error adding exam location:', err)
-    error.value = `Fehler beim Hinzufügen: ${err.message}`
-  }
-}
-
-const toggleExamLocationStatus = async (location: any) => {
-  try {
-    const supabase = getSupabase()
-    
-    const { error } = await supabase
-      .from('staff_exam_locations')
-      .update({ is_active: !location.is_active })
-      .eq('id', location.id)
-
-    if (error) throw error
-
-    location.is_active = !location.is_active
-
-  } catch (err: any) {
-    console.error('❌ Error toggling exam location:', err)
-    error.value = `Fehler beim Ändern des Status: ${err.message}`
-  }
-}
-
-const removeExamLocation = async (locationId: string) => {
-  try {
-    const supabase = getSupabase()
-    
-    const { error } = await supabase
-      .from('staff_exam_locations')
-      .delete()
-      .eq('id', locationId)
-
-    if (error) throw error
-
-    examLocations.value = examLocations.value.filter(loc => loc.id !== locationId)
-
-  } catch (err: any) {
-    console.error('❌ Error removing exam location:', err)
-    error.value = `Fehler beim Entfernen: ${err.message}`
-  }
-}
-
-// Data Loading
 const loadAllData = async () => {
   isLoading.value = true
   error.value = null
 
   try {
     await Promise.all([
-      loadExamLocations()
-      // + bestehende Load-Funktionen
+      loadExamLocations() // ✅ HINZUFÜGEN
     ])
   } catch (err: any) {
     console.error('❌ Error loading data:', err)
@@ -11545,6 +11767,19 @@ const loadAllData = async () => {
     isLoading.value = false
   }
 }
+
+const isExamLocationActive = (examLocationId: string): boolean => {
+  const staffLocation = staffExamLocations.value.find(sl => 
+    sl.exam_location_id === examLocationId && sl.is_active
+  )
+  return !!staffLocation
+}
+
+const getExamLocationMapsUrl = (location: any): string => {
+  const query = encodeURIComponent(location.address)
+  return `https://maps.google.com/maps?q=${query}`
+}
+
 
 const toggleSection = (section: keyof typeof openSections) => {
   openSections[section] = !openSections[section]
@@ -11635,6 +11870,113 @@ const addLocation = async () => {
   } catch (err: any) {
     console.error('❌ Error adding location:', err)
     error.value = `Fehler beim Hinzufügen: ${err.message}`
+  }
+}
+
+// Füge diese Funktionen zu deinem StaffSettings.vue Script hinzu:
+
+const addExamLocation = async () => {
+  if (!newExamLocation.value.name || !newExamLocation.value.address) return
+
+  try {
+    const supabase = getSupabase()
+    
+    const { data, error } = await supabase
+      .from('staff_exam_locations')
+      .insert({
+        staff_id: props.currentUser.id,
+        name: newExamLocation.value.name,
+        address: newExamLocation.value.address,
+        categories: newExamLocation.value.categories,
+        is_active: true
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    examLocations.value.push(data)
+    
+    // Reset form
+    newExamLocation.value = {
+      name: '',
+      address: '',
+      categories: []
+    }
+
+    console.log('✅ Exam location added:', data)
+
+  } catch (err: any) {
+    console.error('❌ Error adding exam location:', err)
+    error.value = `Fehler beim Hinzufügen: ${err.message}`
+  }
+}
+
+const toggleExamLocation = async (examLocation: any) => {
+  if (isSavingExamLocation.value) return
+
+  isSavingExamLocation.value = true
+  try {
+    const supabase = getSupabase()
+    const currentlyActive = isExamLocationActive(examLocation.id)
+    const existingStaffLocation = staffExamLocations.value.find(sl => 
+      sl.exam_location_id === examLocation.id
+    )
+
+    if (existingStaffLocation) {
+      // Update existing record
+      const { error } = await supabase
+        .from('staff_exam_locations')
+        .update({ is_active: !currentlyActive })
+        .eq('id', existingStaffLocation.id)
+
+      if (error) throw error
+      
+      existingStaffLocation.is_active = !currentlyActive
+    } else {
+      // Create new record - Staff aktiviert zum ersten Mal
+      const { data, error } = await supabase
+        .from('staff_exam_locations')
+        .insert({
+          staff_id: props.currentUser.id,
+          exam_location_id: examLocation.id,
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      
+      staffExamLocations.value.push(data)
+    }
+
+    console.log(`✅ Exam location ${!currentlyActive ? 'activated' : 'deactivated'}:`, examLocation.name)
+
+  } catch (err: any) {
+    console.error('❌ Error toggling exam location:', err)
+    error.value = `Fehler beim Ändern des Prüfungsstandorts: ${err.message}`
+  } finally {
+    isSavingExamLocation.value = false
+  }
+}
+
+const removeExamLocation = async (locationId: string) => {
+  try {
+    const supabase = getSupabase()
+    
+    const { error } = await supabase
+      .from('staff_exam_locations')
+      .delete()
+      .eq('id', locationId)
+
+    if (error) throw error
+
+    examLocations.value = examLocations.value.filter(loc => loc.id !== locationId)
+    console.log('✅ Exam location removed:', locationId)
+
+  } catch (err: any) {
+    console.error('❌ Error removing exam location:', err)
+    error.value = `Fehler beim Entfernen: ${err.message}`
   }
 }
 
@@ -11748,6 +12090,7 @@ const loadData = async () => {
   } finally {
     isLoading.value = false
   }
+   await loadExamLocations() 
 }
 
 // Debug-Version der loadWorkingHoursData Funktion:
@@ -11850,13 +12193,6 @@ const loadWorkingHoursData = async () => {
     monthlyStats.value.previousMonth.worked = previousHours
     monthlyStats.value.twoMonthsAgo.worked = twoMonthsAgoHours
     monthlyStats.value.threeMonthsAgo.worked = threeMonthsAgoHours
-    
-    console.log('✅ DEBUG: Final working hours set:', {
-      current: monthlyStats.value.currentMonth.worked,
-      previous: monthlyStats.value.previousMonth.worked,
-      twoAgo: monthlyStats.value.twoMonthsAgo.worked,
-      threeAgo: monthlyStats.value.threeMonthsAgo.worked
-    })
     
   } catch (error) {
     console.error('❌ DEBUG: Unexpected error:', error)
@@ -12002,6 +12338,7 @@ const saveAllSettings = async () => {
 onMounted(() => {
   loadData()
   loadWorkingHoursData()
+  loadExamLocations() 
 
 })
 </script>
@@ -12827,11 +13164,10 @@ const handleSwitchToOther = () => {
 const handleSearchFocus = () => {
   console.log('🔍 Search field focused, autoLoad:', shouldAutoLoadComputed.value)
   
-  if (shouldAutoLoadComputed.value && availableStudents.value.length === 0) {
-    console.log('📚 Auto-loading students on search focus')
+  // ✅ Lade Studenten auch bei autoLoad=false wenn noch keine geladen sind
+  if (availableStudents.value.length === 0) {
+    console.log('📚 Loading students on search focus (no students loaded yet)')
     loadStudents()
-  } else if (!shouldAutoLoadComputed.value) {
-    console.log('🚫 Auto-load disabled - user must manually trigger loading')
   }
 }
 
@@ -12868,13 +13204,9 @@ const handleStudentClick = (student: Student) => {
     isFreeslotMode: props.isFreeslotMode
   })
   
-  if (props.isFreeslotMode) {
-    console.log('🚫 Manual student click blocked in free-slot mode')
-    return
-  }
-  
-  console.log('✅ Student click allowed - selecting student')
-  selectStudent(student, true)
+  // Manuelle Klicks sollten erlaubt sein
+  console.log('✅ Manual student click allowed - selecting student')
+  selectStudent(student, true) // isUserClick=true bedeutet manueller Klick
 }
 
 const clearStudent = () => {
@@ -13232,7 +13564,7 @@ const props = withDefaults(defineProps<Props>(), {
   maxLength: 100,
   showSuggestions: true,
   showCharacterCount: true,
-  autoGenerate: true
+  autoGenerate: false
 })
 
 const emit = defineEmits<Emits>()
@@ -13455,6 +13787,1161 @@ button:hover:not(:disabled) {
 }
 </style>```
 
+### ./components/admin/AdminExamLocations.vue
+```vue
+<template>
+  <div class="bg-white p-6 rounded-lg border border-gray-200">
+    <div class="flex justify-between items-center mb-6">
+      <h3 class="text-lg font-medium text-gray-900">
+        🏛️ Prüfungsstandorte verwalten
+      </h3>
+      <button
+        @click="showAddForm = !showAddForm"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        {{ showAddForm ? 'Abbrechen' : '+ Neuer Standort' }}
+      </button>
+    </div>
+
+    <!-- Error/Success Messages -->
+    <div v-if="error" class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+      ❌ {{ error }}
+    </div>
+    
+    <div v-if="successMessage" class="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+      ✅ {{ successMessage }}
+    </div>
+
+   <!-- Add Form (inline) -->
+<div v-if="showAddForm && !editingLocation" class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+  <h4 class="font-medium text-gray-900 mb-3">Neuen Prüfungsstandort hinzufügen</h4>
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+      <input
+        v-model="formData.name"
+        type="text"
+        placeholder="z.B. TCS Zürich"
+        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      >
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Adresse *</label>
+      <input
+        v-model="formData.address"
+        type="text"
+        placeholder="Vollständige Adresse"
+        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      >
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Stadt</label>
+      <input
+        v-model="formData.city"
+        type="text"
+        placeholder="z.B. Zürich"
+        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      >
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Kanton</label>
+      <select
+        v-model="formData.canton"
+        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      >
+        <option value="">Kanton wählen</option>
+        <option value="ZH">Zürich</option>
+        <option value="BE">Bern</option>
+        <option value="LU">Luzern</option>
+        <option value="AG">Aargau</option>
+        <option value="SG">St. Gallen</option>
+        <option value="GR">Graubünden</option>
+        <option value="TI">Tessin</option>
+        <option value="VD">Waadt</option>
+        <option value="VS">Wallis</option>
+        <option value="GE">Genf</option>
+      </select>
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
+      <input
+        v-model="formData.postal_code"
+        type="text"
+        placeholder="z.B. 8005"
+        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      >
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+      <input
+        v-model="formData.contact_phone"
+        type="tel"
+        placeholder="z.B. +41 44 123 45 67"
+        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      >
+    </div>
+  </div>
+  
+  <div class="mt-4">
+    <label class="block text-sm font-medium text-gray-700 mb-1">Verfügbare Kategorien</label>
+    <div class="flex flex-wrap gap-2">
+      <label
+        v-for="category in availableCategories"
+        :key="category"
+        class="flex items-center p-2 border rounded cursor-pointer text-gray-700 hover:bg-gray-50 text-sm"
+        :class="{
+          'border-blue-500 bg-blue-50': formData.available_categories.includes(category),
+          'border-gray-300': !formData.available_categories.includes(category)
+        }"
+      >
+        <input
+          type="checkbox"
+          :checked="formData.available_categories.includes(category)"
+          @change="toggleCategory(category)"
+          class="sr-only"
+        >
+        <span class="font-medium">{{ category }}</span>
+      </label>
+    </div>
+  </div>
+  
+  <div class="mt-4 flex gap-3">
+    <button
+      @click="saveLocation"
+      :disabled="isSaving || !formData.name || !formData.address"
+      class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+    >
+      {{ isSaving ? 'Speichern...' : 'Hinzufügen' }}
+    </button>
+    <button
+      @click="cancelEdit"
+      class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+    >
+      Abbrechen
+    </button>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div v-if="editingLocation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-lg max-w-2xl w-full max-h-screen overflow-y-auto">
+    <div class="p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h4 class="text-lg font-medium text-gray-900">Prüfungsstandort bearbeiten</h4>
+        <button @click="cancelEdit" class="text-gray-500 hover:text-gray-700">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+          <input
+            v-model="formData.name"
+            type="text"
+            placeholder="z.B. TCS Zürich"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Adresse *</label>
+          <input
+            v-model="formData.address"
+            type="text"
+            placeholder="Vollständige Adresse"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Stadt</label>
+          <input
+            v-model="formData.city"
+            type="text"
+            placeholder="z.B. Zürich"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Kanton</label>
+          <select
+            v-model="formData.canton"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Kanton wählen</option>
+            <option value="ZH">Zürich</option>
+            <option value="BE">Bern</option>
+            <option value="LU">Luzern</option>
+            <option value="AG">Aargau</option>
+            <option value="SG">St. Gallen</option>
+            <option value="GR">Graubünden</option>
+            <option value="TI">Tessin</option>
+            <option value="VD">Waadt</option>
+            <option value="VS">Wallis</option>
+            <option value="GE">Genf</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
+          <input
+            v-model="formData.postal_code"
+            type="text"
+            placeholder="z.B. 8005"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+          <input
+            v-model="formData.contact_phone"
+            type="tel"
+            placeholder="z.B. +41 44 123 45 67"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+      </div>
+      
+      <div class="mt-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Verfügbare Kategorien</label>
+        <div class="flex flex-wrap gap-2">
+          <label
+            v-for="category in availableCategories"
+            :key="category"
+            class="flex items-center p-2 border rounded cursor-pointer text-gray-700 hover:bg-gray-50 text-sm"
+            :class="{
+              'border-blue-500 bg-blue-50': formData.available_categories.includes(category),
+              'border-gray-300': !formData.available_categories.includes(category)
+            }"
+          >
+            <input
+              type="checkbox"
+              :checked="formData.available_categories.includes(category)"
+              @change="toggleCategory(category)"
+              class="sr-only"
+            >
+            <span class="font-medium">{{ category }}</span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="mt-6 flex gap-3">
+        <button
+          @click="saveLocation"
+          :disabled="isSaving || !formData.name || !formData.address"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+        >
+          {{ isSaving ? 'Speichern...' : 'Aktualisieren' }}
+        </button>
+        <button
+          @click="cancelEdit"
+          class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <!-- Loading State -->
+    <div v-if="isLoading" class="text-center py-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+      <p class="text-gray-600">Lade Prüfungsstandorte...</p>
+    </div>
+
+    <!-- Locations List -->
+    <div v-else class="space-y-3">
+      <div v-if="examLocations.length === 0" class="text-center py-12 text-gray-500">
+        <div class="text-6xl mb-4">🏛️</div>
+        <h4 class="text-lg font-medium text-gray-900 mb-2">Keine Prüfungsstandorte</h4>
+        <p class="text-gray-600">Fügen Sie den ersten Prüfungsstandort hinzu</p>
+      </div>
+
+      <div
+        v-for="location in examLocations"
+        :key="location.id"
+        class="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all"
+        :class="{ 'border-green-200 bg-green-50': location.is_active, 'border-gray-200': !location.is_active }"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <!-- Header -->
+            <div class="flex items-center gap-3 mb-2">
+              <h4 class="font-semibold text-gray-900">{{ location.name }}</h4>
+            </div>
+            
+            <!-- Address -->
+            <p class="text-sm text-gray-600 mb-2">
+              📍 {{ location.address }}
+              <span v-if="location.city" class="text-gray-500">
+                • {{ location.city }}  {{ location.postal_code }}
+              </span>
+            </p>
+            
+            <!-- Categories -->
+            <div v-if="location.available_categories && location.available_categories.length > 0" class="flex flex-wrap gap-1 mb-2">
+              <span
+                v-for="category in location.available_categories"
+                :key="category"
+                class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+              >
+                {{ category }}
+              </span>
+            </div>
+            
+            <!-- Usage Stats -->
+            <div class="text-xs text-gray-500 mt-2">
+              Erstellt: {{ formatDate(location.created_at) }}
+              <span v-if="location.updated_at && location.updated_at !== location.created_at">
+                • Aktualisiert: {{ formatDate(location.updated_at) }}
+              </span>
+            </div>
+          </div>
+          
+            <!-- Actions -->
+            <div class="flex flex-col sm:flex-row gap-1 sm:gap-2 min-w-max">
+            <button
+                @click="startEdit(location)"
+                class="px-2 py-1 text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 rounded hover:bg-blue-50 transition-colors"
+            >
+                ✏️ Bearbeiten
+            </button>
+            <button
+                @click="confirmDelete(location)"
+                class="px-2 py-1 text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 rounded hover:bg-red-50 transition-colors"
+            >
+                🗑️ Löschen
+            </button>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+// State
+const examLocations = ref<any[]>([])
+const isLoading = ref(false)
+const isSaving = ref(false)
+const error = ref<string | null>(null)
+const successMessage = ref<string | null>(null)
+const showAddForm = ref(false)
+const editingLocation = ref<any | null>(null)
+const usageCount = ref(0)
+
+// Form Data
+const formData = ref({
+  name: '',
+  address: '',
+  city: '',
+  canton: '',
+  postal_code: '',
+  available_categories: [] as string[],
+  contact_phone: ''
+})
+
+// Constants
+const availableCategories = ['B', 'A1', 'A', 'BE', 'C1', 'C', 'D1', 'D']
+
+// Computed - Removed unused computed properties
+
+// === METHODS ===
+
+const loadExamLocations = async () => {
+  isLoading.value = true
+  try {
+    const supabase = getSupabase()
+    
+    const { data: locations, error: locationsError } = await supabase
+      .from('exam_locations')
+      .select('*')
+      .order('name', { ascending: true })
+
+    if (locationsError) throw locationsError
+    examLocations.value = locations || []
+      
+    usageCount.value = 0
+
+    console.log('✅ Admin: Exam locations loaded:', examLocations.value.length)
+
+  } catch (err: any) {
+    console.error('❌ Error loading exam locations:', err)
+    error.value = `Fehler beim Laden: ${err.message}`
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const saveLocation = async () => {
+  if (!formData.value.name || !formData.value.address) {
+    error.value = 'Name und Adresse sind erforderlich'
+    return
+  }
+
+  isSaving.value = true
+  error.value = null
+  
+  try {
+    const supabase = getSupabase()
+    
+    const locationData = {
+      name: formData.value.name.trim(),
+      address: formData.value.address.trim(),
+      city: formData.value.city.trim() || null,
+      canton: formData.value.canton || null,
+      postal_code: formData.value.postal_code.trim() || null,
+      available_categories: formData.value.available_categories,
+      contact_phone: formData.value.contact_phone.trim() || null,
+      updated_at: new Date().toISOString()
+    }
+
+    if (editingLocation.value) {
+      // Update existing
+      const { error: updateErr } = await supabase
+        .from('exam_locations')
+        .update(locationData)
+        .eq('id', editingLocation.value.id)
+
+      if (updateErr) throw updateErr
+      successMessage.value = `"${formData.value.name}" wurde aktualisiert`
+    } else {
+      // Create new
+      const { error: insertErr } = await supabase
+        .from('exam_locations')
+        .insert({
+          ...locationData,
+          created_at: new Date().toISOString()
+        })
+
+      if (insertErr) throw insertErr
+      successMessage.value = `"${formData.value.name}" wurde hinzugefügt`
+    }
+
+    await loadExamLocations()
+    cancelEdit()
+    
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      successMessage.value = null
+    }, 3000)
+
+  } catch (err: any) {
+    console.error('❌ Error saving location:', err)
+    error.value = `Fehler beim Speichern: ${err.message}`
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const startEdit = (location: any) => {
+    console.log('startEdit ausgeführt mit:', location)
+  editingLocation.value = location
+  showAddForm.value = true
+  
+  formData.value = {
+    name: location.name,
+    address: location.address,
+    city: location.city || '',
+    canton: location.canton || '',
+    postal_code: location.postal_code || '',
+    available_categories: [...(location.available_categories || [])],
+    contact_phone: location.contact_phone || ''
+  }
+}
+
+const cancelEdit = () => {
+  editingLocation.value = null
+  showAddForm.value = false
+  
+  formData.value = {
+    name: '',
+    address: '',
+    city: '',
+    canton: '',
+    postal_code: '',
+    available_categories: [],
+    contact_phone: ''
+  }
+}
+
+const toggleLocationStatus = async (location: any) => {
+  try {
+    const supabase = getSupabase()
+    
+    const { error: toggleErr } = await supabase
+      .from('exam_locations')
+      .update({ 
+        is_active: !location.is_active,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', location.id)
+
+    if (toggleErr) throw toggleErr
+    
+    await loadExamLocations()
+    successMessage.value = `"${location.name}" wurde ${!location.is_active ? 'aktiviert' : 'deaktiviert'}`
+    
+    setTimeout(() => {
+      successMessage.value = null
+    }, 3000)
+
+  } catch (err: any) {
+    console.error('❌ Error toggling location:', err)
+    error.value = `Fehler beim Ändern des Status: ${err.message}`
+  }
+}
+
+const confirmDelete = async (location: any) => {
+  if (!confirm(`Möchten Sie "${location.name}" wirklich löschen?`)) {
+    return
+  }
+
+  try {
+    const supabase = getSupabase()
+    
+    const { error: deleteErr } = await supabase
+      .from('exam_locations')
+      .delete()
+      .eq('id', location.id)
+
+    if (deleteErr) throw deleteErr
+    
+    await loadExamLocations()
+    successMessage.value = `"${location.name}" wurde gelöscht`
+    
+    setTimeout(() => {
+      successMessage.value = null
+    }, 3000)
+
+  } catch (err: any) {
+    console.error('❌ Error deleting location:', err)
+    error.value = `Fehler beim Löschen: ${err.message}`
+  }
+}
+
+const toggleCategory = (category: string) => {
+  const index = formData.value.available_categories.indexOf(category)
+  if (index > -1) {
+    formData.value.available_categories.splice(index, 1)
+  } else {
+    formData.value.available_categories.push(category)
+  }
+}
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('de-CH')
+}
+
+const getMapsUrl = (location: any) => {
+  const query = encodeURIComponent(location.address)
+  return `https://maps.google.com/maps?q=${query}`
+}
+
+// Clear messages when component unmounts
+const clearMessages = () => {
+  error.value = null
+  successMessage.value = null
+}
+
+// Lifecycle
+onMounted(() => {
+  loadExamLocations()
+})
+</script>
+
+<style scoped>
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+</style>```
+
+### ./components/admin/AdminPricingDashboard.vue
+```vue
+<template>
+  <div class="admin-pricing-dashboard p-6 max-w-7xl mx-auto">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        💰 Preismanagement
+      </h1>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="isLoadingPrices" class="flex justify-center items-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+
+    <!-- Error State -->
+    <div v-if="pricingError" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+      <div class="flex items-center">
+        <span class="text-red-600 mr-2">❌</span>
+        <span class="text-red-800">{{ pricingError }}</span>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div v-if="!isLoadingPrices" class="space-y-8">
+      
+      <!-- Categories Overview -->
+      <div class="bg-white rounded-lg shadow-sm border">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-semibold text-gray-900">
+              🚗 Kategorien-Preise ({{ categoriesCount }} Kategorien)
+            </h2>
+            <button
+              @click="showCreateModal = true"
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              ➕ Neue Kategorie
+            </button>
+          </div>
+        </div>
+
+        <!-- Categories Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategorie</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Preis/Min</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">45min Lektion</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Versicherung</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ab Termin</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr v-for="rule in pricingRules" :key="rule.id" class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="font-medium text-gray-900">{{ rule.category_code }}</div>
+                  <div class="text-sm text-gray-500">{{ rule.rule_name }}</div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm font-medium text-gray-900">
+                    CHF {{ (rule.price_per_minute_rappen / 100).toFixed(2) }}
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm font-medium text-gray-900">
+                    CHF {{ Math.round((rule.price_per_minute_rappen * 45) / 100) }}.00
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ rule.admin_fee_rappen === 0 ? 'Keine' : `CHF ${(rule.admin_fee_rappen / 100).toFixed(2)}` }}
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm text-gray-700">
+                    {{ rule.admin_fee_applies_from === 999 ? 'Nie' : `${rule.admin_fee_applies_from}. Termin` }}
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex space-x-2">
+                    <button
+                      @click="editRule(rule)"
+                      class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                    >
+                      ✏️ Bearbeiten
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              
+              <!-- Empty State -->
+              <tr v-if="pricingRules.length === 0">
+                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                  <div class="text-lg">📊 Keine Preisregeln gefunden</div>
+                  <div class="text-sm mt-2">Erstellen Sie die erste Preisregel</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Debug Info -->
+      <div v-if="isLoaded" class="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div class="text-green-800">
+          ✅ {{ categoriesCount }} Preisregeln erfolgreich geladen
+        </div>
+        <div class="text-sm text-green-600 mt-1">
+          {{ categoriesCount }} Kategorien verfügbar
+        </div>
+      </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div v-if="showSuccessModal && savedRuleData" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl max-w-lg w-full shadow-2xl">
+        <!-- Header -->
+        <div class="px-6 py-4 bg-green-50 border-b border-green-200 rounded-t-xl">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+              <span class="text-white text-xl">✅</span>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-green-800">
+                Erfolgreich gespeichert!
+              </h3>
+              <p class="text-sm text-green-600">
+                Kategorie {{ savedRuleData.category_code }} wurde aktualisiert
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="p-6 space-y-4">
+          <!-- Preisdetails -->
+          <div class="bg-gray-50 rounded-lg p-4">
+            <h4 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              💰 Neue Preisdetails
+            </h4>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="text-gray-600">Preis pro Minute:</span>
+                <div class="font-bold text-lg text-blue-600">
+                  CHF {{ savedRuleData.price_per_minute_chf }}
+                </div>
+              </div>
+              
+              <div>
+                <span class="text-gray-600">45min Lektion:</span>
+                <div class="font-bold text-lg text-blue-600">
+                  CHF {{ Math.round(parseFloat(savedRuleData.price_45min_chf)) }}.00
+                </div>
+              </div>
+              
+              <div>
+                <span class="text-gray-600">Versicherungsgebühr:</span>
+                <div class="font-bold text-lg text-orange-600">
+                  {{ savedRuleData.admin_fee_chf === '0.00' ? 'Keine' : `CHF ${savedRuleData.admin_fee_chf}` }}
+                </div>
+              </div>
+              
+              <div>
+                <span class="text-gray-600">Anwendung ab:</span>
+                <div class="font-bold text-lg text-orange-600">
+                  {{ savedRuleData.admin_fee_applies_from === 999 ? 'Nie' : `${savedRuleData.admin_fee_applies_from}. Termin` }}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Technische Details -->
+          <div class="bg-blue-50 rounded-lg p-4">
+            <h4 class="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+              🔧 Database-Updates
+            </h4>
+            
+            <div class="text-xs space-y-1 text-blue-700">
+              <div>• Grundpreis: {{ savedRuleData.price_per_minute_rappen }} Rappen/Min</div>
+              <div>• Versicherung: {{ savedRuleData.admin_fee_rappen }} Rappen</div>
+              <div>• Termin-Regel: Ab {{ savedRuleData.admin_fee_applies_from }}. Termin</div>
+              <div>• Aktualisiert: {{ new Date().toLocaleString('de-CH') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-gray-50 rounded-b-xl">
+          <button
+            @click="closeSuccessModal"
+            class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
+          >
+            👍 Alles klar!
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Rule Modal -->
+    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg max-w-md w-full">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold">
+            Regel bearbeiten: {{ editForm.category_code }}
+          </h3>
+        </div>
+        
+        <div class="p-6 space-y-4">
+          <!-- Category Code (Read-only) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Kategorie-Code
+            </label>
+            <input
+              v-model="editForm.category_code"
+              type="text"
+              class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+              readonly
+            />
+          </div>
+
+          <!-- Price per Minute -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Preis pro Minute (CHF)
+            </label>
+            <input
+              v-model="editForm.price_per_minute_chf"
+              type="number"
+              step="0.01"
+              min="0"
+              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              45min Lektion: CHF {{ Math.round(editForm.price_per_minute_chf * 45) }}.00
+            </p>
+          </div>
+
+          <!-- Admin Fee -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Versicherungsgebühr (CHF)
+            </label>
+            <input
+              v-model="editForm.admin_fee_chf"
+              type="number"
+              step="0.01"
+              min="0"
+              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <!-- Admin Fee Applies From -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Versicherung ab Termin
+            </label>
+            <select
+              v-model="editForm.admin_fee_applies_from"
+              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="1">1. Termin</option>
+              <option value="2">2. Termin</option>
+              <option value="3">3. Termin</option>
+              <option value="5">5. Termin</option>
+              <option value="10">10. Termin</option>
+              <option value="999">Nie</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+          <button
+            @click="closeEditModal"
+            class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Abbrechen
+          </button>
+          <button
+            @click="showConfirmSave"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            💾 Speichern
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm Save Modal -->
+    <div v-if="showConfirmModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[100] p-4">
+      <div class="bg-white rounded-xl max-w-md w-full shadow-2xl">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">
+            💾 Änderungen speichern?
+          </h3>
+        </div>
+        
+        <div class="p-6">
+          <p class="text-gray-700 mb-4">
+            Möchten Sie die folgenden Änderungen für <strong class="text-gray-900">{{ editForm.category_code }}</strong> wirklich speichern?
+          </p>
+          
+          <div class="bg-blue-50 rounded-lg p-4 space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-700">Preis pro Minute:</span>
+              <span class="font-medium text-gray-900">CHF {{ editForm.price_per_minute_chf }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-700">45min Lektion:</span>
+              <span class="font-medium text-gray-900">CHF {{ Math.round(editForm.price_per_minute_chf * 45) }}.00</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-700">Versicherungsgebühr:</span>
+              <span class="font-medium" :class="editForm.admin_fee_chf === 0 ? 'text-gray-500' : 'text-gray-900'">
+                {{ editForm.admin_fee_chf === 0 ? 'Keine' : `CHF ${editForm.admin_fee_chf}` }}
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-700">Versicherung ab:</span>
+              <span class="font-medium" :class="editForm.admin_fee_applies_from === 999 ? 'text-gray-500' : 'text-gray-900'">
+                {{ editForm.admin_fee_applies_from === 999 ? 'Nie' : `${editForm.admin_fee_applies_from}. Termin` }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div class="flex items-center gap-2 text-yellow-800">
+              <span>⚠️</span>
+              <span class="text-sm font-medium">Diese Änderungen betreffen alle zukünftigen Buchungen!</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
+          <button
+            @click="closeConfirmModal"
+            class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            ❌ Abbrechen
+          </button>
+          <button
+            @click="confirmSaveRule"
+            :disabled="isSaving"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+          >
+            {{ isSaving ? 'Speichern...' : '✅ Ja, speichern!' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { usePricing } from '~/composables/usePricing'
+import { getSupabase } from '~/utils/supabase'
+
+console.log('🚀 AdminPricingDashboard component loading...')
+
+// Verwende das Pricing Composable
+const { 
+  pricingRules, 
+  isLoadingPrices, 
+  pricingError,
+  isLoaded,
+  categoriesCount,
+  loadPricingRules 
+} = usePricing()
+
+// Modal states
+const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const showConfirmModal = ref(false)
+const showSuccessModal = ref(false)
+const editingRule = ref<any>(null)
+const isSaving = ref(false)
+const savedRuleData = ref<any>(null)
+
+// Form data
+const editForm = ref({
+  category_code: '',
+  rule_name: '',
+  price_per_minute_chf: 0,
+  admin_fee_chf: 0,
+  admin_fee_applies_from: 2
+})
+
+// Methods
+const editRule = (rule: any) => {
+  console.log('Edit rule:', rule)
+  editingRule.value = rule
+  editForm.value = {
+    category_code: rule.category_code,
+    rule_name: rule.rule_name,
+    price_per_minute_chf: rule.price_per_minute_rappen / 100,
+    admin_fee_chf: rule.admin_fee_rappen / 100,
+    admin_fee_applies_from: rule.admin_fee_applies_from
+  }
+  showEditModal.value = true
+}
+
+const closeSuccessModal = () => {
+  showSuccessModal.value = false
+  savedRuleData.value = null
+}
+const closeEditModal = () => {
+  showEditModal.value = false
+  editingRule.value = null
+  editForm.value = {
+    category_code: '',
+    rule_name: '',
+    price_per_minute_chf: 0,
+    admin_fee_chf: 0,
+    admin_fee_applies_from: 2
+  }
+}
+
+const showConfirmSave = () => {
+  showConfirmModal.value = true
+}
+
+const closeConfirmModal = () => {
+  showConfirmModal.value = false
+}
+
+const confirmSaveRule = async () => {
+  await saveRule()
+  closeConfirmModal()
+}
+
+const saveRule = async () => {
+  if (!editingRule.value) return
+  
+  isSaving.value = true
+  try {
+    console.log('💾 Saving rule:', editForm.value)
+    
+    const categoryCode = editForm.value.category_code
+    const supabase = getSupabase()
+    
+    // Debug: Zeige was wir updaten wollen
+    console.log('📊 Updating base_price rule:', {
+      category_code: categoryCode,
+      price_per_minute_rappen: Math.round(editForm.value.price_per_minute_chf * 100)
+    })
+    
+    // Update base_price Regel
+    const { error: basePriceError } = await supabase
+      .from('pricing_rules')
+      .update({
+        price_per_minute_rappen: Math.round(editForm.value.price_per_minute_chf * 100),
+        updated_at: new Date().toISOString()
+      })
+      .eq('category_code', categoryCode)
+      .eq('rule_type', 'base_price')
+    
+    if (basePriceError) {
+      console.error('❌ Error updating base price:', basePriceError)
+      throw new Error(`Fehler beim Speichern des Grundpreises: ${basePriceError.message}`)
+    }
+    
+    console.log('✅ Base price updated')
+    
+    // Debug: Zeige was wir für admin_fee updaten wollen
+    console.log('📊 Updating admin_fee rule:', {
+      category_code: categoryCode,
+      admin_fee_rappen: Math.round(editForm.value.admin_fee_chf * 100),
+      admin_fee_applies_from: editForm.value.admin_fee_applies_from
+    })
+    
+    // Update admin_fee Regel
+    const { error: adminFeeError } = await supabase
+      .from('pricing_rules')
+      .update({
+        admin_fee_rappen: Math.round(editForm.value.admin_fee_chf * 100),
+        admin_fee_applies_from: editForm.value.admin_fee_applies_from,
+        updated_at: new Date().toISOString()
+      })
+      .eq('category_code', categoryCode)
+      .eq('rule_type', 'admin_fee')
+    
+    if (adminFeeError) {
+      console.error('❌ Error updating admin fee:', adminFeeError)
+      throw new Error(`Fehler beim Speichern der Versicherungsgebühr: ${adminFeeError.message}`)
+    }
+    
+    console.log('✅ Admin fee updated')
+    console.log('✅ Both rules updated successfully')
+    closeEditModal()
+    
+    // Reload data first
+    await loadPricingRules(true)
+    
+    // Finde die aktualisierte Regel aus den neu geladenen Daten
+    const updatedRule = pricingRules.value.find(rule => rule.category_code === categoryCode)
+    
+    if (updatedRule) {
+      savedRuleData.value = {
+        category_code: updatedRule.category_code,
+        price_per_minute_chf: (updatedRule.price_per_minute_rappen / 100).toFixed(2),
+        price_45min_chf: ((updatedRule.price_per_minute_rappen * 45) / 100).toFixed(2),
+        admin_fee_chf: (updatedRule.admin_fee_rappen / 100).toFixed(2),
+        admin_fee_applies_from: updatedRule.admin_fee_applies_from,
+        price_per_minute_rappen: updatedRule.price_per_minute_rappen,
+        admin_fee_rappen: updatedRule.admin_fee_rappen
+      }
+      
+      showSuccessModal.value = true
+    }
+    
+  } catch (error: any) {
+    console.error('❌ Error saving:', error)
+    alert(`❌ Fehler beim Speichern: ${error.message}`)
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// Lifecycle
+onMounted(async () => {
+  console.log('🔄 Component mounted, loading pricing rules...')
+  await loadPricingRules()
+  console.log('✅ Pricing rules loaded:', pricingRules.value.length)
+})
+</script>
+
+<style scoped>
+.admin-pricing-dashboard {
+  font-family: 'Inter', sans-serif;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.transition-colors {
+  transition: all 0.2s ease-in-out;
+}
+
+tbody tr:hover {
+  background-color: #f9fafb;
+}
+</style>```
+
 ### ./components/admin/UserPaymentDetails.vue
 ```vue
 <template>
@@ -13479,7 +14966,6 @@ button:hover:not(:disabled) {
               <h1 class="text-3xl font-bold text-gray-900">
                 👤 {{ displayName }}
               </h1>
-              <p class="mt-2 text-gray-600">Detaillierte Zahlungsübersicht und Rechnungshistorie</p>
             </div>
           </div>
           
@@ -14219,7 +15705,6 @@ onMounted(async () => {
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-3xl font-bold text-gray-900">💰 Zahlungsübersicht</h1>
-            <p class="mt-2 text-gray-600">Übersicht aller Schüler mit Zahlungsstatus und offenen Beträgen</p>
           </div>
           
           <!-- Refresh Button -->
@@ -14759,20 +16244,28 @@ onMounted(() => {
 ```vue
 <!-- components/CustomerDashboard.vue -->
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
     <!-- Header -->
-    <div class="bg-white shadow-sm border-b">
+    <div class="bg-white shadow-lg border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-6">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">
-              Hallo, {{ getUserDisplayName() }}
-            </h1>
+          <div class="flex items-center space-x-4">
+            <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+              <span class="text-white font-bold text-lg">
+                {{ getInitials() }}
+              </span>
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">
+                Willkommen, {{ getUserDisplayName() }}!
+              </h1>
+              <p class="text-gray-600 text-sm">Ihre Fahrschul-Übersicht</p>
+            </div>
           </div>
           <div class="flex items-center space-x-4">
             <button 
               @click="handleLogout"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Abmelden
             </button>
@@ -14782,25 +16275,31 @@ onMounted(() => {
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div v-if="isLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
-        <p class="mt-4 text-gray-600">Termine werden geladen...</p>
+        <div class="animate-spin rounded-full h-16 w-16 border-4 border-green-500 border-t-transparent mx-auto"></div>
+        <p class="mt-4 text-gray-600 text-lg">Ihre Daten werden geladen...</p>
       </div>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="bg-red-50 border border-red-200 rounded-md p-4">
+      <div class="bg-red-50 border-l-4 border-red-400 rounded-lg p-6">
         <div class="flex">
           <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <svg class="h-6 w-6 text-red-400" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
             </svg>
           </div>
           <div class="ml-3">
-            <h3 class="text-sm font-medium text-red-800">Fehler beim Laden der Daten</h3>
-            <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+            <h3 class="text-lg font-medium text-red-800">Fehler beim Laden der Daten</h3>
+            <p class="mt-2 text-red-700">{{ error }}</p>
+            <button 
+              @click="retryLoad" 
+              class="mt-4 bg-red-100 text-red-800 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors"
+            >
+              Erneut versuchen
+            </button>
           </div>
         </div>
       </div>
@@ -14808,96 +16307,352 @@ onMounted(() => {
 
     <!-- Main Content -->
     <div v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-          <div class="p-5">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        
+        <!-- Zahlungsübersicht - NACH OBEN VERSCHOBEN -->
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border" 
+             :class="unpaidAppointments.length > 0 ? 'border-yellow-100' : 'border-green-100'">
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
+                   :class="unpaidAppointments.length > 0 ? 'bg-yellow-100' : 'bg-green-100'">
+                <svg v-if="unpaidAppointments.length > 0" class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+                <svg v-else class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 class="text-sm font-medium text-gray-500">
+                {{ unpaidAppointments.length > 0 ? 'Offene Rechnungen' : 'Zahlungsstatus' }}
+              </h3>
+            </div>
+            
+            <div class="flex-1">
+              <div v-if="unpaidAppointments.length > 0">
+                <p class="text-3xl font-bold text-yellow-600">{{ unpaidAppointments.length }}</p>
+                <p class="text-xs text-red-500 mt-1">
+                  CHF {{ (totalUnpaidAmount / 100).toFixed(2) }} offen
+                </p>
+              </div>
+              <div v-else>
+                <p class="text-3xl font-bold text-green-600">✓ Bezahlt</p>
+                <p class="text-xs text-green-500 mt-1">
+                  Alle {{ paidAppointments.length }} Rechnungen beglichen
+                </p>
+              </div>
+            </div>
+            
+            <div class="mt-4">
+              <button
+                @click="navigateToPayments"
+                :class="[
+                  'w-full px-3 py-2 rounded-lg transition-colors text-sm font-medium',
+                  unpaidAppointments.length > 0 
+                    ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
+                    : 'bg-green-500 text-white hover:bg-green-600'
+                ]"
+              >
+                {{ unpaidAppointments.length > 0 ? 'Jetzt bezahlen' : 'Zahlungsverlauf' }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-green-100">
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-3">
+              <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
                 <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-             <!-- Bei "Kommende Termine" Section -->
-              <div class="bg-white rounded-lg shadow p-4">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center">
-                    <div class="ml-4">
-                      <h3 class="text-sm font-medium text-gray-500 truncate">Kommende Termine</h3>
-                      <p class="text-lg font-medium text-gray-900">{{ upcomingAppointments.length }}</p>
-                    </div>
+              <h3 class="text-sm font-medium text-gray-500">Kommende Termine</h3>
+            </div>
+            
+            <div class="flex-1">
+              <p class="text-3xl font-bold text-gray-900">{{ upcomingAppointments.length }}</p>
+              <p class="text-xs text-gray-500 mt-1">Nächster Termin bald</p>
+            </div>
+            
+            <div class="mt-4">
+              <button
+                @click="showUpcomingLessonsModal = true"
+                class="w-full px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+              >
+                Details anzeigen
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Absolvierte Lektionen -->
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-blue-100">
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-3">
+              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 class="text-sm font-medium text-gray-500">Absolvierte Lektionen</h3>
+            </div>
+            
+            <div class="flex-1">
+              <p class="text-3xl font-bold text-gray-900">{{ completedLessonsCount }}</p>
+              <p class="text-xs text-gray-500 mt-1">{{ totalEvaluationsCount }} Bewertungen</p>
+            </div>
+            
+            <div class="mt-4">
+              <button
+                @click="showEvaluationsModal = true"
+                class="w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+              >
+                Bewertungen ansehen
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-100 mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+            <svg class="w-6 h-6 text-gray-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Schnellaktionen
+          </h2>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- Termine verwalten -->
+            <div class="group cursor-pointer">
+              <div class="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-4 hover:shadow-md transition-all group-hover:from-green-100 group-hover:to-green-200">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                   </div>
-                  
-                  <!-- NEU: Klickbarer Button -->
-                  <button
-                    @click="showUpcomingLessonsModal = true"
-                    class="p-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm"
-                  >
-                    Details anzeigen
-                  </button>
+                  <div>
+                    <h3 class="font-medium text-gray-900">Termine verwalten</h3>
+                    <p class="text-sm text-gray-600">Anzeigen, buchen, ändern</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-       <!-- Bei "Absolvierte Lektionen" Section - mache den Bereich klickbar -->
-        <div class="bg-white rounded-lg shadow p-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center">
-              <div class="ml-4">
-                <h3 class="text-sm font-medium text-gray-500 truncate">Absolvierte Lektionen</h3>
-                <p class="text-lg font-medium text-gray-900">{{ completedLessonsCount }} </p>
+            <!-- Zahlungen verwalten -->
+            <div class="group cursor-pointer" @click="navigateToPayments">
+              <div class="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4 hover:shadow-md transition-all group-hover:from-purple-100 group-hover:to-purple-200">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 class="font-medium text-gray-900">Zahlungen</h3>
+                    <p class="text-sm text-gray-600">Rechnungen & Bezahlung</p>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <!-- NEU: Klickbarer Button -->
-            <button
-              @click="showEvaluationsModal = true"
-              class="p-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
-            >Bewertungen anzeigen
-            </button>
-          </div>
-        </div>
 
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-          <div class="p-5">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <svg class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-              <div class="ml-5 w-0 flex-1">
-                <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">Offene Rechnungen</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ unpaidAppointments.length }}</dd>
-                </dl>
+            <!-- Bewertungen ansehen -->
+            <div class="group cursor-pointer" @click="showEvaluationsModal = true">
+              <div class="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-all group-hover:from-blue-100 group-hover:to-blue-200">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 class="font-medium text-gray-900">Meine Bewertungen</h3>
+                    <p class="text-sm text-gray-600">Fortschritt anzeigen</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-    <!-- Modal Component -->
-  <EvaluationsOverviewModal 
-    :is-open="showEvaluationsModal"
-    :lessons="lessons"
-    @close="showEvaluationsModal = false"
-  />
+      <!-- Recent Activity -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Nächste Termine -->
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+              <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Nächste Termine
+            </h2>
+          </div>
+          <div class="p-6">
+            <div v-if="upcomingAppointments.length === 0" class="text-center py-8">
+              <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p class="text-gray-500">Keine kommenden Termine</p>
+            </div>
+            
+            <div v-else class="space-y-4">
+              <div 
+                v-for="appointment in upcomingAppointments.slice(0, 3)" 
+                :key="appointment.id"
+                class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+              >
+                <div class="flex justify-between items-start">
+                  <div>
+                    <h3 class="font-medium text-gray-900">{{ appointment.title || 'Fahrstunde' }}</h3>
+                    <p class="text-sm text-gray-600 mt-1">
+                      {{ formatDateTime(appointment.start_time) }}
+                    </p>
+                    <p class="text-sm text-gray-500 mt-1">
+                      {{ appointment.duration_minutes }} Minuten
+                    </p>
+                  </div>
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    {{ appointment.status }}
+                  </span>
+                </div>
+              </div>
+              
+              <button 
+                v-if="upcomingAppointments.length > 3"
+                @click="showUpcomingLessonsModal = true"
+                class="w-full text-center py-2 text-green-600 hover:text-green-700 text-sm font-medium"
+              >
+                Alle {{ upcomingAppointments.length }} Termine anzeigen →
+              </button>
+            </div>
+          </div>
+        </div>
 
-  <!-- Upcoming Lessons Modal -->
-  <UpcomingLessonsModal 
-    :is-open="showUpcomingLessonsModal"
-    :lessons="appointments"
-    @close="showUpcomingLessonsModal = false"
-  />
+        <!-- Letzte Bewertungen -->
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+              <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+              Letzte Bewertungen
+            </h2>
+          </div>
+          <div class="p-6">
+            <div v-if="recentEvaluations.length === 0" class="text-center py-8">
+              <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+              <p class="text-gray-500">Noch keine Bewertungen</p>
+            </div>
+            
+            <div v-else class="space-y-4">
+              <div 
+                v-for="evaluation in recentEvaluations.slice(0, 3)" 
+                :key="evaluation.lesson_id"
+                class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+              >
+                <!-- Termin Header -->
+                <div class="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 class="font-medium text-gray-900">{{ evaluation.lesson_title }}</h3>
+                    <p class="text-sm text-gray-600">
+                      {{ formatDateTime(evaluation.lesson_date) }}
+                    </p>
+                  </div>
+                  <div class="text-right">
+                    <span :class="getRatingColorPreview(Math.round(evaluation.average_rating))" 
+                          class="inline-flex px-2 py-1 rounded-full text-xs font-semibold">
+                      ⌀ {{ evaluation.average_rating.toFixed(1) }}/6
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Bewertungen für diesen Termin -->
+                <div class="space-y-2">
+                  <div 
+                    v-for="criteriaEval in evaluation.criteria_evaluations.slice(0, 3)" 
+                    :key="criteriaEval.criteria_id"
+                    class="flex justify-between items-center"
+                  >
+                    <span class="text-sm text-gray-700">{{ criteriaEval.criteria_name }}</span>
+                    <span :class="getRatingColorPreview(criteriaEval.criteria_rating)" 
+                          class="inline-flex px-2 py-1 rounded-full text-xs font-semibold">
+                      {{ criteriaEval.criteria_rating }}/6
+                    </span>
+                  </div>
+                  
+                  <!-- "Weitere" Anzeige wenn mehr als 3 Kriterien -->
+                  <div v-if="evaluation.criteria_evaluations.length > 3" class="text-xs text-gray-500 text-center pt-1">
+                    ... und {{ evaluation.criteria_evaluations.length - 3 }} weitere
+                  </div>
+                </div>
+              </div>
+              
+              <button 
+                v-if="recentEvaluations.length > 3"
+                @click="showEvaluationsModal = true"
+                class="w-full text-center py-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+              >
+                Alle {{ recentEvaluations.length }} bewerteten Termine anzeigen →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      <!-- Zahlungshinweis (falls offene Rechnungen) -->
+      <div v-if="unpaidAppointments.length > 0" class="mt-6">
+        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 rounded-lg p-6">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="h-6 w-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-4">
+              <h3 class="text-lg font-medium text-yellow-800">
+                Sie haben {{ unpaidAppointments.length }} offene Rechnung{{ unpaidAppointments.length > 1 ? 'en' : '' }}
+              </h3>
+              <p class="mt-2 text-yellow-700">
+                Gesamtbetrag: <strong>CHF {{ (totalUnpaidAmount / 100).toFixed(2) }}</strong>
+              </p>
+              <button
+                @click="navigateToPayments"
+                class="mt-4 bg-yellow-500 text-white px-6 py-2 rounded-lg hover:bg-yellow-600 transition-colors font-medium"
+              >
+                💳 Jetzt bezahlen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- Modals -->
+    <EvaluationsOverviewModal 
+      :is-open="showEvaluationsModal"
+      :lessons="lessons"
+      @close="showEvaluationsModal = false"
+    />
+
+    <UpcomingLessonsModal 
+      :is-open="showUpcomingLessonsModal"
+      :lessons="appointments"
+      @close="showUpcomingLessonsModal = false"
+    />
   </div>
 </template>
-
-<!-- CustomerDashboard.vue - Router-Fehler beheben -->
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
@@ -14907,6 +16662,7 @@ import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
 import EvaluationsOverviewModal from './EvaluationsOverviewModal.vue'
 import UpcomingLessonsModal from './UpcomingLessonsModal.vue'
+
 // Composables
 const authStore = useAuthStore()
 const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
@@ -14920,34 +16676,41 @@ const staff = ref<any[]>([])
 const lessons = ref<any[]>([]) 
 const showEvaluationsModal = ref(false) 
 const showUpcomingLessonsModal = ref(false)
+
 // Computed properties
 const completedLessonsCount = computed(() => {
   return appointments.value?.filter(apt => apt.status === 'completed').length || 0
 })
 
+const paidAppointments = computed(() => {
+  return appointments.value?.filter(apt => apt.is_paid) || []
+})
+
 const recentEvaluations = computed(() => {
-  // Erstmal leer - hier würden die echten Bewertungen kommen
-  const evaluations: any[] = []
+  // Gruppiere Bewertungen nach Terminen
+  const lessonEvaluations: any[] = []
   
   lessons.value?.forEach(lesson => {
     if (lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0) {
-      lesson.criteria_evaluations.forEach((evaluation: any) => {
-        evaluations.push({
-          criteria_id: evaluation.criteria_id,
-          criteria_name: evaluation.criteria_name,
-          criteria_rating: evaluation.criteria_rating,
-          lesson_date: lesson.start_time,
-          sort_date: new Date(lesson.start_time).getTime()
-        })
+      lessonEvaluations.push({
+        lesson_id: lesson.id,
+        lesson_date: lesson.start_time,
+        lesson_title: lesson.title || 'Fahrstunde',
+        sort_date: new Date(lesson.start_time).getTime(),
+        criteria_evaluations: lesson.criteria_evaluations,
+        average_rating: lesson.criteria_evaluations.reduce((sum: number, criteriaEval: any) => sum + criteriaEval.criteria_rating, 0) / lesson.criteria_evaluations.length
       })
     }
   })
 
-  // Sortiere nach Datum (neueste zuerst)
-  return evaluations.sort((a, b) => b.sort_date - a.sort_date)
+  return lessonEvaluations.sort((a, b) => b.sort_date - a.sort_date)
 })
 
-const totalEvaluationsCount = computed(() => recentEvaluations.value.length)
+const totalEvaluationsCount = computed(() => {
+  return lessons.value?.reduce((total, lesson) => {
+    return total + (lesson.criteria_evaluations?.length || 0)
+  }, 0) || 0
+})
 
 const upcomingAppointments = computed(() => {
   const now = new Date()
@@ -14967,11 +16730,30 @@ const unpaidAppointments = computed(() => {
   return appointments.value.filter(apt => !apt.is_paid)
 })
 
-// Helper method to get user display name
+const totalUnpaidAmount = computed(() => {
+  return unpaidAppointments.value.reduce((sum, apt) => {
+    const basePrice = (apt.price_per_minute || 0) * (apt.duration_minutes || 0)
+    return sum + Math.round(basePrice * 100) // Convert to Rappen
+  }, 0)
+})
+
+// Helper methods
+const getInitials = () => {
+  if (!currentUser.value) return '??'
+  
+  const firstName = currentUser.value.user_metadata?.first_name || 
+                   currentUser.value.user_metadata?.firstName || ''
+  const lastName = currentUser.value.user_metadata?.last_name || 
+                  currentUser.value.user_metadata?.lastName || ''
+  
+  const first = firstName.charAt(0)?.toUpperCase() || ''
+  const last = lastName.charAt(0)?.toUpperCase() || ''
+  return first + last || currentUser.value.email?.charAt(0)?.toUpperCase() || '??'
+}
+
 const getUserDisplayName = () => {
   if (!currentUser.value) return 'Unbekannt'
   
-  // Try user metadata first
   const firstName = currentUser.value.user_metadata?.first_name || 
                    currentUser.value.user_metadata?.firstName
   const lastName = currentUser.value.user_metadata?.last_name || 
@@ -14981,12 +16763,76 @@ const getUserDisplayName = () => {
     return `${firstName} ${lastName}`
   }
   
-  // Fallback to email
   return currentUser.value.email || 'Unbekannt'
 }
 
-// Methods
+const formatDateTime = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('de-CH', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('de-CH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
+
+const getRatingColorPreview = (rating: number) => {
+  const colors = {
+    1: 'bg-red-100 text-red-700',
+    2: 'bg-orange-100 text-orange-700',
+    3: 'bg-yellow-100 text-yellow-700',
+    4: 'bg-blue-100 text-blue-700',
+    5: 'bg-green-100 text-green-700',
+    6: 'bg-emerald-100 text-emerald-700'
+  }
+  return colors[rating as keyof typeof colors] || 'bg-gray-100 text-gray-700'
+}
+
+// Navigation methods
+const navigateToPayments = async () => {
+  await navigateTo('/customer/payments')
+}
+
+const retryLoad = async () => {
+  error.value = null
+  isLoading.value = true
+  await loadAllData()
+}
+
+// Data loading methods
+const loadAllData = async () => {
+  try {
+    if (!isClient.value) {
+      console.warn('⚠️ User is not a client, redirecting...')
+      await navigateTo('/')
+      return
+    }
+
+    await Promise.all([
+      loadAppointments(),
+      loadLocations(),
+      loadStaff()
+    ])
+
+    console.log('✅ Customer dashboard data loaded successfully')
+  } catch (err: any) {
+    console.error('❌ Error loading customer dashboard:', err)
+    error.value = err.message
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const loadAppointments = async () => {
   if (!currentUser.value?.id) return
@@ -14994,7 +16840,6 @@ const loadAppointments = async () => {
   try {
     const supabase = getSupabase()
     
-    // Get user data from users table to get internal user_id
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
@@ -15006,10 +16851,9 @@ const loadAppointments = async () => {
 
     console.log('🔍 Loading appointments for user:', userData.id)
 
-    // 1. Lade Appointments
     const { data: appointmentsData, error: appointmentsError } = await supabase
       .from('appointments')
-        .select(`
+      .select(`
         id,
         title,
         start_time,
@@ -15034,7 +16878,6 @@ const loadAppointments = async () => {
     if (appointmentsError) throw appointmentsError
     console.log('✅ Appointments loaded:', appointmentsData?.length || 0)
 
-    // 2. Lade Locations separat
     const locationIds = [...new Set(appointmentsData?.map(a => a.location_id).filter(Boolean))]
     let locationsMap: Record<string, string> = {}
     
@@ -15052,7 +16895,6 @@ const loadAppointments = async () => {
       }
     }
 
-    // 3. Lade Bewertungen - KORRIGIERTE QUERY
     const appointmentIds = appointmentsData?.map(a => a.id) || []
     console.log('🔍 Searching evaluations for appointments:', appointmentIds.length)
 
@@ -15075,14 +16917,12 @@ const loadAppointments = async () => {
 
     console.log('✅ Evaluations loaded:', notes?.length || 0)
 
-    // 4. Lade Criteria-Details separat - KORRIGIERT ohne category_id
     const criteriaIds = [...new Set(notes?.map(n => n.evaluation_criteria_id).filter(Boolean))]
     let criteriaMap: Record<string, any> = {}
 
     if (criteriaIds.length > 0) {
       console.log('🔍 Loading criteria details for:', criteriaIds.length, 'criteria')
       
-      // Nur die verfügbaren Spalten laden
       const { data: criteria, error: criteriaError } = await supabase
         .from('evaluation_criteria')
         .select('id, name, short_code')
@@ -15090,7 +16930,6 @@ const loadAppointments = async () => {
 
       if (criteriaError) {
         console.error('❌ Criteria error:', criteriaError)
-        // Fallback: Erstelle leere criteriaMap Einträge
         criteriaIds.forEach(id => {
           criteriaMap[id] = {
             name: 'Bewertungskriterium',
@@ -15100,25 +16939,18 @@ const loadAppointments = async () => {
         })
       } else if (criteria) {
         console.log('✅ Criteria loaded:', criteria.length)
-        console.log('📊 Sample criteria:', criteria[0])
         
-        // Erstelle criteriaMap
         criteriaMap = criteria.reduce((acc, crit) => {
           acc[crit.id] = {
             name: crit.name || 'Unbekanntes Kriterium',
             short_code: crit.short_code,
-            category_name: null // Erstmal ohne Kategorien
+            category_name: null
           }
           return acc
         }, {} as Record<string, any>)
-        
-        console.log('📊 CriteriaMap sample:', Object.values(criteriaMap)[0])
       }
     }
 
-    console.log('✅ Criteria details loaded:', Object.keys(criteriaMap).length)
-
-    // 5. Verarbeite Notes zu Criteria Evaluations
     const notesByAppointment = (notes || []).reduce((acc: Record<string, any[]>, note: any) => {
       if (!acc[note.appointment_id]) {
         acc[note.appointment_id] = []
@@ -15140,7 +16972,6 @@ const loadAppointments = async () => {
       return acc
     }, {} as Record<string, any[]>)
 
-    // 6. Kombiniere alles
     const lessonsWithEvaluations = (appointmentsData || []).map(appointment => ({
       ...appointment,
       location_name: locationsMap[appointment.location_id] || null,
@@ -15148,9 +16979,7 @@ const loadAppointments = async () => {
     }))
 
     console.log('✅ Final lessons with evaluations:', lessonsWithEvaluations.length)
-    console.log('📊 Lessons with evaluations:', lessonsWithEvaluations.filter(l => l.criteria_evaluations.length > 0).length)
 
-    // Setze beide Arrays
     appointments.value = lessonsWithEvaluations
     lessons.value = lessonsWithEvaluations
 
@@ -15195,22 +17024,10 @@ const handleLogout = async () => {
   try {
     const supabase = getSupabase()
     await authStore.logout(supabase)
-    await navigateTo('/') // Zurück zu navigateTo - das sollte in Nuxt 3 verfügbar sein
+    await navigateTo('/')
   } catch (err: any) {
     console.error('❌ Fehler beim Abmelden:', err)
   }
-}
-
-const getRatingColorPreview = (rating: number) => {
-  const colors = {
-    1: 'bg-red-100 text-red-700',
-    2: 'bg-orange-100 text-orange-700',
-    3: 'bg-yellow-100 text-yellow-700',
-    4: 'bg-blue-100 text-blue-700',
-    5: 'bg-green-100 text-green-700',
-    6: 'bg-emerald-100 text-emerald-700'
-  }
-  return colors[rating as keyof typeof colors] || 'bg-gray-100 text-gray-700'
 }
 
 // Watch for user role changes and redirect if needed
@@ -15224,29 +17041,7 @@ watch([currentUser, userRole], ([newUser, newRole]) => {
 // Lifecycle
 onMounted(async () => {
   console.log('🔥 CustomerDashboard mounted')
-  
-  try {
-    // Check if user is a client
-    if (!isClient.value) {
-      console.warn('⚠️ User is not a client, redirecting...')
-      await navigateTo('/')
-      return
-    }
-
-    // Load all data in parallel
-    await Promise.all([
-      loadAppointments(),
-      loadLocations(),
-      loadStaff()
-    ])
-
-    console.log('✅ Customer dashboard data loaded successfully')
-  } catch (err: any) {
-    console.error('❌ Error loading customer dashboard:', err)
-    error.value = err.message
-  } finally {
-    isLoading.value = false
-  }
+  await loadAllData()
 })
 </script>
 
@@ -15258,6 +17053,61 @@ onMounted(async () => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.transition-colors {
+  transition: all 0.2s ease-in-out;
+}
+
+.transition-all {
+  transition: all 0.3s ease-in-out;
+}
+
+.transition-shadow {
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+/* Custom gradient backgrounds */
+.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+
+.bg-gradient-to-r {
+  background-image: linear-gradient(to right, var(--tw-gradient-stops));
+}
+
+/* Hover effects */
+.group:hover .group-hover\:from-green-100 {
+  --tw-gradient-from: #dcfce7;
+}
+
+.group:hover .group-hover\:to-green-200 {
+  --tw-gradient-to: #bbf7d0;
+}
+
+.group:hover .group-hover\:from-purple-100 {
+  --tw-gradient-from: #f3e8ff;
+}
+
+.group:hover .group-hover\:to-purple-200 {
+  --tw-gradient-to: #e9d5ff;
+}
+
+.group:hover .group-hover\:from-blue-100 {
+  --tw-gradient-from: #dbeafe;
+}
+
+.group:hover .group-hover\:to-blue-200 {
+  --tw-gradient-to: #bfdbfe;
+}
+
+/* Enhanced shadows */
+.hover\:shadow-xl:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 </style>```
 
@@ -17228,6 +19078,255 @@ export const useDurationManager = () => {
   }
 }```
 
+### ./composables/useDynamicPricing.ts
+```ts
+// composables/usePricing.ts
+import { ref, computed } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+interface PricingRule {
+  id: string
+  category_code: string
+  price_per_minute_rappen: number
+  admin_fee_rappen: number
+  admin_fee_applies_from: number
+  base_duration_minutes: number
+  is_active: boolean
+  rule_name: string
+  valid_from: string | null
+  valid_until: string | null
+}
+
+interface CalculatedPrice {
+  base_price_rappen: number
+  admin_fee_rappen: number
+  total_rappen: number
+  base_price_chf: string
+  admin_fee_chf: string
+  total_chf: string
+  category_code: string
+  duration_minutes: number
+  appointment_number: number
+}
+
+export const usePricing = () => {
+  const supabase = getSupabase()
+  
+  // State
+  const pricingRules = ref<PricingRule[]>([])
+  const isLoadingPrices = ref(false)
+  const pricingError = ref<string>('')
+  const lastLoaded = ref<Date | null>(null)
+  
+  // Cache für 5 Minuten
+  const CACHE_DURATION = 5 * 60 * 1000
+
+  // Load pricing rules from database
+  const loadPricingRules = async (forceReload = false): Promise<void> => {
+    console.log('🔄 Loading pricing rules from database...')
+    
+    // Prüfe Cache
+    if (!forceReload && lastLoaded.value && 
+        (Date.now() - lastLoaded.value.getTime()) < CACHE_DURATION) {
+      console.log('📦 Using cached pricing rules')
+      return
+    }
+
+    isLoadingPrices.value = true
+    pricingError.value = ''
+
+    try {
+      const { data, error } = await supabase
+        .from('pricing_rules')
+        .select('*')
+        .eq('rule_type', 'category_pricing')
+        .eq('is_active', true)
+        .order('category_code')
+
+      console.log('📊 Database response:', { data, error })
+
+      if (error) {
+        console.error('❌ Database error:', error)
+        throw new Error(`Database error: ${error.message}`)
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('⚠️ No pricing rules found, using fallback')
+        await createFallbackPricingRules()
+        return
+      }
+
+      // Filter nur gültige Regeln
+      const today = new Date().toISOString().split('T')[0]
+      const validRules = data.filter(rule => {
+        const validFrom = rule.valid_from || '1900-01-01'
+        const validUntil = rule.valid_until || '2099-12-31'
+        return today >= validFrom && today <= validUntil
+      })
+
+      pricingRules.value = validRules
+      lastLoaded.value = new Date()
+
+      console.log('✅ Pricing rules loaded:', validRules.length, 'rules')
+      console.log('📊 Categories:', validRules.map(r => r.category_code))
+
+    } catch (err: any) {
+      console.error('❌ Error loading pricing rules:', err)
+      pricingError.value = err.message || 'Fehler beim Laden der Preisregeln'
+      
+      // Fallback auf hard-coded Werte bei Fehler
+      await createFallbackPricingRules()
+    } finally {
+      isLoadingPrices.value = false
+    }
+  }
+
+  // Fallback: Hard-coded Werte in Memory laden
+  const createFallbackPricingRules = async (): Promise<void> => {
+    console.log('🔄 Using fallback pricing rules...')
+    
+    const fallbackRules: PricingRule[] = [
+      { 
+        id: 'fallback-B', 
+        category_code: 'B', 
+        price_per_minute_rappen: 211, 
+        admin_fee_rappen: 12000, 
+        admin_fee_applies_from: 2, 
+        base_duration_minutes: 45, 
+        is_active: true, 
+        valid_from: null, 
+        valid_until: null, 
+        rule_name: 'Fallback B' 
+      },
+      { 
+        id: 'fallback-A1', 
+        category_code: 'A1', 
+        price_per_minute_rappen: 211, 
+        admin_fee_rappen: 12000, 
+        admin_fee_applies_from: 2, 
+        base_duration_minutes: 45, 
+        is_active: true, 
+        valid_from: null, 
+        valid_until: null, 
+        rule_name: 'Fallback A1' 
+      },
+      { 
+        id: 'fallback-C', 
+        category_code: 'C', 
+        price_per_minute_rappen: 333, 
+        admin_fee_rappen: 25000, 
+        admin_fee_applies_from: 2, 
+        base_duration_minutes: 45, 
+        is_active: true, 
+        valid_from: null, 
+        valid_until: null, 
+        rule_name: 'Fallback C' 
+      }
+    ]
+    
+    pricingRules.value = fallbackRules
+    lastLoaded.value = new Date()
+    console.log('✅ Fallback pricing rules loaded')
+  }
+
+  // Get pricing rule for specific category
+  const getPricingRule = (categoryCode: string): PricingRule | null => {
+    const rule = pricingRules.value.find(rule => rule.category_code === categoryCode)
+    if (!rule) {
+      console.warn(`⚠️ No pricing rule found for category: ${categoryCode}`)
+      return null
+    }
+    return rule
+  }
+
+  // Get appointment count for user
+  const getAppointmentCount = async (userId: string): Promise<number> => {
+    try {
+      const { count, error } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .in('status', ['completed', 'confirmed'])
+
+      if (error) {
+        console.error('❌ Error counting appointments:', error)
+        return 1
+      }
+
+      return (count || 0) + 1
+    } catch (error) {
+      console.error('❌ Error in getAppointmentCount:', error)
+      return 1
+    }
+  }
+
+  // Calculate price
+  const calculatePrice = async (
+    categoryCode: string,
+    durationMinutes: number,
+    userId?: string
+  ): Promise<CalculatedPrice> => {
+    // Lade Pricing Rules falls noch nicht geladen
+    if (pricingRules.value.length === 0) {
+      await loadPricingRules()
+    }
+
+    const rule = getPricingRule(categoryCode)
+    if (!rule) {
+      throw new Error(`Keine Preisregel für Kategorie ${categoryCode} gefunden`)
+    }
+
+    // Appointment count ermitteln
+    const appointmentNumber = userId ? await getAppointmentCount(userId) : 1
+
+    // Grundpreis berechnen
+    const basePriceRappen = Math.round(rule.price_per_minute_rappen * durationMinutes)
+    
+    // Admin-Fee nur ab entsprechendem Termin
+    const adminFeeRappen = appointmentNumber >= rule.admin_fee_applies_from ? rule.admin_fee_rappen : 0
+    
+    // Gesamtpreis
+    const totalRappen = basePriceRappen + adminFeeRappen
+
+    const result: CalculatedPrice = {
+      base_price_rappen: basePriceRappen,
+      admin_fee_rappen: adminFeeRappen,
+      total_rappen: totalRappen,
+      base_price_chf: (basePriceRappen / 100).toFixed(2),
+      admin_fee_chf: (adminFeeRappen / 100).toFixed(2),
+      total_chf: (totalRappen / 100).toFixed(2),
+      category_code: categoryCode,
+      duration_minutes: durationMinutes,
+      appointment_number: appointmentNumber
+    }
+
+    return result
+  }
+
+  // Computed
+  const isLoaded = computed(() => pricingRules.value.length > 0)
+  const categoriesCount = computed(() => pricingRules.value.length)
+  const availableCategories = computed(() => 
+    pricingRules.value.map(rule => rule.category_code).sort()
+  )
+
+  return {
+    // State
+    pricingRules,
+    isLoadingPrices,
+    pricingError,
+    isLoaded,
+    categoriesCount,
+    availableCategories,
+    
+    // Methods
+    loadPricingRules,
+    calculatePrice,
+    getPricingRule,
+    getAppointmentCount
+  }
+}```
+
 ### ./composables/useEventModalForm.ts
 ```ts
 // composables/useEventModalForm.ts
@@ -17801,6 +19900,32 @@ const { calculateEndTime } = useTimeCalculations(formData)
       const primaryCategory = student.category.split(',')[0].trim()
       formData.value.type = primaryCategory
       console.log('📚 Category from users table:', formData.value.type)
+
+    // ✅ NEU: Kategorie-Daten direkt aus DB laden für Dauer-Berechnung
+    try {
+      console.log('🔄 Loading category data for:', primaryCategory)
+      const { data, error } = await supabase
+        .from('categories')
+        .select('code, lesson_duration_minutes, exam_duration_minutes')
+        .eq('code', primaryCategory)
+        .eq('is_active', true)
+        .single()
+      
+      if (error) throw error
+      
+      if (data) {
+        selectedCategory.value = data
+        console.log('✅ Category data loaded for student:', data)
+      }
+    } catch (err) {
+      console.error('❌ Error loading category data:', err)
+      // Fallback: leeres Objekt mit Standard-Werten
+      selectedCategory.value = {
+        code: primaryCategory,
+        lesson_duration_minutes: 45,
+        exam_duration_minutes: 180
+      }
+    }
     }
 
     // Load preferred payment method from student profile using the paymentMethods composable
@@ -17847,16 +19972,7 @@ const { calculateEndTime } = useTimeCalculations(formData)
    * Auto-fills form data based on the selected student's profile.
    * @param student The selected student object.
    */
-  const handleStudentSelected = async (student: any) => {
-    console.log('🎯 Student selected:', student.first_name, student.id)
 
-    selectedStudent.value = student
-
-    // Auto-fill form data from student (only in CREATE mode, implicitly handled by initial state)
-    if (student) {
-      await autoFillFromStudent(student)
-    }
-  }
 
   /**
    * Handles clearing the selected student and resetting related form fields.
@@ -17926,12 +20042,14 @@ const handleCategorySelected = async (category: any) => {
 }
 
 
+// FIX für useEventModalHandlers.ts - setDurationForLessonType Funktion
+
 const setDurationForLessonType = (lessonTypeCode: string) => {
   console.log('⏱️ Setting duration for lesson type:', lessonTypeCode)
   
   switch (lessonTypeCode) {
     case 'exam':
-      // ✅ Fallback falls selectedCategory nicht verfügbar
+      // Prüfung: Verwende category exam_duration_minutes
       const examDuration = selectedCategory.value?.exam_duration_minutes || 180
       console.log('📝 Auto-setting EXAM duration:', examDuration)
       
@@ -17941,17 +20059,32 @@ const setDurationForLessonType = (lessonTypeCode: string) => {
       break
       
     case 'lesson':
-      console.log('✅ Switching back to normal lesson')
-      // Standard Category-Dauern wiederherstellen
-      availableDurations.value = [45, 90] // Fallback
-      formData.value.duration_minutes = 45
-      calculateEndTime()
-      break
+  if (selectedCategory.value?.lesson_duration_minutes) {
+    const standardDuration = selectedCategory.value.lesson_duration_minutes
+    formData.value.duration_minutes = standardDuration
+    availableDurations.value = [standardDuration, standardDuration * 2]
+  } else {
+    formData.value.duration_minutes = 45
+    availableDurations.value = [45, 90]
+  }
+  calculateEndTime()
+  break
       
     case 'theory':
       console.log('🎓 Setting theory duration: 45min')
       formData.value.duration_minutes = 45
       availableDurations.value = [45]
+      calculateEndTime()
+      break
+      
+    default:
+      console.log('❓ Unknown lesson type, using default')
+      if (availableDurations.value.length === 0) {
+        availableDurations.value = [45]
+      }
+      if (!formData.value.duration_minutes) {
+        formData.value.duration_minutes = availableDurations.value[0] || 45
+      }
       calculateEndTime()
       break
   }
@@ -18332,7 +20465,6 @@ const setDurationForLessonType = (lessonTypeCode: string) => {
 
   return {
     // Student Handlers
-    handleStudentSelected,
     handleStudentCleared,
     autoFillFromStudent,
 
@@ -18622,23 +20754,7 @@ const { calculateEndTime } = useTimeCalculations(formData)
   // ============ FORM DATA WATCHERS ============
   const setupFormWatchers = () => {
 
-    // Title generation watcher
-    watch([
-      () => selectedStudent.value,
-      () => formData.value.location_id,
-      () => formData.value.type,
-      () => formData.value.eventType,
-    ], ([currentStudent, locationId, category, eventType]) => {
-
-      // Skip title generation in edit/view mode
-      if (props.mode === 'edit' || props.mode === 'view') {
-        return
-      }
-
-      if (eventType === 'lesson' && currentStudent) {
-        generateLessonTitle(currentStudent, locationId, category)
-      }
-    }, { immediate: true })
+   
 
     // 🔥 NEW: Auto-load students when needed
     watch(() => props.mode, (newMode) => {
@@ -18777,33 +20893,6 @@ const { calculateEndTime } = useTimeCalculations(formData)
     }
   }
 
-  const generateLessonTitle = (currentStudent: any, locationId: string, category: string) => {
-    // Safety check for availableLocations
-    const selectedLocationObject = Array.isArray(availableLocations.value) && availableLocations.value.length > 0
-      ? availableLocations.value.find((loc: any) => loc.id === locationId)
-      : null
-
-    const locationName = selectedLocationObject?.name || ''
-    const currentCategory = category || ''
-
-    let title = 'Fahrstunde' // Default title
-
-    if (currentStudent?.first_name) {
-      title = `${currentStudent.first_name}`
-    }
-
-    if (locationName) {
-      title += ` • ${locationName}`
-    }
-
-    if (currentCategory) {
-      title += ` (${currentCategory})`
-    }
-
-    console.log('✏️ Title generated:', title)
-    formData.value.title = title
-  }
-
   // ============ PUBLIC API ============
   const setupAllWatchers = () => {
     setupModalWatcher()
@@ -18820,7 +20909,6 @@ const { calculateEndTime } = useTimeCalculations(formData)
     setupDebugWatchers,
     calculateEndTime,
     getAppointmentNumber,
-    generateLessonTitle
   }
 }```
 
@@ -19895,11 +21983,9 @@ export const usePendingTasks = () => {
 ### ./composables/usePricing.ts
 ```ts
 // composables/usePricing.ts
-
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 
-// Types
 interface PricingRule {
   id: string
   category_code: string
@@ -19908,9 +21994,9 @@ interface PricingRule {
   admin_fee_applies_from: number
   base_duration_minutes: number
   is_active: boolean
+  rule_name: string
   valid_from: string | null
   valid_until: string | null
-  rule_name: string
 }
 
 interface CalculatedPrice {
@@ -19935,28 +22021,31 @@ export const usePricing = () => {
   const lastLoaded = ref<Date | null>(null)
   
   // Cache für 5 Minuten
-  const CACHE_DURATION = 5 * 60 * 1000 // 5 Minuten
+  const CACHE_DURATION = 5 * 60 * 1000
 
   // Load pricing rules from database
   const loadPricingRules = async (forceReload = false): Promise<void> => {
+    console.log('🔄 Loading pricing rules from database...')
+    
     // Prüfe Cache
     if (!forceReload && lastLoaded.value && 
         (Date.now() - lastLoaded.value.getTime()) < CACHE_DURATION) {
-      return // Cache noch gültig
+      console.log('📦 Using cached pricing rules')
+      return
     }
 
     isLoadingPrices.value = true
     pricingError.value = ''
 
     try {
-      console.log('🔄 Loading pricing rules from database...')
-
+      // Lade ALLE pricing rules (base_price UND admin_fee)
       const { data, error } = await supabase
         .from('pricing_rules')
         .select('*')
-        .eq('rule_type', 'category_pricing')
         .eq('is_active', true)
         .order('category_code')
+
+      console.log('📊 Database response:', { data, error })
 
       if (error) {
         console.error('❌ Database error:', error)
@@ -19969,19 +22058,55 @@ export const usePricing = () => {
         return
       }
 
-      // Filter nur gültige Regeln (Datumsbereich)
-      const today = new Date().toISOString().split('T')[0]
-      const validRules = data.filter(rule => {
-        const validFrom = rule.valid_from || '1900-01-01'
-        const validUntil = rule.valid_until || '2099-12-31'
-        return today >= validFrom && today <= validUntil
+      // Gruppiere die Regeln nach category_code
+      const rulesByCategory = data.reduce((acc, rule) => {
+        if (!acc[rule.category_code]) {
+          acc[rule.category_code] = {}
+        }
+        acc[rule.category_code][rule.rule_type] = rule
+        return acc
+      }, {} as Record<string, Record<string, any>>)
+
+      // Kombiniere base_price und admin_fee Regeln
+      const combinedRules = Object.entries(rulesByCategory).map(([categoryCode, rules]) => {
+        const baseRule = (rules as any).base_price
+        const adminRule = (rules as any).admin_fee
+
+        console.log(`🔍 Combining rules for ${categoryCode}:`, {
+          hasBaseRule: !!baseRule,
+          hasAdminRule: !!adminRule,
+          basePrice: baseRule?.price_per_minute_rappen,
+          adminFee: adminRule?.admin_fee_rappen,
+          adminFeeFrom: adminRule?.admin_fee_applies_from,
+          baseRuleId: baseRule?.id,
+          adminRuleId: adminRule?.id
+        })
+
+        return {
+          id: baseRule?.id || adminRule?.id || `combined-${categoryCode}`,
+          category_code: categoryCode,
+          rule_name: `${categoryCode} - Kombiniert`,
+          price_per_minute_rappen: baseRule?.price_per_minute_rappen || 212,
+          admin_fee_rappen: adminRule?.admin_fee_rappen || (
+            // Motorrad-Kategorien haben keine Admin Fee
+            ['A', 'A1', 'A35kW'].includes(categoryCode) ? 0 : 12000
+          ),
+          admin_fee_applies_from: adminRule?.admin_fee_applies_from || (
+            // Motorrad-Kategorien: nie (999), andere: ab 2. Termin
+            ['A', 'A1', 'A35kW'].includes(categoryCode) ? 999 : 2
+          ),
+          base_duration_minutes: baseRule?.base_duration_minutes || 45,
+          is_active: true,
+          valid_from: baseRule?.valid_from || null,
+          valid_until: baseRule?.valid_until || null
+        }
       })
 
-      pricingRules.value = validRules
+      pricingRules.value = combinedRules
       lastLoaded.value = new Date()
 
-      console.log('✅ Pricing rules loaded:', validRules.length, 'rules')
-      console.log('📊 Categories:', validRules.map(r => r.category_code))
+      console.log('✅ Pricing rules combined:', combinedRules.length, 'categories')
+      console.log('📊 Categories:', combinedRules.map(r => r.category_code))
 
     } catch (err: any) {
       console.error('❌ Error loading pricing rules:', err)
@@ -19999,18 +22124,42 @@ export const usePricing = () => {
     console.log('🔄 Using fallback pricing rules...')
     
     const fallbackRules: PricingRule[] = [
-      { id: 'fallback-B', category_code: 'B', price_per_minute_rappen: 211, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback B' },
-      { id: 'fallback-A1', category_code: 'A1', price_per_minute_rappen: 211, admin_fee_rappen: 0, admin_fee_applies_from: 999, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A1' },
-      { id: 'fallback-A35kW', category_code: 'A35kW', price_per_minute_rappen: 211, admin_fee_rappen: 0, admin_fee_applies_from: 999, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A35kW' },
-      { id: 'fallback-A', category_code: 'A', price_per_minute_rappen: 211, admin_fee_rappen: 0, admin_fee_applies_from: 999, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A' },
-      { id: 'fallback-BE', category_code: 'BE', price_per_minute_rappen: 267, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback BE' },
-      { id: 'fallback-C1', category_code: 'C1', price_per_minute_rappen: 333, admin_fee_rappen: 20000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback C1' },
-      { id: 'fallback-D1', category_code: 'D1', price_per_minute_rappen: 333, admin_fee_rappen: 20000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D1' },
-      { id: 'fallback-C', category_code: 'C', price_per_minute_rappen: 378, admin_fee_rappen: 20000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback C' },
-      { id: 'fallback-CE', category_code: 'CE', price_per_minute_rappen: 444, admin_fee_rappen: 25000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback CE' },
-      { id: 'fallback-D', category_code: 'D', price_per_minute_rappen: 444, admin_fee_rappen: 30000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D' },
-      { id: 'fallback-Motorboot', category_code: 'Motorboot', price_per_minute_rappen: 211, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback Motorboot' },
-      { id: 'fallback-BPT', category_code: 'BPT', price_per_minute_rappen: 222, admin_fee_rappen: 12000, admin_fee_applies_from: 2, base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback BPT' }
+      { 
+        id: 'fallback-B', 
+        category_code: 'B', 
+        price_per_minute_rappen: 211, 
+        admin_fee_rappen: 12000, 
+        admin_fee_applies_from: 2, 
+        base_duration_minutes: 45, 
+        is_active: true, 
+        valid_from: null, 
+        valid_until: null, 
+        rule_name: 'Fallback B' 
+      },
+      { 
+        id: 'fallback-A1', 
+        category_code: 'A1', 
+        price_per_minute_rappen: 211, 
+        admin_fee_rappen: 12000, 
+        admin_fee_applies_from: 2, 
+        base_duration_minutes: 45, 
+        is_active: true, 
+        valid_from: null, 
+        valid_until: null, 
+        rule_name: 'Fallback A1' 
+      },
+      { 
+        id: 'fallback-C', 
+        category_code: 'C', 
+        price_per_minute_rappen: 333, 
+        admin_fee_rappen: 25000, 
+        admin_fee_applies_from: 2, 
+        base_duration_minutes: 45, 
+        is_active: true, 
+        valid_from: null, 
+        valid_until: null, 
+        rule_name: 'Fallback C' 
+      }
     ]
     
     pricingRules.value = fallbackRules
@@ -20049,7 +22198,7 @@ export const usePricing = () => {
     }
   }
 
-  // Calculate price based on category, duration, and appointment count
+  // Calculate price
   const calculatePrice = async (
     categoryCode: string,
     durationMinutes: number,
@@ -20068,7 +22217,7 @@ export const usePricing = () => {
     // Appointment count ermitteln
     const appointmentNumber = userId ? await getAppointmentCount(userId) : 1
 
-    // Grundpreis berechnen (skaliert auf Dauer)
+    // Grundpreis berechnen
     const basePriceRappen = Math.round(rule.price_per_minute_rappen * durationMinutes)
     
     // Admin-Fee nur ab entsprechendem Termin
@@ -20089,73 +22238,15 @@ export const usePricing = () => {
       appointment_number: appointmentNumber
     }
 
-    console.log('💰 Price calculated:', {
-      category: categoryCode,
-      duration: durationMinutes,
-      appointment: appointmentNumber,
-      basePrice: result.base_price_chf,
-      adminFee: result.admin_fee_chf,
-      total: result.total_chf
-    })
-
     return result
-  }
-
-  // Get admin fee for category (legacy support)
-  const getAdminFeeForCategory = (categoryCode: string): number => {
-    const rule = getPricingRule(categoryCode)
-    return rule ? rule.admin_fee_rappen / 100 : 0
-  }
-
-  // Get price per minute for category
-  const getPricePerMinuteForCategory = (categoryCode: string): number => {
-    const rule = getPricingRule(categoryCode)
-    return rule ? rule.price_per_minute_rappen / 100 : 0
-  }
-
-  // Get all available categories
-  const getAvailableCategories = (): string[] => {
-    return pricingRules.value.map(rule => rule.category_code).sort()
-  }
-
-  // Update single pricing rule
-  const updatePricingRule = async (
-    categoryCode: string, 
-    updates: Partial<Pick<PricingRule, 'price_per_minute_rappen' | 'admin_fee_rappen' | 'admin_fee_applies_from'>>
-  ): Promise<boolean> => {
-    try {
-      console.log('💾 Updating pricing rule:', categoryCode, updates)
-
-      const { error } = await supabase
-        .from('pricing_rules')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('category_code', categoryCode)
-        .eq('rule_type', 'category_pricing')
-
-      if (error) {
-        console.error('❌ Error updating pricing rule:', error)
-        throw new Error(error.message)
-      }
-
-      // Cache invalidieren und neu laden
-      await loadPricingRules(true)
-      
-      console.log('✅ Pricing rule updated successfully')
-      return true
-
-    } catch (err: any) {
-      console.error('❌ Error in updatePricingRule:', err)
-      pricingError.value = err.message || 'Fehler beim Aktualisieren der Preisregel'
-      return false
-    }
   }
 
   // Computed
   const isLoaded = computed(() => pricingRules.value.length > 0)
   const categoriesCount = computed(() => pricingRules.value.length)
+  const availableCategories = computed(() => 
+    pricingRules.value.map(rule => rule.category_code).sort()
+  )
 
   return {
     // State
@@ -20164,17 +22255,12 @@ export const usePricing = () => {
     pricingError,
     isLoaded,
     categoriesCount,
+    availableCategories,
     
     // Methods
     loadPricingRules,
     calculatePrice,
     getPricingRule,
-    getAdminFeeForCategory,
-    getPricePerMinuteForCategory,
-    getAvailableCategories,
-    updatePricingRule,
-    
-    // Legacy support
     getAppointmentCount
   }
 }```
@@ -21269,6 +23355,251 @@ export const useWallee = () => {
   }
 }```
 
+### ./layouts/admin.vue
+```vue
+<template>
+  <div class="admin-layout">
+    <!-- Admin Header/Navigation -->
+    <header class="admin-header bg-gray-800 text-white p-4">
+      <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-lg sm:text-xl font-bold">Admin Dashboard</h1>
+        <p> {{ new Date().toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' }) }}</p>
+        
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex space-x-1">
+          <NuxtLink
+            to="/admin"
+            class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            :class="isActive('/admin') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+          >
+            🏠 Dashboard
+          </NuxtLink>
+          <NuxtLink
+            to="/admin/exam-locations"
+            class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            :class="isActive('/admin/exam-locations') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+          >
+            🏛️ Prüfungsorte
+          </NuxtLink>
+          <NuxtLink
+            to="/admin/pricing"
+            class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            :class="isActive('/admin/pricing') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+          >
+            💰 Preise
+          </NuxtLink>
+          <NuxtLink
+            to="/admin/payment-overview"
+            class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            :class="isActive('/admin/payment-overview') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+          >
+            💳 Zahlungen
+          </NuxtLink>
+          <NuxtLink
+            to="/admin/users"
+            class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            :class="isActive('/admin/users') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+          >
+            👥 Benutzer
+          </NuxtLink>
+        </nav>
+
+        <!-- Mobile Menu Button -->
+        <div class="md:hidden relative">
+          <button
+            @click="showMobileMenu = !showMobileMenu"
+            class="p-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white"
+          >
+            <svg 
+              class="h-6 w-6" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path 
+                v-if="!showMobileMenu"
+                stroke-linecap="round" 
+                stroke-linejoin="round" 
+                stroke-width="2" 
+                d="M4 6h16M4 12h16M4 18h16" 
+              />
+              <path 
+                v-else
+                stroke-linecap="round" 
+                stroke-linejoin="round" 
+                stroke-width="2" 
+                d="M6 18L18 6M6 6l12 12" 
+              />
+            </svg>
+          </button>
+
+          <!-- Mobile Dropdown Menu -->
+          <div
+            v-if="showMobileMenu"
+            class="absolute right-0 top-full mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50"
+          >
+            <div class="py-2">
+              <NuxtLink
+                to="/admin"
+                @click="showMobileMenu = false"
+                class="block px-4 py-2 text-sm font-medium transition-colors"
+                :class="isActive('/admin') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+              >
+                🏠 Dashboard
+              </NuxtLink>
+              <NuxtLink
+                to="/admin/exam-locations"
+                @click="showMobileMenu = false"
+                class="block px-4 py-2 text-sm font-medium transition-colors"
+                :class="isActive('/admin/exam-locations') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+              >
+                🏛️ Prüfungsorte
+              </NuxtLink>
+              <NuxtLink
+                to="/admin/pricing"
+                @click="showMobileMenu = false"
+                class="block px-4 py-2 text-sm font-medium transition-colors"
+                :class="isActive('/admin/pricing') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+              >
+                💰 Preise
+              </NuxtLink>
+              <NuxtLink
+                to="/admin/payment-overview"
+                @click="showMobileMenu = false"
+                class="block px-4 py-2 text-sm font-medium transition-colors"
+                :class="isActive('/admin/payment-overview') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+              >
+                💳 Zahlungen
+              </NuxtLink>
+              <NuxtLink
+                to="/admin/users"
+                @click="showMobileMenu = false"
+                class="block px-4 py-2 text-sm font-medium transition-colors"
+                :class="isActive('/admin/users') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+              >
+                👥 Benutzer
+              </NuxtLink>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="admin-main min-h-screen bg-gray-50">
+      <slot />
+    </main>
+
+    <!-- Mobile Menu Backdrop -->
+    <div
+      v-if="showMobileMenu"
+      @click="showMobileMenu = false"
+      class="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
+    ></div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from '#app'
+
+const route = useRoute()
+const showMobileMenu = ref(false)
+
+// Check if current route matches (with exact match for /admin)
+const isActive = (path) => {
+  if (path === '/admin') {
+    return route.path === '/admin'
+  }
+  return route.path.startsWith(path)
+}
+
+// Close mobile menu when clicking outside
+const handleClickOutside = (event) => {
+  if (showMobileMenu.value && !event.target.closest('.mobile-menu')) {
+    showMobileMenu.value = false
+  }
+}
+
+// Close mobile menu on route change
+watch(() => route.path, () => {
+  showMobileMenu.value = false
+})
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+</script>
+
+<style scoped>
+.admin-layout {
+  min-height: 100vh;
+}
+
+.admin-header {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.admin-main {
+  padding-top: 1rem;
+}
+
+/* Smooth transitions */
+.transition-colors {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Active link styles */
+nav a {
+  text-decoration: none;
+}
+
+nav a:hover {
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* Mobile menu specific styles */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .admin-main {
+    padding-top: 0.5rem;
+  }
+}
+
+/* Ensure dropdown is above other content */
+.z-50 {
+  z-index: 50;
+}
+
+.z-40 {
+  z-index: 40;
+}
+
+/* Mobile dropdown animation */
+.mobile-dropdown-enter-active,
+.mobile-dropdown-leave-active {
+  transition: all 0.2s ease;
+}
+
+.mobile-dropdown-enter-from,
+.mobile-dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+</style>```
+
 ### ./layouts/default.vue
 ```vue
 <!-- layouts/default.vue -->
@@ -21298,105 +23629,39 @@ import { defineNuxtRouteMiddleware, navigateTo } from '#app'
 import { useAuthStore } from '~/stores/auth'
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
-  console.log('🔥 Auth middleware for:', to.path)
-  
   // Skip auf Server
   if (process.server) return
-
+  
   const authStore = useAuthStore()
-
-  // Warte kurz auf Store-Initialisierung
+  
+  // Warte kurz auf Store-Initialisierung oder bis Auth-Daten vorhanden sind
   let attempts = 0
-  while (!authStore.isInitialized && attempts < 50) {
+  while (!authStore.isInitialized && !authStore.isLoggedIn && attempts < 50) {
     await new Promise(resolve => setTimeout(resolve, 100))
     attempts++
   }
-
+  
+  // Wenn Auth-Daten vorhanden sind, aber isInitialized fehlt, setze es manuell
+  if (authStore.isLoggedIn && !authStore.isInitialized) {
+    authStore.isInitialized = true
+  }
+  
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ Not logged in, redirecting to /')
     if (to.path !== '/') {
       return navigateTo('/')
     }
     return
   }
-
+  
   // Prüfe ob User ein Profil hat
   if (!authStore.hasProfile && to.path !== '/profile-setup') {
-    console.log('📝 No profile found, redirecting to setup')
     return navigateTo('/profile-setup')
   }
-
+  
   // Wenn User Profil hat aber auf Setup-Seite ist
   if (authStore.hasProfile && to.path === '/profile-setup') {
-    console.log('✅ Profile exists, redirecting to dashboard')
     return navigateTo('/dashboard')
-  }
-
-  console.log('✅ Auth check passed for role:', authStore.userRole)
-})
-
-// middleware/admin.ts
-export const adminMiddleware = defineNuxtRouteMiddleware((to, from) => {
-  console.log('🔐 Admin middleware for:', to.path)
-  
-  if (process.server) return
-
-  const authStore = useAuthStore()
-
-  // Basis-Auth prüfen
-  if (!authStore.isLoggedIn) {
-    console.log('❌ Not authenticated')
-    return navigateTo('/')
-  }
-
-  // Admin/Staff Berechtigung prüfen
-  if (!authStore.isAdmin && !authStore.isStaff) {
-    console.log('❌ Insufficient permissions. Role:', authStore.userRole)
-    return navigateTo('/dashboard')
-  }
-
-  console.log('✅ Admin access granted for role:', authStore.userRole)
-})
-
-// middleware/staff.ts
-export const staffMiddleware = defineNuxtRouteMiddleware((to, from) => {
-  console.log('👨‍🏫 Staff middleware for:', to.path)
-  
-  if (process.server) return
-
-  const authStore = useAuthStore()
-
-  if (!authStore.isLoggedIn) {
-    console.log('❌ Not authenticated')
-    return navigateTo('/')
-  }
-
-  if (!authStore.isStaff && !authStore.isAdmin) {
-    console.log('❌ Staff access denied. Role:', authStore.userRole)
-    return navigateTo('/dashboard')
-  }
-
-  console.log('✅ Staff access granted for role:', authStore.userRole)
-})
-
-// middleware/client.ts  
-export const clientMiddleware = defineNuxtRouteMiddleware((to, from) => {
-  console.log('👤 Client middleware for:', to.path)
-  
-  if (process.server) return
-
-  const authStore = useAuthStore()
-
-  if (!authStore.isLoggedIn) {
-    console.log('❌ Not authenticated')
-    return navigateTo('/')
-  }
-
-  // Clients können nur auf ihre eigenen Daten zugreifen
-  if (authStore.isClient) {
-    // Zusätzliche Client-spezifische Checks hier
-    console.log('✅ Client access granted')
   }
 })```
 
@@ -21415,7 +23680,7 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxt/eslint',
-    '@nuxtjs/supabase' // ✅ DIESE ZEILE HINZUFÜGEN
+    // '@nuxtjs/supabase' // ✅ DIESE ZEILE HINZUFÜGEN
   ],
   
   // ✅ SUPABASE KONFIGURATION MIT UMGEBUNGSVARIABLEN
@@ -21513,11 +23778,11 @@ export default defineNuxtConfig({
     "@fullcalendar/interaction": "^6.1.17",
     "@fullcalendar/timegrid": "^6.1.17",
     "@fullcalendar/vue3": "^6.1.17",
-    "@nuxt/ui": "^2.18.7",
+    "@nuxt/ui": "^2.22.1",
     "@nuxtjs/supabase": "^1.5.3",
     "@pinia/nuxt": "^0.5.5",
-    "@supabase/supabase-js": "^2.50.2",
-    "nuxt": "^3.17.5",
+    "@supabase/supabase-js": "^2.52.1",
+    "nuxt": "^3.17.7",
     "pinia": "^2.2.6"
   },
   "devDependencies": {
@@ -21526,7 +23791,21 @@ export default defineNuxtConfig({
     "eslint": "^8.57.1",
     "typescript": "^5.8.3",
     "vue-tsc": "^2.2.12"
-  }
+  },
+  "version": "1.0.0",
+  "description": "Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.",
+  "main": "tailwind.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kilchi555/driving-team-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kilchi555/driving-team-app/issues"
+  },
+  "homepage": "https://github.com/Kilchi555/driving-team-app#readme"
 }
 ```
 
@@ -21829,74 +24108,411 @@ onMounted(() => {
 })
 </script>```
 
+### ./pages/admin/exam-locations.vue
+```vue
+<template>
+  <AdminExamLocations />
+</template>
+
+<script setup lang="ts">
+import AdminExamLocations from '~/components/admin/AdminExamLocations.vue'
+import { definePageMeta } from '#imports'
+
+definePageMeta({
+  layout: 'admin',
+  middleware: ['auth']
+})
+</script>```
+
 ### ./pages/admin/index.vue
 ```vue
 <template>
-  <div class="admin-dashboard-page">
-    <h1>Admin Dashboard</h1>
+  <div class="p-4">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex justify-center items-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
 
-    <div class="dashboard-sections">
-      <section class="dashboard-section">
-        <UsersPaymentOverview />
-      </section>
+    <!-- Main Dashboard Content -->
+    <div v-else class="space-y-8">
+      
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Revenue Today -->
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600">Umsatz heute</p>
+              <p class="text-2xl font-bold text-green-600">
+                CHF {{ (stats.todayRevenue / 100).toFixed(2) }}
+              </p>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <span class="text-green-600 text-xl">💰</span>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">
+            {{ stats.todayLessons }} Fahrstunden heute
+          </p>
+        </div>
+
+        <!-- Active Users -->
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600">Aktive Benutzer</p>
+              <p class="text-2xl font-bold text-blue-600">{{ stats.activeUsers }}</p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span class="text-blue-600 text-xl">👥</span>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">
+            {{ stats.newUsersThisWeek }} neue diese Woche
+          </p>
+        </div>
+
+        <!-- Pending Payments -->
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600">Offene Zahlungen</p>
+              <p class="text-2xl font-bold text-orange-600">{{ stats.pendingPayments }}</p>
+            </div>
+            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <span class="text-orange-600 text-xl">⏳</span>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">
+            CHF {{ (stats.pendingAmount / 100).toFixed(2) }} ausstehend
+          </p>
+        </div>
+
+        <!-- Upcoming Appointments -->
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-600">Termine heute</p>
+              <p class="text-2xl font-bold text-purple-600">{{ stats.todayAppointments }}</p>
+            </div>
+            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <span class="text-purple-600 text-xl">📅</span>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">
+            {{ stats.tomorrowAppointments }} morgen geplant
+          </p>
+        </div>
       </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Revenue Chart -->
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">
+              📈 Umsatz letzte 7 Tage
+            </h3>
+          </div>
+          <div class="p-6">
+            <div class="h-64 flex items-center justify-center text-gray-500">
+              <div class="text-center">
+                <div class="text-4xl mb-2">📊</div>
+                <div>Chart wird geladen...</div>
+                <div class="text-sm mt-2">Total 7 Tage: CHF {{ (stats.weekRevenue / 100).toFixed(2) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category Distribution -->
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">
+              🚗 Beliebteste Kategorien
+            </h3>
+          </div>
+          <div class="p-6">
+            <div class="space-y-4">
+              <div v-for="category in stats.topCategories" :key="category.code" 
+                   class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-3 h-3 rounded-full" 
+                       :style="{ backgroundColor: category.color || '#3B82F6' }"></div>
+                  <span class="font-medium">{{ category.code }}</span>
+                </div>
+                <div class="text-right">
+                  <div class="font-semibold">{{ category.count }}</div>
+                  <div class="text-xs text-gray-500">Termine</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="bg-white rounded-lg shadow-sm border">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-gray-900">
+              🕒 Letzte Aktivitäten
+            </h3>
+            <NuxtLink to="/admin/payment-overview" 
+                      class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+              Alle anzeigen →
+            </NuxtLink>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div v-for="activity in recentActivities" :key="activity.id" 
+                 class="flex items-center gap-4 py-3 border-b border-gray-100 last:border-b-0">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center"
+                   :class="activity.type === 'payment' ? 'bg-green-100' : 
+                          activity.type === 'booking' ? 'bg-blue-100' : 'bg-gray-100'">
+                <span class="text-sm">{{ activity.icon }}</span>
+              </div>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
+                <p class="text-xs text-gray-500">{{ activity.description }}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-medium text-gray-900">{{ activity.amount }}</p>
+                <p class="text-xs text-gray-500">{{ activity.time }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { definePageMeta } from '#imports';
-import UsersPaymentOverview from '~/components/admin/UsersPaymentOverview.vue'; // Pfad anpassen, falls nötig
+import { ref, onMounted } from 'vue'
+import { definePageMeta } from '#imports'
+import { getSupabase } from '~/utils/supabase'
 
 definePageMeta({
+  layout: 'admin',
   middleware: ['auth'] 
 })
 
-</script>
-
-<style scoped>
-.admin-dashboard-page {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+// Types
+interface DashboardStats {
+  todayRevenue: number
+  todayLessons: number
+  weekRevenue: number
+  activeUsers: number
+  newUsersThisWeek: number
+  pendingPayments: number
+  pendingAmount: number
+  todayAppointments: number
+  tomorrowAppointments: number
+  topCategories: CategoryStat[]
 }
 
-h1 {
-  font-size: 2.5rem;
-  margin-bottom: 30px;
-  color: #333;
-  text-align: center;
+interface CategoryStat {
+  code: string
+  count: number
+  color: string
 }
 
-.dashboard-sections {
-  display: grid;
-  gap: 30px;
-  grid-template-columns: 1fr; /* Standard: Eine Spalte */
+interface Activity {
+  id: number
+  type: string
+  icon: string
+  title: string
+  description: string
+  amount: string
+  time: string
 }
 
-@media (min-width: 768px) {
-  .dashboard-sections {
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); /* Zwei oder mehr Spalten auf größeren Bildschirmen */
+// State
+const isLoading = ref(true)
+const supabase = getSupabase()
+
+const stats = ref<DashboardStats>({
+  todayRevenue: 0,
+  todayLessons: 0,
+  weekRevenue: 0,
+  activeUsers: 0,
+  newUsersThisWeek: 0,
+  pendingPayments: 0,
+  pendingAmount: 0,
+  todayAppointments: 0,
+  tomorrowAppointments: 0,
+  topCategories: []
+})
+
+const recentActivities = ref<Activity[]>([
+  {
+    id: 1,
+    type: 'payment',
+    icon: '💰',
+    title: 'Zahlung erhalten',
+    description: 'Max Mustermann - Kategorie B',
+    amount: 'CHF 95.00',
+    time: 'vor 2h'
+  },
+  {
+    id: 2,
+    type: 'booking',
+    icon: '📅',
+    title: 'Neuer Termin gebucht',
+    description: 'Anna Schmidt - Kategorie C',
+    amount: 'CHF 170.00',
+    time: 'vor 4h'
+  },
+  {
+    id: 3,
+    type: 'user',
+    icon: '👤',
+    title: 'Neuer Benutzer registriert',
+    description: 'Peter Weber',
+    amount: '',
+    time: 'vor 1d'
+  }
+])
+
+// Methods
+const loadDashboardStats = async () => {
+  try {
+    console.log('🔄 Loading dashboard statistics...')
+    
+    // Get today's date range
+    const today = new Date()
+    const todayStart = new Date(today.setHours(0, 0, 0, 0)).toISOString()
+    const todayEnd = new Date(today.setHours(23, 59, 59, 999)).toISOString()
+    
+    // Get week range
+    const weekStart = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    
+    // Load various stats in parallel
+    const [
+      paymentsResponse,
+      usersResponse,
+      appointmentsResponse
+    ] = await Promise.all([
+      // Today's payments
+      supabase
+        .from('payments')
+        .select('total_amount_rappen')
+        .eq('payment_status', 'completed')
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd),
+      
+      // Active users
+      supabase
+        .from('users')
+        .select('id, created_at')
+        .eq('is_active', true),
+      
+      // Today's appointments
+      supabase
+        .from('appointments')
+        .select('id, start_time, type')
+        .gte('start_time', todayStart)
+        .lte('start_time', todayEnd)
+    ])
+
+    // Process results
+    if (paymentsResponse.data) {
+      stats.value.todayRevenue = paymentsResponse.data.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0)
+      stats.value.todayLessons = paymentsResponse.data.length
+    }
+
+    if (usersResponse.data) {
+      stats.value.activeUsers = usersResponse.data.length
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      stats.value.newUsersThisWeek = usersResponse.data.filter(
+        u => new Date(u.created_at) > weekAgo
+      ).length
+    }
+
+    if (appointmentsResponse.data) {
+      stats.value.todayAppointments = appointmentsResponse.data.length
+      
+      // Count tomorrow's appointments
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0)).toISOString()
+      const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999)).toISOString()
+      
+      const { data: tomorrowAppts } = await supabase
+        .from('appointments')
+        .select('id')
+        .gte('start_time', tomorrowStart)
+        .lte('start_time', tomorrowEnd)
+      
+      stats.value.tomorrowAppointments = tomorrowAppts?.length || 0
+      
+      // Top categories from appointments
+      const categoryCount = appointmentsResponse.data.reduce((acc, apt) => {
+        acc[apt.type] = (acc[apt.type] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+      
+      stats.value.topCategories = Object.entries(categoryCount)
+        .map(([code, count]) => ({ 
+          code, 
+          count: count as number, 
+          color: getCategoryColor(code) 
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5)
+    }
+
+    // Get pending payments
+    const { data: pendingPayments } = await supabase
+      .from('payments')
+      .select('total_amount_rappen')
+      .eq('payment_status', 'pending')
+
+    if (pendingPayments) {
+      stats.value.pendingPayments = pendingPayments.length
+      stats.value.pendingAmount = pendingPayments.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0)
+    }
+
+    console.log('✅ Dashboard stats loaded:', stats.value)
+
+  } catch (error) {
+    console.error('❌ Error loading dashboard stats:', error)
+  } finally {
+    isLoading.value = false
   }
 }
 
-.dashboard-section {
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  padding: 25px;
+const getCategoryColor = (categoryCode: string): string => {
+  const colors: Record<string, string> = {
+    'B': '#10B981',
+    'A': '#3B82F6', 
+    'A1': '#3B82F6',
+    'C': '#F59E0B',
+    'CE': '#EF4444',
+    'D': '#8B5CF6'
+  }
+  return colors[categoryCode] || '#6B7280'
 }
 
-.dashboard-section h2 {
-  font-size: 1.8rem;
-  color: #555;
-  margin-top: 0;
-  margin-bottom: 15px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+// Lifecycle
+onMounted(() => {
+  loadDashboardStats()
+})
+</script>
+
+<style scoped>
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
-.dashboard-section p {
-  color: #666;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.transition-colors {
+  transition: all 0.2s ease-in-out;
 }
 </style>```
 
@@ -21916,6 +24532,19 @@ definePageMeta({
 })
 </script>```
 
+### ./pages/admin/pricing.vue
+```vue
+<template>
+    <AdminPricingDashboard />
+</template>
+<script setup>
+import AdminPricingDashboard from '~/components/admin/AdminPricingDashboard.vue'
+definePageMeta({
+  // middleware: 'auth',
+  layout: 'admin'
+})
+</script>```
+
 ### ./pages/admin/users/[id].vue
 ```vue
 <template>
@@ -21932,6 +24561,459 @@ definePageMeta({
   middleware: 'auth'
 })
 </script>```
+
+### ./pages/admin/users/index.vue
+```vue
+<template>
+  <div class="p-6">
+    <!-- Page Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        👥 Benutzerverwaltung
+      </h1>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white rounded-lg shadow-sm border p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600">Alle Benutzer</p>
+            <p class="text-2xl font-bold text-gray-900">{{ totalUsers }}</p>
+          </div>
+          <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+            <span class="text-blue-600 text-xl">👥</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600">Kunden</p>
+            <p class="text-2xl font-bold text-green-600">{{ clientCount }}</p>
+          </div>
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+            <span class="text-green-600 text-xl">🚗</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600">Fahrlehrer</p>
+            <p class="text-2xl font-bold text-purple-600">{{ staffCount }}</p>
+          </div>
+          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+            <span class="text-purple-600 text-xl">👨‍🏫</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600">Neue (7 Tage)</p>
+            <p class="text-2xl font-bold text-orange-600">{{ newUsersCount }}</p>
+          </div>
+          <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+            <span class="text-orange-600 text-xl">✨</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="bg-white rounded-lg shadow-sm border mb-6">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <h2 class="text-xl font-semibold text-gray-900">
+            Benutzer ({{ filteredUsers.length }})
+          </h2>
+          
+          <div class="flex flex-col sm:flex-row gap-3">
+            <!-- Search -->
+            <div class="relative">
+              <input
+                v-model="searchTerm"
+                type="text"
+                placeholder="Name oder E-Mail suchen..."
+                class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center">
+                <span class="text-gray-400">🔍</span>
+              </div>
+            </div>
+
+            <!-- Role Filter -->
+            <select
+              v-model="selectedRole"
+              class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Alle Rollen</option>
+              <option value="client">Kunden</option>
+              <option value="staff">Fahrlehrer</option>
+              <option value="admin">Admins</option>
+            </select>
+
+            <!-- Status Filter -->
+            <select
+              v-model="selectedStatus"
+              class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Alle Status</option>
+              <option value="active">Aktiv</option>
+              <option value="inactive">Inaktiv</option>
+              <option value="unpaid">Mit offenen Zahlungen</option>
+            </select>
+
+            <!-- New User Button -->
+            <button
+              @click="showCreateUserModal = true"
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            >
+              ➕ Neuer Benutzer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Benutzer</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rolle</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kontakt</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <tr v-for="user in filteredUsers" :key="user.id" class="hover:bg-gray-50">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                    <span class="text-sm font-medium text-gray-600">
+                      {{ getInitials(user.first_name, user.last_name) }}
+                    </span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">
+                      {{ user.first_name }} {{ user.last_name }}
+                    </div>
+                    <div class="text-sm text-gray-500">{{ user.email }}</div>
+                  </div>
+                </div>
+              </td>
+
+              <td class="px-6 py-4">
+                <span :class="getRoleBadgeClass(user.role)"
+                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                  {{ getRoleLabel(user.role) }}
+                </span>
+              </td>
+
+              <td class="px-6 py-4">
+                <div class="text-sm text-gray-900">{{ user.phone || '-' }}</div>
+                <div class="text-xs text-gray-500">{{ user.preferred_payment_method || 'Nicht festgelegt' }}</div>
+              </td>
+
+              <td class="px-6 py-4">
+                <span :class="user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                  {{ user.is_active ? 'Aktiv' : 'Inaktiv' }}
+                </span>
+              </td>
+
+              <td class="px-6 py-4">
+                <div class="flex space-x-2">
+                  <NuxtLink :to="`/admin/users/${user.id}`"
+                            class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    Details
+                  </NuxtLink>
+                  <button
+                    @click="editUser(user)"
+                    class="text-green-600 hover:text-green-800 text-sm font-medium">
+                    Bearbeiten
+                  </button>
+                  <button
+                    @click="toggleUserStatus(user)"
+                    :class="user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'"
+                    class="text-sm font-medium">
+                    {{ user.is_active ? 'Deaktivieren' : 'Aktivieren' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Empty State -->
+            <tr v-if="filteredUsers.length === 0">
+              <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                <div class="text-lg">👤 Keine Benutzer gefunden</div>
+                <div class="text-sm mt-2">
+                  {{ searchTerm ? 'Versuchen Sie eine andere Suche' : 'Erstellen Sie den ersten Benutzer' }}
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex justify-center items-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { definePageMeta } from '#imports'
+import { getSupabase } from '~/utils/supabase'
+
+definePageMeta({
+  layout: 'admin',
+  middleware: ['auth']
+})
+
+// Types
+interface User {
+  id: string
+  first_name: string | null
+  last_name: string | null
+  email: string
+  phone: string | null
+  role: string
+  preferred_payment_method: string | null
+  is_active: boolean
+  created_at: string
+  appointment_count?: number
+  completed_appointments?: number
+  unpaid_count?: number
+  unpaid_amount?: number
+}
+
+// State
+const supabase = getSupabase()
+const isLoading = ref(true)
+const users = ref<User[]>([])
+const searchTerm = ref('')
+const selectedRole = ref('')
+const selectedStatus = ref('')
+const showCreateUserModal = ref(false)
+
+// Computed
+const totalUsers = computed(() => users.value.length)
+const clientCount = computed(() => users.value.filter(u => u.role === 'client').length)
+const staffCount = computed(() => users.value.filter(u => u.role === 'staff').length)
+const newUsersCount = computed(() => {
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  return users.value.filter(u => new Date(u.created_at) > weekAgo).length
+})
+
+const filteredUsers = computed(() => {
+  let filtered = users.value
+
+  // Search filter
+  if (searchTerm.value) {
+    const search = searchTerm.value.toLowerCase()
+    filtered = filtered.filter(user =>
+      (user.first_name?.toLowerCase().includes(search)) ||
+      (user.last_name?.toLowerCase().includes(search)) ||
+      user.email.toLowerCase().includes(search)
+    )
+  }
+
+  // Role filter
+  if (selectedRole.value) {
+    filtered = filtered.filter(user => user.role === selectedRole.value)
+  }
+
+  // Status filter
+  if (selectedStatus.value) {
+    switch (selectedStatus.value) {
+      case 'active':
+        filtered = filtered.filter(user => user.is_active)
+        break
+      case 'inactive':
+        filtered = filtered.filter(user => !user.is_active)
+        break
+      case 'unpaid':
+        filtered = filtered.filter(user => (user.unpaid_amount ?? 0) > 0)
+        break
+    }
+  }
+
+  return filtered.sort((a, b) => {
+    // Sort by last name, then first name
+    const aName = `${a.last_name || ''} ${a.first_name || ''}`.trim()
+    const bName = `${b.last_name || ''} ${b.first_name || ''}`.trim()
+    return aName.localeCompare(bName)
+  })
+})
+
+// Methods
+const loadUsers = async () => {
+  try {
+    console.log('🔄 Loading users...')
+    
+    // Load users with their appointment statistics
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select(`
+        id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        role,
+        preferred_payment_method,
+        is_active,
+        created_at
+      `)
+      .order('last_name', { ascending: true })
+
+    if (usersError) throw usersError
+
+    // Load appointment statistics for each user
+    const { data: appointmentsData, error: appointmentsError } = await supabase
+      .from('appointments')
+      .select(`
+        user_id,
+        is_paid,
+        status,
+        price_per_minute,
+        duration_minutes,
+        discount
+      `)
+
+    if (appointmentsError) {
+      console.warn('Warning loading appointments:', appointmentsError)
+    }
+
+    // Process users with statistics
+    const processedUsers = (usersData || []).map(user => {
+      const userAppointments = (appointmentsData || []).filter(apt => apt.user_id === user.id)
+      const completedAppointments = userAppointments.filter(apt => apt.status === 'completed')
+      const unpaidAppointments = userAppointments.filter(apt => !apt.is_paid)
+      
+      // Calculate unpaid amount
+      const unpaidAmount = unpaidAppointments.reduce((sum, apt) => {
+        const basePrice = (apt.price_per_minute || 0) * (apt.duration_minutes || 0)
+        return sum + (basePrice - (apt.discount || 0))
+      }, 0)
+
+      return {
+        ...user,
+        appointment_count: userAppointments.length,
+        completed_appointments: completedAppointments.length,
+        unpaid_count: unpaidAppointments.length,
+        unpaid_amount: Math.round(unpaidAmount * 100) // Convert to Rappen
+      }
+    })
+
+    users.value = processedUsers
+    console.log('✅ Users loaded:', users.value.length)
+
+  } catch (error: any) {
+    console.error('❌ Error loading users:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const getInitials = (firstName: string | null, lastName: string | null): string => {
+  const first = firstName?.charAt(0)?.toUpperCase() || ''
+  const last = lastName?.charAt(0)?.toUpperCase() || ''
+  return first + last || '??'
+}
+
+const getRoleLabel = (role: string): string => {
+  const labels: Record<string, string> = {
+    'client': 'Kunde',
+    'staff': 'Fahrlehrer',
+    'admin': 'Admin'
+  }
+  return labels[role] || role
+}
+
+const getRoleBadgeClass = (role: string): string => {
+  const classes: Record<string, string> = {
+    'client': 'bg-blue-100 text-blue-800',
+    'staff': 'bg-purple-100 text-purple-800',
+    'admin': 'bg-red-100 text-red-800'
+  }
+  return classes[role] || 'bg-gray-100 text-gray-800'
+}
+
+const editUser = (user: User) => {
+  console.log('Edit user:', user)
+  // TODO: Implement edit user modal
+  alert(`Bearbeiten von ${user.first_name} ${user.last_name} - Wird implementiert`)
+}
+
+const toggleUserStatus = async (user: User) => {
+  try {
+    console.log(`${user.is_active ? 'Deactivating' : 'Activating'} user:`, user.email)
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ 
+        is_active: !user.is_active,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id)
+
+    if (error) throw error
+
+    // Update local state
+    user.is_active = !user.is_active
+    
+    const status = user.is_active ? 'aktiviert' : 'deaktiviert'
+    alert(`✅ ${user.first_name} ${user.last_name} wurde ${status}`)
+
+  } catch (error: any) {
+    console.error('❌ Error toggling user status:', error)
+    alert(`❌ Fehler: ${error.message}`)
+  }
+}
+
+// Lifecycle
+onMounted(() => {
+  loadUsers()
+})
+</script>
+
+<style scoped>
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.transition-colors {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Table hover effects */
+tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Input focus states */
+input:focus, select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+</style>```
 
 ### ./pages/customer-dashboard.vue
 ```vue
@@ -21960,6 +25042,676 @@ watch([user, userRole], ([newUser, newRole]) => {
   }
 }, { immediate: true })
 </script>```
+
+### ./pages/customer/payments.vue
+```vue
+<!-- pages/customer/payments.vue -->
+<template>
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <!-- Header -->
+    <div class="bg-white shadow-lg border-b">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center py-6">
+          <div class="flex items-center space-x-4">
+            <button 
+              @click="goBack"
+              class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">💳 Zahlungen</h1>
+              <p class="text-gray-600 text-sm">Rechnungen verwalten und bezahlen</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="isLoading" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-4 border-green-500 border-t-transparent mx-auto"></div>
+        <p class="mt-4 text-gray-600 text-lg">Zahlungsdaten werden geladen...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="bg-red-50 border-l-4 border-red-400 rounded-lg p-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-6 w-6 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-lg font-medium text-red-800">Fehler beim Laden</h3>
+            <p class="mt-2 text-red-700">{{ error }}</p>
+            <button 
+              @click="retryLoad" 
+              class="mt-4 bg-red-100 text-red-800 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors"
+            >
+              Erneut versuchen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      
+      <!-- Payment Status Overview -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        
+        <!-- Offene Rechnungen -->
+        <div class="bg-white rounded-xl shadow-lg border" 
+             :class="unpaidPayments.length > 0 ? 'border-red-200' : 'border-green-200'">
+          <div class="p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="flex items-center mb-2">
+                  <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
+                       :class="unpaidPayments.length > 0 ? 'bg-red-100' : 'bg-green-100'">
+                    <svg v-if="unpaidPayments.length > 0" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <svg v-else class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 class="text-sm font-medium text-gray-500">
+                    {{ unpaidPayments.length > 0 ? 'Offene Rechnungen' : 'Zahlungsstatus' }}
+                  </h3>
+                </div>
+                
+                <div v-if="unpaidPayments.length > 0">
+                  <p class="text-3xl font-bold text-red-600">{{ unpaidPayments.length }}</p>
+                  <p class="text-sm text-red-500 mt-1">CHF {{ totalUnpaidAmount.toFixed(2) }}</p>
+                </div>
+                <div v-else>
+                  <p class="text-3xl font-bold text-green-600">Alles bezahlt</p>
+                  <p class="text-sm text-green-500 mt-1">✓ Keine offenen Beträge</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bezahlte Rechnungen -->
+        <div class="bg-white rounded-xl shadow-lg border border-blue-200">
+          <div class="p-6">
+            <div class="flex items-center mb-2">
+              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 class="text-sm font-medium text-gray-500">Bezahlte Rechnungen</h3>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ paidPayments.length }}</p>
+            <p class="text-sm text-gray-500 mt-1">CHF {{ totalPaidAmount.toFixed(2) }}</p>
+          </div>
+        </div>
+
+        <!-- Bevorzugte Zahlungsart -->
+        <div class="bg-white rounded-xl shadow-lg border border-purple-200">
+          <div class="p-6">
+            <div class="flex items-center mb-2">
+              <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
+              <h3 class="text-sm font-medium text-gray-500">Bevorzugte Zahlungsart</h3>
+            </div>
+            <p class="text-lg font-bold text-gray-900">{{ preferredPaymentMethodLabel }}</p>
+            <button 
+              @click="showSettings = true"
+              class="text-sm text-purple-600 hover:text-purple-700 mt-1"
+            >
+              Ändern
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Schnell-Bezahlung für offene Rechnungen -->
+      <div v-if="unpaidPayments.length > 0" class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 rounded-lg p-6 mb-8">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-medium text-yellow-800 mb-2">
+              🚨 {{ unpaidPayments.length }} offene Rechnung{{ unpaidPayments.length > 1 ? 'en' : '' }}
+            </h3>
+            <p class="text-yellow-700">
+              Gesamtbetrag: <strong>CHF {{ totalUnpaidAmount.toFixed(2) }}</strong>
+            </p>
+          </div>
+          <div class="flex space-x-3">
+            <button
+              @click="payAllUnpaid"
+              :disabled="isProcessingPayment"
+              class="bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition-colors font-medium disabled:opacity-50"
+            >
+              {{ isProcessingPayment ? 'Verarbeitung...' : 'Alle bezahlen' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zahlungsfilter -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <h2 class="text-xl font-semibold text-gray-900">
+              Zahlungshistorie
+            </h2>
+            
+            <div class="flex space-x-3">
+              <select
+                v-model="statusFilter"
+                class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Alle Status</option>
+                <option value="unpaid">Offen</option>
+                <option value="paid">Bezahlt</option>
+                <option value="pending">Ausstehend</option>
+              </select>
+
+              <select
+                v-model="methodFilter"
+                class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Alle Zahlungsarten</option>
+                <option value="twint">Twint</option>
+                <option value="stripe_card">Kreditkarte</option>
+                <option value="cash">Bar</option>
+                <option value="invoice">Rechnung</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payments Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Termin</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Betrag</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zahlungsart</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr v-for="payment in filteredPayments" :key="payment.id" class="hover:bg-gray-50">
+                
+                <!-- Termin -->
+                <td class="px-6 py-4">
+                  <div>
+                    <div class="font-medium text-gray-900">
+                      {{ payment.appointment_title || 'Fahrstunde' }}
+                    </div>
+                    <div class="text-sm text-gray-500">
+                      {{ formatDateTime(payment.appointment_start) }}
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Betrag -->
+                <td class="px-6 py-4">
+                  <div class="text-sm">
+                    <div class="font-medium text-gray-900">
+                      CHF {{ payment.total_amount_chf }}
+                    </div>
+                    <div v-if="payment.admin_fee_chf > 0" class="text-xs text-gray-500">
+                      inkl. CHF {{ payment.admin_fee_chf }} Gebühr
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Zahlungsart -->
+                <td class="px-6 py-4">
+                  <span :class="getPaymentMethodClass(payment.payment_method)"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {{ getPaymentMethodLabel(payment.payment_method) }}
+                  </span>
+                </td>
+
+                <!-- Status -->
+                <td class="px-6 py-4">
+                  <span :class="getStatusClass(payment.payment_status)"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {{ getStatusLabel(payment.payment_status) }}
+                  </span>
+                </td>
+
+                <!-- Datum -->
+                <td class="px-6 py-4 text-sm text-gray-500">
+                  <div v-if="payment.paid_at">
+                    {{ formatDate(payment.paid_at) }}
+                  </div>
+                  <div v-else-if="payment.due_date">
+                    Fällig: {{ formatDate(payment.due_date) }}
+                  </div>
+                  <div v-else>
+                    {{ formatDate(payment.created_at) }}
+                  </div>
+                </td>
+
+                <!-- Aktionen -->
+                <td class="px-6 py-4">
+                  <div class="flex space-x-2">
+                    
+                    <!-- Bezahlen Button (nur für offene Rechnungen) -->
+                    <button
+                      v-if="payment.payment_status === 'pending'"
+                      @click="payIndividual(payment)"
+                      :disabled="isProcessingPayment"
+                      class="text-green-600 hover:text-green-800 text-sm font-medium bg-green-50 hover:bg-green-100 px-3 py-1 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      Bezahlen
+                    </button>
+
+                    <!-- Quittung Download -->
+                    <button
+                      v-if="payment.payment_status === 'completed'"
+                      @click="downloadReceipt(payment)"
+                      class="text-blue-600 hover:text-blue-800 text-sm font-medium bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg transition-colors"
+                    >
+                      Quittung
+                    </button>
+
+                    <!-- Details -->
+                    <button
+                      @click="showPaymentDetails(payment)"
+                      class="text-gray-600 hover:text-gray-800 text-sm font-medium bg-gray-50 hover:bg-gray-100 px-3 py-1 rounded-lg transition-colors"
+                    >
+                      Details
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Empty State -->
+              <tr v-if="filteredPayments.length === 0">
+                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                  <div class="flex flex-col items-center">
+                    <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    <p class="text-lg font-medium text-gray-900 mb-2">Keine Zahlungen gefunden</p>
+                    <p class="text-gray-600">
+                      {{ statusFilter !== 'all' ? 'Versuchen Sie einen anderen Filter' : 'Noch keine Zahlungen vorhanden' }}
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Details Modal -->
+    <!-- TODO: Create PaymentDetailsModal component -->
+    <!--
+    <PaymentDetailsModal 
+      :is-open="showDetailsModal"
+      :payment="selectedPayment"
+      @close="showDetailsModal = false"
+    />
+    -->
+
+    <!-- Payment Settings Modal -->
+    <!-- TODO: Create PaymentSettingsModal component -->
+    <!--
+    <PaymentSettingsModal 
+      :is-open="showSettings"
+      :current-method="preferredPaymentMethod"
+      @close="showSettings = false"
+      @updated="loadPayments"
+    />
+    -->
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue'
+import { navigateTo } from '#app'
+import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
+import { storeToRefs } from 'pinia'
+import { definePageMeta } from '#imports'
+
+
+// Components (these would need to be created)
+// import PaymentDetailsModal from '~/components/customer/PaymentDetailsModal.vue'
+// import PaymentSettingsModal from '~/components/customer/PaymentSettingsModal.vue'
+
+// Define page meta
+definePageMeta({
+  middleware: 'auth',
+  layout: false
+})
+
+// Composables
+const authStore = useAuthStore()
+const { user: currentUser, isClient } = storeToRefs(authStore)
+
+// State
+const isLoading = ref(true)
+const error = ref<string | null>(null)
+const payments = ref<any[]>([])
+const isProcessingPayment = ref(false)
+const statusFilter = ref('all')
+const methodFilter = ref('all')
+const showDetailsModal = ref(false)
+const showSettings = ref(false)
+const selectedPayment = ref<any>(null)
+const preferredPaymentMethod = ref<string | null>(null)
+
+// Computed properties
+const unpaidPayments = computed(() => 
+  payments.value.filter(p => p.payment_status === 'pending' || !p.paid_at)
+)
+
+const paidPayments = computed(() => 
+  payments.value.filter(p => p.payment_status === 'completed' && p.paid_at)
+)
+
+const totalUnpaidAmount = computed(() => 
+  unpaidPayments.value.reduce((sum, p) => sum + (p.total_amount_chf || 0), 0)
+)
+
+const totalPaidAmount = computed(() => 
+  paidPayments.value.reduce((sum, p) => sum + (p.total_amount_chf || 0), 0)
+)
+
+const preferredPaymentMethodLabel = computed(() => {
+  const labels: Record<string, string> = {
+    'cash': 'Bar',
+    'invoice': 'Rechnung',
+    'twint': 'Twint',
+    'stripe_card': 'Kreditkarte',
+    'debit_card': 'Debitkarte'
+  }
+  return labels[preferredPaymentMethod.value || ''] || 'Nicht festgelegt'
+})
+
+const filteredPayments = computed(() => {
+  let filtered = payments.value
+
+  // Status filter
+  if (statusFilter.value !== 'all') {
+    switch (statusFilter.value) {
+      case 'unpaid':
+        filtered = filtered.filter(p => p.payment_status === 'pending' || !p.paid_at)
+        break
+      case 'paid':
+        filtered = filtered.filter(p => p.payment_status === 'completed' && p.paid_at)
+        break
+      case 'pending':
+        filtered = filtered.filter(p => p.payment_status === 'pending')
+        break
+    }
+  }
+
+  // Method filter
+  if (methodFilter.value !== 'all') {
+    filtered = filtered.filter(p => p.payment_method === methodFilter.value)
+  }
+
+  return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+})
+
+// Methods
+const goBack = async () => {
+  await navigateTo('/customer-dashboard')
+}
+
+const retryLoad = async () => {
+  error.value = null
+  isLoading.value = true
+  await loadPayments()
+}
+
+const loadPayments = async () => {
+  if (!currentUser.value?.id) return
+
+  try {
+    const supabase = getSupabase()
+    
+    // Get user data from users table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, preferred_payment_method')
+      .eq('auth_user_id', currentUser.value.id)
+      .single()
+    
+    if (userError) throw userError
+    if (!userData) throw new Error('User nicht in Datenbank gefunden')
+
+    preferredPaymentMethod.value = userData.preferred_payment_method
+
+    console.log('🔍 Loading payments for user:', userData.id)
+
+    // Load payments using the detailed view
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from('v_payments_detailed')
+      .select('*')
+      .eq('user_id', userData.id)
+      .order('created_at', { ascending: false })
+
+    if (paymentsError) throw paymentsError
+    console.log('✅ Payments loaded:', paymentsData?.length || 0)
+
+    payments.value = paymentsData || []
+
+  } catch (err: any) {
+    console.error('❌ Error loading payments:', err)
+    error.value = err.message
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const payAllUnpaid = async () => {
+  if (unpaidPayments.value.length === 0) return
+
+  isProcessingPayment.value = true
+  
+  try {
+    // Redirect to payment processing with all unpaid payment IDs
+    const paymentIds = unpaidPayments.value.map(p => p.id).join(',')
+    await navigateTo(`/customer/payment-process?payments=${paymentIds}`)
+    
+  } catch (err: any) {
+    console.error('❌ Error initiating bulk payment:', err)
+    alert('Fehler beim Initialisieren der Zahlung. Bitte versuchen Sie es erneut.')
+  } finally {
+    isProcessingPayment.value = false
+  }
+}
+
+const payIndividual = async (payment: any) => {
+  isProcessingPayment.value = true
+  
+  try {
+    await navigateTo(`/customer/payment-process?payments=${payment.id}`)
+    
+  } catch (err: any) {
+    console.error('❌ Error initiating individual payment:', err)
+    alert('Fehler beim Initialisieren der Zahlung. Bitte versuchen Sie es erneut.')
+  } finally {
+    isProcessingPayment.value = false
+  }
+}
+
+const downloadReceipt = async (payment: any) => {
+  try {
+    // Generate receipt download URL
+    const receiptUrl = `/api/payments/${payment.id}/receipt`
+    
+    // Create download link
+    const link = document.createElement('a')
+    link.href = receiptUrl
+    link.download = `Quittung_${payment.invoice_number || payment.id}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+  } catch (err: any) {
+    console.error('❌ Error downloading receipt:', err)
+    alert('Fehler beim Herunterladen der Quittung. Bitte versuchen Sie es erneut.')
+  }
+}
+
+const showPaymentDetails = (payment: any) => {
+  selectedPayment.value = payment
+  showDetailsModal.value = true
+}
+
+const getPaymentMethodLabel = (method: string): string => {
+  const labels: Record<string, string> = {
+    'cash': 'Bar',
+    'invoice': 'Rechnung',
+    'twint': 'Twint',
+    'stripe_card': 'Kreditkarte',
+    'debit_card': 'Debitkarte'
+  }
+  return labels[method] || method
+}
+
+const getPaymentMethodClass = (method: string): string => {
+  const classes: Record<string, string> = {
+    'cash': 'bg-yellow-100 text-yellow-800',
+    'invoice': 'bg-blue-100 text-blue-800',
+    'twint': 'bg-purple-100 text-purple-800',
+    'stripe_card': 'bg-green-100 text-green-800',
+    'debit_card': 'bg-gray-100 text-gray-800'
+  }
+  return classes[method] || 'bg-gray-100 text-gray-800'
+}
+
+const getStatusLabel = (status: string): string => {
+  const labels: Record<string, string> = {
+    'pending': 'Offen',
+    'completed': 'Bezahlt',
+    'failed': 'Fehlgeschlagen',
+    'cancelled': 'Storniert',
+    'refunded': 'Rückerstattet'
+  }
+  return labels[status] || status
+}
+
+const getStatusClass = (status: string): string => {
+  const classes: Record<string, string> = {
+    'pending': 'bg-yellow-100 text-yellow-800',
+    'completed': 'bg-green-100 text-green-800',
+    'failed': 'bg-red-100 text-red-800',
+    'cancelled': 'bg-gray-100 text-gray-800',
+    'refunded': 'bg-orange-100 text-orange-800'
+  }
+  return classes[status] || 'bg-gray-100 text-gray-800'
+}
+
+const formatDateTime = (dateString: string): string => {
+  if (!dateString) return '-'
+  return new Date(dateString).toLocaleDateString('de-CH', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '-'
+  return new Date(dateString).toLocaleDateString('de-CH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
+
+// Watch for user role changes
+watch([currentUser], ([newUser]) => {
+  if (newUser && !isClient.value) {
+    console.log('🔄 User is not a client, redirecting to main dashboard')
+    navigateTo('/')
+  }
+}, { immediate: true })
+
+// Lifecycle
+onMounted(async () => {
+  console.log('🔥 Customer Payments mounted')
+  
+  if (!isClient.value) {
+    console.warn('⚠️ User is not a client, redirecting...')
+    await navigateTo('/')
+    return
+  }
+
+  await loadPayments()
+})
+</script>
+
+<style scoped>
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.transition-colors {
+  transition: all 0.2s ease-in-out;
+}
+
+.transition-all {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Table hover effects */
+tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Enhanced shadows */
+.hover\:shadow-xl:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Input focus states */
+input:focus, select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Gradient backgrounds */
+.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+
+.bg-gradient-to-r {
+  background-image: linear-gradient(to right, var(--tw-gradient-stops));
+}
+</style>```
 
 ### ./pages/customers.vue
 ```vue
@@ -25820,8 +29572,13 @@ export const useAuthStore = defineStore('authV2', () => {
   const isInitialized = ref<boolean>(false)
 
   // Computed Properties
-  const isLoggedIn = computed(() => !!user.value && !!userProfile.value)
-  const isAdmin = computed(() => userRole.value === 'admin')
+const isLoggedIn = computed(() => !!user.value && !!userProfile.value)
+
+const isAdmin = computed(() => {
+  const result = userRole.value === 'admin'
+  console.log('🔍 Auth Store - isAdmin:', result, 'Role:', userRole.value)
+  return result
+})
   const isStaff = computed(() => userRole.value === 'staff')
   const isClient = computed(() => userRole.value === 'client')
   const hasProfile = computed(() => !!userProfile.value)
@@ -25841,6 +29598,7 @@ export const useAuthStore = defineStore('authV2', () => {
   })
 
   // Actions
+
   const initializeAuthStore = (
     supabaseClient: SupabaseClient,
     supabaseUserRef: Ref<User | null>
@@ -25877,6 +29635,8 @@ export const useAuthStore = defineStore('authV2', () => {
     }
 
     isInitialized.value = true
+      console.log('✅ Auth Store initialization completed, isInitialized:', isInitialized.value)
+
   }
 
   const login = async (email: string, password: string, supabaseClient: SupabaseClient) => {
@@ -27204,6 +30964,10 @@ export const formatTimeShort = (dateString: string): string => {
   // Beispielformat: 06:33
   return new Intl.DateTimeFormat('de-CH', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
 };```
+
+### ./utils/migrate-pricing.ts
+```ts
+```
 
 ### ./utils/supabase.ts
 ```ts

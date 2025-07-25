@@ -441,11 +441,18 @@ const setDurationForLessonType = (lessonTypeCode: string) => {
    * Recalculates the end time.
    * @param duration The new duration in minutes.
    */
-  const handleDurationChanged = (duration: number) => {
-    console.log('⏱️ Duration changed to:', duration)
-    formData.value.duration_minutes = duration
-    calculateEndTime()
+ const handleDurationChanged = (newDuration: number) => {
+  console.log('⏱️ Duration changed to:', newDuration)
+  
+  formData.value.duration_minutes = newDuration
+  calculateEndTime()
+  
+  // ✅ OFFLINE-PREISBERECHNUNG bei Dauer-Änderung
+  if (formData.value.type && formData.value.eventType === 'lesson') {
+    const appointmentNum = appointmentNumber?.value || 1
+    console.log('💰 Duration changed - price will be recalculated by watcher')
   }
+}
 
   // ============ LOCATION HANDLERS ============
 
@@ -520,11 +527,7 @@ const setDurationForLessonType = (lessonTypeCode: string) => {
   /**
    * Switches the event type to 'other' and resets related fields.
    */
-  const switchToOtherEventType = () => {
-    formData.value.eventType = 'other'
-    formData.value.selectedSpecialType = ''
-    formData.value.title = ''
-  }
+
 
   /**
    * Switches the event type back to 'lesson' and resets related fields.
@@ -800,7 +803,6 @@ const setDurationForLessonType = (lessonTypeCode: string) => {
 
     // Event Type Handlers
     handleEventTypeSelected,
-    switchToOtherEventType,
     backToStudentSelection,
 
     // Payment Handlers

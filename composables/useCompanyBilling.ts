@@ -91,7 +91,7 @@ export const useCompanyBilling = () => {
       city: '',
       country: 'Schweiz',
       vatNumber: '',
-      notes: ''
+      notes: '',
     }
     error.value = ''
   }

@@ -85,114 +85,116 @@
         </div>
        
         <!-- 6. Prüfungsstandorte -->
-          <div class="border border-gray-200 rounded-lg">
-            <button
-              @click="toggleSection('examLocations')"
-              class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
-            >
-              <span class="font-medium text-gray-900">🏛️ Prüfungsstandorte</span>
-              <span class="text-gray-600 font-bold">{{ openSections.examLocations ? '−' : '+' }}</span>
-            </button>
-            
-            <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
-              <div class="space-y-4 mt-4">
+        <div class="border border-gray-200 rounded-lg">
+          <button
+            @click="toggleSection('examLocations')"
+            class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+          >
+            <span class="font-medium text-gray-900">🏛️ Prüfungsstandorte</span>
+            <span class="text-gray-600 font-bold">{{ openSections.examLocations ? '−' : '+' }}</span>
+          </button>
+          
+          <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
+            <div class="space-y-4 mt-4">
+              
+              <!-- Info Text -->
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p class="text-sm text-blue-800">
+                  📍 Aktivieren Sie die Prüfungsstandorte, die Sie für Ihre Schüler nutzen möchten.
+                </p>
+              </div>
+
+              <!-- Loading State -->
+              <div v-if="isLoadingExamLocations" class="text-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <p class="text-gray-600 text-sm">Prüfungsstandorte werden geladen...</p>
+              </div>
+
+              <!-- Verfügbare Prüfungsstandorte -->
+              <div v-else class="space-y-3">
+                <div v-if="availableExamLocations.length === 0" class="text-center py-8 text-gray-500">
+                  <div class="text-4xl mb-2">🏛️</div>
+                  <p class="text-sm">Keine Prüfungsstandorte verfügbar</p>
+                  <p class="text-xs mt-1">Kontaktieren Sie Ihren Administrator</p>
+                </div>
                 
-                <!-- Info Text -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p class="text-sm text-blue-800">
-                    📍 Aktivieren Sie die Prüfungsstandorte, die Sie für Ihre Schüler nutzen möchten.
-                  </p>
-                </div>
-
-                <!-- Loading State -->
-                <div v-if="isLoadingExamLocations" class="text-center py-8">
-                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p class="text-gray-600">Prüfungsstandorte werden geladen...</p>
-                </div>
-
-                <!-- Verfügbare Prüfungsstandorte -->
-                <div v-else class="space-y-3">
-                  <div v-if="availableExamLocations.length === 0" class="text-center py-8 text-gray-500">
-                    <div class="text-4xl mb-2">🏛️</div>
-                    <p>Keine Prüfungsstandorte verfügbar</p>
-                    <p class="text-xs mt-1">Kontaktieren Sie Ihren Administrator</p>
-                  </div>
-                  
-                  <div
-                    v-for="location in availableExamLocations"
-                    :key="location.id"
-                    class="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
-                  >
-                    <div class="flex items-start justify-between">
-                      <div class="flex-1">
-                        <!-- Standort Info -->
-                        <div class="flex items-center gap-3 mb-2">
-                          <h4 class="font-semibold text-gray-900">{{ location.name }}</h4>
-                          
-                          <!-- Toggle Switch -->
-                          <button
-                            @click="toggleExamLocation(location)"
-                            :disabled="isSavingExamLocation"
-                            :class="[
-                              'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                              isExamLocationActive(location.id) 
-                                ? 'bg-green-600' 
-                                : 'bg-gray-300'
-                            ]"
-                          >
-                            <span
-                              :class="[
-                                'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
-                                isExamLocationActive(location.id) ? 'translate-x-5' : 'translate-x-1'
-                              ]"
-                            />
-                          </button>
-                          
-                          <!-- Status Badge -->
-                          <span 
-                            :class="[
-                              'text-xs px-2 py-1 rounded-full font-medium',
-                              isExamLocationActive(location.id) 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-gray-100 text-gray-600'
-                            ]"
-                          >
-                            {{ isExamLocationActive(location.id) ? 'Für mich aktiv' : 'Inaktiv' }}
-                          </span>
-                        </div>
-                        
-                        <!-- Adresse -->
-                        <p class="text-sm text-gray-600 mb-2">
-                          📍 {{ location.address }}
-                        </p>
-                        
-                        <!-- Verfügbare Kategorien -->
-                        <div v-if="location.available_categories && location.available_categories.length > 0" class="flex flex-wrap gap-1 mb-2">
-                          <span
-                            v-for="category in location.available_categories"
-                            :key="category"
-                            class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
-                          >
-                            {{ category }}
-                          </span>
+                <div
+                  v-for="location in availableExamLocations"
+                  :key="location.id"
+                  class="border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow"
+                >
+                  <div class="space-y-3">
+                    
+                    <!-- Header mit Name und Toggle -->
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex-1 min-w-0">
+                        <h4 class="font-semibold text-gray-900 text-sm leading-tight break-words">{{ location.name }}</h4>
+                      </div>
+                      
+                      <!-- Toggle Switch -->
+                      <button
+                        @click="toggleExamLocation(location)"
+                        :disabled="isSavingExamLocation"
+                        :class="[
+                          'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex-shrink-0 mt-0.5',
+                          isExamLocationActive(location.id) ? 'bg-green-600' : 'bg-gray-300'
+                        ]"
+                      >
+                        <span
+                          :class="[
+                            'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
+                            isExamLocationActive(location.id) ? 'translate-x-5' : 'translate-x-1'
+                          ]"
+                        ></span>
+                      </button>
+                    </div>
+                    
+                    <!-- Status Badge -->
+                    <div class="flex justify-start">
+                      <span 
+                        :class="[
+                          'text-xs px-2 py-1 rounded-full font-medium inline-block',
+                          isExamLocationActive(location.id) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        ]"
+                      >
+                        {{ isExamLocationActive(location.id) ? 'Für mich aktiv' : 'Inaktiv' }}
+                      </span>
+                    </div>
+                    
+                   <!-- Adresse -->
+                    <div class="text-sm text-gray-600">
+                      <div class="flex items-start gap-1">
+                        <span class="text-xs">📍</span>
+                        <div class="break-words">
+                          <div>{{ location.address }}</div>
+                          <div v-if="location.postal_code || location.city" class="text-gray-500 mt-1">
+                            {{ location.postal_code }} {{ location.city }}
+                            <span v-if="location.canton" class="ml-1">({{ location.canton }})</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                <!-- Aktive Standorte Zusammenfassung -->
-                <div v-if="activeExamLocationsCount > 0" class="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div class="flex items-center gap-2">
-                    <span class="text-green-600 text-lg">✅</span>
-                    <span class="text-sm font-medium text-green-800">
-                      {{ activeExamLocationsCount }} von {{ availableExamLocations.length }} Prüfungsstandorten aktiviert
-                    </span>
+                    
+                    <!-- Verfügbare Kategorien -->
+                    <div v-if="location.available_categories && location.available_categories.length > 0" class="space-y-2">
+                      <div class="text-xs text-gray-500 font-medium">Verfügbare Kategorien:</div>
+                      <div class="flex flex-wrap gap-1">
+                        <span
+                          v-for="category in location.available_categories"
+                          :key="category"
+                          class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                        >
+                          {{ category }}
+                        </span>
+                      </div>
+                    </div>                   
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+
           
           <!-- 3. Treffpunkte/Standorte -->
           <div class="border border-gray-200 rounded-lg">
@@ -425,6 +427,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 
+
 interface Props {
   currentUser: any
 }
@@ -437,16 +440,22 @@ interface ExamLocation {
   canton?: string
   postal_code?: string
   available_categories?: string[]
+  contact_phone?: string   
   is_active: boolean
   display_order?: number
+  created_at?: string
+  updated_at?: string
 }
 
 interface StaffExamLocation {
   id: string
   staff_id: string
-  exam_location_id: string
+  name: string           
+  address: string       
+  categories?: string[] 
   is_active: boolean
   created_at?: string
+  updated_at?: string    
 }
 
 const props = defineProps<Props>()
@@ -546,6 +555,39 @@ const threeMonthsAgoName = computed(() => {
 })
 
 // Methods
+// In StaffSettings.vue - ersetzen Sie die Funktion mit dieser typisierten Version:
+const saveWithOfflineSupport = async (
+  table: string, 
+  data: any, 
+  action: string = 'insert', 
+  where: any, 
+  operationName: string
+) => {
+  try {
+    const supabase = getSupabase()
+    
+    let result
+    switch (action) {
+      case 'delete':
+        result = await supabase.from(table).delete().match(where)
+        break
+      default:
+        throw new Error(`Action ${action} not implemented`)
+    }
+    
+    if (result.error) throw result.error
+    return result
+    
+  } catch (error: any) {
+    // Offline-Queue (vereinfacht)
+    const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]')
+    queue.push({ table, action, data, where, operationName, timestamp: Date.now() })
+    localStorage.setItem('offline_queue', JSON.stringify(queue))
+    
+    throw new Error(`${operationName} wird synchronisiert sobald Internet verfügbar ist`)
+  }
+}
+
 const loadExamLocations = async () => {
   if (!props.currentUser?.id) return
 
@@ -557,11 +599,17 @@ const loadExamLocations = async () => {
     const { data: allLocations, error: locationsError } = await supabase
       .from('exam_locations')
       .select('*')
-      .eq('is_active', true)
       .order('name')
 
     if (locationsError) throw locationsError
-    availableExamLocations.value = allLocations || []
+
+    // Nur aktive Standorte filtern, falls is_active Spalte existiert
+    const filteredLocations = allLocations?.filter(location => {
+      // Falls is_active nicht existiert oder true ist, Location anzeigen
+      return location.is_active === undefined || location.is_active === true
+    }) || []
+
+    availableExamLocations.value = filteredLocations
     
     // 2. Aktivierte Standorte dieses Staff laden
     const { data: staffLocations, error: staffError } = await supabase
@@ -603,8 +651,12 @@ const loadAllData = async () => {
 }
 
 const isExamLocationActive = (examLocationId: string): boolean => {
+  // Da staff_exam_locations name und address speichert, nicht exam_location_id
+  const examLocation = availableExamLocations.value.find(el => el.id === examLocationId)
+  if (!examLocation) return false
+  
   const staffLocation = staffExamLocations.value.find(sl => 
-    sl.exam_location_id === examLocationId && sl.is_active
+    sl.name === examLocation.name && sl.is_active
   )
   return !!staffLocation
 }
@@ -753,8 +805,10 @@ const toggleExamLocation = async (examLocation: any) => {
   try {
     const supabase = getSupabase()
     const currentlyActive = isExamLocationActive(examLocation.id)
+    
+    // Nach name suchen, da keine exam_location_id existiert
     const existingStaffLocation = staffExamLocations.value.find(sl => 
-      sl.exam_location_id === examLocation.id
+      sl.name === examLocation.name
     )
 
     if (existingStaffLocation) {
@@ -773,7 +827,9 @@ const toggleExamLocation = async (examLocation: any) => {
         .from('staff_exam_locations')
         .insert({
           staff_id: props.currentUser.id,
-          exam_location_id: examLocation.id,
+          name: examLocation.name,          // ✅ name statt exam_location_id
+          address: examLocation.address,    // ✅ address hinzufügen
+          categories: examLocation.available_categories || [],  // ✅ categories
           is_active: true
         })
         .select()
@@ -817,19 +873,44 @@ const removeExamLocation = async (locationId: string) => {
 const removeLocation = async (locationId: string) => {
   try {
     console.log('🔥 Removing location:', locationId)
-    const supabase = getSupabase()
-    const { error } = await supabase
-      .from('locations')
-      .delete()
-      .eq('id', locationId)
-
-    if (error) throw error
-
+    
+    await saveWithOfflineSupport(
+      'locations',           // table
+      {},                   // data (leer bei delete)
+      'delete',             // action
+      { id: locationId },   // where
+      `Standort löschen`    // operation name
+    )
+    
+    console.log('🔍 Delete response - success')
+    
+    // Optimistic Update - sofort aus UI entfernen
     myLocations.value = myLocations.value.filter(loc => loc.id !== locationId)
     console.log('✅ Location removed successfully')
+    
   } catch (err: any) {
-    console.error('❌ Error removing location:', err)
-    error.value = `Fehler beim Entfernen: ${err.message}`
+    console.error('❌ Error in removeLocation:', err)
+    
+    // Spezielle Behandlung für Foreign Key Constraint (behält Ihre Logik bei)
+    if (err.code === '23503') {
+      error.value = 'Dieser Standort kann nicht gelöscht werden, da er noch von Terminen verwendet wird. Bitte löschen Sie zuerst alle Termine an diesem Standort.'
+      return
+    }
+    
+    // Offline-Support: Benutzerfreundliche Meldung
+    if (err.message?.includes('synchronisiert')) {
+      // Optimistic Update auch bei Offline
+      myLocations.value = myLocations.value.filter(loc => loc.id !== locationId)
+      error.value = null // Kein Fehler anzeigen
+      
+      // Optional: Success-Message für Offline
+      console.log('📦 Location will be deleted when online')
+      // Sie könnten hier eine Notification anzeigen:
+      // showMessage("Standort wird gelöscht sobald Internet verfügbar ist")
+    } else {
+      // Alle anderen Fehler normal behandeln
+      error.value = `Fehler beim Löschen: ${err.message}`
+    }
   }
 }
 

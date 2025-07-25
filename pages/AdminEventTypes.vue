@@ -190,7 +190,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 
 const supabase = getSupabase()
@@ -267,8 +267,10 @@ const saveEventType = async () => {
       if (error) throw error
     }
     
-    await loadEventTypes()
-    closeModal()
+  await loadEventTypes()
+  await nextTick() // Vue's nextTick importieren
+  showModal.value = false // Explizit setzen
+  editingEventType.value = null // Explizit zurücksetzen
   } catch (error) {
     console.error('Error saving event type:', error)
     alert('Fehler beim Speichern')

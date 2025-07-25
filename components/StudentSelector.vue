@@ -32,7 +32,6 @@
         </label>
        <button 
           @click="handleSwitchToOther"
-          :disabled="isLoading || availableStudents.length === 0"
           class="text-xs text-blue-600 font-bold hover:text-blue-800 border-solid border-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed"
         >
           Andere Terminart
@@ -137,6 +136,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { 
+  cacheStudents, 
+  getCachedStudents, 
+  isCacheValid, 
+  getCacheStatus 
+} from '~/utils/studentCache'
 
 // Student Interface
 interface Student {
@@ -231,6 +236,7 @@ interface AppointmentResponse {
 }
 
 // Methods
+
 const loadStudents = async (editStudentId?: string | null) => {
   console.log('🔄 Loading students...', { 
     showAll: showAllStudentsLocal.value,
@@ -243,13 +249,102 @@ const loadStudents = async (editStudentId?: string | null) => {
   })
   
   if (isLoading.value) return
+  
+  const staffId = props.currentUser?.id
+  if (!staffId) {
+    console.error('❌ No staff ID available')
+    return
+  }
+
   isLoading.value = true
   error.value = null
   loadTime.value = Date.now()
-  
+
   try {
-    console.log('📚 StudentSelector: Loading students...')
+    // ✅ 1. Cache prüfen (nur für Staff-spezifische Abfragen)
+    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value) {
+      const cacheStatus = getCacheStatus(staffId)
+      console.log('📦 Cache status:', cacheStatus)
+      
+      if (cacheStatus.isValid && cacheStatus.count > 0) {
+        console.log('📦 Using cached students')
+        const cachedStudents = getCachedStudents(staffId)
+        
+        const typedStudents: Student[] = cachedStudents.map((student) => ({
+          id: student.id,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          email: student.email,
+          phone: student.phone,
+          category: student.category,
+          assigned_staff_id: student.assigned_staff_id,
+          preferred_location_id: undefined
+        }))
+        
+        availableStudents.value = typedStudents
+        console.log('✅ Students loaded from cache:', availableStudents.value.length)
+        
+        // Background refresh falls online
+        if (navigator.onLine) {
+          console.log('🔄 Cache valid, but trying to refresh in background...')
+          setTimeout(() => {
+            loadStudentsFromDB(editStudentId, true) // Background refresh
+          }, 100)
+        }
+        
+        isLoading.value = false
+        return
+      }
+    }
+
+    // ✅ 2. Von DB laden
+    await loadStudentsFromDB(editStudentId, false)
+
+  } catch (err: any) {
+    console.error('❌ Error in loadStudents:', err)
+    
+    // ✅ 3. Bei Netzwerk-Fehler: Fallback auf Cache
+    if ((err.message?.includes('fetch') || err.message?.includes('network')) && 
+        props.currentUser?.role === 'staff' && !showAllStudentsLocal.value) {
+      
+      console.log('📦 Network error - trying cache as fallback')
+      const cachedStudents = getCachedStudents(staffId)
+      
+      if (cachedStudents.length > 0) {
+        const typedStudents: Student[] = cachedStudents.map((student) => ({
+          id: student.id,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          email: student.email,
+          phone: student.phone,
+          category: student.category,
+          assigned_staff_id: student.assigned_staff_id,
+          preferred_location_id: undefined
+        }))
+        
+        availableStudents.value = typedStudents
+        console.log('✅ Students loaded from expired cache (offline fallback):', availableStudents.value.length)
+        error.value = '' // Kein Fehler anzeigen wenn Cache verfügbar
+      } else {
+        error.value = 'Offline - keine Schüler im Cache. Versuchen Sie es online.'
+        availableStudents.value = []
+      }
+    } else {
+      error.value = err.message || 'Fehler beim Laden der Schüler'
+      availableStudents.value = []
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// ✅ Neue Hilfsfunktion: DB-Laden
+const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRefresh: boolean = false) => {
+  try {
+    console.log('📚 StudentSelector: Loading students from database...')
     const supabase = getSupabase()
+
+    let studentsToCache: any[] = []
 
     // Staff-spezifische Logik
     if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value) {
@@ -318,19 +413,23 @@ const loadStudents = async (editStudentId?: string | null) => {
         }
       }
 
-      const typedStudents: Student[] = uniqueStudents.map((user: UserFromDB) => ({
-        id: user.id,
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        category: user.category || '',
-        assigned_staff_id: user.assigned_staff_id || '',
-        preferred_location_id: user.preferred_location_id || undefined
-      }))
-      
-      availableStudents.value = typedStudents
-      console.log('✅ Staff students loaded:', availableStudents.value.length)
+      studentsToCache = uniqueStudents
+
+      if (!isBackgroundRefresh) {
+        const typedStudents: Student[] = uniqueStudents.map((user: UserFromDB) => ({
+          id: user.id,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          category: user.category || '',
+          assigned_staff_id: user.assigned_staff_id || '',
+          preferred_location_id: user.preferred_location_id || undefined
+        }))
+        
+        availableStudents.value = typedStudents
+        console.log('✅ Staff students loaded:', availableStudents.value.length)
+      }
 
     } else {
       // Admin oder "Alle anzeigen" Modus
@@ -344,34 +443,41 @@ const loadStudents = async (editStudentId?: string | null) => {
         .order('first_name')
 
       if (props.currentUser?.role === 'staff') {
-        // Wenn Staff-Member "Alle anzeigen" aktiviert hat, begrenzen wir trotzdem auf sinnvolle Anzahl
         query = query.limit(100)
       }
 
       const { data, error: fetchError } = await query
       if (fetchError) throw fetchError
       
-      const typedStudents: Student[] = (data || []).map((user: UserFromDB) => ({
-        id: user.id,
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        category: user.category || '',
-        assigned_staff_id: user.assigned_staff_id || '',
-        preferred_location_id: user.preferred_location_id || undefined
-      }))
-      
-      availableStudents.value = typedStudents
-      console.log('✅ All students loaded:', availableStudents.value.length)
+      studentsToCache = data || []
+
+      if (!isBackgroundRefresh) {
+        const typedStudents: Student[] = (data || []).map((user: UserFromDB) => ({
+          id: user.id,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          category: user.category || '',
+          assigned_staff_id: user.assigned_staff_id || '',
+          preferred_location_id: user.preferred_location_id || undefined
+        }))
+        
+        availableStudents.value = typedStudents
+        console.log('✅ All students loaded:', availableStudents.value.length)
+      }
+    }
+
+    // ✅ Cache aktualisieren (nur für Staff-spezifische Abfragen)
+    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && studentsToCache.length > 0) {
+      cacheStudents(studentsToCache, props.currentUser.id)
     }
 
   } catch (err: any) {
-    console.error('❌ StudentSelector: Error loading students:', err)
-    error.value = err.message || 'Fehler beim Laden der Schüler'
-    availableStudents.value = []
-  } finally {
-    isLoading.value = false
+    console.error('❌ StudentSelector: Error loading from DB:', err)
+    if (!isBackgroundRefresh) {
+      throw err
+    }
   }
 }
 
@@ -379,9 +485,8 @@ const handleSwitchToOther = () => {
   console.log('🔄 User manually clicked "Andere Terminart" button')
   console.log('📍 SWITCH CALL STACK:', new Error().stack)
   
-  if (!isLoading.value && availableStudents.value.length > 0 && !selectedStudent.value) {
-    emit('switch-to-other')
-  }
+  // ✅ Immer erlauben, unabhängig vom Loading-Status
+  emit('switch-to-other')
 }
 
 const handleSearchFocus = () => {
