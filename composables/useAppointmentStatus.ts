@@ -1,6 +1,7 @@
 // composables/useAppointmentStatus.ts - Status-Workflow Management
 import { ref } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 export const useAppointmentStatus = () => {
   const supabase = getSupabase()
@@ -17,7 +18,7 @@ const updateOverdueAppointments = async () => {
   try {
     console.log('🔄 Checking for overdue appointments...')
     
-    const now = new Date().toISOString()
+    const now = toLocalTimeString(new Date())
     
     // 🆕 ERWEITERT: Finde ALLE Termine die bereits beendet sind
     const { data: overdueAppointments, error: findError } = await supabase
@@ -44,7 +45,7 @@ const updateOverdueAppointments = async () => {
       .from('appointments')
       .update({ 
         status: 'completed',
-        updated_at: new Date().toISOString()
+        updated_at: toLocalTimeString(new Date())
       })
       .in('id', appointmentIds)
       .select('id, title, status')
@@ -83,7 +84,7 @@ const updateOverdueAppointments = async () => {
         .from('appointments')
         .update({ 
           status: 'completed',
-          updated_at: new Date().toISOString()
+          updated_at: toLocalTimeString(new Date())
         })
         .eq('id', appointmentId)
         .select('id, title, status')
@@ -120,7 +121,7 @@ const updateOverdueAppointments = async () => {
         .from('appointments')
         .update({ 
           status: 'evaluated',
-          updated_at: new Date().toISOString()
+          updated_at: toLocalTimeString(new Date())
         })
         .eq('id', appointmentId)
         .select('id, title, status')
@@ -196,7 +197,7 @@ const updateOverdueAppointments = async () => {
         .from('appointments')
         .update({ 
           status: filters.toStatus,
-          updated_at: new Date().toISOString()
+          updated_at: toLocalTimeString(new Date())
         })
         .eq('status', filters.fromStatus)
 

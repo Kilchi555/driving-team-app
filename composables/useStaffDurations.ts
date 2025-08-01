@@ -1,6 +1,7 @@
 // composables/useStaffDurations.ts - Komplett Datenbank-getrieben
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 export const useStaffDurations = () => {
   // State
@@ -98,7 +99,7 @@ export const useStaffDurations = () => {
         .upsert({
           staff_id: staffId,
           preferred_durations: durationsString,
-          updated_at: new Date().toISOString()
+          updated_at: toLocalTimeString(new Date)
         })
 
       if (upsertError) throw upsertError

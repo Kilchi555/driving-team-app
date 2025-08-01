@@ -180,6 +180,7 @@
 import { ref, computed, watch } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 // Props
 interface Props {
@@ -205,8 +206,7 @@ const errorMessage = ref('')
 // Computed
 const minDate = computed(() => {
   const today = new Date()
-  return today.toISOString().split('T')[0]
-})
+return toLocalTimeString(today).split('T')[0]})
 
 const isValidTime = computed(() => {
   if (!newDate.value || !newStartTime.value || !newEndTime.value) return false
@@ -237,7 +237,7 @@ const initializeForm = () => {
   const startDate = new Date(props.appointment.start)
   const endDate = new Date(props.appointment.end)
   
-  newDate.value = startDate.toISOString().split('T')[0]
+  newDate.value = toLocalTimeString(startDate).split('T')[0]
   newStartTime.value = startDate.toTimeString().slice(0, 5)
   newEndTime.value = endDate.toTimeString().slice(0, 5)
 }
@@ -251,7 +251,7 @@ const formatNewDateTime = () => {
   if (!newDate.value || !newStartTime.value) return ''
   
   const dateTime = new Date(`${newDate.value}T${newStartTime.value}`)
-  return formatDateTime(dateTime.toISOString())
+  return formatDateTime(toLocalTimeString(dateTime))
 }
 
 const shiftByDays = (days: number) => {
@@ -259,7 +259,7 @@ const shiftByDays = (days: number) => {
   
   const currentDate = new Date(newDate.value)
   currentDate.setDate(currentDate.getDate() + days)
-  newDate.value = currentDate.toISOString().split('T')[0]
+  newDate.value = toLocalTimeString(currentDate).split('T')[0]
 }
 
 const shiftByHours = (hours: number) => {
@@ -291,8 +291,8 @@ const moveAppointment = async () => {
     const { error } = await supabase
       .from('appointments')
       .update({
-        start_time: newStartDateTime.toISOString(),
-        end_time: newEndDateTime.toISOString()
+        start_time: toLocalTimeString(newStartDateTime),
+        end_time: toLocalTimeString(newEndDateTime)
       })
       .eq('id', props.appointment.id)
     
@@ -306,8 +306,8 @@ const moveAppointment = async () => {
     // Emit success
     emit('moved', {
       appointmentId: props.appointment.id,
-      newStart: newStartDateTime.toISOString(),
-      newEnd: newEndDateTime.toISOString()
+      newStart: toLocalTimeString(newStartDateTime),
+      newEnd: toLocalTimeString(newEndDateTime)
     })
     
     closeModal()

@@ -159,12 +159,13 @@ interface Student {
 // Props
 interface Props {
   modelValue?: Student | null
-  currentUser?: any
+  currentUser?: { id: string; role: string; [key: string]: any } | null;
   disabled?: boolean
   placeholder?: string
   autoLoad?: boolean
   showAllStudents?: boolean
   isFreeslotMode?: boolean
+  editStudentId?: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -173,7 +174,8 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: 'Schüler suchen (Name, E-Mail oder Telefon)...',
   autoLoad: true,
   showAllStudents: false,
-  isFreeslotMode: false
+  isFreeslotMode: false,
+  editStudentId: undefined
 })
 
 // Emits
@@ -238,22 +240,12 @@ interface AppointmentResponse {
 // Methods
 
 const loadStudents = async (editStudentId?: string | null) => {
-  console.log('🔄 Loading students...', { 
-    showAll: showAllStudentsLocal.value,
-    editMode: !!editStudentId,
-    editStudentId: editStudentId,
-    currentUserId: props.currentUser?.id,
-    currentUserRole: props.currentUser?.role,
-    autoLoad: props.autoLoad,
-    isFreeslotMode: props.isFreeslotMode
-  })
-  
   if (isLoading.value) return
   
   const staffId = props.currentUser?.id
-  if (!staffId) {
-    console.error('❌ No staff ID available')
-    return
+  if (!staffId && !props.showAllStudents) { // Zeige Fehler nur, wenn staffId erwartet wird und fehlt
+    console.error('❌ No staff ID available for staff-specific load or showAllStudents is false.')
+    return // Nur hier zurückkehren, wenn staffId wirklich obligatorisch ist
   }
 
   isLoading.value = true
@@ -262,7 +254,7 @@ const loadStudents = async (editStudentId?: string | null) => {
 
   try {
     // ✅ 1. Cache prüfen (nur für Staff-spezifische Abfragen)
-    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value) {
+    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && staffId) { 
       const cacheStatus = getCacheStatus(staffId)
       console.log('📦 Cache status:', cacheStatus)
       
@@ -308,6 +300,7 @@ const loadStudents = async (editStudentId?: string | null) => {
         props.currentUser?.role === 'staff' && !showAllStudentsLocal.value) {
       
       console.log('📦 Network error - trying cache as fallback')
+      if (staffId) { 
       const cachedStudents = getCachedStudents(staffId)
       
       if (cachedStudents.length > 0) {
@@ -333,6 +326,10 @@ const loadStudents = async (editStudentId?: string | null) => {
       error.value = err.message || 'Fehler beim Laden der Schüler'
       availableStudents.value = []
     }
+        } else {
+      error.value = err.message || 'Fehler beim Laden der Schüler'
+      availableStudents.value = []
+        }
   } finally {
     isLoading.value = false
   }
@@ -346,8 +343,10 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
 
     let studentsToCache: any[] = []
 
+    const staffId = props.currentUser?.id;
+
     // Staff-spezifische Logik
-    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value) {
+    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && staffId) {
       console.log('👨‍🏫 Loading students for staff member:', props.currentUser.id)
       
       // 1. Direkt zugewiesene Schüler laden
@@ -356,7 +355,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
         .eq('role', 'client')
         .eq('is_active', true)
-        .eq('assigned_staff_id', props.currentUser.id)
+        .eq('assigned_staff_id', staffId)
         .order('first_name')
 
       if (assignedError) throw assignedError
@@ -385,12 +384,6 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
                  user.role === 'client' && 
                  user.is_active === true
         })
-
-      console.log('📊 Student loading results:', {
-        assignedStudents: assignedStudents?.length || 0,
-        appointmentStudents: typedAppointmentStudents?.length || 0,
-        historyStudents: historyStudents.length
-      })
 
       // 3. Kombinieren und deduplizieren
       const allStudents = [...(assignedStudents || []), ...historyStudents]
@@ -469,8 +462,8 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
     }
 
     // ✅ Cache aktualisieren (nur für Staff-spezifische Abfragen)
-    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && studentsToCache.length > 0) {
-      cacheStudents(studentsToCache, props.currentUser.id)
+    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && studentsToCache.length > 0 && staffId) {
+      cacheStudents(studentsToCache, staffId)
     }
 
   } catch (err: any) {
@@ -493,9 +486,14 @@ const handleSearchFocus = () => {
   console.log('🔍 Search field focused, autoLoad:', shouldAutoLoadComputed.value)
   
   // ✅ Lade Studenten auch bei autoLoad=false wenn noch keine geladen sind
-  if (availableStudents.value.length === 0) {
+  // ÄNDERE DIESEN BLOCK:
+  // Füge props.currentUser?.id hinzu, um sicherzustellen, dass die ID vorhanden ist
+  if (availableStudents.value.length === 0 && props.currentUser?.id) { // <-- HIER IST DIE WICHTIGE ÄNDERUNG
     console.log('📚 Loading students on search focus (no students loaded yet)')
-    loadStudents()
+    loadStudents() // Ruft loadStudents auf, das intern die staffId prüft
+  } else if (!props.currentUser?.id) {
+    // Optionaler Log, um zu bestätigen, dass es hier nicht geladen wird, weil die ID fehlt
+    console.log('🚫 Cannot load on focus yet: No staff ID available.');
   }
 }
 
@@ -590,31 +588,59 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
   }
 }
 
+watch(() => props.showAllStudents, (newVal) => { // <--- HIER newVal HINZUFÜGEN
+  showAllStudentsLocal.value = newVal;
+  console.log('👀 Watcher: showAllStudents changed to:', newVal);
+  if (props.currentUser?.id) { 
+      console.log('🔄 showAllStudents changed, re-loading students with current ID...');
+      loadStudents(props.editStudentId);
+  } else {
+      console.log('🔄 showAllStudents changed, but no currentUser ID to trigger load yet.');
+  }
+});
+
 // Watchers
 watch(showAllStudentsLocal, async () => {
   console.log('🔄 Toggle changed:', showAllStudentsLocal.value)
   await loadStudents()
 })
 
-onMounted(() => {
-  console.log('📚 StudentSelector mounted, autoLoad:', shouldAutoLoadComputed.value)
+// StudentSelector.vue
+// ...
+// Füge DIESEN WATCHER HINZU ODER PASSE IHN AN, falls nicht exakt so
+watch(() => props.currentUser?.id, (newId) => {
+  console.log('👀 Watcher: currentUser.id changed to:', newId, 'autoLoad:', props.autoLoad, 'isFreeslotMode:', props.isFreeslotMode, 'showAllStudents:', props.showAllStudents);
   
-  if (shouldAutoLoadComputed.value) {
-    console.log('🔄 Auto-loading students on mount')
-    loadStudents()
-  } else {
-    console.log('🚫 Auto-load disabled, waiting for user action')
+  if (props.autoLoad && !props.isFreeslotMode && newId) {
+    console.log('🚀 Triggering loadStudents from watcher (autoLoad & not freeslot & id available)');
+    // ZEILE 601: Sicherstellen, dass 'editStudentId' als Prop existiert
+    loadStudents(props.editStudentId); 
+  } else if (props.showAllStudents && (newId || !props.autoLoad)) {
+      console.log('🚀 Triggering loadStudents from watcher (showAllStudents enabled)');
+      // ZEILE 607: Sicherstellen, dass 'editStudentId' als Prop existiert
+      loadStudents(props.editStudentId);
+  } else if (!newId) {
+      console.log('Waiting for currentUser ID to become available to trigger loadStudents.');
   }
-})
+}, { immediate: true });
 
-watch(() => props.autoLoad, (newAutoLoad) => {
-  console.log('🔄 autoLoad prop changed to:', newAutoLoad)
-  
-  if (newAutoLoad && availableStudents.value.length === 0) {
-    console.log('🔄 autoLoad enabled - loading students')
-    loadStudents()
+onMounted(() => {
+  console.log('📚 StudentSelector mounted, autoLoad:', props.autoLoad, 'isFreeslotMode:', props.isFreeslotMode, 'currentUser.id:', props.currentUser?.id, 'showAllStudents:', props.showAllStudents);
+  // Stelle sicher, dass HIER KEIN loadStudents() Aufruf mehr ist!
+  if (!props.autoLoad || props.isFreeslotMode || (!props.currentUser?.id && !props.showAllStudents)) {
+    console.log('🚫 Initial auto-load conditions not met. Waiting for props or user action.');
   }
-}, { immediate: true })
+});
+
+watch(() => props.autoLoad, (newVal) => { // <--- HIER newVal HINZUFÜGEN
+  console.log('🔄 autoLoad prop changed to:', newVal);
+  if (newVal && props.currentUser?.id && !props.isFreeslotMode) {
+    console.log('🚀 autoLoad enabled and ID available, triggering loadStudents.');
+    loadStudents(props.editStudentId);
+  } else if (newVal && !props.currentUser?.id) {
+    console.log('🚫 autoLoad enabled, but no ID yet. Waiting for currentUser.id watcher.');
+  }
+});
 
 // Expose methods for parent components
 defineExpose({

@@ -16,9 +16,20 @@
           <span v-if="invitedCustomers.length > 0" class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
             {{ invitedCustomers.length }}
           </span>
+          
+          <!-- SMS Status Badge im Header -->
+          <span v-if="smsStatusSummary.total > 0" class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+            📱 {{ smsStatusSummary.sent }}/{{ smsStatusSummary.total }}
+          </span>
         </div>
         
         <div class="flex items-center gap-2">
+          <!-- SMS Sending Indicator im Header -->
+          <div v-if="sendingSms" class="flex items-center gap-1">
+            <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+            <span class="text-xs text-blue-600">SMS...</span>
+          </div>
+          
           <!-- Schnell-Aktionen (nur wenn expanded) -->
           <div v-if="isExpanded && invitedCustomers.length > 0" class="flex gap-1">
             <button
@@ -52,6 +63,14 @@
         <!-- Error State -->
         <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 m-3">
           ❌ {{ error }}
+        </div>
+
+        <!-- SMS-Sending Indicator -->
+        <div v-if="sendingSms" class="mx-3 mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div class="flex items-center gap-2">
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span class="text-sm text-blue-800">📱 Sende SMS-Einladungen...</span>
+          </div>
         </div>
 
         <!-- Neukunden-Eingabeformular -->
@@ -167,27 +186,78 @@
                     <span v-if="customer.category" class="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded">
                       {{ customer.category }}
                     </span>
+                    
+                    <!-- SMS Status Badge -->
+                    <span v-if="smsStatus[customer.phone]" class="text-xs px-2 py-0.5 rounded flex items-center gap-1"
+                      :class="smsStatus[customer.phone].sent 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'"
+                    >
+                      <span v-if="smsStatus[customer.phone].sent">✅ SMS</span>
+                      <span v-else>❌ SMS</span>
+                    </span>
                   </div>
                   <div class="text-sm text-gray-600">
                     📱 {{ customer.phone }}
                     <span v-if="customer.notes" class="ml-2">
                       📝 {{ customer.notes }}
                     </span>
+                    
+                    <!-- SMS Details -->
+                    <div v-if="smsStatus[customer.phone]" class="mt-1 text-xs">
+                      <span v-if="smsStatus[customer.phone].sent && smsStatus[customer.phone].sid" class="text-green-600">
+                        SID: {{ smsStatus[customer.phone].sid }}
+                      </span>
+                      <span v-else-if="smsStatus[customer.phone].error" class="text-red-600">
+                        Fehler: {{ smsStatus[customer.phone].error }}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
-                <button
-                  v-if="!disabled"
-                  @click="removeCustomer(index)"
-                  class="text-red-600 hover:text-red-800 p-1"
-                  title="Entfernen"
-                >
-                  ✕
-                </button>
+                <div class="flex items-center gap-2">
+                  <!-- SMS Retry Button -->
+                  <button
+                    v-if="smsStatus[customer.phone] && !smsStatus[customer.phone].sent"
+                    @click="retrySms(customer)"
+                    class="text-blue-600 hover:text-blue-800 p-1 text-xs"
+                    title="SMS erneut senden"
+                  >
+                    🔄
+                  </button>
+                  
+                  <button
+                    v-if="!disabled"
+                    @click="removeCustomer(index)"
+                    class="text-red-600 hover:text-red-800 p-1"
+                    title="Entfernen"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             </div>
 
-            <!-- Info Box -->
+            <!-- SMS Summary -->
+            <div v-if="smsStatusSummary.total > 0" class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <h5 class="text-sm font-medium text-gray-900 mb-2">📊 SMS-Status</h5>
+              <div class="grid grid-cols-3 gap-4 text-sm">
+                <div class="text-center">
+                  <div class="text-lg font-bold text-gray-900">{{ smsStatusSummary.total }}</div>
+                  <div class="text-gray-600">Gesamt</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-lg font-bold text-green-600">{{ smsStatusSummary.sent }}</div>
+                  <div class="text-gray-600">Gesendet</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-lg font-bold text-red-600">{{ smsStatusSummary.failed }}</div>
+                  <div class="text-gray-600">Fehlgeschlagen</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Updated Info Box -->
             <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div class="flex items-start gap-2">
                 <span class="text-blue-600 mt-0.5">ℹ️</span>
@@ -195,8 +265,9 @@
                   <p class="font-medium">Was passiert beim Speichern:</p>
                   <ul class="mt-1 space-y-1 text-xs">
                     <li>• Neukunden werden automatisch registriert</li>
-                    <li>• SMS-Einladung mit App-Download Link</li>
+                    <li>• 📱 SMS-Einladung mit Termindetails und App-Link</li>
                     <li>• Termin wird für alle Teilnehmer erstellt</li>
+                    <li v-if="sendingSms">• <strong>SMS werden gerade versendet...</strong></li>
                   </ul>
                 </div>
               </div>
@@ -216,6 +287,13 @@
           class="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-800"
         >
           {{ customer.first_name }} {{ customer.last_name }}
+          
+          <!-- SMS Status in kompakter Ansicht -->
+          <span v-if="smsStatus[customer.phone]" class="ml-1">
+            <span v-if="smsStatus[customer.phone].sent" class="text-green-600">✅</span>
+            <span v-else class="text-red-600">❌</span>
+          </span>
+          
           <button
             v-if="!disabled"
             @click="removeCustomer(index)"
@@ -232,6 +310,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 // Customer Interface - vereinfacht für temp users
 interface NewCustomer {
@@ -267,6 +346,8 @@ const isProcessing = ref(false)
 const error = ref<string | null>(null)
 const categories = ref<any[]>([])
 const isLoadingCategories = ref(false)
+const smsStatus = ref<Record<string, { sent: boolean, sid?: string, error?: string }>>({})
+const sendingSms = ref(false)
 
 const newCustomer = ref<NewCustomer>({
   first_name: '',
@@ -286,6 +367,16 @@ const isNewCustomerValid = computed(() => {
   return newCustomer.value.phone.trim() &&
          isValidPhone(newCustomer.value.phone) &&
          (newCustomer.value.first_name?.trim() || newCustomer.value.last_name?.trim()) // Mindestens ein Name
+})
+
+// Computed für SMS Status Display:
+const smsStatusSummary = computed(() => {
+  const statuses = Object.values(smsStatus.value)
+  return {
+    total: statuses.length,
+    sent: statuses.filter(s => s.sent).length,
+    failed: statuses.filter(s => !s.sent).length
+  }
 })
 
 // Methods
@@ -313,6 +404,28 @@ const formatPhone = (phone: string): string => {
   }
   
   return cleanPhone
+}
+
+const createInvitationSmsMessage = (customer: NewCustomer, appointmentData?: any) => {
+  const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Kunde'
+  
+  // Basis-Einladungs-SMS
+  let message = `Hallo ${customerName}! 🚗 Willkommen bei Driving Team Zürich! `
+  
+  if (appointmentData) {
+    const appointmentDate = new Date(appointmentData.start_time).toLocaleDateString('de-CH')
+    const appointmentTime = new Date(appointmentData.start_time).toLocaleTimeString('de-CH', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+    
+    message += `Ihr Fahrstunden-Termin ist am ${appointmentDate} um ${appointmentTime} Uhr bestätigt. `
+  }
+  
+  message += `Laden Sie unsere App herunter: https://app.drivingteam.ch 📱 `
+  message += `Bei Fragen: 044 431 00 33. Beste Grüsse, Ihr Driving Team!`
+  
+  return message
 }
 
 const toggleExpanded = () => {
@@ -399,20 +512,7 @@ const addCustomer = async () => {
       return
     }
 
-    // Check invited customers
-    const { data: invitedCustomer } = await supabase
-      .from('invited_customers')
-      .select('id, first_name, last_name, phone')
-      .eq('phone', formatPhone(newCustomer.value.phone))
-      .eq('status', 'pending')
-      .maybeSingle()
-
-    if (invitedCustomer) {
-      error.value = `Einladung für "${invitedCustomer.first_name || ''} ${invitedCustomer.last_name || ''}" bereits versendet`
-      return
-    }
-
-    // Add to invited customers list
+    // Dann direkt zum Hinzufügen zur Liste:
     const customerToAdd: NewCustomer = {
       first_name: newCustomer.value.first_name?.trim() || undefined,
       last_name: newCustomer.value.last_name?.trim() || undefined,
@@ -470,19 +570,48 @@ const resetSelection = () => {
   console.log('🔄 CustomerInviteSelector: Selection reset')
 }
 
+// 1. FÜGE DIESE DIREKTE sendSms FUNKTION HINZU (vor createInvitedCustomers):
+const sendSms = async (phoneNumber: string, message: string) => {
+  try {
+    const supabase = getSupabase();
+    
+    const { data, error } = await supabase.functions.invoke('send-twilio-sms', {
+      body: {
+        to: phoneNumber,
+        message: message
+      },
+      method: 'POST'
+    });
+
+    if (error) {
+      console.error('Fehler beim Aufruf der SMS-Funktion:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('SMS-Funktion erfolgreich aufgerufen:', data);
+    return { success: true, data };
+
+  } catch (err) {
+    console.error('Unerwarteter Fehler beim Senden der SMS:', err);
+    return { success: false, error: 'Unerwarteter Fehler' };
+  }
+};
+
+// 2. DEINE createInvitedCustomers FUNKTION BLEIBT UNVERÄNDERT:
 const createInvitedCustomers = async (appointmentData: any) => {
   if (invitedCustomers.value.length === 0) {
     console.log('📞 No customers to invite')
     return []
   }
 
-  console.log('📧 Creating invited customers in temp table:', invitedCustomers.value.length)
+  console.log('📧 Creating invited customers and sending SMS:', invitedCustomers.value.length)
   const supabase = getSupabase()
   const createdInvites = []
+  sendingSms.value = true
 
   for (const customer of invitedCustomers.value) {
     try {
-      // 1. Create entry in invited_customers table
+      // 1. UPSERT entry in invited_customers table (UPDATE wenn phone existiert, INSERT wenn nicht)
       const inviteData = {
         first_name: customer.first_name || null,
         last_name: customer.last_name || null,
@@ -490,34 +619,127 @@ const createInvitedCustomers = async (appointmentData: any) => {
         category: customer.category || null,
         notes: customer.notes || null,
         invited_by_staff_id: props.currentUser?.id,
+        appointment_id: appointmentData.id, // ← Verknüpfung zum Termin
         status: 'pending',
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 Tage
+        expires_at: toLocalTimeString(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 Tage        
+        updated_at: toLocalTimeString(new Date())
       }
 
+      // UPSERT: ON CONFLICT (phone) DO UPDATE
       const { data: invite, error: inviteError } = await supabase
         .from('invited_customers')
-        .insert(inviteData)
+        .upsert(inviteData, { 
+          onConflict: 'phone',
+          ignoreDuplicates: false 
+        })
         .select()
         .single()
 
       if (inviteError) throw inviteError
 
-      // 2. TODO: Send SMS invitation
-      // Integration with SMS service (Twilio, etc.)
-      console.log('📱 SMS invitation would be sent to:', customer.phone)
-      console.log('📧 Invitation stored with ID:', invite.id)
+      console.log('✅ Invitation upserted with ID:', invite.id)
 
-      createdInvites.push(invite)
+      // 2. Send SMS invitation
+      try {
+        const smsMessage = createInvitationSmsMessage(customer, appointmentData)
+        console.log('📱 Sending SMS to:', customer.phone)
+        console.log('📄 Message:', smsMessage)
+
+        // ✅ VERWENDET JETZT DIE DIREKTE sendSms FUNKTION (wie in EventModal)
+        const smsResult = await sendSms(customer.phone, smsMessage)
+
+       if (smsResult.success) {
+          console.log('✅ SMS sent successfully:', smsResult.data?.sid)
+          
+          // Update SMS status tracking
+          smsStatus.value[customer.phone] = {
+            sent: true,
+            sid: smsResult.data?.sid
+          }
+
+          // Update invitation record with SMS status - VERWENDE VORHANDENE FELDER
+          await supabase
+            .from('invited_customers')
+            .update({
+              invitation_sent_at: toLocalTimeString(new Date()), // ← Statt sms_sent_at
+              metadata: { // ← Speichere SMS-Details im metadata-Feld (JSONB)
+                sms_sent: true,
+                sms_sid: smsResult.data?.sid,
+                sms_sent_at: toLocalTimeString(new Date())
+              }
+            })
+            .eq('id', invite.id)
+
+        } else {
+          console.error('❌ SMS failed:', smsResult.error)
+          smsStatus.value[customer.phone] = {
+            sent: false,
+            error: smsResult.error
+          }
+
+          // Update invitation record with SMS failure - VERWENDE VORHANDENE FELDER
+          await supabase
+            .from('invited_customers')
+            .update({
+              invitation_sent_at: toLocalTimeString(new Date()), // ← Versucht wurde es trotzdem
+              metadata: { // ← Speichere Fehler-Details im metadata-Feld
+                sms_sent: false,
+                sms_error: smsResult.error,
+                sms_sent_at: toLocalTimeString(new Date())
+              }
+            })
+            .eq('id', invite.id)
+        }
+
+      } catch (smsError: any) {
+        console.error('❌ SMS sending error:', smsError)
+        smsStatus.value[customer.phone] = {
+          sent: false,
+          error: smsError.message || 'SMS Fehler'
+        }
+      }
+
+      createdInvites.push({
+        ...invite,
+        sms_status: smsStatus.value[customer.phone]
+      })
 
     } catch (err) {
       console.error('❌ Error creating invite for customer:', customer, err)
     }
   }
 
-  // 3. TODO: Create reminder job for follow-up SMS
+  sendingSms.value = false
+
+  // 3. Log SMS summary
+  const successfulSms = Object.values(smsStatus.value).filter(status => status.sent).length
+  const failedSms = Object.values(smsStatus.value).filter(status => !status.sent).length
+  console.log(`📊 SMS Summary: ${successfulSms} sent, ${failedSms} failed`)
+
+  // 4. TODO: Create reminder job for follow-up SMS
   console.log('⏰ Reminder jobs would be scheduled for', createdInvites.length, 'invites')
 
   return createdInvites
+}
+
+// Funktion zum manuellen Nachsenden einer SMS:
+const retrySms = async (customer: NewCustomer) => {
+  try {
+    const smsMessage = createInvitationSmsMessage(customer)
+    const smsResult = await sendSms(customer.phone, smsMessage)
+    
+    if (smsResult.success) {
+      smsStatus.value[customer.phone] = {
+        sent: true,
+        sid: smsResult.data?.sid
+      }
+      console.log('✅ SMS retry successful for:', customer.phone)
+    } else {
+      console.error('❌ SMS retry failed for:', customer.phone, smsResult.error)
+    }
+  } catch (error) {
+    console.error('❌ SMS retry error:', error)
+  }
 }
 
 // Expose methods for parent components

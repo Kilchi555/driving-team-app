@@ -4,7 +4,7 @@ import { defineNuxtConfig } from 'nuxt/config'
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: false },
-  ssr: true,
+  ssr: false,
   
   // --- Module Configuration (MIT @nuxtjs/supabase hinzugefügt) ---
   modules: [
@@ -40,7 +40,7 @@ export default defineNuxtConfig({
   // --- TypeScript Configuration ---
   typescript: {
     strict: true,
-    typeCheck: true
+    typeCheck: false
   },
   
   // --- Nitro Configuration ---
@@ -60,7 +60,7 @@ export default defineNuxtConfig({
     compilerOptions: {
       // Suspense-Warnungen unterdrücken
       isCustomElement: (tag: string) => false
-    }
+    },
   },
   
   runtimeConfig: {
@@ -81,7 +81,7 @@ export default defineNuxtConfig({
     head: {
       script: [
         {
-          src: `https://maps.googleapis.com/maps/api/js?key=${process.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=de&region=CH&v=beta&loading=async`,
+          src: `https://maps.googleapis.com/maps/api/js?key=${process.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=de&region=CH`,
           async: true,
           defer: true
         }

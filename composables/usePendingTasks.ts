@@ -1,6 +1,7 @@
 // composables/usePendingTasks.ts
 import { ref, computed, reactive } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 // Typen für bessere Typsicherheit
 interface PendingAppointment {
@@ -105,7 +106,7 @@ const fetchPendingTasks = async (staffId: string) => {
         )
       `)
       .eq('staff_id', staffId)
-      .lt('end_time', new Date().toISOString()) // Nur vergangene Termine
+      .lt('end_time', toLocalTimeString(new Date)) // Nur vergangene Termine
       .eq('status', 'completed') // Nur abgeschlossene Termine
       .order('start_time', { ascending: true }) // Neueste zuerst
 
@@ -188,7 +189,7 @@ const saveCriteriaEvaluations = async (
         staff_rating: null,
         staff_note: '',
         last_updated_by_user_id: currentUserId || null,
-        last_updated_at: new Date().toISOString()
+        last_updated_at: toLocalTimeString(new Date)
       };
     });
 

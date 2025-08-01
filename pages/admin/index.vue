@@ -165,6 +165,7 @@
 import { ref, onMounted } from 'vue'
 import { definePageMeta } from '#imports'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 definePageMeta({
   layout: 'admin',
@@ -255,11 +256,11 @@ const loadDashboardStats = async () => {
     
     // Get today's date range
     const today = new Date()
-    const todayStart = new Date(today.setHours(0, 0, 0, 0)).toISOString()
-    const todayEnd = new Date(today.setHours(23, 59, 59, 999)).toISOString()
+    const todayStart = toLocalTimeString(new Date(today.setHours(0, 0, 0, 0)))
+    const todayEnd = toLocalTimeString(new Date(today.setHours(23, 59, 59, 999)))
     
     // Get week range
-    const weekStart = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const weekStart = toLocalTimeString(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000))
     
     // Load various stats in parallel
     const [
@@ -308,8 +309,8 @@ const loadDashboardStats = async () => {
       
       // Count tomorrow's appointments
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
-      const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0)).toISOString()
-      const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999)).toISOString()
+      const tomorrowStart = toLocalTimeString(new Date(tomorrow.setHours(0, 0, 0, 0)))
+      const tomorrowEnd = toLocalTimeString(new Date(tomorrow.setHours(23, 59, 59, 999)))
       
       const { data: tomorrowAppts } = await supabase
         .from('appointments')

@@ -1,4 +1,4 @@
-<!-- Verbesserte PriceDisplay.vue Template Sektion -->
+<!-- PriceDisplay.vue - Sauberes Template -->
 <template>
   <div class="space-y-4 p-4 bg-white rounded-lg border border-gray-200">
     <!-- Header -->
@@ -26,63 +26,95 @@
         </span>
       </div>
 
-      <!-- 2. VERSICHERUNGSGEBÜHR (falls vorhanden) -->
-      <div v-if="shouldShowAdminFee" class="flex justify-between items-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+      <!-- 2. PRODUKTE ANZEIGE -->
+      <div v-if="productSale.hasProducts.value" class="space-y-2">
+        <div class="text-sm font-medium text-gray-700">📚 Zusätzliche Produkte</div>
+        <div v-for="item in productSale.selectedProducts.value" :key="item.product.id" 
+             class="flex justify-between items-center p-2 bg-green-50 rounded border border-green-200">
+          <div class="flex-1">
+            <div class="text-sm font-medium text-green-800">{{ item.product.name }}</div>
+            <div class="text-xs text-green-600">{{ item.quantity }}x CHF {{ item.product.price.toFixed(2) }}</div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-sm font-bold text-green-800">CHF {{ item.total.toFixed(2) }}</span>
+            <button 
+              @click="productSale.removeProduct(item.product.id)" 
+              class="text-red-500 hover:text-red-700 text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. VERSICHERUNGSGEBÜHR -->
+      <div v-if="shouldShowAdminFee" class="flex justify-between items-center p-2 bg-orange-50 rounded border border-orange-200">
         <div class="flex items-center space-x-2">
-          <span class="text-sm font-medium text-gray-900">Versicherungsgebühr</span>
-          <button @click="showAdminFeeInfo = !showAdminFeeInfo" class="text-blue-500 hover:text-blue-700 text-xs">
+          <span class="text-sm text-orange-800">🛡️ Versicherung</span>
+          <button 
+            @click="showAdminFeeInfo = !showAdminFeeInfo"
+            class="text-orange-600 hover:text-orange-800 text-xs"
+          >
             ℹ️
           </button>
         </div>
-        <span class="text-lg font-bold text-yellow-800">
-          CHF {{ formatPrice(adminFee) }}
-        </span>
+        <span class="text-sm font-bold text-orange-800">CHF {{ formatPrice(pricing.calculatedAdminFee.value) }}</span>
       </div>
 
-      <!-- 4. RABATT (falls vorhanden) -->
-      <div v-if="props.discount > 0" class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+      <!-- 4. RABATT ANZEIGE -->
+      <div v-if="discount > 0" class="flex justify-between items-center p-2 bg-green-50 rounded border border-green-200">
         <div class="flex items-center space-x-2">
-          <span class="text-sm font-medium text-green-800">Rabatt</span>
-          <span v-if="props.discountReason" class="text-xs text-green-600">({{ props.discountReason }})</span>
-          <button v-if="props.allowDiscountEdit" @click="removeDiscount" class="text-red-500 hover:text-red-700 text-xs">
-            ✕ 
+          <span class="text-sm text-green-800">🏷️ Rabatt</span>
+          <span v-if="discountReason" class="text-xs text-green-600">({{ discountReason }})</span>
+        </div>
+        <span class="text-sm font-bold text-green-800">- CHF {{ formatPrice(discount) }}</span>
+                  <button 
+            @click="removeDiscount"
+            class="text-red-500 hover:text-red-700 text-xs"
+          >
+            ✕
           </button>
-        </div>
-        <span class="text-lg font-bold text-green-700">
-          - CHF {{ formatPrice(props.discount) }}
-        </span>
       </div>
 
-      <!-- 5. RABATT HINZUFÜGEN BUTTON -->
-      <div v-if="props.allowDiscountEdit && props.discount === 0" class="flex justify-center">
-        <button 
-          @click="showDiscountEdit = true"
-          class="text-blue-600 hover:text-blue-800 text-sm font-medium py-2 px-4 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors"
-        >
-          ➕ Rabatt hinzufügen
-        </button>
-      </div>
-
-      <!-- 6. GESAMTPREIS (nur wenn Rabatt vorhanden) -->
-      <div v-if="props.discount > 0" class="flex justify-between items-center p-4 bg-gray-900 rounded-lg border-2 border-gray-800" 
-           :class="paymentStatusClass">
-        <span class="text-lg font-bold text-white">TOTAL:</span>
-        <div class="text-right">
-          <div class="text-2xl font-bold text-white">CHF {{ finalPrice }}</div>
-        </div>
+      <!-- 5. GESAMTPREIS -->
+      <div class="flex justify-between items-center p-3 bg-gray-100 rounded-lg border-2 border-gray-300">
+        <span class="text-lg font-bold text-gray-900">💳 Gesamtpreis</span>
+        <span class="text-xl font-bold text-gray-900">CHF {{ formatPrice(finalPrice) }}</span>
       </div>
     </div>
 
-    <!-- ADMIN FEE INFO EXPANDABLE -->
-    <div v-if="showAdminFeeInfo" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-      <p><strong>Versicherungsgebühr:</strong></p>
-      <p v-if="props.appointmentNumber === 1">Entfällt beim ersten Termin.</p>
-      <p v-else>Wird ab dem 2. Termin einmalig erhoben.</p>
+    <!-- EDIT-BUTTONS (nur im Edit-Mode sichtbar) -->
+    <div class="flex space-x-2 pt-2 border-t border-gray-200">
+      <!-- Rabatt-Button -->
+      <button
+        v-if="allowDiscountEdit && !showDiscountEdit"
+        @click="showDiscountEdit = true"
+        class="flex items-center px-3 py-2 text-sm text-green-600 border border-green-300 rounded-md hover:bg-green-50"
+      >
+        🏷️ Rabatt
+      </button>
+
+      <!-- Produkt-Button -->
+      <button
+        v-if="allowProductSale && !productSale.showProductSelector.value"
+        @click="productSale.openProductSelector()"
+        class="flex items-center px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50"
+      >
+        📚 Produkte
+      </button>
+    </div>
+
+    <!-- VERSICHERUNGS-INFO -->
+    <div v-if="showAdminFeeInfo" class="bg-orange-50 border border-orange-200 rounded-md p-3">
+      <h4 class="text-sm font-medium text-orange-800 mb-1">🛡️ Versicherungsgebühr</h4>
+      <p class="text-xs text-orange-700">Diese Gebühr wird für jeden Termin einmalig erhoben.</p>
     </div>
 
     <!-- RABATT-BEARBEITUNGS-SEKTION -->
     <div v-if="showDiscountEdit" class="border-t border-gray-200 pt-4">      
       <div class="space-y-3">
+        <h4 class="text-sm font-medium text-gray-700">🏷️ Rabatt hinzufügen</h4>
+        
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Rabattbetrag (CHF)</label>
           <input 
@@ -110,33 +142,6 @@
           >
         </div>
 
-        <!-- RABATT-VORSCHAU -->
-        <div v-if="tempDiscount > 0" class="bg-gray-50 p-3 rounded-md border">
-          <h5 class="text-sm font-medium text-gray-700 mb-2">📊 Vorschau:</h5>
-          <div class="space-y-1 text-xs">
-            <div class="flex justify-between text-gray-500">
-              <span>Fahrstunde:</span>
-              <span>CHF {{ formatPrice(lessonPrice) }}</span>
-            </div>
-            <div v-if="shouldShowAdminFee" class="flex justify-between text-gray-500">
-              <span>Versicherung:</span>
-              <span>CHF {{ formatPrice(adminFee) }}</span>
-            </div>
-            <div class="flex justify-between border-t pt-1 text-gray-600">
-              <span>Subtotal:</span>
-              <span>CHF {{ formatPrice(totalPriceWithoutDiscount) }}</span>
-            </div>
-            <div class="flex justify-between text-green-600">
-              <span>Rabatt:</span>
-              <span>- CHF {{ formatPrice(tempDiscount) }}</span>
-            </div>
-            <div class="flex justify-between font-bold text-lg border-t border-gray-300 pt-1 text-gray-500">
-              <span>Neuer Preis:</span>
-              <span>CHF {{ formatPrice(totalPriceWithoutDiscount - tempDiscount) }}</span>
-            </div>
-          </div>
-        </div>
-
         <!-- BUTTONS -->
         <div class="flex justify-end space-x-3">
           <button
@@ -156,8 +161,38 @@
       </div>
     </div>
 
+    <!-- PRODUKT-AUSWAHL-SEKTION -->
+    <div v-if="productSale.showProductSelector.value" class="border-t border-gray-200 pt-4">      
+      <div class="space-y-3">
+        <h4 class="text-sm font-medium text-gray-700">📚 Produkte hinzufügen</h4>
+        
+        <!-- Produkt-Grid -->
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            v-for="product in productSale.availableProducts.value"
+            :key="product.id"
+            @click="productSale.addProduct(product)"
+            class="p-3 text-left border rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <div class="text-sm font-medium">{{ product.name }}</div>
+            <div class="text-xs text-gray-500 mb-1">{{ product.description }}</div>
+            <div class="text-sm font-bold text-blue-600">CHF {{ product.price.toFixed(2) }}</div>
+          </button>
+        </div>
 
-    <!-- Zahlungsart-Regler -->
+        <!-- Buttons -->
+        <div class="flex justify-end">
+          <button 
+            @click="productSale.closeProductSelector()" 
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Schliessen
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ZAHLUNGSART-SEKTION (vereinfacht) -->
     <div class="border-t border-gray-200 pt-4">
       <h4 class="text-md font-medium text-gray-900 mb-3">Zahlungsart wählen</h4>
       
@@ -186,6 +221,180 @@
           </label>
         </div>
 
+          <!-- RECHNUNGSFELDER - MIT BESTEHENDEN FUNKTIONEN -->
+          <div v-if="invoiceMode" class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 class="text-sm font-medium text-blue-800 mb-3">📋 Rechnungsadresse</h4>
+            
+            <!-- Bestehende Adressen laden Button -->
+            <div v-if="companyBilling.savedAddresses.value.length === 0 && !companyBilling.currentAddress.value" class="mb-3">
+              <button
+                @click="loadExistingAddresses"
+                class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                :disabled="companyBilling.isLoading.value"
+              >
+                {{ companyBilling.isLoading.value ? 'Laden...' : 'Bestehende Adressen laden' }}
+              </button>
+            </div>
+            
+            <!-- Adresse auswählen -->
+            <div v-if="companyBilling.savedAddresses.value.length > 0 && !companyBilling.currentAddress.value" class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Gespeicherte Adresse auswählen:</label>
+              <select 
+                @change="selectExistingAddress(($event.target as HTMLSelectElement).value)"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Neue Adresse eingeben</option>
+                <option v-for="address in companyBilling.savedAddresses.value" :key="address.id" :value="address.id">
+                  {{ companyBilling.getAddressPreview(address) }}
+                </option>
+              </select>
+            </div>
+            
+            <!-- Formular Felder -->
+            <div v-if="!companyBilling.currentAddress.value" class="space-y-3">
+              <!-- Firmenname -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Firmenname *</label>
+                <input
+                  v-model="companyBilling.formData.value.companyName"
+                  type="text"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Firma AG"
+                />
+                <div v-if="companyBilling.validation.value.errors.companyName" class="text-red-500 text-xs mt-1">
+                  {{ companyBilling.validation.value.errors.companyName }}
+                </div>
+              </div>
+              
+              <!-- Kontaktperson -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kontaktperson *</label>
+                <input
+                  v-model="companyBilling.formData.value.contactPerson"
+                  type="text"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Max Muster"
+                />
+                <div v-if="companyBilling.validation.value.errors.contactPerson" class="text-red-500 text-xs mt-1">
+                  {{ companyBilling.validation.value.errors.contactPerson }}
+                </div>
+              </div>
+              
+              <!-- E-Mail -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
+                <input
+                  v-model="companyBilling.formData.value.email"
+                  type="email"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="rechnung@firma.ch"
+                />
+                <div v-if="companyBilling.validation.value.errors.email" class="text-red-500 text-xs mt-1">
+                  {{ companyBilling.validation.value.errors.email }}
+                </div>
+              </div>
+              
+              <!-- Adresse -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Strasse *</label>
+                  <input
+                    v-model="companyBilling.formData.value.street"
+                    type="text"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Musterstrasse"
+                  />
+                  <div v-if="companyBilling.validation.value.errors.street" class="text-red-500 text-xs mt-1">
+                    {{ companyBilling.validation.value.errors.street }}
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Hausnummer</label>
+                  <input
+                    v-model="companyBilling.formData.value.streetNumber"
+                    type="text"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="123"
+                  />
+                </div>
+              </div>
+              
+              <!-- PLZ/Ort -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">PLZ *</label>
+                  <input
+                    v-model="companyBilling.formData.value.zip"
+                    type="text"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="8000"
+                  />
+                  <div v-if="companyBilling.validation.value.errors.zip" class="text-red-500 text-xs mt-1">
+                    {{ companyBilling.validation.value.errors.zip }}
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Ort *</label>
+                  <input
+                    v-model="companyBilling.formData.value.city"
+                    type="text"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Zürich"
+                  />
+                  <div v-if="companyBilling.validation.value.errors.city" class="text-red-500 text-xs mt-1">
+                    {{ companyBilling.validation.value.errors.city }}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Optional: VAT -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">MwSt-Nummer (optional)</label>
+                <input
+                  v-model="companyBilling.formData.value.vatNumber"
+                  type="text"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="CHE-123.456.789"
+                />
+              </div>
+              
+              <!-- Speichern Button -->
+              <div class="flex justify-end">
+                <button
+                  @click="saveCompanyBillingAddress"
+                  :disabled="!companyBilling.validation.value.isValid || companyBilling.isLoading.value"
+                  class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {{ companyBilling.isLoading.value ? 'Speichern...' : 'Adresse speichern' }}
+                </button>
+              </div>
+            </div>
+            
+            <!-- Gespeicherte Adresse anzeigen -->
+            <div v-if="companyBilling.currentAddress.value" class="bg-green-50 border border-green-200 rounded p-3">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h5 class="font-medium text-green-800">{{ companyBilling.currentAddress.value.company_name }}</h5>
+                  <p class="text-sm text-green-700">{{ companyBilling.currentAddress.value.contact_person }}</p>
+                  <p class="text-sm text-green-600">
+                    {{ companyBilling.currentAddress.value.street }} {{ companyBilling.currentAddress.value.street_number || '' }}<br>
+                    {{ companyBilling.currentAddress.value.zip }} {{ companyBilling.currentAddress.value.city }}<br>                  </p>
+                </div>
+                <button
+                  @click="companyBilling.currentAddress.value = null; companyBilling.resetForm()"
+                  class="text-red-600 hover:text-red-800 text-sm"
+                >
+                  Ändern
+                </button>
+              </div>
+            </div>
+            
+            <!-- Error anzeigen -->
+            <div v-if="companyBilling.error.value" class="text-red-600 text-sm mt-2">
+              {{ companyBilling.error.value }}
+            </div>
+          </div>
+
         <!-- Barzahlung Toggle -->
         <div class="flex items-center justify-between p-3 border rounded-lg"
              :class="[
@@ -210,7 +419,7 @@
           </label>
         </div>
 
-        <!-- Online Zahlung (Standard wenn nichts aktiviert) -->
+        <!-- Online Zahlung (Standard) -->
         <div v-if="!invoiceMode && !cashMode" class="flex items-center justify-between p-3 border-2 border-green-500 bg-green-50 rounded-lg">
           <div class="flex items-center space-x-3">
             <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,224 +435,6 @@
       </div>
     </div>
 
-    <!-- Neue einklappbare Rechnungsadresse Section - ERSETZT die alte Section -->
-    <div v-if="invoiceMode" class="mt-4 border border-gray-200 rounded-lg">
-      <!-- Kollapsible Header - Mobile Responsive -->
-      <div class="p-3 cursor-pointer hover:bg-gray-50 transition-colors" @click="toggleBillingSection">
-        
-        <!-- Desktop Version (md+) -->
-        <div class="hidden md:flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-lg">📄</span>
-            <label class="text-sm font-semibold text-gray-900 cursor-pointer">
-              Firmenrechnungsadresse
-            </label>
-            <!-- Status Indikator -->
-            <span v-if="billingAddressSaved" class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-              ✅ Gespeichert
-            </span>
-            <span v-else-if="companyBilling.validation.value.isValid" class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
-              ⚠️ Nicht gespeichert
-            </span>
-            <span v-else class="text-xs bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full">
-              ❌ Unvollständig
-            </span>
-          </div>
-        </div>
-
-        <!-- Mobile Version (bis md) -->
-        <div class="md:hidden">
-          <!-- Erste Zeile: Icon, Titel und Pfeil -->
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="text-lg">📄</span>
-              <label class="text-sm font-semibold text-gray-900 cursor-pointer">
-                Firmenrechnungsadresse
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Eingeklappte Ansicht - Kurze Zusammenfassung -->
-      <div v-if="!isBillingSectionExpanded && billingAddressSaved" class="px-3 pb-3">
-        <div class="text-sm text-gray-600 bg-green-50 p-2 rounded">
-          <div class="font-medium">{{ companyBilling.formData.value.companyName }}</div>
-          <div>{{ companyBilling.formData.value.street }} {{ companyBilling.formData.value.streetNumber }}</div>
-          <div>{{ companyBilling.formData.value.zip }} {{ companyBilling.formData.value.city }}</div>
-        </div>
-      </div>
-
-    <!-- Erweiterte Ansicht - Vollständiges Formular -->
-    <div v-if="isBillingSectionExpanded" class="p-4 border-t border-gray-200 bg-gray-50">
-      
-      <!-- Gespeicherte Adressen Dropdown - IHRE BESTEHENDE LOGIK -->
-      <div v-if="companyBilling.savedAddresses.value.length > 0" class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Gespeicherte Adresse verwenden</label>
-        <select
-          @change="onSavedAddressSelected"
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">Neue Adresse eingeben</option>
-          <option v-for="address in companyBilling.savedAddresses.value" :key="address.id" :value="address.id">
-            {{ companyBilling.getAddressPreview(address) }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Firmenadresse Formular -->
-      <div class="space-y-3">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Firmenname *</label>
-            <input 
-              type="text" 
-              v-model="companyBilling.formData.value.companyName"
-              placeholder="z.B. Muster AG"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :class="{ 'border-red-300': companyBilling.validation.value.errors.companyName }"
-            >
-            <p v-if="companyBilling.validation.value.errors.companyName" class="text-xs text-red-600 mt-1">
-              {{ companyBilling.validation.value.errors.companyName }}
-            </p>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Ansprechperson *</label>
-            <input 
-              type="text" 
-              v-model="companyBilling.formData.value.contactPerson"
-              placeholder="z.B. Max Mustermann"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :class="{ 'border-red-300': companyBilling.validation.value.errors.contactPerson }"
-            >
-            <p v-if="companyBilling.validation.value.errors.contactPerson" class="text-xs text-red-600 mt-1">
-              {{ companyBilling.validation.value.errors.contactPerson }}
-            </p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
-            <input 
-              type="email" 
-              v-model="companyBilling.formData.value.email"
-              placeholder="rechnung@firma.ch"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :class="{ 'border-red-300': companyBilling.validation.value.errors.email }"
-            >
-            <p v-if="companyBilling.validation.value.errors.email" class="text-xs text-red-600 mt-1">
-              {{ companyBilling.validation.value.errors.email }}
-            </p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
-            <input 
-              type="tel" 
-              v-model="companyBilling.formData.value.phone"
-              placeholder="+41 44 123 45 67"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-          </div>
-        </div>
-
-        <div class="grid grid-cols-4 gap-3">
-          <div class="col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Strasse *</label>
-            <input 
-              type="text" 
-              v-model="companyBilling.formData.value.street"
-              placeholder="Musterstrasse"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :class="{ 'border-red-300': companyBilling.validation.value.errors.street }"
-            >
-            <p v-if="companyBilling.validation.value.errors.street" class="text-xs text-red-600 mt-1">
-              {{ companyBilling.validation.value.errors.street }}
-            </p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nr.</label>
-            <input 
-              type="text" 
-              v-model="companyBilling.formData.value.streetNumber"
-              placeholder="123"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">PLZ *</label>
-            <input 
-              type="text" 
-              v-model="companyBilling.formData.value.zip"
-              placeholder="8000"
-              maxlength="4"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :class="{ 'border-red-300': companyBilling.validation.value.errors.zip }"
-            >
-            <p v-if="companyBilling.validation.value.errors.zip" class="text-xs text-red-600 mt-1">
-              {{ companyBilling.validation.value.errors.zip }}
-            </p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Ort *</label>
-            <input 
-              type="text" 
-              v-model="companyBilling.formData.value.city"
-              placeholder="Zürich"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :class="{ 'border-red-300': companyBilling.validation.value.errors.city }"
-            >
-            <p v-if="companyBilling.validation.value.errors.city" class="text-xs text-red-600 mt-1">
-              {{ companyBilling.validation.value.errors.city }}
-            </p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">MwSt-Nummer</label>
-            <input 
-              type="text" 
-              v-model="companyBilling.formData.value.vatNumber"
-              placeholder="CHE-123.456.789 MWST"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-          </div>
-        </div>
-
-        <!-- Speichern Button - Erweitert um Auto-Collapse -->
-            <div v-if="!companyBilling.currentAddress.value" class="pt-4">
-              <button
-                @click="saveAndCollapseBilling"
-                :disabled="!companyBilling.validation.value.isValid || companyBilling.isLoading.value"
-                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span v-if="companyBilling.isLoading.value">⏳ Speichere...</span>
-                <span v-else>💾 Speichern & Einklappen</span>
-              </button>
-            </div>
-
-            <!-- Validation & Error Messages - IHRE BESTEHENDE LOGIK -->
-            <div v-if="!companyBilling.validation.value.isValid" class="mt-3 text-sm text-red-600 bg-red-50 p-2 rounded">
-              ⚠️ Bitte füllen Sie alle Pflichtfelder korrekt aus
-            </div>
-            
-            <div v-if="companyBilling.validation.value.isValid" class="mt-3 text-sm text-green-600 bg-green-50 p-2 rounded">
-              ✅ Rechnungsadresse vollständig
-            </div>
-
-            <div v-if="companyBilling.error.value" class="mt-3 text-sm text-red-600 bg-red-50 p-2 rounded">
-              ❌ {{ companyBilling.error.value }}
-            </div>
-          </div>
-        </div>
-        </div>
-
     <!-- Statusmeldung -->
     <div v-if="paymentModeStatus" class="text-sm p-3 rounded-lg" 
          :class="[
@@ -453,299 +444,173 @@
          ]">
       {{ paymentModeStatus.message }}
     </div>
-
-    <!-- Für Clients: Link zu PaymentModal -->
-    <div v-if="currentUser?.role === 'student' && !isPaid" class="mt-3 pt-3 border-t border-gray-200">
-      <button
-        @click="emit('open-payment-modal')"
-        class="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700"
-      >
-        💳 Online bezahlen (Twint, Karte)
-      </button>
-    </div>
-    <!-- Checkbox für automatisches Speichern hinzufügen -->
-    <div v-if="invoiceMode || cashMode" class="flex items-center mt-3 p-2 bg-gray-50 rounded">
-      <input 
-        type="checkbox" 
-        v-model="savePaymentPreference" 
-        id="save-payment-pref"
-        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-      >
-      <label for="save-payment-pref" class="ml-2 text-sm text-gray-600">
-        Als Standard für zukünftige Termine speichern
-      </label>
-    </div>
-    <!-- HIER der neue Billing-Button - NUR wenn Rechnungsadresse gespeichert UND Invoice-Mode aktiv -->
-    <div v-if="invoiceMode && billingAddressSaved" class="mt-4 pt-3 border-t border-gray-200">
-      <button
-        @click="toggleBillingEditMode"
-        class="w-full flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors"
-        :class="[
-          isBillingEditMode 
-            ? 'bg-green-600 text-white hover:bg-green-700' 
-            : 'bg-blue-600 text-white hover:bg-blue-700'
-        ]"
-      >
-        <span v-if="isBillingEditMode" class="mr-2">💾</span>
-        <span v-else class="mr-2">✏️</span>
-        {{ isBillingEditMode ? 'Speichern' : 'Rechnungsadresse bearbeiten' }}
-      </button>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useProductSale } from '~/composables/useProductSale'
 import { useCompanyBilling } from '~/composables/useCompanyBilling'
+import { usePricing } from '~/composables/usePricing'
 import { getSupabase } from '~/utils/supabase'
+import { usePaymentMethods } from '~/composables/usePaymentMethods'
 
-
-// Props - angepasst an bestehende Struktur
+// Props Interface - nur die nötigsten
 interface Props {
-  eventType?: 'lesson' | 'meeting'
+  eventType?: 'lesson' | 'staff_meeting' | 'other'
+  eventData?: any 
+  selectedDate?: string
+  startTime?: string
+  endTime?: string
   durationMinutes: number
   pricePerMinute: number
-  isPaid: boolean
-  adminFee: number
-  isSecondOrLaterAppointment: boolean
-  appointmentNumber: number
+  adminFee?: number
+  appointmentNumber?: number
+  discount?: number
+  discountReason?: string
+  allowDiscountEdit?: boolean
+  allowProductSale?: boolean
+  disabled?: boolean
   showAdminFeeByDefault?: boolean
-  discount: number
-  discountType: 'fixed'
-  discountReason: string
-  allowDiscountEdit: boolean
-  selectedDate?: string | null
-  startTime?: string | null
-  endTime?: string | null
+  isSecondOrLaterAppointment?: boolean
   currentUser?: any
+  selectedStudent?: any
   initialPaymentMethod?: string
-  selectedStudentId?: string
-  selectedStudent?: any  
- 
-
+  isPaid?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   eventType: 'lesson',
   durationMinutes: 45,
-  pricePerMinute: 0,
-  isPaid: false,
-  adminFee: 120,
-  isSecondOrLaterAppointment: false,
-  appointmentNumber: 1,
-  showAdminFeeByDefault: false,
+  // pricePerMinute: 2.11,
+  // adminFee: 25,
+  // appointmentNumber: 1,
   discount: 0,
-  discountType: 'fixed',
   discountReason: '',
-  allowDiscountEdit: false,
-  selectedDate: '',
-  startTime: '',
-  currentUser: null
+  allowDiscountEdit: true,
+  allowProductSale: true,
+  disabled: false,
+  showAdminFeeByDefault: false,
+  isSecondOrLaterAppointment: false,
+  isPaid: false
 })
 
-// Emits - alle Events aus deiner bestehenden Komponente
-const emit = defineEmits([
-  'discount-changed', 
-  'update:discount', 
-  'update:discountReason',
-  'payment-status-changed',
-  'open-payment-modal',
-  'payment-mode-changed',
-  'invoice-data-changed'
-])
+// Emits - nur die nötigsten
+const emit = defineEmits<{
+  'discount-changed': [discount: number, discountType: "fixed" | "percentage", reason: string]
+  'products-changed': [products: any[]]
+  'payment-method-changed': [method: string, data?: any]
+}>()
 
-// Composables
+const priceDisplayRef = ref()
+
+// ✅ BESTEHENDE COMPOSABLES VERWENDEN
+const productSale = useProductSale(
+  computed(() => props.eventData?.id),  // appointmentId
+  []  // initial products
+)
 const companyBilling = useCompanyBilling()
 
-// State - angepasst an bestehende Logik
-const showAdminFeeInfo = ref(false)
+// ✅ MINIMALE REACTIVE DATA
+const isEditMode = ref(false)
 const showDiscountEdit = ref(false)
-
-// Temp discount for editing
+const showAdminFeeInfo = ref(false)
 const tempDiscountInput = ref('')
 const tempDiscountReason = ref('')
 
-// State - Neue Zahlungsart-Regler
+// Payment 
 const invoiceMode = ref(false)
 const cashMode = ref(false)
-const selectedAddressId = ref('')
-const savePaymentPreference = ref(true)
-const isBillingSectionExpanded = ref(false) 
-const billingAddressSaved = ref(false) 
+const { loadStudentPaymentPreference } = usePaymentMethods()
 
-// Computed - angepasst an bestehende Props
-const tempDiscount = computed(() => parseFloat(tempDiscountInput.value) || 0)
-
-const isEditMode = ref(false)
-const isBillingEditMode = ref(false)
-
-const toggleBillingEditMode = () => {
-  if (isBillingEditMode.value) {
-    // SPEICHERN-MODUS: Rechnungsadresse speichern
-    if (companyBilling.validation.value.isValid) {
-      saveAndCollapseBilling()
-    }
-    isBillingEditMode.value = false
-  } else {
-    // BEARBEITEN-MODUS: Billing-Bereich öffnen
-    isBillingEditMode.value = true
-    isBillingSectionExpanded.value = true
-  }
-}
+const pricing = usePricing({
+  selectedStudent: computed(() => props.selectedStudent),
+  currentUser: computed(() => props.currentUser),
+  durationMinutes: computed(() => props.durationMinutes),
+  isSecondOrLaterAppointment: computed(() => props.isSecondOrLaterAppointment),
+  showAdminFeeByDefault: computed(() => props.showAdminFeeByDefault)
+})
 
 
-// Toggle-Funktion hinzufügen
-const toggleEditMode = () => {
-  console.log('🔄 toggleEditMode called, current state:', isEditMode.value)
-  
-  if (isEditMode.value) {
-    // SPEICHERN-MODUS: Alle offenen Editierungen anwenden
-    console.log('💾 Speichern-Modus aktiviert')
-    
-    // Rabatt speichern falls offen
-    if (showDiscountEdit.value && tempDiscountInput.value) {
-      console.log('💰 Applying discount...')
-      applyDiscount()
-    }
-    
-    // Alle Edit-Bereiche schließen
-    showDiscountEdit.value = false
-    showAdminFeeInfo.value = false
-    
-    // Edit-Mode beenden
-    isEditMode.value = false
-    console.log('✅ Edit-Mode beendet')
-    
-  } else {
-    // BEARBEITEN-MODUS: Edit-Mode aktivieren
-    console.log('✏️ Bearbeiten-Modus aktiviert')
-    isEditMode.value = true
-    
-    // Optional: Rabatt-Edit automatisch öffnen wenn erlaubt
-    if (props.allowDiscountEdit && props.discount === 0) {
-      showDiscountEdit.value = true
-      console.log('📝 Rabatt-Edit automatisch geöffnet')
-    }
-  }
-}
-
+// ✅ COMPUTED PROPERTIES - nur die nötigsten
 const lessonPrice = computed(() => {
-  return props.durationMinutes * props.pricePerMinute
+  // ✅ EINFACH: Verwende die Props direkt!
+  const pricePerMin = props.pricePerMinute || 0
+  const duration = props.durationMinutes || 0
+  const result = pricePerMin * duration
+  
+  console.log('💰 PriceDisplay SIMPLE calculation:', {
+    pricePerMinute: pricePerMin,
+    durationMinutes: duration,
+    result: result
+  })
+  
+  return result
 })
 
-const shouldShowAdminFee = computed(() => {
-  return props.appointmentNumber === 2 || props.showAdminFeeByDefault || props.isSecondOrLaterAppointment
-})
+const shouldShowAdminFee = computed(() => 
+  pricing.calculatedAdminFee.value > 0
+
+)
 
 const totalPriceWithoutDiscount = computed(() => {
   let total = lessonPrice.value
   if (shouldShowAdminFee.value) {
-    total += props.adminFee
+    total += pricing.calculatedAdminFee.value || 0
   }
+  total += productSale.totalProductsValue.value
   return total
 })
 
 const maxDiscount = computed(() => totalPriceWithoutDiscount.value)
 
+const tempDiscount = computed(() => {
+  const value = parseFloat(tempDiscountInput.value) || 0
+  return Math.min(value, maxDiscount.value)
+})
+
 const finalPrice = computed(() => {
-  const total = totalPriceWithoutDiscount.value - props.discount
-  return formatPrice(total)
-})
-
-const paymentStatusClass = computed(() => {
-  if (props.isPaid) return 'text-green-700'
-  return 'text-gray-900'
-})
-
-const paymentStatusText = computed(() => {
-  if (props.isPaid) return 'Bezahlt'
-  return 'Offen'
-})
-
-const formattedAppointmentInfo = computed(() => {
-  let parts = []
-  
-  if (props.selectedDate) {
-    const date = new Date(props.selectedDate)
-    parts.push(date.toLocaleDateString('de-CH'))
-  }
-  
-  if (props.startTime) {
-    const [hours, minutes] = props.startTime.split(':').map(Number)
-    const startMinutes = hours * 60 + minutes
-    const endMinutes = startMinutes + props.durationMinutes
-    const endHours = Math.floor(endMinutes / 60)
-    const endMins = endMinutes % 60
-    const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`
-    
-    parts.push(`${props.startTime} - ${endTime} (${props.durationMinutes}min)`)
-  } else {
-    parts.push(`${props.durationMinutes}min`)
-  }
-  
-  return parts.join('\n')
-})
-
-// Neue Funktion für Datum-Formatierung hinzufügen:
-const formatSelectedDate = (dateString: string) => {
-  if (!dateString) return ''
-  
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('de-CH', {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
-  } catch (error) {
-    return dateString
-  }
-}
-
-// Computed - Neue Zahlungsart-Logik
-const invoiceDataValid = computed(() => {
-  return companyBilling.validation.value.isValid
+  const total = totalPriceWithoutDiscount.value - (props.discount || 0)
+  return Math.max(0, total)
 })
 
 const paymentModeStatus = computed(() => {
-  if (invoiceMode.value && cashMode.value) {
+  if (!invoiceMode.value && !cashMode.value) {
     return {
-      type: 'warning',
-      message: 'Bitte wählen Sie nur eine Zahlungsart aus.'
+      type: 'success' as const,
+      message: 'Online-Zahlung über Customer Dashboard.'
     }
   }
   
-  if (invoiceMode.value && !invoiceDataValid.value) {
+  if (invoiceMode.value) {
     return {
-      type: 'warning',
-      message: 'Bitte füllen Sie alle Pflichtfelder für die Rechnungsadresse aus.'
-    }
-  }
-  
-  if (invoiceMode.value && invoiceDataValid.value) {
-    return {
-      type: 'success',
-      message: 'Rechnung wird nach der Fahrstunde erstellt und versendet.'
+      type: 'success' as const,
+      message: 'Rechnung wird im Büro erstellt und versendet.'
     }
   }
   
   if (cashMode.value) {
     return {
-      type: 'success',
+      type: 'success' as const,
       message: 'Zahlung erfolgt bar beim Fahrlehrer.'
     }
   }
   
-  return {
-    type: 'success',
-    message: 'Online-Zahlung über Customer Dashboard.'
-  }
+  return null
 })
 
-// Methods
+// ✅ METHODS - nur die nötigsten
 const formatPrice = (amount: number): string => {
   return amount.toFixed(2)
+}
+
+const formatSelectedDate = (date: string): string => {
+  return new Date(date).toLocaleDateString('de-CH', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
 }
 
 const formatToTwoDecimals = () => {
@@ -754,10 +619,52 @@ const formatToTwoDecimals = () => {
   }
 }
 
+// Edit Mode
+const toggleEditMode = () => {
+  if (isEditMode.value) {
+    // Speichern-Modus
+    if (showDiscountEdit.value && tempDiscountInput.value) {
+      applyDiscount()
+    }
+    
+    showDiscountEdit.value = false
+    productSale.closeProductSelector()
+    showAdminFeeInfo.value = false
+    isEditMode.value = false
+  } else {
+    isEditMode.value = true
+  }
+}
+
+const saveStudentPaymentPreference = async (studentId: string, paymentMethod: string) => {
+  try {
+    const supabase = getSupabase()
+    
+    // ✅ Mapping zu gültigen payment_methods codes
+    const methodMapping: Record<string, string> = {
+      'cash': 'cash',
+      'invoice': 'invoice', 
+      'online': 'twint'  // oder 'stripe_card' - je nachdem was in deiner DB existiert
+    }
+    
+    const validMethod = methodMapping[paymentMethod] || 'cash'
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ preferred_payment_method: validMethod })
+      .eq('id', studentId)
+
+    if (error) throw error
+    console.log('✅ Payment preference saved:', validMethod)
+    
+  } catch (err) {
+    console.error('❌ Error saving payment preference:', err)
+  }
+}
+
+// Discount Methods
 const applyDiscount = () => {
-  // Emit in bestehender Struktur
   emit('discount-changed', tempDiscount.value, 'fixed', tempDiscountReason.value)
-  
   showDiscountEdit.value = false
   tempDiscountInput.value = ''
   tempDiscountReason.value = ''
@@ -773,111 +680,147 @@ const removeDiscount = () => {
   emit('discount-changed', 0, 'fixed', '')
 }
 
-// Methods - Neue Zahlungsart-Logik
-// In PriceDisplay.vue - bei der onInvoiceModeChange Funktion:
-const onInvoiceModeChange = async () => {
+// Payment Methods
+const onInvoiceModeChange = () => {
+  console.log('🔍 DEBUG: onInvoiceModeChange called')
+  console.log('🔍 DEBUG: invoiceMode.value BEFORE:', invoiceMode.value)
+  console.log('🔍 DEBUG: cashMode.value BEFORE:', cashMode.value)
+  
   if (invoiceMode.value && cashMode.value) {
     cashMode.value = false
   }
   
-  // Lade gespeicherte Adressen wenn Invoice-Mode aktiviert wird
-  if (invoiceMode.value && props.currentUser?.id) {
-    await companyBilling.loadUserCompanyAddresses(props.currentUser.id)
+  // ✅ NEU: Automatisch Adressen laden wenn Invoice Mode aktiviert wird
+  if (invoiceMode.value && companyBilling.savedAddresses.value.length === 0) {
+    autoLoadBillingAddress()
   }
   
   updatePaymentMode()
+  
+  console.log('🔍 DEBUG: invoiceMode.value AFTER:', invoiceMode.value)
+  console.log('🔍 DEBUG: cashMode.value AFTER:', cashMode.value)
 }
 
-// ============ PAYMENT PREFERENCES METHODS ============
-const loadUserPaymentPreferences = async (userId: string) => {
+const loadExistingAddresses = async () => {
+  if (!props.selectedStudent?.id) {
+    console.warn('❌ No student selected for loading addresses')
+    return
+  }
+  
+  console.log('🔄 Loading existing addresses for student:', props.selectedStudent.id)
+  
   try {
+    // ✅ KORRIGIERT: getSupabase() direkt verwenden
     const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('users')
-      .select('preferred_payment_method, default_company_billing_address_id')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (error) throw error
-    
-    console.log('🔍 DB Result preferred_payment_method:', data?.preferred_payment_method)
-    console.log('🔍 DB Result default_company_billing_address_id:', data?.default_company_billing_address_id)
-    
-    // Store billing address ID for later use
-    let billingAddressData = null
-    
-    // NEU: Lade Standard-Rechnungsadresse zuerst (falls vorhanden)
-    if (data?.default_company_billing_address_id) {
-      billingAddressData = await loadDefaultBillingAddress(data.default_company_billing_address_id)
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (!user?.id) {
+      console.warn('❌ No authenticated user found')
+      return
     }
     
-    if (data?.preferred_payment_method) {
-      // Bestehende Payment-Method Logik...
-      const uiMethodMapping: Record<string, string> = {
-        'cash': 'cash',
-        'invoice': 'invoice',
-        'twint': 'online',
-        'stripe_card': 'online',
-        'debit_card': 'online'
-      }
-      
-      const uiMethod = uiMethodMapping[data.preferred_payment_method] || 'online'
-      
-      console.log('✅ Loaded payment preference:', data.preferred_payment_method, '→', uiMethod)
-      
-      // Setze UI-Zustand basierend auf Preference
-      if (uiMethod === 'cash') {
-        cashMode.value = true
-        invoiceMode.value = false
-      } else if (uiMethod === 'invoice') {
-        invoiceMode.value = true
-        cashMode.value = false
-      } else {
-        cashMode.value = false
-        invoiceMode.value = false
-      }
-      
-      // Pass billing data if invoice method and address loaded
-      const paymentData = (uiMethod === 'invoice' && billingAddressData) ? billingAddressData : null
-      updatePaymentMode()
-      
-    } else {
-      console.log('📭 No payment preference found, setting to online')
-      cashMode.value = false
-      invoiceMode.value = false
+    console.log('👤 Loading addresses for auth user:', user.id)
+    
+    // ✅ VERWENDE DIE BESTEHENDE FUNKTION MIT AUTH USER ID
+    await companyBilling.loadUserCompanyAddresses(user.id)
+    
+    console.log('✅ Loaded addresses:', companyBilling.savedAddresses.value.length)
+    
+    // Auto-select first address if available
+    if (companyBilling.savedAddresses.value.length > 0) {
+      const firstAddress = companyBilling.savedAddresses.value[0]
+      companyBilling.loadFormFromAddress(firstAddress)
+      console.log('✅ Auto-selected first address:', firstAddress.company_name)
     }
     
-  } catch (err) {
-    console.error('❌ Error loading payment preferences:', err)
-    cashMode.value = false
-    invoiceMode.value = false
+  } catch (error) {
+    console.error('❌ Error loading existing addresses:', error)
   }
 }
 
-const loadDefaultBillingAddress = async (addressId: string) => {
+const selectExistingAddress = (addressId: string) => {
+  if (!addressId) return
+  
+  const address = companyBilling.savedAddresses.value.find(addr => addr.id === addressId)
+  if (address) {
+    // ✅ BESTEHENDE FUNKTION VERWENDEN
+    companyBilling.loadFormFromAddress(address)
+  }
+}
+
+const saveCompanyBillingAddress = async () => {
+  if (!props.selectedStudent?.id) return
+  
+  // ✅ BESTEHENDE FUNKTION VERWENDEN
+  const result = await companyBilling.createCompanyBillingAddress(props.selectedStudent.id)
+  
+  if (result.success && result.data) {
+    console.log('✅ Company billing address saved:', result.data.id)
+    
+    // Nach dem Speichern updatePaymentMode aufrufen
+    updatePaymentMode()
+  }
+}
+
+const autoLoadBillingAddress = async () => {
+  if (!props.selectedStudent?.id) return
+  
+  console.log('🔄 Auto-loading billing address for student:', props.selectedStudent.id)
+  
   try {
-    await companyBilling.loadUserCompanyAddresses(props.currentUser.id)
+    // ✅ KORRIGIERT: getSupabase() direkt verwenden
+    const supabase = getSupabase()
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (!user?.id) {
+      console.warn('❌ No authenticated user found')
+      return
+    }
     
-    const address = companyBilling.savedAddresses.value.find(
-      (addr: any) => addr.id === addressId
-    )
+    console.log('👤 Auth user ID:', user.id)
     
-    if (address) {
-      companyBilling.loadFormFromAddress(address)
-      selectedAddressId.value = addressId
-      console.log('✅ Auto-loaded default billing address')
-      return {
+    // 2. Adressen laden
+    await companyBilling.loadUserCompanyAddresses(user.id)
+    
+    // 3. Erste Adresse automatisch verwenden wenn vorhanden
+    if (companyBilling.savedAddresses.value.length > 0) {
+      const firstAddress = companyBilling.savedAddresses.value[0]
+      companyBilling.loadFormFromAddress(firstAddress)
+      console.log('✅ Auto-loaded first address:', firstAddress.company_name)
+      
+      // Automatisch updatePaymentMode aufrufen
+      updatePaymentMode()
+    } else {
+      console.log('ℹ️ No saved addresses found for user')
+    }
+    
+  } catch (error) {
+    console.error('❌ Error auto-loading billing address:', error)
+  }
+}
+
+// ✅ ERWEITERE DIE BESTEHENDE updatePaymentMode FUNKTION:
+const updatePaymentMode = () => {
+  let method = 'online'
+  let data = null
+  
+  if (invoiceMode.value) {
+    method = 'invoice'
+    if (companyBilling.currentAddress.value) {
+      data = {
         formData: companyBilling.formData.value,
-        currentAddress: address,
+        currentAddress: companyBilling.currentAddress.value,
         isValid: companyBilling.validation.value.isValid
       }
     }
-    
-    return null
-  } catch (err) {
-    console.error('❌ Error loading default billing:', err)
-    return null
+  } else if (cashMode.value) {
+    method = 'cash'
   }
+  
+  // ✅ NEU: Speichern der Zahlungsmethode
+  if (props.selectedStudent?.id) {
+    saveStudentPaymentPreference(props.selectedStudent.id, method)
+  }
+  
+  emit('payment-method-changed', method, data)
 }
 
 const onCashModeChange = () => {
@@ -887,176 +830,123 @@ const onCashModeChange = () => {
   updatePaymentMode()
 }
 
-const onSavedAddressSelected = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const addressId = target.value
+const loadDefaultAddressForStudent = async () => {
+  if (!props.selectedStudent?.id) return
   
-  if (addressId) {
-    const address = companyBilling.savedAddresses.value.find(addr => addr.id === addressId)
-    if (address) {
-      companyBilling.loadFormFromAddress(address)
-      selectedAddressId.value = addressId
-    }
-  } else {
-    companyBilling.resetForm()
-    selectedAddressId.value = ''
+  const defaultAddress = await companyBilling.loadDefaultBillingAddress(props.selectedStudent.id)
+  
+  if (defaultAddress) {
+    companyBilling.loadFormFromAddress(defaultAddress)  // ← BESTEHENDE Funktion
+    console.log('✅ Default billing address auto-loaded:', defaultAddress.company_name)
   }
 }
 
-const saveCompanyAddress = async () => {
-  if (!props.currentUser?.id) {
-    companyBilling.error.value = 'Benutzer nicht angemeldet'
-    return
-  }
+// Debug-Code für PriceDisplay.vue - füge diese Logs hinzu:
 
-  const result = await companyBilling.createCompanyBillingAddress(props.currentUser.id)
+// 1. Debug den Watch für selectedStudent:
+watch(() => props.selectedStudent, async (newStudent, oldStudent) => {
+  console.log('🔍 PriceDisplay: selectedStudent changed!')
+  console.log('🔍 Old student:', oldStudent?.id)
+  console.log('🔍 New student:', newStudent?.id)
+  console.log('🔍 Has student ID:', !!newStudent?.id)
   
-  if (result.success) {
-    // Erfolgreich gespeichert, lade Liste neu
-    await companyBilling.loadUserCompanyAddresses(props.currentUser.id)
-    selectedAddressId.value = result.data?.id || ''
-  }
-}
-
-const updatePaymentMode = () => {
-  let mode: 'invoice' | 'cash' | 'online' = 'online'
-  let data = undefined
-  
-  if (invoiceMode.value) {
-    mode = 'invoice'
-    data = {
-      formData: companyBilling.formData.value,
-      currentAddress: companyBilling.currentAddress.value,
-      isValid: companyBilling.validation.value.isValid
-    }
-  } else if (cashMode.value) {
-    mode = 'cash'
-  }
-  
-  emit('payment-mode-changed', mode, data)
-  
-  // Zusätzliches Event für Invoice-Data
-  if (mode === 'invoice') {
-    emit('invoice-data-changed', companyBilling.formData.value, companyBilling.validation.value.isValid)
-  }
-}
-
-const toggleBillingSection = () => {
-  isBillingSectionExpanded.value = !isBillingSectionExpanded.value
-}
-
-const expandBillingSection = () => {
-  isBillingSectionExpanded.value = true
-}
-
-const saveAndCollapseBilling = async () => {
-  if (!props.currentUser?.id) {
-    companyBilling.error.value = 'Benutzer nicht angemeldet'
-    return
-  }
-
-  try {
-    let result
-
-    if (companyBilling.currentAddress.value?.id) {
-      // ✅ UPDATE: Bestehende Adresse aktualisieren
-      console.log('🔄 Updating existing billing address:', companyBilling.currentAddress.value.id)
-      result = await companyBilling.updateCompanyBillingAddress(companyBilling.currentAddress.value.id)
-    } else {
-      // ✅ CREATE: Neue Adresse erstellen
-      console.log('➕ Creating new billing address...')
-      result = await companyBilling.createCompanyBillingAddress(props.currentUser.id)
-    }
-
-    if (result.success && !companyBilling.error.value) {
-      isBillingSectionExpanded.value = false
-      console.log('✅ Billing address saved and collapsed')
+  if (newStudent?.id) {
+    console.log('👤 Loading payment preference for student:', newStudent.id)
+    
+    try {
+      const savedMethod = await loadStudentPaymentPreference(newStudent.id)
+      console.log('💳 Loaded payment method:', savedMethod)
       
-      // Liste neu laden um aktuelle Daten zu haben
-      await companyBilling.loadUserCompanyAddresses(props.currentUser.id)
-    } else {
-      console.error('❌ Failed to save billing address:', result.error || companyBilling.error.value)
+      // Debug: Aktuelle Werte BEVOR Änderung
+      console.log('🔍 BEFORE - invoiceMode:', invoiceMode.value, 'cashMode:', cashMode.value)
+      
+      invoiceMode.value = (savedMethod === 'invoice')
+      cashMode.value = (savedMethod === 'cash')
+      
+      // Debug: Aktuelle Werte NACH Änderung
+      console.log('🔍 AFTER - invoiceMode:', invoiceMode.value, 'cashMode:', cashMode.value)
+      
+      if (savedMethod === 'invoice') {
+        console.log('🔄 Invoice mode detected, loading billing address...')
+        await autoLoadBillingAddress()
+      } else {
+        console.log('🧹 Not invoice mode, clearing billing data...')
+        companyBilling.resetForm()
+        companyBilling.currentAddress.value = null
+        companyBilling.savedAddresses.value = []
+      }
+    } catch (error) {
+      console.error('❌ Error in payment preference loading:', error)
     }
-
-  } catch (err: any) {
-    console.error('❌ Error in saveAndCollapseBilling:', err)
-    companyBilling.error.value = err.message || 'Unbekannter Fehler beim Speichern'
-  }
-}
-
-// Bestehende Funktionen modifizieren um Edit-Mode zu berücksichtigen
-const startDiscountEdit = () => {
-  if (!isEditMode.value) {
-    isEditMode.value = true
-  }
-  showDiscountEdit.value = true
-  tempDiscountInput.value = props.discount > 0 ? props.discount.toString() : ''
-  tempDiscountReason.value = props.discountReason
-}
-
-
-// Watchers
-// Watcher für initialPaymentMethod
-watch(() => props.initialPaymentMethod, (newMethod) => {
-  
-  if (newMethod === 'cash') {
-    cashMode.value = true
-    invoiceMode.value = false
-  } else if (newMethod === 'invoice') {
-    invoiceMode.value = true
-    cashMode.value = false
   } else {
-    cashMode.value = false
-    invoiceMode.value = false
+    console.log('❌ No student ID, skipping payment preference loading')
   }
-}, { immediate: true })
+}, { immediate: true }) // ← WICHTIG: immediate: true damit es auch beim ersten Laden triggert
 
-watch([invoiceMode, cashMode], updatePaymentMode)
+// 2. Debug die loadStudentPaymentPreference Funktion:
+// Erweitere sie um mehr Logs:
+const debugLoadStudentPaymentPreference = async (studentId: string): Promise<string> => {
+  console.log('🔍 loadStudentPaymentPreference called with:', studentId)
+  
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('users')
+      .select('preferred_payment_method, default_company_billing_address_id')
+      .eq('id', studentId)
+      .maybeSingle()
 
-watch(() => companyBilling.formData.value, () => {
-  if (invoiceMode.value) {
-    updatePaymentMode()
+    console.log('🔍 Supabase query result:', { data, error })
+
+    if (error) {
+      console.error('❌ Supabase error:', error)
+      throw error
+    }
+    
+    const preference = data?.preferred_payment_method || 'cash'
+    console.log('💳 Final payment preference:', preference)
+    console.log('🏠 Has billing address ID:', !!data?.default_company_billing_address_id)
+    
+    return preference
+
+  } catch (err) {
+    console.error('❌ Error loading payment preference:', err)
+    return 'cash'
   }
+}
+
+
+// ✅ WATCHERS - nur für Produktänderungen
+watch(productSale.selectedProducts, (newProducts) => {
+  emit('products-changed', newProducts)
 }, { deep: true })
 
-// Watcher für selectedStudent
-watch(() => props.selectedStudent, async (newStudent) => {
-  if (newStudent?.id) {
-    console.log('👤 PriceDisplay: Loading payment preferences for:', newStudent.first_name)
-    await loadUserPaymentPreferences(newStudent.id)
-  }
-}, { immediate: true })
+// ✅ LIFECYCLE
+onMounted(() => {
 
-watch(() => companyBilling.currentAddress.value, (newAddress) => {
-  billingAddressSaved.value = !!newAddress
-  
-  // Automatisch einklappen wenn eine Adresse geladen wurde
-  if (newAddress) {
-    isBillingSectionExpanded.value = false
+    console.log('🔍 PriceDisplay mounted!')
+  console.log('🔍 Initial selectedStudent:', props.selectedStudent?.id)
+  console.log('🔍 Initial payment method:', props.initialPaymentMethod)
+    // Load existing products in edit mode
+ if (props.eventData?.id) {
+    productSale.loadProducts(props.eventData.id)
+    
+    // ✅ RABATTE aus props laden (kommen von populateFormFromAppointment)
+    console.log('💰 PriceDisplay mounted - checking for discount props:', {
+      discount: props.discount,
+      discountReason: props.discountReason
+    })
   }
-}, { immediate: true })
-
-// Beim Wechsel zu Invoice-Mode erweitern (falls noch nicht gespeichert)
-watch(() => invoiceMode.value, (isInvoice) => {
-  if (isInvoice && !billingAddressSaved.value) {
-    isBillingSectionExpanded.value = true
+  // Initial payment method setup
+  if (props.initialPaymentMethod === 'invoice') {
+    invoiceMode.value = true
+    autoLoadBillingAddress()
+  } else if (props.initialPaymentMethod === 'cash') {
+    cashMode.value = true
   }
 })
 
-// Optional: Watch für Edit-Mode um UI-Elemente zu steuern
-watch(isEditMode, (newMode) => {
-  if (!newMode) {
-    // Beim Verlassen des Edit-Mode alle Dialoge schließen
-    showDiscountEdit.value = false
-    showAdminFeeInfo.value = false
-  }
-})
-
-// Lifecycle
-onMounted(async () => {
-  // Lade gespeicherte Adressen beim Component-Mount
-  if (props.currentUser?.id) {
-    await companyBilling.loadUserCompanyAddresses(props.currentUser.id)
-  }
+defineExpose({
+  productSale
 })
 </script>

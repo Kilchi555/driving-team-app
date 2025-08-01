@@ -32,6 +32,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface Category {
   id: number
@@ -274,74 +275,73 @@ const loadCategories = async () => {
         id: 1, code: 'B', name: 'B - Auto', description: 'Autoprüfung Kategorie B',
         price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 180,
         color: 'hellgrün', is_active: true, display_order: 1, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
       { 
         id: 2, code: 'A1', name: 'A1 - Motorrad 125cc', description: 'Motorrad A1',
         price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
         color: 'hellgrün', is_active: true, display_order: 2, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
+   
       { 
         id: 3, code: 'A35kW', name: 'A35kW - Motorrad 35kW', description: 'Motorrad A35kW',
         price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
         color: 'hellgrün', is_active: true, display_order: 3, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
+     
       { 
         id: 4, code: 'A', name: 'A - Motorrad', description: 'Motorrad A',
         price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
         color: 'hellgrün', is_active: true, display_order: 4, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
+   
       { 
         id: 5, code: 'BE', name: 'BE - Anhänger', description: 'Anhänger BE',
         price_per_lesson: 120, lesson_duration_minutes: 45, exam_duration_minutes: 90,
         color: 'orange', is_active: true, display_order: 5, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
+    
       { 
         id: 6, code: 'C1', name: 'C1 - LKW klein', description: 'LKW C1',
         price_per_lesson: 150, lesson_duration_minutes: 45, exam_duration_minutes: 180,
         color: 'gelb', is_active: true, display_order: 6, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
+     
       { 
         id: 7, code: 'D1', name: 'D1 - Bus klein', description: 'Bus D1',
         price_per_lesson: 150, lesson_duration_minutes: 45, exam_duration_minutes: 180,
         color: 'gelb', is_active: true, display_order: 7, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
+   
       { 
         id: 8, code: 'C', name: 'C - LKW', description: 'LKW C',
         price_per_lesson: 170, lesson_duration_minutes: 45, exam_duration_minutes: 180,
         color: 'rot', is_active: true, display_order: 8, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
+     
       { 
         id: 9, code: 'CE', name: 'CE - LKW mit Anhänger', description: 'LKW CE',
         price_per_lesson: 200, lesson_duration_minutes: 45, exam_duration_minutes: 180,
         color: 'violett', is_active: true, display_order: 9, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
+     
       { 
         id: 10, code: 'D', name: 'D - Bus', description: 'Bus D',
         price_per_lesson: 200, lesson_duration_minutes: 45, exam_duration_minutes: 180,
         color: 'türkis', is_active: true, display_order: 10, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
+     
       { 
         id: 11, code: 'Motorboot', name: 'Motorboot', description: 'Motorboot',
         price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
         color: 'hellblau', is_active: true, display_order: 11, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      },
+        created_at: toLocalTimeString(new Date())},
+     
       { 
         id: 12, code: 'BPT', name: 'BPT - Berufsprüfung Transport', description: 'Berufsprüfung Transport',
         price_per_lesson: 100, lesson_duration_minutes: 45, exam_duration_minutes: 180,
         color: 'dunkelblau', is_active: true, display_order: 12, price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
-      }
+        created_at: toLocalTimeString(new Date())},
+   
     ]
     
   } finally {

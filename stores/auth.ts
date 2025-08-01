@@ -3,6 +3,7 @@ import { ref, computed, watch, readonly } from 'vue'
 import { defineStore } from 'pinia'
 import type { User, SupabaseClient } from '@supabase/supabase-js'
 import type { Ref } from 'vue'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 // Types
 interface UserProfile {
@@ -58,6 +59,17 @@ const isAdmin = computed(() => {
     supabaseUserRef: Ref<User | null>
   ) => {
     console.log('🔥 Initializing Auth Store')
+
+      // ✅ NEU: Session beim Start wiederherstellen
+  if (process.client) {
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user && !user.value) {
+        console.log('🔄 Restoring session for:', session.user.email)
+        user.value = session.user
+        fetchUserProfile(supabaseClient, session.user.id)
+      }
+    })
+  }
     
     // Setze den initialen Benutzerwert
     user.value = supabaseUserRef.value
@@ -92,6 +104,33 @@ const isAdmin = computed(() => {
       console.log('✅ Auth Store initialization completed, isInitialized:', isInitialized.value)
 
   }
+
+  // stores/auth.ts - nach Zeile wo initializeAuthStore steht
+    const restoreSession = async (supabaseClient: SupabaseClient) => {
+      try {
+        console.log('🔄 Restoring session...')
+        
+        const { data: { session }, error } = await supabaseClient.auth.getSession()
+        
+        if (error) {
+          console.error('❌ Session restore error:', error)
+          return false
+        }
+        
+        if (session?.user) {
+          console.log('✅ Session restored for:', session.user.email)
+          user.value = session.user
+          await fetchUserProfile(supabaseClient, session.user.id)
+          return true
+        } else {
+          console.log('❌ No session found to restore')
+          return false
+        }
+      } catch (err: any) {
+        console.error('❌ Session restore failed:', err)
+        return false
+      }
+    }
 
   const login = async (email: string, password: string, supabaseClient: SupabaseClient) => {
     loading.value = true
@@ -255,7 +294,7 @@ const isAdmin = computed(() => {
           email: user.value.email,
           ...profileData,
           is_active: true,
-          created_at: new Date().toISOString()
+          created_at: toLocalTimeString(new Date)
         })
         .select()
         .single()
@@ -327,6 +366,7 @@ const isAdmin = computed(() => {
 
     // Actions
     initializeAuthStore,
+    restoreSession,
     login,
     register,
     logout,

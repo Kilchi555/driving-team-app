@@ -10,7 +10,7 @@ import { getSupabase } from '~/utils/supabase'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
 import MoveAppointmentModal from './MoveAppointmentModal.vue'
-
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 
 
@@ -28,7 +28,9 @@ const confirmationData = ref({
 const pendingAction = ref<(() => Promise<void>) | null>(null)
 const showMoveModal = ref(false)
 const selectedAppointmentToMove = ref<CalendarAppointment | null>(null)
-
+const showClipboardChoice = ref(false)
+const clipboardAppointment = ref<any>(null)  // ✅ Typ hinzufügen
+const pendingSlotClick = ref<{ date: Date; allDay: boolean } | null>(null)
 
 // Helper-Funktion für Confirmation Dialog
 const showConfirmDialog = (options: {
@@ -219,39 +221,11 @@ const loadStaffMeetings = async () => {
   }
 }
 
-// Kombiniere beide Datenquellen in loadAppointments
-const loadAppointments = async () => {
-  isLoadingEvents.value = true
-  try {
-    console.log('🔄 Loading all calendar events...')
-    
-    // Parallel laden
-    const [appointments] = await Promise.all([
-      loadRegularAppointments(), 
-    ])
+// Ersetzen Sie BEIDE Funktionen in CalendarComponent.vue:
 
-    // Kombinieren
-    const allEvents = [...appointments]  
-    calendarEvents.value = allEvents
-
-    console.log('✅ Final calendar summary:', {
-      appointments: appointments.length,
-      total: allEvents.length
-    })
-
-    if (calendar.value?.getApi) {
-      const calendarApi = calendar.value.getApi()
-      calendarApi.refetchEvents()
-    }
-
-  } catch (error) {
-    console.error('❌ Error loading calendar events:', error)
-  } finally {
-    isLoadingEvents.value = false
-  }
-}
-
+// 1. Die verbesserte loadRegularAppointments Funktion:
 const loadRegularAppointments = async () => {
+  console.log('🔥 NEW loadRegularAppointments function is running!')
   isLoadingEvents.value = true
   try {
     console.log('🔄 Loading appointments from Supabase...')
@@ -262,7 +236,10 @@ const loadRegularAppointments = async () => {
       .from('appointments')
       .select(`
         *,
-        user:user_id(first_name, last_name),
+        discount,
+        discount_type, 
+        discount_reason,
+        user:user_id(first_name, last_name, category),
         staff:staff_id(first_name, last_name)
       `)
       .or(`staff_id.eq.${props.currentUser?.id}`) // Eigene Termine (als staff_id)
@@ -270,31 +247,32 @@ const loadRegularAppointments = async () => {
     
     const { data: appointments, error } = await query
     console.log('📊 Raw appointments from DB:', appointments?.length || 0)
+
+    // ✅ MINIMAL DEBUG: Erste Appointment prüfen
+    if (appointments && appointments.length > 0) {
+      const firstApt = appointments[0]
+      console.log('🔍 FIRST APPOINTMENT RAW DATA:', {
+        id: firstApt.id,
+        title: firstApt.title,
+        discount: firstApt.discount,
+        discount_type: firstApt.discount_type,
+        discount_reason: firstApt.discount_reason,
+        hasDiscount: typeof firstApt.discount !== 'undefined'
+      })
+    }
     
     if (error) throw error
     
     // Filtern: Eigene Termine + echte Team-Einladungen (nicht doppelte)
     const filteredAppointments = (appointments || []).filter((apt) => {
       const isOwnAppointment = apt.staff_id === props.currentUser?.id
-      const isTeamInvite = apt.type === 'team_invite'
-      
-      // Debug-Info
-      console.log(`🔍 Filtering appointment "${apt.title}":`, {
-        id: apt.id,
-        staff_id: apt.staff_id,
-        type: apt.type,
-        isOwnAppointment,
-        isTeamInvite,
-        currentUserId: props.currentUser?.id
-      })
-      
       return isOwnAppointment // Nur eigene Termine
     })
     
     console.log('✅ Filtered appointments:', filteredAppointments.length)
     
     // ✅ Location-Daten für alle Termine laden (für alte Termine)
-    const locationIds = [...new Set(appointments
+    const locationIds = [...new Set(filteredAppointments
       .filter(apt => apt.location_id && !apt.location_name)
       .map(apt => apt.location_id)
     )]
@@ -304,46 +282,47 @@ const loadRegularAppointments = async () => {
       console.log('🔄 Loading location data for', locationIds.length, 'locations')
       const { data: locations, error: locError } = await supabase
         .from('locations')
-        .select('id, name, adress')
+        .select('id, name, address')
         .in('id', locationIds)
       
       if (!locError && locations) {
         locationsMap = Object.fromEntries(
-          locations.map(loc => [loc.id, { name: loc.name, address: loc.adress }])
+          locations.map(loc => [loc.id, { name: loc.name, address: loc.address }])
         )
         console.log('✅ Locations loaded:', Object.keys(locationsMap).length)
       }
     }
     
-    const convertedEvents = appointments.map((apt) => {
+    const convertedEvents = filteredAppointments.map((apt) => {
       const isTeamInvite = apt.type === 'team_invite'
       
-      // ✅ Für Fahrlektionen: Student Name als Titel
+      // ✅ Event-Titel bestimmen
       let eventTitle = ''
       if (apt.type === 'lesson' || !apt.type) {
         eventTitle = `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim() || 'Fahrlektion'
-      }
-      // ✅ Für andere Terminarten: Den echten Event-Titel verwenden
-      else {
+      } else {
         eventTitle = apt.title || apt.type || 'Termin'
       }
       
       const event = {
         id: apt.id,
         title: eventTitle,
-        start: new Date(apt.start_time).toISOString(),
-        end: new Date(apt.end_time).toISOString(),
+        start: apt.start_time.replace('+00:00', ''),
+        end: apt.end_time.replace('+00:00', ''),  
         allDay: false,
         extendedProps: {
           // ✅ Hybride Location-Auflösung: Neue Felder oder aus locations-Map
-        location: apt.location_name || 
-          apt.location_address || 
-          (apt.location_id ? locationsMap[apt.location_id]?.name : '') || 
-          (apt.location_id ? locationsMap[apt.location_id]?.address : '') || 
-          'Kein Ort',
+          location: apt.location_name || 
+              apt.location_address || 
+              (apt.location_id ? locationsMap[apt.location_id]?.name : '') || 
+              (apt.location_id ? locationsMap[apt.location_id]?.address : '') || 
+              'Kein Ort',
+          discount: apt.discount,
+          discount_type: apt.discount_type,
+          discount_reason: apt.discount_reason,
           staff_note: apt.description || '',
           client_note: '',
-          category: apt.type,
+          category: apt.user?.category || apt.type || 'B',
           instructor: `${apt.staff?.first_name || ''} ${apt.staff?.last_name || ''}`.trim(),
           student: `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim(),
           price: (apt.price_per_minute || 0) * (apt.duration_minutes || 45),
@@ -358,9 +337,40 @@ const loadRegularAppointments = async () => {
           is_paid: apt.is_paid,
           appointment_type: apt.type,
           is_team_invite: isTeamInvite,
-          original_type: apt.type,
+          original_type: apt.user?.category || apt.type || 'B',
           eventType: apt.type // ← Wichtig für die Farb-Zuordnung
         }
+      }
+      
+      // ✅ ZEIT-DEBUG: Zeigt alle relevanten Informationen
+      console.log('🔍 ZEIT-DEBUG für Termin:', {
+        title: eventTitle,
+        // Rohdaten aus DB:
+        db_start: apt.start_time,
+        db_end: apt.end_time,
+        
+        // Was an FullCalendar gesendet wird:
+        calendar_start: event.start,
+        calendar_end: event.end,
+        
+        // Wie Browser es interpretiert:
+        parsed_date: new Date(event.start),
+        will_display_at: new Date(event.start).toLocaleString('de-CH'),
+        time_only: new Date(event.start).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }),
+        
+        // Timezone-Check:
+        has_timezone: event.start.includes('+') || event.start.includes('Z'),
+        timezone_type: event.start.includes('+00:00') ? 'UTC' : 
+                       event.start.includes('+') ? 'Timezone' : 'Local'
+      })
+
+      // Noch spezifischer für das Problem:
+      if (apt.start_time.includes('+00:00')) {
+        console.log('⚠️ UTC-Termin gefunden - könnte Zeitverschiebung verursachen!')
+      } else if (!apt.start_time.includes('+') && !apt.start_time.includes('Z')) {
+        console.log('✅ Lokaler Termin - sollte korrekte Zeit anzeigen')
+      } else {
+        console.log('🔍 Unbekanntes Zeitformat:', apt.start_time)
       }
       
       return event
@@ -374,6 +384,59 @@ const loadRegularAppointments = async () => {
   } finally {
     isLoadingEvents.value = false
   }
+}
+
+// 2. Die ursprüngliche loadAppointments Funktion (unverändert):
+const loadAppointments = async () => {
+  isLoadingEvents.value = true
+  try {
+    console.log('🔄 Loading all calendar events...')
+    // Parallel laden
+    const [appointments] = await Promise.all([
+      loadRegularAppointments(),
+    ])
+    // Kombinieren
+    const allEvents = [...appointments]
+    calendarEvents.value = allEvents
+    console.log('✅ Final calendar summary:', {
+      appointments: appointments.length,
+      total: allEvents.length
+    })
+    
+    if (calendar.value?.getApi) {
+      const calendarApi = calendar.value.getApi()
+      calendarApi.refetchEvents()
+    }
+  } catch (error) {
+    console.error('❌ Error loading calendar events:', error)
+  } finally {
+    isLoadingEvents.value = false
+  }
+}
+
+// ✅ Helper-Funktion für Event-Farben
+const getEventColor = (type: string, status?: string): string => {
+  const colors = {
+    'lesson': '#10b981',      // Grün für Fahrstunden
+    'exam': '#f59e0b',        // Orange für Prüfungen  
+    'theory': '#3b82f6',      // Blau für Theorie
+    'meeting': '#8b5cf6',     // Lila für Meetings
+    'break': '#6b7280',       // Grau für Pausen
+    'maintenance': '#ef4444', // Rot für Wartung
+    'team_invite': '#06b6d4', // Cyan für Team-Einladungen
+    'other': '#64748b'        // Grau für Sonstiges
+  }
+  
+  let baseColor = colors[type as keyof typeof colors] || colors.other
+  
+  // Status-basierte Anpassungen
+  if (status === 'cancelled') {
+    baseColor = '#ef4444' // Rot für abgesagte Termine
+  } else if (status === 'completed') {
+    baseColor = '#22c55e' // Helles Grün für abgeschlossene Termine
+  }
+  
+  return baseColor
 }
     
 const handleMoveError = (error: string) => {
@@ -446,6 +509,42 @@ const eventModalRef = ref()
 const isUpdating = ref(false)
 const modalEventType = ref<'lesson' | 'staff_meeting'>('lesson')
 
+// Neue Hilfsfunktion:
+const openNewAppointmentModal = (arg: any) => {
+  // ✅ FIX 1: Verwende originale Zeit (keine -2h Korrektur)
+  const clickedDate = arg.date
+  const endDate = new Date(clickedDate.getTime() + 45 * 60000)
+  
+  console.log('📅 CREATE MODE: Free slot clicked at', toLocalTimeString(clickedDate))
+  
+  isModalVisible.value = true
+  modalMode.value = 'create'
+  modalEventData.value = {
+    title: '',
+    start: toLocalTimeString(clickedDate),
+    end: toLocalTimeString(endDate),
+    allDay: arg.allDay,
+    
+    // ✅ FIX 2: KRITISCH - Markierung für freien Slot
+    isFreeslotClick: true,
+    clickSource: 'calendar-free-slot',
+    
+    // ✅ FIX 3: Explizit KEINE Student-Daten
+    user_id: null,
+    selectedStudentId: null,
+    preselectedStudent: null,
+    
+    extendedProps: {
+      location: '',
+      staff_note: '',
+      client_note: '',
+      eventType: 'lesson',
+      isNewAppointment: true
+    }
+  }
+  
+  console.log('✅ FREE SLOT: Modal opened with clean data (no student preselection)')
+}
 
 // Überarbeitete handleEventDrop mit schönem Dialog
 const handleEventDrop = async (dropInfo: any) => {
@@ -631,7 +730,6 @@ showConfirmDialog({
     initialView: 'timeGridWeek',
     locale: 'delocale',
     timeZone: 'local',
-    
     allDaySlot: false,
     slotMinTime: '05:00:00',
     slotMaxTime: '23:00:00',
@@ -644,45 +742,37 @@ showConfirmDialog({
     eventDrop: handleEventDrop,
     eventResize: handleEventResize,
   // Klick auf leeren Zeitslot
- dateClick: (arg) => {
+
+// In der dateClick Funktion im calendarOptions:
+dateClick: (arg) => {
   console.log('🔍 FREE SLOT CLICKED:', {
     clickedDate: arg.date,
-    clickedISO: arg.date.toISOString()
+    clickedISO: toLocalTimeString(arg.date),
+    hasClipboard: !!clipboardAppointment.value,
+    clipboardData: clipboardAppointment.value
   })
   
-  // ✅ FIX 1: Verwende originale Zeit (keine -2h Korrektur)
-  const clickedDate = arg.date
-  const endDate = new Date(clickedDate.getTime() + 45 * 60000)
-  
-  console.log('📅 CREATE MODE: Free slot clicked at', clickedDate.toISOString())
-  
-  isModalVisible.value = true
-  modalMode.value = 'create'
-  modalEventData.value = {
-    title: '',
-    start: clickedDate.toISOString(), 
-    end: endDate.toISOString(),
-    allDay: arg.allDay,
+  // ✅ Prüfen ob Zwischenablage gefüllt ist
+  if (clipboardAppointment.value) {
+    console.log('📋 Clipboard detected, showing choice modal:', clipboardAppointment.value)
     
-    // ✅ FIX 2: KRITISCH - Markierung für freien Slot
-    isFreeslotClick: true,
-    clickSource: 'calendar-free-slot',
-    
-    // ✅ FIX 3: Explizit KEINE Student-Daten
-    user_id: null,
-    selectedStudentId: null,
-    preselectedStudent: null,
-    
-    extendedProps: {
-      location: '',
-      staff_note: '',
-      client_note: '',
-      eventType: 'lesson',
-      isNewAppointment: true
+    // Slot-Info für später speichern
+    pendingSlotClick.value = {
+      date: arg.date,
+      allDay: arg.allDay
     }
+    
+    // ✅ WICHTIG: Modal mit setTimeout stabil setzen
+    setTimeout(() => {
+      showClipboardChoice.value = true
+      console.log('✅ Choice modal set to visible with timeout:', showClipboardChoice.value)
+    }, 10) // Kleine Verzögerung um Race Conditions zu vermeiden
+    
+    return
   }
   
-  console.log('✅ FREE SLOT: Modal opened with clean data (no student preselection)')
+  console.log('➕ No clipboard, opening new appointment modal')
+  openNewAppointmentModal(arg)
 },
 
 eventContent: (arg) => {
@@ -803,6 +893,187 @@ const handleEventDeleted = (id: string) => {
   loadAppointments() // Kalender neu laden
 }
 
+// ✅ NEUE FUNKTION: Direktes Speichern ohne Modal
+const pasteAppointmentDirectly = async () => {
+  if (!clipboardAppointment.value || !pendingSlotClick.value) return
+  
+  console.log('📋 Pasting appointment directly...')
+  console.log('🔍 FULL clipboardAppointment:', clipboardAppointment.value)
+  
+  try {
+    // Kopierte Daten mit neuer Zeit vorbereiten
+    const clickedDate = pendingSlotClick.value.date
+    const endDate = new Date(clickedDate.getTime() + clipboardAppointment.value.duration * 60000)
+    
+    // ✅ EXPLIZITE KATEGORIE-ERMITTLUNG
+    const rawCategory = clipboardAppointment.value.category || clipboardAppointment.value.type
+    console.log('🔍 Raw category from clipboard:', rawCategory)
+    
+    // Bei mehreren Kategorien nur die erste nehmen
+    const category = rawCategory ? rawCategory.split(',')[0].trim() : 'B'
+    console.log('🔍 Final category for pricing:', category)
+    
+    // ✅ EXPLIZITE PREIS-BERECHNUNG
+    const fallbackPrices: Record<string, number> = {
+      'B': 95/45,           // 2.11
+      'A': 95/45,           // 2.11  
+      'A1': 95/45,          // 2.11
+      'BE': 120/45,         // 2.67
+      'C': 170/45,          // 3.78
+      'C1': 150/45,         // 3.33
+      'D': 200/45,          // 4.44
+      'CE': 200/45,         // 4.44
+      'BOAT': 120/45,       // 2.67
+      'BPT': 95/45          // 2.11
+    }
+    
+    const pricePerMinute = fallbackPrices[category] || 2.11
+    console.log('🔍 Calculated price_per_minute:', pricePerMinute, 'for category:', category)
+    
+    // ✅ APPOINTMENTS-DATEN MIT EXPLIZITEN WERTEN
+      const appointmentData = {
+        // Basis-Felder
+        title: clipboardAppointment.value.title || 'Kopierter Termin',
+        description: clipboardAppointment.value.description || '',
+        user_id: clipboardAppointment.value.user_id,
+        staff_id: clipboardAppointment.value.staff_id || props.currentUser?.id,
+        location_id: clipboardAppointment.value.location_id,
+        
+        // Zeit-Felder (neu)
+        start_time: toLocalTimeString(clickedDate),
+        end_time: toLocalTimeString(endDate),
+        duration_minutes: clipboardAppointment.value.duration || 45,
+        
+        // Kopierte Felder
+        type: category,
+        price_per_minute: Number(pricePerMinute),
+        status: 'scheduled',
+        
+        // Pflichtfelder mit Defaults
+        is_paid: clipboardAppointment.value.is_paid || false,
+        discount: clipboardAppointment.value.discount || 0,
+        discount_type: clipboardAppointment.value.discount_type || 'fixed',
+        discount_reason: clipboardAppointment.value.discount_reason || null,
+      }
+    
+    // ✅ FINALE DEBUG-AUSGABE
+    console.log('💾 FINAL appointmentData before save:', appointmentData)
+    console.log('🔍 price_per_minute type and value:', typeof appointmentData.price_per_minute, appointmentData.price_per_minute)
+    
+    // Validierung vor dem Speichern
+    if (!appointmentData.price_per_minute || appointmentData.price_per_minute <= 0) {
+      throw new Error(`Invalid price_per_minute: ${appointmentData.price_per_minute}`)
+    }
+    
+    // Direkt in Datenbank speichern
+    const { data, error } = await supabase
+      .from('appointments')
+      .insert(appointmentData)
+      .select()
+      .single()
+    
+    if (error) throw error
+    
+    console.log('✅ Appointment pasted successfully:', data.id)
+    
+    // Cleanup
+    showClipboardChoice.value = false
+    pendingSlotClick.value = null
+    
+    // Kalender neu laden
+    await loadAppointments()
+        
+  } catch (error: any) {
+    console.error('❌ Error pasting appointment:', error)
+    showToast('❌ Fehler beim Einfügen: ' + error.message)
+  }
+}
+
+const createNewAppointment = () => {
+  if (!pendingSlotClick.value) return
+  
+  console.log('➕ Creating completely new appointment')
+  
+  // ✅ WICHTIG: Völlig leeres Modal ohne vorausgewählte Daten
+  const clickedDate = pendingSlotClick.value.date
+  const endDate = new Date(clickedDate.getTime() + 45 * 60000)
+  
+  modalMode.value = 'create'
+  modalEventData.value = {
+    title: '',
+    start: toLocalTimeString(clickedDate),
+    end: toLocalTimeString(endDate),
+    allDay: pendingSlotClick.value.allDay,
+    
+    // ✅ WICHTIG: Explizit KEINE Student-Daten setzen
+    user_id: null,
+    selectedStudentId: null,
+    preselectedStudent: null,
+    
+    // ✅ WICHTIG: Markierung als freier Slot
+    isFreeslotClick: true,
+    clickSource: 'calendar-free-slot-new',
+    
+    extendedProps: {
+      location: '',
+      staff_note: '',
+      client_note: '',
+      eventType: 'lesson',
+      isNewAppointment: true
+    }
+  }
+  
+  // Cleanup
+  showClipboardChoice.value = false
+  pendingSlotClick.value = null
+  
+  // Modal öffnen
+  isModalVisible.value = true
+  
+  console.log('✅ New appointment modal opened with clean data')
+}
+
+// Copy Handler anpassen:
+const handleCopyAppointment = (copyData: any) => {
+  console.log('📋 CALENDAR: Copy event received:', copyData)
+  
+  // ✅ DEBUG: Alle verfügbaren Kategorie-Felder anzeigen
+  console.log('🔍 DEBUG Category fields:', {
+    'copyData.eventData.type': copyData.eventData.type,
+    'copyData.eventData.extendedProps?.type': copyData.eventData.extendedProps?.type,
+    'copyData.eventData.extendedProps?.category': copyData.eventData.extendedProps?.category,
+    'copyData.eventData.extendedProps?.appointment_type': copyData.eventData.extendedProps?.appointment_type
+  })
+  
+  // ✅ KORRIGIERT: Verwende die echte Termin-Kategorie
+  const appointmentCategory = copyData.eventData.type || 
+                              copyData.eventData.extendedProps?.type || 
+                              'B' // Fallback
+  
+  // In Zwischenablage speichern
+  clipboardAppointment.value = {
+      id: copyData.eventData.id,
+        title: copyData.eventData.title?.replace(' (Kopie)', '') || 'Kopierter Termin',
+        user_id: copyData.eventData.user_id,
+        staff_id: copyData.eventData.staff_id,
+        location_id: copyData.eventData.location_id,
+        appointment_type: copyData.eventData.appointment_type,
+        category: appointmentCategory,
+        type: appointmentCategory,
+        duration: copyData.eventData.duration_minutes || 45,
+        duration_minutes: copyData.eventData.duration_minutes || 45,
+        price_per_minute: copyData.eventData.price_per_minute,
+  }
+  
+  console.log('✅ Termin in Zwischenablage gespeichert:', clipboardAppointment.value)
+}
+
+const cancelClipboardChoice = () => {
+  console.log('❌ Cancelling clipboard choice')
+  showClipboardChoice.value = false
+  pendingSlotClick.value = null
+}
+
 onMounted(async () => {
   console.log('📅 CalendarComponent mounted')
   isCalendarReady.value = true
@@ -878,6 +1149,7 @@ defineExpose({
   @close="isModalVisible = false"
   @save-event="handleSaveEvent"       
   @delete-event="handleEventDeleted"
+  @copy-appointment="handleCopyAppointment"
   @refresh-calendar="loadAppointments"
   @appointment-saved="refreshCalendar"    
   @appointment-updated="refreshCalendar"   
@@ -907,6 +1179,53 @@ defineExpose({
     @moved="handleAppointmentMoved"
     @error="handleMoveError"
   />
+
+ <!-- ✅ NEUES MODAL: Clipboard Choice Modal -->
+  <div v-if="showClipboardChoice" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md mx-4">
+      <div class="text-center mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">
+            Kopierter Termin        
+        </h3>
+      </div>
+
+      <!-- Kopierter Termin Info -->
+      <div v-if="clipboardAppointment" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+        <div class="text-sm">
+          <div class="font-medium text-blue-900">{{ clipboardAppointment.title }}</div>
+          <div class="text-blue-700 text-xs mt-1">
+            Kategorie {{ clipboardAppointment.category }} • {{ clipboardAppointment.duration }}min
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex space-x-3">
+        <button
+          @click="pasteAppointmentDirectly"
+          class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2"
+        >
+          <span>Dieser einfügen</span>
+        </button>
+        
+        <button
+          @click="createNewAppointment"
+          class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center space-x-2"
+        >
+          <span>Neuer Termin</span>
+        </button>
+      </div>
+
+      <!-- Cancel -->
+      <button
+        @click="cancelClipboardChoice"
+        class="w-full mt-3 px-4 py-2 text-gray-600 hover:text-gray-800 text-sm rounded-lg border border-gray-600"
+      >
+        Abbrechen
+      </button>
+    </div>
+  </div>
+
 </template>
 
 <style>
@@ -965,8 +1284,8 @@ defineExpose({
 /* === EVENTS === */
 .fc-event {
   border: none !important;
-  border-radius: 6px !important;
-  padding: 2px;
+  border-radius: 4px !important;
+  padding: 1px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
   font-weight: 500 !important;
   transition: all 0.2s ease !important;

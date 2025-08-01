@@ -343,6 +343,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 // State
 const examLocations = ref<any[]>([])
@@ -417,7 +418,7 @@ const saveLocation = async () => {
       postal_code: formData.value.postal_code.trim() || null,
       available_categories: formData.value.available_categories,
       contact_phone: formData.value.contact_phone.trim() || null,
-      updated_at: new Date().toISOString()
+      updated_at: toLocalTimeString(new Date())
     }
 
     if (editingLocation.value) {
@@ -435,7 +436,7 @@ const saveLocation = async () => {
         .from('exam_locations')
         .insert({
           ...locationData,
-          created_at: new Date().toISOString()
+          created_at: toLocalTimeString(new Date())
         })
 
       if (insertErr) throw insertErr
@@ -497,7 +498,7 @@ const toggleLocationStatus = async (location: any) => {
       .from('exam_locations')
       .update({ 
         is_active: !location.is_active,
-        updated_at: new Date().toISOString()
+        updated_at: toLocalTimeString(new Date())
       })
       .eq('id', location.id)
 

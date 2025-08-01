@@ -2,6 +2,7 @@
 
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface Category {
   id: number
@@ -98,7 +99,7 @@ export const useCategoryData = () => {
         is_active: true,
         display_order: 0,
         price_unit: 'per_lesson',
-        created_at: new Date().toISOString()
+        created_at: toLocalTimeString(new Date)
       } as Category
     }
     

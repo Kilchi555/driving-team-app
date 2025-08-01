@@ -1,0 +1,716 @@
+// composables/usePricing.ts - Optimiert mit erweiterten Caching-Strategien
+import { ref, computed, watch, type Ref } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
+interface PricingRule {
+  id: string
+  category_code: string
+  price_per_minute_rappen: number
+  admin_fee_rappen: number
+  admin_fee_applies_from: number
+  base_duration_minutes: number
+  is_active: boolean
+  rule_name: string
+  valid_from: string | null
+  valid_until: string | null
+}
+
+interface CalculatedPrice {
+  base_price_rappen: number
+  admin_fee_rappen: number
+  total_rappen: number
+  base_price_chf: string
+  admin_fee_chf: string
+  total_chf: string
+  category_code: string
+  duration_minutes: number
+  appointment_number: number
+}
+
+interface CachedPrice {
+  data: CalculatedPrice
+  timestamp: number
+  key: string
+}
+
+interface CachedAppointmentCount {
+  count: number
+  timestamp: number
+}
+
+interface UsePricingOptions {
+  selectedStudent: Ref<any | null>; // Muss ein Ref sein
+  currentUser: Ref<any | null>; // Muss ein Ref sein
+  durationMinutes: Ref<number>; // Muss ein Ref sein
+  isSecondOrLaterAppointment: Ref<boolean>; // Muss ein Ref sein
+  showAdminFeeByDefault: Ref<boolean>; // Muss ein Ref sein
+}
+
+// ✅ DIESE INTERFACES UND FUNKTIONEN GEHÖREN AUSSERHALB der usePricing() Funktion!
+
+export interface CompleteFallbackRule {
+  id: string
+  category_code: string
+  name: string
+  description: string
+  price_per_minute_rappen: number
+  price_per_minute_chf: number
+  admin_fee_rappen: number
+  admin_fee_chf: number
+  admin_fee_applies_from: number
+  base_duration_minutes: number
+  is_active: boolean
+  valid_from: string | null
+  valid_until: string | null
+  rule_name: string
+}
+
+// ✅ VOLLSTÄNDIGE FALLBACK-DATEN FÜR ALLE KATEGORIEN
+const COMPLETE_FALLBACK_RULES: CompleteFallbackRule[] = [
+  {
+    id: 'fallback-B',
+    category_code: 'B',
+    name: 'Kategorie B (Personenwagen)',
+    description: 'Personenwagen bis 3500kg',
+    price_per_minute_rappen: 211,
+    price_per_minute_chf: 2.11,
+    admin_fee_rappen: 12000,
+    admin_fee_chf: 120,
+    admin_fee_applies_from: 2,
+    base_duration_minutes: 45,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback B'
+  },
+  {
+    id: 'fallback-A',
+    category_code: 'A',
+    name: 'Kategorie A (Motorrad)',
+    description: 'Motorrad unbeschränkt',
+    price_per_minute_rappen: 211,
+    price_per_minute_chf: 2.11,
+    admin_fee_rappen: 0,
+    admin_fee_chf: 0,
+    admin_fee_applies_from: 999,
+    base_duration_minutes: 45,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback A'
+  },
+  {
+    id: 'fallback-A1',
+    category_code: 'A1',
+    name: 'Kategorie A1 (Leichtmotorrad)',
+    description: 'Leichtmotorrad 125ccm',
+    price_per_minute_rappen: 211,
+    price_per_minute_chf: 2.11,
+    admin_fee_rappen: 0,
+    admin_fee_chf: 0,
+    admin_fee_applies_from: 999,
+    base_duration_minutes: 45,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback A1'
+  },
+  {
+    id: 'fallback-A35kW',
+    category_code: 'A35kW',
+    name: 'Kategorie A 35kW',
+    description: 'Motorrad mit Leistungsbeschränkung',
+    price_per_minute_rappen: 211,
+    price_per_minute_chf: 2.11,
+    admin_fee_rappen: 0,
+    admin_fee_chf: 0,
+    admin_fee_applies_from: 999,
+    base_duration_minutes: 45,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback A35kW'
+  },
+  {
+    id: 'fallback-BE',
+    category_code: 'BE',
+    name: 'Kategorie BE (Auto + Anhänger)',
+    description: 'Personenwagen mit Anhänger',
+    price_per_minute_rappen: 267,
+    price_per_minute_chf: 2.67,
+    admin_fee_rappen: 12000,
+    admin_fee_chf: 120,
+    admin_fee_applies_from: 2,
+    base_duration_minutes: 90,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback BE'
+  },
+  {
+    id: 'fallback-C',
+    category_code: 'C',
+    name: 'Kategorie C (Lastwagen)',
+    description: 'Lastwagen über 3500kg',
+    price_per_minute_rappen: 378,
+    price_per_minute_chf: 3.78,
+    admin_fee_rappen: 25000,
+    admin_fee_chf: 250,
+    admin_fee_applies_from: 2,
+    base_duration_minutes: 45,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback C'
+  },
+  {
+    id: 'fallback-C1',
+    category_code: 'C1',
+    name: 'Kategorie C1 (Kleinlastwagen)',
+    description: 'Lastwagen 3500-7500kg',
+    price_per_minute_rappen: 333,
+    price_per_minute_chf: 3.33,
+    admin_fee_rappen: 20000,
+    admin_fee_chf: 200,
+    admin_fee_applies_from: 2,
+    base_duration_minutes: 45,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback C1'
+  },
+  {
+    id: 'fallback-CE',
+    category_code: 'CE',
+    name: 'Kategorie CE (Lastwagen + Anhänger)',
+    description: 'Lastwagen mit Anhänger',
+    price_per_minute_rappen: 444,
+    price_per_minute_chf: 4.44,
+    admin_fee_rappen: 30000,
+    admin_fee_chf: 300,
+    admin_fee_applies_from: 2,
+    base_duration_minutes: 90,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback CE'
+  },
+  {
+    id: 'fallback-D',
+    category_code: 'D',
+    name: 'Kategorie D (Autobus)',
+    description: 'Autobus über 8 Personen',
+    price_per_minute_rappen: 444,
+    price_per_minute_chf: 4.44,
+    admin_fee_rappen: 30000,
+    admin_fee_chf: 300,
+    admin_fee_applies_from: 2,
+    base_duration_minutes: 45,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback D'
+  },
+  {
+    id: 'fallback-D1',
+    category_code: 'D1',
+    name: 'Kategorie D1 (Kleinbus)',
+    description: 'Kleinbus 9-16 Personen',
+    price_per_minute_rappen: 333,
+    price_per_minute_chf: 3.33,
+    admin_fee_rappen: 25000,
+    admin_fee_chf: 250,
+    admin_fee_applies_from: 2,
+    base_duration_minutes: 45,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback D1'
+  },
+  {
+    id: 'fallback-BPT',
+    category_code: 'BPT',
+    name: 'Berufsprüfung Theorie',
+    description: 'Berufskraftfahrer Theorieprüfung',
+    price_per_minute_rappen: 222,
+    price_per_minute_chf: 2.22,
+    admin_fee_rappen: 12000,
+    admin_fee_chf: 120,
+    admin_fee_applies_from: 2,
+    base_duration_minutes: 45,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback BPT'
+  },
+  {
+    id: 'fallback-BOAT',
+    category_code: 'BOAT',
+    name: 'Bootsführerschein',
+    description: 'Motorbootführerschein',
+    price_per_minute_rappen: 133,
+    price_per_minute_chf: 1.33,
+    admin_fee_rappen: 15000,
+    admin_fee_chf: 150,
+    admin_fee_applies_from: 2,
+    base_duration_minutes: 90,
+    is_active: true,
+    valid_from: null,
+    valid_until: null,
+    rule_name: 'Fallback BOAT'
+  }
+]
+
+// ✅ HILFSFUNKTIONEN - AUSSERHALB der usePricing() Funktion
+export const getFallbackRule = (categoryCode: string): CompleteFallbackRule | null => {
+  const category = categoryCode.split(',')[0].trim().toUpperCase()
+  return COMPLETE_FALLBACK_RULES.find(rule => rule.category_code === category) || null
+}
+
+export const getFallbackPricePerMinute = (categoryCode: string): number => {
+  const rule = getFallbackRule(categoryCode)
+  return rule ? rule.price_per_minute_chf : COMPLETE_FALLBACK_RULES[0].price_per_minute_chf
+}
+
+export const getFallbackAdminFee = (categoryCode: string, appointmentNumber: number): number => {
+  const rule = getFallbackRule(categoryCode)
+  if (!rule || appointmentNumber < rule.admin_fee_applies_from) {
+    return 0
+  }
+  return rule.admin_fee_chf
+}
+
+export const getFallbackDuration = (categoryCode: string): number => {
+  const rule = getFallbackRule(categoryCode)
+  return rule ? rule.base_duration_minutes : 45
+}
+
+export const calculateFallbackPrice = (
+  categoryCode: string, 
+  durationMinutes: number, 
+  appointmentNumber: number = 1
+): { basePrice: number; adminFee: number; total: number; rule: CompleteFallbackRule | null } => {
+  const rule = getFallbackRule(categoryCode)
+  
+  if (!rule) {
+    return { basePrice: 0, adminFee: 0, total: 0, rule: null }
+  }
+  
+  const basePrice = Math.round(rule.price_per_minute_chf * durationMinutes * 100) / 100
+  const adminFee = appointmentNumber >= rule.admin_fee_applies_from ? rule.admin_fee_chf : 0
+  
+  return {
+    basePrice,
+    adminFee,
+    total: basePrice + adminFee,
+    rule
+  }
+}
+
+export const getAllFallbackCategories = (): CompleteFallbackRule[] => {
+  return [...COMPLETE_FALLBACK_RULES]
+}
+
+export const usePricing = (options?: UsePricingOptions) => {
+  const supabase = getSupabase()
+
+  // State
+  const pricingRules = ref<PricingRule[]>([])
+  const isLoadingPrices = ref(false)
+  const pricingError = ref<string>('')
+  const lastLoaded = ref<Date | null>(null)
+  const _calculatedPricePerMinute = ref(0);
+  const _calculatedAdminFee = ref(0);
+  const _calculatedAppointmentNumber = ref(1);
+  const _hasAdminFee = ref(false);
+  const _totalPriceChf = ref('0.00');
+
+  // Cache-Konfiguration
+  const PRICING_RULES_CACHE_DURATION = 10 * 60 * 1000  // 10 Minuten für Pricing Rules
+  const PRICE_CALCULATION_CACHE_DURATION = 2 * 60 * 1000  // 2 Minuten für Berechnungen
+  const APPOINTMENT_COUNT_CACHE_DURATION = 30 * 1000     // 30 Sekunden für Appointment Counts
+
+  // Cache-Speicher
+  const priceCalculationCache = ref<Map<string, CachedPrice>>(new Map())
+  const appointmentCountCache = ref<Map<string, CachedAppointmentCount>>(new Map())
+
+  // ✅ CACHE-HELPER FUNKTIONEN
+  const generatePriceKey = (categoryCode: string, durationMinutes: number, userId?: string): string => {
+    return `${categoryCode}-${durationMinutes}${userId ? `-${userId}` : '-guest'}`
+  }
+
+  const isCacheValid = (timestamp: number, duration: number): boolean => {
+    return (Date.now() - timestamp) < duration
+  }
+
+  const clearExpiredCache = () => {
+    const now = Date.now()
+
+    // Bereinige Price Calculations Cache
+    for (const [key, cached] of priceCalculationCache.value.entries()) {
+      if (!isCacheValid(cached.timestamp, PRICE_CALCULATION_CACHE_DURATION)) {
+        priceCalculationCache.value.delete(key)
+      }
+    }
+
+    // Bereinige Appointment Count Cache  
+    for (const [userId, cached] of appointmentCountCache.value.entries()) {
+      if (!isCacheValid(cached.timestamp, APPOINTMENT_COUNT_CACHE_DURATION)) {
+        appointmentCountCache.value.delete(userId)
+      }
+    }
+
+    console.log('🧹 Cache cleaned:', {
+      priceCalculations: priceCalculationCache.value.size,
+      appointmentCounts: appointmentCountCache.value.size
+    })
+  }
+
+  // Cache-Cleanup alle 60 Sekunden
+  setInterval(clearExpiredCache, 60 * 1000)
+
+    const createFallbackPricingRules = async (): Promise<void> => {
+    console.log('🔄 Using complete fallback pricing rules for all categories...')
+    
+    // Konvertiere zu PricingRule Format für das bestehende System
+    const fallbackRules = COMPLETE_FALLBACK_RULES.map(rule => ({
+      id: rule.id,
+      category_code: rule.category_code,
+      price_per_minute_rappen: rule.price_per_minute_rappen,
+      admin_fee_rappen: rule.admin_fee_rappen,
+      admin_fee_applies_from: rule.admin_fee_applies_from,
+      base_duration_minutes: rule.base_duration_minutes,
+      is_active: rule.is_active,
+      valid_from: rule.valid_from,
+      valid_until: rule.valid_until,
+      rule_name: rule.rule_name
+    }))
+    
+    pricingRules.value = fallbackRules
+    lastLoaded.value = new Date()
+    console.log('✅ Complete fallback pricing rules loaded:', fallbackRules.length, 'categories')
+  }
+
+  // ✅ PRICING RULES MIT CACHE
+  const loadPricingRules = async (forceReload = false): Promise<void> => {
+    console.log('🔄 Loading pricing rules from database...')
+    
+    // Prüfe Cache für Pricing Rules
+    if (!forceReload && lastLoaded.value && 
+        isCacheValid(lastLoaded.value.getTime(), PRICING_RULES_CACHE_DURATION)) {
+      console.log('📦 Using cached pricing rules')
+      return
+    }
+
+    isLoadingPrices.value = true
+    pricingError.value = ''
+
+    try {
+      const { data, error } = await supabase
+        .from('pricing_rules')
+        .select('*')
+        .eq('is_active', true)
+        .order('category_code')
+
+      if (error) {
+        console.error('❌ Database error:', error)
+        throw new Error(`Database error: ${error.message}`)
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('⚠️ No pricing rules found, using fallback')
+        await createFallbackPricingRules()
+        return
+      }
+
+      // Kombiniere die Regeln nach category_code
+      const rulesByCategory = data.reduce((acc, rule) => {
+        if (!acc[rule.category_code]) {
+          acc[rule.category_code] = {}
+        }
+        acc[rule.category_code][rule.rule_type] = rule
+        return acc
+      }, {} as Record<string, Record<string, any>>)
+
+      const combinedRules = Object.entries(rulesByCategory).map(([categoryCode, rules]) => {
+        const baseRule = (rules as any).base_price
+        const adminRule = (rules as any).admin_fee
+
+        return {
+          id: baseRule?.id || adminRule?.id || `combined-${categoryCode}`,
+          category_code: categoryCode,
+          rule_name: `${categoryCode} - Kombiniert`,
+          price_per_minute_rappen: baseRule?.price_per_minute_rappen || 212,
+          admin_fee_rappen: adminRule?.admin_fee_rappen || (
+            ['A', 'A1', 'A35kW'].includes(categoryCode) ? 0 : 12000
+          ),
+          admin_fee_applies_from: adminRule?.admin_fee_applies_from || (
+            ['A', 'A1', 'A35kW'].includes(categoryCode) ? 999 : 2
+          ),
+          base_duration_minutes: baseRule?.base_duration_minutes || 45,
+          is_active: true,
+          valid_from: baseRule?.valid_from || null,
+          valid_until: baseRule?.valid_until || null
+        }
+      })
+
+      pricingRules.value = combinedRules
+      lastLoaded.value = new Date()
+
+      // ✅ CACHE INVALIDIERUNG: Lösche alle Preis-Caches wenn neue Rules geladen werden
+      priceCalculationCache.value.clear()
+      appointmentCountCache.value.clear()
+
+      console.log('✅ Pricing rules loaded:', combinedRules.length, 'categories')
+      console.log('🗑️ Price caches cleared due to new rules')
+
+    } catch (err: any) {
+      console.error('❌ Error loading pricing rules:', err)
+      pricingError.value = err.message || 'Fehler beim Laden der Preisregeln'
+      await createFallbackPricingRules()
+    } finally {
+      isLoadingPrices.value = false
+    }
+  }
+
+  // ✅ APPOINTMENT COUNT MIT CACHE
+  const getAppointmentCount = async (userId: string): Promise<number> => {
+    console.log('🔢 Getting appointment count for user:', userId)
+    
+    // Prüfe Cache
+    const cached = appointmentCountCache.value.get(userId)
+    if (cached && isCacheValid(cached.timestamp, APPOINTMENT_COUNT_CACHE_DURATION)) {
+      console.log('📦 Using cached appointment count:', cached.count)
+      return cached.count
+    }
+
+    try {
+      const { count, error } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .in('status', ['completed', 'confirmed'])
+
+      if (error) {
+        console.error('❌ Error counting appointments:', error)
+        return 1
+      }
+
+      const appointmentNumber = (count || 0) + 1
+      
+      // ✅ CACHE SPEICHERN
+      appointmentCountCache.value.set(userId, {
+        count: appointmentNumber,
+        timestamp: Date.now()
+      })
+      
+      console.log('✅ Appointment count cached:', appointmentNumber)
+      return appointmentNumber
+
+    } catch (error) {
+      console.error('❌ Error in getAppointmentCount:', error)
+      return 1
+    }
+  }
+
+  // ✅ GET PRICING RULE
+  const getPricingRule = (categoryCode: string): PricingRule | null => {
+    const rule = pricingRules.value.find(rule => rule.category_code === categoryCode)
+    if (!rule) {
+      console.warn(`⚠️ No pricing rule found for category: ${categoryCode}`)
+      return null
+    }
+    return rule
+  }
+
+  // ✅ ROUND TO NEAREST 50 RAPPEN
+  const roundToNearestFiftyRappen = (rappen: number): number => {
+    const remainder = rappen % 50
+    if (remainder === 0) {
+      return rappen
+    }
+    if (remainder < 25) {
+      return rappen - remainder
+    } else {
+      return rappen + (50 - remainder)
+    }
+  }
+
+  // ✅ PRICE CALCULATION MIT CACHE
+  const calculatePrice = async (
+    categoryCode: string,
+    durationMinutes: number,
+    userId?: string
+  ): Promise<CalculatedPrice> => {
+    const cacheKey = generatePriceKey(categoryCode, durationMinutes, userId)
+    console.log('💰 Calculating price for:', cacheKey)
+    
+    // ✅ PRÜFE PRICE CALCULATION CACHE
+    const cachedPrice = priceCalculationCache.value.get(cacheKey)
+    if (cachedPrice && isCacheValid(cachedPrice.timestamp, PRICE_CALCULATION_CACHE_DURATION)) {
+      console.log('📦 Using cached price calculation:', cachedPrice.data.total_chf)
+      return cachedPrice.data
+    }
+
+    // Lade Pricing Rules falls noch nicht geladen
+    if (pricingRules.value.length === 0) {
+      await loadPricingRules()
+    }
+
+    const rule = getPricingRule(categoryCode)
+    if (!rule) {
+      throw new Error(`Keine Preisregel für Kategorie ${categoryCode} gefunden`)
+    }
+
+    // Appointment count ermitteln (auch mit Cache)
+    const appointmentNumber = userId ? await getAppointmentCount(userId) : 1
+
+    // Grundpreis berechnen
+    let basePriceRappen = Math.round(rule.price_per_minute_rappen * durationMinutes)
+    basePriceRappen = roundToNearestFiftyRappen(basePriceRappen)
+
+    // Admin-Fee nur ab entsprechendem Termin
+    const adminFeeRappen = appointmentNumber >= rule.admin_fee_applies_from ? rule.admin_fee_rappen : 0
+    
+    // Gesamtpreis
+    const totalRappen = basePriceRappen + adminFeeRappen
+
+    const result: CalculatedPrice = {
+      base_price_rappen: basePriceRappen,
+      admin_fee_rappen: adminFeeRappen,
+      total_rappen: totalRappen,
+      base_price_chf: (basePriceRappen / 100).toFixed(2),
+      admin_fee_chf: (adminFeeRappen / 100).toFixed(2),
+      total_chf: (totalRappen / 100).toFixed(2),
+      category_code: categoryCode,
+      duration_minutes: durationMinutes,
+      appointment_number: appointmentNumber
+    }
+
+    // ✅ CACHE SPEICHERN
+    priceCalculationCache.value.set(cacheKey, {
+      data: result,
+      timestamp: Date.now(),
+      key: cacheKey
+    })
+    
+    console.log('✅ Price calculated and cached:', {
+      category: categoryCode,
+      duration: durationMinutes,
+      total: result.total_chf,
+      cached: true
+    })
+
+    return result
+  }
+
+  // ✅ REFRESH PRICING (falls options vorhanden)
+  const refreshPricing = async () => {
+    if (!options?.selectedStudent.value || !options?.durationMinutes.value || !options?.currentUser.value) {
+      console.warn('⚠️ Cannot refresh pricing: Missing student, duration, or current user.')
+      // Setze Fallback-Werte, wenn Daten fehlen
+      _calculatedPricePerMinute.value = 0;
+      _calculatedAdminFee.value = 0;
+      _calculatedAppointmentNumber.value = 1;
+      _hasAdminFee.value = false;
+      _totalPriceChf.value = '0.00';
+      return;
+    }
+
+    try {
+      isLoadingPrices.value = true;
+      pricingError.value = '';
+
+      // Hole die Terminnummer
+      const appointmentNum = await getAppointmentCount(options.selectedStudent.value.id);
+      
+      // Berechne den Preis mit der bestehenden calculatePrice-Funktion
+      const result = await calculatePrice(
+        options.selectedStudent.value.category.split(',')[0].trim(),
+        options.durationMinutes.value,
+        options.selectedStudent.value.id
+      );
+
+      // Aktualisiere die reaktiven Werte
+      _calculatedPricePerMinute.value = result.base_price_rappen / options.durationMinutes.value / 100;
+      _calculatedAdminFee.value = parseFloat(result.admin_fee_chf);
+      _calculatedAppointmentNumber.value = appointmentNum;
+      _hasAdminFee.value = result.admin_fee_rappen > 0;
+      _totalPriceChf.value = result.total_chf;
+
+      console.log('✅ Pricing refreshed:', {
+        pricePerMin: _calculatedPricePerMinute.value,
+        adminFee: _calculatedAdminFee.value,
+        total: _totalPriceChf.value
+      });
+
+    } catch (err: any) {
+      console.error('❌ Error refreshing pricing:', err);
+      pricingError.value = err.message || 'Fehler beim Abrufen der Preise';
+      // Setze Fallback-Werte bei Fehler
+      _calculatedPricePerMinute.value = 0;
+      _calculatedAdminFee.value = 0;
+      _calculatedAppointmentNumber.value = 1;
+      _hasAdminFee.value = false;
+      _totalPriceChf.value = '0.00';
+    } finally {
+      isLoadingPrices.value = false;
+    }
+  };
+
+  // ✅ CACHE MANAGEMENT
+  const invalidateCache = (type?: 'pricing' | 'calculations' | 'appointments' | 'all') => {
+    switch (type) {
+      case 'pricing':
+        lastLoaded.value = null
+        console.log('🗑️ Pricing rules cache invalidated')
+        break
+      case 'calculations':
+        priceCalculationCache.value.clear()
+        console.log('🗑️ Price calculations cache cleared')
+        break
+      case 'appointments':
+        appointmentCountCache.value.clear()
+        console.log('🗑️ Appointment count cache cleared')
+        break
+      case 'all':
+      default:
+        lastLoaded.value = null
+        priceCalculationCache.value.clear()
+        appointmentCountCache.value.clear()
+        console.log('🗑️ All pricing caches cleared')
+        break
+    }
+  }
+
+  // ✅ COMPUTED VALUES
+  const isLoaded = computed(() => pricingRules.value.length > 0)
+  const categoriesCount = computed(() => pricingRules.value.length)
+
+  // ✅ RETURN ALL FUNCTIONS AND STATE
+  return {
+    // State
+    pricingRules,
+    isLoadingPrices,
+    pricingError,
+    isLoaded,
+    categoriesCount,
+
+    // Computed (falls options vorhanden)
+    calculatedPricePerMinute: computed(() => _calculatedPricePerMinute.value),
+    calculatedAdminFee: computed(() => _calculatedAdminFee.value),
+    calculatedAppointmentNumber: computed(() => _calculatedAppointmentNumber.value),
+    hasAdminFee: computed(() => _hasAdminFee.value),
+    totalPriceChf: computed(() => _totalPriceChf.value),
+
+    // Functions
+    loadPricingRules,
+    createFallbackPricingRules,
+    calculatePrice,
+    getAppointmentCount,
+    getPricingRule,
+    refreshPricing,
+    invalidateCache,
+    clearExpiredCache
+  }
+}

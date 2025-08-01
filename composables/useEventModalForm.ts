@@ -1,41 +1,68 @@
 // composables/useEventModalForm.ts
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, readonly } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useTimeCalculations } from '~/composables/useTimeCalculations'
 import { useCategoryData } from '~/composables/useCategoryData'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
-const useEventTypes = () => {
+export const useEventTypes = () => {
   const eventTypesCache = ref<string[]>([])
+  const eventTypesFullCache = ref<any[]>([]) // ✅ NEU: Für komplette Objekte
   const isEventTypesLoaded = ref(false)
   
-  const loadEventTypes = async () => {
-    if (isEventTypesLoaded.value) return eventTypesCache.value
+// useEventModalForm.ts - erweitern Sie die loadEventTypes Funktion
+const loadEventTypes = async (excludeTypes: string[] = [], loadFullObjects: boolean = false) => {
+  if (isEventTypesLoaded.value && !loadFullObjects) return eventTypesCache.value
+  
+  try {
+    const supabase = getSupabase()
+    console.log('🔄 Loading event types from database...')
     
-    try {
-      const supabase = getSupabase()
-      console.log('🔄 Loading event types from database...')
+    const { data, error } = await supabase
+      .from('event_types')
+      .select(loadFullObjects ? '*' : 'code')
+      .eq('is_active', true)
+      .order('display_order')
+    
+    if (error) throw error
+    
+    if (loadFullObjects) {
+      // ✅ DEBUG: Alle Event Type Codes anzeigen
+      console.log('🔍 All event type codes in DB:', (data || []).map(et => et.code))
       
-      const { data, error } = await supabase
-        .from('event_types')
-        .select('code')
-        .eq('is_active', true)
+      // Filter anwenden für komplette Objekte
+      const filteredData = (data || []).filter(eventType => 
+        !excludeTypes.includes(eventType.code)
+      )
       
-      if (error) throw error
+      console.log('✅ Full event types loaded (filtered):', filteredData.length, 'of', data?.length, 'total')
+      return filteredData
       
-      eventTypesCache.value = data?.map((et: any) => et.code) || []
+    } else {
+      // Original Code logic für nur Codes
+      const allCodes = data?.map((et: any) => et.code) || []
+      console.log('🔍 All event type codes in DB:', allCodes)
+      
+      eventTypesCache.value = allCodes.filter(code => !excludeTypes.includes(code))
       isEventTypesLoaded.value = true
       
-      console.log('✅ Event types loaded:', eventTypesCache.value)
+      console.log('✅ Event types loaded:', eventTypesCache.value, excludeTypes.length > 0 ? `(excluded: ${excludeTypes.join(', ')})` : '')
       return eventTypesCache.value
-      
-    } catch (err) {
-      console.error('❌ Error loading event types from DB:', err)
-      // Fallback: Bekannte Event Types als Backup
+    }
+    
+  } catch (err) {
+    console.error('❌ Error loading event types from DB:', err)
+    
+    if (loadFullObjects) {
+      return []
+    } else {
+      // Fallback ohne excluded types
       eventTypesCache.value = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
       isEventTypesLoaded.value = true
       return eventTypesCache.value
     }
   }
+}
   
   return {
     eventTypesCache: computed(() => eventTypesCache.value),
@@ -44,6 +71,13 @@ const useEventTypes = () => {
   }
 }
 
+interface Refs {
+  customerInviteSelectorRef?: any
+  staffSelectorRef?: any
+  priceDisplayRef?: any  // ✅ HINZUFÜGEN
+  invitedCustomers?: any
+  invitedStaffIds?: any
+}
 
 // Types (können später in separates types file)
 interface AppointmentData {
@@ -86,12 +120,37 @@ interface Student {
   preferred_duration?: number 
 }
 
-export const useEventModalForm = (currentUser?: any) => {
+interface EventModalCallbacks {
+  onCustomerInvites?: (appointmentData: any) => Promise<any[]>
+  onTeamInvites?: (appointmentData: any) => Promise<any[]>
+}
+
+export const useEventModalForm = (currentUser?: any, refs?: {
+  customerInviteSelectorRef?: any,
+  staffSelectorRef?: any,
+  invitedCustomers?: any,
+  invitedStaffIds?: any,
+  selectedLocation?: any,
+  priceDisplayRef?: any,  
+  emit?: any,
+  props?: any,
+}) => {
   
     // ✅ Composables initialisieren
   const categoryData = useCategoryData()
   const eventTypes = useEventTypes()
   const supabase = getSupabase()
+
+  const customerInviteSelectorRef = ref()
+  const invitedCustomers = ref<any[]>([])  
+  // Setter-Funktionen für EventModal
+  const setCustomerInviteRef = (ref: any) => {
+    customerInviteSelectorRef.value = ref
+  }
+  
+  const setInvitedCustomers = (customers: any[]) => {
+    invitedCustomers.value = customers
+  }
 
   // ============ STATE ============
   const formData = ref<AppointmentData>({
@@ -129,23 +188,77 @@ export const useEventModalForm = (currentUser?: any) => {
   const error = ref<string | null>(null)
 
   // ============ COMPUTED ============
-  const isFormValid = computed(() => {
-    const baseValid = formData.value.title && 
-                     formData.value.startDate && 
-                     formData.value.startTime &&
-                     formData.value.endTime
+  
+  const hasValidLocation = computed(() => {
+  // 1. Echte Location ID aus DB
+  if (formData.value.location_id && !formData.value.location_id.startsWith('temp_')) {
+    return true
+  }
+  
+  // 2. Temporäre Location ID (wird beim Speichern konvertiert)
+  if (formData.value.location_id && formData.value.location_id.startsWith('temp_')) {
+    return true
+  }
+  
+  // 3. selectedLocation hat eine ID (Fallback)
+  if (selectedLocation.value && selectedLocation.value.id) {
+    return true
+  }
+  
+  return false
+})
 
-    if (formData.value.eventType === 'lesson') {
-      return baseValid && 
-             selectedStudent.value && 
-             formData.value.type && 
-             formData.value.location_id &&
-             formData.value.duration_minutes > 0
-    } else {
-      return baseValid && formData.value.selectedSpecialType
-    }
-  })
-
+const isFormValid = computed(() => {
+  const lessonTypes = ['lesson', 'exam', 'theory']
+  
+  if (lessonTypes.includes(formData.value.eventType)) {
+    const lessonValid = !!(selectedStudent.value &&
+                         formData.value.type &&
+                         formData.value.startDate &&
+                         formData.value.startTime &&
+                         hasValidLocation.value &&  // ✅ Neue Location-Validierung
+                         formData.value.staff_id)
+    
+    console.log('🔍 LESSON VALIDATION (TEMP-FIXED):', {
+      isValid: lessonValid,
+      eventType: formData.value.eventType,
+      selectedStudent: !!selectedStudent.value,
+      studentName: selectedStudent.value ? `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}` : 'FEHLT',
+      type: formData.value.type || 'FEHLT',
+      startDate: formData.value.startDate || 'FEHLT',
+      startTime: formData.value.startTime || 'FEHLT',
+      // ✅ Erweiterte Location-Info:
+      location_id: formData.value.location_id || 'FEHLT',
+      location_is_temp: formData.value.location_id?.startsWith('temp_') || false,
+      selectedLocation_name: selectedLocation.value?.name || 'KEINE',
+      selectedLocation_id: selectedLocation.value?.id || 'KEINE',
+      hasValidLocation: hasValidLocation.value,
+      staff_id: formData.value.staff_id || 'FEHLT'
+    })
+    
+    return lessonValid
+  } else {
+    const otherValid = !!(formData.value.title &&
+                        formData.value.startDate &&
+                        formData.value.startTime &&
+                        hasValidLocation.value &&  // ✅ Neue Location-Validierung
+                        formData.value.staff_id)
+    
+    console.log('🔍 OTHER VALIDATION (TEMP-FIXED):', {
+      isValid: otherValid,
+      eventType: formData.value.eventType,
+      title: formData.value.title || 'FEHLT',
+      startDate: formData.value.startDate || 'FEHLT',
+      startTime: formData.value.startTime || 'FEHLT',
+      location_id: formData.value.location_id || 'FEHLT',
+      location_is_temp: formData.value.location_id?.startsWith('temp_') || false,
+      hasValidLocation: hasValidLocation.value,
+      staff_id: formData.value.staff_id || 'FEHLT'
+    })
+    
+    return otherValid
+  }
+})
   const computedEndTime = computed(() => {
     if (!formData.value.startTime || !formData.value.duration_minutes) return ''
     
@@ -251,6 +364,21 @@ const populateFormFromAppointment = async (appointment: any) => {
     drivingCategory,
     allEventTypeCodes: allEventTypeCodes.slice(0, 5)
   })
+
+  console.log('🔍 CATEGORY SOURCES DEBUG:', {
+  'appointment.type': appointment.type,
+  'appointment.category': appointment.category,
+  'appointment.extendedProps?.category': appointment.extendedProps?.category,
+  'appointment.extendedProps?.original_type': appointment.extendedProps?.original_type,
+  'rawEventTypeCode': rawEventTypeCode,
+  allSources: {
+    type: appointment.type,
+    category: appointment.category,
+    extPropsCategory: appointment.extendedProps?.category,
+    extPropsOriginalType: appointment.extendedProps?.original_type,
+    extPropsAppointmentType: appointment.extendedProps?.appointment_type
+  }
+})
   
   // ✅ EINFACHE LOGIK basierend auf event_types DB:
   // - lesson, exam, theory = LESSON TYPE (zeigt StudentSelector + LessonTypeSelector)
@@ -269,7 +397,7 @@ const populateFormFromAppointment = async (appointment: any) => {
   // Zeit-Verarbeitung
   const startDateTime = new Date(appointment.start_time || appointment.start)
   const endDateTime = appointment.end_time || appointment.end ? new Date(appointment.end_time || appointment.end) : null
-  const startDate = startDateTime.toISOString().split('T')[0]
+  const startDate = toLocalTimeString(startDateTime).split('T')[0]
   const startTime = startDateTime.toTimeString().slice(0, 5)
   const endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : ''
   
@@ -361,6 +489,62 @@ const populateFormFromAppointment = async (appointment: any) => {
       console.error('❌ Error loading location:', err)
     }
   }
+// useEventModalForm.ts - Zeile 478 ersetzen (den Debug-Code erweitern):
+
+// ✅ VOLLSTÄNDIGES DEBUGGING der appointment Struktur
+console.log('🔍 COMPLETE APPOINTMENT STRUCTURE:', JSON.stringify(appointment, null, 2))
+console.log('🔍 APPOINTMENT TOP LEVEL:', {
+  id: appointment.id,
+  title: appointment.title,
+  discount: appointment.discount,
+  discount_type: appointment.discount_type,
+  discount_reason: appointment.discount_reason
+})
+console.log('🔍 APPOINTMENT EXTENDED PROPS:', {
+  extendedProps: appointment.extendedProps,
+  'extendedProps.discount': appointment.extendedProps?.discount,
+  'extendedProps.discount_type': appointment.extendedProps?.discount_type,
+  'extendedProps.discount_reason': appointment.extendedProps?.discount_reason
+})
+
+// ✅ ERWEITERTE Suche nach Rabatt-Daten in allen möglichen Orten
+const discountAmount = appointment.discount || 
+                      appointment.extendedProps?.discount || 
+                      appointment.extendedProps?.discountAmount ||
+                      0
+
+const discountType = appointment.discount_type || 
+                    appointment.extendedProps?.discount_type ||
+                    appointment.extendedProps?.discountType ||
+                    'fixed'
+
+const discountReason = appointment.discount_reason || 
+                      appointment.extendedProps?.discount_reason ||
+                      appointment.extendedProps?.discountReason ||
+                      ''
+
+console.log('💰 Loading discount from appointment data:', {
+  discount: discountAmount,
+  discount_type: discountType,
+  discount_reason: discountReason,
+  sources: {
+    'appointment.discount': appointment.discount,
+    'extendedProps.discount': appointment.extendedProps?.discount,
+    'appointment.discount_type': appointment.discount_type,
+    'extendedProps.discount_type': appointment.extendedProps?.discount_type
+  }
+})
+
+// Setze Rabatt-Werte
+formData.value.discount = discountAmount
+formData.value.discount_type = discountType
+formData.value.discount_reason = discountReason
+
+console.log('✅ Discount loaded from appointment:', {
+  amount: formData.value.discount,
+  type: formData.value.discount_type,
+  reason: formData.value.discount_reason
+})
 }
 
 const { calculateEndTime } = useTimeCalculations(formData)
@@ -431,8 +615,32 @@ const saveWithOfflineSupport = async (
   }
 }
 
+const cleanUUIDFields = (data: any) => {
+  const cleaned = { ...data }
+  
+  // Bereinige alle UUID-Felder von temporären IDs
+  const uuidFields = ['user_id', 'staff_id', 'location_id', 'id']
+  
+  uuidFields.forEach(field => {
+    if (cleaned[field] && typeof cleaned[field] === 'string') {
+      // Entferne temporäre IDs (setze auf null)
+      if (cleaned[field].startsWith('temp_') || 
+          cleaned[field].startsWith('manual_') ||
+          cleaned[field].includes('temp_manual_')) {
+        console.log(`🧹 Removing temp ID from ${field}:`, cleaned[field])
+        cleaned[field] = null
+      }
+    }
+  })
+  
+  console.log('🧹 UUID fields cleaned:', cleaned)
+  return cleaned
+}
+
 // Dann die saveAppointment Funktion ersetzen:
 const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {
+    console.log('🔥🔥🔥 useEventModalForm saveAppointment called!') 
+
   isLoading.value = true
   error.value = null
   
@@ -468,49 +676,175 @@ const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {
         id: formData.value.staff_id || 'offline_staff_' + Date.now() 
       }
     }
+
+const localStartString = `${formData.value.startDate}T${formData.value.startTime}:00`
+const localEndString = `${formData.value.startDate}T${formData.value.endTime}:00`
+
+console.log('🔍 SAVING TO DB (LOCAL TIME):', {
+  start_time: localStartString,
+  end_time: localEndString,
+  note: 'NO TIMEZONE INFO - PURE LOCAL TIME'
+})
+
+// Appointment Data
+const appointmentData = {
+  title: formData.value.title,
+  description: formData.value.description,
+  user_id: formData.value.user_id,
+  staff_id: formData.value.staff_id || dbUser.id,
+  location_id: formData.value.location_id,
+  start_time: localStartString,  
+  end_time: localEndString,     
+  duration_minutes: formData.value.duration_minutes,
+  type: formData.value.eventType === 'lesson' ? formData.value.type : formData.value.type,  // Immer formData.value.type (die Fahrkategorie)
+  event_type_code: formData.value.eventType === 'lesson' ? formData.value.appointment_type : formData.value.selectedSpecialType,
+  status: formData.value.status,
+  price_per_minute: formData.value.price_per_minute,
+  is_paid: formData.value.is_paid,
+  discount: formData.value.discount || 0,                    
+  discount_type: formData.value.discount_type || 'fixed',   
+  discount_reason: formData.value.discount_reason || '', 
+
+}
+
+    const cleanedAppointmentData = cleanUUIDFields({
+      ...appointmentData,
+      user_id: appointmentData.user_id || appointmentData.staff_id || dbUser.id,        
+      staff_id: appointmentData.staff_id || null,
+      location_id: appointmentData.location_id || null
+    })
     
-    // Appointment Data
-    const appointmentData = {
-      title: formData.value.title,
-      description: formData.value.description,
-      user_id: formData.value.user_id,
-      staff_id: formData.value.staff_id || dbUser.id,
-      location_id: formData.value.location_id,
-      start_time: `${formData.value.startDate}T${formData.value.startTime}:00`,
-      end_time: `${formData.value.startDate}T${formData.value.endTime}:00`,
-      duration_minutes: formData.value.duration_minutes,
-      type: formData.value.eventType === 'lesson' ? formData.value.appointment_type || formData.value.type : formData.value.type,
-      event_type_code: formData.value.eventType === 'lesson' ? formData.value.appointment_type : formData.value.selectedSpecialType,
-      status: formData.value.status,
-      price_per_minute: formData.value.price_per_minute,
-      is_paid: formData.value.is_paid
-    }
-    
-    console.log('💾 Saving appointment data:', appointmentData)
-    
+    console.log('💾 Saving appointment data:', cleanedAppointmentData)
+
+    // Dann cleanedAppointmentData verwenden statt appointmentData:
     let result
     if (mode === 'edit' && eventId) {
-      // Update existing appointment
       result = await saveWithOfflineSupport(
         'appointments',
-        appointmentData,
+        cleanedAppointmentData,  // ← Gereinigte Daten verwenden
         'update',
         { id: eventId },
-        `Termin "${appointmentData.title}" bearbeiten`
+        `Termin "${cleanedAppointmentData.title}" bearbeiten`
       )
     } else {
-      // Create new appointment  
       result = await saveWithOfflineSupport(
-        'appointments',
-        appointmentData,
+        'appointments', 
+        cleanedAppointmentData,  // ← Gereinigte Daten verwenden
         'insert',
         null,
-        `Termin "${appointmentData.title}" erstellen`
+        `Termin "${cleanedAppointmentData.title}" erstellen`
       )
     }
     
     console.log('✅ Appointment saved:', result?.data?.id || 'offline')
-    return result?.data || appointmentData
+
+const savedAppointmentId = result.data.id
+
+console.log('🔍 DEBUG Payment Method:', {
+  paymentMethod: formData.value.payment_method,
+  savedAppointmentId,
+  willCreatePayment: formData.value.payment_method === 'twint' || formData.value.payment_method === 'online'
+})
+
+// ✅ EINFACHER TEST - mit RPC Call (umgeht RLS):
+if (savedAppointmentId) { // ← Erstelle IMMER einen Payment für den Test
+  console.log('🔥 Creating payment record for TESTING...')
+  
+  // Verwende den direkten Supabase Insert statt RPC:
+  try {
+    const supabase = getSupabase()
+    const { error: paymentError } = await supabase
+      .from('payments')
+      .insert({
+        appointment_id: savedAppointmentId,
+        user_id: cleanedAppointmentData.user_id,
+        staff_id: cleanedAppointmentData.staff_id,
+        amount_rappen: 9500, // Hardcode für Test
+        total_amount_rappen: 9500,
+        payment_method: 'twint', // Hardcode für Test
+        payment_status: 'pending',
+        currency: 'CHF',
+        description: 'Test Payment'
+      })
+
+    if (paymentError) {
+      console.error('❌ RPC Error:', paymentError)
+    } else {
+      console.log('✅ Payment record created via RPC')
+    }
+    
+  } catch (err) {
+    console.error('❌ Payment creation failed:', err)
+  }
+}
+
+console.log('🔍 PRODUCT DEBUGGING:', {
+  savedAppointmentId,
+  hasRefs: !!refs,
+  hasPriceDisplayRef: !!refs?.priceDisplayRef,
+  priceDisplayRefValue: refs?.priceDisplayRef?.value
+})
+
+// ✅ SICHERE Null-Checks mit optionalem Chaining
+if (refs?.priceDisplayRef?.value && savedAppointmentId) {
+  console.log('📦 PriceDisplay found:', refs.priceDisplayRef.value)
+  
+  // ✅ DIREKT auf productSale zugreifen
+  const priceDisplayInstance = refs.priceDisplayRef.value
+  if (priceDisplayInstance.productSale?.selectedProducts?.value?.length > 0) {
+    console.log('📦 ProductSale found with products:', priceDisplayInstance.productSale.selectedProducts.value.length)
+    
+    try {
+      // ✅ KORREKTE Speicherung über das productSale composable
+      await priceDisplayInstance.productSale.saveAppointmentProducts(savedAppointmentId)
+      console.log('✅ Products saved via productSale')
+    } catch (error) {
+      console.error('❌ Error saving products:', error)
+    }
+  } else {
+    console.log('❌ No productSale or products found')
+  }
+} else {
+  console.log('❌ No PriceDisplay ref or savedAppointmentId')
+}
+
+    // 🔍 DEBUG LOGS HINZUFÜGEN:
+    console.log('🔍 SMS Debug:', {
+      hasRefs: !!refs,
+      hasCustomerRef: !!refs?.customerInviteSelectorRef,
+      hasCustomerRefValue: !!refs?.customerInviteSelectorRef?.value,
+      resultId: result?.data?.id,
+      isTemporary: String(result?.data?.id || '').startsWith('temp_')
+    })
+    
+    // Handle customer invites with SMS (nur bei echten IDs, nicht temp_)
+    if (refs?.customerInviteSelectorRef?.value && result?.data?.id && !String(result.data.id).startsWith('temp_')) {
+      console.log('📱 Creating customer invites with SMS...')
+      try {
+        const customerInvites = await refs.customerInviteSelectorRef.value.createInvitedCustomers({
+          ...appointmentData,
+          id: result.data.id
+        })
+        console.log('✅ Customer invites created with SMS:', customerInvites.length)
+      } catch (inviteError) {
+        console.error('❌ Error creating customer invites:', inviteError)
+        // Continue even if invites fail - main appointment is saved
+      }
+    } else if (refs?.customerInviteSelectorRef?.value && String(result?.data?.id || '').startsWith('temp_')) {
+      console.log('📦 Customer invites will be created when synced online')
+    }
+
+    // ✅ SUCCESS: Emit save event (Modal wird von EventModal.vue geschlossen)
+    const savedData = result?.data || cleanedAppointmentData
+    console.log('✅ Emitting save event - modal will close automatically')
+    
+    // Events emittieren - EventModal.vue behandelt das Schließen
+    if (refs?.emit) {
+      refs.emit('save-event', savedData)
+      refs.emit('appointment-saved', savedData)
+    }
+    
+    return savedData
     
   } catch (err: any) {
     console.error('❌ Save error:', err)
@@ -539,9 +873,15 @@ const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {
         is_paid: formData.value.is_paid
       }
       
+      // ✅ AUCH BEI OFFLINE: Events emittieren - Modal wird von EventModal.vue geschlossen
+      if (refs?.emit) {
+        refs.emit('save-event', fallbackAppointment)
+        refs.emit('appointment-saved', fallbackAppointment)
+      }
+      
       return fallbackAppointment
     } else {
-      // Echte Fehler normal behandeln
+      // Echte Fehler normal behandeln - Modal BLEIBT OFFEN
       error.value = err.message
       throw err
     }
@@ -621,6 +961,11 @@ const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {
 
         // Composables
     categoryData,
-    eventTypes
+    eventTypes,
+
+        // SMS-spezifische Funktionen exportieren
+    setCustomerInviteRef,
+    setInvitedCustomers,
+    invitedCustomers: readonly(invitedCustomers)
   }
 }

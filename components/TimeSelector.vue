@@ -61,6 +61,7 @@
 
 <script setup lang="ts">
 import { computed, watch } from 'vue'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface Props {
   startDate: string
@@ -100,7 +101,7 @@ const shouldShow = computed(() => {
 
 const minDate = computed(() => {
   const today = new Date()
-  return today.toISOString().split('T')[0]
+  return toLocalTimeString(today).split('T')[0]
 })
 
 const timeConflictWarning = computed(() => {

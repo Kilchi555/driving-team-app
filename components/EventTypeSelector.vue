@@ -46,6 +46,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useEventTypes } from '~/composables/useEventModalForm'
 
 // Types
 interface EventType {
@@ -81,54 +82,15 @@ const eventTypes = ref<EventType[]>([])
 const isLoading = ref(false)
 
 // Methods
-const loadEventTypes = async () => {
+const { loadEventTypes: loadEventTypesFromComposable } = useEventTypes()
+
+// EventTypeSelector.vue
+const loadEventTypes = async (excludeTypes: string[] = []) => {
   isLoading.value = true
   try {
-    console.log('🔄 Loading event types from database...')
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('event_types')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order')
-
-    if (error) throw error
-
-    eventTypes.value = (data || []) as EventType[]
-    console.log('✅ Event types loaded:', {
-      count: eventTypes.value.length,
-      types: eventTypes.value.map((et: EventType) => `${et.emoji} ${et.name} (${et.default_duration_minutes}min)`)
-    })
-  } catch (error) {
-    console.error('❌ Error loading event types:', error)
-    // Fallback: Statische Event-Types falls DB-Abfrage fehlschlägt
-    eventTypes.value = [
-      {
-        code: 'meeting',
-        name: 'Sitzung',
-        emoji: '🤝',
-        description: 'Team-Meeting',
-        default_duration_minutes: 180,
-        default_color: '#019ee5'
-      },
-      {
-        code: 'course',
-        name: 'Kurs',
-        emoji: '☕',
-        description: 'Verkehrskunde',
-        default_duration_minutes: 300,
-        default_color: '#62b22f'
-      },
-      {
-        code: 'other',
-        name: 'Sonstiges',
-        emoji: '📝',
-        description: 'Individueller Termin',
-        default_duration_minutes: 45,
-        default_color: '#666666'
-      }
-    ] as EventType[]
-    console.log('🔄 Using fallback event types')
+    // ✅ Jetzt mit Parametern aufrufen
+    const data = await loadEventTypesFromComposable(excludeTypes, true)
+    eventTypes.value = data
   } finally {
     isLoading.value = false
   }
@@ -158,7 +120,7 @@ const selectEventType = (eventType: EventType) => {
 // Lifecycle
 onMounted(() => {
   if (props.autoLoad) {
-    loadEventTypes()
+    loadEventTypes(['exam', 'theorie']) // ✅ Diese rausfiltern
   }
 })
 

@@ -24,3 +24,5 @@ logs
 .env.development
 .env.production
 
+# Supabase Edge Function local secrets
+supabase/functions/**/.env.local

@@ -1,6 +1,8 @@
 <!-- pages/customer-dashboard.vue -->
-<template>
-  <CustomerDashboard />
+<template>  
+  <ClientOnly>
+    <CustomerDashboard />
+  </ClientOnly>
 </template>
 
 <script setup>
@@ -9,7 +11,8 @@ import CustomerDashboard from '~/components/customer/CustomerDashboard.vue'
 // Meta
 definePageMeta({
   middleware: 'auth',
-  layout: false // Use no layout for clean customer view
+ layout: 'customer',
+ ssr: false 
 })
 
 // Redirect non-clients to main dashboard

@@ -1,6 +1,7 @@
 // composables/usePayments.ts - Gemeinsame Payment Logic
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface CalculatedPrice {
   base_price_rappen: number
@@ -199,7 +200,7 @@ export const usePayments = () => {
         metadata: {
           category: price.category_code,
           duration: price.duration_minutes,
-          processed_at: new Date().toISOString()
+          processed_at: toLocalTimeString(new Date)
         }
       }
 
@@ -239,7 +240,7 @@ export const usePayments = () => {
           category: price.category_code,
           duration: price.duration_minutes,
           invoice_data: invoiceData,
-          created_at: new Date().toISOString()
+          created_at: toLocalTimeString(new Date)
         }
       }
 

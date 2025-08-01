@@ -423,6 +423,7 @@ const filteredPayments = computed(() => {
   return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 })
 
+
 // Methods
 const goBack = async () => {
   await navigateTo('/customer-dashboard')

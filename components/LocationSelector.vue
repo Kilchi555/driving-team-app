@@ -39,22 +39,16 @@
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          📍 Treffpunkt / Adresse manuell eingeben
-        </label>
-        <input
+       <input
           v-model="manualLocationInput"
           @input="onLocationSearch"
-          @blur="handleManualLocationSubmit"
+          @blur="hideLocationSuggestionsDelayed"
           @keyup.enter="handleManualLocationSubmit"
           @focus="showLocationSuggestions = true"
           type="text"
           placeholder="z.B. Zürich HB, Bahnhofstrasse 1, 8001 Zürich"
           class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
         />
-        <div class="text-xs text-gray-500 mt-1">
-          Vollständige Adresse oder bekannten Ort eingeben
-        </div>
       </div>
 
       <!-- Google Places Suggestions (online) -->
@@ -63,7 +57,7 @@
           <div
             v-for="suggestion in locationSuggestions"
             :key="suggestion.place_id"
-            @click="selectLocationSuggestion(suggestion)"
+            @mousedown.prevent="selectLocationSuggestion(suggestion)"
             class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
           >
             <div class="font-medium text-gray-900">
@@ -164,7 +158,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted, computed, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 
 // Google Maps Types Declaration
@@ -506,12 +500,17 @@ const initializeGooglePlaces = async () => {
       console.log('✅ Google Places (New API) initialized')
     } catch (error) {
       console.warn('⚠️ New Places API failed, using legacy API:', error)
+      // ✅ WICHTIG: placesLibrary auf null setzen damit Legacy API verwendet wird
+      placesLibrary = null
       if (window.google.maps.places) {
         console.log('✅ Google Places (Legacy) initialized')
       }
     }
   }
 }
+
+// ✅ Fügen Sie diese Variable am Anfang der Datei hinzu (neben placesLibrary):
+let newApiBlocked = false
 
 const onLocationSearch = async () => {
   const query = manualLocationInput.value.trim()
@@ -526,8 +525,8 @@ const onLocationSearch = async () => {
   error.value = null
   
   try {
-    // Try new API first
-    if (placesLibrary && placesLibrary.AutocompleteSuggestion) {
+    // ✅ PRÜFE OB NEUE API BEREITS ALS BLOCKIERT MARKIERT IST
+    if (placesLibrary && placesLibrary.AutocompleteSuggestion && !newApiBlocked) {
       try {
         const request = {
           input: query,
@@ -552,11 +551,16 @@ const onLocationSearch = async () => {
         }
       } catch (newApiError) {
         console.warn('New Places API failed:', newApiError)
+        // ✅ MARKIERE NEUE API ALS BLOCKIERT FÜR ZUKÜNFTIGE REQUESTS
+        newApiBlocked = true
+        console.log('🚫 New API marked as blocked, switching to legacy API permanently')
       }
     }
 
-    // Fallback to legacy API
+    // ✅ Legacy API (wird jetzt verwendet)
     if (typeof window !== 'undefined' && window.google && window.google.maps && window.google.maps.places && window.google.maps.places.AutocompleteService) {
+      console.log('🔄 Using Legacy Google Places API')
+      
       const autocompleteService = new window.google.maps.places.AutocompleteService()
       
       const request = {
@@ -576,13 +580,13 @@ const onLocationSearch = async () => {
             structured_formatting: prediction.structured_formatting
           }))
           showLocationSuggestions.value = true
+          console.log('✅ Legacy API suggestions loaded:', locationSuggestions.value.length)
         } else {
           locationSuggestions.value = []
           error.value = 'Keine Vorschläge von Google Places gefunden'
         }
       })
     } else {
-      // Final fallback - just show the typed text as manual entry
       console.log('📴 Google Places not available - using manual input')
       isLoadingGooglePlaces.value = false
     }
@@ -596,6 +600,9 @@ const onLocationSearch = async () => {
 
 const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
   try {
+    // 🔥 FIX: Input-Feld sofort mit der vollständigen Adresse füllen
+    manualLocationInput.value = suggestion.description
+    
     const locationData = {
       name: suggestion.structured_formatting?.main_text || suggestion.description,
       address: suggestion.description,
@@ -610,32 +617,41 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
     )
     
     if (existingLocation) {
-      // Use existing pickup location
+      // Use existing pickup location - ABER BEI ADRESSEINGABE BLEIBEN
       selectedLocationId.value = existingLocation.id
-      useStandardLocations.value = true
-      manualLocationInput.value = ''
-      selectedCustomLocation.value = null
+      // 🔥 ENTFERNT: useStandardLocations.value = true
+      // 🔥 ENTFERNT: manualLocationInput.value = ''
+      selectedCustomLocation.value = existingLocation
       
       emit('update:modelValue', existingLocation.id)
       emit('locationSelected', existingLocation)
       
       console.log('🔄 Using existing pickup location:', existingLocation.name)
     } else if (props.selectedStudentId) {
-      // Save as new pickup location
+      // ✅ LOADING STATE WÄHREND SPEICHERN:
+      isLoadingGooglePlaces.value = true
+      
+      // Save as new pickup location - ABER BEI ADRESSEINGABE BLEIBEN
       const savedLocation = await savePickupLocation(locationData, props.selectedStudentId)
       
+      // ✅ WARTE EINEN MOMENT FÜR UI-UPDATE:
+      await nextTick()
       selectedLocationId.value = savedLocation.id
-      useStandardLocations.value = true
-      manualLocationInput.value = ''
-      selectedCustomLocation.value = null
+      // 🔥 ENTFERNT: useStandardLocations.value = true
+      // 🔥 ENTFERNT: manualLocationInput.value = ''
+      selectedCustomLocation.value = savedLocation
       
       emit('update:modelValue', savedLocation.id)
       emit('locationSelected', savedLocation)
       
+      // ✅ SUCCESS MESSAGE:
+      console.log('✅ Neue Adresse gespeichert:', savedLocation.name)
+      // ✅ LOADING STATE BEENDEN:
+      isLoadingGooglePlaces.value = false
       console.log('💾 Saved and selected new pickup location:', savedLocation.name)
     } else {
-      // Kein Student selected - emitte temporäre Location
-      const tempLocation: Location = {
+      // Kein Student selected - temporäre Location
+      const tempLocation = {
         id: `temp_${Date.now()}`,
         name: locationData.name,
         address: locationData.address,
@@ -647,7 +663,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       }
       
       selectedCustomLocation.value = tempLocation
-      manualLocationInput.value = suggestion.description
+      // manualLocationInput.value bereits gesetzt am Anfang
       
       emit('update:modelValue', null)
       emit('locationSelected', tempLocation)
@@ -659,8 +675,16 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
     
   } catch (err: any) {
     error.value = `Fehler beim Speichern des Treffpunkts: ${err.message}`
+    isLoadingGooglePlaces.value = false
     console.error('❌ Error selecting location:', err)
   }
+}
+
+const hideLocationSuggestionsDelayed = () => {
+  // Verzögerung damit mousedown auf Suggestion vor blur ausgeführt wird
+  setTimeout(() => {
+    showLocationSuggestions.value = false
+  }, 200)
 }
 
 // === EVENT HANDLERS ===
@@ -681,12 +705,6 @@ const clearCustomLocation = () => {
   manualLocationInput.value = ''
   emit('update:modelValue', null)
   emit('locationSelected', null)
-}
-
-const hideLocationSuggestionsDelayed = () => {
-  setTimeout(() => {
-    showLocationSuggestions.value = false
-  }, 150)
 }
 
 const getLocationMapsUrl = (location: Location) => {

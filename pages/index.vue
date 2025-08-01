@@ -63,11 +63,6 @@
                 </svg>
               </button>
             </div>
-            
-            <!-- Debug Info (Development) -->
-            <div v-if="loginPassword" class="mt-2 p-2 bg-gray-100 rounded text-xs text-gray-600">
-              <strong>Debug:</strong> "{{ loginPassword }}" ({{ loginPassword.length }} Zeichen)
-            </div>
           </div>
 
           <!-- Remember Me & Forgot Password -->
@@ -276,18 +271,6 @@ const fillLoginData = (email: string, password: string) => {
   loginEmail.value = email
   loginPassword.value = password
   console.log(`🎯 Filled: ${email} / "${password}"`)
-}
-
-const debugAuth = () => {
-  console.log('🔍 === LOGIN DEBUG INFO ===')
-  console.log('Email:', `"${loginEmail.value}"`)
-  console.log('Password:', `"${loginPassword.value}"`)
-  console.log('Email Length:', loginEmail.value.length)
-  console.log('Password Length:', loginPassword.value.length)
-  console.log('Email Trimmed:', `"${loginEmail.value.trim()}"`)
-  console.log('Password has spaces:', loginPassword.value.includes(' '))
-  console.log('Password visible chars:', loginPassword.value.split('').map(c => c.charCodeAt(0)))
-  console.log('========================')
 }
 
 // Auth token handling on mount

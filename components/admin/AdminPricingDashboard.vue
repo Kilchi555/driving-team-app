@@ -357,6 +357,7 @@
 import { ref, onMounted } from 'vue'
 import { usePricing } from '~/composables/usePricing'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 console.log('🚀 AdminPricingDashboard component loading...')
 
@@ -452,7 +453,7 @@ const saveRule = async () => {
       .from('pricing_rules')
       .update({
         price_per_minute_rappen: Math.round(editForm.value.price_per_minute_chf * 100),
-        updated_at: new Date().toISOString()
+        updated_at: toLocalTimeString(new Date())
       })
       .eq('category_code', categoryCode)
       .eq('rule_type', 'base_price')
@@ -477,7 +478,7 @@ const saveRule = async () => {
       .update({
         admin_fee_rappen: Math.round(editForm.value.admin_fee_chf * 100),
         admin_fee_applies_from: editForm.value.admin_fee_applies_from,
-        updated_at: new Date().toISOString()
+        updated_at: toLocalTimeString(new Date())
       })
       .eq('category_code', categoryCode)
       .eq('rule_type', 'admin_fee')

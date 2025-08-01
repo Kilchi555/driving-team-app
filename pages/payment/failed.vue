@@ -82,9 +82,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-// Import von Nuxt hinzufügen
 import {  useRoute, useRouter } from '#app'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 // Router
 const route = useRoute()
@@ -129,7 +129,7 @@ const loadFailureDetails = async () => {
           .from('payments')
           .update({ 
             payment_status: 'failed',
-            updated_at: new Date().toISOString()
+            updated_at: toLocalTimeString(new Date)
           })
           .eq('id', payment.id)
       }

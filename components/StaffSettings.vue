@@ -426,7 +426,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface Props {
   currentUser: any
@@ -1194,7 +1194,7 @@ const saveAllSettings = async () => {
       available_weekdays: availableDays.value.join(','),
       sms_notifications: notifications.value.sms,
       email_notifications: notifications.value.email,
-      updated_at: new Date().toISOString()
+      updated_at: toLocalTimeString(new Date())
     }
 
     // Erst prüfen ob Eintrag existiert
@@ -1214,7 +1214,7 @@ const saveAllSettings = async () => {
           available_weekdays: availableDays.value.join(','),
           sms_notifications: notifications.value.sms,
           email_notifications: notifications.value.email,
-          updated_at: new Date().toISOString()
+          updated_at: toLocalTimeString(new Date())
         })
         .eq('staff_id', props.currentUser.id)
 

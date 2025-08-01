@@ -1,6 +1,7 @@
 // composables/useCurrentUser.ts
 import { ref } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 export const useCurrentUser = () => {
   const currentUser = ref<any>(null)
@@ -99,7 +100,7 @@ export const useCurrentUser = () => {
           company_name: profileData.company_name,
           role: profileData.role,
           is_active: true,
-          created_at: new Date().toISOString()
+          created_at: toLocalTimeString(new Date)
         })
         .select()
         .single()

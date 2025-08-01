@@ -1,6 +1,7 @@
 // composables/usePricing.ts
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface PricingRule {
   id: string
@@ -75,7 +76,7 @@ export const usePricing = () => {
       }
 
       // Filter nur gültige Regeln
-      const today = new Date().toISOString().split('T')[0]
+      const today = toLocalTimeString(new Date).split('T')[0]
       const validRules = data.filter(rule => {
         const validFrom = rule.valid_from || '1900-01-01'
         const validUntil = rule.valid_until || '2099-12-31'

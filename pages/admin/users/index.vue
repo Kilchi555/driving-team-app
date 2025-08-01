@@ -208,6 +208,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { definePageMeta } from '#imports'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 definePageMeta({
   layout: 'admin',
@@ -398,7 +399,7 @@ const toggleUserStatus = async (user: User) => {
       .from('users')
       .update({ 
         is_active: !user.is_active,
-        updated_at: new Date().toISOString()
+        updated_at: toLocalTimeString(new Date)
       })
       .eq('id', user.id)
 

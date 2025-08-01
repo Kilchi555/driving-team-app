@@ -1,6 +1,7 @@
 // composables/useDurationManager.ts - Komplett neue Datei ohne Cache-Probleme
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 export const useDurationManager = () => {
   // State
@@ -110,7 +111,7 @@ export const useDurationManager = () => {
         .upsert({
           staff_id: staffId,
           preferred_durations: durationsString,
-          updated_at: new Date().toISOString()
+          updated_at: toLocalTimeString(new Date)
         })
 
       if (upsertError) throw upsertError

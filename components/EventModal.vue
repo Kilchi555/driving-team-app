@@ -1,122 +1,154 @@
-
 <template>
-  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-    <div class="fixed top-2 left-2 right-2 bottom-20 bg-white rounded-lg overflow-y-auto z-50" @click.stop>
-      
-      <!-- Header -->
-      <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
-        <div class="flex justify-between items-center">
-          <h3 class="text-xl font-semibold text-gray-900">
-            {{ modalTitle }}
-          </h3>
-          <button @click="handleClose" class="text-gray-400 hover:text-gray-600 text-2xl">
-            ✕
-          </button>
+  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 z-50">
+    <!-- Modal Container - Ganzer verfügbarer Raum -->
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[calc(100vh-80px)] flex flex-col overflow-hidden absolute top-4 left-1/2 transform -translate-x-1/2" @click.stop>
+
+      <!-- ✅ FIXED HEADER -->
+      <div class="bg-white px-6 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+        <!-- Links: Titel oder Action-Buttons -->
+        <div class="flex items-center space-x-3">
+          <h2 class="text-lg font-semibold text-gray-900">
+            {{ mode === 'create' ? 'Neuer Termin' : mode === 'edit' ? 'Termin' : 'Termin anzeigen' }}
+          </h2>
+          
+          <!-- Action-Buttons (nur bei edit/view mode) -->
+          <div v-if="mode !== 'create' && eventData?.id" class="flex items-center space-x-2">
+            <!-- Kopieren Button -->
+            <button
+              @click="handleCopy"
+              class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+              title="Termin kopieren"
+            >
+              Kopieren
+            </button>
+            
+            <!-- Löschen Button -->
+            <button
+              @click="handleDelete"
+              class="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
+              title="Termin löschen"
+            >
+              Löschen
+            </button>
+          </div>
         </div>
+
+        <!-- Rechts: Schließen Button -->
+        <button
+          @click="$emit('close')"
+          class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          ✕
+        </button>
       </div>
 
-      <!-- Content -->
-      <div class="px-6 py-6 space-y-6">
-        
-        <!-- Student Selector -->
-        <div v-if="showStudentSelector">
-          <StudentSelector
-            ref="studentSelectorRef"
-            v-model="selectedStudent"
-            :current-user="currentUser"
-            :disabled="mode === 'view'"
-            :auto-load="shouldAutoLoadStudents"
-            :is-freeslot-mode="isFreeslotMode"  
-           @student-selected="handleStudentSelected"
-            @student-cleared="handleStudentCleared"
-            @switch-to-other="switchToOtherEventType"
-          />
-        </div>
+      <!-- ✅ SCROLLABLE CONTENT AREA -->
+      <div class="flex-1 overflow-y-auto">
+        <div class="px-6 py-6 space-y-6">
+          
+          <!-- Student Selector -->
+          <div v-if="showStudentSelector">
+            <StudentSelector
+              ref="studentSelectorRef"
+              v-model="selectedStudent"
+              :current-user="props.currentUser"
+              :disabled="mode === 'view'"
+              :auto-load="shouldAutoLoadStudents"
+              :is-freeslot-mode="isFreeslotMode"  
+              @student-selected="handleStudentSelected"
+              @student-cleared="handleStudentCleared"
+              @switch-to-other="switchToOtherEventType"
+            />
+          </div>
 
-        <!-- Lesson Type Selector -->
-        <div v-if="selectedStudent && formData.eventType === 'lesson'">
-          <LessonTypeSelector
-            v-model="selectedLessonType"
-            :selected-type="selectedLessonType"
-            :disabled="mode === 'view'"
-            @lesson-type-selected="handleLessonTypeSelected"
-          />
-        </div>
+          <!-- Lesson Type Selector -->
+          <div v-if="selectedStudent && formData.eventType === 'lesson'">
+            <LessonTypeSelector
+              v-model="selectedLessonType"
+              :selected-type="selectedLessonType"
+              :disabled="mode === 'view'"
+              @lesson-type-selected="handleLessonTypeSelected"
+            />
+          </div>
 
-        <!-- Prüfungsstandort Auswahl (nur bei Prüfungen) -->
-        <div v-if="formData.appointment_type === 'exam'" class="space-y-2">
-          <ExamLocationSelector
-            :current-staff-id="currentUser?.id || ''"
-            v-model="selectedExamLocation"
-            @update:modelValue="handleExamLocationSelected"
-          />
-        </div>
+          <!-- Prüfungsstandort Auswahl (nur bei Prüfungen) -->
+          <div v-if="formData.eventType === 'lesson' && formData.appointment_type === 'exam' && selectedStudent" class="space-y-2">
+            <ExamLocationSelector
+              :current-staff-id="currentUser?.id || ''"
+              v-model="selectedExamLocation"
+              @update:modelValue="handleExamLocationSelected"
+            />
+          </div>
 
-        <!-- Event Type Selector -->
-        <div v-if="showEventTypeSelector">
-          <EventTypeSelector
-            :selected-type="formData.selectedSpecialType"
-            @event-type-selected="handleEventTypeSelected"
-            @back-to-student="backToStudentSelection"
-          />
-        </div>
+          <!-- Event Type Selector -->
+          <div v-if="showEventTypeSelector">
+            <EventTypeSelector
+              :selected-type="formData.selectedSpecialType"
+              @event-type-selected="handleEventTypeSelected"
+              @back-to-student="backToStudentSelection"
+            />
+          </div>
 
-        <!-- Staff Selector für andere Terminarten -->
-        <div v-if="formData.eventType === 'other' && formData.selectedSpecialType">
-          <StaffSelector
-            ref="staffSelectorRef"
-            v-model="invitedStaffIds"
-            :current-user="currentUser"
-            :disabled="mode === 'view'"
-            @selection-changed="handleStaffSelectionChanged"
-          />
-        </div>
+          <!-- Staff Selector für andere Terminarten -->
+          <div v-if="formData.eventType === 'other' && formData.selectedSpecialType">
+            <StaffSelector
+              ref="staffSelectorRef"
+              v-model="invitedStaffIds"
+              :current-user="currentUser"
+              :disabled="mode === 'view'"
+              @selection-changed="handleStaffSelectionChanged"
+            />
+          </div>
 
-        <!-- Customer Invite Selector für andere Terminarten -->
-        <div v-if="formData.eventType === 'other' && formData.selectedSpecialType">
-          <CustomerInviteSelector
-            v-model="invitedCustomers"
-            :current-user="currentUser"
-            :disabled="mode === 'view'"
-            @customers-added="handleCustomersAdded"
-            @customers-cleared="handleCustomersCleared"
-          />
-        </div>
+          <!-- Customer Invite Selector für andere Terminarten -->
+          <div v-if="formData.eventType === 'other' && formData.selectedSpecialType">
+            <CustomerInviteSelector
+              ref="customerInviteSelectorRef" 
+              v-model="invitedCustomers"
+              :current-user="currentUser"
+              :disabled="mode === 'view'"
+              @customers-added="handleCustomersAdded"
+              @customers-cleared="handleCustomersCleared"
+            />
+          </div>
 
-       <!-- Title Input -->
-        <TitleInput
-          :title="formData.title"
-          :event-type="formData.eventType as 'lesson' | 'staff_meeting' | 'other'"
-          :selected-student="selectedStudent"
-          :selected-special-type="formData.selectedSpecialType"
-          :category-code="formData.type"
-          :selected-location="selectedLocation"
-          :disabled="mode === 'view'"
-          @update:title="formData.title = $event"
-          @title-generated="handleTitleGenerated"
-        />
+          <!-- Title Input -->
+          <div> 
+            <TitleInput
+              :title="formData.title"
+              :event-type="formData.eventType as 'lesson' | 'staff_meeting' | 'other'"
+              :selected-student="selectedStudent"
+              :selected-special-type="formData.selectedSpecialType"
+              :category-code="formData.type"
+              :selected-location="selectedLocation"
+              :disabled="mode === 'view'"
+              @update:title="formData.title = $event"
+              @title-generated="handleTitleGenerated"
+            />
+          </div>
 
-        <!-- Category & Duration Section -->
-        <div v-if="selectedStudent" class="space-y-4">
-          <CategorySelector
-            v-model="formData.type"
-            :selected-user="selectedStudent"
-            :current-user="currentUser"
-            :current-user-role="currentUser?.role"
-            @category-selected="handleCategorySelected"
-            @price-changed="handlePriceChanged"
-            @durations-changed="handleDurationsChanged"
-          />
+          <!-- Category & Duration Section -->
+          <div v-if="selectedStudent" class="space-y-4">
+            <CategorySelector
+              v-model="formData.type"
+              :selected-user="selectedStudent"
+              :current-user="currentUser"
+              :current-user-role="currentUser?.role"
+              @category-selected="handleCategorySelected"
+              @price-changed="handlePriceChanged"
+              @durations-changed="handleDurationsChanged"
+            />
 
-          <DurationSelector
-            v-if="formData.type"
-            v-model="formData.duration_minutes"
-            :available-durations="availableDurations"
-            :price-per-minute="formData.price_per_minute"
-            :disabled="mode === 'view'"
-            @duration-changed="handleDurationChanged"
-          />
-        </div>
+            <DurationSelector
+              v-if="formData.type"
+              v-model="formData.duration_minutes"
+              :available-durations="availableDurations"
+              :price-per-minute="formData.price_per_minute"
+              :disabled="mode === 'view'"
+              @duration-changed="handleDurationChanged"
+            />
+          </div>
+
           <!-- Time Section -->
           <div v-if="showTimeSection">
             <TimeSelector
@@ -148,12 +180,13 @@
             />
           </div>
 
-        <!-- Price Display - nur für Fahrstunden -->
-        <div v-if="selectedStudent && formData.duration_minutes && formData.eventType === 'lesson'">
+          <!-- Price Display - nur für Fahrstunden -->
+          <div v-if="selectedStudent && formData.duration_minutes && formData.eventType === 'lesson'">
             <PriceDisplay
+              ref="priceDisplayRef"
               :event-type="formData.eventType"
               :duration-minutes="formData.duration_minutes"
-              :price-per-minute="dynamicPricing.pricePerMinute || formData.price_per_minute"
+              :price-per-minute="handlers.pricing.dynamicPricing.value.pricePerMinute || formData.price_per_minute"
               :is-paid="formData.is_paid"
               :admin-fee="dynamicPricing.adminFeeChf || 0"
               :appointment-number="dynamicPricing.appointmentNumber || 1"
@@ -167,92 +200,76 @@
               :end-time="formData.endTime"
               :current-user="currentUser"
               :selected-student="selectedStudent"
+              :event-data="props.eventData"
               @discount-changed="handleDiscountChanged"
               @payment-status-changed="handlePaymentStatusChanged"
               @payment-mode-changed="handlePaymentModeChanged"
+              :allow-product-sale="true"
+              @products-changed="handleProductsChanged"
             />
-
-             <!-- Debug Info (entfernbar) -->
-          <div v-if="dynamicPricing.error" class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
-            ❌ {{ dynamicPricing.error }}
           </div>
-        </div>
 
-        <!-- Error Display -->
-        <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p class="text-sm text-red-800">❌ {{ error }}</p>
-        </div>
-
-        <!-- Loading Display -->
-        <div v-if="isLoading" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div class="flex items-center space-x-2">
-            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            <p class="text-sm text-blue-800">💾 Termin wird gespeichert...</p>
+          <!-- Error Display -->
+          <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p class="text-sm text-red-800">❌ {{ error }}</p>
           </div>
-        </div>
 
+          <!-- Loading Display -->
+          <div v-if="isLoading" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-center space-x-2">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <p class="text-sm text-blue-800">💾 Termin wird gespeichert...</p>
+            </div>
+          </div>
+
+        </div>
       </div>
 
-        <!-- Footer mit Actions -->
-        <div class="bg-gray-50 px-4 py-3 border-t flex justify-between">
-          <!-- Links: Löschen-Button (nur bei edit/view mode) -->
-          <div>
-            <button
-              v-if="mode !== 'create' && eventData?.id"
-              @click="handleDelete"
-              class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2 transition-colors"
-            >
-              <span></span>
-              <span>Löschen</span>
-            </button>
-          </div>
+      <!-- ✅ FIXED FOOTER -->
+      <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-end space-x-3 flex-shrink-0">
+        <button
+          @click="$emit('close')"
+          class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+        >
+          {{ mode === 'view' ? 'Schließen' : 'Abbrechen' }}
+        </button>
 
-          <!-- Rechts: Schließen und Speichern Buttons -->
-          <div class="flex gap-2">
-            <button
-              @click="$emit('close')"
-              class="px-3 py-2 mx-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              {{ mode === 'view' ? 'Schließen' : 'Abbrechen' }}
-            </button>
-
-            <button
-              v-if="mode !== 'view'"
-              @click="handleSave"
-              :disabled="!isFormValid || isLoading"
-              class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2 transition-colors"
-            >
-              <span v-if="isLoading">⏳</span>
-              <span v-else></span>
-              <span>{{ mode === 'create' ? 'Erstellen' : 'Speichern' }}</span>
-            </button>
-          </div>
-        </div>
+        <button
+          v-if="mode !== 'view'"
+          @click="() => saveAppointment(mode as 'create' | 'edit', eventData?.id)"  
+          :disabled="!isFormValid || isLoading"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2 transition-colors"
+        >
+          <span v-if="isLoading">⏳</span>
+          <span v-else>{{ mode === 'create' ? 'Termin erstellen' : 'Speichern' }}</span>
+        </button>
+      </div>
 
     </div>
-  </div>
 
-          <!-- ConfirmationDialog für Löschen -->
-        <ConfirmationDialog
-          :is-visible="showDeleteConfirmation"
-          title="Termin löschen"
-          :message="`Möchten Sie diesen Termin wirklich löschen?`"
-          :details="`<strong>Termin:</strong> ${props.eventData?.title || 'Unbenannt'}<br>
-                    <strong>Datum:</strong> ${props.eventData?.start ? new Date(props.eventData.start).toLocaleDateString('de-CH') : ''}<br>
-                    <strong>Zeit:</strong> ${props.eventData?.start ? new Date(props.eventData.start).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) : ''}`"
-          icon="🗑️"
-          type="danger"
-          confirm-text="Löschen"
-          cancel-text="Abbrechen"
-          @confirm="confirmDelete"
-          @cancel="cancelDelete"
-          @close="cancelDelete"
-        />
+    <!-- ConfirmationDialog für Löschen -->
+    <ConfirmationDialog
+      :is-visible="showDeleteConfirmation"
+      title="Termin löschen"
+      :message="`Möchten Sie diesen Termin wirklich löschen?`"
+      :details="`<strong>Termin:</strong> ${props.eventData?.title || 'Unbenannt'}<br>
+                <strong>Datum:</strong> ${props.eventData?.start ? new Date(props.eventData.start).toLocaleDateString('de-CH') : ''}<br>
+                <strong>Zeit:</strong> ${props.eventData?.start ? new Date(props.eventData.start).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) : ''}`"
+      icon="🗑️"
+      type="danger"
+      confirm-text="Löschen"
+      cancel-text="Abbrechen"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+      @close="cancelDelete"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useSmsService } from '~/composables/useSmsService'
 
 // Components
 import StudentSelector from '~/components/StudentSelector.vue'
@@ -276,8 +293,11 @@ import { useEventModalHandlers} from '~/composables/useEventModalHandlers'
 import { useTimeCalculations } from '~/composables/useTimeCalculations'
 import { useEventModalForm } from '~/composables/useEventModalForm'
 import { usePricing } from '~/composables/usePricing'
+import { useCurrentUser } from '~/composables/useCurrentUser'
+import { useProductSale } from '~/composables/useProductSale'
 
 
+import { useAuthStore } from '~/stores/auth'
 
 //Utils
 import { saveWithOfflineSupport } from '~/utils/offlineSupport'
@@ -301,9 +321,19 @@ interface Props {
   eventType?: 'lesson' | 'staff_meeting'
 }
 
+interface SmsPayload {
+  phoneNumber: string;
+  message: string;
+  onSuccess: (msg?: string) => void;
+  onError: (err?: string) => void;
+}
+
 const props = withDefaults(defineProps<Props>(), {
   mode: 'create'
 })
+
+const { currentUser: composableCurrentUser } = useCurrentUser()
+
 
 const emit = defineEmits<{
   'close': []
@@ -314,8 +344,9 @@ const emit = defineEmits<{
   'appointment-deleted': [id: string]
   'default-billing-address-loaded': [address: any]
   'payment-mode-changed': [paymentMode: string, data?: any]
-  'delete-event': [id: string]      // ← Diese Zeile hinzufügen
+  'delete-event': [id: string]     
   'refresh-calendar': [] 
+   'copy-appointment': [data: any]
 }>()
 
 // ============ REFS ============
@@ -326,16 +357,18 @@ const isLoading = ref(false)
 const showEventTypeSelection = ref(false)
 const selectedLessonType = ref('lesson') 
 const staffSelectorRef = ref() 
-const invitedStaffIds = ref<string[]>([])
-const invitedCustomers = ref<any[]>([])  
+const invitedStaffIds = ref([] as string[])
 const defaultBillingAddress = ref(null)
 const selectedCategory = ref<any | null>(null)
 const selectedExamLocation = ref(null)
-const modalForm = useEventModalForm(props.currentUser)
 const showDeleteConfirmation = ref(false)
 const appointmentNumber = ref(1)
-const availableDurations = ref([45])
-
+const availableDurations = ref([45] as number[])
+const customerInviteSelectorRef = ref()
+const authStore = useAuthStore()
+const selectedProducts = ref([] as any[])
+const invitedCustomers = ref([] as any[])
+const priceDisplayRef = ref()
 
 // Neue Dynamic Pricing Integration
 const dynamicPricing = ref({
@@ -350,13 +383,45 @@ const dynamicPricing = ref({
   error: ''
 })
 
+const currentUser = computed(() => props.currentUser || composableCurrentUser.value)
+
+// 3. Callback-Funktion für SMS-Integration erstellen
+const handleCustomerInvites = async (appointmentData: any) => {
+  if (invitedCustomers.value.length > 0 && customerInviteSelectorRef.value) {
+    console.log('📱 Creating customer invites with SMS...')
+    try {
+      const customerInvites = await customerInviteSelectorRef.value.createInvitedCustomers(appointmentData)
+      console.log('✅ Customer invites created with SMS:', customerInvites.length)
+      return customerInvites
+    } catch (error) {
+      console.error('❌ Error creating customer invites:', error)
+      throw error
+    }
+  }
+  return []
+}
+
+const modalForm = useEventModalForm(currentUser, {
+  customerInviteSelectorRef,
+  staffSelectorRef,
+  invitedCustomers,
+  invitedStaffIds,
+  priceDisplayRef,
+  emit,
+  props,
+})
+
 const { 
   formData, 
   selectedStudent,        
   selectedLocation,
+  isFormValid,  
   populateFormFromAppointment,
-  calculateEndTime 
+  calculateEndTime,
+  saveAppointment
 } = modalForm
+
+
 
 const handlers = useEventModalHandlers(
   formData,
@@ -372,6 +437,32 @@ const {
   handleDurationsChanged,
   setDurationForLessonType,
 } = handlers
+
+const prefilledNumber = ref('+41797157027'); // Kannst du anpassen für deine Testnummer
+const customMessagePlaceholder = ref('Hallo, vielen Dank für deine Anmeldung. Beste Grüsse Dein Driving Team');
+const { sendSms } = useSmsService();
+
+const handleSendSmsRequest = async ({
+  phoneNumber,
+  message,
+  onSuccess,
+  onError
+}: SmsPayload) => {
+  // Rufe die eigentliche Sendelogik auf
+  const result = await sendSms(phoneNumber, message);
+
+  if (result.success) {
+    onSuccess('SMS erfolgreich gesendet!'); // Callback an die Child-Komponente
+  } else {
+    // Übergebe detailliertere Fehlermeldung, falls vorhanden
+    onError(`Fehler: ${result.error || 'Unbekannter Fehler'}`);
+  }
+}
+
+const handleProductsChanged = (products: any[]) => {
+  console.log('📦 Products changed:', products.length)
+  // Die Produkte werden im productSale composable verwaltet
+}
 
 // ============ COMPUTED ============
 const modalTitle = computed(() => {
@@ -392,40 +483,28 @@ const shouldAutoLoadStudents = computed(() => {
   return formData.value.eventType === 'lesson' && (props.mode === 'create' || !selectedStudent.value)
 })
 
-const isFormValid = computed(() => {
-  const lessonTypes = ['lesson', 'exam', 'theory']
-  if (lessonTypes.includes(formData.value.eventType)) {
-    return selectedStudent.value && 
-           formData.value.type && 
-           formData.value.startDate && 
-           formData.value.startTime && 
-           formData.value.location_id &&
-           formData.value.staff_id
-  } else {
-    // Für andere Terminarten
-    return formData.value.title &&
-           formData.value.startDate && 
-           formData.value.startTime && 
-           formData.value.location_id &&
-           formData.value.staff_id
-  }
-})
 
 // showStudentSelector computed:
 const showStudentSelector = computed(() => {
-  console.log('🔍 showStudentSelector:', {
+  console.log('🔍 showStudentSelector check:', {
     eventType: formData.value.eventType,
-    isLessonType: formData.value.eventType === 'lesson',
     showEventTypeSelection: showEventTypeSelection.value,
-    mode: props.mode,
-    hasUserId: !!formData.value.user_id,
-    hasSelectedStudent: !!selectedStudent.value,
-    result: formData.value.eventType === 'lesson' && !showEventTypeSelection.value
+    appointmentType: formData.value.appointment_type,  // ✅ RICHTIG
+    selectedLessonType: selectedLessonType.value,      // ✅ LOKALE VARIABLE
+    type: formData.value.type
   })
   
-  // ✅ EINFACHE LOGIK: Zeige StudentSelector für alle Lesson Types
-  // Egal ob Edit oder Create, egal ob Student bereits geladen oder nicht
-  return formData.value.eventType === 'lesson' && !showEventTypeSelection.value
+  // ✅ Zeige StudentSelector für lessons, ABER nicht für exam
+  if (formData.value.eventType === 'lesson') {
+    // Für EXAM-Termine zeigen wir den StudentSelector nicht sofort
+    if (formData.value.appointment_type === 'exam' || selectedLessonType.value === 'exam') {
+      return false  // ✅ Bei Prüfungen ist Student optional
+    }
+    
+    return !showEventTypeSelection.value
+  }
+  
+  return false
 })
 
 const showEventTypeSelector = computed(() => {
@@ -443,7 +522,23 @@ const showEventTypeSelector = computed(() => {
 // showTimeSection computed:
 // In EventModal.vue - prüfen Sie diese computed property:
 const showTimeSection = computed(() => {
+  console.log('🔍 showTimeSection computed:', {
+    eventType: formData.value.eventType,
+    selectedStudent: !!selectedStudent.value,
+    appointmentType: formData.value.appointment_type,  // ✅ RICHTIG
+    selectedLessonType: selectedLessonType.value,      // ✅ LOKALE VARIABLE
+    type: formData.value.type,
+    mode: props.mode
+  })
+  
   if (formData.value.eventType === 'lesson') {
+    // ✅ FIX: Bei EXAM-Terminen brauchen wir nicht zwingend einen selectedStudent
+    if (formData.value.appointment_type === 'exam' || selectedLessonType.value === 'exam') {
+      console.log('📋 EXAM detected - showing time section even without selected student')
+      return true  // ✅ Zeige auch ohne Student bei Prüfungen
+    }
+    
+    // Für normale Fahrstunden brauchen wir einen Student
     return !!selectedStudent.value
   } else {
     return !!formData.value.selectedSpecialType
@@ -462,6 +557,22 @@ const isFreeslotMode = computed(() => {
   return result
 })
 
+// Irgendwo in EventModal.vue, nach den anderen computed properties:
+const timeSelectorDebug = computed(() => {
+  const debug = {
+    showTimeSection: showTimeSection.value,
+    selectedStudent: !!selectedStudent.value,
+    studentName: selectedStudent.value ? `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}` : 'NONE',
+    eventType: formData.value.eventType,
+    selectedSpecialType: formData.value.selectedSpecialType,
+    startTime: formData.value.startTime,
+    endTime: formData.value.endTime,
+    startDate: formData.value.startDate
+  }
+  
+  console.log('🔍 TimeSelector Debug:', debug)
+  return debug
+})
 // ============ HANDLERS ============
 // In EventModal.vue - ersetzen Sie die lokale handleStudentSelected Funktion mit:
 // EventModal.vue - FÜGEN SIE DIESE FUNKTIONEN HINZU:
@@ -598,10 +709,32 @@ const handleStudentSelected = async (student: Student | null) => {
   selectedStudent.value = student
   formData.value.user_id = student?.id || ''
   
+  // 🔧 FIX: staff_id setzen wenn Student ausgewählt wird
+  if (currentUser.value?.id) {
+    formData.value.staff_id = currentUser.value.id
+    console.log('✅ staff_id gesetzt bei Student-Auswahl:', currentUser.value.id)
+  }
+  
+  // ✅ ZEIT NACH STUDENT-AUSWAHL SETZEN:
+  if (props.mode === 'create' && props.eventData?.start && !formData.value.startTime) {
+    const startTimeString = props.eventData.start
+    const [datePart, timePart] = startTimeString.split('T')
+    const timeOnly = timePart.split(':').slice(0, 2).join(':')
+    
+    formData.value.startDate = datePart
+    formData.value.startTime = timeOnly
+    calculateEndTime()
+    
+    console.log('🕐 Zeit nach Student-Auswahl gesetzt:', {
+      startDate: formData.value.startDate,
+      startTime: formData.value.startTime,
+      endTime: formData.value.endTime
+    })
+  }
+  
   if (student?.category) {
     const primaryCategory = student.category.split(',')[0].trim()
     formData.value.type = primaryCategory
-    
     // ✅ NEU: Kategorie-Daten direkt aus DB laden für Dauer-Berechnung
     try {
       console.log('🔄 Loading category data for student:', primaryCategory)
@@ -611,9 +744,7 @@ const handleStudentSelected = async (student: Student | null) => {
         .eq('code', primaryCategory)
         .eq('is_active', true)
         .single()
-      
       if (error) throw error
-      
       if (data) {
         selectedCategory.value = data
         console.log('✅ Category data loaded for selected student:', data)
@@ -705,11 +836,11 @@ const handleDurationChanged = (newDuration: number) => {
   calculateEndTime()
 }
 
-const handleDiscountChanged = (discount: number, discountType: 'fixed', reason: string) => {
+const handleDiscountChanged = (discount: number, discountType: "fixed" | "percentage", reason: string) => {
+  console.log('💰 Discount changed:', { discount, discountType, reason })
   formData.value.discount = discount
   formData.value.discount_type = discountType
   formData.value.discount_reason = reason
-  console.log('💰 Discount changed:', { discount, discountType, reason })
 }
 
 const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => {
@@ -968,161 +1099,76 @@ const loadCategoryData = async (categoryCode: string) => {
   }
 }
 
-// ============ SAVE LOGIC ============
-const handleSave = async () => {
-  if (!formData.value.title && selectedStudent.value) {
-    formData.value.title = `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}`
-  }
-
-  console.log('💾 Saving appointment')
-  
-  if (!isFormValid.value) {
-    error.value = 'Bitte füllen Sie alle Felder aus'
-    return
-  }
-  
-  isLoading.value = true
-  error.value = ''
-  
-  // ✅ appointmentData hier definieren (außerhalb try-catch für Scope)
-  let finalLocationId: string | undefined = formData.value.location_id
-  
-  // Create proper datetime strings
-  const localStart = new Date(`${formData.value.startDate}T${formData.value.startTime}`)
-  const localEnd = new Date(`${formData.value.startDate}T${formData.value.endTime}`)
-  
-  // ✅ appointmentData außerhalb des try-blocks definieren
-  const appointmentData: any = {
-    title: formData.value.title,
-    start_time: localStart.toISOString(),
-    end_time: localEnd.toISOString(),
-    duration_minutes: formData.value.duration_minutes,
-    user_id: formData.value.user_id || formData.value.staff_id,
-    staff_id: formData.value.staff_id,
-    type: formData.value.eventType === 'lesson' ? (formData.value.appointment_type || formData.value.type) : formData.value.type,
-    status: formData.value.status,
-    is_paid: formData.value.is_paid,
-    price_per_minute: formData.value.price_per_minute,
-    description: formData.value.title || ''
-  }
-  
-  try {
-    // ✅ CRITICAL FIX: Handle temporary locations BEFORE saving appointment
-    if (selectedLocation.value?.id?.startsWith('temp_')) {
-      console.log('🔄 Converting temporary location to permanent DB location...')
-      console.log('📍 Temporary location data:', selectedLocation.value)
-      
-      try {
-        const locationResult = await saveWithOfflineSupport(
-          'locations',
-          {
-            staff_id: formData.value.staff_id,
-            name: selectedLocation.value.name,
-            address: selectedLocation.value.address || '',
-            location_type: 'custom',
-            is_active: true,
-            google_place_id: selectedLocation.value.place_id || null,
-            latitude: selectedLocation.value.latitude || null,
-            longitude: selectedLocation.value.longitude || null
-          },
-          'insert',
-          undefined,  // ✅ undefined statt null
-          `Standort "${selectedLocation.value.name}" speichern`
-        )
-        
-        finalLocationId = locationResult?.data?.id
-        formData.value.location_id = finalLocationId || ''
-        console.log('✅ Temporary location saved with permanent ID:', finalLocationId)
-        
-      } catch (locationSaveError) {
-        console.error('❌ Could not save temporary location:', locationSaveError)
-        finalLocationId = undefined
-        formData.value.location_id = ''
-        console.log('⚠️ Continuing without location due to save error')
-      }
-    }
-    
-    // ✅ VALIDATION: Never allow temp_ IDs to reach the database
-    if (finalLocationId && String(finalLocationId).startsWith('temp_')) {
-      console.error('❌ BLOCKING: Temporary ID detected before save:', finalLocationId)
-      finalLocationId = undefined
-      formData.value.location_id = ''
-    }
-
-    // ✅ FIX: Only add location_id if we have a valid one
-    if (finalLocationId) {
-      appointmentData.location_id = finalLocationId
-    }
-    
-    console.log('📋 Saving appointment data:', appointmentData)
-    console.log('🔍 Final location_id being saved:', finalLocationId || 'none')
-    
-    let result
-    if (props.mode === 'create') {
-      result = await saveWithOfflineSupport(
-        'appointments',
-        appointmentData,
-        'insert',
-        undefined,  // ✅ undefined statt null
-        `Termin "${appointmentData.title}" erstellen`
-      )
-      console.log('✅ Appointment created:', result?.data?.id || 'offline')
-      
-    } else if (props.mode === 'edit') {
-      result = await saveWithOfflineSupport(
-        'appointments',
-        appointmentData,
-        'update',
-        { id: formData.value.id },
-        `Termin "${appointmentData.title}" bearbeiten`
-      )
-      console.log('✅ Appointment updated:', result?.data?.id || 'offline')
-    }
-    
-    // Handle team invitations if any (nur bei echten IDs, nicht temp_)
-    if (invitedStaffIds.value.length > 0 && staffSelectorRef.value && result?.data?.id && !String(result.data.id).startsWith('temp_')) {
-      console.log('📧 Creating team invites via StaffSelector...')
-      try {
-        const teamInvites = await staffSelectorRef.value.createTeamInvites(appointmentData)
-        console.log('✅ Team invites created:', teamInvites.length)
-      } catch (inviteError) {
-        console.error('❌ Error creating team invites:', inviteError)
-        // Main appointment is saved, continue even if team invites fail
-      }
-    } else if (invitedStaffIds.value.length > 0 && String(result?.data?.id).startsWith('temp_')) {
-      console.log('📦 Team invites will be created when synced online')
-    }
-    
-    // ✅ DIESE ZEILEN MÜSSEN HIER STEHEN (INNERHALB des try-blocks)
-    console.log('✅ All save events emitted for mode:', props.mode)
-    emit('save-event', result?.data || appointmentData)
-    handleClose()
-    
-  } catch (err: any) {
-    console.error('❌ Save error:', err)
-    
-    // Bei Offline: Benutzerfreundliche Behandlung
-    if (err.message?.includes('synchronisiert')) {
-      console.log('📦 Appointment will be synced when online')
-      // Nicht als Fehler behandeln - optimistic update
-      error.value = ''
-      
-      // ✅ appointmentData ist hier verfügbar, da außerhalb definiert!
-      emit('save-event', appointmentData)
-      handleClose()
-    } else {
-      // Echte Fehler normal behandeln
-      error.value = err.message || 'Fehler beim Speichern des Termins'
-    }
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const handleClose = () => {
   console.log('🚪 Closing modal')
   resetForm()
   emit('close')
+}
+
+const handleCopy = () => {
+  if (!props.eventData?.id) return
+  
+  console.log('📋 Copying appointment:', props.eventData.id)
+  
+  // Alle aktuellen Daten kopieren, aber ID entfernen und Zeit anpassen
+  const copiedData = {
+    ...formData.value,
+    // Neue Zeit: 1 Stunde später oder nächster Tag
+    startTime: getNextAvailableTime(formData.value.startTime),
+    startDate: shouldMoveToNextDay(formData.value.startTime) 
+      ? getNextDay(formData.value.startDate) 
+      : formData.value.startDate
+  }
+   // Endzeit basierend auf Dauer neu berechnen
+  const startDateTime = new Date(`${copiedData.startDate}T${copiedData.startTime}`)
+  const endDateTime = new Date(startDateTime.getTime() + formData.value.duration_minutes * 60000)
+  copiedData.endTime = endDateTime.toTimeString().slice(0, 5)
+  
+  // Modal in CREATE-Mode öffnen mit kopierten Daten
+  emit('copy-appointment', {
+    mode: 'create',
+    eventData: {
+      ...copiedData,
+      title: `${formData.value.title} (Kopie)`,
+      start: `${copiedData.startDate}T${copiedData.startTime}:00`,
+      end: `${copiedData.startDate}T${copiedData.endTime}:00`,
+      isFreeslotClick: false,
+      extendedProps: {
+        // Nur gewünschte Eigenschaften kopieren
+        location: props.eventData?.extendedProps?.location || '',
+        staff_note: props.eventData?.extendedProps?.staff_note || '',
+        client_note: props.eventData?.extendedProps?.client_note || '',
+        eventType: props.eventData?.extendedProps?.eventType,
+        appointment_type: props.eventData?.extendedProps?.appointment_type,
+        category: props.eventData?.extendedProps?.category,
+        original_type: props.eventData?.extendedProps?.original_type,
+      }
+    }
+  })
+  // Aktuelles Modal schließen
+  emit('close')
+}
+
+// Hilfsfunktionen für intelligente Zeitberechnung
+const getNextAvailableTime = (currentTime: string): string => {
+  const [hours, minutes] = currentTime.split(':').map(Number)
+  const nextHour = hours + 1
+  
+  // Wenn nach 20 Uhr, dann nächster Tag um 8 Uhr
+  if (nextHour > 20) return '08:00'
+  
+  return `${nextHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+}
+
+const shouldMoveToNextDay = (currentTime: string): boolean => {
+  const [hours] = currentTime.split(':').map(Number)
+  return hours >= 20
+}
+
+const getNextDay = (currentDate: string): string => {
+  const date = new Date(currentDate)
+  date.setDate(date.getDate() + 1)
+  return date.toISOString().split('T')[0]
 }
 
 // In EventModal.vue - ersetze die handleDelete Funktion:
@@ -1178,9 +1224,27 @@ const cancelDelete = () => {
 }
 
 // initializeFormData function:
+// In EventModal.vue - ersetzen Sie die initializeFormData Funktion:
+
 const initializeFormData = async () => {
   console.log('🎯 Initializing form data, mode:', props.mode)
-  
+    console.log('🎯 props.eventData:', props.eventData) 
+
+      // ✅ NEUE ZEILE: Staff ID automatisch auf currentUser setzen
+  if (props.currentUser?.id) {
+    formData.value.staff_id = props.currentUser.id
+    console.log('👤 Staff ID automatically set to currentUser:', props.currentUser.id)
+  }
+
+    // ✅ NEUER CODE: Free slot → Student explizit clearen
+  if (props.eventData?.isFreeslotClick && props.mode === 'create') {
+    console.log('🧹 FREE SLOT detected - clearing any cached student')
+    selectedStudent.value = null
+    formData.value.user_id = ''
+    formData.value.type = ''
+    formData.value.title = ''
+  }
+
   if (props.mode === 'edit' && props.eventData) {
     // ✅ SCHRITT 1: Form populieren
     await populateFormFromAppointment(props.eventData)
@@ -1203,17 +1267,52 @@ const initializeFormData = async () => {
     selectedLessonType.value = 'lesson'
     console.log('🎯 CREATE MODE: Set selectedLessonType to default: lesson')
     
-    const utcDate = new Date(props.eventData.start)
-    const year = utcDate.getFullYear()
-    const month = String(utcDate.getMonth() + 1).padStart(2, '0')
-    const day = String(utcDate.getDate()).padStart(2, '0')
-    const hours = String(utcDate.getHours()).padStart(2, '0')
-    const minutes = String(utcDate.getMinutes()).padStart(2, '0')
-    formData.value.startDate = `${year}-${month}-${day}`
-    formData.value.startTime = `${hours}:${minutes}`
+    // ✅ KORRIGIERT: Direkt den ISO-String verwenden, nicht new Date()!
+    const startTimeString = props.eventData.start // "2025-08-24T07:00:00"
+        if (typeof startTimeString === 'string' && startTimeString.includes('T')) {
+
+    const [datePart, timePart] = startTimeString.split('T')
+    const timeOnly = timePart.split(':').slice(0, 2).join(':') // "07:00"
+    
+    formData.value.startDate = datePart  // "2025-08-24"
+    formData.value.startTime = timeOnly  // "07:00"
+    
+    console.log('✅ CREATE MODE - Zeit gesetzt:', {
+      startDate: formData.value.startDate,
+      startTime: formData.value.startTime
+    })
+    
     calculateEndTime()
+        } else {
+      console.error('❌ Invalid startTimeString:', startTimeString)
+    }
   }
 }
+
+// ✅ KORRIGIERTE VERSION mit .value
+watch([
+  () => formData.value.type,
+  () => formData.value.duration_minutes,
+  () => selectedStudent.value
+], async ([newType, newDuration, newStudent]) => {
+  console.log('🔍 EventModal watcher triggered:', { newType, newDuration, hasStudent: !!newStudent })
+  
+  if (newType && newDuration && newStudent && formData.value.eventType === 'lesson') {
+    console.log('💰 Auto-triggering price calculation for pre-selected category')
+    
+    // Trigger die gleiche Preisberechnung wie in handleCategorySelected
+    try {
+      await handlers.pricing.updateDynamicPricing(
+        newType, 
+        newDuration, 
+        newStudent.id
+      )
+      console.log('✅ Auto price calculation completed:', handlers.pricing.dynamicPricing.value.pricePerMinute)
+    } catch (error) {
+      console.error('❌ Auto price calculation failed:', error)
+    }
+  }
+}, { immediate: true })
 
 const loadStudentForEdit = async (userId: string) => {
   try {
@@ -1232,15 +1331,6 @@ const loadStudentForEdit = async (userId: string) => {
   } catch (err) {
     console.error('❌ Error loading student for edit:', err)
   }
-}
-
-const testTimeChange = () => {
-  console.log('🧪 Testing time change...')
-  handleTimeChanged({
-    startDate: formData.value.startDate,
-    startTime: '14:00',
-    endTime: '15:30'  // 90 Minuten
-  })
 }
 
 // In EventModal.vue - erweitere die Funktion mit mehr Logs:
@@ -1348,20 +1438,48 @@ const handleInvoiceDataChanged = (invoiceData: any, isValid: boolean) => {
   // formData.value.invoiceValid = isValid
 }
 
+// Debug staff_id Problem
+console.log('🔍 Staff ID Debug:', {
+  currentUserValue: currentUser.value,
+  formDataStaffId: formData.value.staff_id,
+  shouldAutoSet: !!currentUser.value?.id && !formData.value.staff_id
+})
+
+// Force staff_id setzen als Test
+if (currentUser.value?.id) {
+  formData.value.staff_id = currentUser.value.id
+  console.log('🔧 FORCE SET staff_id:', currentUser.value.id)
+}
+
+// Watch currentUser changes
+watch(currentUser, (newUser) => {
+  console.log('🔄 EventModal: currentUser changed:', newUser)
+  if (newUser?.id && !formData.value.staff_id) {
+    formData.value.staff_id = newUser.id
+    console.log('✅ Staff ID auto-set:', newUser.id)
+  }
+}, { immediate: true })
+
 // ============ WATCHERS ============
-watch(() => props.isVisible, (visible) => {
-  if (visible) {
-    console.log('✅ Modal opened:', {
-      mode: props.mode,
-      hasEventData: !!props.eventData
+// Direkt nach initializeFormData in der watch-Funktion:
+watch(() => props.isVisible, async (newVisible) => {
+  if (newVisible && props.eventData) {
+    console.log('✅ Modal opened:', { mode: props.mode, hasEventData: !!props.eventData })
+    
+    await initializeFormData()
+    
+    // ✅ DEBUG NACH initializeFormData:
+    console.log('🔍 AFTER initializeFormData:', {
+      eventType: formData.value.eventType,
+      showEventTypeSelection: showEventTypeSelection.value,
+      selectedLessonType: selectedLessonType.value
     })
     
-    if (props.mode === 'create') {
-      resetForm()
-      triggerStudentLoad()
-    }
-    
-    initializeFormData()
+    nextTick(() => {
+      if (shouldAutoLoadStudents.value) {
+        triggerStudentLoad()
+      }
+    })
   }
 })
 
@@ -1435,5 +1553,9 @@ button:not(:disabled):hover {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.sms-container {
+  max-width: 960px;
 }
 </style>

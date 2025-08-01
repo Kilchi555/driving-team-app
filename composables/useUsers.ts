@@ -1,6 +1,7 @@
 // composables/useUsers.ts
 import { ref } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 export const useUsers = () => {
   const users = ref<any[]>([])
@@ -16,7 +17,7 @@ export const useUsers = () => {
         .from('users')
         .update({
           is_active: false,
-          deleted_at: new Date().toISOString(),
+          deleted_at: toLocalTimeString(new Date),
           deletion_reason: reason || 'Deaktiviert'
         })
         .eq('id', userId)

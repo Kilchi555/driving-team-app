@@ -1,34 +1,50 @@
 <!-- components/CustomerDashboard.vue -->
+<!-- In CustomerDashboard.vue Template - im Header Bereich -->
 <template>
   <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-    <!-- Header -->
-    <div class="bg-white shadow-lg border-b">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
-          <div class="flex items-center space-x-4">
-            <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
-              <span class="text-white font-bold text-lg">
-                {{ getInitials() }}
-              </span>
+      <!-- Header -->
+      <div class="bg-white shadow-lg border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center py-6">
+            <div class="flex items-center space-x-4">
+              <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                <span class="text-white font-bold text-lg">
+                  {{ getInitials() }}
+                </span>
+              </div>
+              <div>
+                <h1 class="text-2xl font-bold text-gray-900">
+                  Hallo, {{ getFirstName() }}!
+                </h1>
+              </div>
             </div>
-            <div>
-              <h1 class="text-2xl font-bold text-gray-900">
-                Willkommen, {{ getUserDisplayName() }}!
-              </h1>
-              <p class="text-gray-600 text-sm">Ihre Fahrschul-Übersicht</p>
-            </div>
-          </div>
-          <div class="flex items-center space-x-4">
-            <button 
-              @click="handleLogout"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Abmelden
-            </button>
+            
+            <!-- Nur Refresh Button -->
+              <button
+                @click="refreshData"
+                :disabled="isLoading"
+                class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                <!-- ✅ SVG Refresh Icon -->
+                <svg 
+                  class="w-5 h-5" 
+                  :class="{ 'animate-spin': isLoading }" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    stroke-linecap="round" 
+                    stroke-linejoin="round" 
+                    stroke-width="2" 
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                <span class="hidden sm:inline">Aktualisieren</span>
+              </button>
           </div>
         </div>
       </div>
-    </div>
 
     <!-- Loading State -->
     <div v-if="isLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -61,8 +77,34 @@
       </div>
     </div>
 
+<!-- Pending Payment Notifications -->
+<div v-if="pendingPayments.length > 0" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+    <div class="flex items-center space-x-3">
+      <span class="text-2xl">💳</span>
+      <div class="flex-1">
+        <h3 class="font-semibold text-orange-900">Zahlung erforderlich</h3>
+        <p class="text-sm text-orange-700">
+          <span v-if="pendingPayments.length === 1">
+            Sie haben eine offene Zahlung.
+          </span>
+          <span v-else>
+            Sie haben {{ pendingPayments.length }} offene Zahlungen.
+          </span>
+        </p>
+      </div>
+      <button 
+        @click="processPendingPayments"
+        class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+      >
+        Jetzt bezahlen
+      </button>
+    </div>
+  </div>
+</div>
+
     <!-- Main Content -->
-    <div v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div v-if="showContent" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -394,6 +436,9 @@
         </div>
       </div>
     </div>
+      <div v-else class="min-h-screen flex items-center justify-center">
+    <div class="animate-spin rounded-full h-16 w-16 border-4 border-green-500"></div>
+  </div>
 
     <!-- Modals -->
     <EvaluationsOverviewModal 
@@ -408,9 +453,15 @@
       @close="showUpcomingLessonsModal = false"
     />
   </div>
+  
 </template>
 
 <script setup lang="ts">
+// In CustomerDashboard.vue - ganz oben im script setup:
+console.log('🔍 CustomerDashboard Script loaded')
+console.log('🔍 Process client:', process.client)
+console.log('🔍 Process server:', process.server)
+
 import { ref, computed, onMounted, watch } from 'vue'
 import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
@@ -418,6 +469,7 @@ import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
 import EvaluationsOverviewModal from './EvaluationsOverviewModal.vue'
 import UpcomingLessonsModal from './UpcomingLessonsModal.vue'
+import { useCustomerPayments } from '~/composables/useCustomerPayments'
 
 // Composables
 const authStore = useAuthStore()
@@ -432,6 +484,18 @@ const staff = ref<any[]>([])
 const lessons = ref<any[]>([]) 
 const showEvaluationsModal = ref(false) 
 const showUpcomingLessonsModal = ref(false)
+
+// In CustomerDashboard.vue - vor dem Template:
+const isServerSide = process.server
+const showContent = computed(() => !isServerSide && currentUser.value && isClient.value)
+
+const {
+  payments,
+  pendingPayments,
+  loadPayments,
+  isLoading: paymentsLoading,
+  error: paymentsError
+} = useCustomerPayments()
 
 // Computed properties
 const completedLessonsCount = computed(() => {
@@ -493,6 +557,33 @@ const totalUnpaidAmount = computed(() => {
   }, 0)
 })
 
+const refreshData = async () => {
+  isLoading.value = true
+  try {
+    await Promise.all([
+      loadAllData(),
+      loadPayments()
+    ])
+    console.log('✅ Data refreshed')
+  } catch (err) {
+    console.error('❌ Refresh failed:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const processPendingPayments = async () => {
+  if (pendingPayments.value.length === 0) return
+  
+  try {
+    const paymentIds = pendingPayments.value.map(p => p.id).join(',')
+    await navigateTo(`/customer/payment-process?payments=${paymentIds}`)
+  } catch (err) {
+    console.error('❌ Error processing pending payments:', err)
+    alert('Fehler beim Weiterleiten zur Zahlung.')
+  }
+}
+
 // Helper methods
 const getInitials = () => {
   if (!currentUser.value) return '??'
@@ -507,19 +598,13 @@ const getInitials = () => {
   return first + last || currentUser.value.email?.charAt(0)?.toUpperCase() || '??'
 }
 
-const getUserDisplayName = () => {
+const getFirstName = () => {
   if (!currentUser.value) return 'Unbekannt'
   
   const firstName = currentUser.value.user_metadata?.first_name || 
                    currentUser.value.user_metadata?.firstName
-  const lastName = currentUser.value.user_metadata?.last_name || 
-                  currentUser.value.user_metadata?.lastName
   
-  if (firstName && lastName) {
-    return `${firstName} ${lastName}`
-  }
-  
-  return currentUser.value.email || 'Unbekannt'
+  return firstName || currentUser.value.email?.split('@')[0] || 'Unbekannt'
 }
 
 const formatDateTime = (dateString: string) => {
@@ -795,9 +880,38 @@ watch([currentUser, userRole], ([newUser, newRole]) => {
 }, { immediate: true })
 
 // Lifecycle
+// In CustomerDashboard.vue - für Live-Updates
 onMounted(async () => {
   console.log('🔥 CustomerDashboard mounted')
-  await loadAllData()
+  
+  isLoading.value = true
+  error.value = null
+
+  try {
+    // Auth Check
+    if (!isClient.value) {
+      console.warn('⚠️ User is not a client, redirecting...')
+      await navigateTo('/')
+      return
+    }
+
+    // ✅ EINZELN LADEN zum Debuggen:
+    console.log('📋 Loading appointments...')
+    await loadAllData()
+    console.log('✅ Appointments loaded')
+    
+    console.log('💳 Loading payments...')
+    await loadPayments()
+    console.log('✅ Payments loaded')
+
+    console.log('✅ Customer dashboard data loaded successfully')
+  } catch (err: any) {
+    console.error('❌ Error loading customer dashboard:', err)
+    console.error('❌ Full error:', err)
+    error.value = err.message
+  } finally {
+    isLoading.value = false
+  }
 })
 </script>
 

@@ -1,4 +1,7 @@
 // server/api/wallee/create-transaction.post.ts
+import { toLocalTimeString } from '~/utils/dateUtils'
+
+
 export default defineEventHandler(async (event) => {
   try {
     console.log('🔥 Wallee API called')
@@ -79,7 +82,7 @@ export default defineEventHandler(async (event) => {
       customerEmailAddress: customerEmail,
       metaData: {
         appointmentId: appointmentId,
-        createdAt: new Date().toISOString()
+        createdAt: toLocalTimeString(new Date)
       }
     }
 

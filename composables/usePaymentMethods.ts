@@ -1,6 +1,7 @@
 // composables/usePaymentMethods.ts
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface PaymentMethod {
   value: string
@@ -186,7 +187,7 @@ export const usePaymentMethods = () => {
           duration: appointmentData.duration,
           appointment_number: appointmentData.appointmentNumber,
           price_breakdown: appointmentData.calculation,
-          created_at: new Date().toISOString()
+          created_at: toLocalTimeString(new Date)
         }
       }
 
@@ -350,11 +351,11 @@ export const usePaymentMethods = () => {
         .from('payments')
         .update({
           payment_status: 'completed',
-          paid_at: new Date().toISOString(),
+          paid_at: toLocalTimeString(new Date),
           wallee_transaction_id: transactionData?.transactionId || null,
           metadata: {
             ...transactionData,
-            completed_at: new Date().toISOString()
+            completed_at: toLocalTimeString(new Date)
           }
         })
         .eq('appointment_id', appointmentId)

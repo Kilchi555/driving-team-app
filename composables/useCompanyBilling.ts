@@ -10,6 +10,8 @@ import type {
   CreateCompanyBillingResponse,
   CompanyBillingListResponse
 } from '~/types/companyBilling'
+import { toLocalTimeString } from '~/utils/dateUtils'
+
 
 export const useCompanyBilling = () => {
   const supabase = getSupabase()
@@ -130,59 +132,103 @@ export const useCompanyBilling = () => {
     }
   }
 
+const debugAuth = async () => {
+  const { data: { user }, error } = await supabase.auth.getUser()
+  console.log('🔍 AUTH DEBUG:', {
+    user: user,
+    userId: user?.id,
+    email: user?.email,
+    isAuthenticated: !!user
+  })
+
+  // Teste auch RLS direkt
+  const { data: testData, error: testError } = await supabase
+    .rpc('auth.uid')
+  
+  console.log('🔍 RLS auth.uid():', testData, testError)
+  
+  return user?.id
+}
+
   // CRUD Operations
-  const createCompanyBillingAddress = async (userId: string): Promise<CreateCompanyBillingResponse> => {
-    if (!validation.value.isValid) {
-      return {
-        success: false,
-        error: 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
-      }
-    }
-
-    isLoading.value = true
-    error.value = ''
-
-    try {
-      const insertData = convertFormToInsert(userId)
-      
-      console.log('💾 Creating company billing address:', insertData)
-
-      const { data, error: supabaseError } = await supabase
-        .from('company_billing_addresses')
-        .insert(insertData)
-        .select()
-        .single()
-
-      if (supabaseError) {
-        console.error('❌ Supabase error:', supabaseError)
-        throw new Error(supabaseError.message)
-      }
-
-      if (!data) {
-        throw new Error('Keine Daten von der Datenbank erhalten')
-      }
-
-      currentAddress.value = data
-      console.log('✅ Company billing address created:', data)
-
-      return {
-        success: true,
-        data: data
-      }
-
-    } catch (err: any) {
-      const errorMessage = err.message || 'Fehler beim Speichern der Firmenadresse'
-      error.value = errorMessage
-      console.error('❌ Error creating company billing address:', err)
-      
-      return {
-        success: false,
-        error: errorMessage
-      }
-    } finally {
-      isLoading.value = false
+ const createCompanyBillingAddress = async (userId: string): Promise<CreateCompanyBillingResponse> => {
+  if (!validation.value.isValid) {
+    return {
+      success: false,
+      error: 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
     }
   }
+
+  isLoading.value = true
+  error.value = ''
+
+  try {
+    // ✅ DEBUG AUTH FIRST
+    const authUserId = await debugAuth()
+    console.log('🔍 DEBUG: Passed userId:', userId, 'Auth userId:', authUserId)
+    
+    const insertData = convertFormToInsert(userId)
+    
+    // ✅ WICHTIG: created_by muss die auth.uid() sein, nicht die User-Table ID!
+    const finalInsertData = {
+      ...insertData,
+      created_by: authUserId // ← VERWENDE AUTH USER ID STATT USER TABLE ID
+    }
+    
+    console.log('💾 Creating company billing address with auth ID:', finalInsertData)
+
+    const { data, error: supabaseError } = await supabase
+      .from('company_billing_addresses')
+      .insert(finalInsertData)
+      .select()
+      .single()
+
+    if (supabaseError) {
+      console.error('❌ Supabase error:', supabaseError)
+      throw new Error(supabaseError.message)
+    }
+
+    if (!data) {
+      throw new Error('Keine Daten von der Datenbank erhalten')
+    }
+
+    currentAddress.value = data
+    console.log('✅ Company billing address created:', data)
+
+    // ✅ NEU: Als Standard-Adresse für User setzen
+    try {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ default_company_billing_address_id: data.id })
+        .eq('id', userId)
+
+      if (updateError) {
+        console.warn('⚠️ Could not set as default address:', updateError)
+      } else {
+        console.log('✅ Set as default billing address for user')
+      }
+    } catch (updateErr) {
+      console.warn('⚠️ Could not set as default address:', updateErr)
+    }
+
+    return {
+      success: true,
+      data: data
+    }
+
+  } catch (err: any) {
+    const errorMessage = err.message || 'Fehler beim Speichern der Firmenadresse'
+    error.value = errorMessage
+    console.error('❌ Error creating company billing address:', err)
+    
+    return {
+      success: false,
+      error: errorMessage
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
 
   const loadUserCompanyAddresses = async (userId: string): Promise<CompanyBillingListResponse> => {
     isLoading.value = true
@@ -249,7 +295,7 @@ export const useCompanyBilling = () => {
         country: formData.value.country.trim(),
         vat_number: formData.value.vatNumber.trim() || null,
         notes: formData.value.notes.trim() || null,
-        updated_at: new Date().toISOString()
+        updated_at: toLocalTimeString(new Date)
       }
 
       console.log('💾 Updating company billing address:', addressId, updateData)
@@ -331,6 +377,43 @@ export const useCompanyBilling = () => {
     }
   }
 
+
+const loadDefaultBillingAddress = async (userId: string): Promise<CompanyBillingAddress | null> => {
+  try {
+    // 1. User's Standard-Adresse ID holen
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('default_company_billing_address_id')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !userData?.default_company_billing_address_id) {
+      console.log('ℹ️ No default billing address set for user')
+      return null
+    }
+
+    // 2. Standard-Adresse laden
+    const { data: addressData, error: addressError } = await supabase
+      .from('company_billing_addresses')
+      .select('*')
+      .eq('id', userData.default_company_billing_address_id)
+      .eq('is_active', true)
+      .single()
+
+    if (addressError || !addressData) {
+      console.log('ℹ️ Default billing address not found or inactive')
+      return null
+    }
+
+    console.log('✅ Default billing address loaded:', addressData.company_name)
+    return addressData
+
+  } catch (err) {
+    console.error('❌ Error loading default billing address:', err)
+    return null
+  }
+}
+
   // Utility Methods
   const formatAddress = (address: CompanyBillingAddress): string => {
     const parts = [
@@ -362,6 +445,7 @@ export const useCompanyBilling = () => {
     updateCompanyBillingAddress,
     deleteCompanyBillingAddress,
     loadFormFromAddress,
+    loadDefaultBillingAddress,
     resetForm,
     formatAddress,
     getAddressPreview

@@ -178,9 +178,6 @@
                       <span class="text-xs">📱</span>
                       {{ formatPhone(student.phone) }}
                     </p>
-                    <p v-if="student.email" class="text-xs text-gray-500 truncate">
-                      {{ student.email }}
-                    </p>
                   </div>
                 </div>
                 
