@@ -454,6 +454,7 @@ import { useCompanyBilling } from '~/composables/useCompanyBilling'
 import { usePricing } from '~/composables/usePricing'
 import { getSupabase } from '~/utils/supabase'
 import { usePaymentMethods } from '~/composables/usePaymentMethods'
+import { navigateTo } from '#app'
 
 // Props Interface - nur die nötigsten
 interface Props {
@@ -522,6 +523,7 @@ const tempDiscountReason = ref('')
 const invoiceMode = ref(false)
 const cashMode = ref(false)
 const { loadStudentPaymentPreference } = usePaymentMethods()
+const isProcessingPayment = ref(false)
 
 const pricing = usePricing({
   selectedStudent: computed(() => props.selectedStudent),
@@ -659,6 +661,45 @@ const saveStudentPaymentPreference = async (studentId: string, paymentMethod: st
     
   } catch (err) {
     console.error('❌ Error saving payment preference:', err)
+  }
+}
+
+// CustomerDashboard.vue - im script setup hinzufügen:
+const payIndividual = async (payment: any) => {
+  console.log('💳 Starting payment for:', payment)
+  isProcessingPayment.value = true
+  
+  try {
+    // 1. Wallee Payment erstellen
+    const paymentUrl = await createWalleePayment(payment)
+    
+    if (paymentUrl) {
+      // 2. Redirect zum Wallee Payment
+      window.location.href = paymentUrl
+    } else {
+      // 3. Fallback: Mock-Payment-Seite
+      await navigateTo(`/payment/process?amount=${payment.total_amount_rappen / 100}&payment_id=${payment.id}`)
+    }
+    
+  } catch (error: any) {
+    console.error('❌ Payment error:', error)
+    alert('Zahlung konnte nicht gestartet werden. Bitte versuchen Sie es später erneut.')
+  } finally {
+    isProcessingPayment.value = false
+  }
+}
+
+const createWalleePayment = async (payment: any) => {
+  try {
+    // Hier würde die echte Wallee-Integration stehen
+    console.log('🔄 Creating Wallee payment for:', payment.total_amount_rappen / 100, 'CHF')
+    
+    // Mock für jetzt
+    return null
+    
+  } catch (error) {
+    console.error('❌ Wallee payment creation failed:', error)
+    return null
   }
 }
 
@@ -814,13 +855,16 @@ const updatePaymentMode = () => {
   } else if (cashMode.value) {
     method = 'cash'
   }
-  
+    console.log('🔥 PriceDisplay EMITTING payment-method-changed:', method) // ← Debug hinzufügen
+
   // ✅ NEU: Speichern der Zahlungsmethode
   if (props.selectedStudent?.id) {
     saveStudentPaymentPreference(props.selectedStudent.id, method)
   }
   
   emit('payment-method-changed', method, data)
+    console.log('✅ Event emitted successfully') // ← Debug hinzufügen
+
 }
 
 const onCashModeChange = () => {
@@ -923,12 +967,12 @@ watch(productSale.selectedProducts, (newProducts) => {
 
 // ✅ LIFECYCLE
 onMounted(() => {
-
-    console.log('🔍 PriceDisplay mounted!')
+  console.log('🔍 PriceDisplay mounted!')
   console.log('🔍 Initial selectedStudent:', props.selectedStudent?.id)
   console.log('🔍 Initial payment method:', props.initialPaymentMethod)
-    // Load existing products in edit mode
- if (props.eventData?.id) {
+  
+  // Load existing products in edit mode
+  if (props.eventData?.id) {
     productSale.loadProducts(props.eventData.id)
     
     // ✅ RABATTE aus props laden (kommen von populateFormFromAppointment)
@@ -937,6 +981,7 @@ onMounted(() => {
       discountReason: props.discountReason
     })
   }
+  
   // Initial payment method setup
   if (props.initialPaymentMethod === 'invoice') {
     invoiceMode.value = true
@@ -944,6 +989,10 @@ onMounted(() => {
   } else if (props.initialPaymentMethod === 'cash') {
     cashMode.value = true
   }
+  
+  // ✅ NEU: Synchronisiere das formData mit dem UI-Zustand
+  updatePaymentMode()
+  console.log('✅ Payment mode synchronized on mount')
 })
 
 defineExpose({

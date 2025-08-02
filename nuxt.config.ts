@@ -87,5 +87,9 @@ export default defineNuxtConfig({
         }
       ]
     }
-  }
+  },
+    css: [
+    // Globales Loading CSS
+    '~/assets/css/loading.css'
+  ]
 })

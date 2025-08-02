@@ -11,8 +11,9 @@ import CustomerDashboard from '~/components/customer/CustomerDashboard.vue'
 // Meta
 definePageMeta({
   middleware: 'auth',
- layout: 'customer',
- ssr: false 
+    layout: 'customer',
+    ssr: false
+
 })
 
 // Redirect non-clients to main dashboard

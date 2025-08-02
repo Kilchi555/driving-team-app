@@ -740,10 +740,12 @@ const appointmentData = {
 
 const savedAppointmentId = result.data.id
 
+// useEventModalForm.ts - ändere den Debug:
 console.log('🔍 DEBUG Payment Method:', {
-  paymentMethod: formData.value.payment_method,
+  paymentMethod: cleanedAppointmentData.payment_method, // ← Das richtige Objekt
+  formDataMethod: formData.value.payment_method, // ← Vergleich
   savedAppointmentId,
-  willCreatePayment: formData.value.payment_method === 'twint' || formData.value.payment_method === 'online'
+  willCreatePayment: cleanedAppointmentData.payment_method === 'twint' || cleanedAppointmentData.payment_method === 'online'
 })
 
 // ✅ EINFACHER TEST - mit RPC Call (umgeht RLS):

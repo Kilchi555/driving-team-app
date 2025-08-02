@@ -463,7 +463,7 @@ console.log('🔍 Process client:', process.client)
 console.log('🔍 Process server:', process.server)
 
 import { ref, computed, onMounted, watch } from 'vue'
-import { navigateTo } from '#app'
+import { navigateTo, useRoute } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
@@ -879,38 +879,71 @@ watch([currentUser, userRole], ([newUser, newRole]) => {
   }
 }, { immediate: true })
 
+// pages/index.vue - im Watcher für userRole:
+// pages/index.vue - ändere den Watcher:
+const route = useRoute() // ← Hier oben definieren, außerhalb des watchers
+
+watch(userRole, (newRole: string | null) => {
+  console.log('🔍 WATCHER TRIGGERED - userRole changed to:', newRole)
+  
+  if (newRole) {
+    console.log('DEBUG: UserRole detected in index.vue watcher:', newRole);
+    
+    const currentPath = route.path; // ← Jetzt route.path verwenden statt useRoute().path
+    let targetPath = '/';
+
+    switch (newRole) {
+      case 'admin':
+        targetPath = '/admin';
+        console.log('🔄 Navigating admin to:', targetPath);
+        break;
+      case 'staff':
+        targetPath = '/dashboard';
+        break;
+      case 'client':
+        targetPath = '/customer-dashboard';
+        break;
+      default:
+        targetPath = '/';
+    }
+
+    console.log('🎯 Final navigation:', currentPath, '→', targetPath);
+    if (currentPath !== targetPath) {
+      navigateTo(targetPath);
+    }
+  } else {
+    console.log('🔍 WATCHER - userRole is null/empty')
+  }
+}, { immediate: true })// ← Stelle sicher dass immediate: true da ist
+
 // Lifecycle
 // In CustomerDashboard.vue - für Live-Updates
+// CustomerDashboard.vue - ändere den onMounted:
+// CustomerDashboard.vue - ändere den onMounted komplett:
 onMounted(async () => {
   console.log('🔥 CustomerDashboard mounted')
   
-  isLoading.value = true
-  error.value = null
-
   try {
-    // Auth Check
-    if (!isClient.value) {
-      console.warn('⚠️ User is not a client, redirecting...')
+    // Einfacher: Warte auf Auth-Store Initialisierung
+    let attempts = 0
+    while (!authStore.isInitialized && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
+    }
+    
+    if (!authStore.isLoggedIn || !authStore.isClient) {
+      console.log('❌ Not logged in or not a client, redirecting...')
       await navigateTo('/')
       return
     }
-
-    // ✅ EINZELN LADEN zum Debuggen:
-    console.log('📋 Loading appointments...')
-    await loadAllData()
-    console.log('✅ Appointments loaded')
     
-    console.log('💳 Loading payments...')
+    console.log('✅ Auth verified, loading data...')
+    await loadAllData()
     await loadPayments()
-    console.log('✅ Payments loaded')
-
-    console.log('✅ Customer dashboard data loaded successfully')
+    
   } catch (err: any) {
-    console.error('❌ Error loading customer dashboard:', err)
-    console.error('❌ Full error:', err)
-    error.value = err.message
-  } finally {
-    isLoading.value = false
+    console.error('❌ Error during mount:', err)
+    await navigateTo('/')
   }
 })
 </script>

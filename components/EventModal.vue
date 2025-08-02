@@ -203,11 +203,23 @@
               :event-data="props.eventData"
               @discount-changed="handleDiscountChanged"
               @payment-status-changed="handlePaymentStatusChanged"
-              @payment-mode-changed="handlePaymentModeChanged"
+              @payment-method-changed="handlePaymentModeChanged"
               :allow-product-sale="true"
               @products-changed="handleProductsChanged"
             />
           </div>
+
+           <!-- ✅ DEBUG BUTTONS -->
+            <div class="bg-red-100 p-4 m-4 rounded">
+              <h3>DEBUG PAYMENT METHOD</h3>
+              <p>Current formData.payment_method: {{ formData.payment_method }}</p>
+              <button @click="debugPaymentMethod" class="bg-blue-500 text-white p-2 rounded mr-2">
+                Check Payment Method
+              </button>
+              <button @click="setOnlineManually" class="bg-green-500 text-white p-2 rounded">
+                Set to Online Manually
+              </button>
+            </div>
 
           <!-- Error Display -->
           <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -343,7 +355,7 @@ const emit = defineEmits<{
   'appointment-updated': [data: any]
   'appointment-deleted': [id: string]
   'default-billing-address-loaded': [address: any]
-  'payment-mode-changed': [paymentMode: string, data?: any]
+  'payment-method-changed': [paymentMode: string, data?: any]
   'delete-event': [id: string]     
   'refresh-calendar': [] 
    'copy-appointment': [data: any]
@@ -399,6 +411,18 @@ const handleCustomerInvites = async (appointmentData: any) => {
     }
   }
   return []
+}
+
+// EventModal.vue - im script setup:
+const debugPaymentMethod = () => {
+  console.log('🔍 Current formData.payment_method:', formData.value.payment_method)
+  console.log('🔍 Full formData:', formData.value)
+}
+
+const setOnlineManually = () => {
+  console.log('🔧 Setting payment method to online manually')
+  formData.value.payment_method = 'online'
+  console.log('✅ Payment method now:', formData.value.payment_method)
 }
 
 const modalForm = useEventModalForm(currentUser, {
@@ -1392,7 +1416,7 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
  }
 }
 
-const handlePaymentModeChanged = (paymentMode: 'invoice' | 'cash' | 'online', data?: any) => {
+const handlePaymentModeChanged = (paymentMode: string, data?: any) => { // ← string statt 'invoice' | 'cash' | 'online'
   console.log('💳 handlePaymentModeChanged called:', { paymentMode, data, selectedStudentId: selectedStudent.value?.id, selectedStudentName: selectedStudent.value?.first_name })
   
   // Store payment method
@@ -1428,7 +1452,7 @@ const handlePaymentModeChanged = (paymentMode: 'invoice' | 'cash' | 'online', da
   }
   
   // Emit for PriceDisplay
-  emit('payment-mode-changed', paymentMode, data)
+  emit('payment-method-changed', paymentMode, data)
 }
 
 const handleInvoiceDataChanged = (invoiceData: any, isValid: boolean) => {

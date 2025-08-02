@@ -1,7 +1,29 @@
 <!-- ERWEITERTE index.vue mit Passwort Toggle & Debug Features -->
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
+  <!-- Loading mit Driving Team Logo -->
+  <div v-if="isCheckingSession" class="min-h-screen flex items-center justify-center bg-gray-50">
+    <div class="text-center">
+      <!-- Driving Team Logo mit Pulsing Animation -->
+      <div class="mb-8">
+        <div class="w-24 h-24 mx-auto mb-4 animate-pulse-logo">
+          <!-- SVG Logo oder Image -->
+          <svg viewBox="0 0 100 100" class="w-full h-full text-blue-600">
+            <!-- Beispiel: Lenkrad Icon -->
+            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="3"/>
+            <circle cx="50" cy="50" r="15" fill="currentColor"/>
+            <line x1="20" y1="50" x2="35" y2="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+            <line x1="65" y1="50" x2="80" y2="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+            <line x1="50" y1="20" x2="50" y2="35" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Driving Team</h1>
+        <p class="text-gray-600">Lade Session...</p>
+      </div>
+    </div>
+  </div>
+
+  <div v-else class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
       <!-- Header -->
       <div class="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
@@ -266,6 +288,8 @@ const canSubmitReset = computed(() => {
          passwordIsValid.value
 })
 
+const isCheckingSession = ref(true)
+
 // Debug functions
 const fillLoginData = (email: string, password: string) => {
   loginEmail.value = email
@@ -446,4 +470,74 @@ const updatePassword = async () => {
 const goToRegister = () => {
   navigateTo('/register')
 }
+
+// pages/index.vue - im onMounted nach den bestehenden Checks:
+// pages/index.vue - ersetze das bestehende onMounted:
+onMounted(async () => {
+  try {
+    const urlParams = new URLSearchParams(window.location.search)
+    const hash = window.location.hash
+
+    console.log('Page loaded with hash:', hash)
+
+    // Check for reset parameter
+    if (urlParams.get('reset') === 'true') {
+      showResetForm.value = true
+      return
+    }
+
+    // Check for auth tokens in hash
+    if (hash.includes('access_token') && hash.includes('refresh_token')) {
+      const hashParams = new URLSearchParams(hash.substring(1))
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
+      const type = hashParams.get('type')
+
+      if (type === 'recovery' && accessToken && refreshToken) {
+        console.log('Password recovery detected')
+
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        })
+
+        if (error) {
+          resetError.value = `Session-Fehler: ${error.message}`
+        } else {
+          showResetForm.value = true
+          resetSuccess.value = '✅ Reset-Link erfolgreich verarbeitet!'
+        }
+
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname)
+      }
+    }
+
+ } catch (error: any) {
+    console.error('Mount error:', error)
+  } finally {
+    // Kurz warten damit das Plugin Zeit hat
+    setTimeout(() => {
+      isCheckingSession.value = false
+    }, 500) // ← 500ms warten, dann Login-Seite anzeigen
+  }
+})
 </script>
+
+<style scoped>
+/* Custom Pulsing Animation für das Logo */
+@keyframes pulse-logo {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-logo {
+  animation: pulse-logo 2s ease-in-out infinite;
+}
+</style>
