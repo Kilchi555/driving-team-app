@@ -77,7 +77,6 @@ export default defineEventHandler(async (event) => {
       successUrl: successUrl || `${baseUrl}/payment/success`,
       failedUrl: failedUrl || `${baseUrl}/payment/failed`,
       language: 'de-CH',
-      spaceId: parseInt(walleeSpaceId),
       autoConfirmationEnabled: true,
       customerEmailAddress: customerEmail,
       metaData: {

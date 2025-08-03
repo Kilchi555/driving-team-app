@@ -223,7 +223,7 @@ const isAdmin = computed(() => {
           is_active,
           preferred_payment_method
         `)
-        .eq('id', userId)
+        .eq('auth_user_id', userId) 
         .eq('is_active', true)
         .single()
 

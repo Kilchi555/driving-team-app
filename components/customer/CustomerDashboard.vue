@@ -917,9 +917,6 @@ watch(userRole, (newRole: string | null) => {
 }, { immediate: true })// ← Stelle sicher dass immediate: true da ist
 
 // Lifecycle
-// In CustomerDashboard.vue - für Live-Updates
-// CustomerDashboard.vue - ändere den onMounted:
-// CustomerDashboard.vue - ändere den onMounted komplett:
 onMounted(async () => {
   console.log('🔥 CustomerDashboard mounted')
   

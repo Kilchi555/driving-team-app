@@ -68,6 +68,7 @@ interface Props {
   selectedUser?: any
   currentUser?: any
   currentUserRole?: string
+  appointmentType?: string
   showDebugInfo?: boolean
 }
 
@@ -79,7 +80,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  showDebugInfo: false
+  showDebugInfo: false,
+  appointmentType: 'lesson'
 })
 const emit = defineEmits<Emits>()
 
@@ -96,6 +98,14 @@ const selectedCategory = computed(() => {
   if (!props.modelValue) return null
   return availableCategoriesForUser.value.find(cat => cat.code === props.modelValue) || null
 })
+
+const getCorrectDuration = (category: Category): number => {
+  if (props.appointmentType === 'exam') {
+    return category.exam_duration_minutes || 180
+  } else {
+    return category.lesson_duration_minutes || 45
+  }
+}
 
 const availableCategoriesForUser = computed(() => {
   let result: CategoryWithDurations[] = []
@@ -118,7 +128,7 @@ const availableCategoriesForUser = computed(() => {
       .filter(cat => cat.is_active)
       .map(cat => ({
         ...cat,
-        availableDurations: [cat.lesson_duration_minutes] // Standard-Dauer für Admins
+      availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
       }))
     console.log('👨‍💼 Admin: Showing all categories:', result.length)
   }
@@ -131,7 +141,7 @@ const availableCategoriesForUser = computed(() => {
         .filter(cat => cat.is_active)
         .map(cat => ({
           ...cat,
-          availableDurations: [cat.lesson_duration_minutes]
+        availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
         }))
     } else {
       // Gruppiere Staff-Kategorien-Dauern nach category_code
@@ -167,7 +177,7 @@ const availableCategoriesForUser = computed(() => {
           .filter(cat => cat.is_active)
           .map(cat => ({
             ...cat,
-            availableDurations: [cat.lesson_duration_minutes] // Standard-Dauer
+          availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
           }))
       }
     }
@@ -180,7 +190,7 @@ const availableCategoriesForUser = computed(() => {
       .filter(cat => cat.is_active)
       .map(cat => ({
         ...cat,
-        availableDurations: [cat.lesson_duration_minutes] // Standard-Dauer für Clients
+        availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
       }))
     console.log('👤 Client: Showing all categories:', result.length)
   }
@@ -273,30 +283,30 @@ const loadCategories = async () => {
     allCategories.value = [
       { 
         id: 1, code: 'B', name: 'B - Auto', description: 'Autoprüfung Kategorie B',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 135,
         color: 'hellgrün', is_active: true, display_order: 1, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
       { 
         id: 2, code: 'A1', name: 'A1 - Motorrad 125cc', description: 'Motorrad A1',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 90,
         color: 'hellgrün', is_active: true, display_order: 2, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
    
       { 
         id: 3, code: 'A35kW', name: 'A35kW - Motorrad 35kW', description: 'Motorrad A35kW',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 90,
         color: 'hellgrün', is_active: true, display_order: 3, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
      
       { 
         id: 4, code: 'A', name: 'A - Motorrad', description: 'Motorrad A',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 90,
         color: 'hellgrün', is_active: true, display_order: 4, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
    
       { 
         id: 5, code: 'BE', name: 'BE - Anhänger', description: 'Anhänger BE',
-        price_per_lesson: 120, lesson_duration_minutes: 45, exam_duration_minutes: 90,
+        price_per_lesson: 120, lesson_duration_minutes: 45, exam_duration_minutes: 135,
         color: 'orange', is_active: true, display_order: 5, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
     
@@ -332,13 +342,13 @@ const loadCategories = async () => {
      
       { 
         id: 11, code: 'Motorboot', name: 'Motorboot', description: 'Motorboot',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 135,
         color: 'hellblau', is_active: true, display_order: 11, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
      
       { 
         id: 12, code: 'BPT', name: 'BPT - Berufsprüfung Transport', description: 'Berufsprüfung Transport',
-        price_per_lesson: 100, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        price_per_lesson: 100, lesson_duration_minutes: 45, exam_duration_minutes: 135,
         color: 'dunkelblau', is_active: true, display_order: 12, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
    

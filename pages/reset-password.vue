@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <img src="/images/Driving_Team_ch.jpg" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
+          <img src="public/images/Driving_Team_Logo.png" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
           <h1 class="text-2xl font-bold">Passwort zurücksetzen</h1>
           <p class="text-blue-100 mt-1">Geben Sie Ihr neues Passwort ein</p>
         </div>

@@ -254,16 +254,9 @@
     {{ lessonsError }}
   </div>
 
-  <div v-else-if="lessons.length === 0" class="text-center">
+  <div v-else-if="lessons.length === 0" class="text-center py-8">
     <div class="text-4xl mb-2">📚</div>
     <h4 class="font-semibold text-gray-900 mb-2">Noch keine Lektionen</h4>
-    <p class="text-gray-600 mb-4">Dieser Schüler hat noch keine Fahrlektionen absolviert.</p>
-    <button
-      @click="createAppointment(selectedStudent)"
-      class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-    >
-      Erste Lektion buchen
-    </button>
   </div>
 
   <div v-else class="flex-1 overflow-y-auto p-2">
@@ -305,7 +298,6 @@
           <div v-else-if="lessons.length === 0" class="text-center py-8">
             <div class="text-3xl mb-2">📚</div>
             <h4 class="font-semibold text-gray-900 mb-2">Keine Lektionen gefunden</h4>
-            <p class="text-gray-600 text-sm">Dieser Schüler hat noch keine Fahrlektionen absolviert.</p>
           </div>
 
           <div v-else-if="progressData.length === 0" class="text-center py-8">

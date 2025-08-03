@@ -179,7 +179,7 @@ export const useEventModalWatchers = ({
         // The duration watcher above will automatically trigger price recalculation
       }
       
-    }, { immediate: false })
+    })
   }
 
   // ✅ STANDARD WATCHERS (unchanged)
@@ -192,7 +192,7 @@ export const useEventModalWatchers = ({
       if (formData.value.startTime && formData.value.duration_minutes) {
         calculateEndTime()
       }
-    }, { immediate: true })
+    })
 
     // Event type change watcher
     watch(() => formData.value.eventType, (newType) => {
@@ -229,6 +229,8 @@ export const useEventModalWatchers = ({
         console.log('🔄 Reset appointment number to 1')
       }
     })
+
+    
 
     // Category type watcher
     watch(() => formData.value.type, async (newType) => {

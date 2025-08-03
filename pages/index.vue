@@ -28,7 +28,7 @@
       <!-- Header -->
       <div class="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <img src="/images/Driving_Team_ch.jpg" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
+          <img src="public/images/Driving_Team_Logo.png" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
           <h1 class="text-2xl font-bold">Willkommen</h1>
           <p class="text-blue-100 mt-1">Melden Sie sich in Ihrem Account an</p>
         </div>
@@ -401,8 +401,28 @@ const manualLogin = async () => {
     }
 
     console.log('✅ Login initiated successfully via store action.');
-    // Keine direkte Navigation hier, der Watcher auf userRole übernimmt dies
-    // sobald der Store die Rolle geladen hat.
+    
+    // DIREKTE NAVIGATION basierend auf Rolle
+    const role = authStore.userRole;
+    console.log('🎯 User role after login:', role);
+    
+    if (role) {
+      let targetPath = '/';
+      switch (role) {
+        case 'admin':
+          targetPath = '/admin';
+          break;
+        case 'staff':
+          targetPath = '/dashboard';
+          break;
+        case 'client':
+          targetPath = '/customer-dashboard';
+          break;
+      }
+      
+      console.log('🚀 DIRECT NAVIGATION TO:', targetPath);
+      await navigateTo(targetPath);
+    }
 
   } catch (error: any) {
     console.error('❌ Catch Error in manualLogin:', error)

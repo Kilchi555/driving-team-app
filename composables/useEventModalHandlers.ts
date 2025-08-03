@@ -293,16 +293,26 @@ const handleCategorySelected = async (category: any) => {
   /**
    * Handles changes to available durations.
    */
-  const handleDurationsChanged = (durations: number[]) => {
-    console.log('⏱️ Available durations changed:', durations)
+const handleDurationsChanged = (durations: number[]) => {
+  console.log('⏱️ Durations changed:', durations)
+  console.log('🔍 Current appointment_type:', formData.value.appointment_type)
+  
+  // ✅ FIX: Bei Prüfungen die exam_duration aus selectedCategory verwenden
+  if (formData.value.appointment_type === 'exam') {
+    const examDuration = selectedCategory.value?.exam_duration_minutes || 135
+    console.log('📝 OVERRIDE: Using exam duration instead of received durations:', examDuration)
+    availableDurations.value = [examDuration]
+    formData.value.duration_minutes = examDuration
+  } else {
+    // Normale Fahrstunden-Logic
     availableDurations.value = durations
-    
-    // Ensure current duration is valid
-    if (!durations.includes(formData.value.duration_minutes)) {
-      formData.value.duration_minutes = durations[0] || DEFAULT_DURATION_MINUTES
-      calculateEndTime()
+    if (durations.length > 0 && !durations.includes(formData.value.duration_minutes)) {
+      formData.value.duration_minutes = durations[0]
     }
   }
+  
+  calculateEndTime()
+}
 
   // ============ LOCATION HANDLERS ============
 

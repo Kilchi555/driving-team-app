@@ -134,6 +134,7 @@
               :selected-user="selectedStudent"
               :current-user="currentUser"
               :current-user-role="currentUser?.role"
+              :appointment-type="formData.appointment_type || selectedLessonType || 'lesson'"
               @category-selected="handleCategorySelected"
               @price-changed="handlePriceChanged"
               @durations-changed="handleDurationsChanged"
@@ -1313,30 +1314,85 @@ const initializeFormData = async () => {
   }
 }
 
+const triggerInitialCalculations = async () => {
+  console.log('🚀 Triggering initial calculations...')
+  
+  // Warte bis alle Daten geladen sind
+  await nextTick()
+  
+  // Nur triggern wenn alle Daten da sind
+  if (formData.value.type && 
+      formData.value.duration_minutes && 
+      selectedStudent.value?.id && 
+      formData.value.eventType === 'lesson') {
+    
+    console.log('💰 Initial price calculation')
+    try {
+      await handlers.pricing.updateDynamicPricing(
+        formData.value.type,
+        formData.value.duration_minutes,
+        selectedStudent.value.id
+      )
+    } catch (error) {
+      console.error('❌ Initial price calculation failed:', error)
+    }
+  }
+  
+  // End time berechnen
+  if (formData.value.startTime && formData.value.duration_minutes) {
+    calculateEndTime()
+  }
+}
+
+// Triggere nach Modal-Öffnung und Daten-Laden
+watch(() => props.isVisible, async (isVisible) => {
+  if (isVisible) {
+    console.log('📂 Modal opened, initializing...')
+    
+    // Erst Daten laden...
+    await initializeFormData()
+    
+    // Dann Berechnungen triggern
+    await triggerInitialCalculations()
+  }
+})
+
 // ✅ KORRIGIERTE VERSION mit .value
 watch([
   () => formData.value.type,
   () => formData.value.duration_minutes,
-  () => selectedStudent.value
-], async ([newType, newDuration, newStudent]) => {
-  console.log('🔍 EventModal watcher triggered:', { newType, newDuration, hasStudent: !!newStudent })
+  () => selectedStudent.value?.id // ← .id hinzufügen für Stability
+], async ([newType, newDuration, newStudentId], [oldType, oldDuration, oldStudentId]) => {
   
-  if (newType && newDuration && newStudent && formData.value.eventType === 'lesson') {
+  // ✅ Nur triggern wenn sich wirklich was geändert hat
+  const typeChanged = newType !== oldType
+  const durationChanged = newDuration !== oldDuration  
+  const studentChanged = newStudentId !== oldStudentId
+  
+  if (!typeChanged && !durationChanged && !studentChanged) {
+    return // Keine Änderung, nichts tun
+  }
+  
+  console.log('🔍 EventModal watcher triggered:', { 
+    typeChanged, durationChanged, studentChanged,
+    newType, newDuration, hasStudentId: !!newStudentId 
+  })
+  
+  if (newType && newDuration && newStudentId && formData.value.eventType === 'lesson') {
     console.log('💰 Auto-triggering price calculation for pre-selected category')
     
-    // Trigger die gleiche Preisberechnung wie in handleCategorySelected
     try {
       await handlers.pricing.updateDynamicPricing(
         newType, 
         newDuration, 
-        newStudent.id
+        newStudentId
       )
-      console.log('✅ Auto price calculation completed:', handlers.pricing.dynamicPricing.value.pricePerMinute)
+      console.log('✅ Auto price calculation completed')
     } catch (error) {
       console.error('❌ Auto price calculation failed:', error)
     }
   }
-}, { immediate: true })
+})
 
 const loadStudentForEdit = async (userId: string) => {
   try {

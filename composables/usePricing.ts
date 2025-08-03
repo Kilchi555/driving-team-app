@@ -128,7 +128,7 @@ export const COMPLETE_FALLBACK_RULES = [
     base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D1'
   },
   {
-    id: 'fallback-Motorboot', category_code: 'Motorboot', name: 'Motorboot',
+    id: 'fallback-BOAT', category_code: 'BOAT', name: 'Motorboot',
     description: 'Motorbootführerschein',
     price_per_minute_rappen: 211, price_per_minute_chf: 2.11, // 95 CHF / 45min = 2.11
     admin_fee_rappen: 12000, admin_fee_chf: 120, admin_fee_applies_from: 2,

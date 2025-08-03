@@ -2,11 +2,10 @@
   <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
+      <div class="bg-gray-100 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <img src="/images/Driving_Team_ch.jpg" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
-          <h1 class="text-2xl font-bold">Fahrschüler Registrierung</h1>
-          <p class="text-blue-100 mt-1">Erstellen Sie Ihr Konto für Fahrstunden</p>
+          <img src="public/images/Driving_Team_Logo.png" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
+          <h1 class="text-2xl font-bold text-gray-700">Registrierung</h1>
         </div>
       </div>
 
@@ -32,7 +31,7 @@
             3
           </div>
         </div>
-        <div class="flex justify-center mt-2 space-x-16 text-xs text-gray-600">
+        <div class="flex justify-center text-center mt-2 space-x-6 text-xs text-gray-600">
           <span>Persönliche Daten</span>
           <span>Lernfahrausweis</span>
           <span>Account</span>
@@ -44,10 +43,6 @@
         
         <!-- Step 1: Personal Data -->
         <div v-if="currentStep === 1" class="space-y-6">
-          <div class="text-center">
-            <h2 class="text-xl font-semibold text-gray-900 mb-2">👤 Persönliche Daten</h2>
-            <p class="text-gray-600">Bitte geben Sie Ihre persönlichen Daten ein</p>
-          </div>
 
           <!-- Personal Information Form -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -186,7 +181,7 @@
                   class="flex flex-col items-center justify-center p-4 border-2 rounded-lg cursor-pointer hover:border-blue-400 transition-colors"
                 >
                   <span class="text-lg font-bold">{{ category.code }}</span>
-                  <span class="text-xs mt-1">{{ category.name }}</span>
+                  <span class="text-xs mt-1 text-center">{{ category.name }}</span>
                   <span class="text-xs text-gray-500">CHF {{ category.price }}/45min</span>
                 </label>
               </div>
@@ -197,24 +192,7 @@
         <!-- Step 2: Lernfahrausweis Upload -->
         <div v-if="currentStep === 2" class="space-y-6">
           <div class="text-center">
-            <h2 class="text-xl font-semibold text-gray-900 mb-2">📄 Lernfahrausweis hochladen</h2>
-            <p class="text-gray-600">Laden Sie ein Foto oder Scan Ihres Lernfahrausweises hoch</p>
-          </div>
-
-          <!-- Lernfahrausweis Number (Manual Entry) -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Lernfahrausweis-Nummer *
-            </label>
-            <input
-              v-model="formData.lernfahrausweisNr"
-              type="text"
-              required
-              pattern="L[0-9]{6,10}"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="z.B. L123456789"
-            />
-            <p class="text-xs text-gray-500 mt-1">Format: L + 6-10 Ziffern</p>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">📄 Lernfahr- oder Führerausweis hochladen</h2>
           </div>
 
           <!-- Upload Area -->
@@ -298,91 +276,138 @@
               </div>
             </div>
           </div>
+                    <!-- Lernfahrausweis Number (Manual Entry) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Lernfahrausweis-Nummer *
+            </label>
+            <input
+              v-model="formData.lernfahrausweisNr"
+              type="text"
+              required
+              pattern="L[0-9]{6,10}"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="z.B. L123456789"
+            />
+            <p class="text-xs text-gray-500 mt-1">Format: L + 6-10 Ziffern</p>
+          </div>
         </div>
 
-        <!-- Step 3: Account Creation -->
-        <div v-if="currentStep === 3" class="space-y-6">
-          <div class="text-center">
-            <h2 class="text-xl font-semibold text-gray-900 mb-2">🔐 Account erstellen</h2>
-            <p class="text-gray-600">Erstellen Sie Ihren Login-Account</p>
+        <!-- Schritt 3: Account & Registrierung -->
+        <div v-else-if="currentStep === 3" class="space-y-6">
+          <div class="text-center mb-6">
+            <div class="text-4xl mb-2">🔐</div>
+            <h3 class="text-xl font-semibold text-gray-900">Account erstellen</h3>
+            <p class="text-gray-600">E-Mail und Passwort für Ihren Zugang</p>
           </div>
 
-          <!-- Email -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              E-Mail-Adresse *
-            </label>
-            <input
-              v-model="formData.email"
-              type="email"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="max.mustermann@example.com"
-            />
-          </div>
+          <!-- WICHTIG: Form Element um die Passwort-Felder -->
+          <form @submit.prevent="submitRegistration" class="space-y-4">
+            <!-- E-Mail -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                E-Mail-Adresse *
+              </label>
+              <input
+                v-model="formData.email"
+                type="email"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="ihre.email@beispiel.ch"
+              />
+            </div>
 
-          <!-- Password -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Passwort *
-            </label>
-            <input
-              v-model="formData.password"
-              type="password"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Mindestens 8 Zeichen"
-            />
-            <div class="mt-2 space-y-1">
-              <div class="flex items-center space-x-2">
-                <span :class="passwordChecks.length ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                  {{ passwordChecks.length ? '✓' : '○' }} Mindestens 8 Zeichen
-                </span>
+            <!-- Passwort -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Passwort *
+              </label>
+              <div class="relative">
+                <input
+                  v-model="formData.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  required
+                  class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Sicheres Passwort wählen"
+                />
+                <button
+                  type="button"
+                  @click="showPassword = !showPassword"
+                  class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {{ showPassword ? '🙈' : '👁️' }}
+                </button>
               </div>
-              <div class="flex items-center space-x-2">
-                <span :class="passwordChecks.uppercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                  {{ passwordChecks.uppercase ? '✓' : '○' }} Großbuchstabe
-                </span>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span :class="passwordChecks.number ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                  {{ passwordChecks.number ? '✓' : '○' }} Zahl
-                </span>
+              
+              <!-- Passwort-Validierung -->
+              <div class="mt-2 space-y-1">
+                <div class="flex items-center space-x-2">
+                  <span :class="passwordChecks.length ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                    {{ passwordChecks.length ? '✓' : '○' }} Mindestens 8 Zeichen
+                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span :class="passwordChecks.uppercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                    {{ passwordChecks.uppercase ? '✓' : '○' }} Großbuchstabe
+                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span :class="passwordChecks.number ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                    {{ passwordChecks.number ? '✓' : '○' }} Zahl
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Password Confirmation -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Passwort bestätigen *
-            </label>
-            <input
-              v-model="formData.confirmPassword"
-              type="password"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Passwort wiederholen"
-            />
-            <p v-if="formData.confirmPassword && formData.password !== formData.confirmPassword" 
-               class="text-red-600 text-sm mt-1">
-              Passwörter stimmen nicht überein
-            </p>
-          </div>
+            <!-- Passwort bestätigen -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Passwort bestätigen *
+              </label>
+              <input
+                v-model="formData.confirmPassword"
+                type="password"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Passwort wiederholen"
+              />
+              <p v-if="formData.confirmPassword && formData.password !== formData.confirmPassword" 
+                class="text-red-600 text-sm mt-1">
+                Passwörter stimmen nicht überein
+              </p>
+            </div>
 
-          <!-- Terms -->
-          <div class="flex items-start space-x-3">
-            <input
-              v-model="formData.acceptTerms"
-              type="checkbox"
-              required
-              class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label class="text-sm text-gray-700">
-              Ich akzeptiere die <a href="#" class="text-blue-600 hover:underline">Allgemeinen Geschäftsbedingungen</a> 
-              und die <a href="#" class="text-blue-600 hover:underline">Datenschutzerklärung</a> *
-            </label>
-          </div>
+            <!-- Nutzungsbedingungen -->
+            <div class="flex items-start space-x-3">
+              <input
+                v-model="formData.acceptTerms"
+                type="checkbox"
+                id="terms"
+                required
+                class="mt-1 h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+              />
+              <label for="terms" class="text-sm text-gray-700">
+                Ich akzeptiere die 
+                <a href="/terms" target="_blank" class="text-green-600 hover:text-green-800 underline">
+                  Nutzungsbedingungen
+                </a> 
+                und die 
+                <a href="/privacy" target="_blank" class="text-green-600 hover:text-green-800 underline">
+                  Datenschutzerklärung
+                </a>
+              </label>
+            </div>
+
+            <!-- Submit Button -->
+            <button
+              type="submit"
+              :disabled="!canSubmit || isSubmitting"
+              class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition-colors text-lg"
+            >
+              <span v-if="isSubmitting">⏳ Registriere...</span>
+              <span v-else>✨ Registrierung abschließen</span>
+            </button>
+          </form>
         </div>
       </div>
 
@@ -431,6 +456,8 @@
       </div>
     </div>
   </div>
+
+
 </template>
 
 <script setup lang="ts">
@@ -445,6 +472,7 @@ const currentStep = ref(1)
 const isSubmitting = ref(false)
 const uploadedImage = ref<string | null>(null)
 const showCamera = ref(false)
+const showPassword = ref(false)
 
 // Refs
 const fileInput = ref<HTMLInputElement>()
@@ -610,152 +638,150 @@ const clearImage = () => {
   }
 }
 
-// FINALE LÖSUNG: Registrierung mit separater public.users Tabelle
-
 const submitRegistration = async () => {
   if (!canSubmit.value) return
   
   isSubmitting.value = true
   
   try {
-    // 1. Auth User erstellen (für Login)
+    console.log('🚀 Starting registration with trigger-based approach...')
+    
+    // 1. ✅ VALIDIERUNG: Prüfe nur Auth-User (nicht public.users, da Trigger das macht)
+    const { data: existingAuthUsers, error: authCheckError } = await supabase
+      .from('users')
+      .select('email, phone, first_name, last_name')
+      .or(`email.eq.${formData.value.email.trim().toLowerCase()},phone.eq.${formData.value.phone?.trim()}`)
+      .eq('is_active', true)
+    
+    if (authCheckError) {
+      throw new Error('Fehler beim Prüfen der Daten')
+    }
+    
+    // Prüfe auf Duplikate
+    if (existingAuthUsers && existingAuthUsers.length > 0) {
+      const emailDuplicate = existingAuthUsers.find(user => 
+        user.email === formData.value.email.trim().toLowerCase()
+      )
+      
+      if (emailDuplicate) {
+        throw new Error(`Diese E-Mail-Adresse ist bereits registriert für ${emailDuplicate.first_name} ${emailDuplicate.last_name}. Bitte verwenden Sie eine andere E-Mail-Adresse oder loggen Sie sich ein.`)
+      }
+      
+      const phoneDuplicate = existingAuthUsers.find(user => 
+        user.phone === formData.value.phone?.trim()
+      )
+      
+      if (phoneDuplicate) {
+        throw new Error(`Diese Telefonnummer ist bereits registriert für ${phoneDuplicate.first_name} ${phoneDuplicate.last_name}. Bitte verwenden Sie eine andere Telefonnummer.`)
+      }
+    }
+    
+    // 2. ✅ Auth User erstellen - Trigger erstellt automatisch public.users
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: formData.value.email,
+      email: formData.value.email.trim().toLowerCase(),
       password: formData.value.password,
       options: {
         data: {
-          first_name: formData.value.firstName,
-          last_name: formData.value.lastName
+          first_name: formData.value.firstName.trim(),
+          last_name: formData.value.lastName.trim()
         }
       }
     })
     
-    if (authError) throw authError
+    if (authError) {
+      if (authError.message?.includes('User already registered')) {
+        throw new Error('Diese E-Mail-Adresse ist bereits registriert. Bitte loggen Sie sich ein oder verwenden Sie eine andere E-Mail-Adresse.')
+      }
+      throw authError
+    }
     
-    if (!authData.user?.id) {
+    if (!authData?.user?.id) {
       throw new Error('Benutzer-ID nicht erhalten')
     }
     
-    console.log('Auth User created:', authData.user.id)
+    console.log('✅ Auth User created:', authData.user.id)
     
-    // 2. Profil-Daten in public.users speichern
-    let { data: userData, error: profileError } = await supabase
+    // 3. ✅ Warte und prüfe bis Trigger-User existiert, dann ergänze Daten
+    console.log('⏳ Waiting for trigger to create base user...')
+    
+    let attempts = 0
+    let triggerUser = null
+    
+    // Warte bis der Trigger den User erstellt hat (max 5 Sekunden)
+    while (attempts < 10 && !triggerUser) {
+      await new Promise(resolve => setTimeout(resolve, 500)) // 500ms warten
+      
+      const { data: checkUser, error: checkError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', authData.user.id)
+        .single()
+      
+      if (!checkError && checkUser) {
+        triggerUser = checkUser
+        console.log('✅ Trigger user found:', triggerUser.id)
+        break
+      }
+      
+      attempts++
+      console.log(`⏳ Attempt ${attempts}/10: Waiting for trigger user...`)
+    }
+    
+    if (!triggerUser) {
+      console.error('❌ Trigger user not created after 5 seconds')
+      throw new Error('Benutzer wurde erstellt, aber Profil ist unvollständig. Bitte wenden Sie sich an den Support.')
+    }
+    
+    // 4. ✅ Jetzt die zusätzlichen Daten ergänzen
+    console.log('📝 Updating user with additional data...')
+    const { data: updatedUser, error: updateError } = await supabase
       .from('users')
-      .insert({
-        // WICHTIG: Verwende die auth.user.id als id
-        id: authData.user.id,
-        email: formData.value.email,
-        role: 'client',
-        first_name: formData.value.firstName,
-        last_name: formData.value.lastName,
-        phone: formData.value.phone,
-        birthdate: formData.value.birthDate,
-        street: formData.value.street,
-        street_nr: formData.value.streetNr,
-        zip: formData.value.zip,
-        city: formData.value.city,
+      .update({
+        // Ergänze nur die zusätzlichen Daten (Basis wurde vom Trigger erstellt)
+        phone: formData.value.phone?.trim() || null,
+        birthdate: formData.value.birthDate || null,
+        street: formData.value.street?.trim() || null,
+        street_nr: formData.value.streetNr?.trim() || null,
+        zip: formData.value.zip?.trim() || null,
+        city: formData.value.city?.trim() || null,
         category: formData.value.categories.join(','),
-        lernfahrausweis_url: formData.value.lernfahrausweisNr,
-        is_active: true
+        lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null,
+        lernfahrausweis_url: uploadedImage.value || null
       })
+      .eq('id', triggerUser.id) // Verwende die ID vom Trigger-User
       .select()
       .single()
     
-    if (profileError) {
-      console.error('Profile error:', profileError)
-      
-      // Fallback: Falls public.users bereits existiert, update stattdessen
-      if (profileError.code === '23505') { // Unique constraint violation
-        const { data: updateData, error: updateError } = await supabase
-          .from('users')
-          .update({
-            email: formData.value.email,
-            role: 'client',
-            first_name: formData.value.firstName,
-            last_name: formData.value.lastName,
-            phone: formData.value.phone,
-            birthdate: formData.value.birthDate,
-            street: formData.value.street,
-            street_nr: formData.value.streetNr,
-            zip: formData.value.zip,
-            city: formData.value.city,
-            category: formData.value.categories.join(','),
-            lernfahrausweis_url: formData.value.lernfahrausweisNr,
-            is_active: true
-          })
-          .eq('id', authData.user.id)
-          .select()
-          .single()
-        
-        if (updateError) throw updateError
-        userData = updateData
-      } else {
-        throw profileError
-      }
+    if (updateError) {
+      console.error('❌ Profile update error:', updateError)
+      console.log('ℹ️ Basic profile exists, but additional data could not be saved')
+      // Nicht kritisch - User kann sich trotzdem einloggen
+    } else {
+      console.log('✅ Profile completed with additional data:', updatedUser)
     }
     
-    console.log('Profile created:', userData)
+    console.log('✅ Complete registration successful:', updatedUser || 'Basic profile created by trigger')
     
-    // 3. Lernfahrausweis-Bild hochladen
-    if (uploadedImage.value) {
-      try {
-        const blob = await fetch(uploadedImage.value).then(r => r.blob())
-        const fileName = `learner_permit_${authData.user.id}_${Date.now()}.jpg`
-        
-        // Upload in bestehenden learner-permits bucket
-        const { error: uploadError } = await supabase.storage
-          .from('learner-permits')
-          .upload(fileName, blob, {
-            cacheControl: '3600',
-            upsert: false
-          })
-        
-        if (!uploadError) {
-          // Update user mit Bild-Pfad
-          await supabase
-            .from('users')
-            .update({ lernfahrausweis_url: fileName })
-            .eq('id', authData.user.id)
-          
-          console.log('Image uploaded:', fileName)
-        } else {
-          console.warn('Image upload failed:', uploadError)
-          // Nicht kritisch - weiter ohne Bild
-        }
-      } catch (uploadError) {
-        console.warn('Image upload error:', uploadError)
-      }
-    }
-    
-    // 4. Erfolg!
-    alert('🎉 Registrierung erfolgreich! Bitte bestätigen Sie Ihre E-Mail-Adresse.')
+    // 4. ✅ Erfolgreiche Registrierung
+    alert('🎉 Registrierung erfolgreich!\n\nIhr Account wurde erstellt. Bitte prüfen Sie Ihre E-Mails zur Bestätigung und loggen Sie sich dann ein.')
     await navigateTo('/')
     
   } catch (error: any) {
-    console.error('Registration error:', error)
+    console.error('❌ Registration failed:', error)
+    
+    let errorMessage = error.message || 'Unbekannter Fehler bei der Registrierung'
     
     // Spezifische Fehlermeldungen
-    let errorMessage = 'Unbekannter Fehler'
-    
-    if (error.message?.includes('User already registered')) {
-      errorMessage = 'Diese E-Mail-Adresse ist bereits registriert.'
-    } else if (error.message?.includes('duplicate key')) {
-      errorMessage = 'Benutzer existiert bereits. Versuchen Sie sich anzumelden.'
-    } else if (error.message?.includes('invalid email')) {
-      errorMessage = 'Ungültige E-Mail-Adresse.'
-    } else if (error.message?.includes('weak password')) {
-      errorMessage = 'Passwort zu schwach. Mindestens 8 Zeichen, 1 Großbuchstabe, 1 Zahl erforderlich.'
-    } else if (error.message) {
-      errorMessage = error.message
+    if (errorMessage.includes('duplicate key') || errorMessage.includes('already registered')) {
+      errorMessage = 'Diese Daten sind bereits registriert. Bitte verwenden Sie andere Angaben oder loggen Sie sich ein.'
+    } else if (errorMessage.includes('Invalid email')) {
+      errorMessage = 'Ungültige E-Mail-Adresse. Bitte prüfen Sie Ihre Eingabe.'
+    } else if (errorMessage.includes('Password') || errorMessage.includes('weak password')) {
+      errorMessage = 'Passwort zu schwach. Mindestens 8 Zeichen, 1 Großbuchstabe und 1 Zahl erforderlich.'
     }
     
-    alert(`Fehler bei der Registrierung: ${errorMessage}`)
-    
-    // Bei Auth-Erfolg aber Profile-Fehler: User zur Vervollständigung weiterleiten
-    if (error.code === '23505' && error.table === 'users') {
-      alert('Ihr Account wurde erstellt, aber das Profil konnte nicht gespeichert werden. Bitte loggen Sie sich ein und vervollständigen Sie Ihr Profil.')
-      await navigateTo('/')
-    }
+    // ✅ BENUTZERFREUNDLICH: Zeige Fehler an, ohne Eingaben zu verlieren
+    alert(`❌ Registrierung nicht möglich:\n\n${errorMessage}\n\nBitte korrigieren Sie die Eingaben und versuchen Sie es erneut.`)
     
   } finally {
     isSubmitting.value = false
