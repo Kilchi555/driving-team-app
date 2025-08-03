@@ -488,7 +488,7 @@ const updatePassword = async () => {
 
 // Navigation
 const goToRegister = () => {
-  navigateTo('/register')
+  navigateTo('/auswahl')
 }
 
 // pages/index.vue - im onMounted nach den bestehenden Checks:

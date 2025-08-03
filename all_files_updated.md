@@ -1,5 +1,5 @@
 === DRIVING TEAM PROJECT - AKTUELLER EXPORT ===
-Generated: Sat Aug  2 05:45:12 CEST 2025
+Generated: Sun Aug  3 16:10:15 CEST 2025
 
 ### ./app.vue
 ```vue
@@ -2039,6 +2039,7 @@ interface Props {
   selectedUser?: any
   currentUser?: any
   currentUserRole?: string
+  appointmentType?: string
   showDebugInfo?: boolean
 }
 
@@ -2050,7 +2051,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  showDebugInfo: false
+  showDebugInfo: false,
+  appointmentType: 'lesson'
 })
 const emit = defineEmits<Emits>()
 
@@ -2067,6 +2069,14 @@ const selectedCategory = computed(() => {
   if (!props.modelValue) return null
   return availableCategoriesForUser.value.find(cat => cat.code === props.modelValue) || null
 })
+
+const getCorrectDuration = (category: Category): number => {
+  if (props.appointmentType === 'exam') {
+    return category.exam_duration_minutes || 180
+  } else {
+    return category.lesson_duration_minutes || 45
+  }
+}
 
 const availableCategoriesForUser = computed(() => {
   let result: CategoryWithDurations[] = []
@@ -2089,7 +2099,7 @@ const availableCategoriesForUser = computed(() => {
       .filter(cat => cat.is_active)
       .map(cat => ({
         ...cat,
-        availableDurations: [cat.lesson_duration_minutes] // Standard-Dauer für Admins
+      availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
       }))
     console.log('👨‍💼 Admin: Showing all categories:', result.length)
   }
@@ -2102,7 +2112,7 @@ const availableCategoriesForUser = computed(() => {
         .filter(cat => cat.is_active)
         .map(cat => ({
           ...cat,
-          availableDurations: [cat.lesson_duration_minutes]
+        availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
         }))
     } else {
       // Gruppiere Staff-Kategorien-Dauern nach category_code
@@ -2138,7 +2148,7 @@ const availableCategoriesForUser = computed(() => {
           .filter(cat => cat.is_active)
           .map(cat => ({
             ...cat,
-            availableDurations: [cat.lesson_duration_minutes] // Standard-Dauer
+          availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
           }))
       }
     }
@@ -2151,7 +2161,7 @@ const availableCategoriesForUser = computed(() => {
       .filter(cat => cat.is_active)
       .map(cat => ({
         ...cat,
-        availableDurations: [cat.lesson_duration_minutes] // Standard-Dauer für Clients
+        availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
       }))
     console.log('👤 Client: Showing all categories:', result.length)
   }
@@ -2244,30 +2254,30 @@ const loadCategories = async () => {
     allCategories.value = [
       { 
         id: 1, code: 'B', name: 'B - Auto', description: 'Autoprüfung Kategorie B',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 135,
         color: 'hellgrün', is_active: true, display_order: 1, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
       { 
         id: 2, code: 'A1', name: 'A1 - Motorrad 125cc', description: 'Motorrad A1',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 90,
         color: 'hellgrün', is_active: true, display_order: 2, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
    
       { 
         id: 3, code: 'A35kW', name: 'A35kW - Motorrad 35kW', description: 'Motorrad A35kW',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 90,
         color: 'hellgrün', is_active: true, display_order: 3, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
      
       { 
         id: 4, code: 'A', name: 'A - Motorrad', description: 'Motorrad A',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 90,
         color: 'hellgrün', is_active: true, display_order: 4, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
    
       { 
         id: 5, code: 'BE', name: 'BE - Anhänger', description: 'Anhänger BE',
-        price_per_lesson: 120, lesson_duration_minutes: 45, exam_duration_minutes: 90,
+        price_per_lesson: 120, lesson_duration_minutes: 45, exam_duration_minutes: 135,
         color: 'orange', is_active: true, display_order: 5, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
     
@@ -2303,13 +2313,13 @@ const loadCategories = async () => {
      
       { 
         id: 11, code: 'Motorboot', name: 'Motorboot', description: 'Motorboot',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 120,
+        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 135,
         color: 'hellblau', is_active: true, display_order: 11, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
      
       { 
         id: 12, code: 'BPT', name: 'BPT - Berufsprüfung Transport', description: 'Berufsprüfung Transport',
-        price_per_lesson: 100, lesson_duration_minutes: 45, exam_duration_minutes: 180,
+        price_per_lesson: 100, lesson_duration_minutes: 45, exam_duration_minutes: 135,
         color: 'dunkelblau', is_active: true, display_order: 12, price_unit: 'per_lesson',
         created_at: toLocalTimeString(new Date())},
    
@@ -3847,16 +3857,9 @@ watch(() => props.availableDurations, (newDurations) => {
     {{ lessonsError }}
   </div>
 
-  <div v-else-if="lessons.length === 0" class="text-center">
+  <div v-else-if="lessons.length === 0" class="text-center py-8">
     <div class="text-4xl mb-2">📚</div>
     <h4 class="font-semibold text-gray-900 mb-2">Noch keine Lektionen</h4>
-    <p class="text-gray-600 mb-4">Dieser Schüler hat noch keine Fahrlektionen absolviert.</p>
-    <button
-      @click="createAppointment(selectedStudent)"
-      class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-    >
-      Erste Lektion buchen
-    </button>
   </div>
 
   <div v-else class="flex-1 overflow-y-auto p-2">
@@ -3898,7 +3901,6 @@ watch(() => props.availableDurations, (newDurations) => {
           <div v-else-if="lessons.length === 0" class="text-center py-8">
             <div class="text-3xl mb-2">📚</div>
             <h4 class="font-semibold text-gray-900 mb-2">Keine Lektionen gefunden</h4>
-            <p class="text-gray-600 text-sm">Dieser Schüler hat noch keine Fahrlektionen absolviert.</p>
           </div>
 
           <div v-else-if="progressData.length === 0" class="text-center py-8">
@@ -5421,6 +5423,7 @@ input:focus, textarea:focus {
               :selected-user="selectedStudent"
               :current-user="currentUser"
               :current-user-role="currentUser?.role"
+              :appointment-type="formData.appointment_type || selectedLessonType || 'lesson'"
               @category-selected="handleCategorySelected"
               @price-changed="handlePriceChanged"
               @durations-changed="handleDurationsChanged"
@@ -6600,30 +6603,85 @@ const initializeFormData = async () => {
   }
 }
 
+const triggerInitialCalculations = async () => {
+  console.log('🚀 Triggering initial calculations...')
+  
+  // Warte bis alle Daten geladen sind
+  await nextTick()
+  
+  // Nur triggern wenn alle Daten da sind
+  if (formData.value.type && 
+      formData.value.duration_minutes && 
+      selectedStudent.value?.id && 
+      formData.value.eventType === 'lesson') {
+    
+    console.log('💰 Initial price calculation')
+    try {
+      await handlers.pricing.updateDynamicPricing(
+        formData.value.type,
+        formData.value.duration_minutes,
+        selectedStudent.value.id
+      )
+    } catch (error) {
+      console.error('❌ Initial price calculation failed:', error)
+    }
+  }
+  
+  // End time berechnen
+  if (formData.value.startTime && formData.value.duration_minutes) {
+    calculateEndTime()
+  }
+}
+
+// Triggere nach Modal-Öffnung und Daten-Laden
+watch(() => props.isVisible, async (isVisible) => {
+  if (isVisible) {
+    console.log('📂 Modal opened, initializing...')
+    
+    // Erst Daten laden...
+    await initializeFormData()
+    
+    // Dann Berechnungen triggern
+    await triggerInitialCalculations()
+  }
+})
+
 // ✅ KORRIGIERTE VERSION mit .value
 watch([
   () => formData.value.type,
   () => formData.value.duration_minutes,
-  () => selectedStudent.value
-], async ([newType, newDuration, newStudent]) => {
-  console.log('🔍 EventModal watcher triggered:', { newType, newDuration, hasStudent: !!newStudent })
+  () => selectedStudent.value?.id // ← .id hinzufügen für Stability
+], async ([newType, newDuration, newStudentId], [oldType, oldDuration, oldStudentId]) => {
   
-  if (newType && newDuration && newStudent && formData.value.eventType === 'lesson') {
+  // ✅ Nur triggern wenn sich wirklich was geändert hat
+  const typeChanged = newType !== oldType
+  const durationChanged = newDuration !== oldDuration  
+  const studentChanged = newStudentId !== oldStudentId
+  
+  if (!typeChanged && !durationChanged && !studentChanged) {
+    return // Keine Änderung, nichts tun
+  }
+  
+  console.log('🔍 EventModal watcher triggered:', { 
+    typeChanged, durationChanged, studentChanged,
+    newType, newDuration, hasStudentId: !!newStudentId 
+  })
+  
+  if (newType && newDuration && newStudentId && formData.value.eventType === 'lesson') {
     console.log('💰 Auto-triggering price calculation for pre-selected category')
     
-    // Trigger die gleiche Preisberechnung wie in handleCategorySelected
     try {
       await handlers.pricing.updateDynamicPricing(
         newType, 
         newDuration, 
-        newStudent.id
+        newStudentId
       )
-      console.log('✅ Auto price calculation completed:', handlers.pricing.dynamicPricing.value.pricePerMinute)
+      console.log('✅ Auto price calculation completed')
     } catch (error) {
       console.error('❌ Auto price calculation failed:', error)
     }
   }
-}, { immediate: true })
+})
 
 const loadStudentForEdit = async (userId: string) => {
   try {
@@ -19005,9 +19063,6 @@ watch(userRole, (newRole: string | null) => {
 }, { immediate: true })// ← Stelle sicher dass immediate: true da ist
 
 // Lifecycle
-// In CustomerDashboard.vue - für Live-Updates
-// CustomerDashboard.vue - ändere den onMounted:
-// CustomerDashboard.vue - ändere den onMounted komplett:
 onMounted(async () => {
   console.log('🔥 CustomerDashboard mounted')
   
@@ -22580,16 +22635,26 @@ const handleCategorySelected = async (category: any) => {
   /**
    * Handles changes to available durations.
    */
-  const handleDurationsChanged = (durations: number[]) => {
-    console.log('⏱️ Available durations changed:', durations)
+const handleDurationsChanged = (durations: number[]) => {
+  console.log('⏱️ Durations changed:', durations)
+  console.log('🔍 Current appointment_type:', formData.value.appointment_type)
+  
+  // ✅ FIX: Bei Prüfungen die exam_duration aus selectedCategory verwenden
+  if (formData.value.appointment_type === 'exam') {
+    const examDuration = selectedCategory.value?.exam_duration_minutes || 135
+    console.log('📝 OVERRIDE: Using exam duration instead of received durations:', examDuration)
+    availableDurations.value = [examDuration]
+    formData.value.duration_minutes = examDuration
+  } else {
+    // Normale Fahrstunden-Logic
     availableDurations.value = durations
-    
-    // Ensure current duration is valid
-    if (!durations.includes(formData.value.duration_minutes)) {
-      formData.value.duration_minutes = durations[0] || DEFAULT_DURATION_MINUTES
-      calculateEndTime()
+    if (durations.length > 0 && !durations.includes(formData.value.duration_minutes)) {
+      formData.value.duration_minutes = durations[0]
     }
   }
+  
+  calculateEndTime()
+}
 
   // ============ LOCATION HANDLERS ============
 
@@ -23212,7 +23277,7 @@ export const useEventModalWatchers = ({
         // The duration watcher above will automatically trigger price recalculation
       }
       
-    }, { immediate: false })
+    })
   }
 
   // ✅ STANDARD WATCHERS (unchanged)
@@ -23225,7 +23290,7 @@ export const useEventModalWatchers = ({
       if (formData.value.startTime && formData.value.duration_minutes) {
         calculateEndTime()
       }
-    }, { immediate: true })
+    })
 
     // Event type change watcher
     watch(() => formData.value.eventType, (newType) => {
@@ -23262,6 +23327,8 @@ export const useEventModalWatchers = ({
         console.log('🔄 Reset appointment number to 1')
       }
     })
+
+    
 
     // Category type watcher
     watch(() => formData.value.type, async (newType) => {
@@ -24623,7 +24690,7 @@ export const COMPLETE_FALLBACK_RULES = [
     base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D1'
   },
   {
-    id: 'fallback-Motorboot', category_code: 'Motorboot', name: 'Motorboot',
+    id: 'fallback-BOAT', category_code: 'BOAT', name: 'Motorboot',
     description: 'Motorbootführerschein',
     price_per_minute_rappen: 211, price_per_minute_chf: 2.11, // 95 CHF / 45min = 2.11
     admin_fee_rappen: 12000, admin_fee_chf: 120, admin_fee_applies_from: 2,
@@ -26835,7 +26902,7 @@ export const useWallee = () => {
       }
 
       // API Call zu deiner Wallee Route
-    const response = await $fetch('/api/mock/create-transaction', {
+const response = await $fetch('/api/mock/create-transaction', {
         method: 'POST',
         body: {
           appointmentId: request.appointmentId,
@@ -28657,6 +28724,91 @@ input:focus, select:focus {
 }
 </style>```
 
+### ./pages/auswahl.vue
+```vue
+<!-- pages/auswahl.vue -->
+<template>
+  <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl">
+      
+      <!-- Header -->
+      <div class="bg-gray-200 text-white p-8 rounded-t-xl text-center">
+        <img src="public/images/Driving_Team_Logo.png" class=" w-auto mx-auto mb-4" alt="Driving Team">
+        <h1 class="text-3xl font-bold mb-2 text-gray-700">Willkommen bei Driving Team</h1>
+      </div>
+
+      <!-- Auswahl Buttons -->
+      <div class="p-8">
+        <div class="grid md:grid-cols-2 gap-6">
+          
+          <!-- Fahrstunden Option -->
+          <div class="group">
+            <button
+              @click="goToFahrstunden"
+              class="w-full h-full p-8 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:shadow-lg transition-all duration-300 group-hover:scale-105"
+            >
+              <div class="text-center">
+                
+                <!-- Button -->
+                <div>
+                  <span class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold group-hover:bg-blue-700 transition-colors">
+                    Fahrstunden buchen →
+                  </span>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <!-- Laufkundschaft Option -->
+          <div class="group">
+            <button
+              @click="goToLaufkundschaft"
+              class="w-full h-full p-8 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:shadow-lg transition-all duration-300 group-hover:scale-105"
+            >
+              <div class="text-center">
+                                
+                <!-- Button -->
+                <div>
+                  <span class="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-semibold group-hover:bg-green-700 transition-colors">
+                    Theorie & Produkte →
+                  </span>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bereits registriert Link -->
+        <div class="text-center mt-8 pt-6 border-t border-gray-200">
+          <p class="text-gray-600 mb-3">Bereits registriert?</p>
+          <button
+            @click="goToLogin"
+            class="text-blue-600 hover:text-blue-800 font-semibold text-lg hover:underline"
+          >
+            → Hier anmelden
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { navigateTo } from '#app'
+// Navigation functions
+const goToFahrstunden = () => {
+  navigateTo('/register')
+}
+
+const goToLaufkundschaft = () => {
+  navigateTo('/shop') // Neue Light-Registration Seite
+}
+
+const goToLogin = () => {
+  navigateTo('/')
+}
+</script>```
+
 ### ./pages/customer-dashboard.vue
 ```vue
 <!-- pages/customer-dashboard.vue -->
@@ -29986,11 +30138,11 @@ input:focus, select:focus {
         </div>
 
         <!-- Mobile: Floating Action Button -->
-        <div class="sm:hidden fixed bottom-4 right-4 z-10">
+        <div class="sm:hidden fixed top-3 right-3 z-10">
           <button 
             v-if="currentUser.role !== 'client'"
-            @click="showAddModal = true"
-            class="bg-green-600 text-white p-4 rounded-full shadow-lg hover:bg-green-700 transition-colors"
+            @click="navigateToAuswahl"
+            class="bg-green-600 text-white p-2 rounded-full shadow-lg hover:bg-green-700 transition-colors"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -30056,6 +30208,12 @@ const filteredStudents = computed(() => {
 
   return filtered
 })
+
+// Navigation zum Register
+const navigateToAuswahl = () => {
+  console.log('🚀 Navigating to register page for new student')
+  navigateTo('/auswahl')
+}
 
 // Mobile optimization methods
 const formatPhone = (phone: string) => {
@@ -30727,7 +30885,7 @@ onUnmounted(() => {
       <!-- Header -->
       <div class="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <img src="/images/Driving_Team_ch.jpg" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
+          <img src="public/images/Driving_Team_Logo.png" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
           <h1 class="text-2xl font-bold">Willkommen</h1>
           <p class="text-blue-100 mt-1">Melden Sie sich in Ihrem Account an</p>
         </div>
@@ -31100,8 +31258,28 @@ const manualLogin = async () => {
     }
 
     console.log('✅ Login initiated successfully via store action.');
-    // Keine direkte Navigation hier, der Watcher auf userRole übernimmt dies
-    // sobald der Store die Rolle geladen hat.
+    
+    // DIREKTE NAVIGATION basierend auf Rolle
+    const role = authStore.userRole;
+    console.log('🎯 User role after login:', role);
+    
+    if (role) {
+      let targetPath = '/';
+      switch (role) {
+        case 'admin':
+          targetPath = '/admin';
+          break;
+        case 'staff':
+          targetPath = '/dashboard';
+          break;
+        case 'client':
+          targetPath = '/customer-dashboard';
+          break;
+      }
+      
+      console.log('🚀 DIRECT NAVIGATION TO:', targetPath);
+      await navigateTo(targetPath);
+    }
 
   } catch (error: any) {
     console.error('❌ Catch Error in manualLogin:', error)
@@ -31794,11 +31972,10 @@ onMounted(() => {
   <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
+      <div class="bg-gray-100 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <img src="/images/Driving_Team_ch.jpg" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
-          <h1 class="text-2xl font-bold">Fahrschüler Registrierung</h1>
-          <p class="text-blue-100 mt-1">Erstellen Sie Ihr Konto für Fahrstunden</p>
+          <img src="public/images/Driving_Team_Logo.png" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
+          <h1 class="text-2xl font-bold text-gray-700">Registrierung</h1>
         </div>
       </div>
 
@@ -31824,7 +32001,7 @@ onMounted(() => {
             3
           </div>
         </div>
-        <div class="flex justify-center mt-2 space-x-16 text-xs text-gray-600">
+        <div class="flex justify-center text-center mt-2 space-x-6 text-xs text-gray-600">
           <span>Persönliche Daten</span>
           <span>Lernfahrausweis</span>
           <span>Account</span>
@@ -31836,10 +32013,6 @@ onMounted(() => {
         
         <!-- Step 1: Personal Data -->
         <div v-if="currentStep === 1" class="space-y-6">
-          <div class="text-center">
-            <h2 class="text-xl font-semibold text-gray-900 mb-2">👤 Persönliche Daten</h2>
-            <p class="text-gray-600">Bitte geben Sie Ihre persönlichen Daten ein</p>
-          </div>
 
           <!-- Personal Information Form -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -31978,7 +32151,7 @@ onMounted(() => {
                   class="flex flex-col items-center justify-center p-4 border-2 rounded-lg cursor-pointer hover:border-blue-400 transition-colors"
                 >
                   <span class="text-lg font-bold">{{ category.code }}</span>
-                  <span class="text-xs mt-1">{{ category.name }}</span>
+                  <span class="text-xs mt-1 text-center">{{ category.name }}</span>
                   <span class="text-xs text-gray-500">CHF {{ category.price }}/45min</span>
                 </label>
               </div>
@@ -31989,24 +32162,7 @@ onMounted(() => {
         <!-- Step 2: Lernfahrausweis Upload -->
         <div v-if="currentStep === 2" class="space-y-6">
           <div class="text-center">
-            <h2 class="text-xl font-semibold text-gray-900 mb-2">📄 Lernfahrausweis hochladen</h2>
-            <p class="text-gray-600">Laden Sie ein Foto oder Scan Ihres Lernfahrausweises hoch</p>
-          </div>
-
-          <!-- Lernfahrausweis Number (Manual Entry) -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Lernfahrausweis-Nummer *
-            </label>
-            <input
-              v-model="formData.lernfahrausweisNr"
-              type="text"
-              required
-              pattern="L[0-9]{6,10}"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="z.B. L123456789"
-            />
-            <p class="text-xs text-gray-500 mt-1">Format: L + 6-10 Ziffern</p>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">📄 Lernfahr- oder Führerausweis hochladen</h2>
           </div>
 
           <!-- Upload Area -->
@@ -32090,91 +32246,138 @@ onMounted(() => {
               </div>
             </div>
           </div>
+                    <!-- Lernfahrausweis Number (Manual Entry) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Lernfahrausweis-Nummer *
+            </label>
+            <input
+              v-model="formData.lernfahrausweisNr"
+              type="text"
+              required
+              pattern="L[0-9]{6,10}"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="z.B. L123456789"
+            />
+            <p class="text-xs text-gray-500 mt-1">Format: L + 6-10 Ziffern</p>
+          </div>
         </div>
 
-        <!-- Step 3: Account Creation -->
-        <div v-if="currentStep === 3" class="space-y-6">
-          <div class="text-center">
-            <h2 class="text-xl font-semibold text-gray-900 mb-2">🔐 Account erstellen</h2>
-            <p class="text-gray-600">Erstellen Sie Ihren Login-Account</p>
+        <!-- Schritt 3: Account & Registrierung -->
+        <div v-else-if="currentStep === 3" class="space-y-6">
+          <div class="text-center mb-6">
+            <div class="text-4xl mb-2">🔐</div>
+            <h3 class="text-xl font-semibold text-gray-900">Account erstellen</h3>
+            <p class="text-gray-600">E-Mail und Passwort für Ihren Zugang</p>
           </div>
 
-          <!-- Email -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              E-Mail-Adresse *
-            </label>
-            <input
-              v-model="formData.email"
-              type="email"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="max.mustermann@example.com"
-            />
-          </div>
+          <!-- WICHTIG: Form Element um die Passwort-Felder -->
+          <form @submit.prevent="submitRegistration" class="space-y-4">
+            <!-- E-Mail -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                E-Mail-Adresse *
+              </label>
+              <input
+                v-model="formData.email"
+                type="email"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="ihre.email@beispiel.ch"
+              />
+            </div>
 
-          <!-- Password -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Passwort *
-            </label>
-            <input
-              v-model="formData.password"
-              type="password"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Mindestens 8 Zeichen"
-            />
-            <div class="mt-2 space-y-1">
-              <div class="flex items-center space-x-2">
-                <span :class="passwordChecks.length ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                  {{ passwordChecks.length ? '✓' : '○' }} Mindestens 8 Zeichen
-                </span>
+            <!-- Passwort -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Passwort *
+              </label>
+              <div class="relative">
+                <input
+                  v-model="formData.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  required
+                  class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Sicheres Passwort wählen"
+                />
+                <button
+                  type="button"
+                  @click="showPassword = !showPassword"
+                  class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {{ showPassword ? '🙈' : '👁️' }}
+                </button>
               </div>
-              <div class="flex items-center space-x-2">
-                <span :class="passwordChecks.uppercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                  {{ passwordChecks.uppercase ? '✓' : '○' }} Großbuchstabe
-                </span>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span :class="passwordChecks.number ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                  {{ passwordChecks.number ? '✓' : '○' }} Zahl
-                </span>
+              
+              <!-- Passwort-Validierung -->
+              <div class="mt-2 space-y-1">
+                <div class="flex items-center space-x-2">
+                  <span :class="passwordChecks.length ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                    {{ passwordChecks.length ? '✓' : '○' }} Mindestens 8 Zeichen
+                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span :class="passwordChecks.uppercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                    {{ passwordChecks.uppercase ? '✓' : '○' }} Großbuchstabe
+                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span :class="passwordChecks.number ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                    {{ passwordChecks.number ? '✓' : '○' }} Zahl
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Password Confirmation -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Passwort bestätigen *
-            </label>
-            <input
-              v-model="formData.confirmPassword"
-              type="password"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Passwort wiederholen"
-            />
-            <p v-if="formData.confirmPassword && formData.password !== formData.confirmPassword" 
-               class="text-red-600 text-sm mt-1">
-              Passwörter stimmen nicht überein
-            </p>
-          </div>
+            <!-- Passwort bestätigen -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Passwort bestätigen *
+              </label>
+              <input
+                v-model="formData.confirmPassword"
+                type="password"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Passwort wiederholen"
+              />
+              <p v-if="formData.confirmPassword && formData.password !== formData.confirmPassword" 
+                class="text-red-600 text-sm mt-1">
+                Passwörter stimmen nicht überein
+              </p>
+            </div>
 
-          <!-- Terms -->
-          <div class="flex items-start space-x-3">
-            <input
-              v-model="formData.acceptTerms"
-              type="checkbox"
-              required
-              class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label class="text-sm text-gray-700">
-              Ich akzeptiere die <a href="#" class="text-blue-600 hover:underline">Allgemeinen Geschäftsbedingungen</a> 
-              und die <a href="#" class="text-blue-600 hover:underline">Datenschutzerklärung</a> *
-            </label>
-          </div>
+            <!-- Nutzungsbedingungen -->
+            <div class="flex items-start space-x-3">
+              <input
+                v-model="formData.acceptTerms"
+                type="checkbox"
+                id="terms"
+                required
+                class="mt-1 h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+              />
+              <label for="terms" class="text-sm text-gray-700">
+                Ich akzeptiere die 
+                <a href="/terms" target="_blank" class="text-green-600 hover:text-green-800 underline">
+                  Nutzungsbedingungen
+                </a> 
+                und die 
+                <a href="/privacy" target="_blank" class="text-green-600 hover:text-green-800 underline">
+                  Datenschutzerklärung
+                </a>
+              </label>
+            </div>
+
+            <!-- Submit Button -->
+            <button
+              type="submit"
+              :disabled="!canSubmit || isSubmitting"
+              class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition-colors text-lg"
+            >
+              <span v-if="isSubmitting">⏳ Registriere...</span>
+              <span v-else>✨ Registrierung abschließen</span>
+            </button>
+          </form>
         </div>
       </div>
 
@@ -32223,6 +32426,8 @@ onMounted(() => {
       </div>
     </div>
   </div>
+
+
 </template>
 
 <script setup lang="ts">
@@ -32237,6 +32442,7 @@ const currentStep = ref(1)
 const isSubmitting = ref(false)
 const uploadedImage = ref<string | null>(null)
 const showCamera = ref(false)
+const showPassword = ref(false)
 
 // Refs
 const fileInput = ref<HTMLInputElement>()
@@ -32402,152 +32608,150 @@ const clearImage = () => {
   }
 }
 
-// FINALE LÖSUNG: Registrierung mit separater public.users Tabelle
-
 const submitRegistration = async () => {
   if (!canSubmit.value) return
   
   isSubmitting.value = true
   
   try {
-    // 1. Auth User erstellen (für Login)
+    console.log('🚀 Starting registration with trigger-based approach...')
+    
+    // 1. ✅ VALIDIERUNG: Prüfe nur Auth-User (nicht public.users, da Trigger das macht)
+    const { data: existingAuthUsers, error: authCheckError } = await supabase
+      .from('users')
+      .select('email, phone, first_name, last_name')
+      .or(`email.eq.${formData.value.email.trim().toLowerCase()},phone.eq.${formData.value.phone?.trim()}`)
+      .eq('is_active', true)
+    
+    if (authCheckError) {
+      throw new Error('Fehler beim Prüfen der Daten')
+    }
+    
+    // Prüfe auf Duplikate
+    if (existingAuthUsers && existingAuthUsers.length > 0) {
+      const emailDuplicate = existingAuthUsers.find(user => 
+        user.email === formData.value.email.trim().toLowerCase()
+      )
+      
+      if (emailDuplicate) {
+        throw new Error(`Diese E-Mail-Adresse ist bereits registriert für ${emailDuplicate.first_name} ${emailDuplicate.last_name}. Bitte verwenden Sie eine andere E-Mail-Adresse oder loggen Sie sich ein.`)
+      }
+      
+      const phoneDuplicate = existingAuthUsers.find(user => 
+        user.phone === formData.value.phone?.trim()
+      )
+      
+      if (phoneDuplicate) {
+        throw new Error(`Diese Telefonnummer ist bereits registriert für ${phoneDuplicate.first_name} ${phoneDuplicate.last_name}. Bitte verwenden Sie eine andere Telefonnummer.`)
+      }
+    }
+    
+    // 2. ✅ Auth User erstellen - Trigger erstellt automatisch public.users
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: formData.value.email,
+      email: formData.value.email.trim().toLowerCase(),
       password: formData.value.password,
       options: {
         data: {
-          first_name: formData.value.firstName,
-          last_name: formData.value.lastName
+          first_name: formData.value.firstName.trim(),
+          last_name: formData.value.lastName.trim()
         }
       }
     })
     
-    if (authError) throw authError
+    if (authError) {
+      if (authError.message?.includes('User already registered')) {
+        throw new Error('Diese E-Mail-Adresse ist bereits registriert. Bitte loggen Sie sich ein oder verwenden Sie eine andere E-Mail-Adresse.')
+      }
+      throw authError
+    }
     
-    if (!authData.user?.id) {
+    if (!authData?.user?.id) {
       throw new Error('Benutzer-ID nicht erhalten')
     }
     
-    console.log('Auth User created:', authData.user.id)
+    console.log('✅ Auth User created:', authData.user.id)
     
-    // 2. Profil-Daten in public.users speichern
-    let { data: userData, error: profileError } = await supabase
+    // 3. ✅ Warte und prüfe bis Trigger-User existiert, dann ergänze Daten
+    console.log('⏳ Waiting for trigger to create base user...')
+    
+    let attempts = 0
+    let triggerUser = null
+    
+    // Warte bis der Trigger den User erstellt hat (max 5 Sekunden)
+    while (attempts < 10 && !triggerUser) {
+      await new Promise(resolve => setTimeout(resolve, 500)) // 500ms warten
+      
+      const { data: checkUser, error: checkError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', authData.user.id)
+        .single()
+      
+      if (!checkError && checkUser) {
+        triggerUser = checkUser
+        console.log('✅ Trigger user found:', triggerUser.id)
+        break
+      }
+      
+      attempts++
+      console.log(`⏳ Attempt ${attempts}/10: Waiting for trigger user...`)
+    }
+    
+    if (!triggerUser) {
+      console.error('❌ Trigger user not created after 5 seconds')
+      throw new Error('Benutzer wurde erstellt, aber Profil ist unvollständig. Bitte wenden Sie sich an den Support.')
+    }
+    
+    // 4. ✅ Jetzt die zusätzlichen Daten ergänzen
+    console.log('📝 Updating user with additional data...')
+    const { data: updatedUser, error: updateError } = await supabase
       .from('users')
-      .insert({
-        // WICHTIG: Verwende die auth.user.id als id
-        id: authData.user.id,
-        email: formData.value.email,
-        role: 'client',
-        first_name: formData.value.firstName,
-        last_name: formData.value.lastName,
-        phone: formData.value.phone,
-        birthdate: formData.value.birthDate,
-        street: formData.value.street,
-        street_nr: formData.value.streetNr,
-        zip: formData.value.zip,
-        city: formData.value.city,
+      .update({
+        // Ergänze nur die zusätzlichen Daten (Basis wurde vom Trigger erstellt)
+        phone: formData.value.phone?.trim() || null,
+        birthdate: formData.value.birthDate || null,
+        street: formData.value.street?.trim() || null,
+        street_nr: formData.value.streetNr?.trim() || null,
+        zip: formData.value.zip?.trim() || null,
+        city: formData.value.city?.trim() || null,
         category: formData.value.categories.join(','),
-        lernfahrausweis_url: formData.value.lernfahrausweisNr,
-        is_active: true
+        lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null,
+        lernfahrausweis_url: uploadedImage.value || null
       })
+      .eq('id', triggerUser.id) // Verwende die ID vom Trigger-User
       .select()
       .single()
     
-    if (profileError) {
-      console.error('Profile error:', profileError)
-      
-      // Fallback: Falls public.users bereits existiert, update stattdessen
-      if (profileError.code === '23505') { // Unique constraint violation
-        const { data: updateData, error: updateError } = await supabase
-          .from('users')
-          .update({
-            email: formData.value.email,
-            role: 'client',
-            first_name: formData.value.firstName,
-            last_name: formData.value.lastName,
-            phone: formData.value.phone,
-            birthdate: formData.value.birthDate,
-            street: formData.value.street,
-            street_nr: formData.value.streetNr,
-            zip: formData.value.zip,
-            city: formData.value.city,
-            category: formData.value.categories.join(','),
-            lernfahrausweis_url: formData.value.lernfahrausweisNr,
-            is_active: true
-          })
-          .eq('id', authData.user.id)
-          .select()
-          .single()
-        
-        if (updateError) throw updateError
-        userData = updateData
-      } else {
-        throw profileError
-      }
+    if (updateError) {
+      console.error('❌ Profile update error:', updateError)
+      console.log('ℹ️ Basic profile exists, but additional data could not be saved')
+      // Nicht kritisch - User kann sich trotzdem einloggen
+    } else {
+      console.log('✅ Profile completed with additional data:', updatedUser)
     }
     
-    console.log('Profile created:', userData)
+    console.log('✅ Complete registration successful:', updatedUser || 'Basic profile created by trigger')
     
-    // 3. Lernfahrausweis-Bild hochladen
-    if (uploadedImage.value) {
-      try {
-        const blob = await fetch(uploadedImage.value).then(r => r.blob())
-        const fileName = `learner_permit_${authData.user.id}_${Date.now()}.jpg`
-        
-        // Upload in bestehenden learner-permits bucket
-        const { error: uploadError } = await supabase.storage
-          .from('learner-permits')
-          .upload(fileName, blob, {
-            cacheControl: '3600',
-            upsert: false
-          })
-        
-        if (!uploadError) {
-          // Update user mit Bild-Pfad
-          await supabase
-            .from('users')
-            .update({ lernfahrausweis_url: fileName })
-            .eq('id', authData.user.id)
-          
-          console.log('Image uploaded:', fileName)
-        } else {
-          console.warn('Image upload failed:', uploadError)
-          // Nicht kritisch - weiter ohne Bild
-        }
-      } catch (uploadError) {
-        console.warn('Image upload error:', uploadError)
-      }
-    }
-    
-    // 4. Erfolg!
-    alert('🎉 Registrierung erfolgreich! Bitte bestätigen Sie Ihre E-Mail-Adresse.')
+    // 4. ✅ Erfolgreiche Registrierung
+    alert('🎉 Registrierung erfolgreich!\n\nIhr Account wurde erstellt. Bitte prüfen Sie Ihre E-Mails zur Bestätigung und loggen Sie sich dann ein.')
     await navigateTo('/')
     
   } catch (error: any) {
-    console.error('Registration error:', error)
+    console.error('❌ Registration failed:', error)
+    
+    let errorMessage = error.message || 'Unbekannter Fehler bei der Registrierung'
     
     // Spezifische Fehlermeldungen
-    let errorMessage = 'Unbekannter Fehler'
-    
-    if (error.message?.includes('User already registered')) {
-      errorMessage = 'Diese E-Mail-Adresse ist bereits registriert.'
-    } else if (error.message?.includes('duplicate key')) {
-      errorMessage = 'Benutzer existiert bereits. Versuchen Sie sich anzumelden.'
-    } else if (error.message?.includes('invalid email')) {
-      errorMessage = 'Ungültige E-Mail-Adresse.'
-    } else if (error.message?.includes('weak password')) {
-      errorMessage = 'Passwort zu schwach. Mindestens 8 Zeichen, 1 Großbuchstabe, 1 Zahl erforderlich.'
-    } else if (error.message) {
-      errorMessage = error.message
+    if (errorMessage.includes('duplicate key') || errorMessage.includes('already registered')) {
+      errorMessage = 'Diese Daten sind bereits registriert. Bitte verwenden Sie andere Angaben oder loggen Sie sich ein.'
+    } else if (errorMessage.includes('Invalid email')) {
+      errorMessage = 'Ungültige E-Mail-Adresse. Bitte prüfen Sie Ihre Eingabe.'
+    } else if (errorMessage.includes('Password') || errorMessage.includes('weak password')) {
+      errorMessage = 'Passwort zu schwach. Mindestens 8 Zeichen, 1 Großbuchstabe und 1 Zahl erforderlich.'
     }
     
-    alert(`Fehler bei der Registrierung: ${errorMessage}`)
-    
-    // Bei Auth-Erfolg aber Profile-Fehler: User zur Vervollständigung weiterleiten
-    if (error.code === '23505' && error.table === 'users') {
-      alert('Ihr Account wurde erstellt, aber das Profil konnte nicht gespeichert werden. Bitte loggen Sie sich ein und vervollständigen Sie Ihr Profil.')
-      await navigateTo('/')
-    }
+    // ✅ BENUTZERFREUNDLICH: Zeige Fehler an, ohne Eingaben zu verlieren
+    alert(`❌ Registrierung nicht möglich:\n\n${errorMessage}\n\nBitte korrigieren Sie die Eingaben und versuchen Sie es erneut.`)
     
   } finally {
     isSubmitting.value = false
@@ -32584,7 +32788,7 @@ onMounted(async () => {
       <!-- Header -->
       <div class="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <img src="/images/Driving_Team_ch.jpg" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
+          <img src="public/images/Driving_Team_Logo.png" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
           <h1 class="text-2xl font-bold">Passwort zurücksetzen</h1>
           <p class="text-blue-100 mt-1">Geben Sie Ihr neues Passwort ein</p>
         </div>
@@ -32815,6 +33019,775 @@ onMounted(async () => {
     error.value = err.message
     isLoading.value = false
   }
+})
+</script>```
+
+### ./pages/shop.vue
+```vue
+<!-- pages/shop.vue -->
+<template>
+  <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 p-4">
+    <div class="max-w-2xl mx-auto">
+      
+      <!-- Header -->
+      <div class="bg-white rounded-t-xl shadow-2xl">
+        <div class="bg-gray-200 text-gray-700 p-6 rounded-t-xl">
+          <div class="text-center">
+            <img src="public/images/Driving_Team_Logo.png" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
+            <h1 class="text-2xl font-bold">Registrierung</h1>
+          </div>
+        </div>
+
+        <!-- Navigation Back -->
+        <div class="px-6 py-3 bg-gray-50 border-b">
+          <button
+            @click="goBack"
+            class="text-gray-600 hover:text-gray-800 flex items-center text-sm"
+          >
+            ← Zurück zur Auswahl
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress Steps -->
+      <div class="bg-white border-b px-6 py-4">
+        <div class="flex items-center justify-center space-x-4">
+          <div :class="currentStep >= 1 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
+               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
+            1
+          </div>
+          <div class="h-1 w-12 bg-gray-300">
+            <div v-if="currentStep >= 2" class="h-full bg-green-500 transition-all duration-300"></div>
+          </div>
+          <div :class="currentStep >= 2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
+               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
+            2
+          </div>
+          <div class="h-1 w-12 bg-gray-300">
+            <div v-if="currentStep >= 3" class="h-full bg-green-500 transition-all duration-300"></div>
+          </div>
+          <div :class="currentStep >= 3 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
+               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
+            3
+          </div>
+        </div>
+        <div class="text-center mt-2">
+          <p class="text-sm text-gray-600">
+            <span v-if="currentStep === 1">Schritt 1: Kontaktdaten</span>
+            <span v-if="currentStep === 2">Schritt 2: Produktauswahl</span>
+            <span v-if="currentStep === 3">Schritt 3: Bezahlung</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Form Content -->
+      <div class="bg-white shadow-2xl">
+        <div class="p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-6">{{ stepTitle }}</h2>
+
+          <!-- SCHRITT 1: KONTAKTDATEN -->
+          <div v-if="currentStep === 1">
+            <div class="space-y-4">
+              <!-- Name -->
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Vorname *
+                  </label>
+                  <input
+                    v-model="formData.firstName"
+                    type="text"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Max"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Nachname *
+                  </label>
+                  <input
+                    v-model="formData.lastName"
+                    type="text"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Mustermann"
+                  />
+                </div>
+              </div>
+
+              <!-- Email -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  E-Mail-Adresse *
+                </label>
+                <input
+                  v-model="formData.email"
+                  type="email"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="max@example.com"
+                />
+                <p class="text-xs text-gray-500 mt-1">Für die Bestätigung und weitere Informationen</p>
+              </div>
+
+              <!-- Telefon -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Telefonnummer *
+                </label>
+                <input
+                  v-model="formData.phone"
+                  type="tel"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="+41 79 123 45 67"
+                />
+              </div>
+
+              <!-- Adresse -->
+              <div class="grid md:grid-cols-4 gap-4">
+                <div class="md:col-span-3">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Strasse *
+                  </label>
+                  <input
+                    v-model="formData.street"
+                    type="text"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Musterstrasse"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Nr. *
+                  </label>
+                  <input
+                    v-model="formData.streetNumber"
+                    type="text"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="123"
+                  />
+                </div>
+              </div>
+
+              <!-- PLZ & Ort -->
+              <div class="grid md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    PLZ *
+                  </label>
+                  <input
+                    v-model="formData.zip"
+                    type="text"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="8000"
+                  />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Ort *
+                  </label>
+                  <input
+                    v-model="formData.city"
+                    type="text"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Zürich"
+                  />
+                </div>
+              </div>
+
+              <!-- Führerschein-Kategorie -->
+              <div>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Kategorie</h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-gray-300">
+                  <label v-for="category in availableCategories" :key="category.code"
+                         class="flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer hover:border-green-500 transition-colors text-center"
+                         :class="formData.category === category.code ? 'border-green-500 bg-green-50' : 'border-gray-200'">
+                    <input
+                      v-model="formData.category"
+                      type="radio"
+                      :value="category.code"
+                      class="sr-only"
+                    />
+                    <span class="text-lg font-bold">{{ category.code }}</span>
+                    <span class="text-xs text-gray-600 mt-1">{{ category.name }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Bemerkungen -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Bemerkungen (optional)
+                </label>
+                <textarea
+                  v-model="formData.notes"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Spezielle Wünsche, Zeitpräferenzen, etc."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCHRITT 2: PRODUKTAUSWAHL -->
+          <div v-if="currentStep === 2">
+            <div class="space-y-6">
+              <!-- Kundendaten Zusammenfassung -->
+              <div class="bg-gray-50 rounded-lg p-4 border">
+                <h3 class="text-sm font-medium text-gray-900 mb-2">📋 Ihre Daten:</h3>
+                <div class="text-sm text-gray-600">
+                  <p><strong>{{ formData.firstName }} {{ formData.lastName }}</strong></p>
+                  <p>{{ formData.email }} • {{ formData.phone }}</p>
+                  <p>{{ formData.street }} {{ formData.streetNumber }}, {{ formData.zip }} {{ formData.city }}</p>
+                  <p>Kategorie: {{ formData.category }}</p>
+                </div>
+              </div>
+
+              <!-- Produktauswahl -->
+              <div>
+                <!-- Ausgewählte Produkte anzeigen -->
+                <div v-if="hasProducts" class="space-y-3 mb-6">
+                  <h3 class="text-md font-medium text-gray-900">📦 Ihre Auswahl:</h3>
+                  <div v-for="item in selectedProducts" :key="item.product.id" 
+                       class="flex justify-between items-center p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex-1">
+                      <div class="font-medium text-green-800">{{ item.product.name }}</div>
+                      <div class="text-sm text-green-600">{{ item.product.description }}</div>
+                      <div class="text-sm text-green-700">CHF {{ (item.product.price_rappen / 100).toFixed(2) }} × {{ item.quantity }}</div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                      <!-- Quantity Controls -->
+                      <div class="flex items-center space-x-2">
+                        <button 
+                          @click="updateQuantity(item.product.id, item.quantity - 1)"
+                          class="w-8 h-8 flex items-center justify-center bg-white border border-green-300 rounded text-green-600 hover:bg-green-100"
+                        >
+                          −
+                        </button>
+                        <span class="w-8 text-center font-medium">{{ item.quantity }}</span>
+                        <button 
+                          @click="updateQuantity(item.product.id, item.quantity + 1)"
+                          class="w-8 h-8 flex items-center justify-center bg-white border border-green-300 rounded text-green-600 hover:bg-green-100"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <!-- Total Price -->
+                      <span class="text-lg font-bold text-green-800 min-w-[80px] text-right">
+                        CHF {{ item.total.toFixed(2) }}
+                      </span>
+                      <!-- Remove Button -->
+                      <button 
+                        @click="removeProduct(item.product.id)" 
+                        class="text-red-500 hover:text-red-700 p-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <!-- Gesamtpreis -->
+                  <div class="flex justify-between items-center p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
+                    <span class="text-lg font-bold text-blue-900">💳 Gesamtpreis</span>
+                    <span class="text-xl font-bold text-blue-900">CHF {{ totalPrice.toFixed(2) }}</span>
+                  </div>
+                </div>
+                
+                <!-- Produkt-Auswahl Button -->
+                <div class="text-center">
+                  <button
+                    @click="showProductSelector = true"
+                    class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                  >
+                    {{ hasProducts ? '+ Weitere Produkte hinzufügen' : '🛍️ Produkte auswählen' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Produkt-Auswahl Modal -->
+            <div v-if="showProductSelector" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div class="bg-white rounded-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+                <div class="p-6 border-b">
+                  <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold">Produkte auswählen</h3>
+                    <button @click="showProductSelector = false" class="text-gray-500 hover:text-gray-700">
+                      ✕
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="p-6 overflow-y-auto max-h-[60vh]">
+                  <!-- Loading State -->
+                  <div v-if="isLoadingProducts" class="text-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+                    <p class="text-gray-600">Lade Produkte...</p>
+                  </div>
+                  
+                  <!-- Produktgrid -->
+                  <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div v-for="product in availableProducts" :key="product.id"
+                         class="border rounded-lg p-4 hover:border-green-500 hover:shadow-md transition-all cursor-pointer"
+                         @click="addProduct(product)">
+                      <div v-if="product.image_url" class="mb-3">
+                        <img :src="product.image_url" :alt="product.name" class="w-full h-32 object-cover rounded">
+                      </div>
+                      <div class="font-medium text-gray-900 mb-2">{{ product.name }}</div>
+                      <div class="text-sm text-gray-600 mb-3">{{ product.description }}</div>
+                      <div class="text-lg font-bold text-green-600">CHF {{ (product.price_rappen / 100).toFixed(2) }}</div>
+                      <div v-if="product.category !== 'general'" class="text-xs text-gray-500 mt-2">
+                        Kategorie: {{ product.category }}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Fallback wenn keine Produkte -->
+                  <div v-if="!isLoadingProducts && availableProducts.length === 0" class="text-center py-8 text-gray-500">
+                    Derzeit sind keine Produkte verfügbar.
+                  </div>
+                </div>
+                
+                <div class="p-6 border-t bg-gray-50">
+                  <button 
+                    @click="showProductSelector = false"
+                    class="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+                  >
+                    Fertig
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCHRITT 3: PAYMENT -->
+          <div v-if="currentStep === 3">
+            <div class="space-y-6">
+              <!-- Bestellübersicht -->
+              <div class="bg-gray-50 rounded-lg p-6 border">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">📋 Bestellübersicht</h3>
+                
+                <!-- Kundendaten -->
+                <div class="mb-4 pb-4 border-b">
+                  <h4 class="text-sm font-medium text-gray-700 mb-2">Kunde:</h4>
+                  <div class="text-sm text-gray-600">
+                    <p><strong>{{ formData.firstName }} {{ formData.lastName }}</strong></p>
+                    <p>{{ formData.email }} • {{ formData.phone }}</p>
+                    <p>{{ formData.street }} {{ formData.streetNumber }}, {{ formData.zip }} {{ formData.city }}</p>
+                    <p>Kategorie: {{ formData.category }}</p>
+                  </div>
+                </div>
+
+                <!-- Produkte -->
+                <div class="mb-4">
+                  <h4 class="text-sm font-medium text-gray-700 mb-2">Bestellte Produkte:</h4>
+                  <div class="space-y-2">
+                    <div v-for="item in selectedProducts" :key="item.product.id" 
+                         class="flex justify-between items-center">
+                      <div>
+                        <span class="text-sm font-medium">{{ item.product.name }}</span>
+                        <span class="text-xs text-gray-500 ml-2">({{ item.quantity }}x CHF {{ (item.product.price_rappen / 100).toFixed(2) }})</span>
+                      </div>
+                      <span class="text-sm font-medium">CHF {{ item.total.toFixed(2) }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Gesamtpreis -->
+                <div class="pt-4 border-t">
+                  <div class="flex justify-between items-center">
+                    <span class="text-lg font-bold text-gray-900">Gesamtpreis:</span>
+                    <span class="text-xl font-bold text-green-600">CHF {{ totalPrice.toFixed(2) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Payment Optionen -->
+              <div class="bg-white border rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">💳 Bezahlung</h3>
+                <div class="space-y-4">
+                  <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 class="font-medium text-blue-900 mb-2">📧 Rechnung per E-Mail</h4>
+                    <p class="text-sm text-blue-700">
+                      Sie erhalten eine Rechnung per E-Mail an <strong>{{ formData.email }}</strong> 
+                      mit allen Zahlungsdetails und Bankverbindung.
+                    </p>
+                    <p class="text-xs text-blue-600 mt-2">
+                      Zahlungsziel: 30 Tage • Wir kontaktieren Sie vor der Lieferung
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer mit Navigation -->
+        <div class="px-6 py-4 bg-gray-50 rounded-b-xl border-t">
+          <div class="flex justify-between">
+            <!-- Zurück Button -->
+            <button
+              v-if="currentStep > 1"
+              @click="previousStep"
+              class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            >
+              ← Zurück
+            </button>
+            <div v-else></div>
+
+            <!-- Weiter/Absenden Button -->
+            <button
+              v-if="currentStep < 3"
+              @click="nextStep"
+              :disabled="!canProceedToNextStep"
+              class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            >
+              {{ currentStep === 1 ? 'Weiter zur Produktauswahl' : 'Weiter zur Bezahlung' }} →
+            </button>
+            
+            <!-- Bestellung absenden -->
+            <button
+              v-if="currentStep === 3"
+              @click="submitOrder"
+              :disabled="isSubmitting"
+              class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            >
+              <span v-if="isSubmitting">⏳ Bestellung wird gesendet...</span>
+              <span v-else>✅ Bestellung absenden</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { navigateTo } from '#app'
+import { definePageMeta } from '#imports'
+
+// TypeScript Interfaces
+interface Product {
+  id: string
+  name: string
+  description?: string
+  price_rappen: number
+  category?: string
+  is_active?: boolean
+  display_order?: number
+  image_url?: string
+  stock_quantity?: number
+  track_stock?: boolean
+  created_at?: string
+}
+
+interface ProductItem {
+  product: Product
+  quantity: number
+  total: number
+}
+
+// Reactive data - Multi-Step Process
+const currentStep = ref(1) // 1: Anmeldung, 2: Produktauswahl, 3: Payment
+const isSubmitting = ref(false)
+const isLoadingProducts = ref(false)
+const availableProducts = ref<Product[]>([])
+const selectedProducts = ref<ProductItem[]>([])
+const showProductSelector = ref(false)
+
+// Step 1: Customer Data
+const formData = ref({
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  street: '',
+  streetNumber: '',
+  zip: '',
+  city: '',
+  category: '',
+  notes: ''
+})
+
+// Available categories
+const availableCategories = [
+  { code: 'B', name: 'Auto' },
+  { code: 'A1/A35kW/A', name: 'Motorrad/Roller' },
+  { code: 'BPT', name: 'Taxi' },
+  { code: 'BE', name: 'Anhänger' },
+  { code: 'C', name: 'LKW' },
+  { code: 'D', name: 'Bus' },
+  { code: 'Boot', name: 'Motorboot' },
+
+]
+
+// Computed
+const canSubmitStep1 = computed(() => {
+  return formData.value.firstName && 
+         formData.value.lastName && 
+         formData.value.email && 
+         formData.value.phone &&
+         formData.value.street &&
+         formData.value.streetNumber &&
+         formData.value.zip &&
+         formData.value.city &&
+         formData.value.category
+})
+
+const canProceedToPayment = computed(() => {
+  return selectedProducts.value.length > 0
+})
+
+const totalPrice = computed(() => {
+  return selectedProducts.value.reduce((sum, item) => sum + item.total, 0)
+})
+
+const hasProducts = computed(() => selectedProducts.value.length > 0)
+
+const stepTitle = computed(() => {
+  switch (currentStep.value) {
+    case 1: return 'Ihre Kontaktdaten'
+    case 2: return 'Produktauswahl'
+    case 3: return 'Bezahlung'
+    default: return 'Laufkundschaft'
+  }
+})
+
+const canProceedToNextStep = computed(() => {
+  switch (currentStep.value) {
+    case 1: return canSubmitStep1.value
+    case 2: return canProceedToPayment.value
+    default: return false
+  }
+})
+
+// Step Navigation
+const nextStep = () => {
+  if (currentStep.value < 3 && canProceedToNextStep.value) {
+    currentStep.value++
+    
+    // Produkte laden wenn wir zu Schritt 2 gehen
+    if (currentStep.value === 2 && availableProducts.value.length === 0) {
+      loadProducts()
+    }
+  }
+}
+
+const previousStep = () => {
+  if (currentStep.value > 1) {
+    currentStep.value--
+  }
+}
+
+// Methods
+const goBack = () => {
+  if (typeof navigateTo !== 'undefined') {
+    navigateTo('/auswahl')
+  } else {
+    window.location.href = '/auswahl'
+  }
+}
+
+// Produktverwaltung
+const addProduct = (product: Product) => {
+  const existingIndex = selectedProducts.value.findIndex(item => item.product.id === product.id)
+  
+  if (existingIndex >= 0) {
+    // Produkt existiert bereits, erhöhe Menge
+    selectedProducts.value[existingIndex].quantity += 1
+    selectedProducts.value[existingIndex].total = selectedProducts.value[existingIndex].quantity * (product.price_rappen / 100)
+  } else {
+    // Neues Produkt hinzufügen
+    selectedProducts.value.push({
+      product,
+      quantity: 1,
+      total: product.price_rappen / 100
+    })
+  }
+  console.log('✅ Product added:', product.name)
+}
+
+const removeProduct = (productId: string) => {
+  const index = selectedProducts.value.findIndex(item => item.product.id === productId)
+  if (index >= 0) {
+    const productName = selectedProducts.value[index].product.name
+    selectedProducts.value.splice(index, 1)
+    console.log('🗑️ Product removed:', productName)
+  }
+}
+
+const updateQuantity = (productId: string, newQuantity: number) => {
+  if (newQuantity <= 0) {
+    removeProduct(productId)
+    return
+  }
+  
+  const item = selectedProducts.value.find(item => item.product.id === productId)
+  if (item) {
+    item.quantity = newQuantity
+    item.total = newQuantity * (item.product.price_rappen / 100)
+    console.log('📊 Quantity updated:', item.product.name, 'x', newQuantity)
+  }
+}
+
+// Lade Produkte aus der Datenbank
+const loadProducts = async () => {
+  isLoadingProducts.value = true
+  
+  try {
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order')
+    
+    if (error) throw error
+    
+    availableProducts.value = data || []
+    console.log('✅ Products loaded:', availableProducts.value.length)
+    
+  } catch (error) {
+    console.error('❌ Error loading products:', error)
+    // Fallback Produkte falls DB nicht erreichbar
+    availableProducts.value = [
+      { 
+        id: '1', 
+        name: 'Theorielektionen', 
+        description: 'Einzellektionen für die Theorieprüfung', 
+        price_rappen: 4500, 
+        category: 'theory',
+        is_active: true,
+        display_order: 1
+      },
+      { 
+        id: '2', 
+        name: 'Lehrmaterial', 
+        description: 'Theoriebücher und Online-Zugang', 
+        price_rappen: 2900, 
+        category: 'material',
+        is_active: true,
+        display_order: 2
+      }
+    ]
+  } finally {
+    isLoadingProducts.value = false
+  }
+}
+
+const submitOrder = async () => {
+  if (!canProceedToPayment.value) return
+  
+  isSubmitting.value = true
+  
+  try {
+    // Importiere getSupabase dynamisch
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    
+    const customerData = {
+      first_name: formData.value.firstName.trim(),
+      last_name: formData.value.lastName.trim(),
+      email: formData.value.email.trim(),
+      phone: formData.value.phone.trim(),
+      category: formData.value.category,
+      notes: formData.value.notes || null,
+      invited_by_staff_id: null, // Kein Staff - kommt von Website
+      appointment_id: null, // Kein Termin - nur Shop-Anfrage
+      customer_type: 'laufkundschaft',
+      contact_method: 'email',
+      source: 'website_shop',
+      status: 'shop_inquiry',
+      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 Tage
+      
+      // 🔥 ERSTE PRODUKT-VERKNÜPFUNG (für invited_customers table)
+      requested_product_id: selectedProducts.value.length > 0 ? selectedProducts.value[0].product.id : null,
+      quantity: selectedProducts.value.reduce((sum, item) => sum + item.quantity, 0),
+      total_price_rappen: Math.round(totalPrice.value * 100),
+      
+      // 🔥 ALLE PRODUKTE IM METADATA
+      metadata: {
+        address: {
+          street: formData.value.street.trim(),
+          street_number: formData.value.streetNumber.trim(),
+          zip: formData.value.zip.trim(),
+          city: formData.value.city.trim()
+        },
+        products: selectedProducts.value.map(item => ({
+          product_id: item.product.id,
+          product_name: item.product.name,
+          quantity: item.quantity,
+          unit_price_rappen: item.product.price_rappen,
+          total_price_rappen: Math.round(item.total * 100)
+        })),
+        order_step: 'completed',
+        payment_method: 'invoice',
+        source_details: {
+          timestamp: new Date().toISOString(),
+          user_agent: navigator.userAgent
+        }
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('invited_customers')
+      .insert(customerData)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    console.log('✅ Shop order saved:', data.id)
+    
+    const productList = selectedProducts.value.map(item => 
+      `• ${item.product.name} (${item.quantity}x à CHF ${(item.product.price_rappen / 100).toFixed(2)})`
+    ).join('\n')
+    
+    alert(`✅ Bestellung erfolgreich aufgegeben!
+    
+Hallo ${formData.value.firstName},
+
+Ihre Bestellung wurde erfolgreich übermittelt:
+
+${productList}
+
+Gesamtpreis: CHF ${totalPrice.value.toFixed(2)}
+Bestellnummer: ${data.id}
+
+Sie erhalten in Kürze eine Rechnung per E-Mail an ${formData.value.email} mit allen Details und der Bankverbindung.
+
+Wir kontaktieren Sie innerhalb von 24 Stunden für die weitere Abwicklung.
+
+Vielen Dank für Ihre Bestellung!`)
+    
+    // Redirect back to start
+    goBack()
+    
+  } catch (error: any) {
+    console.error('❌ Error saving shop order:', error)
+    alert('❌ Fehler beim Absenden der Bestellung. Bitte versuchen Sie es erneut.')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+// Lifecycle
+onMounted(() => {
+  // Produkte werden nur geladen wenn zu Schritt 2 navigiert wird
+  console.log('🛍️ Shop mounted - Step-by-step process started')
+})
+
+// Meta
+definePageMeta({
+  title: 'Driving Team - Laufkundschaft Shop'
 })
 </script>```
 
@@ -33209,7 +34182,6 @@ export default defineEventHandler(async (event) => {
       successUrl: successUrl || `${baseUrl}/payment/success`,
       failedUrl: failedUrl || `${baseUrl}/payment/failed`,
       language: 'de-CH',
-      spaceId: parseInt(walleeSpaceId),
       autoConfirmationEnabled: true,
       customerEmailAddress: customerEmail,
       metaData: {
@@ -33829,7 +34801,7 @@ const isAdmin = computed(() => {
           is_active,
           preferred_payment_method
         `)
-        .eq('id', userId)
+        .eq('auth_user_id', userId) 
         .eq('is_active', true)
         .single()
 
