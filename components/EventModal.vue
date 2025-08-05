@@ -115,14 +115,13 @@
           <!-- Title Input -->
           <div> 
             <TitleInput
-              :title="formData.title"
+              v-model:title="formData.title"
               :event-type="formData.eventType as 'lesson' | 'staff_meeting' | 'other'"
               :selected-student="selectedStudent"
               :selected-special-type="formData.selectedSpecialType"
               :category-code="formData.type"
               :selected-location="selectedLocation"
               :disabled="mode === 'view'"
-              @update:title="formData.title = $event"
               @title-generated="handleTitleGenerated"
             />
           </div>
@@ -209,18 +208,6 @@
               @products-changed="handleProductsChanged"
             />
           </div>
-
-           <!-- ✅ DEBUG BUTTONS -->
-            <div class="bg-red-100 p-4 m-4 rounded">
-              <h3>DEBUG PAYMENT METHOD</h3>
-              <p>Current formData.payment_method: {{ formData.payment_method }}</p>
-              <button @click="debugPaymentMethod" class="bg-blue-500 text-white p-2 rounded mr-2">
-                Check Payment Method
-              </button>
-              <button @click="setOnlineManually" class="bg-green-500 text-white p-2 rounded">
-                Set to Online Manually
-              </button>
-            </div>
 
           <!-- Error Display -->
           <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -415,10 +402,6 @@ const handleCustomerInvites = async (appointmentData: any) => {
 }
 
 // EventModal.vue - im script setup:
-const debugPaymentMethod = () => {
-  console.log('🔍 Current formData.payment_method:', formData.value.payment_method)
-  console.log('🔍 Full formData:', formData.value)
-}
 
 const setOnlineManually = () => {
   console.log('🔧 Setting payment method to online manually')

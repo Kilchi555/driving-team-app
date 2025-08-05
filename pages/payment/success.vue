@@ -54,7 +54,7 @@
             @click="goToCalendar"
             class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
           >
-            Zurück zum Kalender
+            Zurück zum Dashboard
           </button>
           
           <button
@@ -181,7 +181,7 @@ const formatDate = (dateString: string): string => {
 }
 
 const goToCalendar = () => {
-  router.push('/')
+  router.push('/customer-dashboard')
 }
 
 const downloadReceipt = async () => {

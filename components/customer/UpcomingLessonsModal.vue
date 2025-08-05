@@ -27,34 +27,6 @@
         <div class="bg-gray-50 rounded-lg p-4">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
             
-            <!-- Filter nach Status -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                v-model="filterStatus"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
-              >
-                <option value="all" class="text-gray-600">Alle Termine</option>
-                <option value="upcoming" class="text-gray-600">Kommende</option>
-                <option value="today" class="text-gray-600">Heute</option>
-                <option value="this_week" class="text-gray-600">Diese Woche</option>
-              </select>
-            </div>
-            
-            <!-- Filter nach Kategorie -->
-            <div v-if="availableCategories.length > 1">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie</label>
-              <select
-                v-model="filterCategory"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
-              >
-                <option value="all" class="text-gray-600">Alle Kategorien</option>
-                <option v-for="category in availableCategories" :key="category" :value="category" class="text-gray-600">
-                  {{ category }}
-                </option>
-              </select>
-            </div>
-            
             <!-- Sortierung Switch -->
             <div class="flex gap-6">
               <div>
@@ -130,9 +102,6 @@
                 <div class="mt-2 text-sm text-gray-600">
                     <span>📍 {{ lesson.location_name || 'Ort wird noch bekannt gegeben' }}</span>
                 </div>
-                <div v-if="lesson.price_per_minute && lesson.duration_minutes" class="text-right text-xs text-gray-500">
-                  CHF {{ calculatePrice(lesson).toFixed(2) }}
-                </div>
           </div>
         </div>
       </div>
@@ -179,17 +148,35 @@ const formatLessonDate = (dateString: string) => {
 }
 
 const formatTimeRange = (startTime: string, endTime: string) => {
-  const start = new Date(startTime)
-  const end = new Date(endTime)
+  console.log('🔍 RAW DB DATA:', { startTime, endTime })
   
-  const startStr = start.toLocaleTimeString('de-CH', { 
-    hour: '2-digit', 
+  // ✅ KRITISCHER FIX: Entferne das +00:00 UTC-Suffix
+  const cleanStartTime = startTime.replace('+00:00', '').replace('T', ' ')
+  const cleanEndTime = endTime.replace('+00:00', '').replace('T', ' ')
+  
+  console.log('🔍 CLEANED TIMES:', { cleanStartTime, cleanEndTime })
+  
+  // Jetzt wird es als lokale Zeit interpretiert
+  const start = new Date(cleanStartTime)
+  const end = new Date(cleanEndTime)
+  
+  console.log('🔍 PARSED AS LOCAL:', {
+    start_getHours: start.getHours(),
+    start_getMinutes: start.getMinutes(),
+    should_show: '06:00'
+  })
+  
+  const startStr = start.toLocaleTimeString('de-CH', {
+    hour: '2-digit',
     minute: '2-digit'
   })
-  const endStr = end.toLocaleTimeString('de-CH', { 
-    hour: '2-digit', 
+  
+  const endStr = end.toLocaleTimeString('de-CH', {
+    hour: '2-digit',
     minute: '2-digit'
   })
+  
+  console.log('🔍 FINAL OUTPUT:', { startStr, endStr })
   
   return `${startStr} - ${endStr}`
 }

@@ -4,6 +4,8 @@ import { getSupabase } from '~/utils/supabase'
 import { useTimeCalculations } from '~/composables/useTimeCalculations'
 import { useCategoryData } from '~/composables/useCategoryData'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { useAutoAssignStaff } from '~/composables/useAutoAssignStaff'
+
 
 export const useEventTypes = () => {
   const eventTypesCache = ref<string[]>([])
@@ -139,6 +141,7 @@ export const useEventModalForm = (currentUser?: any, refs?: {
     // ✅ Composables initialisieren
   const categoryData = useCategoryData()
   const eventTypes = useEventTypes()
+  const { checkFirstAppointmentAssignment } = useAutoAssignStaff()
   const supabase = getSupabase()
 
   const customerInviteSelectorRef = ref()
@@ -183,6 +186,7 @@ export const useEventModalForm = (currentUser?: any, refs?: {
   const availableDurations = ref<number[]>([45])
   const appointmentNumber = ref<number>(1)
   const selectedLessonType = ref('lesson')
+
   
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -715,6 +719,7 @@ const appointmentData = {
     })
     
     console.log('💾 Saving appointment data:', cleanedAppointmentData)
+    
 
     // Dann cleanedAppointmentData verwenden statt appointmentData:
     let result
@@ -739,6 +744,29 @@ const appointmentData = {
     console.log('✅ Appointment saved:', result?.data?.id || 'offline')
 
 const savedAppointmentId = result.data.id
+
+// ✅ AUTO-ASSIGNMENT beim ersten Termin mit spezifischem Staff
+if (savedAppointmentId && 
+    cleanedAppointmentData.user_id && 
+    cleanedAppointmentData.staff_id &&
+    !String(savedAppointmentId).startsWith('temp_')) {
+  
+  try {
+    const assignment = await checkFirstAppointmentAssignment({
+      user_id: cleanedAppointmentData.user_id,
+      staff_id: cleanedAppointmentData.staff_id
+    })
+    
+    if (assignment.assigned) {
+      console.log(`✅ Auto-Assignment: ${assignment.studentName} - Staff hinzugefügt (${assignment.totalStaff} Staff total)`)
+    } else {
+      console.log(`ℹ️ No auto-assignment: ${assignment.reason}`)
+    }
+  } catch (assignmentError) {
+    console.error('❌ Auto-Assignment Fehler:', assignmentError)
+    // Fehler nicht weiterwerfen - Termin ist bereits gespeichert
+  }
+}
 
 // useEventModalForm.ts - ändere den Debug:
 console.log('🔍 DEBUG Payment Method:', {

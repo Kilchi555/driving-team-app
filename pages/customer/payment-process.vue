@@ -5,15 +5,22 @@
       <div class="bg-white rounded-lg shadow-lg overflow-hidden">
         
         <!-- Header -->
-        <div class="bg-blue-600 text-white p-6 text-center">
-          <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex justify-between items-center bg-blue-600 text-white p-4">
+          <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
             </svg>
           </div>
           <h1 class="text-2xl font-bold">Zahlungsübersicht</h1>
-          <p class="text-blue-100 mt-2">Überprüfen Sie Ihre Zahlungsdetails</p>
         </div>
+
+            <button
+                @click="router.push('/customer-dashboard')"
+              :disabled="isProcessing"
+              class="mt-2 w-full border text-gray-500 py-2 px-4 hover:bg-gray-700 transition-colors disabled:opacity-50"
+            >
+              <- Zurück
+            </button>
 
         <!-- Loading State -->
         <div v-if="isLoading" class="p-6 text-center">
@@ -22,7 +29,7 @@
         </div>
 
         <!-- Payment Details -->
-        <div v-else-if="paymentDetails.length > 0" class="p-6">
+        <div v-else-if="paymentDetails.length > 0" class="p-4">
           <!-- Summary Card -->
           <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 mb-6 border border-green-200">
             <div class="flex justify-between items-center">
@@ -31,8 +38,7 @@
                 <p class="text-sm text-gray-600">{{ paymentDetails.length }} {{ paymentDetails.length === 1 ? 'Position' : 'Positionen' }}</p>
               </div>
               <div class="text-right">
-                <p class="text-2xl font-bold text-gray-900">CHF {{ totalAmount.toFixed(2) }}</p>
-                <p class="text-sm text-gray-600">inkl. Gebühren</p>
+                <p class="text-xl font-bold text-gray-900">CHF {{ totalAmount.toFixed(2) }}</p>
               </div>
             </div>
           </div>
@@ -112,29 +118,6 @@
             </div>
           </div>
 
-          <!-- Payment Method Selection -->
-          <div class="bg-gray-50 rounded-lg p-4 mb-6">
-            <h4 class="font-medium text-gray-900 mb-3">Zahlungsart wählen</h4>
-            <div class="grid grid-cols-2 gap-3">
-              <button
-                @click="selectedPaymentMethod = 'twint'"
-                :class="selectedPaymentMethod === 'twint' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'"
-                class="border-2 rounded-lg p-3 text-center hover:border-blue-300 transition-colors"
-              >
-                <div class="text-lg font-medium">💳</div>
-                <div class="text-sm font-medium text-gray-600">Twint</div>
-              </button>
-              <button
-                @click="selectedPaymentMethod = 'card'"
-                :class="selectedPaymentMethod === 'card' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'"
-                class="border-2 rounded-lg p-3 text-center hover:border-blue-300 transition-colors"
-              >
-                <div class="text-lg font-medium">💳</div>
-                <div class="text-sm font-medium text-gray-600">Kreditkarte</div>
-              </button>
-            </div>
-          </div>
-
           <!-- Action Buttons -->
           <div class="space-y-3">
             <button
@@ -146,7 +129,7 @@
             </button>
             
             <button
-              @click="processPayment(false)"
+                @click="router.push('/customer-dashboard')"
               :disabled="isProcessing"
               class="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
             >

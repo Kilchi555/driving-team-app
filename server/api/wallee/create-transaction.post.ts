@@ -1,14 +1,11 @@
 // server/api/wallee/create-transaction.post.ts
-import { toLocalTimeString } from '~/utils/dateUtils'
-
+// ✅ TEMPORÄRER DEBUG - Hardcoded Credentials
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🔥 Wallee API called')
+    console.log('🔥 Wallee API called with HARDCODED credentials')
     
-    // Body aus der Anfrage lesen
     const body = await readBody(event)
-    
     console.log('📨 Received body:', body)
     
     const {
@@ -31,29 +28,42 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Wallee Konfiguration aus Environment Variables
-    const walleeSpaceId = process.env.WALLEE_SPACE_ID
-    const walleeApplicationUserId = process.env.WALLEE_APPLICATION_USER_ID
-    const walleeSecretKey = process.env.WALLEE_SECRET_KEY
+    // ✅ HARDCODED Wallee Credentials (temporär für Debug)
+    const walleeSpaceId = '82592'  
+    const walleeApplicationUserId = '140525'  
+    const walleeSecretKey = 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
 
-    console.log('🔧 Wallee Config Check:', {
-      hasSpaceId: !!walleeSpaceId,
-      hasUserId: !!walleeApplicationUserId,
+    console.log('🔧 HARDCODED Wallee Config:', {
+      spaceId: walleeSpaceId,
+      userId: walleeApplicationUserId ? `${walleeApplicationUserId.substring(0, 3)}...` : 'MISSING',
       hasSecretKey: !!walleeSecretKey,
-      spaceId: walleeSpaceId ? `${walleeSpaceId.substring(0, 3)}...` : 'missing',
-      userId: walleeApplicationUserId ? `${walleeApplicationUserId.substring(0, 3)}...` : 'missing'
+      spaceIdLength: walleeSpaceId?.length,
+      userIdLength: walleeApplicationUserId?.length,
+      secretKeyLength: walleeSecretKey?.length
     })
 
     if (!walleeSpaceId || !walleeApplicationUserId || !walleeSecretKey) {
-      console.error('❌ Wallee configuration missing')
+      console.error('❌ Hardcoded credentials missing')
       throw createError({
         statusCode: 500,
-        statusMessage: 'Wallee configuration missing in environment variables'
+        statusMessage: 'Hardcoded Wallee credentials missing'
       })
     }
 
-    // Base64 Authentifizierung für Wallee API
+    // Base64 Authentifizierung
     const auth = Buffer.from(`${walleeApplicationUserId}:${walleeSecretKey}`).toString('base64')
+    
+    // ✅ TEMPORÄRER DEBUG - für Marco
+    console.log('🔐 DEBUG für Marco:')
+    console.log('Auth String Raw:', `${walleeApplicationUserId}:${walleeSecretKey}`)
+    console.log('Auth Base64:', auth)
+    console.log('Auth Header wird sein:', `Basic ${auth}`)
+
+    console.log('🔐 HARDCODED Auth Debug:', {
+      authStringLength: `${walleeApplicationUserId}:${walleeSecretKey}`.length,
+      base64Length: auth.length,
+      authPreview: `${auth.substring(0, 20)}...`
+    })
 
     // Get request host for URLs
     const host = getHeader(event, 'host') || 'localhost:3000'
@@ -79,80 +89,80 @@ export default defineEventHandler(async (event) => {
       language: 'de-CH',
       autoConfirmationEnabled: true,
       customerEmailAddress: customerEmail,
-      metaData: {
+      metadata: {
         appointmentId: appointmentId,
-        createdAt: toLocalTimeString(new Date)
+        createdAt: new Date().toISOString()
       }
     }
 
-    console.log('🔄 Creating Wallee transaction:', {
+    console.log('🔄 Creating Wallee transaction with HARDCODED credentials:', {
       spaceId: walleeSpaceId,
       amount: amount,
       currency: currency,
-      customerId: customerId
+      customerId: customerId,
+      url: `https://app-wallee.com/api/transaction/create?spaceId=${walleeSpaceId}`
     })
 
-    // Wallee Transaction erstellen
-    const response = await $fetch<any>(
-      `https://app-wallee.com/api/transaction/create?spaceId=${walleeSpaceId}`,
-      {
-        method: 'POST',
-        body: transactionData,
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+    console.log('📋 Transaction Data:', JSON.stringify(transactionData, null, 2))
+
+    // ✅ WALLEE Transaction erstellen
+    console.log('🔄 About to call Wallee Transaction API with HARDCODED auth...')
+    
+    let response: any
+    
+    try {
+      response = await $fetch<any>(
+        `https://app-wallee.com/api/transaction/create?spaceId=${walleeSpaceId}`,
+        {
+          method: 'POST',
+          body: transactionData,
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
         }
+      )
+      
+      console.log('✅ HARDCODED SUCCESS! Wallee response:', response)
+      
+    } catch (fetchError: any) {
+      console.error('❌ HARDCODED FAILED! Wallee Transaction Error:', {
+        message: fetchError.message,
+        statusCode: fetchError.statusCode,
+        data: fetchError.data,
+        walleeMessage: fetchError.data?.message
+      })
+      
+      if (fetchError.statusCode === 442) {
+        console.error('🚨 STILL 442 with hardcoded credentials!')
+        console.error('🚨 This means either:')
+        console.error('1. Wrong Application User ID copied')
+        console.error('2. Wrong Secret Key copied') 
+        console.error('3. Different issue than credentials')
+        
+        throw createError({
+          statusCode: 442,
+          statusMessage: `HARDCODED TEST: Still 442 error. Wallee Error: ${fetchError.data?.message || 'Unknown'}`
+        })
       }
-    )
+      
+      throw createError({
+        statusCode: fetchError.statusCode || 500,
+        statusMessage: `HARDCODED TEST: ${fetchError.data?.message || fetchError.message || 'Unknown error'}`
+      })
+    }
 
-    console.log('✅ Wallee transaction created:', {
-      id: response?.id,
-      state: response?.state,
-      amount: response?.authorizationAmount
-    })
-
-    // Payment Page URL erstellen
-    const paymentPageUrl = await $fetch<string>(
-      `https://app-wallee.com/api/transaction-payment-page/payment-page-url?spaceId=${walleeSpaceId}`,
-      {
-        method: 'POST',
-        body: {
-          id: response?.id
-        },
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      }
-    )
-
-    console.log('✅ Payment page URL created:', paymentPageUrl)
-
+    // Success handling...
     return {
       success: true,
-      transactionId: response?.id,
-      paymentUrl: paymentPageUrl,
+      transactionId: response.id,
+      paymentUrl: 'HARDCODED_TEST_SUCCESS',
       transaction: response
     }
 
   } catch (error: any) {
-    console.error('❌ Wallee API Error:', error)
-    
-    // Spezifische Fehlerbehandlung für Wallee API Fehler
-    if (error.data) {
-      console.error('❌ Wallee API Response Error:', error.data)
-      throw createError({
-        statusCode: error.statusCode || 500,
-        statusMessage: error.data.message || 'Wallee API Error'
-      })
-    }
-
-    // Allgemeine Fehlerbehandlung
-    throw createError({
-      statusCode: error.statusCode || 500,
-      statusMessage: error.message || 'Internal Server Error'
-    })
+    console.error('❌ HARDCODED FINAL Error:', error)
+    throw error
   }
 })

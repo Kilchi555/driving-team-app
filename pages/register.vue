@@ -8,6 +8,15 @@
           <h1 class="text-2xl font-bold text-gray-700">Registrierung</h1>
         </div>
       </div>
+                      <!-- Navigation Back -->
+        <div class="px-6 py-3 bg-gray-50 border-b">
+          <button
+            @click="goBack"
+            class="text-gray-600 hover:text-gray-800 flex items-center text-sm"
+          >
+            ← Zurück zur Auswahl
+          </button>
+        </div>
 
       <!-- Progress Steps -->
       <div class="px-6 py-4 bg-gray-50 border-b">
@@ -567,6 +576,14 @@ const nextStep = () => {
 
 const prevStep = () => {
   currentStep.value--
+}
+
+const goBack = () => {
+  if (typeof navigateTo !== 'undefined') {
+    navigateTo('/auswahl')
+  } else {
+    window.location.href = '/auswahl'
+  }
 }
 
 // Camera functions

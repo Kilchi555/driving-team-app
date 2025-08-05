@@ -41,7 +41,7 @@
         <!-- Add Student Button (nur Desktop) -->
         <button 
           v-if="currentUser.role !== 'client'"
-          @click="showAddModal = true"
+            @click="navigateToAuswahl"
           class="hidden sm:block bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
         >
           + Neu
@@ -56,38 +56,32 @@
             v-model="searchQuery"
             type="text"
             placeholder="Schüler suchen (Name oder E-Mail)..."
-            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            class="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
           >
           <div class="absolute left-3 top-2.5 text-gray-400">
-            🔍
           </div>
         </div>
 
         <!-- Filter Toggles -->
+        <!-- Filter Toggles -->
         <div class="flex gap-4 items-center text-sm">
           <!-- Inactive Toggle -->
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input
-              v-model="showInactive"
-              type="checkbox"
-              class="rounded border-gray-300 text-green-600 focus:ring-green-500"
-            >
-            <span class="text-gray-700">Inaktive</span>
-          </label>
+          <div class="flex items-center justify-between rounded-lg">
+            <span class="text-sm font-medium text-gray-700 mr-2">Inaktive</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input v-model="showInactive" type="checkbox" class="sr-only peer">
+              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
 
           <!-- All Students Toggle (nur für Staff) -->
-          <label 
-            v-if="currentUser.role === 'staff'" 
-            class="flex items-center gap-2 cursor-pointer"
-          >
-            <input
-              v-model="showAllStudents"
-              type="checkbox"
-              class="rounded border-gray-300 text-green-600 focus:ring-green-500"
-              @change="loadStudents"
-            >
-            <span class="text-gray-700">Alle Fahrschüler</span>
-          </label>
+          <div v-if="currentUser.role === 'staff' || 'admin'" class="flex items-center justify-between rounded-lg">
+            <span class="text-sm font-medium text-gray-700 mr-2">Alle Fahrschüler</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input v-model="showAllStudents" type="checkbox" class="sr-only peer" @change="loadStudents">
+              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
         </div>
 
         <!-- Statistics -->
@@ -95,7 +89,6 @@
           <span>Gesamt: {{ students.length }}</span>
           <span>Aktiv: {{ students.filter(s => s.is_active).length }}</span>
           <span>Inaktiv: {{ students.filter(s => !s.is_active).length }}</span>
-          <span v-if="searchQuery">Gefiltert: {{ filteredStudents.length }}</span>
         </div>
       </div>
     </div>
@@ -176,7 +169,9 @@
                   <div class="space-y-0.5">
                     <p v-if="student.phone" class="text-sm text-gray-600 flex items-center gap-1">
                       <span class="text-xs">📱</span>
-                      {{ formatPhone(student.phone) }}
+                      <a :href="`tel:${student.phone}`" class="text-blue-600 hover:text-blue-800 hover:underline"  @click.stop>
+                        {{ formatPhone(student.phone) }}
+                      </a>                    
                     </p>
                   </div>
                 </div>

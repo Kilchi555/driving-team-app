@@ -247,13 +247,14 @@
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span class="font-medium">{{ companyBillingAddress.company_name }}</span><br>
-                    <span>{{ companyBillingAddress.contact_person }}</span><br>
-                    <span>{{ companyBillingAddress.street }} {{ companyBillingAddress.street_number || '' }}</span><br>
-                    <span>{{ companyBillingAddress.zip }} {{ companyBillingAddress.city }}</span>
+                    <span class="font-medium text-gray-600">{{ companyBillingAddress.company_name }}</span><br>
+                    <span class="text-gray-600">{{ companyBillingAddress.contact_person }}</span><br>
+                    <span class="text-gray-600">{{ companyBillingAddress.street }} {{ companyBillingAddress.street_number || '' }}</span><br>
+                    <span class="text-gray-600">{{ companyBillingAddress.zip }} {{ companyBillingAddress.city }}</span>
                   </div>
                   <div>
-                    <span class="text-gray-600">E-Mail:</span> {{ companyBillingAddress.email }}<br>
+                    <span class="font-medium text-gray-600">E-Mail: </span>
+                    <a :href="emailLink" class="text-blue-600 hover:text-blue-800"> {{ companyBillingAddress.email }}</a><br>
                     <span v-if="companyBillingAddress.phone" class="text-gray-600">Telefon:</span> 
                     <span v-if="companyBillingAddress.phone">{{ companyBillingAddress.phone }}</span><br>
                     <span v-if="companyBillingAddress.vat_number" class="text-gray-600">MwSt-Nr:</span> 

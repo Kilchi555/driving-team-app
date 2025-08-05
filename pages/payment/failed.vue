@@ -52,7 +52,7 @@
             @click="goToCalendar"
             class="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
           >
-            Zurück zum Kalender
+            Zurück zum Dashboard
           </button>
           
           <button
@@ -160,7 +160,7 @@ const retryPayment = () => {
 }
 
 const goToCalendar = () => {
-  router.push('/')
+  router.push('/customer-dashboard')
 }
 
 const contactSupport = () => {

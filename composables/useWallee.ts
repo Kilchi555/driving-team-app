@@ -45,7 +45,7 @@ export const useWallee = () => {
       }
 
       // API Call zu deiner Wallee Route
-const response = await $fetch('/api/mock/create-transaction', {
+const response = await $fetch('/api/wallee/test-connection', {
         method: 'POST',
         body: {
           appointmentId: request.appointmentId,

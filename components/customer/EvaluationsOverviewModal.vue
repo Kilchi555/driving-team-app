@@ -9,11 +9,6 @@
             <h3 class="text-xl font-semibold text-gray-900">
               Meine Bewertungen
             </h3>
-            <p v-if="availableDrivingCategories.length > 0" class="text-sm text-gray-600 mt-1">
-              {{ availableDrivingCategories.length === 1 
-                ? `Kategorie ${availableDrivingCategories[0]}` 
-                : `Kategorien: ${availableDrivingCategories.join(', ')}` }}
-            </p>
           </div>
           <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-2xl">
             ✕

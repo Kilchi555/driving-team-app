@@ -1,5 +1,5 @@
 === DRIVING TEAM PROJECT - AKTUELLER EXPORT ===
-Generated: Sun Aug  3 16:10:15 CEST 2025
+Generated: Tue Aug  5 05:21:05 CEST 2025
 
 ### ./app.vue
 ```vue
@@ -5404,14 +5404,13 @@ input:focus, textarea:focus {
           <!-- Title Input -->
           <div> 
             <TitleInput
-              :title="formData.title"
+              v-model:title="formData.title"
               :event-type="formData.eventType as 'lesson' | 'staff_meeting' | 'other'"
               :selected-student="selectedStudent"
               :selected-special-type="formData.selectedSpecialType"
               :category-code="formData.type"
               :selected-location="selectedLocation"
               :disabled="mode === 'view'"
-              @update:title="formData.title = $event"
               @title-generated="handleTitleGenerated"
             />
           </div>
@@ -5498,18 +5497,6 @@ input:focus, textarea:focus {
               @products-changed="handleProductsChanged"
             />
           </div>
-
-           <!-- ✅ DEBUG BUTTONS -->
-            <div class="bg-red-100 p-4 m-4 rounded">
-              <h3>DEBUG PAYMENT METHOD</h3>
-              <p>Current formData.payment_method: {{ formData.payment_method }}</p>
-              <button @click="debugPaymentMethod" class="bg-blue-500 text-white p-2 rounded mr-2">
-                Check Payment Method
-              </button>
-              <button @click="setOnlineManually" class="bg-green-500 text-white p-2 rounded">
-                Set to Online Manually
-              </button>
-            </div>
 
           <!-- Error Display -->
           <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -5704,10 +5691,6 @@ const handleCustomerInvites = async (appointmentData: any) => {
 }
 
 // EventModal.vue - im script setup:
-const debugPaymentMethod = () => {
-  console.log('🔍 Current formData.payment_method:', formData.value.payment_method)
-  console.log('🔍 Full formData:', formData.value)
-}
 
 const setOnlineManually = () => {
   console.log('🔧 Setting payment method to online manually')
@@ -6179,7 +6162,7 @@ const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, ap
     'C': { pricePerLesson: 170, adminFee: 200, adminFrom: 2 },
     'CE': { pricePerLesson: 200, adminFee: 250, adminFrom: 2 },
     'D': { pricePerLesson: 200, adminFee: 300, adminFrom: 2 },
-    'Motorboot': { pricePerLesson: 95, adminFee: 120, adminFrom: 2 },
+    'BOAT': { pricePerLesson: 95, adminFee: 120, adminFrom: 2 },
     'BPT': { pricePerLesson: 100, adminFee: 120, adminFrom: 2 }
   }
   
@@ -17095,13 +17078,14 @@ tbody tr:hover {
               <div class="bg-gray-50 rounded-lg p-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span class="font-medium">{{ companyBillingAddress.company_name }}</span><br>
-                    <span>{{ companyBillingAddress.contact_person }}</span><br>
-                    <span>{{ companyBillingAddress.street }} {{ companyBillingAddress.street_number || '' }}</span><br>
-                    <span>{{ companyBillingAddress.zip }} {{ companyBillingAddress.city }}</span>
+                    <span class="font-medium text-gray-600">{{ companyBillingAddress.company_name }}</span><br>
+                    <span class="text-gray-600">{{ companyBillingAddress.contact_person }}</span><br>
+                    <span class="text-gray-600">{{ companyBillingAddress.street }} {{ companyBillingAddress.street_number || '' }}</span><br>
+                    <span class="text-gray-600">{{ companyBillingAddress.zip }} {{ companyBillingAddress.city }}</span>
                   </div>
                   <div>
-                    <span class="text-gray-600">E-Mail:</span> {{ companyBillingAddress.email }}<br>
+                    <span class="font-medium text-gray-600">E-Mail: </span>
+                    <a :href="emailLink" class="text-blue-600 hover:text-blue-800"> {{ companyBillingAddress.email }}</a><br>
                     <span v-if="companyBillingAddress.phone" class="text-gray-600">Telefon:</span> 
                     <span v-if="companyBillingAddress.phone">{{ companyBillingAddress.phone }}</span><br>
                     <span v-if="companyBillingAddress.vat_number" class="text-gray-600">MwSt-Nr:</span> 
@@ -18223,32 +18207,6 @@ onMounted(() => {
       </div>
     </div>
 
-<!-- Pending Payment Notifications -->
-<div v-if="pendingPayments.length > 0" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-  <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-    <div class="flex items-center space-x-3">
-      <span class="text-2xl">💳</span>
-      <div class="flex-1">
-        <h3 class="font-semibold text-orange-900">Zahlung erforderlich</h3>
-        <p class="text-sm text-orange-700">
-          <span v-if="pendingPayments.length === 1">
-            Sie haben eine offene Zahlung.
-          </span>
-          <span v-else>
-            Sie haben {{ pendingPayments.length }} offene Zahlungen.
-          </span>
-        </p>
-      </div>
-      <button 
-        @click="processPendingPayments"
-        class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-      >
-        Jetzt bezahlen
-      </button>
-    </div>
-  </div>
-</div>
-
     <!-- Main Content -->
     <div v-if="showContent" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
@@ -18354,228 +18312,6 @@ onMounted(() => {
                 class="w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
               >
                 Bewertungen ansehen
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="bg-white rounded-xl shadow-lg border border-gray-100 mb-8">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-xl font-semibold text-gray-900 flex items-center">
-            <svg class="w-6 h-6 text-gray-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            Schnellaktionen
-          </h2>
-        </div>
-        <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            <!-- Termine verwalten -->
-            <div class="group cursor-pointer">
-              <div class="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-4 hover:shadow-md transition-all group-hover:from-green-100 group-hover:to-green-200">
-                <div class="flex items-center space-x-3">
-                  <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 class="font-medium text-gray-900">Termine verwalten</h3>
-                    <p class="text-sm text-gray-600">Anzeigen, buchen, ändern</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Zahlungen verwalten -->
-            <div class="group cursor-pointer" @click="navigateToPayments">
-              <div class="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4 hover:shadow-md transition-all group-hover:from-purple-100 group-hover:to-purple-200">
-                <div class="flex items-center space-x-3">
-                  <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 class="font-medium text-gray-900">Zahlungen</h3>
-                    <p class="text-sm text-gray-600">Rechnungen & Bezahlung</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Bewertungen ansehen -->
-            <div class="group cursor-pointer" @click="showEvaluationsModal = true">
-              <div class="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-all group-hover:from-blue-100 group-hover:to-blue-200">
-                <div class="flex items-center space-x-3">
-                  <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 class="font-medium text-gray-900">Meine Bewertungen</h3>
-                    <p class="text-sm text-gray-600">Fortschritt anzeigen</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Activity -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        <!-- Nächste Termine -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-100">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900 flex items-center">
-              <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Nächste Termine
-            </h2>
-          </div>
-          <div class="p-6">
-            <div v-if="upcomingAppointments.length === 0" class="text-center py-8">
-              <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p class="text-gray-500">Keine kommenden Termine</p>
-            </div>
-            
-            <div v-else class="space-y-4">
-              <div 
-                v-for="appointment in upcomingAppointments.slice(0, 3)" 
-                :key="appointment.id"
-                class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div class="flex justify-between items-start">
-                  <div>
-                    <h3 class="font-medium text-gray-900">{{ appointment.title || 'Fahrstunde' }}</h3>
-                    <p class="text-sm text-gray-600 mt-1">
-                      {{ formatDateTime(appointment.start_time) }}
-                    </p>
-                    <p class="text-sm text-gray-500 mt-1">
-                      {{ appointment.duration_minutes }} Minuten
-                    </p>
-                  </div>
-                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                    {{ appointment.status }}
-                  </span>
-                </div>
-              </div>
-              
-              <button 
-                v-if="upcomingAppointments.length > 3"
-                @click="showUpcomingLessonsModal = true"
-                class="w-full text-center py-2 text-green-600 hover:text-green-700 text-sm font-medium"
-              >
-                Alle {{ upcomingAppointments.length }} Termine anzeigen →
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Letzte Bewertungen -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-100">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900 flex items-center">
-              <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              Letzte Bewertungen
-            </h2>
-          </div>
-          <div class="p-6">
-            <div v-if="recentEvaluations.length === 0" class="text-center py-8">
-              <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              <p class="text-gray-500">Noch keine Bewertungen</p>
-            </div>
-            
-            <div v-else class="space-y-4">
-              <div 
-                v-for="evaluation in recentEvaluations.slice(0, 3)" 
-                :key="evaluation.lesson_id"
-                class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-              >
-                <!-- Termin Header -->
-                <div class="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 class="font-medium text-gray-900">{{ evaluation.lesson_title }}</h3>
-                    <p class="text-sm text-gray-600">
-                      {{ formatDateTime(evaluation.lesson_date) }}
-                    </p>
-                  </div>
-                  <div class="text-right">
-                    <span :class="getRatingColorPreview(Math.round(evaluation.average_rating))" 
-                          class="inline-flex px-2 py-1 rounded-full text-xs font-semibold">
-                      ⌀ {{ evaluation.average_rating.toFixed(1) }}/6
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Bewertungen für diesen Termin -->
-                <div class="space-y-2">
-                  <div 
-                    v-for="criteriaEval in evaluation.criteria_evaluations.slice(0, 3)" 
-                    :key="criteriaEval.criteria_id"
-                    class="flex justify-between items-center"
-                  >
-                    <span class="text-sm text-gray-700">{{ criteriaEval.criteria_name }}</span>
-                    <span :class="getRatingColorPreview(criteriaEval.criteria_rating)" 
-                          class="inline-flex px-2 py-1 rounded-full text-xs font-semibold">
-                      {{ criteriaEval.criteria_rating }}/6
-                    </span>
-                  </div>
-                  
-                  <!-- "Weitere" Anzeige wenn mehr als 3 Kriterien -->
-                  <div v-if="evaluation.criteria_evaluations.length > 3" class="text-xs text-gray-500 text-center pt-1">
-                    ... und {{ evaluation.criteria_evaluations.length - 3 }} weitere
-                  </div>
-                </div>
-              </div>
-              
-              <button 
-                v-if="recentEvaluations.length > 3"
-                @click="showEvaluationsModal = true"
-                class="w-full text-center py-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
-              >
-                Alle {{ recentEvaluations.length }} bewerteten Termine anzeigen →
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Zahlungshinweis (falls offene Rechnungen) -->
-      <div v-if="unpaidAppointments.length > 0" class="mt-6">
-        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 rounded-lg p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <svg class="h-6 w-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="ml-4">
-              <h3 class="text-lg font-medium text-yellow-800">
-                Sie haben {{ unpaidAppointments.length }} offene Rechnung{{ unpaidAppointments.length > 1 ? 'en' : '' }}
-              </h3>
-              <p class="mt-2 text-yellow-700">
-                Gesamtbetrag: <strong>CHF {{ (totalUnpaidAmount / 100).toFixed(2) }}</strong>
-              </p>
-              <button
-                @click="navigateToPayments"
-                class="mt-4 bg-yellow-500 text-white px-6 py-2 rounded-lg hover:bg-yellow-600 transition-colors font-medium"
-              >
-                💳 Jetzt bezahlen
               </button>
             </div>
           </div>
@@ -19170,11 +18906,6 @@ onMounted(async () => {
             <h3 class="text-xl font-semibold text-gray-900">
               Meine Bewertungen
             </h3>
-            <p v-if="availableDrivingCategories.length > 0" class="text-sm text-gray-600 mt-1">
-              {{ availableDrivingCategories.length === 1 
-                ? `Kategorie ${availableDrivingCategories[0]}` 
-                : `Kategorien: ${availableDrivingCategories.join(', ')}` }}
-            </p>
           </div>
           <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-2xl">
             ✕
@@ -19664,34 +19395,6 @@ const stats = computed(() => {
         <div class="bg-gray-50 rounded-lg p-4">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
             
-            <!-- Filter nach Status -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                v-model="filterStatus"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
-              >
-                <option value="all" class="text-gray-600">Alle Termine</option>
-                <option value="upcoming" class="text-gray-600">Kommende</option>
-                <option value="today" class="text-gray-600">Heute</option>
-                <option value="this_week" class="text-gray-600">Diese Woche</option>
-              </select>
-            </div>
-            
-            <!-- Filter nach Kategorie -->
-            <div v-if="availableCategories.length > 1">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie</label>
-              <select
-                v-model="filterCategory"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
-              >
-                <option value="all" class="text-gray-600">Alle Kategorien</option>
-                <option v-for="category in availableCategories" :key="category" :value="category" class="text-gray-600">
-                  {{ category }}
-                </option>
-              </select>
-            </div>
-            
             <!-- Sortierung Switch -->
             <div class="flex gap-6">
               <div>
@@ -19767,9 +19470,6 @@ const stats = computed(() => {
                 <div class="mt-2 text-sm text-gray-600">
                     <span>📍 {{ lesson.location_name || 'Ort wird noch bekannt gegeben' }}</span>
                 </div>
-                <div v-if="lesson.price_per_minute && lesson.duration_minutes" class="text-right text-xs text-gray-500">
-                  CHF {{ calculatePrice(lesson).toFixed(2) }}
-                </div>
           </div>
         </div>
       </div>
@@ -19815,18 +19515,40 @@ const formatLessonDate = (dateString: string) => {
   }
 }
 
+// ✅ DEBUG VERSION - Fügen Sie diese temporär ein:
+
+// ✅ LÖSUNG: UTC-Suffix entfernen und als lokale Zeit interpretieren
+
 const formatTimeRange = (startTime: string, endTime: string) => {
-  const start = new Date(startTime)
-  const end = new Date(endTime)
+  console.log('🔍 RAW DB DATA:', { startTime, endTime })
   
-  const startStr = start.toLocaleTimeString('de-CH', { 
-    hour: '2-digit', 
+  // ✅ KRITISCHER FIX: Entferne das +00:00 UTC-Suffix
+  const cleanStartTime = startTime.replace('+00:00', '').replace('T', ' ')
+  const cleanEndTime = endTime.replace('+00:00', '').replace('T', ' ')
+  
+  console.log('🔍 CLEANED TIMES:', { cleanStartTime, cleanEndTime })
+  
+  // Jetzt wird es als lokale Zeit interpretiert
+  const start = new Date(cleanStartTime)
+  const end = new Date(cleanEndTime)
+  
+  console.log('🔍 PARSED AS LOCAL:', {
+    start_getHours: start.getHours(),
+    start_getMinutes: start.getMinutes(),
+    should_show: '06:00'
+  })
+  
+  const startStr = start.toLocaleTimeString('de-CH', {
+    hour: '2-digit',
     minute: '2-digit'
   })
-  const endStr = end.toLocaleTimeString('de-CH', { 
-    hour: '2-digit', 
+  
+  const endStr = end.toLocaleTimeString('de-CH', {
+    hour: '2-digit',
     minute: '2-digit'
   })
+  
+  console.log('🔍 FINAL OUTPUT:', { startStr, endStr })
   
   return `${startStr} - ${endStr}`
 }
@@ -20239,6 +19961,482 @@ const updateOverdueAppointments = async () => {
     batchUpdateStatus
   }
 }```
+
+### ./composables/useAutoSave.ts
+```ts
+// composables/useAutoSave.ts
+import { ref, watch, onMounted, onUnmounted, computed, readonly, type Ref } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+import { useRoute } from '#app'
+
+export interface AutoSaveConfig {
+  // Eindeutige Kennzeichnung
+  formId: string
+  tableName: string
+  
+  // LocalStorage Einstellungen
+  localStorageKey?: string
+  localStorageExpiry?: number // Stunden, default: 24
+  
+  // Database Einstellungen  
+  databaseSaveDelay?: number // ms nach vollständigem Formular, default: 2000
+  autoSaveInterval?: number // ms für regelmäßiges Speichern, default: 30000
+  draftExpiry?: number // Tage, default: 7
+  
+  // Callbacks
+  onSave?: (data: any) => void
+  onRestore?: (data: any) => void
+  onError?: (error: any) => void
+  
+  // Validierungen
+  isValidForDatabaseSave?: () => boolean
+  transformForSave?: (data: any) => any
+  transformForRestore?: (data: any) => any
+}
+
+export interface RecoveryData {
+  localData?: any
+  databaseData?: any
+  source: 'localStorage' | 'database' | 'url'
+  timestamp: string
+}
+
+export const useAutoSave = <T>(
+  formData: Ref<T>, 
+  config: AutoSaveConfig
+) => {
+  // State
+  const draftId = ref<string | null>(null)
+  const isAutoSaving = ref(false)
+  const lastSaved = ref<Date | null>(null)
+  const showRecoveryModal = ref(false)
+  const recoveryData = ref<RecoveryData | null>(null)
+  const saveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const showSaveMessage = ref(false)
+  
+  // Message display timeout
+  let messageTimeout: NodeJS.Timeout | null = null
+  let showMessageTimeout: NodeJS.Timeout | null = null
+  let lastMessageUpdate = 0
+  let inputActivityTimeout: NodeJS.Timeout | null = null
+  
+  // Config with defaults
+  const finalConfig = {
+    localStorageKey: `autosave-${config.formId}`,
+    localStorageExpiry: 24,
+    databaseSaveDelay: 2000,
+    autoSaveInterval: 30000,
+    draftExpiry: 7,
+    ...config
+  }
+  
+  // Auto-save intervals
+  let databaseSaveTimeout: NodeJS.Timeout | null = null
+  let autoSaveInterval: NodeJS.Timeout | null = null
+  
+  // Computed
+  const canSaveToDatabase = computed(() => {
+    return finalConfig.isValidForDatabaseSave ? finalConfig.isValidForDatabaseSave() : true
+  })
+  
+  const statusMessage = computed(() => {
+    if (isAutoSaving.value) return 'Speichere...'
+    if (showSaveMessage.value && saveStatus.value === 'saved') return 'Gespeichert'
+    return null
+  })
+
+  // Helper function to show save message temporarily
+  const showTemporarySaveMessage = () => {
+    const now = Date.now()
+    
+    // Only update message every 5 seconds
+    if (now - lastMessageUpdate < 5000) return
+    
+    lastMessageUpdate = now
+    
+    // Clear existing timeouts
+    if (messageTimeout) clearTimeout(messageTimeout)
+    if (showMessageTimeout) clearTimeout(showMessageTimeout)
+    
+    // Show message immediately (but will be hidden by input activity)
+    showSaveMessage.value = false
+    
+    // Set timer to show message after 1 second
+    showMessageTimeout = setTimeout(() => {
+      showSaveMessage.value = true
+      
+      // Hide message after 3 seconds
+      messageTimeout = setTimeout(() => {
+        showSaveMessage.value = false
+      }, 3000)
+    }, 1000)
+  }
+
+  // Track input activity
+  const onInputActivity = () => {
+    // Hide message immediately on new input
+    showSaveMessage.value = false
+    
+    // Clear existing activity timeout
+    if (inputActivityTimeout) {
+      clearTimeout(inputActivityTimeout)
+    }
+    
+    // Clear show message timeout
+    if (showMessageTimeout) {
+      clearTimeout(showMessageTimeout)
+    }
+    
+    // Start new activity timeout
+    inputActivityTimeout = setTimeout(() => {
+      // Only show if we recently saved
+      if (saveStatus.value === 'saved') {
+        const now = Date.now()
+        if (now - lastMessageUpdate < 5000) {
+          showSaveMessage.value = true
+          
+          // Hide after 3 seconds
+          messageTimeout = setTimeout(() => {
+            showSaveMessage.value = false
+          }, 3000)
+        }
+      }
+    }, 1000)
+  }
+
+  // === SAVE FUNCTIONS ===
+  
+  const saveToLocalStorage = () => {
+    try {
+      const data = {
+        formData: formData.value,
+        timestamp: new Date().toISOString(),
+        draftId: draftId.value,
+        formId: config.formId
+      }
+      
+      localStorage.setItem(finalConfig.localStorageKey, JSON.stringify(data))
+      lastSaved.value = new Date()
+      saveStatus.value = 'saved'
+      
+      // Don't show message immediately - let input activity handle it
+      const now = Date.now()
+      lastMessageUpdate = now
+      
+      finalConfig.onSave?.(data)
+      console.log(`💾 LocalStorage saved: ${config.formId}`)
+      
+    } catch (error) {
+      saveStatus.value = 'error'
+      finalConfig.onError?.(error)
+      console.error('❌ LocalStorage save failed:', error)
+    }
+  }
+  
+  const saveDraftToDatabase = async () => {
+    if (!canSaveToDatabase.value || isAutoSaving.value) return
+    
+    try {
+      isAutoSaving.value = true
+      saveStatus.value = 'saving'
+      
+      const supabase = getSupabase()
+      
+      // Transform data for database
+      const transformedData = finalConfig.transformForSave 
+        ? finalConfig.transformForSave(formData.value)
+        : formData.value
+      
+      const draftData = {
+        ...transformedData,
+        status: 'draft',
+        expires_at: new Date(Date.now() + finalConfig.draftExpiry * 24 * 60 * 60 * 1000).toISOString(),
+        metadata: {
+          ...transformedData.metadata,
+          form_id: config.formId,
+          last_saved: new Date().toISOString(),
+          auto_save_version: '1.0'
+        }
+      }
+      
+      let result
+      if (draftId.value) {
+        // Update existing draft
+        result = await supabase
+          .from(config.tableName)
+          .update(draftData)
+          .eq('id', draftId.value)
+          .select()
+          .single()
+      } else {
+        // Create new draft
+        result = await supabase
+          .from(config.tableName)
+          .insert(draftData)
+          .select()
+          .single()
+      }
+      
+      if (result.error) throw result.error
+      
+      draftId.value = result.data.id
+      lastSaved.value = new Date()
+      saveStatus.value = 'saved'
+      
+      // Update localStorage with draft ID
+      saveToLocalStorage()
+      
+      finalConfig.onSave?.(result.data)
+      console.log(`✅ Database draft saved: ${config.formId} -> ${draftId.value}`)
+      
+    } catch (error) {
+      saveStatus.value = 'error'
+      finalConfig.onError?.(error)
+      console.error('❌ Database save failed:', error)
+    } finally {
+      isAutoSaving.value = false
+    }
+  }
+  
+  // === RECOVERY FUNCTIONS ===
+  
+  const loadFromLocalStorage = (): any | null => {
+    try {
+      const saved = localStorage.getItem(finalConfig.localStorageKey)
+      if (!saved) return null
+      
+      const data = JSON.parse(saved)
+      const savedDate = new Date(data.timestamp)
+      const expiryMs = finalConfig.localStorageExpiry * 60 * 60 * 1000
+      const isValid = (Date.now() - savedDate.getTime()) < expiryMs
+      
+      if (!isValid) {
+        localStorage.removeItem(finalConfig.localStorageKey)
+        return null
+      }
+      
+      return data
+    } catch (error) {
+      console.error('❌ LocalStorage recovery failed:', error)
+      return null
+    }
+  }
+  
+  const loadDraftFromDatabase = async (id: string): Promise<any | null> => {
+    try {
+      const supabase = getSupabase()
+      
+      const { data, error } = await supabase
+        .from(config.tableName)
+        .select('*')
+        .eq('id', id)
+        .eq('status', 'draft')
+        .single()
+      
+      if (error || !data) return null
+      
+      // Transform data for restoration
+      return finalConfig.transformForRestore 
+        ? finalConfig.transformForRestore(data)
+        : data
+        
+    } catch (error) {
+      console.error('❌ Database recovery failed:', error)
+      return null
+    }
+  }
+  
+  const checkForRecoveryData = async (): Promise<RecoveryData | null> => {
+    // 1. Check URL parameters
+    const route = useRoute()
+    if (route.query.recover) {
+      const dbData = await loadDraftFromDatabase(route.query.recover as string)
+      if (dbData) {
+        return {
+          databaseData: dbData,
+          source: 'url',
+          timestamp: dbData.metadata?.last_saved || new Date().toISOString()
+        }
+      }
+    }
+    
+    // 2. Check LocalStorage
+    const localData = loadFromLocalStorage()
+    if (localData) {
+      // If we have a draft ID, also try to load from database
+      if (localData.draftId) {
+        const dbData = await loadDraftFromDatabase(localData.draftId)
+        if (dbData) {
+          return {
+            localData,
+            databaseData: dbData,
+            source: 'database',
+            timestamp: dbData.metadata?.last_saved || localData.timestamp
+          }
+        }
+      }
+      
+      return {
+        localData,
+        source: 'localStorage',
+        timestamp: localData.timestamp
+      }
+    }
+    
+    return null
+  }
+  
+  // === RESTORE FUNCTIONS ===
+  
+  const restoreFromRecovery = (recovery: RecoveryData) => {
+    try {
+      // Prefer database data over localStorage
+      const dataToRestore = recovery.databaseData || recovery.localData
+      
+      if (recovery.databaseData) {
+        formData.value = dataToRestore.formData || dataToRestore
+        draftId.value = dataToRestore.id
+      } else if (recovery.localData) {
+        formData.value = recovery.localData.formData
+        draftId.value = recovery.localData.draftId
+      }
+      
+      showRecoveryModal.value = false
+      recoveryData.value = null
+      
+      finalConfig.onRestore?.(dataToRestore)
+      console.log(`✅ Data restored from ${recovery.source}`)
+      
+    } catch (error) {
+      finalConfig.onError?.(error)
+      console.error('❌ Restore failed:', error)
+    }
+  }
+  
+  const clearDraft = () => {
+    localStorage.removeItem(finalConfig.localStorageKey)
+    draftId.value = null
+    showRecoveryModal.value = false
+    recoveryData.value = null
+    lastSaved.value = null
+    saveStatus.value = 'idle'
+    
+    console.log(`🗑️ Draft cleared: ${config.formId}`)
+  }
+  
+  // === FINALIZE FUNCTIONS ===
+  
+  const finalizeDraft = async (finalStatus = 'completed') => {
+    if (!draftId.value) return null
+    
+    try {
+      const supabase = getSupabase()
+      
+      const finalData = finalConfig.transformForSave 
+        ? finalConfig.transformForSave(formData.value)
+        : formData.value
+      
+      const { data, error } = await supabase
+        .from(config.tableName)
+        .update({
+          ...finalData,
+          status: finalStatus,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', draftId.value)
+        .select()
+        .single()
+      
+      if (error) throw error
+      
+      // Clear draft after successful finalization
+      clearDraft()
+      
+      return data
+      
+    } catch (error) {
+      finalConfig.onError?.(error)
+      throw error
+    }
+  }
+  
+  // === WATCHERS & LIFECYCLE ===
+  
+  // Watch for form changes -> LocalStorage
+  watch(formData, () => {
+    // Track input activity
+    onInputActivity()
+    
+    // Save to localStorage
+    saveToLocalStorage()
+    
+    // Debounced database save
+    if (databaseSaveTimeout) {
+      clearTimeout(databaseSaveTimeout)
+    }
+    
+    if (canSaveToDatabase.value) {
+      databaseSaveTimeout = setTimeout(() => {
+        saveDraftToDatabase()
+      }, finalConfig.databaseSaveDelay)
+    }
+  }, { deep: true })
+  
+  // Setup auto-save interval
+  onMounted(async () => {
+    // Check for recovery data
+    const recovery = await checkForRecoveryData()
+    if (recovery) {
+      recoveryData.value = recovery
+      showRecoveryModal.value = true
+    }
+    
+    // Setup periodic auto-save
+    autoSaveInterval = setInterval(() => {
+      if (canSaveToDatabase.value && !isAutoSaving.value) {
+        saveDraftToDatabase()
+      }
+    }, finalConfig.autoSaveInterval)
+  })
+  
+  // Cleanup
+  onUnmounted(() => {
+    if (databaseSaveTimeout) clearTimeout(databaseSaveTimeout)
+    if (autoSaveInterval) clearInterval(autoSaveInterval)
+    if (messageTimeout) clearTimeout(messageTimeout)
+    if (showMessageTimeout) clearTimeout(showMessageTimeout)
+    if (inputActivityTimeout) clearTimeout(inputActivityTimeout)
+  })
+  
+  // === RETURN API ===
+  
+  return {
+    // State
+    draftId: readonly(draftId),
+    isAutoSaving: readonly(isAutoSaving),
+    lastSaved: readonly(lastSaved),
+    saveStatus: readonly(saveStatus),
+    showRecoveryModal,
+    recoveryData: readonly(recoveryData),
+    statusMessage,
+    showSaveMessage: readonly(showSaveMessage),
+    
+    // Actions
+    saveToLocalStorage,
+    saveDraftToDatabase,
+    restoreFromRecovery,
+    clearDraft,
+    finalizeDraft,
+    
+    // Manual triggers
+    forceSave: saveDraftToDatabase,
+    checkRecovery: checkForRecoveryData
+  }
+}
+
+// Expliziter Export für bessere Kompatibilität
+export default useAutoSave
+```
 
 ### ./composables/useCategoryData.ts
 ```ts
@@ -24690,7 +24888,7 @@ export const COMPLETE_FALLBACK_RULES = [
     base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D1'
   },
   {
-    id: 'fallback-BOAT', category_code: 'BOAT', name: 'Motorboot',
+    id: 'fallback-BOAT', category_code: 'Motorboot', name: 'Motorboot',
     description: 'Motorbootführerschein',
     price_per_minute_rappen: 211, price_per_minute_chf: 2.11, // 95 CHF / 45min = 2.11
     admin_fee_rappen: 12000, admin_fee_chf: 120, admin_fee_applies_from: 2,
@@ -24943,7 +25141,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   ): Promise<CalculatedPrice> => {
       
   // ✅ NEUE VALIDIERUNG: Nur für Fahrkategorien berechnen
-  const validDrivingCategories = ['A', 'A1', 'A35kW', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE', 'BOAT', 'BPT']
+  const validDrivingCategories = ['A', 'A1', 'A35kW', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE', 'Motorboot', 'BPT']
   
   if (!validDrivingCategories.includes(categoryCode)) {
     console.log(`🚫 Skipping price calculation for non-driving category: ${categoryCode}`)
@@ -26902,7 +27100,7 @@ export const useWallee = () => {
       }
 
       // API Call zu deiner Wallee Route
-const response = await $fetch('/api/mock/create-transaction', {
+const response = await $fetch('/api/wallee/test-connection', {
         method: 'POST',
         body: {
           appointmentId: request.appointmentId,
@@ -28850,15 +29048,22 @@ watch([user, userRole], ([newUser, newRole]) => {
       <div class="bg-white rounded-lg shadow-lg overflow-hidden">
         
         <!-- Header -->
-        <div class="bg-blue-600 text-white p-6 text-center">
-          <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex justify-between items-center bg-blue-600 text-white p-4">
+          <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
             </svg>
           </div>
           <h1 class="text-2xl font-bold">Zahlungsübersicht</h1>
-          <p class="text-blue-100 mt-2">Überprüfen Sie Ihre Zahlungsdetails</p>
         </div>
+
+            <button
+                @click="router.push('/customer-dashboard')"
+              :disabled="isProcessing"
+              class="mt-2 w-full border text-gray-500 py-2 px-4 hover:bg-gray-700 transition-colors disabled:opacity-50"
+            >
+              <- Zurück
+            </button>
 
         <!-- Loading State -->
         <div v-if="isLoading" class="p-6 text-center">
@@ -28867,7 +29072,7 @@ watch([user, userRole], ([newUser, newRole]) => {
         </div>
 
         <!-- Payment Details -->
-        <div v-else-if="paymentDetails.length > 0" class="p-6">
+        <div v-else-if="paymentDetails.length > 0" class="p-4">
           <!-- Summary Card -->
           <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 mb-6 border border-green-200">
             <div class="flex justify-between items-center">
@@ -28876,8 +29081,7 @@ watch([user, userRole], ([newUser, newRole]) => {
                 <p class="text-sm text-gray-600">{{ paymentDetails.length }} {{ paymentDetails.length === 1 ? 'Position' : 'Positionen' }}</p>
               </div>
               <div class="text-right">
-                <p class="text-2xl font-bold text-gray-900">CHF {{ totalAmount.toFixed(2) }}</p>
-                <p class="text-sm text-gray-600">inkl. Gebühren</p>
+                <p class="text-xl font-bold text-gray-900">CHF {{ totalAmount.toFixed(2) }}</p>
               </div>
             </div>
           </div>
@@ -28957,29 +29161,6 @@ watch([user, userRole], ([newUser, newRole]) => {
             </div>
           </div>
 
-          <!-- Payment Method Selection -->
-          <div class="bg-gray-50 rounded-lg p-4 mb-6">
-            <h4 class="font-medium text-gray-900 mb-3">Zahlungsart wählen</h4>
-            <div class="grid grid-cols-2 gap-3">
-              <button
-                @click="selectedPaymentMethod = 'twint'"
-                :class="selectedPaymentMethod === 'twint' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'"
-                class="border-2 rounded-lg p-3 text-center hover:border-blue-300 transition-colors"
-              >
-                <div class="text-lg font-medium">💳</div>
-                <div class="text-sm font-medium text-gray-600">Twint</div>
-              </button>
-              <button
-                @click="selectedPaymentMethod = 'card'"
-                :class="selectedPaymentMethod === 'card' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'"
-                class="border-2 rounded-lg p-3 text-center hover:border-blue-300 transition-colors"
-              >
-                <div class="text-lg font-medium">💳</div>
-                <div class="text-sm font-medium text-gray-600">Kreditkarte</div>
-              </button>
-            </div>
-          </div>
-
           <!-- Action Buttons -->
           <div class="space-y-3">
             <button
@@ -28991,7 +29172,7 @@ watch([user, userRole], ([newUser, newRole]) => {
             </button>
             
             <button
-              @click="processPayment(false)"
+                @click="router.push('/customer-dashboard')"
               :disabled="isProcessing"
               class="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
@@ -29227,7 +29408,7 @@ onMounted(() => {
     <!-- Header -->
     <div class="bg-white shadow-lg border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
+        <div class="flex justify-between items-center py-4">
           <div class="flex items-center space-x-4">
             <button 
               @click="goBack"
@@ -29238,8 +29419,7 @@ onMounted(() => {
               </svg>
             </button>
             <div>
-              <h1 class="text-2xl font-bold text-gray-900">💳 Zahlungen</h1>
-              <p class="text-gray-600 text-sm">Rechnungen verwalten und bezahlen</p>
+              <h1 class="text-2xl font-bold text-gray-900">Zahlungen</h1>
             </div>
           </div>
         </div>
@@ -29281,44 +29461,55 @@ onMounted(() => {
     <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
       <!-- Payment Status Overview -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
         
-        <!-- Offene Rechnungen -->
-        <div class="bg-white rounded-xl shadow-lg border" 
-             :class="unpaidPayments.length > 0 ? 'border-red-200' : 'border-green-200'">
-          <div class="p-6">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="flex items-center mb-2">
-                  <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
-                       :class="unpaidPayments.length > 0 ? 'bg-red-100' : 'bg-green-100'">
-                    <svg v-if="unpaidPayments.length > 0" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                    <svg v-else class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+       <!-- ✅ KORRIGIERTE VERSION: Button rechts unten -->
+          <div class="bg-white rounded-xl shadow-lg border relative"
+              :class="unpaidPayments.length > 0 ? 'border-red-200' : 'border-green-200'">
+            <div class="p-6">
+              <!-- Hauptinhalt links -->
+              <div class="flex justify-between">
+                <div>
+                  <div class="flex mb-2">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
+                        :class="unpaidPayments.length > 0 ? 'bg-red-100' : 'bg-green-100'">
+                      <svg v-if="unpaidPayments.length > 0" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <svg v-else class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h3 class="text-sm font-medium text-gray-500">
+                      {{ unpaidPayments.length > 0 ? 'Offene Rechnungen' : 'Zahlungsstatus' }}
+                    </h3>
                   </div>
-                  <h3 class="text-sm font-medium text-gray-500">
-                    {{ unpaidPayments.length > 0 ? 'Offene Rechnungen' : 'Zahlungsstatus' }}
-                  </h3>
-                </div>
-                
-                <div v-if="unpaidPayments.length > 0">
-                  <p class="text-3xl font-bold text-red-600">{{ unpaidPayments.length }}</p>
-                  <p class="text-sm text-red-500 mt-1">CHF {{ totalUnpaidAmount.toFixed(2) }}</p>
-                </div>
-                <div v-else>
-                  <p class="text-3xl font-bold text-green-600">Alles bezahlt</p>
-                  <p class="text-sm text-green-500 mt-1">✓ Keine offenen Beträge</p>
+                  
+                  <div v-if="unpaidPayments.length > 0">
+                    <p class="text-3xl font-bold text-red-600">{{ unpaidPayments.length }}</p>
+                    <p class="text-sm text-red-500 mt-1">CHF {{ totalUnpaidAmount.toFixed(2) }}</p>
+                  </div>
+                  <div v-else>
+                    <p class="text-3xl font-bold text-green-600">Alles bezahlt</p>
+                    <p class="text-sm text-green-500 mt-1">✓ Keine offenen Beträge</p>
+                  </div>
                 </div>
               </div>
+              
+              <!-- ✅ Button absolut rechts unten positioniert -->
+              <button
+                v-if="unpaidPayments.length > 0"
+                @click="payAllUnpaid"
+                :disabled="isProcessingPayment"
+                class="absolute bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium disabled:opacity-50"
+              >
+                {{ isProcessingPayment ? 'Verarbeitung...' : 'Details' }}
+              </button>
             </div>
           </div>
-        </div>
 
         <!-- Bezahlte Rechnungen -->
-        <div class="bg-white rounded-xl shadow-lg border border-blue-200">
+        <div class="bg-white rounded-xl shadow-lg border border-blue-200 relative">
           <div class="p-6">
             <div class="flex items-center mb-2">
               <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
@@ -29326,15 +29517,21 @@ onMounted(() => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 class="text-sm font-medium text-gray-500">Bezahlte Rechnungen</h3>
+              <h3 class="text-sm font-medium text-gray-500">Vergangene Zahlungen</h3>
             </div>
             <p class="text-3xl font-bold text-gray-900">{{ paidPayments.length }}</p>
             <p class="text-sm text-gray-500 mt-1">CHF {{ totalPaidAmount.toFixed(2) }}</p>
           </div>
+            <button 
+              @click="showSettings = true"
+                class="absolute bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:opacity-50"
+            >
+              Details
+            </button>
         </div>
 
         <!-- Bevorzugte Zahlungsart -->
-        <div class="bg-white rounded-xl shadow-lg border border-purple-200">
+        <div class="bg-white rounded-xl shadow-lg border border-purple-200 relative">
           <div class="p-6">
             <div class="flex items-center mb-2">
               <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
@@ -29347,213 +29544,14 @@ onMounted(() => {
             <p class="text-lg font-bold text-gray-900">{{ preferredPaymentMethodLabel }}</p>
             <button 
               @click="showSettings = true"
-              class="text-sm text-purple-600 hover:text-purple-700 mt-1"
+                class="absolute bottom-4 right-4 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors font-medium disabled:opacity-50"
             >
               Ändern
             </button>
           </div>
         </div>
       </div>
-
-      <!-- Schnell-Bezahlung für offene Rechnungen -->
-      <div v-if="unpaidPayments.length > 0" class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 rounded-lg p-6 mb-8">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-lg font-medium text-yellow-800 mb-2">
-              🚨 {{ unpaidPayments.length }} offene Rechnung{{ unpaidPayments.length > 1 ? 'en' : '' }}
-            </h3>
-            <p class="text-yellow-700">
-              Gesamtbetrag: <strong>CHF {{ totalUnpaidAmount.toFixed(2) }}</strong>
-            </p>
-          </div>
-          <div class="flex space-x-3">
-            <button
-              @click="payAllUnpaid"
-              :disabled="isProcessingPayment"
-              class="bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition-colors font-medium disabled:opacity-50"
-            >
-              {{ isProcessingPayment ? 'Verarbeitung...' : 'Alle bezahlen' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Zahlungsfilter -->
-      <div class="bg-white rounded-xl shadow-lg border border-gray-200 mb-6">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-            <h2 class="text-xl font-semibold text-gray-900">
-              Zahlungshistorie
-            </h2>
-            
-            <div class="flex space-x-3">
-              <select
-                v-model="statusFilter"
-                class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Alle Status</option>
-                <option value="unpaid">Offen</option>
-                <option value="paid">Bezahlt</option>
-                <option value="pending">Ausstehend</option>
-              </select>
-
-              <select
-                v-model="methodFilter"
-                class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Alle Zahlungsarten</option>
-                <option value="twint">Twint</option>
-                <option value="stripe_card">Kreditkarte</option>
-                <option value="cash">Bar</option>
-                <option value="invoice">Rechnung</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Payments Table -->
-        <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Termin</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Betrag</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zahlungsart</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aktionen</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-              <tr v-for="payment in filteredPayments" :key="payment.id" class="hover:bg-gray-50">
-                
-                <!-- Termin -->
-                <td class="px-6 py-4">
-                  <div>
-                    <div class="font-medium text-gray-900">
-                      {{ payment.appointment_title || 'Fahrstunde' }}
-                    </div>
-                    <div class="text-sm text-gray-500">
-                      {{ formatDateTime(payment.appointment_start) }}
-                    </div>
-                  </div>
-                </td>
-
-                <!-- Betrag -->
-                <td class="px-6 py-4">
-                  <div class="text-sm">
-                    <div class="font-medium text-gray-900">
-                      CHF {{ payment.total_amount_chf }}
-                    </div>
-                    <div v-if="payment.admin_fee_chf > 0" class="text-xs text-gray-500">
-                      inkl. CHF {{ payment.admin_fee_chf }} Gebühr
-                    </div>
-                  </div>
-                </td>
-
-                <!-- Zahlungsart -->
-                <td class="px-6 py-4">
-                  <span :class="getPaymentMethodClass(payment.payment_method)"
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                    {{ getPaymentMethodLabel(payment.payment_method) }}
-                  </span>
-                </td>
-
-                <!-- Status -->
-                <td class="px-6 py-4">
-                  <span :class="getStatusClass(payment.payment_status)"
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                    {{ getStatusLabel(payment.payment_status) }}
-                  </span>
-                </td>
-
-                <!-- Datum -->
-                <td class="px-6 py-4 text-sm text-gray-500">
-                  <div v-if="payment.paid_at">
-                    {{ formatDate(payment.paid_at) }}
-                  </div>
-                  <div v-else-if="payment.due_date">
-                    Fällig: {{ formatDate(payment.due_date) }}
-                  </div>
-                  <div v-else>
-                    {{ formatDate(payment.created_at) }}
-                  </div>
-                </td>
-
-                <!-- Aktionen -->
-                <td class="px-6 py-4">
-                  <div class="flex space-x-2">
-                    
-                    <!-- Bezahlen Button (nur für offene Rechnungen) -->
-                    <button
-                      v-if="payment.payment_status === 'pending'"
-                      @click="payIndividual(payment)"
-                      :disabled="isProcessingPayment"
-                      class="text-green-600 hover:text-green-800 text-sm font-medium bg-green-50 hover:bg-green-100 px-3 py-1 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      Bezahlen
-                    </button>
-
-                    <!-- Quittung Download -->
-                    <button
-                      v-if="payment.payment_status === 'completed'"
-                      @click="downloadReceipt(payment)"
-                      class="text-blue-600 hover:text-blue-800 text-sm font-medium bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg transition-colors"
-                    >
-                      Quittung
-                    </button>
-
-                    <!-- Details -->
-                    <button
-                      @click="showPaymentDetails(payment)"
-                      class="text-gray-600 hover:text-gray-800 text-sm font-medium bg-gray-50 hover:bg-gray-100 px-3 py-1 rounded-lg transition-colors"
-                    >
-                      Details
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-              <!-- Empty State -->
-              <tr v-if="filteredPayments.length === 0">
-                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                  <div class="flex flex-col items-center">
-                    <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                    <p class="text-lg font-medium text-gray-900 mb-2">Keine Zahlungen gefunden</p>
-                    <p class="text-gray-600">
-                      {{ statusFilter !== 'all' ? 'Versuchen Sie einen anderen Filter' : 'Noch keine Zahlungen vorhanden' }}
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
-
-    <!-- Payment Details Modal -->
-    <!-- TODO: Create PaymentDetailsModal component -->
-    <!--
-    <PaymentDetailsModal 
-      :is-open="showDetailsModal"
-      :payment="selectedPayment"
-      @close="showDetailsModal = false"
-    />
-    -->
-
-    <!-- Payment Settings Modal -->
-    <!-- TODO: Create PaymentSettingsModal component -->
-    <!--
-    <PaymentSettingsModal 
-      :is-open="showSettings"
-      :current-method="preferredPaymentMethod"
-      @close="showSettings = false"
-      @updated="loadPayments"
-    />
-    -->
   </div>
 </template>
 
@@ -29935,7 +29933,7 @@ input:focus, select:focus {
         <!-- Add Student Button (nur Desktop) -->
         <button 
           v-if="currentUser.role !== 'client'"
-          @click="showAddModal = true"
+            @click="navigateToAuswahl"
           class="hidden sm:block bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
         >
           + Neu
@@ -31345,7 +31343,7 @@ const updatePassword = async () => {
 
 // Navigation
 const goToRegister = () => {
-  navigateTo('/register')
+  navigateTo('/auswahl')
 }
 
 // pages/index.vue - im onMounted nach den bestehenden Checks:
@@ -31599,7 +31597,7 @@ const processPayment = async (success: boolean) => {
             @click="goToCalendar"
             class="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
           >
-            Zurück zum Kalender
+            Zurück zum Dashboard
           </button>
           
           <button
@@ -31707,7 +31705,7 @@ const retryPayment = () => {
 }
 
 const goToCalendar = () => {
-  router.push('/')
+  router.push('/customer-dashboard')
 }
 
 const contactSupport = () => {
@@ -31796,7 +31794,7 @@ onMounted(() => {
             @click="goToCalendar"
             class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
           >
-            Zurück zum Kalender
+            Zurück zum Dashboard
           </button>
           
           <button
@@ -31923,7 +31921,7 @@ const formatDate = (dateString: string): string => {
 }
 
 const goToCalendar = () => {
-  router.push('/')
+  router.push('/customer-dashboard')
 }
 
 const downloadReceipt = async () => {
@@ -31978,6 +31976,15 @@ onMounted(() => {
           <h1 class="text-2xl font-bold text-gray-700">Registrierung</h1>
         </div>
       </div>
+                      <!-- Navigation Back -->
+        <div class="px-6 py-3 bg-gray-50 border-b">
+          <button
+            @click="goBack"
+            class="text-gray-600 hover:text-gray-800 flex items-center text-sm"
+          >
+            ← Zurück zur Auswahl
+          </button>
+        </div>
 
       <!-- Progress Steps -->
       <div class="px-6 py-4 bg-gray-50 border-b">
@@ -32539,6 +32546,14 @@ const prevStep = () => {
   currentStep.value--
 }
 
+const goBack = () => {
+  if (typeof navigateTo !== 'undefined') {
+    navigateTo('/auswahl')
+  } else {
+    window.location.href = '/auswahl'
+  }
+}
+
 // Camera functions
 const openCamera = async () => {
   try {
@@ -33072,22 +33087,18 @@ onMounted(async () => {
           </div>
         </div>
         <div class="text-center mt-2">
-          <p class="text-sm text-gray-600">
-            <span v-if="currentStep === 1">Schritt 1: Kontaktdaten</span>
-            <span v-if="currentStep === 2">Schritt 2: Produktauswahl</span>
-            <span v-if="currentStep === 3">Schritt 3: Bezahlung</span>
-          </p>
+          <h4 class=" text-gray-600 font-bold">
+            <span v-if="currentStep === 1">Kontaktdaten</span>
+            <span v-if="currentStep === 2">Produktauswahl</span>
+            <span v-if="currentStep === 3">Bezahlung</span>
+          </h4>
         </div>
       </div>
 
       <!-- Form Content -->
-      <div class="bg-white shadow-2xl">
-        <div class="p-6">
-          <h2 class="text-xl font-semibold text-gray-900 mb-6">{{ stepTitle }}</h2>
-
           <!-- SCHRITT 1: KONTAKTDATEN -->
           <div v-if="currentStep === 1">
-            <div class="space-y-4">
+            <div class="space-y-4 bg-white p-2">
               <!-- Name -->
               <div class="grid md:grid-cols-2 gap-4">
                 <div>
@@ -33128,7 +33139,6 @@ onMounted(async () => {
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   placeholder="max@example.com"
                 />
-                <p class="text-xs text-gray-500 mt-1">Für die Bestätigung und weitere Informationen</p>
               </div>
 
               <!-- Telefon -->
@@ -33204,7 +33214,7 @@ onMounted(async () => {
               <!-- Führerschein-Kategorie -->
               <div>
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Kategorie</h3>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-gray-300">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-gray-400">
                   <label v-for="category in availableCategories" :key="category.code"
                          class="flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer hover:border-green-500 transition-colors text-center"
                          :class="formData.category === category.code ? 'border-green-500 bg-green-50' : 'border-gray-200'">
@@ -33237,160 +33247,151 @@ onMounted(async () => {
 
           <!-- SCHRITT 2: PRODUKTAUSWAHL -->
           <div v-if="currentStep === 2">
-            <div class="space-y-6">
-              <!-- Kundendaten Zusammenfassung -->
-              <div class="bg-gray-50 rounded-lg p-4 border">
-                <h3 class="text-sm font-medium text-gray-900 mb-2">📋 Ihre Daten:</h3>
-                <div class="text-sm text-gray-600">
-                  <p><strong>{{ formData.firstName }} {{ formData.lastName }}</strong></p>
-                  <p>{{ formData.email }} • {{ formData.phone }}</p>
-                  <p>{{ formData.street }} {{ formData.streetNumber }}, {{ formData.zip }} {{ formData.city }}</p>
-                  <p>Kategorie: {{ formData.category }}</p>
-                </div>
-              </div>
+            <div class="space-y-6 bg-white p-2">
 
-              <!-- Produktauswahl -->
-              <div>
-                <!-- Ausgewählte Produkte anzeigen -->
-                <div v-if="hasProducts" class="space-y-3 mb-6">
-                  <h3 class="text-md font-medium text-gray-900">📦 Ihre Auswahl:</h3>
-                  <div v-for="item in selectedProducts" :key="item.product.id" 
-                       class="flex justify-between items-center p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div class="flex-1">
-                      <div class="font-medium text-green-800">{{ item.product.name }}</div>
-                      <div class="text-sm text-green-600">{{ item.product.description }}</div>
-                      <div class="text-sm text-green-700">CHF {{ (item.product.price_rappen / 100).toFixed(2) }} × {{ item.quantity }}</div>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                      <!-- Quantity Controls -->
-                      <div class="flex items-center space-x-2">
-                        <button 
+           <!-- Produktauswahl -->
+            <div>
+              <!-- Ausgewählte Produkte anzeigen -->
+              <div v-if="hasProducts" class="space-y-3 mb-6">
+                <h3 class="text-md font-medium text-gray-900">📦 Ihre Auswahl:</h3>
+                
+                <!-- Produktliste -->
+                <div v-for="item in selectedProducts" :key="item.product.id"
+                    class="relative flex justify-between items-center p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div class="flex-1">
+                    <div class="font-medium text-green-800">{{ item.product.name }}</div>
+                    <div class="text-sm text-green-700">CHF {{ (item.product.price_rappen / 100).toFixed(2) }} × {{ item.quantity }}</div>
+                  </div>
+                  <div class="flex items-center space-x-3">
+                    <!-- Quantity Controls und Price vertikal angeordnet -->
+                    <div class="flex flex-col items-center space-y-2">
+                      <!-- Quantity Controls oben - enger zusammen -->
+                      <div class="flex items-center space-x-1">
+                        <button
                           @click="updateQuantity(item.product.id, item.quantity - 1)"
-                          class="w-8 h-8 flex items-center justify-center bg-white border border-green-300 rounded text-green-600 hover:bg-green-100"
+                          class="w-7 h-7 flex items-center justify-center bg-white border border-green-300 rounded text-green-600 hover:bg-green-100"
                         >
                           −
                         </button>
-                        <span class="w-8 text-center font-medium">{{ item.quantity }}</span>
-                        <button 
+                        <span class="w-6 text-center font-medium text-sm">{{ item.quantity }}</span>
+                        <button
                           @click="updateQuantity(item.product.id, item.quantity + 1)"
-                          class="w-8 h-8 flex items-center justify-center bg-white border border-green-300 rounded text-green-600 hover:bg-green-100"
+                          class="w-7 h-7 flex items-center justify-center bg-white border border-green-300 rounded text-green-600 hover:bg-green-100"
                         >
                           +
                         </button>
                       </div>
-                      <!-- Total Price -->
-                      <span class="text-lg font-bold text-green-800 min-w-[80px] text-right">
+                      <!-- Total Price unten -->
+                      <div class="text-lg font-bold text-green-800 text-center">
                         CHF {{ item.total.toFixed(2) }}
-                      </span>
-                      <!-- Remove Button -->
-                      <button 
-                        @click="removeProduct(item.product.id)" 
-                        class="text-red-500 hover:text-red-700 p-1"
-                      >
-                        ✕
-                      </button>
+                      </div>
                     </div>
                   </div>
-                  
-                  <!-- Gesamtpreis -->
-                  <div class="flex justify-between items-center p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
-                    <span class="text-lg font-bold text-blue-900">💳 Gesamtpreis</span>
-                    <span class="text-xl font-bold text-blue-900">CHF {{ totalPrice.toFixed(2) }}</span>
-                  </div>
+                  <!-- Remove Button - absolut positioniert unten rechts -->
+                  <button
+                    @click="removeProduct(item.product.id)"
+                    class="absolute top-1 left-1 text-red-500 hover:text-red-700 w-6 h-6 flex items-center justify-center text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
                 </div>
                 
+                <!-- Gesamtpreis (AUSSERHALB der v-for Schleife!) -->
+                <div class="flex justify-between items-center p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
+                  <span class="text-lg font-bold text-blue-900">💳 Gesamtpreis</span>
+                  <span class="text-xl font-bold text-blue-900">CHF {{ totalPrice.toFixed(2) }}</span>
+                </div>
+              </div>
+
+
+                  
                 <!-- Produkt-Auswahl Button -->
                 <div class="text-center">
                   <button
                     @click="showProductSelector = true"
-                    class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                    class="px-6 py-3 mb-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
                   >
-                    {{ hasProducts ? '+ Weitere Produkte hinzufügen' : '🛍️ Produkte auswählen' }}
+                    {{ hasProducts ? 'Weitere Produkte hinzufügen' : 'Produkte auswählen' }}
                   </button>
                 </div>
               </div>
             </div>
 
             <!-- Produkt-Auswahl Modal -->
-            <div v-if="showProductSelector" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div class="bg-white rounded-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
-                <div class="p-6 border-b">
-                  <div class="flex justify-between items-center">
-                    <h3 class="text-lg font-semibold">Produkte auswählen</h3>
-                    <button @click="showProductSelector = false" class="text-gray-500 hover:text-gray-700">
-                      ✕
-                    </button>
-                  </div>
-                </div>
-                
-                <div class="p-6 overflow-y-auto max-h-[60vh]">
-                  <!-- Loading State -->
-                  <div v-if="isLoadingProducts" class="text-center py-8">
-                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-                    <p class="text-gray-600">Lade Produkte...</p>
-                  </div>
+              <div v-if="showProductSelector" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                   
-                  <!-- Produktgrid -->
-                  <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div v-for="product in availableProducts" :key="product.id"
-                         class="border rounded-lg p-4 hover:border-green-500 hover:shadow-md transition-all cursor-pointer"
-                         @click="addProduct(product)">
-                      <div v-if="product.image_url" class="mb-3">
-                        <img :src="product.image_url" :alt="product.name" class="w-full h-32 object-cover rounded">
-                      </div>
-                      <div class="font-medium text-gray-900 mb-2">{{ product.name }}</div>
-                      <div class="text-sm text-gray-600 mb-3">{{ product.description }}</div>
-                      <div class="text-lg font-bold text-green-600">CHF {{ (product.price_rappen / 100).toFixed(2) }}</div>
-                      <div v-if="product.category !== 'general'" class="text-xs text-gray-500 mt-2">
-                        Kategorie: {{ product.category }}
-                      </div>
+                  <!-- Header (feste Höhe) mit X-Button -->
+                  <div class="p-2 border-b flex-shrink-0">
+                    <div class="flex justify-end">
+                      <button 
+                        @click="showProductSelector = false" 
+                        class=" text-gray-500 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
                   
-                  <!-- Fallback wenn keine Produkte -->
-                  <div v-if="!isLoadingProducts && availableProducts.length === 0" class="text-center py-8 text-gray-500">
-                    Derzeit sind keine Produkte verfügbar.
+                  <!-- Scrollbarer Produktbereich (flexibel) -->
+                  <div class="p-6 overflow-y-auto flex-1">
+                    <!-- Loading State -->
+                    <div v-if="isLoadingProducts" class="text-center py-8">
+                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+                      <p class="text-gray-600">Lade Produkte...</p>
+                    </div>
+                    
+                    <!-- Produktgrid -->
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div v-for="product in availableProducts" :key="product.id"
+                          class="border rounded-lg p-4 hover:border-green-500 hover:shadow-md transition-all cursor-pointer"
+                          @click="addProduct(product)">
+                        <div v-if="product.image_url" class="mb-3">
+                          <img :src="product.image_url" :alt="product.name" class="w-full h-32 object-cover rounded">
+                        </div>
+                        <div class="font-medium text-gray-900 mb-2">{{ product.name }}</div>
+                        <div class="text-sm text-gray-600 mb-3">{{ product.description }}</div>
+                        <div class="text-lg font-bold text-green-600">CHF {{ (product.price_rappen / 100).toFixed(2) }}</div>
+                      </div>
+                    </div>
+                    
+                    <!-- Fallback wenn keine Produkte -->
+                    <div v-if="!isLoadingProducts && availableProducts.length === 0" class="text-center py-8 text-gray-500">
+                      Derzeit sind keine Produkte verfügbar.
+                    </div>
                   </div>
                 </div>
-                
-                <div class="p-6 border-t bg-gray-50">
-                  <button 
-                    @click="showProductSelector = false"
-                    class="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
-                  >
-                    Fertig
-                  </button>
-                </div>
               </div>
-            </div>
           </div>
 
           <!-- SCHRITT 3: PAYMENT -->
           <div v-if="currentStep === 3">
-            <div class="space-y-6">
+            <div class="p-2 bg-white max-w-2xl mx-auto">
               <!-- Bestellübersicht -->
-              <div class="bg-gray-50 rounded-lg p-6 border">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">📋 Bestellübersicht</h3>
+              <div class="bg-gray-50 rounded-lg p-4 border">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Bestellübersicht</h3>
                 
                 <!-- Kundendaten -->
                 <div class="mb-4 pb-4 border-b">
                   <h4 class="text-sm font-medium text-gray-700 mb-2">Kunde:</h4>
                   <div class="text-sm text-gray-600">
-                    <p><strong>{{ formData.firstName }} {{ formData.lastName }}</strong></p>
-                    <p>{{ formData.email }} • {{ formData.phone }}</p>
-                    <p>{{ formData.street }} {{ formData.streetNumber }}, {{ formData.zip }} {{ formData.city }}</p>
-                    <p>Kategorie: {{ formData.category }}</p>
+                    <p class="text-sm text-gray-600"><strong>{{ formData.firstName }} {{ formData.lastName }}</strong></p>
+                    <p>{{ formData.street }} {{ formData.streetNumber }}</p>
+                    <p>{{ formData.zip }} {{ formData.city }}</p>
+                    <p>{{ formData.email }}</p>
+                    <p>{{ formData.phone }}</p>
                   </div>
                 </div>
 
                 <!-- Produkte -->
                 <div class="mb-4">
                   <h4 class="text-sm font-medium text-gray-700 mb-2">Bestellte Produkte:</h4>
-                  <div class="space-y-2">
+                  <div class="space-y-2 text-gray-700 ">
                     <div v-for="item in selectedProducts" :key="item.product.id" 
                          class="flex justify-between items-center">
                       <div>
-                        <span class="text-sm font-medium">{{ item.product.name }}</span>
+                        <span class="text-sm font-medium">{{ item.product.name }}</span><br>
                         <span class="text-xs text-gray-500 ml-2">({{ item.quantity }}x CHF {{ (item.product.price_rappen / 100).toFixed(2) }})</span>
                       </div>
                       <span class="text-sm font-medium">CHF {{ item.total.toFixed(2) }}</span>
@@ -33409,26 +33410,75 @@ onMounted(async () => {
 
               <!-- Payment Optionen -->
               <div class="bg-white border rounded-lg p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">💳 Bezahlung</h3>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Bezahlung</h3>
                 <div class="space-y-4">
-                  <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 class="font-medium text-blue-900 mb-2">📧 Rechnung per E-Mail</h4>
-                    <p class="text-sm text-blue-700">
-                      Sie erhalten eine Rechnung per E-Mail an <strong>{{ formData.email }}</strong> 
-                      mit allen Zahlungsdetails und Bankverbindung.
-                    </p>
-                    <p class="text-xs text-blue-600 mt-2">
-                      Zahlungsziel: 30 Tage • Wir kontaktieren Sie vor der Lieferung
-                    </p>
+                  
+                  <!-- Online Payment (Wallee) - Hauptoption -->
+                  <div class="p-4 bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-300 rounded-lg">
+                    
+                    <!-- Dynamic Payment Methods basierend auf Geräteerkennung -->
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                      <!-- Twint (immer in der Schweiz) -->
+                      <div class="flex items-center justify-center space-x-2 p-2 bg-white border border-blue-200 rounded-lg">
+                          <img src="public/images/Twint_Logo.png" alt="Twint" class="h-10" />
+                      </div>
+                      
+                      <!-- Apple Pay (nur auf iOS/Safari) -->
+                      <div v-if="isAppleDevice" class="flex items-center justify-center space-x-2 p-2 bg-white border border-blue-200 rounded-lg">
+                          <img src="/images/Apple_Pay_Mark.svg" alt="Apple Pay" class="h-10" />
+                      </div>
+                      
+                      <!-- Google Pay (nur auf Android/Chrome) -->
+                      <div  v-if="isAndroidDevice" class="flex items-center justify-center space-x-2 p-2 bg-white border border-blue-200 rounded-lg">
+                          <img src="public/images/Google_Pay_Logo.png" alt="Google Pay" class="h-10" />
+                      </div>
+                      
+                      <!-- Kreditkarte (immer verfügbar) -->
+                      <div class="flex items-center justify-center space-x-2 p-2 bg-white border border-blue-200 rounded-lg">
+                        <div class="flex space-x-1">
+                          <!-- Visa/Mastercard -->
+                          <img src="public/images/Visa_Mastercard_Logo.png" alt="Kartenzahlung" class="h-10" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="text-sm text-blue-700 mb-3">
+                      <p class="font-medium">Sichere Zahlung über Wallee</p>
+                      <p class="text-xs text-blue-600">
+                        SSL-verschlüsselt
+                      </p>
+                    </div>
+                    
+                    <!-- Online Payment Button -->
+                    <button 
+                      @click="startOnlinePayment"
+                      :disabled="!hasProducts || isSubmitting"
+                      class="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100"
+                    >
+                      <span v-if="isSubmitting">⏳ Wird verarbeitet...</span>
+                      <span v-else>Jetzt bezahlen <br> CHF {{ totalPrice.toFixed(2) }}</span>
+                    </button>
                   </div>
+
+                  <!-- Rechnung Option - sekundär -->
+                  <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">                    
+                    <!-- Invoice Button -->
+                    <button 
+                      @click="selectInvoicePayment"
+                      :disabled="!hasProducts || isSubmitting"
+                      class="w-full bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                    >
+                      Rechnung senden
+                    </button>
+                  </div>
+                  
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
         <!-- Footer mit Navigation -->
-        <div class="px-6 py-4 bg-gray-50 rounded-b-xl border-t">
+        <div class="px-6 py-4 bg-gray-50 rounded-b-xl border-t max-w-2xl mx-auto">
           <div class="flex justify-between">
             <!-- Zurück Button -->
             <button
@@ -33436,18 +33486,16 @@ onMounted(async () => {
               @click="previousStep"
               class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
             >
-              ← Zurück
+              Zurück
             </button>
             <div v-else></div>
 
-            <!-- Weiter/Absenden Button -->
             <button
               v-if="currentStep < 3"
               @click="nextStep"
-              :disabled="!canProceedToNextStep"
               class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
             >
-              {{ currentStep === 1 ? 'Weiter zur Produktauswahl' : 'Weiter zur Bezahlung' }} →
+              Weiter →
             </button>
             
             <!-- Bestellung absenden -->
@@ -33458,19 +33506,92 @@ onMounted(async () => {
               class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
             >
               <span v-if="isSubmitting">⏳ Bestellung wird gesendet...</span>
-              <span v-else>✅ Bestellung absenden</span>
+              <span v-else>Absenden</span>
             </button>
           </div>
         </div>
+    </div>
+
+<!-- Auto-Save Status (oben rechts) -->
+<div v-if="autoSave.statusMessage.value" class="fixed top-4 right-4 z-40">
+  <Transition 
+    enter-active-class="transition-all duration-300 ease-out"
+    enter-from-class="opacity-0 transform translate-y-2"
+    enter-to-class="opacity-100 transform translate-y-0"
+    leave-active-class="transition-all duration-200 ease-in"
+    leave-from-class="opacity-100 transform translate-y-0"
+    leave-to-class="opacity-0 transform translate-y-2"
+  >
+    <div v-if="autoSave.isAutoSaving.value" class="bg-blue-100 border border-blue-300 rounded-lg px-3 py-2 flex items-center space-x-2 shadow-lg">
+      <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+      <span class="text-sm text-blue-700 font-medium">{{ autoSave.statusMessage.value }}</span>
+    </div>
+    <div v-else-if="autoSave.showSaveMessage.value" class="bg-green-100 border border-green-300 rounded-lg px-3 py-2 shadow-lg">
+      <span class="text-sm text-green-700 font-medium flex items-center">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        {{ autoSave.statusMessage.value }}
+      </span>
+    </div>
+  </Transition>
+</div>
+
+<!-- Universal Recovery Modal -->
+<div v-if="autoSave.showRecoveryModal.value" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+      </div>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">
+        Eingaben wiederherstellen?
+      </h3>
+      <p class="text-sm text-gray-600">
+        Wir haben Ihre letzte Eingabe gefunden. Möchten Sie dort weitermachen?
+      </p>
+    </div>
+
+    <!-- Recovery Info -->
+    <div v-if="autoSave.recoveryData.value" class="bg-gray-50 rounded-lg p-4 mb-6 text-sm">
+      <div class="flex justify-between items-center mb-2">
+        <span class="font-medium text-gray-700">Gefunden:</span>
+        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+          {{ autoSave.recoveryData.value.source }}
+        </span>
+      </div>
+      <div class="text-xs text-gray-600">
+        Gespeichert: {{ new Date(autoSave.recoveryData.value.timestamp).toLocaleString('de-CH') }}
       </div>
     </div>
+
+    <!-- Buttons -->
+    <div class="flex space-x-3">
+      <button
+        @click="autoSave.clearDraft()"
+        class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+      >
+        Neu beginnen
+      </button>
+      <button
+        @click="autoSave.recoveryData.value && autoSave.restoreFromRecovery(autoSave.recoveryData.value)"
+        :disabled="!autoSave.recoveryData.value"
+        class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+      >
+        Wiederherstellen
+      </button>
+    </div>
   </div>
+</div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#app'
 import { definePageMeta } from '#imports'
+import { useAutoSave } from '~/composables/useAutoSave'
 
 // TypeScript Interfaces
 interface Product {
@@ -33491,6 +33612,13 @@ interface ProductItem {
   product: Product
   quantity: number
   total: number
+}
+
+interface WalleeResponse {
+  success: boolean
+  paymentUrl?: string
+  error?: string
+  transactionId?: string
 }
 
 // Reactive data - Multi-Step Process
@@ -33523,21 +33651,23 @@ const availableCategories = [
   { code: 'BE', name: 'Anhänger' },
   { code: 'C', name: 'LKW' },
   { code: 'D', name: 'Bus' },
-  { code: 'Boot', name: 'Motorboot' },
+  { code: 'BOAT', name: 'Motorboot' },
 
 ]
 
 // Computed
-const canSubmitStep1 = computed(() => {
-  return formData.value.firstName && 
-         formData.value.lastName && 
-         formData.value.email && 
-         formData.value.phone &&
-         formData.value.street &&
-         formData.value.streetNumber &&
-         formData.value.zip &&
-         formData.value.city &&
-         formData.value.category
+const canSubmitStep1 = computed((): boolean => {
+  return Boolean(
+    formData.value.firstName && 
+    formData.value.lastName && 
+    formData.value.email && 
+    formData.value.phone &&
+    formData.value.street &&
+    formData.value.streetNumber &&
+    formData.value.zip &&
+    formData.value.city &&
+    formData.value.category
+  )
 })
 
 const canProceedToPayment = computed(() => {
@@ -33569,7 +33699,7 @@ const canProceedToNextStep = computed(() => {
 
 // Step Navigation
 const nextStep = () => {
-  if (currentStep.value < 3 && canProceedToNextStep.value) {
+  if (currentStep.value < 3) { // ← canProceedToNextStep.value entfernt
     currentStep.value++
     
     // Produkte laden wenn wir zu Schritt 2 gehen
@@ -33611,6 +33741,7 @@ const addProduct = (product: Product) => {
     })
   }
   console.log('✅ Product added:', product.name)
+  showProductSelector.value = false
 }
 
 const removeProduct = (productId: string) => {
@@ -33683,13 +33814,200 @@ const loadProducts = async () => {
   }
 }
 
-const submitOrder = async () => {
-  if (!canProceedToPayment.value) return
+const isAppleDevice = computed(() => {
+  if (process.client) {
+    return /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)
+  }
+  return false
+})
+
+const isAndroidDevice = computed(() => {
+  if (process.client) {
+    return /Android/.test(navigator.userAgent)
+  }
+  return false
+})
+
+// Payment Methods
+
+const selectInvoicePayment = async () => {
+  // Standard Rechnungsbestellung
+  await submitOrder()
+}
+
+// In shop.vue <script setup> - Ersetzen Sie den Auto-Save Code mit:
+
+// Auto-Save Integration
+const autoSave = useAutoSave(
+  // Was gespeichert werden soll
+  computed(() => ({
+    formData: formData.value,
+    selectedProducts: selectedProducts.value,
+    currentStep: currentStep.value
+  })),
+  
+  // Konfiguration
+  {
+    formId: 'shop-order',
+    tableName: 'invited_customers',
+    
+    // Wann in Database speichern
+    isValidForDatabaseSave: () => canSubmitStep1.value,
+   
+    // Transformation für Database
+    transformForSave: (data) => ({
+      first_name: data.formData.firstName?.trim(),
+      last_name: data.formData.lastName?.trim(),
+      email: data.formData.email?.trim(),
+      phone: data.formData.phone?.trim(),
+      category: data.formData.category,
+      notes: data.formData.notes || null,
+      customer_type: 'laufkundschaft',
+      source: 'website_shop',
+      
+      metadata: {
+        address: {
+          street: data.formData.street?.trim(),
+          street_number: data.formData.streetNumber?.trim(),
+          zip: data.formData.zip?.trim(),
+          city: data.formData.city?.trim()
+        },
+        products: data.selectedProducts.map((item: any) => ({
+          product_id: item.product.id,
+          product_name: item.product.name,
+          quantity: item.quantity,
+          unit_price_rappen: item.product.price_rappen,
+          total_price_rappen: Math.round(item.total * 100)
+        })),
+        current_step: data.currentStep
+      }
+    }),
+    
+    // Transformation für Restore
+    transformForRestore: (dbData) => ({
+      formData: {
+        firstName: dbData.first_name || '',
+        lastName: dbData.last_name || '',
+        email: dbData.email || '',
+        phone: dbData.phone || '',
+        street: dbData.metadata?.address?.street || '',
+        streetNumber: dbData.metadata?.address?.street_number || '',
+        zip: dbData.metadata?.address?.zip || '',
+        city: dbData.metadata?.address?.city || '',
+        category: dbData.category || '',
+        notes: dbData.notes || ''
+      },
+        selectedProducts: dbData.metadata?.products?.map((p: any) => ({
+          product: {
+            id: p.product_id,
+            name: p.product_name,
+            price_rappen: p.unit_price_rappen
+          },
+          quantity: p.quantity,
+          total: p.total_price_rappen / 100
+        })) || [],
+      currentStep: dbData.metadata?.current_step || 1
+    }),
+    
+    // Callbacks
+    onRestore: (data) => {
+      console.log('🔄 Shop data restored!')
+      // Produkte laden falls noch nicht da
+      if (availableProducts.value.length === 0) {
+        loadProducts()
+      }
+    },
+    
+    onError: (error) => {
+      console.error('💾 Auto-save error:', error)
+    }
+  }
+)
+
+// Updated startOnlinePayment mit finalizeDraft
+const startOnlinePayment = async () => {
+  if (!hasProducts.value) return
   
   isSubmitting.value = true
   
   try {
-    // Importiere getSupabase dynamisch
+    // Finalize draft as payment_pending
+    let order = await autoSave.finalizeDraft('payment_pending')
+    
+    if (!order) {
+      // Fallback: direct save
+      order = await submitOrderWithStatus('payment_pending')
+    }
+    
+    // Create Wallee payment
+    const paymentData = {
+      orderId: order.id,
+      amount: totalPrice.value,
+      currency: 'CHF',
+      customerEmail: formData.value.email,
+      customerName: `${formData.value.firstName} ${formData.value.lastName}`,
+      description: `Driving Team Bestellung #${order.id}`,
+      successUrl: `${window.location.origin}/payment/success?order=${order.id}`,
+      failedUrl: `${window.location.origin}/payment/failed?order=${order.id}`
+    }
+    
+    const response = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
+      method: 'POST',
+      body: paymentData
+    })
+    
+    if (response.success && response.paymentUrl) {
+      window.location.href = response.paymentUrl
+    } else {
+      throw new Error('Payment URL konnte nicht erstellt werden')
+    }
+    
+  } catch (error) {
+    console.error('❌ Online payment error:', error)
+    alert('❌ Fehler beim Starten der Online-Zahlung. Ihre Daten sind gespeichert.')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+// Updated submitOrder mit finalizeDraft
+const submitOrder = async () => {
+  isSubmitting.value = true
+  
+  try {
+    // Finalize draft as completed order
+    const order = await autoSave.finalizeDraft('shop_inquiry')
+    
+    const productList = selectedProducts.value.map(item => 
+      `• ${item.product.name} (${item.quantity}x à CHF ${(item.product.price_rappen / 100).toFixed(2)})`
+    ).join('\n')
+    
+    alert(`✅ Bestellung erfolgreich aufgegeben!
+
+Hallo ${formData.value.firstName},
+
+Ihre Bestellung wurde erfolgreich übermittelt:
+
+${productList}
+
+Gesamtpreis: CHF ${totalPrice.value.toFixed(2)}
+
+Sie erhalten in Kürze eine Rechnung per E-Mail.`)
+    
+    goBack()
+    
+  } catch (error: any) {
+    console.error('❌ Error submitting order:', error)
+    alert('❌ Fehler beim Absenden der Bestellung.')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+const submitOrderWithStatus = async (status: string) => {
+  if (!canProceedToPayment.value) return null
+  
+  try {
     const { getSupabase } = await import('~/utils/supabase')
     const supabase = getSupabase()
     
@@ -33700,20 +34018,15 @@ const submitOrder = async () => {
       phone: formData.value.phone.trim(),
       category: formData.value.category,
       notes: formData.value.notes || null,
-      invited_by_staff_id: null, // Kein Staff - kommt von Website
-      appointment_id: null, // Kein Termin - nur Shop-Anfrage
       customer_type: 'laufkundschaft',
-      contact_method: 'email',
       source: 'website_shop',
-      status: 'shop_inquiry',
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 Tage
+      status: status,
+      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       
-      // 🔥 ERSTE PRODUKT-VERKNÜPFUNG (für invited_customers table)
-      requested_product_id: selectedProducts.value.length > 0 ? selectedProducts.value[0].product.id : null,
+      requested_product_id: selectedProducts.value[0]?.product.id || null,
       quantity: selectedProducts.value.reduce((sum, item) => sum + item.quantity, 0),
       total_price_rappen: Math.round(totalPrice.value * 100),
       
-      // 🔥 ALLE PRODUKTE IM METADATA
       metadata: {
         address: {
           street: formData.value.street.trim(),
@@ -33721,19 +34034,15 @@ const submitOrder = async () => {
           zip: formData.value.zip.trim(),
           city: formData.value.city.trim()
         },
-        products: selectedProducts.value.map(item => ({
+        products: selectedProducts.value.map((item: any) => ({
           product_id: item.product.id,
           product_name: item.product.name,
           quantity: item.quantity,
           unit_price_rappen: item.product.price_rappen,
           total_price_rappen: Math.round(item.total * 100)
         })),
-        order_step: 'completed',
-        payment_method: 'invoice',
-        source_details: {
-          timestamp: new Date().toISOString(),
-          user_agent: navigator.userAgent
-        }
+        payment_method: status === 'payment_pending' ? 'online' : 'invoice',
+        order_completed_at: new Date().toISOString()
       }
     }
 
@@ -33744,51 +34053,232 @@ const submitOrder = async () => {
       .single()
 
     if (error) throw error
-
-    console.log('✅ Shop order saved:', data.id)
+    return data
     
-    const productList = selectedProducts.value.map(item => 
-      `• ${item.product.name} (${item.quantity}x à CHF ${(item.product.price_rappen / 100).toFixed(2)})`
-    ).join('\n')
-    
-    alert(`✅ Bestellung erfolgreich aufgegeben!
-    
-Hallo ${formData.value.firstName},
-
-Ihre Bestellung wurde erfolgreich übermittelt:
-
-${productList}
-
-Gesamtpreis: CHF ${totalPrice.value.toFixed(2)}
-Bestellnummer: ${data.id}
-
-Sie erhalten in Kürze eine Rechnung per E-Mail an ${formData.value.email} mit allen Details und der Bankverbindung.
-
-Wir kontaktieren Sie innerhalb von 24 Stunden für die weitere Abwicklung.
-
-Vielen Dank für Ihre Bestellung!`)
-    
-    // Redirect back to start
-    goBack()
-    
-  } catch (error: any) {
-    console.error('❌ Error saving shop order:', error)
-    alert('❌ Fehler beim Absenden der Bestellung. Bitte versuchen Sie es erneut.')
-  } finally {
-    isSubmitting.value = false
+  } catch (error) {
+    console.error('❌ Error saving order:', error)
+    throw error
   }
 }
+
+// Auto-Save für andere Komponenten verfügbar machen
+defineExpose({
+  autoSave
+})
 
 // Lifecycle
 onMounted(() => {
   // Produkte werden nur geladen wenn zu Schritt 2 navigiert wird
   console.log('🛍️ Shop mounted - Step-by-step process started')
+   loadProducts() 
 })
+</script>```
 
-// Meta
-definePageMeta({
-  title: 'Driving Team - Laufkundschaft Shop'
-})
+### ./pages/wallee-test.vue
+```vue
+<!-- pages/wallee-test.vue -->
+<template>
+  <div class="min-h-screen bg-gray-50 p-8">
+    <div class="max-w-2xl mx-auto">
+      <h1 class="text-3xl font-bold mb-8 text-center">Wallee API Test</h1>
+      
+      <!-- Test Buttons -->
+      <div class="space-y-4 mb-8">
+        
+        <!-- Connection Test -->
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-xl font-semibold mb-4">🔗 Connection Test</h2>
+          <button 
+            @click="testConnection" 
+            class="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            :disabled="loading"
+          >
+            {{ loading ? 'Testing...' : 'Test Wallee Connection' }}
+          </button>
+        </div>
+        
+        <!-- Mock Payment Test -->
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-xl font-semibold mb-4">💳 Payment Test</h2>
+          <p class="text-gray-600 mb-4">Öffnet Ihre bestehende Mock-Payment-Seite</p>
+          <button 
+            @click="openMockPayment" 
+            class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          >
+            Mock Payment öffnen
+          </button>
+        </div>
+        
+        <!-- Real Transaction Test -->
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-xl font-semibold mb-4">🚀 Echte Transaction</h2>
+          <p class="text-gray-600 mb-4">Erstellt echte Wallee Transaction</p>
+          <button 
+            @click="testRealTransaction" 
+            class="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
+            :disabled="loading"
+          >
+            {{ loading ? 'Creating...' : 'Echte Transaction testen' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Neuer Test-Button hinzufügen -->
+<div class="bg-white p-6 rounded-lg shadow">
+  <h2 class="text-xl font-semibold mb-4">🧪 Permission Tests</h2>
+  <p class="text-gray-600 mb-4">Testet verschiedene Wallee API Endpoints</p>
+  <button 
+    @click="testPermissions" 
+    class="w-full bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+    :disabled="loading"
+  >
+    {{ loading ? 'Testing...' : 'Test All Permissions' }}
+  </button>
+</div>
+      
+      <!-- Results -->
+      <div v-if="result || error" class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold mb-4">Test Ergebnisse:</h3>
+        
+// In wallee-test.vue - Ersetzen Sie die Success-Anzeige:
+
+<!-- Success -->
+<div v-if="result" class="bg-green-50 border border-green-200 rounded p-4 mb-4">
+  <h4 class="font-medium text-green-800 mb-2">✅ Erfolg</h4>
+  
+  <!-- ✅ ERWEITERTE DEBUG-ANZEIGE -->
+  <div v-if="result.fullSpaceInfo" class="mb-4">
+    <h5 class="font-medium text-green-700 mb-2">📋 Vollständige Wallee Space Daten:</h5>
+    <pre class="text-xs text-green-600 bg-white p-2 rounded border overflow-auto max-h-32">{{ JSON.stringify(result.fullSpaceInfo, null, 2) }}</pre>
+  </div>
+  
+  <!-- Standard-Anzeige -->
+  <pre class="text-sm text-green-700 overflow-auto whitespace-pre-wrap">{{ JSON.stringify(result, null, 2) }}</pre>
+  
+  <!-- ✅ ZUSÄTZLICHE FELDER falls vorhanden -->
+  <div v-if="result.spaceName || result.state" class="mt-2 text-sm">
+    <div v-if="result.spaceName" class="text-green-700">Space Name: {{ result.spaceName }}</div>
+    <div v-if="result.state" class="text-green-700">State: {{ result.state }}</div>
+  </div>
+</div>
+        
+        <!-- Error -->
+        <div v-if="error" class="bg-red-50 border border-red-200 rounded p-4 mb-4">
+          <h4 class="font-medium text-red-800 mb-2">❌ Fehler</h4>
+          <pre class="text-sm text-red-700 overflow-auto whitespace-pre-wrap">{{ error }}</pre>
+        </div>
+        
+        <button 
+          @click="clearResults" 
+          class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+        >
+          Löschen
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+
+const loading = ref(false)
+const result = ref<any>(null)
+const error = ref<string | null>(null)
+
+// Test Wallee Connection
+const testConnection = async () => {
+  loading.value = true
+  error.value = null
+  result.value = null
+  
+  try {
+    console.log('🔄 Testing Wallee connection...')
+    const response = await $fetch('/api/wallee/test-connection')
+    result.value = response
+    console.log('✅ Connection successful:', response)
+  } catch (err: any) {
+    error.value = `Connection Error:\n${err.message}\nStatus: ${err.statusCode || 'Unknown'}`
+    console.error('❌ Connection failed:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Open Mock Payment (nutzt Ihre bestehende Seite)
+const openMockPayment = () => {
+  console.log('🎭 Opening your existing mock payment page...')
+  
+  // Nutzt Ihre bestehende Mock-Payment-Seite
+  const url = `/mock-payment-page?txn=test-${Date.now()}&amount=95.00&email=test@drivingteam.ch`
+  
+  if (typeof window !== 'undefined') {
+    window.open(url, '_blank')
+  }
+}
+
+// Test Real Wallee Transaction
+const testRealTransaction = async () => {
+  loading.value = true
+  error.value = null
+  result.value = null
+  
+  try {
+    console.log('🔄 Creating real Wallee transaction...')
+    
+    const response = await $fetch('/api/wallee/create-transaction', {
+      method: 'POST',
+      body: {
+        appointmentId: 'test-' + Date.now(),
+        amount: 10.00, // Kleiner Betrag für Test
+        currency: 'CHF',
+        customerId: 'test-customer',
+        customerEmail: 'test@drivingteam.ch'
+      }
+    }) as any
+    
+    result.value = response
+    console.log('✅ Transaction created:', response)
+    
+    // Falls erfolgreich → zur echten Wallee Payment Page weiterleiten
+    if (response.success && response.paymentUrl && typeof window !== 'undefined') {
+      const openPaymentPage = confirm(
+        `Transaction erfolgreich erstellt!\n\nTransaction ID: ${response.transactionId}\n\nMöchten Sie zur Wallee Payment-Seite weiterleiten?`
+      )
+      
+      if (openPaymentPage) {
+        window.open(response.paymentUrl, '_blank')
+      }
+    }
+    
+  } catch (err: any) {
+    error.value = `Transaction Error:\n${err.message}\nStatus: ${err.statusCode || 'Unknown'}\n\nDetails: ${JSON.stringify(err.data || {}, null, 2)}`
+    console.error('❌ Transaction failed:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+const testPermissions = async () => {
+  loading.value = true
+  error.value = null
+  result.value = null
+  
+  try {
+    const response = await $fetch('/api/wallee/test-permissions')
+    result.value = response
+  } catch (err: any) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+// Clear Results
+const clearResults = () => {
+  result.value = null
+  error.value = null
+}
 </script>```
 
 ### ./plugins/auth-restore.client.ts
@@ -34104,16 +34594,13 @@ WALLEE_TWINT_METHOD_ID=your_twint_method_configuration_id
 ### ./server/api/wallee/create-transaction.post.ts
 ```ts
 // server/api/wallee/create-transaction.post.ts
-import { toLocalTimeString } from '~/utils/dateUtils'
-
+// ✅ TEMPORÄRER DEBUG - Hardcoded Credentials
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🔥 Wallee API called')
+    console.log('🔥 Wallee API called with HARDCODED credentials')
     
-    // Body aus der Anfrage lesen
     const body = await readBody(event)
-    
     console.log('📨 Received body:', body)
     
     const {
@@ -34136,29 +34623,36 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Wallee Konfiguration aus Environment Variables
-    const walleeSpaceId = process.env.WALLEE_SPACE_ID
-    const walleeApplicationUserId = process.env.WALLEE_APPLICATION_USER_ID
-    const walleeSecretKey = process.env.WALLEE_SECRET_KEY
+    // ✅ HARDCODED Wallee Credentials (temporär für Debug)
+    const walleeSpaceId = '82592'  // ← Ihre korrekte Space ID
+    const walleeApplicationUserId = '140525'  // ← Kopieren Sie aus Wallee Dashboard
+    const walleeSecretKey = 'uqNeyh29nyrFITKHy7sTG/WNelFBPXaLs2vh6zl45a0='       // ← Kopieren Sie aus Wallee Dashboard
 
-    console.log('🔧 Wallee Config Check:', {
-      hasSpaceId: !!walleeSpaceId,
-      hasUserId: !!walleeApplicationUserId,
+    console.log('🔧 HARDCODED Wallee Config:', {
+      spaceId: walleeSpaceId,
+      userId: walleeApplicationUserId ? `${walleeApplicationUserId.substring(0, 3)}...` : 'MISSING',
       hasSecretKey: !!walleeSecretKey,
-      spaceId: walleeSpaceId ? `${walleeSpaceId.substring(0, 3)}...` : 'missing',
-      userId: walleeApplicationUserId ? `${walleeApplicationUserId.substring(0, 3)}...` : 'missing'
+      spaceIdLength: walleeSpaceId?.length,
+      userIdLength: walleeApplicationUserId?.length,
+      secretKeyLength: walleeSecretKey?.length
     })
 
     if (!walleeSpaceId || !walleeApplicationUserId || !walleeSecretKey) {
-      console.error('❌ Wallee configuration missing')
+      console.error('❌ Hardcoded credentials missing')
       throw createError({
         statusCode: 500,
-        statusMessage: 'Wallee configuration missing in environment variables'
+        statusMessage: 'Hardcoded Wallee credentials missing'
       })
     }
 
-    // Base64 Authentifizierung für Wallee API
+    // Base64 Authentifizierung
     const auth = Buffer.from(`${walleeApplicationUserId}:${walleeSecretKey}`).toString('base64')
+    
+    console.log('🔐 HARDCODED Auth Debug:', {
+      authStringLength: `${walleeApplicationUserId}:${walleeSecretKey}`.length,
+      base64Length: auth.length,
+      authPreview: `${auth.substring(0, 20)}...`
+    })
 
     // Get request host for URLs
     const host = getHeader(event, 'host') || 'localhost:3000'
@@ -34184,81 +34678,81 @@ export default defineEventHandler(async (event) => {
       language: 'de-CH',
       autoConfirmationEnabled: true,
       customerEmailAddress: customerEmail,
-      metaData: {
+      metadata: {
         appointmentId: appointmentId,
-        createdAt: toLocalTimeString(new Date)
+        createdAt: new Date().toISOString()
       }
     }
 
-    console.log('🔄 Creating Wallee transaction:', {
+    console.log('🔄 Creating Wallee transaction with HARDCODED credentials:', {
       spaceId: walleeSpaceId,
       amount: amount,
       currency: currency,
-      customerId: customerId
+      customerId: customerId,
+      url: `https://app-wallee.com/api/transaction/create?spaceId=${walleeSpaceId}`
     })
 
-    // Wallee Transaction erstellen
-    const response = await $fetch<any>(
-      `https://app-wallee.com/api/transaction/create?spaceId=${walleeSpaceId}`,
-      {
-        method: 'POST',
-        body: transactionData,
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+    console.log('📋 Transaction Data:', JSON.stringify(transactionData, null, 2))
+
+    // ✅ WALLEE Transaction erstellen
+    console.log('🔄 About to call Wallee Transaction API with HARDCODED auth...')
+    
+    let response: any
+    
+    try {
+      response = await $fetch<any>(
+        `https://app-wallee.com/api/transaction/create?spaceId=${walleeSpaceId}`,
+        {
+          method: 'POST',
+          body: transactionData,
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
         }
+      )
+      
+      console.log('✅ HARDCODED SUCCESS! Wallee response:', response)
+      
+    } catch (fetchError: any) {
+      console.error('❌ HARDCODED FAILED! Wallee Transaction Error:', {
+        message: fetchError.message,
+        statusCode: fetchError.statusCode,
+        data: fetchError.data,
+        walleeMessage: fetchError.data?.message
+      })
+      
+      if (fetchError.statusCode === 442) {
+        console.error('🚨 STILL 442 with hardcoded credentials!')
+        console.error('🚨 This means either:')
+        console.error('1. Wrong Application User ID copied')
+        console.error('2. Wrong Secret Key copied') 
+        console.error('3. Different issue than credentials')
+        
+        throw createError({
+          statusCode: 442,
+          statusMessage: `HARDCODED TEST: Still 442 error. Wallee Error: ${fetchError.data?.message || 'Unknown'}`
+        })
       }
-    )
+      
+      throw createError({
+        statusCode: fetchError.statusCode || 500,
+        statusMessage: `HARDCODED TEST: ${fetchError.data?.message || fetchError.message || 'Unknown error'}`
+      })
+    }
 
-    console.log('✅ Wallee transaction created:', {
-      id: response?.id,
-      state: response?.state,
-      amount: response?.authorizationAmount
-    })
-
-    // Payment Page URL erstellen
-    const paymentPageUrl = await $fetch<string>(
-      `https://app-wallee.com/api/transaction-payment-page/payment-page-url?spaceId=${walleeSpaceId}`,
-      {
-        method: 'POST',
-        body: {
-          id: response?.id
-        },
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      }
-    )
-
-    console.log('✅ Payment page URL created:', paymentPageUrl)
-
+    // Success handling...
     return {
       success: true,
-      transactionId: response?.id,
-      paymentUrl: paymentPageUrl,
+      transactionId: response.id,
+      paymentUrl: 'HARDCODED_TEST_SUCCESS',
       transaction: response
     }
 
   } catch (error: any) {
-    console.error('❌ Wallee API Error:', error)
-    
-    // Spezifische Fehlerbehandlung für Wallee API Fehler
-    if (error.data) {
-      console.error('❌ Wallee API Response Error:', error.data)
-      throw createError({
-        statusCode: error.statusCode || 500,
-        statusMessage: error.data.message || 'Wallee API Error'
-      })
-    }
-
-    // Allgemeine Fehlerbehandlung
-    throw createError({
-      statusCode: error.statusCode || 500,
-      statusMessage: error.message || 'Internal Server Error'
-    })
+    console.error('❌ HARDCODED FINAL Error:', error)
+    throw error
   }
 })```
 
@@ -34399,7 +34893,8 @@ export default defineEventHandler(async (event) => {
 
 ### ./server/api/wallee/test-connection.get.ts
 ```ts
-// server/api/wallee/test-connection.get.ts
+// server/api/wallee/test-connection.get.ts - ERWEITERTE DEBUG VERSION
+
 export default defineEventHandler(async (event) => {
   try {
     console.log('🔥 Testing Wallee connection...')
@@ -34426,23 +34921,40 @@ export default defineEventHandler(async (event) => {
     // Base64 Authentifizierung
     const auth = Buffer.from(`${walleeApplicationUserId}:${walleeSecretKey}`).toString('base64')
 
-    // Wallee Space Information abrufen (einfacher Connection Test)
-    const spaceInfo = await $fetch(
-      `https://app-wallee.com/api/space/read?spaceId=${walleeSpaceId}&id=${walleeSpaceId}`,
-      {
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      }
-    ) as any
+    // ✅ ERWEITERTE SPACE API DEBUG
+    const spaceUrl = `https://app-wallee.com/api/space/read?spaceId=${walleeSpaceId}&id=${walleeSpaceId}`
+    console.log('🌐 Calling Wallee Space API:', spaceUrl)
 
-    console.log('✅ Wallee connection successful:', {
-      spaceId: walleeSpaceId,
-      spaceName: spaceInfo?.name,
-      state: spaceInfo?.state
-    })
+    const spaceInfo = await $fetch(spaceUrl, {
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    }) as any
+
+// ✅ VOLLSTÄNDIGE SPACE RESPONSE LOGGEN (SICHER)
+console.log('📋 COMPLETE Wallee Space Response:')
+console.log('Type:', typeof spaceInfo)
+console.log('Value:', spaceInfo)
+console.log('Length:', spaceInfo?.length)
+console.log('Is String:', typeof spaceInfo === 'string')
+
+// ✅ SICHERE PRÜFUNG
+if (typeof spaceInfo === 'object' && spaceInfo !== null) {
+  console.log('🔍 Space Response Analysis:', {
+    hasName: 'name' in spaceInfo,
+    hasState: 'state' in spaceInfo,
+    nameValue: spaceInfo?.name,
+    stateValue: spaceInfo?.state,
+    allKeys: Object.keys(spaceInfo || {})
+  })
+} else {
+  console.log('⚠️ Space Response is not an object:', {
+    type: typeof spaceInfo,
+    value: spaceInfo
+  })
+}
 
     return {
       success: true,
@@ -34450,6 +34962,8 @@ export default defineEventHandler(async (event) => {
       spaceId: walleeSpaceId,
       spaceName: spaceInfo?.name,
       state: spaceInfo?.state,
+      // ✅ VOLLSTÄNDIGE SPACE INFO ZURÜCKGEBEN
+      fullSpaceInfo: spaceInfo,
       message: 'Wallee connection successful'
     }
 
@@ -34474,6 +34988,169 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: error.statusCode || 500,
       statusMessage: error.message || 'Wallee connection test failed'
+    })
+  }
+})```
+
+### ./server/api/wallee/test-permissions.get.ts
+```ts
+// server/api/wallee/test-permissions.get.ts - NEUE DATEI ERSTELLEN
+
+export default defineEventHandler(async (event) => {
+  try {
+    console.log('🧪 Testing Wallee API Permissions...')
+
+    // Credentials holen
+    const walleeSpaceId = process.env.WALLEE_SPACE_ID
+    const walleeApplicationUserId = process.env.WALLEE_APPLICATION_USER_ID
+    const walleeSecretKey = process.env.WALLEE_SECRET_KEY
+
+    if (!walleeSpaceId || !walleeApplicationUserId || !walleeSecretKey) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Wallee credentials missing'
+      })
+    }
+
+    const auth = Buffer.from(`${walleeApplicationUserId}:${walleeSecretKey}`).toString('base64')
+    const headers = {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }
+
+    const results: any = {}
+
+    // ✅ TEST 1: Space Read (wissen wir funktioniert)
+    console.log('🧪 Test 1: Space Read API')
+    try {
+      const spaceResponse = await $fetch(
+        `https://app-wallee.com/api/space/read?spaceId=${walleeSpaceId}&id=${walleeSpaceId}`,
+        { headers }
+      )
+      results.spaceRead = { success: true, data: spaceResponse }
+      console.log('✅ Space Read: SUCCESS')
+    } catch (error: any) {
+      results.spaceRead = { success: false, error: error.message, statusCode: error.statusCode }
+      console.log('❌ Space Read: FAILED', error.statusCode)
+    }
+
+    // ✅ TEST 2: Transaction Count/Search (weniger Permissions nötig)
+    console.log('🧪 Test 2: Transaction Search API')
+    try {
+      const transactionSearch = await $fetch(
+        `https://app-wallee.com/api/transaction/count?spaceId=${walleeSpaceId}`,
+        { 
+          method: 'POST',
+          headers,
+          body: {
+            filter: {
+              fieldName: 'state',
+              operator: 'EQUALS',
+              type: 'LEAF',
+              value: 'PENDING'
+            }
+          }
+        }
+      )
+      results.transactionCount = { success: true, data: transactionSearch }
+      console.log('✅ Transaction Count: SUCCESS')
+    } catch (error: any) {
+      results.transactionCount = { success: false, error: error.message, statusCode: error.statusCode }
+      console.log('❌ Transaction Count: FAILED', error.statusCode)
+    }
+
+    // ✅ TEST 3: Payment Method Configuration (Read-only)
+    console.log('🧪 Test 3: Payment Method Configuration API')
+    try {
+      const paymentMethods = await $fetch(
+        `https://app-wallee.com/api/payment-method-configuration/search?spaceId=${walleeSpaceId}`,
+        { 
+          method: 'POST',
+          headers,
+          body: {
+            filter: {
+              fieldName: 'state',
+              operator: 'EQUALS', 
+              type: 'LEAF',
+              value: 'ACTIVE'
+            }
+          }
+        }
+      )
+      results.paymentMethods = { success: true, data: paymentMethods }
+      console.log('✅ Payment Methods: SUCCESS')
+    } catch (error: any) {
+      results.paymentMethods = { success: false, error: error.message, statusCode: error.statusCode }
+      console.log('❌ Payment Methods: FAILED', error.statusCode)
+    }
+
+    // ✅ TEST 4: Application User Info (zeigt was der User kann)
+    console.log('🧪 Test 4: Application User Info API')
+    try {
+      const userInfo = await $fetch(
+        `https://app-wallee.com/api/application-user/read?spaceId=${walleeSpaceId}&id=${walleeApplicationUserId}`,
+        { headers }
+      )
+      results.userInfo = { success: true, data: userInfo }
+      console.log('✅ User Info: SUCCESS')
+    } catch (error: any) {
+      results.userInfo = { success: false, error: error.message, statusCode: error.statusCode }
+      console.log('❌ User Info: FAILED', error.statusCode)
+    }
+
+    // ✅ TEST 5: Transaction Create (wissen wir schlägt fehl, aber warum?)
+    console.log('🧪 Test 5: Transaction Create API (minimal)')
+    try {
+      const minimalTransaction = await $fetch(
+        `https://app-wallee.com/api/transaction/create?spaceId=${walleeSpaceId}`,
+        {
+          method: 'POST',
+          headers,
+          body: {
+            lineItems: [{
+              uniqueId: 'test-minimal',
+              name: 'Test',
+              quantity: 1,
+              amountIncludingTax: 1.00,
+              type: 'PRODUCT'
+            }],
+            currency: 'CHF',
+            customerId: 'test'
+          }
+        }
+      )
+      results.transactionCreate = { success: true, data: minimalTransaction }
+      console.log('✅ Transaction Create: SUCCESS')
+    } catch (error: any) {
+      results.transactionCreate = { success: false, error: error.message, statusCode: error.statusCode }
+      console.log('❌ Transaction Create: FAILED', error.statusCode)
+    }
+
+    // ✅ ZUSAMMENFASSUNG
+    console.log('📊 PERMISSION TEST SUMMARY:')
+    Object.entries(results).forEach(([test, result]: [string, any]) => {
+      const status = result.success ? '✅' : '❌'
+      const code = result.statusCode ? ` (${result.statusCode})` : ''
+      console.log(`${status} ${test}${code}`)
+    })
+
+    return {
+      success: true,
+      message: 'Permission tests completed',
+      results,
+      summary: {
+        total: Object.keys(results).length,
+        passed: Object.values(results).filter((r: any) => r.success).length,
+        failed: Object.values(results).filter((r: any) => !r.success).length
+      }
+    }
+
+  } catch (error: any) {
+    console.error('❌ Permission test error:', error)
+    throw createError({
+      statusCode: 500,
+      statusMessage: error.message || 'Permission test failed'
     })
   }
 })```

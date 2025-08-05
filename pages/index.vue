@@ -7,17 +7,9 @@
       <!-- Driving Team Logo mit Pulsing Animation -->
       <div class="mb-8">
         <div class="w-24 h-24 mx-auto mb-4 animate-pulse-logo">
-          <!-- SVG Logo oder Image -->
-          <svg viewBox="0 0 100 100" class="w-full h-full text-blue-600">
-            <!-- Beispiel: Lenkrad Icon -->
-            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="3"/>
-            <circle cx="50" cy="50" r="15" fill="currentColor"/>
-            <line x1="20" y1="50" x2="35" y2="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-            <line x1="65" y1="50" x2="80" y2="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-            <line x1="50" y1="20" x2="50" y2="35" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-          </svg>
+          <!--Image -->
+            <img src="public/images/DrivingTeamLogo Wasser:Reifen.png" class="w-30 h-30">
         </div>
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">Driving Team</h1>
         <p class="text-gray-600">Lade Session...</p>
       </div>
     </div>
@@ -26,11 +18,11 @@
   <div v-else class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
+      <div class="bg-gray-200 text-gray-700 p-6 rounded-t-xl">
         <div class="text-center">
           <img src="public/images/Driving_Team_Logo.png" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
           <h1 class="text-2xl font-bold">Willkommen</h1>
-          <p class="text-blue-100 mt-1">Melden Sie sich in Ihrem Account an</p>
+          <p class="text-gray-700 mt-1">Melden Sie sich in Ihrem Account an</p>
         </div>
       </div>
 
@@ -116,7 +108,7 @@
             class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
           >
             <span v-if="isLoading">⏳ Anmelden...</span>
-            <span v-else>🔑 Anmelden</span>
+            <span v-else>Anmelden</span>
           </button>
         </form>
 
@@ -137,7 +129,7 @@
             @click="goToRegister"
             class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
           >
-            ✨ Kostenlos registrieren
+            Kostenlos registrieren
           </button>
         </div>
       </div>

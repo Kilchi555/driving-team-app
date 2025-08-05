@@ -923,7 +923,7 @@ const pasteAppointmentDirectly = async () => {
       'C1': 150/45,         // 3.33
       'D': 200/45,          // 4.44
       'CE': 200/45,         // 4.44
-      'BOAT': 120/45,       // 2.67
+      'Motorboot': 120/45,       // 2.67
       'BPT': 95/45          // 2.11
     }
     
