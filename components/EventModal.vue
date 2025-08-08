@@ -1316,9 +1316,59 @@ const saveAppointment = async () => {
       throw new Error(`Datenbank-Fehler: ${result.error.message}`)
     }
 
+    // 6. CREATE PAYMENT ENTRY FOR NEW APPOINTMENTS
+    if (result.data && props.mode === 'create') {
+      console.log('💰 Creating payment entry for new appointment...')
+      
+      // Calculate total price
+      const duration = Number(formData.value.duration_minutes)
+      const pricePerMinute = Number(formData.value.price_per_minute)
+      const basePrice = duration * pricePerMinute
+      
+      // TODO: Get admin fee from settings or calculate based on business logic
+      const adminFeePercentage = 10 // 10% admin fee (example)
+      const adminFee = Math.round(basePrice * adminFeePercentage / 100)
+      
+      const paymentData = {
+        appointment_id: result.data.id,
+        user_id: formData.value.user_id,
+        staff_id: formData.value.staff_id,
+        amount_rappen: Math.round(basePrice * 100), // Convert to Rappen
+        admin_fee_rappen: Math.round(adminFee * 100), // Convert to Rappen
+        total_amount_rappen: Math.round((basePrice + adminFee) * 100), // Convert to Rappen
+        payment_method: 'pending', // Will be set when payment is made
+        payment_status: 'pending',
+        currency: 'CHF',
+        description: `${formData.value.title} - ${duration} Min`,
+        metadata: {
+          category: formData.value.type,
+          duration_minutes: duration,
+          price_per_minute: pricePerMinute,
+          location_id: formData.value.location_id,
+          discount: formData.value.discount || 0,
+          discount_type: formData.value.discount_type || 'fixed',
+          discount_reason: formData.value.discount_reason || null
+        }
+      }
+      
+      const { data: paymentResult, error: paymentError } = await supabase
+        .from('payments')
+        .insert(paymentData)
+        .select()
+        .single()
+      
+      if (paymentError) {
+        console.error('⚠️ Warning: Could not create payment entry:', paymentError)
+        // Don't throw error - appointment is already created
+        // You might want to notify the user or log this for admin attention
+      } else {
+        console.log('✅ Payment entry created:', paymentResult.id)
+      }
+    }
+
     console.log('🚨 EMIT save-event:', result.data)
 
-    // 6. SUCCESS - verwende deine bestehenden emit-Namen
+    // 7. SUCCESS - verwende deine bestehenden emit-Namen
     emit('save-event', result.data) // Das ist richtig laut deinen defineEmits
     emit('close')
     
