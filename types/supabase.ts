@@ -173,6 +173,82 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          id: string
+          created_at: string
+          appointment_id: string
+          user_id: string
+          staff_id: string
+          amount_rappen: number
+          admin_fee_rappen: number
+          total_amount_rappen: number
+          payment_method: string
+          payment_status: string
+          currency: string
+          description: string | null
+          wallee_transaction_id: string | null
+          paid_at: string | null
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          appointment_id: string
+          user_id: string
+          staff_id: string
+          amount_rappen: number
+          admin_fee_rappen: number
+          total_amount_rappen: number
+          payment_method: string
+          payment_status: string
+          currency?: string
+          description?: string | null
+          wallee_transaction_id?: string | null
+          paid_at?: string | null
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          appointment_id?: string
+          user_id?: string
+          staff_id?: string
+          amount_rappen?: number
+          admin_fee_rappen?: number
+          total_amount_rappen?: number
+          payment_method?: string
+          payment_status?: string
+          currency?: string
+          description?: string | null
+          wallee_transaction_id?: string | null
+          paid_at?: string | null
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       teacher_categories: {
         Row: {
           category_id: number | null
