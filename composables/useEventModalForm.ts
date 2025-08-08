@@ -649,6 +649,49 @@ const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {
   error.value = null
   
   try {
+        // ✅ 1. DEBUG: Aktuelle formData Werte loggen
+    console.log('💾 SAVE DEBUG - Current formData before save:', {
+      price_per_minute: formData.value.price_per_minute,
+      type: formData.value.type,
+      duration_minutes: formData.value.duration_minutes,
+      eventType: formData.value.eventType,
+    })
+// ✅ SOFORTIGE KORREKTUR vor dem Speichern
+if (!formData.value.price_per_minute || formData.value.price_per_minute <= 0) {
+  console.log('🔧 Korrigiere fehlenden price_per_minute...')
+  
+  // Direkte Fallback-Preise basierend auf Kategorie
+  const fallbackPrices: Record<string, number> = {
+    'B': 2.111,         // 95 CHF / 45min
+    'A': 2.111,         // 95 CHF / 45min  
+    'A1': 2.111,        // 95 CHF / 45min
+    'BE': 2.667,        // 120 CHF / 45min
+    'C': 3.778,         // 170 CHF / 45min
+    'C1': 3.333,        // 150 CHF / 45min
+    'D': 4.444,         // 200 CHF / 45min
+    'CE': 4.444,        // 200 CHF / 45min
+    'D1': 3.333,        // 150 CHF / 45min
+    'Motorboot': 2.667,      // 120 CHF / 45min
+    'BPT': 2.222        // 100 CHF / 45min
+  }
+  
+  const category = formData.value.type || 'B'
+  const fallbackPrice = fallbackPrices[category] || fallbackPrices['B']
+  
+  console.log(`💰 Using fallback price for category ${category}: ${fallbackPrice} CHF/min`)
+  formData.value.price_per_minute = fallbackPrice
+  
+  // Debug: Log korrigierte Werte
+  console.log('💾 CORRECTED formData.price_per_minute:', formData.value.price_per_minute)
+}
+
+// Zusätzlicher Debug-Log nach der Korrektur
+console.log('💾 FINAL formData before save:', {
+  price_per_minute: formData.value.price_per_minute,
+  type: formData.value.type,
+  duration_minutes: formData.value.duration_minutes,
+  title: formData.value.title
+})
     if (!isFormValid.value) {
       throw new Error('Bitte füllen Sie alle Pflichtfelder aus')
     }
@@ -690,6 +733,14 @@ console.log('🔍 SAVING TO DB (LOCAL TIME):', {
   note: 'NO TIMEZONE INFO - PURE LOCAL TIME'
 })
 
+console.log('🔍 EVENT_TYPE_CODE DEBUG:', {
+  'formData.eventType': formData.value.eventType,
+  'formData.appointment_type': formData.value.appointment_type,
+  'formData.selectedSpecialType': formData.value.selectedSpecialType,
+  'selectedLessonType': selectedLessonType?.value,
+  'will_set_event_type_code_to': formData.value.eventType === 'lesson' ? formData.value.appointment_type : formData.value.selectedSpecialType
+})
+
 // Appointment Data
 const appointmentData = {
   title: formData.value.title,
@@ -701,14 +752,8 @@ const appointmentData = {
   end_time: localEndString,     
   duration_minutes: formData.value.duration_minutes,
   type: formData.value.eventType === 'lesson' ? formData.value.type : formData.value.type,  // Immer formData.value.type (die Fahrkategorie)
-  event_type_code: formData.value.eventType === 'lesson' ? formData.value.appointment_type : formData.value.selectedSpecialType,
-  status: formData.value.status,
-  price_per_minute: formData.value.price_per_minute,
-  is_paid: formData.value.is_paid,
-  discount: formData.value.discount || 0,                    
-  discount_type: formData.value.discount_type || 'fixed',   
-  discount_reason: formData.value.discount_reason || '', 
-
+  event_type_code: formData.value.eventType === 'lesson' ? (formData.value.appointment_type || selectedLessonType?.value || 'lesson'): formData.value.selectedSpecialType,
+    status: formData.value.status,
 }
 
     const cleanedAppointmentData = cleanUUIDFields({

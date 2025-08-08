@@ -201,20 +201,23 @@ const updateSuggestion = () => {
 watch(() => suggestions.value, updateSuggestion, { immediate: true })
 
 // Auto-generate title when key data changes
+// Watch für Auto-Generierung debuggen:
 watch([
   () => props.selectedStudent,
   () => props.selectedLocation,
   () => props.selectedSpecialType
-], () => {
+], ([student, location, specialType]) => {
+  
   if (props.autoGenerate && suggestions.value.length > 0) {
-    // Only auto-update if title is empty or matches old pattern
     if (!props.title || shouldAutoUpdate()) {
-      const newTitle = suggestions.value[0]
-      emit('update:title', newTitle)
-      emit('title-generated', newTitle)
+      console.log('✅ Auto-generating title:', suggestions.value[0])
+      emit('update:title', suggestions.value[0])
+      emit('title-generated', suggestions.value[0])
+    } else {
+      console.log('❌ Auto-generate skipped - title exists and shouldAutoUpdate=false')
     }
   }
-}, { deep: true })
+}, { deep: true, immediate: true })
 
 // Helper function to determine if we should auto-update
 const shouldAutoUpdate = (): boolean => {
@@ -233,6 +236,11 @@ defineExpose({
   selectSuggestion,
   updateSuggestion
 })
+
+// Debug logging
+watch(() => [props.eventType, props.selectedStudent, props.selectedSpecialType, props.title], 
+  ([eventType, student, specialType, title]) => {
+}, { immediate: true, deep: true })
 </script>
 
 <style scoped>

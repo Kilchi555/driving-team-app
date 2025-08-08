@@ -236,15 +236,20 @@
               </button>
             </div>
             
-            <!-- Adresse auswählen -->
-            <div v-if="companyBilling.savedAddresses.value.length > 0 && !companyBilling.currentAddress.value" class="mb-4">
+            <!-- ✅ KORRIGIERT: Dropdown immer anzeigen wenn Adressen da sind -->
+            <div v-if="companyBilling.savedAddresses.value.length > 0" class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-2">Gespeicherte Adresse auswählen:</label>
-              <select 
+              <select
+                :value="companyBilling.currentAddress.value?.id || ''"
                 @change="selectExistingAddress(($event.target as HTMLSelectElement).value)"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Neue Adresse eingeben</option>
-                <option v-for="address in companyBilling.savedAddresses.value" :key="address.id" :value="address.id">
+                <option 
+                  v-for="address in companyBilling.savedAddresses.value" 
+                  :key="address.id" 
+                  :value="address.id"
+                >
                   {{ companyBilling.getAddressPreview(address) }}
                 </option>
               </select>
@@ -529,8 +534,11 @@ const pricing = usePricing({
   selectedStudent: computed(() => props.selectedStudent),
   currentUser: computed(() => props.currentUser),
   durationMinutes: computed(() => props.durationMinutes),
+  categoryCode: computed(() => props.eventType), 
   isSecondOrLaterAppointment: computed(() => props.isSecondOrLaterAppointment),
-  showAdminFeeByDefault: computed(() => props.showAdminFeeByDefault)
+  showAdminFeeByDefault: computed(() => props.showAdminFeeByDefault),
+  watchChanges: true,  
+  autoUpdate: true     
 })
 
 
@@ -762,7 +770,7 @@ const loadExistingAddresses = async () => {
     console.log('👤 Loading addresses for auth user:', user.id)
     
     // ✅ VERWENDE DIE BESTEHENDE FUNKTION MIT AUTH USER ID
-    await companyBilling.loadUserCompanyAddresses(user.id)
+    await companyBilling.loadUserCompanyAddresses(props.selectedStudent.id)
     
     console.log('✅ Loaded addresses:', companyBilling.savedAddresses.value.length)
     
@@ -779,12 +787,18 @@ const loadExistingAddresses = async () => {
 }
 
 const selectExistingAddress = (addressId: string) => {
-  if (!addressId) return
+  if (!addressId) {
+    // "Neue Adresse eingeben" gewählt
+    companyBilling.resetForm()
+    companyBilling.currentAddress.value = null
+    return
+  }
   
   const address = companyBilling.savedAddresses.value.find(addr => addr.id === addressId)
   if (address) {
-    // ✅ BESTEHENDE FUNKTION VERWENDEN
     companyBilling.loadFormFromAddress(address)
+    updatePaymentMode()
+    console.log('✅ Selected address:', address.company_name)
   }
 }
 
@@ -802,39 +816,70 @@ const saveCompanyBillingAddress = async () => {
   }
 }
 
+
+// ✅ KORRIGIERTE autoLoadBillingAddress Funktion:
 const autoLoadBillingAddress = async () => {
   if (!props.selectedStudent?.id) return
-  
-  console.log('🔄 Auto-loading billing address for student:', props.selectedStudent.id)
-  
+
   try {
-    // ✅ KORRIGIERT: getSupabase() direkt verwenden
     const supabase = getSupabase()
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (!user?.id) {
-      console.warn('❌ No authenticated user found')
-      return
-    }
     
-    console.log('👤 Auth user ID:', user.id)
+    // 1. IMMER alle verfügbaren Adressen für Dropdown laden
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user?.id) return
     
-    // 2. Adressen laden
     await companyBilling.loadUserCompanyAddresses(user.id)
+    console.log('✅ Loaded all addresses:', companyBilling.savedAddresses.value.length)
     
-    // 3. Erste Adresse automatisch verwenden wenn vorhanden
-    if (companyBilling.savedAddresses.value.length > 0) {
-      const firstAddress = companyBilling.savedAddresses.value[0]
-      companyBilling.loadFormFromAddress(firstAddress)
-      console.log('✅ Auto-loaded first address:', firstAddress.company_name)
+    // 2. Prüfen ob Schüler eine Standard-Adresse hat
+    const { data: studentData, error: studentError } = await supabase
+      .from('users')
+      .select('default_company_billing_address_id, first_name, last_name')
+      .eq('id', props.selectedStudent.id)
+      .single()
+    
+    console.log('🔍 Student default address ID:', studentData?.default_company_billing_address_id)
+    
+    if (studentData?.default_company_billing_address_id) {
+      // 3. Standard-Adresse finden und vorauswählen
+      const defaultAddress = companyBilling.savedAddresses.value.find(
+        addr => addr.id === studentData.default_company_billing_address_id
+      )
       
-      // Automatisch updatePaymentMode aufrufen
-      updatePaymentMode()
+      if (defaultAddress) {
+        console.log('✅ Pre-selecting student default address:', defaultAddress.company_name)
+        companyBilling.loadFormFromAddress(defaultAddress)
+        updatePaymentMode()
+      } else {
+        console.log('⚠️ Student default address not found in loaded addresses')
+        companyBilling.resetForm()
+      }
     } else {
-      console.log('ℹ️ No saved addresses found for user')
+      console.log('ℹ️ Student has no default address - form empty, all addresses available')
+      companyBilling.resetForm()
     }
     
   } catch (error) {
-    console.error('❌ Error auto-loading billing address:', error)
+    console.error('❌ Error loading billing addresses:', error)
+  }
+}
+
+// ✅ NEUE Funktion: Alle Adressen für Dropdown laden (ohne Vorauswahl)
+const loadAllAddressesForDropdown = async () => {
+  try {
+    const supabase = getSupabase()
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (!user?.id) return
+    
+    // Alle verfügbaren Firmenadressen laden
+    await companyBilling.loadUserCompanyAddresses(user.id)
+    console.log('📋 Loaded all addresses for dropdown:', companyBilling.savedAddresses.value.length)
+    
+    // ✅ WICHTIG: KEINE automatische Auswahl!
+    // User muss manuell aus Dropdown wählen
+    
+  } catch (error) {
+    console.error('❌ Error loading addresses for dropdown:', error)
   }
 }
 

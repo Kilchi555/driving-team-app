@@ -125,8 +125,6 @@ const fetchPendingTasks = async (staffId: string) => {
           note.criteria_rating !== null
         );
 
-      // Hier ignorieren wir alte staff_rating Einträge komplett für die Pendenzen-Logik
-      console.log(`🔥 Appointment ${appointment.id}: hasCriteriaEvaluation=${hasCriteriaEvaluation}`)
       return !hasCriteriaEvaluation; // Pending, wenn keine Kriterien-Bewertung vorhanden ist
     }).map((appointment: any): PendingAppointment => ({
       id: appointment.id,

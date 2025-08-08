@@ -236,13 +236,10 @@ const loadRegularAppointments = async () => {
       .from('appointments')
       .select(`
         *,
-        discount,
-        discount_type, 
-        discount_reason,
         user:user_id(first_name, last_name, category),
         staff:staff_id(first_name, last_name)
       `)
-      .or(`staff_id.eq.${props.currentUser?.id}`) // Eigene Termine (als staff_id)
+      .eq('staff_id', props.currentUser?.id) // Eigene Termine (als staff_id)
       .order('start_time')
     
     const { data: appointments, error } = await query
@@ -340,37 +337,6 @@ const loadRegularAppointments = async () => {
           original_type: apt.user?.category || apt.type || 'B',
           eventType: apt.type // ← Wichtig für die Farb-Zuordnung
         }
-      }
-      
-      // ✅ ZEIT-DEBUG: Zeigt alle relevanten Informationen
-      console.log('🔍 ZEIT-DEBUG für Termin:', {
-        title: eventTitle,
-        // Rohdaten aus DB:
-        db_start: apt.start_time,
-        db_end: apt.end_time,
-        
-        // Was an FullCalendar gesendet wird:
-        calendar_start: event.start,
-        calendar_end: event.end,
-        
-        // Wie Browser es interpretiert:
-        parsed_date: new Date(event.start),
-        will_display_at: new Date(event.start).toLocaleString('de-CH'),
-        time_only: new Date(event.start).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }),
-        
-        // Timezone-Check:
-        has_timezone: event.start.includes('+') || event.start.includes('Z'),
-        timezone_type: event.start.includes('+00:00') ? 'UTC' : 
-                       event.start.includes('+') ? 'Timezone' : 'Local'
-      })
-
-      // Noch spezifischer für das Problem:
-      if (apt.start_time.includes('+00:00')) {
-        console.log('⚠️ UTC-Termin gefunden - könnte Zeitverschiebung verursachen!')
-      } else if (!apt.start_time.includes('+') && !apt.start_time.includes('Z')) {
-        console.log('✅ Lokaler Termin - sollte korrekte Zeit anzeigen')
-      } else {
-        console.log('🔍 Unbekanntes Zeitformat:', apt.start_time)
       }
       
       return event
@@ -818,17 +784,6 @@ select: (arg) => {
     end: arg.end,
     allDay: arg.allDay
   }
-},
-  
-  // DEBUG: Callback um zu sehen ob Events verarbeitet werden
-  eventDidMount: (info) => {
-    console.log('✅ EVENT MOUNTED:',  {
-    title: info.event.title,
-    start: info.event.start,
-    end: info.event.end,
-    startStr: info.event.startStr,
-    endStr: info.event.endStr
-  })
   },
   eventClassNames: (arg) => {
   const category = arg.event.extendedProps?.category || 'default'

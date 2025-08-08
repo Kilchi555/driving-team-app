@@ -329,6 +329,9 @@
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Zahlungsmethode
+                  </th>
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Betrag
                   </th>
@@ -357,6 +360,16 @@
                       {{ getStatusLabel(appointment.status) }}
                     </span>
                   </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span v-if="appointment.payment_method" 
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                              :class="getPaymentMethodClass(appointment.payment_method)">
+                          {{ getPaymentMethodLabel(appointment.payment_method) }}
+                        </span>
+                        <span v-else class="text-gray-400 text-sm">
+                          Nicht festgelegt
+                        </span>
+                      </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div>
                       <div class="font-medium">{{ formatCurrency(calculateAppointmentAmount(appointment)) }}</div>
@@ -433,6 +446,9 @@ interface Appointment {
   is_paid: boolean
   status: string
   type: string
+  payment_method?: string
+  payment_method_name?: string
+  total_amount?: number
 }
 
 interface CompanyBillingAddress {
@@ -591,34 +607,73 @@ const loadUserDetails = async () => {
 
 const loadUserAppointments = async () => {
   try {
-    const { data, error: appointmentsError } = await supabase
-      .from('appointments')
+    // ✅ GEÄNDERT: Verwende v_payments_detailed für Zahlungsinformationen
+    const { data, error } = await supabase
+      .from('v_payments_detailed')
       .select(`
         id,
-        title,
-        start_time,
-        end_time,
-        duration_minutes,
-        price_per_minute,
-        discount,
-        is_paid,
-        status,
-        type
+        appointment_id,
+        description,
+        appointment_start,
+        appointment_duration,
+        payment_status,
+        payment_method,
+        payment_method_name,
+        total_amount_chf,
+        paid_at,
+        created_at
       `)
       .eq('user_id', userId)
-      .order('start_time', { ascending: false })
+      .order('appointment_start', { ascending: false })
 
-    if (appointmentsError) {
-      throw new Error(appointmentsError.message)
-    }
+    if (error) throw error
 
-    appointments.value = data || []
-    console.log('✅ Appointments loaded:', data?.length)
+    // ✅ KORRIGIERT: Alle erforderlichen Felder bereitgestellt
+    appointments.value = (data || []).map(payment => ({
+      id: payment.appointment_id || payment.id,
+      title: payment.description || 'Fahrstunde',
+      start_time: payment.appointment_start || payment.created_at,
+      end_time: payment.appointment_start || payment.created_at, // Fallback
+      duration_minutes: payment.appointment_duration || 45,
+      price_per_minute: 0, // Nicht mehr relevant, da wir total_amount haben
+      discount: 0, // Nicht mehr relevant
+      is_paid: payment.payment_status === 'completed' && payment.paid_at,
+      status: payment.payment_status === 'completed' ? 'completed' : 'pending',
+      type: 'driving_lesson', // Fallback
+      // ✅ NEUE FELDER:
+      payment_method: payment.payment_method,
+      payment_method_name: payment.payment_method_name,
+      total_amount: Number(payment.total_amount_chf) || 0
+    }))
 
+    console.log('✅ Appointments with payment methods loaded:', appointments.value.length)
   } catch (err: any) {
-    console.error('❌ Error loading appointments:', err.message)
-    // Don't set error here, appointments are optional
+    console.error('❌ Error loading appointments:', err)
+    error.value = err.message
   }
+}
+
+
+const getPaymentMethodLabel = (method: string): string => {
+  const labels: Record<string, string> = {
+    'cash': 'Bar',
+    'invoice': 'Rechnung', 
+    'twint': 'Twint',
+    'stripe_card': 'Kreditkarte',
+    'debit_card': 'Debitkarte'
+  }
+  return labels[method] || method
+}
+
+const getPaymentMethodClass = (method: string): string => {
+  const classes: Record<string, string> = {
+    'cash': 'bg-yellow-100 text-yellow-800',
+    'invoice': 'bg-blue-100 text-blue-800',
+    'twint': 'bg-purple-100 text-purple-800', 
+    'stripe_card': 'bg-green-100 text-green-800',
+    'debit_card': 'bg-gray-100 text-gray-800'
+  }
+  return classes[method] || 'bg-gray-100 text-gray-800'
 }
 
 const loadCompanyBillingAddress = async () => {
@@ -661,8 +716,14 @@ const loadCompanyBillingAddress = async () => {
 }
 
 const calculateAppointmentAmount = (appointment: Appointment): number => {
-  const baseAmount = (appointment.price_per_minute || 0) * (appointment.duration_minutes || 0)
-  return Math.max(0, baseAmount - (appointment.discount || 0))
+  // ✅ GEÄNDERT: Verwende total_amount aus payments statt Berechnung
+  if (appointment.total_amount !== undefined) {
+    return appointment.total_amount
+  }
+  
+  // Fallback für den Fall, dass total_amount nicht verfügbar ist
+  const basePrice = (appointment.price_per_minute || 0) * appointment.duration_minutes
+  return Math.max(0, basePrice - (appointment.discount || 0))
 }
 
 const sendPaymentReminder = async () => {

@@ -366,12 +366,12 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     return rule
   }
 
-  const roundToNearestFiftyRappen = (rappen: number): number => {
-    const remainder = rappen % 50
-    if (remainder === 0) return rappen
-    if (remainder < 25) return rappen - remainder
-    else return rappen + (50 - remainder)
-  }
+const roundToNearestFranken = (rappen: number): number => {
+  const remainder = rappen % 100
+  if (remainder === 0) return rappen
+  if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
+  else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
+}
 
   // ===== MAIN CALCULATION FUNCTION =====
   const calculatePrice = async (
@@ -423,7 +423,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
 
     // Grundpreis berechnen mit Rundung
     let basePriceRappen = Math.round(rule.price_per_minute_rappen * durationMinutes)
-    basePriceRappen = roundToNearestFiftyRappen(basePriceRappen)
+    basePriceRappen = roundToNearestFranken(basePriceRappen)
 
     // Admin-Fee nur ab entsprechendem Termin
     const adminFeeRappen = appointmentNumber >= rule.admin_fee_applies_from ? rule.admin_fee_rappen : 0

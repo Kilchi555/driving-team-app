@@ -120,7 +120,7 @@
                 
                 <div
                   v-for="location in availableExamLocations"
-                  :key="location.id"
+                  :key="location.id + locationsKey"
                   class="border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow"
                 >
                   <div class="space-y-3">
@@ -132,7 +132,7 @@
                       </div>
                       
                       <!-- Toggle Switch -->
-                      <button
+                        <button
                         @click="toggleExamLocation(location)"
                         :disabled="isSavingExamLocation"
                         :class="[
@@ -452,10 +452,10 @@ interface StaffExamLocation {
   staff_id: string
   name: string           
   address: string       
-  categories?: string[] 
+  categories: string[] 
   is_active: boolean
-  created_at?: string
-  updated_at?: string    
+  created_at: string
+  updated_at: string    
 }
 
 const props = defineProps<Props>()
@@ -474,6 +474,7 @@ const availableExamLocations = ref<ExamLocation[]>([])
 const staffExamLocations = ref<StaffExamLocation[]>([])
 const isLoadingExamLocations = ref(false)
 const isSavingExamLocation = ref(false)
+
 
 // Accordion State
 const openSections = reactive({
@@ -515,6 +516,7 @@ const notifications = ref({ sms: true, email: true })
 // New Location
 const newLocationName = ref('')
 const newLocationAddress = ref('')
+const locationsKey = ref(0);
 
 // Constants
 const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
@@ -526,8 +528,13 @@ const filteredCategoriesForDurations = computed(() => {
   )
 })
 
-const activeExamLocationsCount = computed(() => {
-  return availableExamLocations.value.filter(loc => isExamLocationActive(loc.id)).length
+const activeExamLocations = computed(() => {
+  // Filtere basierend auf Namen-Matching (wie in StaffSettings)
+  return availableExamLocations.value.filter(examLoc => {
+    return staffExamLocations.value.some(staffLoc => 
+      staffLoc.name === examLoc.name && staffLoc.is_active
+    )
+  })
 })
 
 // computed properties:
@@ -589,47 +596,129 @@ const saveWithOfflineSupport = async (
 }
 
 const loadExamLocations = async () => {
-  if (!props.currentUser?.id) return
+  if (!props.currentUser?.id) return;
 
-  isLoadingExamLocations.value = true
+  isLoadingExamLocations.value = true;
+  error.value = null;
+
   try {
-    const supabase = getSupabase()
-    
-    // 1. Alle verfügbaren Prüfungsstandorte laden
+    const supabase = getSupabase();
+    const staffId = props.currentUser.id;
+
+    // 1. Alle verfügbaren globalen Prüfungsstandorte laden (die der Mitarbeiter wählen kann)
     const { data: allLocations, error: locationsError } = await supabase
-      .from('exam_locations')
+      .from('locations')
       .select('*')
-      .order('name')
+      .eq('location_type', 'exam')
+      .is('staff_id', null) // Nur Standorte ohne Mitarbeiter-ID
+      .eq('is_active', true)
+      .order('name');
 
-    if (locationsError) throw locationsError
+    if (locationsError) throw locationsError;
+    availableExamLocations.value = allLocations || [];
 
-    // Nur aktive Standorte filtern, falls is_active Spalte existiert
-    const filteredLocations = allLocations?.filter(location => {
-      // Falls is_active nicht existiert oder true ist, Location anzeigen
-      return location.is_active === undefined || location.is_active === true
-    }) || []
-
-    availableExamLocations.value = filteredLocations
-    
-    // 2. Aktivierte Standorte dieses Staff laden
-    const { data: staffLocations, error: staffError } = await supabase
-      .from('staff_exam_locations')
+    // 2. Die spezifischen Präferenzen des aktuellen Mitarbeiters laden
+    const { data: staffPreferences, error: staffPreferencesError } = await supabase
+      .from('locations')
       .select('*')
-      .eq('staff_id', props.currentUser.id)
+      .eq('location_type', 'exam')
+      .eq('staff_id', staffId)
+      .eq('is_active', true)
+      .order('name');
 
-    if (staffError) throw staffError
-    staffExamLocations.value = staffLocations || []
+    if (staffPreferencesError) throw staffPreferencesError;
+    staffExamLocations.value = staffPreferences || [];
 
-    console.log('✅ Exam locations loaded:', {
-      available: availableExamLocations.value.length,
-      staffActivated: staffExamLocations.value.length
-    })
+      console.log('✅ Prüfungsstandorte geladen:', {
+      verfügbar: availableExamLocations.value.length,
+      aktiviert_durch_Mitarbeiter: staffExamLocations.value.length,
+      aktive_namen: staffExamLocations.value.map(loc => loc.name)
+      });
 
   } catch (err: any) {
-    console.error('❌ Error loading exam locations:', err)
-    error.value = `Fehler beim Laden der Prüfungsstandorte: ${err.message}`
+    console.error('❌ Fehler beim Laden der Prüfungsstandorte:', err);
+    error.value = `Fehler beim Laden: ${err.message}`;
   } finally {
     isLoadingExamLocations.value = false
+    locationsKey.value++ // Schlüssel erhöhen, um eine Neurenderung zu erzwingen
+  }
+}
+
+// Hilfsfunktionen für localStorage (falls noch nicht vorhanden)
+const getStaffExamPreferences = (staffId: string): string[] => {
+  const key = `staff_exam_preferences_${staffId}`
+  const stored = localStorage.getItem(key)
+  return stored ? JSON.parse(stored) : []
+}
+
+const saveStaffExamPreferences = (staffId: string, locationIds: string[]) => {
+  const key = `staff_exam_preferences_${staffId}`
+  localStorage.setItem(key, JSON.stringify(locationIds))
+}
+
+// Neue Funktion für das Toggling von Exam Locations
+const toggleExamLocation = async (location: any) => {
+  if (!props.currentUser?.id) {
+    console.error('❌ Keine Benutzer-ID vorhanden, kann Standort nicht umschalten.');
+    return;
+  }
+
+  isSavingExamLocation.value = true;
+  error.value = null;
+
+  try {
+    const supabase = getSupabase();
+    const staffId = props.currentUser.id;
+
+    // Wir identifizieren einen Standort nicht nur über die ID, sondern auch über Name & Adresse
+    // Dies ist nötig, da wir für die Präferenzen neue Zeilen erstellen.
+    const { data: existingPreference, error: fetchError } = await supabase
+      .from('locations')
+      .select('id')
+      .eq('staff_id', staffId)
+      .eq('name', location.name)
+      .eq('address', location.address)
+      .eq('location_type', 'exam')
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    if (existingPreference) {
+      // Wenn die Präferenz-Zeile existiert, löschen wir sie
+      const { error: deleteError } = await supabase
+        .from('locations')
+        .delete()
+        .eq('id', existingPreference.id);
+
+      if (deleteError) throw deleteError;
+      console.log('✅ Prüfungsstandort-Präferenz gelöscht für:', location.name);
+    } else {
+      // Wenn keine Präferenz-Zeile existiert, erstellen wir eine neue
+      const { error: insertError } = await supabase
+        .from('locations')
+        .insert({
+          staff_id: staffId,
+          name: location.name,
+          address: location.address,
+          location_type: 'exam',
+          is_active: true,
+          city: location.city,
+          canton: location.canton,
+          postal_code: location.postal_code,
+          // Füge hier weitere relevante Spalten aus dem globalen Standort hinzu
+        });
+
+      if (insertError) throw insertError;
+      console.log('✅ Neue Prüfungsstandort-Präferenz erstellt für:', location.name);
+    }
+
+  } catch (err: any) {
+    console.error('❌ Fehler beim Umschalten des Prüfungsstandorts:', err);
+    error.value = `Fehler beim Speichern der Präferenz: ${err.message}`;
+  } finally {
+    isSavingExamLocation.value = false;
+    // Lade die Daten neu, damit die UI den neuen Status anzeigt
+    await loadExamLocations();
   }
 }
 
@@ -651,14 +740,14 @@ const loadAllData = async () => {
 }
 
 const isExamLocationActive = (examLocationId: string): boolean => {
-  // Da staff_exam_locations name und address speichert, nicht exam_location_id
-  const examLocation = availableExamLocations.value.find(el => el.id === examLocationId)
+  // Finde die Location anhand der ID in availableExamLocations
+  const examLocation = availableExamLocations.value.find(loc => loc.id === examLocationId)
   if (!examLocation) return false
   
-  const staffLocation = staffExamLocations.value.find(sl => 
-    sl.name === examLocation.name && sl.is_active
+  // Prüfe ob ein Staff-Location mit dem gleichen Namen existiert und aktiv ist
+  return staffExamLocations.value.some(staffLoc => 
+    staffLoc.name === examLocation.name && staffLoc.is_active
   )
-  return !!staffLocation
 }
 
 const getExamLocationMapsUrl = (location: any): string => {
@@ -742,7 +831,8 @@ const addLocation = async () => {
       .insert({
         name: newLocationName.value,
         address: newLocationAddress.value,
-        staff_id: props.currentUser.id
+        staff_id: props.currentUser.id,
+        location_type: 'exam' // 👈 Diese Zeile wurde hinzugefügt
       })
       .select()
       .single()
@@ -768,12 +858,13 @@ const addExamLocation = async () => {
     const supabase = getSupabase()
     
     const { data, error } = await supabase
-      .from('staff_exam_locations')
+      .from('locations') // 👈 Tabelle auf 'locations' geändert
       .insert({
         staff_id: props.currentUser.id,
         name: newExamLocation.value.name,
         address: newExamLocation.value.address,
-        categories: newExamLocation.value.categories,
+        available_categories: newExamLocation.value.categories, // 👈 Feldname korrigiert
+        location_type: 'exam', // 👈 Diese Zeile wurde hinzugefügt
         is_active: true
       })
       .select()
@@ -795,58 +886,6 @@ const addExamLocation = async () => {
   } catch (err: any) {
     console.error('❌ Error adding exam location:', err)
     error.value = `Fehler beim Hinzufügen: ${err.message}`
-  }
-}
-
-const toggleExamLocation = async (examLocation: any) => {
-  if (isSavingExamLocation.value) return
-
-  isSavingExamLocation.value = true
-  try {
-    const supabase = getSupabase()
-    const currentlyActive = isExamLocationActive(examLocation.id)
-    
-    // Nach name suchen, da keine exam_location_id existiert
-    const existingStaffLocation = staffExamLocations.value.find(sl => 
-      sl.name === examLocation.name
-    )
-
-    if (existingStaffLocation) {
-      // Update existing record
-      const { error } = await supabase
-        .from('staff_exam_locations')
-        .update({ is_active: !currentlyActive })
-        .eq('id', existingStaffLocation.id)
-
-      if (error) throw error
-      
-      existingStaffLocation.is_active = !currentlyActive
-    } else {
-      // Create new record - Staff aktiviert zum ersten Mal
-      const { data, error } = await supabase
-        .from('staff_exam_locations')
-        .insert({
-          staff_id: props.currentUser.id,
-          name: examLocation.name,          // ✅ name statt exam_location_id
-          address: examLocation.address,    // ✅ address hinzufügen
-          categories: examLocation.available_categories || [],  // ✅ categories
-          is_active: true
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-      
-      staffExamLocations.value.push(data)
-    }
-
-    console.log(`✅ Exam location ${!currentlyActive ? 'activated' : 'deactivated'}:`, examLocation.name)
-
-  } catch (err: any) {
-    console.error('❌ Error toggling exam location:', err)
-    error.value = `Fehler beim Ändern des Prüfungsstandorts: ${err.message}`
-  } finally {
-    isSavingExamLocation.value = false
   }
 }
 

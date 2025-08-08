@@ -1,47 +1,62 @@
 <template>
   <div class="admin-layout">
     <!-- Admin Header/Navigation -->
-    <header class="admin-header bg-gray-800 text-white p-4">
+    <header class="admin-header bg-gray-800 text-white p-2">
       <div class="container mx-auto flex justify-between items-center">
-        <h1 class="text-lg sm:text-xl font-bold">Admin Dashboard</h1>
-        <p> {{ new Date().toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' }) }}</p>
-        
+        <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+        <NuxtLink
+          to="/admin"
+          class="font-bold px-3 rounded-md text-lg transition-colors"
+          :class="isActive('/admin') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+        >
+          Admin Dashboard
+        </NuxtLink>        
+          <!-- Responsive Datum -->
+          <p class="text-sm sm:text-sm text-gray-300 px-3 py-1"> 
+            {{ new Date().toLocaleDateString('de-CH', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: '2-digit', 
+              day: '2-digit' 
+            }) }}
+          </p>  
+          </div>      
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex space-x-1">
           <NuxtLink
-            to="/admin"
+            to="/admin/products"
             class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            :class="isActive('/admin') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+            :class="isActive('/admin/products') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
           >
-            🏠 Dashboard
+            Produkte
           </NuxtLink>
           <NuxtLink
             to="/admin/exam-locations"
             class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
             :class="isActive('/admin/exam-locations') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
           >
-            🏛️ Prüfungsorte
+            Prüfungsorte
           </NuxtLink>
           <NuxtLink
             to="/admin/pricing"
             class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
             :class="isActive('/admin/pricing') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
           >
-            💰 Preise
+            Preise
           </NuxtLink>
           <NuxtLink
             to="/admin/payment-overview"
             class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
             :class="isActive('/admin/payment-overview') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
           >
-            💳 Zahlungen
+            Zahlungen
           </NuxtLink>
           <NuxtLink
             to="/admin/users"
             class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
             :class="isActive('/admin/users') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
           >
-            👥 Benutzer
+            Benutzer
           </NuxtLink>
         </nav>
 
@@ -49,7 +64,8 @@
         <div class="md:hidden relative">
           <button
             @click="showMobileMenu = !showMobileMenu"
-            class="p-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-white"
+            class="p-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700 focus:outline-none transition-colors"
+            type="button"
           >
             <svg 
               class="h-6 w-6" 
@@ -76,49 +92,50 @@
 
           <!-- Mobile Dropdown Menu -->
           <div
-            v-if="showMobileMenu"
-            class="absolute right-0 top-full mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50"
+            v-show="showMobileMenu"
+            class="absolute right-0 top-full mt-2 w-64 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50"
+            @click.stop
           >
             <div class="py-2">
               <NuxtLink
-                to="/admin"
+                to="/admin/products"
                 @click="showMobileMenu = false"
-                class="block px-4 py-2 text-sm font-medium transition-colors"
-                :class="isActive('/admin') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
+                :class="isActive('/admin/products') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
               >
-                🏠 Dashboard
+                Produkte
               </NuxtLink>
               <NuxtLink
                 to="/admin/exam-locations"
                 @click="showMobileMenu = false"
-                class="block px-4 py-2 text-sm font-medium transition-colors"
-                :class="isActive('/admin/exam-locations') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
+                :class="isActive('/admin/exam-locations') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
               >
-                🏛️ Prüfungsorte
+                Prüfungsorte
               </NuxtLink>
               <NuxtLink
                 to="/admin/pricing"
                 @click="showMobileMenu = false"
-                class="block px-4 py-2 text-sm font-medium transition-colors"
-                :class="isActive('/admin/pricing') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
+                :class="isActive('/admin/pricing') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
               >
-                💰 Preise
+                Preise
               </NuxtLink>
               <NuxtLink
                 to="/admin/payment-overview"
                 @click="showMobileMenu = false"
-                class="block px-4 py-2 text-sm font-medium transition-colors"
-                :class="isActive('/admin/payment-overview') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
+                :class="isActive('/admin/payment-overview') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
               >
-                💳 Zahlungen
+                Zahlungen
               </NuxtLink>
               <NuxtLink
                 to="/admin/users"
                 @click="showMobileMenu = false"
-                class="block px-4 py-2 text-sm font-medium transition-colors"
-                :class="isActive('/admin/users') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
+                :class="isActive('/admin/users') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
               >
-                👥 Benutzer
+                Benutzer
               </NuxtLink>
             </div>
           </div>
@@ -141,13 +158,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { useRoute } from '#app'
 
 const route = useRoute()
 const showMobileMenu = ref(false)
 
-// Check if current route matches (with exact match for /admin)
+// Check if current route matches
 const isActive = (path) => {
   if (path === '/admin') {
     return route.path === '/admin'
@@ -155,24 +172,17 @@ const isActive = (path) => {
   return route.path.startsWith(path)
 }
 
-// Close mobile menu when clicking outside
-const handleClickOutside = (event) => {
-  if (showMobileMenu.value && !event.target.closest('.mobile-menu')) {
+// Debug: Log when menu state changes
+watch(() => showMobileMenu.value, (newValue) => {
+  console.log('📱 Mobile menu state:', newValue)
+})
+
+// Simple watch for route changes
+watchEffect(() => {
+  // Close menu when route changes
+  if (route.path) {
     showMobileMenu.value = false
   }
-}
-
-// Close mobile menu on route change
-watch(() => route.path, () => {
-  showMobileMenu.value = false
-})
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -197,16 +207,6 @@ onUnmounted(() => {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Active link styles */
-nav a {
-  text-decoration: none;
-}
-
-nav a:hover {
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-
 /* Mobile menu specific styles */
 @media (max-width: 768px) {
   .container {
@@ -219,24 +219,12 @@ nav a:hover {
   }
 }
 
-/* Ensure dropdown is above other content */
+/* Z-index layers */
 .z-50 {
   z-index: 50;
 }
 
 .z-40 {
   z-index: 40;
-}
-
-/* Mobile dropdown animation */
-.mobile-dropdown-enter-active,
-.mobile-dropdown-leave-active {
-  transition: all 0.2s ease;
-}
-
-.mobile-dropdown-enter-from,
-.mobile-dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
 }
 </style>

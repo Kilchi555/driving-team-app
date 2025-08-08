@@ -115,13 +115,15 @@
           <!-- Title Input -->
           <div> 
             <TitleInput
-              v-model:title="formData.title"
-              :event-type="formData.eventType as 'lesson' | 'staff_meeting' | 'other'"
+              :title="formData.title"
+              @update:title="handleTitleUpdate"
+              :event-type="eventTypeForTitle"
               :selected-student="selectedStudent"
               :selected-special-type="formData.selectedSpecialType"
               :category-code="formData.type"
               :selected-location="selectedLocation"
               :disabled="mode === 'view'"
+              :auto-generate="true"
               @title-generated="handleTitleGenerated"
             />
           </div>
@@ -182,31 +184,32 @@
 
           <!-- Price Display - nur für Fahrstunden -->
           <div v-if="selectedStudent && formData.duration_minutes && formData.eventType === 'lesson'">
-            <PriceDisplay
-              ref="priceDisplayRef"
-              :event-type="formData.eventType"
-              :duration-minutes="formData.duration_minutes"
-              :price-per-minute="handlers.pricing.dynamicPricing.value.pricePerMinute || formData.price_per_minute"
-              :is-paid="formData.is_paid"
-              :admin-fee="dynamicPricing.adminFeeChf || 0"
-              :appointment-number="dynamicPricing.appointmentNumber || 1"
-              :is-second-or-later-appointment="dynamicPricing.hasAdminFee || false"
-              :discount="formData.discount || 0"
-              :discount-type="(formData.discount_type as 'fixed') || 'fixed'"
-              :discount-reason="formData.discount_reason || ''"
-              :allow-discount-edit="currentUser?.role === 'staff' || currentUser?.role === 'admin'"
-              :selected-date="formData.startDate"
-              :start-time="formData.startTime"
-              :end-time="formData.endTime"
-              :current-user="currentUser"
-              :selected-student="selectedStudent"
-              :event-data="props.eventData"
-              @discount-changed="handleDiscountChanged"
-              @payment-status-changed="handlePaymentStatusChanged"
-              @payment-method-changed="handlePaymentModeChanged"
-              :allow-product-sale="true"
-              @products-changed="handleProductsChanged"
-            />
+         <PriceDisplay
+            ref="priceDisplayRef"
+            :event-type="formData.eventType"
+            :duration-minutes="formData.duration_minutes"
+            :price-per-minute="handlers.pricing.dynamicPricing.value.pricePerMinute || formData.price_per_minute"
+            :is-paid="formData.is_paid"
+            :admin-fee="handlers.pricing.dynamicPricing.value.adminFeeChf || 0"
+            :appointment-number="handlers.pricing.dynamicPricing.value.appointmentNumber || 1"
+            :is-second-or-later-appointment="handlers.pricing.dynamicPricing.value.hasAdminFee || false"
+            :discount="formData.discount || 0"
+            :discount-type="(formData.discount_type as 'fixed') || 'fixed'"
+            :discount-reason="formData.discount_reason || ''"
+            :allow-discount-edit="currentUser?.role === 'staff' || currentUser?.role === 'admin'"
+            :selected-date="formData.startDate"
+            :start-time="formData.startTime"
+            :end-time="formData.endTime"
+            :current-user="currentUser"
+            :selected-student="selectedStudent"
+            :event-data="props.eventData"
+            @discount-changed="handleDiscountChanged"
+            @payment-status-changed="handlePaymentStatusChanged"
+            @payment-method-changed="handlePaymentModeChanged"
+            :allow-product-sale="true"
+            @products-changed="handleProductsChanged"
+            @price-changed="handlePriceChanged"
+          />
           </div>
 
           <!-- Error Display -->
@@ -473,13 +476,16 @@ const handleProductsChanged = (products: any[]) => {
 }
 
 // ============ COMPUTED ============
-const modalTitle = computed(() => {
-  switch (props.mode) {
-    case 'create': return '➕ Neuen Termin erstellen'
-    case 'edit': return '✏️ Termin bearbeiten'
-    case 'view': return '👁️ Termin anzeigen'
-    default: return 'Termin'
+const eventTypeForTitle = computed(() => {
+  const eventType = formData.value.eventType
+  
+  // Nur gültige Typen zurückgeben
+  if (eventType === 'lesson' || eventType === 'staff_meeting' || eventType === 'other') {
+    return eventType
   }
+  
+  // Fallback für ungültige Werte
+  return 'lesson' as const
 })
 
 const shouldAutoLoadStudents = computed(() => {
@@ -565,25 +571,10 @@ const isFreeslotMode = computed(() => {
   return result
 })
 
-// Irgendwo in EventModal.vue, nach den anderen computed properties:
-const timeSelectorDebug = computed(() => {
-  const debug = {
-    showTimeSection: showTimeSection.value,
-    selectedStudent: !!selectedStudent.value,
-    studentName: selectedStudent.value ? `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}` : 'NONE',
-    eventType: formData.value.eventType,
-    selectedSpecialType: formData.value.selectedSpecialType,
-    startTime: formData.value.startTime,
-    endTime: formData.value.endTime,
-    startDate: formData.value.startDate
-  }
-  
-  console.log('🔍 TimeSelector Debug:', debug)
-  return debug
-})
 // ============ HANDLERS ============
-// In EventModal.vue - ersetzen Sie die lokale handleStudentSelected Funktion mit:
-// EventModal.vue - FÜGEN SIE DIESE FUNKTIONEN HINZU:
+const handleTitleUpdate = (newTitle: string) => {
+  formData.value.title = newTitle
+}
 
 // ✅ 1. START DATE HANDLER
 const handleStartDateUpdate = (newStartDate: string) => {
@@ -835,6 +826,7 @@ const handleLessonTypeSelected = (lessonType: any) => {
 }
 
 const handlePriceChanged = (price: number) => {
+    console.log('💰 Price changed in EventModal:', price)
   formData.value.price_per_minute = price
 }
 
@@ -988,7 +980,9 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
 
 const handleTitleGenerated = (title: string) => {
   console.log('📝 Title auto-generated:', title)
+  console.log('📝 BEFORE setting title:', formData.value.title)
   formData.value.title = title
+  console.log('📝 AFTER setting title:', formData.value.title)
 }
 
 const handleOpenPaymentModal = () => {
@@ -1340,43 +1334,6 @@ watch(() => props.isVisible, async (isVisible) => {
   }
 })
 
-// ✅ KORRIGIERTE VERSION mit .value
-watch([
-  () => formData.value.type,
-  () => formData.value.duration_minutes,
-  () => selectedStudent.value?.id // ← .id hinzufügen für Stability
-], async ([newType, newDuration, newStudentId], [oldType, oldDuration, oldStudentId]) => {
-  
-  // ✅ Nur triggern wenn sich wirklich was geändert hat
-  const typeChanged = newType !== oldType
-  const durationChanged = newDuration !== oldDuration  
-  const studentChanged = newStudentId !== oldStudentId
-  
-  if (!typeChanged && !durationChanged && !studentChanged) {
-    return // Keine Änderung, nichts tun
-  }
-  
-  console.log('🔍 EventModal watcher triggered:', { 
-    typeChanged, durationChanged, studentChanged,
-    newType, newDuration, hasStudentId: !!newStudentId 
-  })
-  
-  if (newType && newDuration && newStudentId && formData.value.eventType === 'lesson') {
-    console.log('💰 Auto-triggering price calculation for pre-selected category')
-    
-    try {
-      await handlers.pricing.updateDynamicPricing(
-        newType, 
-        newDuration, 
-        newStudentId
-      )
-      console.log('✅ Auto price calculation completed')
-    } catch (error) {
-      console.error('❌ Auto price calculation failed:', error)
-    }
-  }
-})
-
 const loadStudentForEdit = async (userId: string) => {
   try {
     const { data, error } = await supabase
@@ -1395,6 +1352,22 @@ const loadStudentForEdit = async (userId: string) => {
     console.error('❌ Error loading student for edit:', err)
   }
 }
+
+// In EventModal.vue - Console logs hinzufügen:
+
+
+// 1. Watcher für formData.title
+watch(() => formData.value.title, (newTitle, oldTitle) => {
+  console.log('🔍 TITEL CHANGED:', {
+    from: oldTitle,
+    to: newTitle,
+    stack: new Error().stack?.split('\n')[1] || 'Stack not available' // ← Sicherer Zugriff
+  })
+}, { immediate: true })
+
+// 3. Beim Speichern loggen
+// In der saveAppointment Funktion:
+console.log('💾 SAVING WITH TITLE:', formData.value.title)
 
 // In EventModal.vue - erweitere die Funktion mit mehr Logs:
 const saveStudentPaymentPreferences = async (studentId: string, paymentMode: string, data?: any) => {

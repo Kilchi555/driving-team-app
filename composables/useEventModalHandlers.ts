@@ -189,27 +189,6 @@ const handleCategorySelected = async (category: any) => {
       console.error('❌ Error loading category from DB:', err)
     }
     
-    // ✅ SOFORTIGE PREISBERECHNUNG HINZUFÜGEN:
-    if (formData.value.duration_minutes && formData.value.eventType === 'lesson') {
-      console.log('💰 Triggering price calculation after category selection')
-      try {
-        await pricing.updateDynamicPricing(
-          category.code, 
-          formData.value.duration_minutes, 
-          formData.value.user_id
-        )
-        console.log('🔍 Nach pricing.updateDynamicPricing - Debugging:', {
-          pricingResult: pricing.dynamicPricing.value,
-          categoryCode: category.code,
-          duration: formData.value.duration_minutes,
-          userId: formData.value.user_id
-        })
-        console.log('✅ Price updated:', pricing.dynamicPricing.value.pricePerMinute)
-      } catch (error) {
-        console.error('❌ Price calculation failed:', error)
-      }
-    }
-    
     calculateEndTime()
   }
 }

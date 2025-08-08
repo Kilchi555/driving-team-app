@@ -40,13 +40,13 @@ interface Category {
   name: string
   code: string
   description?: string
-  price_per_lesson: number
+  price_per_lesson?: number
   lesson_duration_minutes: number
-  exam_duration_minutes?: number  // ✅ NEU HINZUGEFÜGT
+  exam_duration_minutes?: number  
   color?: string
   is_active: boolean
   display_order: number
-  price_unit: string
+  price_unit?: string
 }
 
 interface CategoryWithDurations extends Category {
@@ -236,12 +236,10 @@ const loadCategories = async () => {
         name, 
         code, 
         description, 
-        price_per_lesson, 
         lesson_duration_minutes, 
         color, 
         is_active, 
         display_order, 
-        price_unit, 
         exam_duration_minutes,
         created_at
       `)
@@ -458,7 +456,7 @@ const handleCategoryChange = (event: Event) => {
   emit('category-selected', selected)
   
   if (selected) {
-    const pricePerMinute = selected.price_per_lesson / 45
+    const pricePerMinute = 2.11
     emit('price-changed', pricePerMinute)
     
     // ✅ FINAL: Dauern emittieren
@@ -507,7 +505,7 @@ watch(() => props.selectedUser, (newUser, oldUser) => {
       
       emit('update:modelValue', 'B')
       emit('category-selected', defaultCategory)
-      emit('price-changed', defaultCategory.price_per_lesson / 45)
+      emit('price-changed', 2.11)
       emit('durations-changed', defaultCategory.availableDurations)
       
       setTimeout(() => {
@@ -539,7 +537,7 @@ watch(() => props.selectedUser, (newUser, oldUser) => {
      console.log('🎯 Auto-selected category:', selected)
      emit('category-selected', selected)
      
-     const pricePerMinute = selected.price_per_lesson / 45
+     const pricePerMinute = 2.11
      emit('price-changed', pricePerMinute)
      
      // ✅ RACE-SAFE Auto-Emit
