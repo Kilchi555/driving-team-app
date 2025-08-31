@@ -155,11 +155,11 @@
           </div>
         </div>
 
-        <!-- Students with Unpaid Lessons -->
+        <!-- Students with Unpaid/Pending Lessons -->
         <div class="bg-white rounded-lg shadow-sm border">
           <div class="px-6 py-4 border-b border-gray-200">
             <h3 class="text-lg font-semibold text-gray-900">
-              💰 Fahrschüler mit unbezahlten Lektionen
+              💰 Fahrschüler mit ausstehenden Zahlungen
             </h3>
           </div>
           <div class="p-6">
@@ -172,26 +172,34 @@
             <div v-else-if="unpaidStudents.length === 0" class="h-64 flex items-center justify-center text-gray-500">
               <div class="text-center">
                 <div class="text-4xl mb-2">✅</div>
-                <div>Alle Lektionen sind bezahlt!</div>
+                <div>Alle Zahlungen sind abgeschlossen!</div>
               </div>
             </div>
             <div v-else class="space-y-4">
               <div v-for="student in unpaidStudents" :key="student.id" 
-                   class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                   class="flex items-center justify-between p-3 rounded-lg border"
+                   :class="getStudentCardClasses(student.payment_status)">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                    <span class="text-red-600 font-semibold text-sm">
+                  <div class="w-10 h-10 rounded-full flex items-center justify-center"
+                       :class="getStudentAvatarClasses(student.payment_status)">
+                    <span class="font-semibold text-sm"
+                          :class="getStudentAvatarTextClasses(student.payment_status)">
                       {{ student.first_name?.charAt(0) }}{{ student.last_name?.charAt(0) }}
                     </span>
                   </div>
                   <div>
                     <div class="font-medium text-gray-900">{{ student.first_name }} {{ student.last_name }}</div>
                     <div class="text-sm text-gray-500">{{ student.email }}</div>
+                    <div class="text-xs mt-1" :class="getStatusBadgeClasses(student.payment_status)">
+                      {{ getStatusText(student.payment_status) }}
+                    </div>
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="font-semibold text-red-600">{{ student.unpaid_lessons_count }}</div>
-                  <div class="text-xs text-gray-500">Unbezahlte Lektionen</div>
+                  <div class="font-semibold" :class="getAmountTextClasses(student.payment_status)">
+                    {{ student.unpaid_lessons_count }}
+                  </div>
+                  <div class="text-xs text-gray-500">{{ getStatusDescription(student.payment_status) }}</div>
                   <div class="text-xs text-gray-500">CHF {{ (student.total_unpaid_amount / 100).toFixed(2) }}</div>
                 </div>
               </div>
@@ -199,12 +207,12 @@
               <!-- Summary -->
               <div class="pt-3 border-t border-gray-100">
                 <div class="flex justify-between text-sm">
-                  <span class="text-gray-600">Gesamt unbezahlte Lektionen:</span>
-                  <span class="font-semibold text-red-600">{{ totalUnpaidLessons }}</span>
+                  <span class="text-gray-600">Gesamt ausstehende Lektionen:</span>
+                  <span class="font-semibold text-orange-600">{{ totalUnpaidLessons }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
-                  <span class="text-gray-600">Gesamt unbezahlter Betrag:</span>
-                  <span class="font-semibold text-red-600">CHF {{ (totalUnpaidAmount / 100).toFixed(2) }}</span>
+                  <span class="text-gray-600">Gesamt ausstehender Betrag:</span>
+                  <span class="font-semibold text-orange-600">CHF {{ (totalUnpaidAmount / 100).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -308,6 +316,7 @@ interface UnpaidStudent {
   email: string
   unpaid_lessons_count: number
   total_unpaid_amount: number
+  payment_status: 'none' | 'pending' | 'mixed'
 }
 
 // State
@@ -444,6 +453,70 @@ const totalUnpaidLessons = computed(() =>
 const totalUnpaidAmount = computed(() => 
   unpaidStudents.value.reduce((sum, student) => sum + student.total_unpaid_amount, 0)
 )
+
+// Helper functions for styling unpaid students
+const getStudentCardClasses = (status: 'none' | 'pending' | 'mixed'): string => {
+  switch (status) {
+    case 'none': return 'bg-red-50 border-red-200'
+    case 'pending': return 'bg-orange-50 border-orange-200'  
+    case 'mixed': return 'bg-yellow-50 border-yellow-200'
+    default: return 'bg-gray-50 border-gray-200'
+  }
+}
+
+const getStudentAvatarClasses = (status: 'none' | 'pending' | 'mixed'): string => {
+  switch (status) {
+    case 'none': return 'bg-red-100'
+    case 'pending': return 'bg-orange-100'
+    case 'mixed': return 'bg-yellow-100'
+    default: return 'bg-gray-100'
+  }
+}
+
+const getStudentAvatarTextClasses = (status: 'none' | 'pending' | 'mixed'): string => {
+  switch (status) {
+    case 'none': return 'text-red-600'
+    case 'pending': return 'text-orange-600'
+    case 'mixed': return 'text-yellow-600'
+    default: return 'text-gray-600'
+  }
+}
+
+const getAmountTextClasses = (status: 'none' | 'pending' | 'mixed'): string => {
+  switch (status) {
+    case 'none': return 'text-red-600'
+    case 'pending': return 'text-orange-600'
+    case 'mixed': return 'text-yellow-600'
+    default: return 'text-gray-600'
+  }
+}
+
+const getStatusBadgeClasses = (status: 'none' | 'pending' | 'mixed'): string => {
+  switch (status) {
+    case 'none': return 'text-red-600 bg-red-100 px-2 py-1 rounded-full'
+    case 'pending': return 'text-orange-600 bg-orange-100 px-2 py-1 rounded-full'
+    case 'mixed': return 'text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full'
+    default: return 'text-gray-600 bg-gray-100 px-2 py-1 rounded-full'
+  }
+}
+
+const getStatusText = (status: 'none' | 'pending' | 'mixed'): string => {
+  switch (status) {
+    case 'none': return '🔴 Unbezahlt'
+    case 'pending': return '🟠 Ausstehend'
+    case 'mixed': return '🟡 Gemischt'
+    default: return '❓ Unbekannt'
+  }
+}
+
+const getStatusDescription = (status: 'none' | 'pending' | 'mixed'): string => {
+  switch (status) {
+    case 'none': return 'Unbezahlte Lektionen'
+    case 'pending': return 'Ausstehende Zahlungen'
+    case 'mixed': return 'Verschiedene Status'
+    default: return 'Lektionen'
+  }
+}
 
 // Methods
 const loadDashboardStats = async () => {
@@ -669,9 +742,8 @@ const loadUnpaidStudents = async () => {
       return acc
     }, {} as Record<string, any[]>)
     
-    // Find appointments without completed payments (but allow pending payments)
-    // FIXED: Only consider appointments as "unpaid" if they have NO payments at all
-    // or only failed payments. Pending payments should NOT be considered unpaid.
+    // Find appointments without completed payments
+    // This includes appointments with NO payments and appointments with only pending/failed payments
     const unpaidAppointments = completedAppointments.filter(apt => {
       const appointmentPayments = paymentsByAppointment[apt.id] || []
       
@@ -680,18 +752,33 @@ const loadUnpaidStudents = async () => {
         return true
       }
       
-      // If has payments, check if ALL are failed (not pending or completed)
-      const hasActivePayment = appointmentPayments.some(p => 
-        p.payment_status === 'completed' || p.payment_status === 'pending'
+      // If has payments, only exclude if there's a completed payment
+      const hasCompletedPayment = appointmentPayments.some(p => 
+        p.payment_status === 'completed'
       )
       
-      return !hasActivePayment
+      return !hasCompletedPayment
     })
     
     console.log('🔍 Debug unpaid logic:')
     console.log('- Total completed appointments:', completedAppointments.length)
+    console.log('- Total payments found:', payments?.length || 0)
     console.log('- Appointments with payments:', Object.keys(paymentsByAppointment).length)
-    console.log('- Truly unpaid appointments:', unpaidAppointments.length)
+    console.log('- Appointments needing payment:', unpaidAppointments.length)
+    
+    // Debug specific payments
+    if (payments && payments.length > 0) {
+      console.log('📊 Payment status breakdown:')
+      const statusCounts = payments.reduce((acc, p) => {
+        acc[p.payment_status] = (acc[p.payment_status] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+      console.log(statusCounts)
+      
+      // Show pending payments specifically
+      const pendingPayments = payments.filter(p => p.payment_status === 'pending')
+      console.log('⏳ Pending payments details:', pendingPayments)
+    }
     
     if (unpaidAppointments.length === 0) {
       unpaidStudents.value = []
@@ -728,13 +815,30 @@ const loadUnpaidStudents = async () => {
       const existing = studentMap.get(userId)
       const userInfo = userNames[userId] || { first_name: '', last_name: '', email: '' }
       
-      // Get the total amount for this appointment from payments (failed payments)
+      // Get the payments for this appointment
       const appointmentPayments = paymentsByAppointment[apt.id] || []
       const totalAmount = appointmentPayments.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0)
+      
+      // Determine payment status for this appointment
+      let paymentStatus: 'none' | 'pending' | 'mixed' = 'none'
+      if (appointmentPayments.length > 0) {
+        const hasPending = appointmentPayments.some(p => p.payment_status === 'pending')
+        const hasFailed = appointmentPayments.some(p => p.payment_status === 'failed')
+        
+        if (hasPending && hasFailed) {
+          paymentStatus = 'mixed'
+        } else if (hasPending) {
+          paymentStatus = 'pending'
+        }
+      }
       
       if (existing) {
         existing.unpaid_lessons_count += 1
         existing.total_unpaid_amount += totalAmount
+        // If mixed statuses, keep as mixed
+        if (existing.payment_status !== paymentStatus) {
+          existing.payment_status = 'mixed'
+        }
       } else {
         studentMap.set(userId, {
           id: userId,
@@ -742,7 +846,8 @@ const loadUnpaidStudents = async () => {
           last_name: userInfo.last_name,
           email: userInfo.email,
           unpaid_lessons_count: 1,
-          total_unpaid_amount: totalAmount
+          total_unpaid_amount: totalAmount,
+          payment_status: paymentStatus
         })
       }
     })
