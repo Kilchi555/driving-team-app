@@ -363,20 +363,52 @@ const getRatingText = (rating: number) => {
   return texts[rating] || ''
 }
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('de-CH')
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return 'Kein Datum'
+  
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return 'Ungültiges Datum'
+    }
+    return date.toLocaleDateString('de-CH')
+  } catch (error) {
+    console.warn('Error formatting date:', dateString, error)
+    return 'Datum Fehler'
+  }
 }
 
-const formatDateTime = (dateString: string) => {
-  const date = new Date(dateString)
-  return `${date.toLocaleDateString('de-CH')} ${date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
+const formatDateTime = (dateString: string | null | undefined) => {
+  if (!dateString) return 'Kein Datum/Zeit'
+  
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return 'Ungültiges Datum/Zeit'
+    }
+    return `${date.toLocaleDateString('de-CH')} ${date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
+  } catch (error) {
+    console.warn('Error formatting dateTime:', dateString, error)
+    return 'Datum/Zeit Fehler'
+  }
 }
 
-const formatTime = (dateString: string) => {
-  return new Date(dateString).toLocaleTimeString('de-CH', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  })
+const formatTime = (dateString: string | null | undefined) => {
+  if (!dateString) return 'Keine Zeit'
+  
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return 'Ungültige Zeit'
+    }
+    return date.toLocaleTimeString('de-CH', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  } catch (error) {
+    console.warn('Error formatting time:', dateString, error)
+    return 'Zeit Fehler'
+  }
 }
 
 // Watchers

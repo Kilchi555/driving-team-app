@@ -1,6 +1,16 @@
-// composables/useWallee.ts - Updated Version
+// composables/useWallee.ts - Updated Version mit neuer DB-Struktur
 
 import { useRuntimeConfig } from '#app'
+import { usePaymentsNew } from './usePaymentsNew'
+import { getSupabase } from '~/utils/supabase'
+import type { 
+  Payment, 
+  PaymentItem, 
+  CreatePaymentRequest,
+  CreatePaymentItemRequest,
+  Product,
+  Discount 
+} from '~/types/payment'
 
 interface WalleeTransactionResult {
   success: boolean
@@ -8,6 +18,7 @@ interface WalleeTransactionResult {
   transactionId?: string
   paymentUrl?: string
   transaction?: any
+  payment?: Payment // Neue DB-Integration
 }
 
 interface WalleeConnectionResult {
@@ -18,11 +29,16 @@ interface WalleeConnectionResult {
 }
 
 interface WalleeTransactionRequest {
-  appointmentId: string
+  appointmentId?: string // Optional für standalone Zahlungen
   amount: number
   currency?: string
   customerId: string
   customerEmail: string
+  userId: string // Neue DB-Integration
+  staffId?: string // Neue DB-Integration
+  paymentMethod: 'online' // Wallee ist immer online
+  products?: Product[] // Neue DB-Integration
+  discounts?: Discount[] // Neue DB-Integration
   lineItems?: Array<{
     uniqueId: string
     name: string
@@ -32,20 +48,24 @@ interface WalleeTransactionRequest {
   }>
   successUrl?: string
   failedUrl?: string
+  description?: string
 }
 
 export const useWallee = () => {
+  const { createPayment } = usePaymentsNew()
+
+  // ✅ Hauptfunktion: Wallee-Transaktion mit DB-Integration
   const createTransaction = async (request: WalleeTransactionRequest): Promise<WalleeTransactionResult> => {
     try {
-      console.log('🔄 Creating Wallee transaction:', request)
+      console.log('🔄 Creating Wallee transaction with DB integration:', request)
       
       // Validierung der erforderlichen Felder
-      if (!request.appointmentId || !request.amount || !request.customerId || !request.customerEmail) {
-        throw new Error('Missing required fields: appointmentId, amount, customerId, customerEmail')
+      if (!request.amount || !request.customerId || !request.customerEmail || !request.userId) {
+        throw new Error('Missing required fields: amount, customerId, customerEmail, userId')
       }
 
-      // API Call zu deiner Wallee Route
-const response = await $fetch('/api/wallee/test-connection', {
+      // 1. Wallee-Transaktion erstellen
+      const walleeResponse = await $fetch('/api/wallee/create-transaction', {
         method: 'POST',
         body: {
           appointmentId: request.appointmentId,
@@ -55,8 +75,8 @@ const response = await $fetch('/api/wallee/test-connection', {
           customerEmail: request.customerEmail,
           lineItems: request.lineItems || [
             {
-              uniqueId: `appointment-${request.appointmentId}`,
-              name: 'Fahrstunde',
+              uniqueId: request.appointmentId ? `appointment-${request.appointmentId}` : `standalone-${Date.now()}`,
+              name: request.description || 'Fahrstunde',
               quantity: 1,
               amountIncludingTax: request.amount,
               type: 'PRODUCT'
@@ -65,15 +85,85 @@ const response = await $fetch('/api/wallee/test-connection', {
           successUrl: request.successUrl,
           failedUrl: request.failedUrl
         }
-      })  as any
+      }) as any
 
-      console.log('✅ Wallee transaction created successfully:', response)
+      if (!walleeResponse.success) {
+        throw new Error(walleeResponse.error || 'Wallee transaction failed')
+      }
+
+      console.log('✅ Wallee transaction created:', walleeResponse)
+
+      // 2. Zahlung in der lokalen DB speichern
+      const paymentItems: CreatePaymentItemRequest[] = []
+
+      // Appointment Item hinzufügen (falls vorhanden)
+      if (request.appointmentId) {
+        paymentItems.push({
+          item_type: 'appointment',
+          item_id: request.appointmentId,
+          quantity: 1,
+          unit_price_rappen: Math.round(request.amount * 100), // CHF zu Rappen
+          total_price_rappen: Math.round(request.amount * 100),
+          description: request.description || 'Fahrstunde'
+        })
+      }
+
+      // Produkte hinzufügen
+      if (request.products && request.products.length > 0) {
+        request.products.forEach(product => {
+          paymentItems.push({
+            item_type: 'product',
+            item_id: product.id,
+            quantity: 1,
+            unit_price_rappen: product.price_rappen,
+            total_price_rappen: product.price_rappen,
+            description: product.name
+          })
+        })
+      }
+
+      // Rabatte hinzufügen
+      if (request.discounts && request.discounts.length > 0) {
+        request.discounts.forEach(discount => {
+          const discountAmount = discount.discount_type === 'percentage' 
+            ? Math.round((request.amount * discount.discount_value / 100) * 100)
+            : Math.round(discount.discount_value * 100)
+          
+          paymentItems.push({
+            item_type: 'discount',
+            item_id: discount.id,
+            quantity: 1,
+            unit_price_rappen: -discountAmount, // Negativ für Rabatte
+            total_price_rappen: -discountAmount,
+            description: discount.name
+          })
+        })
+      }
+
+      // 3. Payment in der DB erstellen
+      const paymentRequest: CreatePaymentRequest = {
+        user_id: request.userId,
+        staff_id: request.staffId,
+        appointment_id: request.appointmentId,
+        payment_method: 'online',
+        items: paymentItems,
+        description: request.description || 'Online-Zahlung via Wallee'
+      }
+
+      const dbPayment = await createPayment(paymentRequest)
+      
+      if (!dbPayment) {
+        throw new Error('Failed to create payment in database')
+      }
+
+      console.log('✅ Payment saved to database:', dbPayment)
 
       return {
         success: true,
-        transactionId: response.transactionId,
-        paymentUrl: response.paymentUrl,
-        transaction: response.transaction,
+        transactionId: walleeResponse.transactionId,
+        paymentUrl: walleeResponse.paymentUrl,
+        transaction: walleeResponse.transaction,
+        payment: dbPayment, // Neue DB-Integration
         error: null
       }
 
@@ -149,33 +239,89 @@ const response = await $fetch('/api/wallee/test-connection', {
     return Math.round((lessonPrice + adminFee) * 100) / 100 // Auf 2 Dezimalstellen runden
   }
 
+  // ✅ Termin-basierte Zahlung mit DB-Integration
   const createAppointmentPayment = async (
     appointment: any, 
     user: any, 
     isSecondAppointment: boolean = false
   ): Promise<WalleeTransactionResult> => {
-    const amount = calculateAppointmentPrice(
-      appointment.type || 'B', 
-      appointment.duration_minutes || 45, 
-      isSecondAppointment
-    )
+    try {
+      const basePrice = calculateAppointmentPrice(appointment.type, appointment.duration_minutes, isSecondAppointment)
+      
+      return await createTransaction({
+        appointmentId: appointment.id,
+        amount: basePrice,
+        customerId: user.id,
+        customerEmail: user.email,
+        userId: user.id,
+        staffId: appointment.staff_id,
+        description: `Fahrstunde ${appointment.type} - ${appointment.duration_minutes}min`,
+        products: [], // Können später hinzugefügt werden
+        discounts: [] // Können später hinzugefügt werden
+      })
+    } catch (error: any) {
+      console.error('❌ Error creating appointment payment:', error)
+      return {
+        success: false,
+        error: error.message || 'Failed to create appointment payment'
+      }
+    }
+  }
 
-    return await createTransaction({
-      appointmentId: appointment.id,
-      amount: amount,
-      currency: 'CHF',
-      customerId: user.id,
-      customerEmail: user.email,
-      lineItems: [
-        {
-          uniqueId: `appointment-${appointment.id}`,
-          name: `Fahrstunde ${appointment.type || 'B'} (${appointment.duration_minutes || 45}min)`,
-          quantity: 1,
-          amountIncludingTax: amount,
-          type: 'PRODUCT'
-        }
-      ]
-    })
+  // ✅ Standalone Produktzahlung mit DB-Integration
+  const createProductPayment = async (
+    userId: string,
+    products: Product[],
+    discounts: Discount[] = [],
+    staffId?: string
+  ): Promise<WalleeTransactionResult> => {
+    try {
+      const totalAmount = products.reduce((sum, product) => sum + product.price_rappen, 0) / 100
+      
+      return await createTransaction({
+        amount: totalAmount,
+        customerId: userId,
+        customerEmail: '', // Muss vom User geholt werden
+        userId,
+        staffId,
+        description: `Produktkauf: ${products.map(p => p.name).join(', ')}`,
+        products,
+        discounts
+      })
+    } catch (error: any) {
+      console.error('❌ Error creating product payment:', error)
+      return {
+        success: false,
+        error: error.message || 'Failed to create product payment'
+      }
+    }
+  }
+
+  // ✅ Zahlungsstatus aktualisieren (Webhook-Integration)
+  const updatePaymentStatus = async (
+    paymentId: string, 
+    walleeTransactionId: string, 
+    status: 'completed' | 'failed' | 'pending'
+  ): Promise<boolean> => {
+    try {
+      const supabase = getSupabase()
+      
+      const { error } = await supabase
+        .from('payments')
+        .update({ 
+          payment_status: status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', paymentId)
+
+      if (error) throw error
+
+      console.log(`✅ Payment ${paymentId} status updated to ${status}`)
+      return true
+    } catch (error: any) {
+      console.error('❌ Error updating payment status:', error)
+      return false
+    }
   }
 
   return {
@@ -186,6 +332,8 @@ const response = await $fetch('/api/wallee/test-connection', {
     
     // Utility functions
     calculateAppointmentPrice,
-    createAppointmentPayment
+    createAppointmentPayment,
+    createProductPayment,
+    updatePaymentStatus
   }
 }

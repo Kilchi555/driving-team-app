@@ -1,1046 +1,1433 @@
-<!-- PriceDisplay.vue - Sauberes Template -->
+<!-- PriceDisplay.vue - Grundlegende Version -->
 <template>
-  <div class="space-y-4 p-4 bg-white rounded-lg border border-gray-200">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <h3 class="text-sm font-semibold text-gray-700">
-        💰 {{ eventType === 'lesson' ? 'Preisübersicht Fahrstunde' : 'Preisübersicht Termin' }}
-      </h3>
-    </div>
-
-    <!-- HAUPTPREIS-ANZEIGE -->
-    <div class="space-y-3">
-      
-      <!-- 1. FAHRSTUNDEN-GRUNDPREIS -->
-      <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-        <div class="flex-1">
-          <!-- Datum, Zeit, Dauer -->
-          <div class="text-xs text-blue-700 space-y-0.5">
-            <div v-if="selectedDate">📅 {{ formatSelectedDate(selectedDate) }}</div>
-            <div v-if="startTime && endTime">🕐 {{ startTime }} - {{ endTime }}</div>
-            <div>⏱️ {{ durationMinutes }} Minuten</div>
-          </div>
+  <div class="space-y-4">
+    <!-- Grundpreis -->
+    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+      <h3 class="text-lg font-semibold text-blue-800 mb-3">Preisübersicht</h3>
+      <div class="space-y-2">
+        <div class="flex justify-between">
+          <span class="text-gray-700">{{ lessonType || 'Grundpreis' }} ({{ durationMinutes }} min)</span>
+          <span class="font-semibold text-gray-700">CHF {{ getBasePrice().toFixed(2) }}</span>
         </div>
-        <span class="text-lg font-bold text-blue-900 ml-4">
-          CHF {{ formatPrice(lessonPrice) }}
-        </span>
-      </div>
-
-      <!-- 2. PRODUKTE ANZEIGE -->
-      <div v-if="productSale.hasProducts.value" class="space-y-2">
-        <div class="text-sm font-medium text-gray-700">📚 Zusätzliche Produkte</div>
-        <div v-for="item in productSale.selectedProducts.value" :key="item.product.id" 
-             class="flex justify-between items-center p-2 bg-green-50 rounded border border-green-200">
-          <div class="flex-1">
-            <div class="text-sm font-medium text-green-800">{{ item.product.name }}</div>
-            <div class="text-xs text-green-600">{{ item.quantity }}x CHF {{ item.product.price.toFixed(2) }}</div>
+        
+        <!-- Rabatt Anzeige - direkt im blauen Bereich -->
+        <div v-if="getDiscountAmount() > 0" class="flex justify-between items-center py-2 border-t border-blue-200">
+          <div class="flex items-center">
+            <span class="text-sm font-medium text-green-700">Rabatt</span>
+            <span v-if="getDiscountReason()" class="text-xs text-green-600 ml-2">({{ getDiscountReason() }})</span>
           </div>
           <div class="flex items-center space-x-2">
-            <span class="text-sm font-bold text-green-800">CHF {{ item.total.toFixed(2) }}</span>
+            <span class="text-sm font-bold text-green-700">- CHF {{ getDiscountAmount().toFixed(2) }}</span>
             <button 
-              @click="productSale.removeProduct(item.product.id)" 
-              class="text-red-500 hover:text-red-700 text-xs"
+              v-if="props.allowDiscountEdit"
+              @click="removeDiscount"
+              class="text-red-500 hover:text-red-700 text-xs ml-2"
             >
               ✕
             </button>
           </div>
         </div>
-      </div>
-
-      <!-- 3. VERSICHERUNGSGEBÜHR -->
-      <div v-if="shouldShowAdminFee" class="flex justify-between items-center p-2 bg-orange-50 rounded border border-orange-200">
-        <div class="flex items-center space-x-2">
-          <span class="text-sm text-orange-800">🛡️ Versicherung</span>
-          <button 
-            @click="showAdminFeeInfo = !showAdminFeeInfo"
-            class="text-orange-600 hover:text-orange-800 text-xs"
-          >
-            ℹ️
-          </button>
-        </div>
-        <span class="text-sm font-bold text-orange-800">CHF {{ formatPrice(pricing.calculatedAdminFee.value) }}</span>
-      </div>
-
-      <!-- 4. RABATT ANZEIGE -->
-      <div v-if="discount > 0" class="flex justify-between items-center p-2 bg-green-50 rounded border border-green-200">
-        <div class="flex items-center space-x-2">
-          <span class="text-sm text-green-800">🏷️ Rabatt</span>
-          <span v-if="discountReason" class="text-xs text-green-600">({{ discountReason }})</span>
-        </div>
-        <span class="text-sm font-bold text-green-800">- CHF {{ formatPrice(discount) }}</span>
-                  <button 
-            @click="removeDiscount"
-            class="text-red-500 hover:text-red-700 text-xs"
-          >
-            ✕
-          </button>
-      </div>
-
-      <!-- 5. GESAMTPREIS -->
-      <div class="flex justify-between items-center p-3 bg-gray-100 rounded-lg border-2 border-gray-300">
-        <span class="text-lg font-bold text-gray-900">💳 Gesamtpreis</span>
-        <span class="text-xl font-bold text-gray-900">CHF {{ formatPrice(finalPrice) }}</span>
-      </div>
-    </div>
-
-    <!-- EDIT-BUTTONS (nur im Edit-Mode sichtbar) -->
-    <div class="flex space-x-2 pt-2 border-t border-gray-200">
-      <!-- Rabatt-Button -->
-      <button
-        v-if="allowDiscountEdit && !showDiscountEdit"
-        @click="showDiscountEdit = true"
-        class="flex items-center px-3 py-2 text-sm text-green-600 border border-green-300 rounded-md hover:bg-green-50"
-      >
-        🏷️ Rabatt
-      </button>
-
-      <!-- Produkt-Button -->
-      <button
-        v-if="allowProductSale && !productSale.showProductSelector.value"
-        @click="productSale.openProductSelector()"
-        class="flex items-center px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50"
-      >
-        📚 Produkte
-      </button>
-    </div>
-
-    <!-- VERSICHERUNGS-INFO -->
-    <div v-if="showAdminFeeInfo" class="bg-orange-50 border border-orange-200 rounded-md p-3">
-      <h4 class="text-sm font-medium text-orange-800 mb-1">🛡️ Versicherungsgebühr</h4>
-      <p class="text-xs text-orange-700">Diese Gebühr wird für jeden Termin einmalig erhoben.</p>
-    </div>
-
-    <!-- RABATT-BEARBEITUNGS-SEKTION -->
-    <div v-if="showDiscountEdit" class="border-t border-gray-200 pt-4">      
-      <div class="space-y-3">
-        <h4 class="text-sm font-medium text-gray-700">🏷️ Rabatt hinzufügen</h4>
         
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Rabattbetrag (CHF)</label>
-          <input 
-            type="number" 
-            v-model="tempDiscountInput"
-            @blur="formatToTwoDecimals"
-            step="0.01"
-            min="0"
-            :max="maxDiscount"
-            placeholder="z.B. 20.00"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-          <p class="text-xs text-gray-500 mt-1">
-            Maximaler Rabatt: CHF {{ formatPrice(maxDiscount) }}
-          </p>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Grund für Rabatt</label>
-          <input 
-            type="text" 
-            v-model="tempDiscountReason"
-            placeholder="z.B. Treuebonus, Ausbildungsrabatt"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
+        <!-- Admin-Fee Anzeige -->
+        <div v-if="getAdminFee() > 0" class="py-2 border-t border-blue-200">
+          <div class="flex justify-between items-center">
+            <span class="text-sm font-medium text-orange-700">Administrationsgebühr</span>
+            <span class="text-sm font-semibold text-orange-700">CHF {{ getAdminFee().toFixed(2) }}</span>
+          </div>
         </div>
 
-        <!-- BUTTONS -->
-        <div class="flex justify-end space-x-3">
-          <button
-            @click="cancelDiscountEdit"
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Abbrechen
-          </button>
-          <button
-            @click="applyDiscount"
-            :disabled="tempDiscount <= 0"
-            class="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Rabatt anwenden
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- PRODUKT-AUSWAHL-SEKTION -->
-    <div v-if="productSale.showProductSelector.value" class="border-t border-gray-200 pt-4">      
-      <div class="space-y-3">
-        <h4 class="text-sm font-medium text-gray-700">📚 Produkte hinzufügen</h4>
-        
-        <!-- Produkt-Grid -->
-        <div class="grid grid-cols-2 gap-2">
-          <button
-            v-for="product in productSale.availableProducts.value"
-            :key="product.id"
-            @click="productSale.addProduct(product)"
-            class="p-3 text-left border rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <div class="text-sm font-medium">{{ product.name }}</div>
-            <div class="text-xs text-gray-500 mb-1">{{ product.description }}</div>
-            <div class="text-sm font-bold text-blue-600">CHF {{ product.price.toFixed(2) }}</div>
-          </button>
-        </div>
-
-        <!-- Buttons -->
-        <div class="flex justify-end">
-          <button 
-            @click="productSale.closeProductSelector()" 
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Schliessen
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ZAHLUNGSART-SEKTION (vereinfacht) -->
-    <div class="border-t border-gray-200 pt-4">
-      <h4 class="text-md font-medium text-gray-900 mb-3">Zahlungsart wählen</h4>
-      
-      <div class="space-y-3">
-        <!-- Rechnung Toggle -->
-        <div class="flex items-center justify-between p-3 border rounded-lg" 
-             :class="[
-               invoiceMode ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50'
-             ]">
-          <div class="flex items-center space-x-3">
-            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            <div>
-              <span class="font-medium text-gray-900">Rechnung</span>
+        <!-- Student Credit Anzeige -->
+        <div v-if="getUsedCredit() > 0 || (props.studentCredit && props.studentCredit.balance_rappen > 0)" class="py-2 border-t border-blue-200">
+          <div class="space-y-2">
+            <!-- Im Edit-Modus: Zeige das damals verwendete Guthaben -->
+            <div v-if="props.isEditMode && getUsedCredit() > 0" class="flex justify-between items-center">
+              <span class="text-sm font-medium text-green-600">Guthaben verwendet (damals)</span>
+              <span class="text-sm font-semibold text-green-600">- CHF {{ getUsedCredit().toFixed(2) }}</span>
+            </div>
+            
+            <!-- Im Create-Modus: Zeige aktuelles Guthaben -->
+            <div v-else-if="!props.isEditMode && props.studentCredit && props.studentCredit.balance_rappen > 0" class="flex justify-between items-center">
+              <span class="text-sm font-medium text-green-700">Verfügbares Guthaben</span>
+              <span class="text-sm font-semibold text-green-700">CHF {{ (props.studentCredit.balance_rappen / 100).toFixed(2) }}</span>
+            </div>
+            
+            <!-- Im Create-Modus: Zeige verwendetes Guthaben -->
+            <div v-if="!props.isEditMode && getUsedCredit() > 0" class="flex justify-between items-center">
+              <span class="text-sm text-green-600">Guthaben wird verwendet</span>
+              <span class="text-sm font-semibold text-green-600">- CHF {{ getUsedCredit().toFixed(2) }}</span>
+            </div>
+            
+            <!-- Im Create-Modus: Zeige verbleibendes Guthaben -->
+            <div v-if="!props.isEditMode && props.studentCredit && props.studentCredit.balance_rappen / 100 > getUsedCredit()" class="flex justify-between items-center">
+              <span class="text-sm text-green-600">Restguthaben</span>
+              <span class="text-sm font-semibold text-green-600">CHF {{ ((props.studentCredit.balance_rappen / 100) - getUsedCredit()).toFixed(2) }}</span>
             </div>
           </div>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input 
-              type="checkbox" 
-              v-model="invoiceMode" 
-              @change="onInvoiceModeChange"
-              class="sr-only peer"
-            >
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
+        </div>
+        
+        <!-- Loading State für Guthaben -->
+        <div v-else-if="props.isLoadingCredit" class="py-2 border-t border-blue-200">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-500">Guthaben wird geladen...</span>
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+          </div>
+        </div>
+        
+        <!-- Kein Guthaben verfügbar -->
+        <div v-else-if="props.studentCredit && props.studentCredit.balance_rappen === 0" class="py-2 border-t border-blue-200">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-500">Verfügbares Guthaben</span>
+            <span class="text-sm text-gray-500">CHF 0.00</span>
+          </div>
+          <div class="mt-1">
+            <span class="text-xs text-gray-400">Kein Guthaben verfügbar</span>
+          </div>
+        </div>
+        
+        <!-- Kein Guthaben verfügbar (Student hat kein Guthaben) -->
+        <div v-else-if="!props.studentCredit && !props.isLoadingCredit" class="py-2 border-t border-blue-200">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-500">Verfügbares Guthaben</span>
+            <span class="text-sm text-gray-500">CHF 0.00</span>
+          </div>
         </div>
 
-          <!-- RECHNUNGSFELDER - MIT BESTEHENDEN FUNKTIONEN -->
-          <div v-if="invoiceMode" class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h4 class="text-sm font-medium text-blue-800 mb-3">📋 Rechnungsadresse</h4>
-            
-            <!-- Bestehende Adressen laden Button -->
-            <div v-if="companyBilling.savedAddresses.value.length === 0 && !companyBilling.currentAddress.value" class="mb-3">
-              <button
-                @click="loadExistingAddresses"
-                class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                :disabled="companyBilling.isLoading.value"
-              >
-                {{ companyBilling.isLoading.value ? 'Laden...' : 'Bestehende Adressen laden' }}
-              </button>
-            </div>
-            
-            <!-- ✅ KORRIGIERT: Dropdown immer anzeigen wenn Adressen da sind -->
-            <div v-if="companyBilling.savedAddresses.value.length > 0" class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Gespeicherte Adresse auswählen:</label>
-              <select
-                :value="companyBilling.currentAddress.value?.id || ''"
-                @change="selectExistingAddress(($event.target as HTMLSelectElement).value)"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Neue Adresse eingeben</option>
-                <option 
-                  v-for="address in companyBilling.savedAddresses.value" 
-                  :key="address.id" 
-                  :value="address.id"
+        <!-- Produkte Anzeige - direkt im blauen Bereich -->
+        <div v-if="getProducts().length > 0" class="py-2 border-t border-blue-200">
+          <div class="space-y-2">
+            <div class="text-sm font-medium text-blue-700">Produkte</div>
+            <div v-for="product in getProducts()" :key="product.id" class="flex justify-between items-center">
+              <div class="flex items-center space-x-2">
+                <span class="text-sm text-gray-700">{{ product.name }}</span>
+                <span v-if="product.quantity > 1" class="text-xs text-gray-500">({{ product.quantity }}x)</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="text-sm font-semibold text-gray-700">CHF {{ getProductPrice(product).toFixed(2) }}</span>
+                <button 
+                  v-if="props.allowProductEdit"
+                  @click="removeProduct(product.id)"
+                  class="text-red-500 hover:text-red-700 text-xs ml-2"
                 >
-                  {{ companyBilling.getAddressPreview(address) }}
-                </option>
-              </select>
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="border-t pt-2">
+          <!-- Preis vor Guthaben (nur anzeigen wenn Guthaben vorhanden) -->
+          <div v-if="props.studentCredit && props.studentCredit.balance_rappen > 0" class="flex justify-between text-sm text-gray-500 mb-1">
+            <span>Preis vor Guthaben</span>
+            <span>CHF {{ calculatePriceBeforeCredit().toFixed(2) }}</span>
+          </div>
+          
+          <!-- Gesamtpreis (nach Guthaben) -->
+          <div class="flex justify-between text-lg font-bold">
+            <span class="text-gray-700">Zu bezahlen</span>
+            <span class="text-blue-600">CHF {{ calculateTotalPrice().toFixed(2) }}</span>
+          </div>
+          
+          <!-- Gratis Info wenn vollständig durch Guthaben gedeckt -->
+          <div v-if="props.studentCredit && props.studentCredit.balance_rappen / 100 >= calculatePriceBeforeCredit()" class="text-center mt-2">
+            <span class="text-sm font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+              ✅ Vollständig durch Guthaben gedeckt
+            </span>
+          </div>
+        </div>
+        
+        <!-- Rabatt und Produkte Buttons - zwischen Gesamtpreis und Zahlungsarten -->
+
+        <div v-if="props.allowDiscountEdit || props.allowProductEdit" class="border-t pt-3">
+          <div class="flex justify-center space-x-3">
+            <!-- ✅ RABATT BUTTON: Immer anzeigen wenn erlaubt -->
+            <button
+              v-if="props.allowDiscountEdit"
+              @click="showDiscountSelector = true"
+              class="flex items-center px-4 py-2 text-sm text-purple-600 border border-purple-300 rounded-md hover:bg-purple-50"
+            >
+              🎫 Rabatt
+            </button>
+            
+            <!-- ✅ PRODUKTE BUTTON: Immer anzeigen wenn erlaubt -->
+            <button
+              v-if="props.allowProductEdit"
+              @click="showProductSelector = true"
+              class="flex items-center px-4 py-2 text-sm text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50"
+            >
+              📦 Produkte
+            </button>
+          </div>
+        </div>
+        
+        <!-- Produktauswahl Modal - direkt im PriceDisplay -->
+        <div v-if="showProductSelector" class="border-t pt-3">
+          <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            
+            <div class="space-y-3">
+              <!-- Verfügbare Produkte als Kacheln -->
+              <div v-if="props.availableProducts && props.availableProducts.length > 0" class="grid grid-cols-2 gap-3">
+                <div 
+                  v-for="product in props.availableProducts" 
+                  :key="product.id" 
+                  @click="addProduct(product)"
+                  class="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                >
+                  <div class="text-center space-y-1">
+                    <!-- Produkt-Name -->
+                    <div class="text-sm font-medium text-gray-700">{{ product.name }}</div>
+                    
+                    <!-- Produkt-Preis -->
+                    <div class="text-sm font-bold text-blue-600">
+                      CHF {{ (product.price_rappen / 100).toFixed(2) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Keine Produkte verfügbar -->
+              <div v-else class="text-sm text-gray-500 text-center py-4">
+                Keine Produkte verfügbar
+              </div>
+              
+              <div class="flex justify-end space-x-3">
+                <button
+                  @click="showProductSelector = false"
+                  class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Schließen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- ✅ RABATT-SELECTOR -->
+        <div v-if="showDiscountSelector" class="border-t pt-3">
+          <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            
+            <div class="space-y-4">
+              
+              <!-- Verfügbare Gutscheine -->
+              <div v-if="availableDiscounts.length > 0" class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                  <div 
+                    v-for="discount in availableDiscounts" 
+                    :key="discount.id" 
+                    @click="applyVoucher(discount)"
+                    class="bg-white border border-gray-200 rounded-lg p-2 cursor-pointer hover:border-purple-300 hover:shadow-md transition-all duration-200"
+                  >
+                    <div class="text-center">
+                      <div class="text-sm font-bold text-purple-600">
+                        - CHF {{ parseFloat(discount.discount_value).toFixed(2) }}
+                      </div>
+                      <div class="text-xs text-gray-500">{{ discount.name || 'Gutschein' }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex justify-end space-x-3 pt-2 border-t border-gray-300">
+                <button
+                  @click="closeDiscountSelector"
+                  class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Schließen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- ✅ NEU: Bestehende Payment-Info anzeigen -->
+        <div v-if="showExistingPaymentInfo" class="border-t pt-3">
+          <div class="text-sm font-medium text-gray-700 mb-3">Zahlungsinformationen</div>
+          <div class="space-y-3">
+            <!-- Zahlungsart und Status Badges -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- Zahlungsart Badge -->
+              <span :class="[
+                'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
+                existingPayment?.payment_method === 'wallee' ? 'bg-blue-100 text-blue-800' :
+                existingPayment?.payment_method === 'cash' ? 'bg-green-100 text-green-800' :
+                existingPayment?.payment_method === 'invoice' ? 'bg-purple-100 text-purple-800' :
+                'bg-gray-100 text-gray-800'
+              ]">
+                {{ existingPayment?.payment_method === 'wallee' ? 'Online-Zahlung' :
+                   existingPayment?.payment_method === 'cash' ? 'Bar' :
+                   existingPayment?.payment_method === 'invoice' ? 'Rechnung' : 
+                   'Unbekannt' }}
+              </span>
+              
+              <!-- Status Badge -->
+              <span :class="[
+                'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
+                existingPayment?.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
+                existingPayment?.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                existingPayment?.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
+                'bg-gray-100 text-gray-800'
+              ]">
+                {{ existingPayment?.payment_status === 'completed' ? 'Bezahlt' :
+                   existingPayment?.payment_status === 'pending' ? 'Ausstehend' : 
+                   existingPayment?.payment_status === 'failed' ? 'Fehlgeschlagen' :
+                   'Unbekannt' }}
+              </span>
+              
+              <!-- Bezahldatum falls vorhanden -->
+              <span v-if="existingPayment?.paid_at" class="text-sm text-gray-600">
+                bezahlt am {{ new Date(existingPayment.paid_at).toLocaleDateString('de-CH') }}
+              </span>
             </div>
             
-            <!-- Formular Felder -->
-            <div v-if="!companyBilling.currentAddress.value" class="space-y-3">
-              <!-- Firmenname -->
+            <!-- Rechnungsadresse für Invoice -->
+            <div v-if="existingPayment?.payment_method === 'invoice' && hasInvoiceAddress" 
+                 class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <div class="text-sm font-medium text-gray-700 mb-2">Rechnungsadresse</div>
+              <div class="text-sm text-gray-600 whitespace-pre-line">{{ formatInvoiceAddress() }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zahlungsarten - nur für neue Termine oder wenn kein Payment existiert -->
+        <div v-if="showPaymentSelection && !props.isPastAppointment" class="border-t pt-3">
+          <div class="text-sm font-medium text-gray-700 mb-3">Zahlungsart</div>
+          
+          <!-- ✅ IMMER die schönen Buttons anzeigen -->
+          <div class="space-y-3">
+            <!-- Online Payment Button -->
+            <button
+              @click="selectPaymentMethod('wallee')"
+              :class="[
+                'w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-3',
+                selectedPaymentMethod === 'wallee'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+              ]"
+            >
+              <span class="font-medium">Online-Zahlung</span>
+            </button>
+            
+            <!-- Cash Payment Button -->
+            <button
+              @click="selectPaymentMethod('cash')"
+              :class="[
+                'w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-3',
+                selectedPaymentMethod === 'cash'
+                  ? 'border-green-500 bg-green-50 text-green-700 shadow-md'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50'
+              ]"
+            >
+              <span class="font-medium">Bar</span>
+            </button>
+            
+            <!-- Invoice Button -->
+            <button
+              @click="selectPaymentMethod('invoice')"
+              :class="[
+                'w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-3',
+                selectedPaymentMethod === 'invoice'
+                  ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-md'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'
+              ]"
+            >
+              <span class="font-medium">Rechnung</span>
+            </button>
+          </div>
+        </div>
+        
+        <!-- ✅ NEU: Gespeicherte Rechnungsadresse anzeigen -->
+        <div v-if="shouldShowSavedBillingAddress" class="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+          <div class="flex justify-between items-start mb-2">
+            <h5 class="text-sm font-medium text-gray-700">Gespeicherte Rechnungsadresse</h5>
+            <button 
+              @click="startEditingBillingAddress"
+              class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            >
+              ✏️ Bearbeiten
+            </button>
+          </div>
+          
+          <!-- Student Billing Address anzeigen -->
+          <div v-if="studentBillingAddress" class="text-sm text-gray-600 whitespace-pre-line">
+            <div v-if="studentBillingAddress.company_name" class="font-medium">{{ studentBillingAddress.company_name }}</div>
+            <div v-if="studentBillingAddress.contact_person">{{ studentBillingAddress.contact_person }}</div>
+            <div v-if="studentBillingAddress.email">{{ studentBillingAddress.email }}</div>
+            <div v-if="studentBillingAddress.phone">{{ studentBillingAddress.phone }}</div>
+            <div v-if="studentBillingAddress.street && studentBillingAddress.street_number">
+              {{ studentBillingAddress.street }} {{ studentBillingAddress.street_number }}
+            </div>
+            <div v-if="studentBillingAddress.zip && studentBillingAddress.city">
+              {{ studentBillingAddress.zip }} {{ studentBillingAddress.city }}
+            </div>
+            <div v-if="studentBillingAddress.country">{{ studentBillingAddress.country }}</div>
+          </div>
+          
+          <!-- Fallback: Existing Payment Billing Address -->
+          <div v-else-if="existingPayment?.company_billing_address" class="text-sm text-gray-600">
+            <div v-if="existingPayment.company_billing_address.company_name" class="font-medium">{{ existingPayment.company_billing_address.company_name }}</div>
+            <div v-if="existingPayment.company_billing_address.contact_person">{{ existingPayment.company_billing_address.contact_person }}</div>
+            <div v-if="existingPayment.company_billing_address.email">{{ existingPayment.company_billing_address.email }}</div>
+            <div v-if="existingPayment.company_billing_address.phone">{{ existingPayment.company_billing_address.phone }}</div>
+            <div v-if="existingPayment.company_billing_address.street && existingPayment.company_billing_address.street_number">
+              {{ existingPayment.company_billing_address.street }} {{ existingPayment.company_billing_address.street_number }}
+            </div>
+            <div v-if="existingPayment.company_billing_address.zip && existingPayment.company_billing_address.city">
+              {{ existingPayment.company_billing_address.zip }} {{ existingPayment.company_billing_address.city }}
+            </div>
+            <div v-if="existingPayment.company_billing_address.country">{{ existingPayment.company_billing_address.country }}</div>
+          </div>
+        </div>
+
+        <!-- Rechnungsadresse Form - nur wenn Formular angezeigt werden soll -->
+        <div v-if="shouldShowBillingAddressForm" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <h5 class="text-sm font-medium text-gray-700 mb-3">Rechnungsadresse</h5>
+            
+            <div class="space-y-3">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Firmenname *</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Firmenname</label>
                 <input
-                  v-model="companyBilling.formData.value.companyName"
+                  v-model="invoiceData.company_name"
                   type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Firma AG"
-                />
-                <div v-if="companyBilling.validation.value.errors.companyName" class="text-red-500 text-xs mt-1">
-                  {{ companyBilling.validation.value.errors.companyName }}
-                </div>
+                  placeholder="Firmenname (optional)"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                >
               </div>
               
-              <!-- Kontaktperson -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Kontaktperson *</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Kontaktperson *</label>
                 <input
-                  v-model="companyBilling.formData.value.contactPerson"
+                  v-model="invoiceData.contact_person"
                   type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Max Muster"
-                />
-                <div v-if="companyBilling.validation.value.errors.contactPerson" class="text-red-500 text-xs mt-1">
-                  {{ companyBilling.validation.value.errors.contactPerson }}
-                </div>
+                  required
+                  placeholder="Vorname Nachname"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                >
               </div>
               
-              <!-- E-Mail -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail *</label>
                 <input
-                  v-model="companyBilling.formData.value.email"
+                  v-model="invoiceData.email"
                   type="email"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="rechnung@firma.ch"
-                />
-                <div v-if="companyBilling.validation.value.errors.email" class="text-red-500 text-xs mt-1">
-                  {{ companyBilling.validation.value.errors.email }}
-                </div>
+                  required
+                  placeholder="email@beispiel.ch"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                >
               </div>
               
-              <!-- Adresse -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Strasse *</label>
-                  <input
-                    v-model="companyBilling.formData.value.street"
-                    type="text"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Musterstrasse"
-                  />
-                  <div v-if="companyBilling.validation.value.errors.street" class="text-red-500 text-xs mt-1">
-                    {{ companyBilling.validation.value.errors.street }}
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Hausnummer</label>
-                  <input
-                    v-model="companyBilling.formData.value.streetNumber"
-                    type="text"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="123"
-                  />
-                </div>
-              </div>
-              
-              <!-- PLZ/Ort -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">PLZ *</label>
-                  <input
-                    v-model="companyBilling.formData.value.zip"
-                    type="text"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="8000"
-                  />
-                  <div v-if="companyBilling.validation.value.errors.zip" class="text-red-500 text-xs mt-1">
-                    {{ companyBilling.validation.value.errors.zip }}
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Ort *</label>
-                  <input
-                    v-model="companyBilling.formData.value.city"
-                    type="text"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Zürich"
-                  />
-                  <div v-if="companyBilling.validation.value.errors.city" class="text-red-500 text-xs mt-1">
-                    {{ companyBilling.validation.value.errors.city }}
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Optional: VAT -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">MwSt-Nummer (optional)</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Telefon</label>
                 <input
-                  v-model="companyBilling.formData.value.vatNumber"
-                  type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="CHE-123.456.789"
-                />
+                  v-model="invoiceData.phone"
+                  type="tel"
+                  placeholder="+41 44 123 45 67"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                >
               </div>
               
-              <!-- Speichern Button -->
-              <div class="flex justify-end">
-                <button
-                  @click="saveCompanyBillingAddress"
-                  :disabled="!companyBilling.validation.value.isValid || companyBilling.isLoading.value"
-                  class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {{ companyBilling.isLoading.value ? 'Speichern...' : 'Adresse speichern' }}
-                </button>
-              </div>
-            </div>
-            
-            <!-- Gespeicherte Adresse anzeigen -->
-            <div v-if="companyBilling.currentAddress.value" class="bg-green-50 border border-green-200 rounded p-3">
-              <div class="flex justify-between items-start">
-                <div>
-                  <h5 class="font-medium text-green-800">{{ companyBilling.currentAddress.value.company_name }}</h5>
-                  <p class="text-sm text-green-700">{{ companyBilling.currentAddress.value.contact_person }}</p>
-                  <p class="text-sm text-green-600">
-                    {{ companyBilling.currentAddress.value.street }} {{ companyBilling.currentAddress.value.street_number || '' }}<br>
-                    {{ companyBilling.currentAddress.value.zip }} {{ companyBilling.currentAddress.value.city }}<br>                  </p>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Straße & Hausnummer *</label>
+                <div class="grid grid-cols-3 gap-2">
+                  <input
+                    v-model="invoiceData.street"
+                    type="text"
+                    required
+                    placeholder="Musterstraße"
+                    class="col-span-2 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  >
+                  <input
+                    v-model="invoiceData.street_number"
+                    type="text"
+                    required
+                    placeholder="123"
+                    class="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  >
                 </div>
-                <button
-                  @click="companyBilling.currentAddress.value = null; companyBilling.resetForm()"
-                  class="text-red-600 hover:text-red-800 text-sm"
+              </div>
+              
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">PLZ *</label>
+                  <input
+                    v-model="invoiceData.zip"
+                    type="text"
+                    required
+                    placeholder="8000"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  >
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Ort *</label>
+                  <input
+                    v-model="invoiceData.city"
+                    type="text"
+                    required
+                    placeholder="Zürich"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  >
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Land</label>
+                <input
+                  v-model="invoiceData.country"
+                  type="text"
+                  placeholder="Schweiz"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                 >
-                  Ändern
+              </div>
+              
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">MWST-Nummer</label>
+                  <input
+                    v-model="invoiceData.vat_number"
+                    type="text"
+                    placeholder="CHE-123.456.789"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  >
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Handelsregisternummer</label>
+                  <input
+                    v-model="invoiceData.company_register_number"
+                    type="text"
+                    placeholder="CH-123.456.789"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  >
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Notizen</label>
+                <textarea
+                  v-model="invoiceData.notes"
+                  placeholder="Zusätzliche Informationen..."
+                  rows="2"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                ></textarea>
+              </div>
+              
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  @click="saveInvoiceAddress"
+                  :disabled="!isInvoiceFormValid || isSavingInvoice"
+                  class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isSavingInvoice">💾 Speichere...</span>
+                  <span v-else>💾 {{ isEditingBillingAddress ? 'Änderungen speichern' : 'Rechnungsadresse speichern' }}</span>
+                </button>
+                
+                <!-- Abbrechen-Button nur im Bearbeitungsmodus -->
+                <button
+                  v-if="isEditingBillingAddress"
+                  type="button"
+                  @click="cancelEditingBillingAddress"
+                  class="px-4 py-2 bg-gray-500 text-white text-sm font-medium rounded-md hover:bg-gray-600"
+                >
+                  ❌ Abbrechen
                 </button>
               </div>
-            </div>
-            
-            <!-- Error anzeigen -->
-            <div v-if="companyBilling.error.value" class="text-red-600 text-sm mt-2">
-              {{ companyBilling.error.value }}
-            </div>
-          </div>
-
-        <!-- Barzahlung Toggle -->
-        <div class="flex items-center justify-between p-3 border rounded-lg"
-             :class="[
-               cashMode ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 bg-gray-50'
-             ]">
-          <div class="flex items-center space-x-3">
-            <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-            <div>
-              <span class="font-medium text-gray-900">Barzahlung</span>
+              
+              <div v-if="invoiceSaveMessage" class="text-sm text-center p-2 rounded-md" :class="invoiceSaveMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                {{ invoiceSaveMessage.text }}
+              </div>
             </div>
           </div>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input 
-              type="checkbox" 
-              v-model="cashMode" 
-              @change="onCashModeChange"
-              class="sr-only peer"
-            >
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-600"></div>
-          </label>
-        </div>
-
-        <!-- Online Zahlung (Standard) -->
-        <div v-if="!invoiceMode && !cashMode" class="flex items-center justify-between p-3 border-2 border-green-500 bg-green-50 rounded-lg">
-          <div class="flex items-center space-x-3">
-            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-            </svg>
-            <div>
-              <span class="font-medium text-gray-900">Online Zahlung</span>
-              <p class="text-sm text-gray-600">Twint, Kreditkarte über Wallee</p>
-            </div>
-          </div>
-          <span class="px-2 py-1 bg-green-600 text-white text-xs rounded-full">Aktiv</span>
-        </div>
       </div>
     </div>
 
-    <!-- Statusmeldung -->
-    <div v-if="paymentModeStatus" class="text-sm p-3 rounded-lg" 
-         :class="[
-           paymentModeStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
-           paymentModeStatus.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
-           'bg-red-50 text-red-800 border border-red-200'
-         ]">
-      {{ paymentModeStatus.message }}
-    </div>
+
+
+
+
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { useProductSale } from '~/composables/useProductSale'
-import { useCompanyBilling } from '~/composables/useCompanyBilling'
-import { usePricing } from '~/composables/usePricing'
+import { ref, computed, onMounted } from 'vue'
+import { usePaymentMethods, useCompanyBilling } from '~/composables/usePaymentMethods'
+import { useEventModalForm } from '~/composables/useEventModalForm'
 import { getSupabase } from '~/utils/supabase'
-import { usePaymentMethods } from '~/composables/usePaymentMethods'
-import { navigateTo } from '#app'
+import { watch } from 'vue'
 
-// Props Interface - nur die nötigsten
+// Erweiterte Props
 interface Props {
-  eventType?: 'lesson' | 'staff_meeting' | 'other'
-  eventData?: any 
-  selectedDate?: string
-  startTime?: string
-  endTime?: string
   durationMinutes: number
   pricePerMinute: number
-  adminFee?: number
-  appointmentNumber?: number
+  selectedStudent?: any
   discount?: number
   discountReason?: string
   allowDiscountEdit?: boolean
-  allowProductSale?: boolean
-  disabled?: boolean
-  showAdminFeeByDefault?: boolean
-  isSecondOrLaterAppointment?: boolean
+  allowProductEdit?: boolean
+  lessonType?: string
+  debugInfo?: string
+  products?: any[]
+  availableProducts?: any[]
+  isPastAppointment?: boolean
   currentUser?: any
-  selectedStudent?: any
-  initialPaymentMethod?: string
-  isPaid?: boolean
+  adminFee?: number // ✅ NEU: Admin-Fee in CHF
+  showAdminFee?: boolean // ✅ NEU: Ob Admin-Fee angezeigt werden soll
+  selectedPaymentMethod?: string // ✅ NEU: Selected payment method von EventModal
+  isEditMode?: boolean // ✅ NEU: Ob im Edit-Modus (bestehender Termin)
+  appointmentId?: string // ✅ NEU: Appointment ID für Payment-Daten laden
+  studentCredit?: any // ✅ NEU: Student credit information
+  isLoadingCredit?: boolean // ✅ NEU: Loading state for credit
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  eventType: 'lesson',
-  durationMinutes: 45,
-  // pricePerMinute: 2.11,
-  // adminFee: 25,
-  // appointmentNumber: 1,
   discount: 0,
   discountReason: '',
   allowDiscountEdit: true,
-  allowProductSale: true,
-  disabled: false,
-  showAdminFeeByDefault: false,
-  isSecondOrLaterAppointment: false,
-  isPaid: false
+  allowProductEdit: true,
+  products: () => [],
+  availableProducts: () => [],
+  isPastAppointment: false,
+  adminFee: 0,
+  showAdminFee: false,
+  selectedPaymentMethod: 'wallee',
+  isEditMode: false,
+  appointmentId: undefined,
+  studentCredit: undefined,
+  isLoadingCredit: false
 })
 
-// Emits - nur die nötigsten
+// Emits
 const emit = defineEmits<{
-  'discount-changed': [discount: number, discountType: "fixed" | "percentage", reason: string]
-  'products-changed': [products: any[]]
-  'payment-method-changed': [method: string, data?: any]
+  'discount-changed': [discount: number, discountType: "fixed", reason: string]
+  'product-removed': [productId: string]
+  'product-added': [product: any]
+  'payment-method-changed': [method: string]
+  'invoice-address-saved': [address: any]
+
+  'update:selectedPaymentMethod': [value: string] // ✅ NEU: v-model emit für payment method
 }>()
 
-const priceDisplayRef = ref()
+// Composables
+const { loadPaymentMethods, activePaymentMethods, isLoading: isLoadingPaymentMethods } = usePaymentMethods()
+const { createBillingAddress } = useCompanyBilling()
 
-// ✅ BESTEHENDE COMPOSABLES VERWENDEN
-const productSale = useProductSale(
-  computed(() => props.eventData?.id),  // appointmentId
-  []  // initial products
-)
-const companyBilling = useCompanyBilling()
-
-// ✅ MINIMALE REACTIVE DATA
-const isEditMode = ref(false)
-const showDiscountEdit = ref(false)
-const showAdminFeeInfo = ref(false)
-const tempDiscountInput = ref('')
-const tempDiscountReason = ref('')
-
-// Payment 
-const invoiceMode = ref(false)
-const cashMode = ref(false)
-const { loadStudentPaymentPreference } = usePaymentMethods()
-const isProcessingPayment = ref(false)
-
-const pricing = usePricing({
-  selectedStudent: computed(() => props.selectedStudent),
-  currentUser: computed(() => props.currentUser),
-  durationMinutes: computed(() => props.durationMinutes),
-  categoryCode: computed(() => props.eventType), 
-  isSecondOrLaterAppointment: computed(() => props.isSecondOrLaterAppointment),
-  showAdminFeeByDefault: computed(() => props.showAdminFeeByDefault),
-  watchChanges: true,  
-  autoUpdate: true     
+// Computed Properties
+const isStaffUser = computed(() => {
+  // Prüfe ob der aktuelle Benutzer Staff oder Admin ist
+  return props.currentUser?.role === 'staff' || props.currentUser?.role === 'admin'
 })
 
+// State
+const showProductSelector = ref(false)
+const showDiscountSelector = ref(false) // ✅ NEU: Für Gutschein-Auswahl
+const availableDiscounts = ref<any[]>([]) // ✅ NEU: Verfügbare Gutscheine
+const isLoadingDiscounts = ref(false) // ✅ NEU: Loading state für Gutscheine
 
-// ✅ COMPUTED PROPERTIES - nur die nötigsten
-const lessonPrice = computed(() => {
-  // ✅ EINFACH: Verwende die Props direkt!
-  const pricePerMin = props.pricePerMinute || 0
-  const duration = props.durationMinutes || 0
-  const result = pricePerMin * duration
+// ✅ NEU: Payment State für Edit-Modus
+const existingPayment = ref<any>(null)
+const isLoadingPayment = ref(false)
+// ✅ NEU: State für Student Billing Address Management
+const studentBillingAddress = ref<any>(null)
+const isLoadingStudentBilling = ref(false)
+const isEditingBillingAddress = ref(false)
+
+// ✅ NEU: Company Billing Address ID (wird gesetzt, wenn Rechnungsadresse gespeichert wird)
+const savedCompanyBillingAddressId = ref<string | null>(null)
+
+// ✅ Computed: Use prop for selectedPaymentMethod
+const selectedPaymentMethod = computed({
+  get: () => props.selectedPaymentMethod || 'wallee',
+  set: (value: string) => emit('update:selectedPaymentMethod', value)
+})
+
+// ✅ Computed: Check if invoice address exists
+const hasInvoiceAddress = computed(() => {
+  const payment = existingPayment.value
+  if (!payment) return false
   
-  console.log('💰 PriceDisplay SIMPLE calculation:', {
-    pricePerMinute: pricePerMin,
-    durationMinutes: duration,
-    result: result
-  })
-  
-  return result
-})
-
-const shouldShowAdminFee = computed(() => 
-  pricing.calculatedAdminFee.value > 0
-
-)
-
-const totalPriceWithoutDiscount = computed(() => {
-  let total = lessonPrice.value
-  if (shouldShowAdminFee.value) {
-    total += pricing.calculatedAdminFee.value || 0
-  }
-  total += productSale.totalProductsValue.value
-  return total
-})
-
-const maxDiscount = computed(() => totalPriceWithoutDiscount.value)
-
-const tempDiscount = computed(() => {
-  const value = parseFloat(tempDiscountInput.value) || 0
-  return Math.min(value, maxDiscount.value)
-})
-
-const finalPrice = computed(() => {
-  const total = totalPriceWithoutDiscount.value - (props.discount || 0)
-  return Math.max(0, total)
-})
-
-const paymentModeStatus = computed(() => {
-  if (!invoiceMode.value && !cashMode.value) {
-    return {
-      type: 'success' as const,
-      message: 'Online-Zahlung über Customer Dashboard.'
-    }
+  // Check if there's a company billing address (preferred)
+  if (payment.company_billing_address && typeof payment.company_billing_address === 'object') {
+    return true
   }
   
-  if (invoiceMode.value) {
-    return {
-      type: 'success' as const,
-      message: 'Rechnung wird im Büro erstellt und versendet.'
-    }
-  }
-  
-  if (cashMode.value) {
-    return {
-      type: 'success' as const,
-      message: 'Zahlung erfolgt bar beim Fahrlehrer.'
-    }
-  }
-  
-  return null
+  // Fallback: Check JSONB invoice_address field
+  return payment.invoice_address && 
+         typeof payment.invoice_address === 'object' &&
+         Object.keys(payment.invoice_address).length > 0
 })
 
-// ✅ METHODS - nur die nötigsten
-const formatPrice = (amount: number): string => {
-  return amount.toFixed(2)
+// ✅ Function: Format invoice address for display
+const formatInvoiceAddress = (): string => {
+  const payment = existingPayment.value
+  if (!payment) return 'Keine Rechnungsadresse gespeichert'
+  
+  let invoiceAddr = null
+  
+  // Prefer company billing address (new structure with single object)
+  if (payment.company_billing_address && typeof payment.company_billing_address === 'object') {
+    invoiceAddr = payment.company_billing_address
+  }
+  // Fallback to JSONB invoice_address
+  else if (payment.invoice_address && typeof payment.invoice_address === 'object') {
+    invoiceAddr = payment.invoice_address
+  }
+  
+  if (!invoiceAddr) {
+    return 'Keine Rechnungsadresse gespeichert'
+  }
+  
+  const lines = []
+  
+  if (invoiceAddr.company_name) {
+    lines.push(invoiceAddr.company_name)
+  }
+  
+  if (invoiceAddr.contact_person) {
+    lines.push(invoiceAddr.contact_person)
+  }
+  
+  if (invoiceAddr.street && invoiceAddr.street_number) {
+    lines.push(`${invoiceAddr.street} ${invoiceAddr.street_number}`)
+  } else if (invoiceAddr.street) {
+    lines.push(invoiceAddr.street)
+  }
+  
+  if (invoiceAddr.zip && invoiceAddr.city) {
+    lines.push(`${invoiceAddr.zip} ${invoiceAddr.city}`)
+  }
+  
+  if (invoiceAddr.country && invoiceAddr.country !== 'Schweiz') {
+    lines.push(invoiceAddr.country)
+  }
+  
+  if (invoiceAddr.email) {
+    lines.push(`E-Mail: ${invoiceAddr.email}`)
+  }
+  
+  if (invoiceAddr.phone) {
+    lines.push(`Tel: ${invoiceAddr.phone}`)
+  }
+  
+  if (invoiceAddr.vat_number) {
+    lines.push(`UID: ${invoiceAddr.vat_number}`)
+  }
+  
+  return lines.join('\n') || 'Keine Adressdaten verfügbar'
 }
 
-const formatSelectedDate = (date: string): string => {
-  return new Date(date).toLocaleDateString('de-CH', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  })
-}
+// ✅ NEU: Manueller Rabatt State
+const manualDiscountAmount = ref<number>(0)
+const manualDiscountReason = ref<string>('')
 
-const formatToTwoDecimals = () => {
-  if (tempDiscountInput.value) {
-    tempDiscountInput.value = parseFloat(tempDiscountInput.value).toFixed(2)
-  }
-}
+// Rechnungsadresse State
+const invoiceData = ref({
+  company_name: '',
+  contact_person: '',
+  email: '',
+  phone: '',
+  street: '',
+  street_number: '',
+  zip: '',
+  city: '',
+  country: 'Schweiz',
+  vat_number: '',
+  company_register_number: '',
+  notes: ''
+})
 
-// Edit Mode
-const toggleEditMode = () => {
-  if (isEditMode.value) {
-    // Speichern-Modus
-    if (showDiscountEdit.value && tempDiscountInput.value) {
-      applyDiscount()
-    }
+const isSavingInvoice = ref(false)
+const invoiceSaveMessage = ref<{ type: 'success' | 'error', text: string } | null>(null)
+
+// Lifecycle
+onMounted(async () => {
+  console.log('🚀 PriceDisplay mounted, starting to load data...')
+  
+  await Promise.all([
+    loadPaymentMethods(),
+    loadAvailableDiscounts(), // ✅ Lade verfügbare Gutscheine
+    loadExistingPayment() // ✅ NEU: Payment-Daten laden
+  ])
+  
+  // ✅ NEU: Student Billing Address laden (falls Student bereits ausgewählt)
+  if (props.selectedStudent?.id) {
+    console.log('🏢 PriceDisplay onMounted: Loading billing address for student:', props.selectedStudent.id)
+    await loadStudentBillingAddressData(props.selectedStudent.id)
     
-    showDiscountEdit.value = false
-    productSale.closeProductSelector()
-    showAdminFeeInfo.value = false
-    isEditMode.value = false
+    // ✅ ZUSÄTZLICH: Falls kein Student Billing gefunden, versuche über bestehende Payments zu laden
+    if (!studentBillingAddress.value) {
+      await loadBillingAddressFromExistingPayments(props.selectedStudent.id)
+    }
   } else {
-    isEditMode.value = true
+    console.log('💡 PriceDisplay onMounted: No student selected yet')
   }
-}
+  
+  console.log('✅ PriceDisplay initialization complete')
+})
 
-const saveStudentPaymentPreference = async (studentId: string, paymentMethod: string) => {
+// ✅ NEU: Watcher für Student-Änderung - lädt automatisch Billing Address
+watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId: string) => {
+  if (newStudentId && newStudentId !== oldStudentId) {
+    console.log('👤 Student changed, loading billing address for:', newStudentId)
+    await loadStudentBillingAddressData(newStudentId)
+    
+    // ✅ Fallback: Falls keine direkte Student Billing Address gefunden
+    if (!studentBillingAddress.value) {
+      await loadBillingAddressFromExistingPayments(newStudentId)
+    }
+  }
+}, { immediate: false })
+
+// ✅ NEUE METHODE: Lade verfügbare Gutscheine
+const loadAvailableDiscounts = async () => {
   try {
+    console.log('🔄 Starting to load available discounts...')
+    isLoadingDiscounts.value = true
     const supabase = getSupabase()
     
-    // ✅ Mapping zu gültigen payment_methods codes
-    const methodMapping: Record<string, string> = {
-      'cash': 'cash',
-      'invoice': 'invoice', 
-      'online': 'twint'  // oder 'stripe_card' - je nachdem was in deiner DB existiert
+    console.log('🔍 Querying discounts table for fixed discounts...')
+    
+    // ✅ Lade nur Gutscheine mit discount_type = 'fixed'
+    const { data, error } = await supabase
+      .from('discounts')
+      .select('*')
+      .eq('is_active', true)
+      .eq('discount_type', 'fixed')
+      .order('discount_value', { ascending: true })
+    
+    if (error) {
+      console.error('❌ Error loading discounts:', error)
+      return
     }
     
-    const validMethod = methodMapping[paymentMethod] || 'cash'
+    console.log('📊 Raw discounts data:', data)
+    console.log('📊 Fixed discounts found:', data)
     
-    const { error } = await supabase
-      .from('users')
-      .update({ preferred_payment_method: validMethod })
-      .eq('id', studentId)
-
-    if (error) throw error
-    console.log('✅ Payment preference saved:', validMethod)
+    availableDiscounts.value = data || []
+    console.log('✅ Loaded available fixed discounts:', availableDiscounts.value.length)
+    console.log('🎫 Available discounts:', availableDiscounts.value)
     
-  } catch (err) {
-    console.error('❌ Error saving payment preference:', err)
-  }
-}
-
-// CustomerDashboard.vue - im script setup hinzufügen:
-const payIndividual = async (payment: any) => {
-  console.log('💳 Starting payment for:', payment)
-  isProcessingPayment.value = true
-  
-  try {
-    // 1. Wallee Payment erstellen
-    const paymentUrl = await createWalleePayment(payment)
-    
-    if (paymentUrl) {
-      // 2. Redirect zum Wallee Payment
-      window.location.href = paymentUrl
-    } else {
-      // 3. Fallback: Mock-Payment-Seite
-      await navigateTo(`/payment/process?amount=${payment.total_amount_rappen / 100}&payment_id=${payment.id}`)
-    }
-    
-  } catch (error: any) {
-    console.error('❌ Payment error:', error)
-    alert('Zahlung konnte nicht gestartet werden. Bitte versuchen Sie es später erneut.')
+  } catch (err: any) {
+    console.error('❌ Error loading discounts:', err)
   } finally {
-    isProcessingPayment.value = false
+    isLoadingDiscounts.value = false
   }
 }
 
-const createWalleePayment = async (payment: any) => {
-  try {
-    // Hier würde die echte Wallee-Integration stehen
-    console.log('🔄 Creating Wallee payment for:', payment.total_amount_rappen / 100, 'CHF')
-    
-    // Mock für jetzt
-    return null
-    
-  } catch (error) {
-    console.error('❌ Wallee payment creation failed:', error)
-    return null
+// Methods
+const applyVoucher = (discount: any) => {
+  const discountValue = parseFloat(discount.discount_value) || 0
+  if (discountValue > 0) {
+    emit('discount-changed', discountValue, discount.discount_type || 'fixed', discount.name)
+    showDiscountSelector.value = false
+    console.log('✅ Applied voucher:', discount.name, 'Value:', discountValue)
   }
 }
 
-// Discount Methods
-const applyDiscount = () => {
-  emit('discount-changed', tempDiscount.value, 'fixed', tempDiscountReason.value)
-  showDiscountEdit.value = false
-  tempDiscountInput.value = ''
-  tempDiscountReason.value = ''
+// ✅ NEUE METHODE: Manuellen Rabatt anwenden
+const applyManualDiscount = () => {
+  if (!manualDiscountAmount.value || manualDiscountAmount.value <= 0) return
+  
+  const reason = manualDiscountReason.value || 'Manueller Rabatt'
+  emit('discount-changed', manualDiscountAmount.value, 'fixed', reason)
+  
+  // Reset form
+  manualDiscountAmount.value = 0
+  manualDiscountReason.value = ''
+  showDiscountSelector.value = false
+  
+  console.log('✅ Applied manual discount:', manualDiscountAmount.value, 'Reason:', reason)
 }
 
-const cancelDiscountEdit = () => {
-  showDiscountEdit.value = false
-  tempDiscountInput.value = ''
-  tempDiscountReason.value = ''
+// ✅ NEUE METHODE: Gutschein-Selector schließen
+const closeDiscountSelector = () => {
+  showDiscountSelector.value = false
+  // Reset manual discount form
+  manualDiscountAmount.value = 0
+  manualDiscountReason.value = ''
 }
 
 const removeDiscount = () => {
   emit('discount-changed', 0, 'fixed', '')
 }
 
-// Payment Methods
-const onInvoiceModeChange = () => {
-  console.log('🔍 DEBUG: onInvoiceModeChange called')
-  console.log('🔍 DEBUG: invoiceMode.value BEFORE:', invoiceMode.value)
-  console.log('🔍 DEBUG: cashMode.value BEFORE:', cashMode.value)
-  
-  if (invoiceMode.value && cashMode.value) {
-    cashMode.value = false
-  }
-  
-  // ✅ NEU: Automatisch Adressen laden wenn Invoice Mode aktiviert wird
-  if (invoiceMode.value && companyBilling.savedAddresses.value.length === 0) {
-    autoLoadBillingAddress()
-  }
-  
-  updatePaymentMode()
-  
-  console.log('🔍 DEBUG: invoiceMode.value AFTER:', invoiceMode.value)
-  console.log('🔍 DEBUG: cashMode.value AFTER:', cashMode.value)
+const removeProduct = (productId: string) => {
+  emit('product-removed', productId)
 }
 
-const loadExistingAddresses = async () => {
-  if (!props.selectedStudent?.id) {
-    console.warn('❌ No student selected for loading addresses')
-    return
+// ✅ NEU: Base Price aus bestehender Payment oder berechnet
+const getBasePrice = () => {
+  // Im Edit-Modus: Verwende den gespeicherten Preis aus der Payment-Tabelle
+  if (props.isEditMode && existingPayment.value) {
+    return (existingPayment.value.lesson_price_rappen || 0) / 100
   }
   
-  console.log('🔄 Loading existing addresses for student:', props.selectedStudent.id)
+  // Im Create-Modus: Berechne den Preis neu
+  return props.durationMinutes * props.pricePerMinute
+}
+
+// ✅ NEU: Discount Amount aus bestehender Payment oder Props
+const getDiscountAmount = () => {
+  // Im Edit-Modus: Verwende den gespeicherten Rabatt aus der Payment-Tabelle
+  if (props.isEditMode && existingPayment.value) {
+    return (existingPayment.value.discount_amount_rappen || 0) / 100
+  }
   
-  try {
-    // ✅ KORRIGIERT: getSupabase() direkt verwenden
-    const supabase = getSupabase()
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (!user?.id) {
-      console.warn('❌ No authenticated user found')
-      return
+  // Im Create-Modus: Verwende Props
+  return props.discount || 0
+}
+
+// ✅ NEU: Discount Reason aus bestehender Payment oder Props
+const getDiscountReason = () => {
+  // Im Edit-Modus: Verwende den gespeicherten Rabatt-Grund aus der Payment-Tabelle
+  if (props.isEditMode && existingPayment.value) {
+    return existingPayment.value.discount_reason || ''
+  }
+  
+  // Im Create-Modus: Verwende Props
+  return props.discountReason || ''
+}
+
+// ✅ NEU: Products aus bestehender Payment oder Props
+const getProducts = () => {
+  // Im Edit-Modus: verwende ausschließlich die geladenen Produkte der Payment
+  if (props.isEditMode) {
+    return (existingPayment.value && (existingPayment.value as any).products) ? (existingPayment.value as any).products : []
+  }
+  
+  // Im Create-Modus: Verwende Props
+  return props.products || []
+}
+
+// ✅ NEU: Admin Fee aus bestehender Payment oder Props
+const getAdminFee = () => {
+  // Im Edit-Modus: Verwende den gespeicherten Admin-Fee aus der Payment-Tabelle
+  if (props.isEditMode && existingPayment.value) {
+    return (existingPayment.value.admin_fee_rappen || 0) / 100
+  }
+  
+  // Im Create-Modus: Verwende Props
+  return (props.showAdminFee && props.adminFee) ? props.adminFee : 0
+}
+
+// ✅ NEU: Used Credit aus bestehender Payment oder Props
+const getUsedCredit = () => {
+  // Im Edit-Modus: Verwende das gespeicherte verwendete Guthaben aus der Payment-Tabelle
+  if (props.isEditMode && existingPayment.value) {
+    // Primär: explizit gespeicherter Wert
+    const fromPayment = existingPayment.value.credit_used_rappen
+    if (typeof fromPayment === 'number' && fromPayment > 0) {
+      return fromPayment / 100
     }
-    
-    console.log('👤 Loading addresses for auth user:', user.id)
-    
-    // ✅ VERWENDE DIE BESTEHENDE FUNKTION MIT AUTH USER ID
-    await companyBilling.loadUserCompanyAddresses(props.selectedStudent.id)
-    
-    console.log('✅ Loaded addresses:', companyBilling.savedAddresses.value.length)
-    
-    // Auto-select first address if available
-    if (companyBilling.savedAddresses.value.length > 0) {
-      const firstAddress = companyBilling.savedAddresses.value[0]
-      companyBilling.loadFormFromAddress(firstAddress)
-      console.log('✅ Auto-selected first address:', firstAddress.company_name)
+
+    // Fallback: aus verknüpfter Kredit-Transaktion ableiten
+    const tx = (existingPayment.value as any).credit_transaction
+    if (tx && typeof tx.amount_rappen === 'number') {
+      // Verwende den absoluten Betrag (Transaktionsrichtung kann variieren)
+      return Math.abs(tx.amount_rappen) / 100
     }
-    
-  } catch (error) {
-    console.error('❌ Error loading existing addresses:', error)
-  }
-}
 
-const selectExistingAddress = (addressId: string) => {
-  if (!addressId) {
-    // "Neue Adresse eingeben" gewählt
-    companyBilling.resetForm()
-    companyBilling.currentAddress.value = null
-    return
+    return 0
   }
   
-  const address = companyBilling.savedAddresses.value.find(addr => addr.id === addressId)
-  if (address) {
-    companyBilling.loadFormFromAddress(address)
-    updatePaymentMode()
-    console.log('✅ Selected address:', address.company_name)
-  }
-}
-
-const saveCompanyBillingAddress = async () => {
-  if (!props.selectedStudent?.id) return
-  
-  // ✅ BESTEHENDE FUNKTION VERWENDEN
-  const result = await companyBilling.createCompanyBillingAddress(props.selectedStudent.id)
-  
-  if (result.success && result.data) {
-    console.log('✅ Company billing address saved:', result.data.id)
-    
-    // Nach dem Speichern updatePaymentMode aufrufen
-    updatePaymentMode()
-  }
-}
-
-
-// ✅ KORRIGIERTE autoLoadBillingAddress Funktion:
-const autoLoadBillingAddress = async () => {
-  if (!props.selectedStudent?.id) return
-
-  try {
-    const supabase = getSupabase()
-    
-    // 1. IMMER alle verfügbaren Adressen für Dropdown laden
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user?.id) return
-    
-    await companyBilling.loadUserCompanyAddresses(user.id)
-    console.log('✅ Loaded all addresses:', companyBilling.savedAddresses.value.length)
-    
-    // 2. Prüfen ob Schüler eine Standard-Adresse hat
-    const { data: studentData, error: studentError } = await supabase
-      .from('users')
-      .select('default_company_billing_address_id, first_name, last_name')
-      .eq('id', props.selectedStudent.id)
-      .single()
-    
-    console.log('🔍 Student default address ID:', studentData?.default_company_billing_address_id)
-    
-    if (studentData?.default_company_billing_address_id) {
-      // 3. Standard-Adresse finden und vorauswählen
-      const defaultAddress = companyBilling.savedAddresses.value.find(
-        addr => addr.id === studentData.default_company_billing_address_id
-      )
-      
-      if (defaultAddress) {
-        console.log('✅ Pre-selecting student default address:', defaultAddress.company_name)
-        companyBilling.loadFormFromAddress(defaultAddress)
-        updatePaymentMode()
-      } else {
-        console.log('⚠️ Student default address not found in loaded addresses')
-        companyBilling.resetForm()
-      }
-    } else {
-      console.log('ℹ️ Student has no default address - form empty, all addresses available')
-      companyBilling.resetForm()
-    }
-    
-  } catch (error) {
-    console.error('❌ Error loading billing addresses:', error)
-  }
-}
-
-// ✅ NEUE Funktion: Alle Adressen für Dropdown laden (ohne Vorauswahl)
-const loadAllAddressesForDropdown = async () => {
-  try {
-    const supabase = getSupabase()
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (!user?.id) return
-    
-    // Alle verfügbaren Firmenadressen laden
-    await companyBilling.loadUserCompanyAddresses(user.id)
-    console.log('📋 Loaded all addresses for dropdown:', companyBilling.savedAddresses.value.length)
-    
-    // ✅ WICHTIG: KEINE automatische Auswahl!
-    // User muss manuell aus Dropdown wählen
-    
-  } catch (error) {
-    console.error('❌ Error loading addresses for dropdown:', error)
-  }
-}
-
-// ✅ ERWEITERE DIE BESTEHENDE updatePaymentMode FUNKTION:
-const updatePaymentMode = () => {
-  let method = 'online'
-  let data = null
-  
-  if (invoiceMode.value) {
-    method = 'invoice'
-    if (companyBilling.currentAddress.value) {
-      data = {
-        formData: companyBilling.formData.value,
-        currentAddress: companyBilling.currentAddress.value,
-        isValid: companyBilling.validation.value.isValid
-      }
-    }
-  } else if (cashMode.value) {
-    method = 'cash'
-  }
-    console.log('🔥 PriceDisplay EMITTING payment-method-changed:', method) // ← Debug hinzufügen
-
-  // ✅ NEU: Speichern der Zahlungsmethode
-  if (props.selectedStudent?.id) {
-    saveStudentPaymentPreference(props.selectedStudent.id, method)
+  // Im Create-Modus: Berechne das verwendete Guthaben basierend auf dem aktuellen Guthaben
+  if (props.studentCredit && props.studentCredit.balance_rappen > 0) {
+    const creditAmount = props.studentCredit.balance_rappen / 100
+    const totalBeforeCredit = calculatePriceBeforeCredit()
+    return Math.min(creditAmount, totalBeforeCredit)
   }
   
-  emit('payment-method-changed', method, data)
-    console.log('✅ Event emitted successfully') // ← Debug hinzufügen
-
+  return 0
 }
 
-const onCashModeChange = () => {
-  if (cashMode.value && invoiceMode.value) {
-    invoiceMode.value = false
-  }
-  updatePaymentMode()
+const calculateTotalPrice = () => {
+  const basePrice = getBasePrice()
+  const discountAmount = getDiscountAmount()
+  const productsTotal = getProducts().reduce((total, product) => {
+    return total + getProductPrice(product)
+  }, 0)
+  const adminFeeAmount = getAdminFee()
+  const usedCredit = getUsedCredit()
+  
+  const totalBeforeCredit = basePrice - discountAmount + productsTotal + adminFeeAmount
+  
+  // Guthaben abziehen (entweder aus Payment-Tabelle oder aktuelles Guthaben)
+  return Math.max(0, totalBeforeCredit - usedCredit)
 }
 
-const loadDefaultAddressForStudent = async () => {
-  if (!props.selectedStudent?.id) return
+const calculatePriceBeforeCredit = () => {
+  const basePrice = getBasePrice()
+  const discountAmount = getDiscountAmount()
+  const productsTotal = getProducts().reduce((total, product) => {
+    return total + getProductPrice(product)
+  }, 0)
+  const adminFeeAmount = getAdminFee()
   
-  const defaultAddress = await companyBilling.loadDefaultBillingAddress(props.selectedStudent.id)
-  
-  if (defaultAddress) {
-    companyBilling.loadFormFromAddress(defaultAddress)  // ← BESTEHENDE Funktion
-    console.log('✅ Default billing address auto-loaded:', defaultAddress.company_name)
-  }
+  return basePrice - discountAmount + productsTotal + adminFeeAmount
 }
 
-// Debug-Code für PriceDisplay.vue - füge diese Logs hinzu:
-
-// 1. Debug den Watch für selectedStudent:
-watch(() => props.selectedStudent, async (newStudent, oldStudent) => {
-  console.log('🔍 PriceDisplay: selectedStudent changed!')
-  console.log('🔍 Old student:', oldStudent?.id)
-  console.log('🔍 New student:', newStudent?.id)
-  console.log('🔍 Has student ID:', !!newStudent?.id)
+const addProduct = (product: any) => {
+  // Füge das Produkt zu den ausgewählten Produkten hinzu
+  const existingProduct = props.products?.find(p => p.id === product.id)
   
-  if (newStudent?.id) {
-    console.log('👤 Loading payment preference for student:', newStudent.id)
-    
-    try {
-      const savedMethod = await loadStudentPaymentPreference(newStudent.id)
-      console.log('💳 Loaded payment method:', savedMethod)
-      
-      // Debug: Aktuelle Werte BEVOR Änderung
-      console.log('🔍 BEFORE - invoiceMode:', invoiceMode.value, 'cashMode:', cashMode.value)
-      
-      invoiceMode.value = (savedMethod === 'invoice')
-      cashMode.value = (savedMethod === 'cash')
-      
-      // Debug: Aktuelle Werte NACH Änderung
-      console.log('🔍 AFTER - invoiceMode:', invoiceMode.value, 'cashMode:', cashMode.value)
-      
-      if (savedMethod === 'invoice') {
-        console.log('🔄 Invoice mode detected, loading billing address...')
-        await autoLoadBillingAddress()
-      } else {
-        console.log('🧹 Not invoice mode, clearing billing data...')
-        companyBilling.resetForm()
-        companyBilling.currentAddress.value = null
-        companyBilling.savedAddresses.value = []
-      }
-    } catch (error) {
-      console.error('❌ Error in payment preference loading:', error)
-    }
+  if (existingProduct) {
+    // Produkt bereits vorhanden - Menge erhöhen
+    existingProduct.quantity = (existingProduct.quantity || 1) + 1
   } else {
-    console.log('❌ No student ID, skipping payment preference loading')
-  }
-}, { immediate: true }) // ← WICHTIG: immediate: true damit es auch beim ersten Laden triggert
-
-// 2. Debug die loadStudentPaymentPreference Funktion:
-// Erweitere sie um mehr Logs:
-const debugLoadStudentPaymentPreference = async (studentId: string): Promise<string> => {
-  console.log('🔍 loadStudentPaymentPreference called with:', studentId)
-  
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('users')
-      .select('preferred_payment_method, default_company_billing_address_id')
-      .eq('id', studentId)
-      .maybeSingle()
-
-    console.log('🔍 Supabase query result:', { data, error })
-
-    if (error) {
-      console.error('❌ Supabase error:', error)
-      throw error
-    }
-    
-    const preference = data?.preferred_payment_method || 'cash'
-    console.log('💳 Final payment preference:', preference)
-    console.log('🏠 Has billing address ID:', !!data?.default_company_billing_address_id)
-    
-    return preference
-
-  } catch (err) {
-    console.error('❌ Error loading payment preference:', err)
-    return 'cash'
-  }
-}
-
-
-// ✅ WATCHERS - nur für Produktänderungen
-watch(productSale.selectedProducts, (newProducts) => {
-  emit('products-changed', newProducts)
-}, { deep: true })
-
-// ✅ LIFECYCLE
-onMounted(() => {
-  console.log('🔍 PriceDisplay mounted!')
-  console.log('🔍 Initial selectedStudent:', props.selectedStudent?.id)
-  console.log('🔍 Initial payment method:', props.initialPaymentMethod)
-  
-  // Load existing products in edit mode
-  if (props.eventData?.id) {
-    productSale.loadProducts(props.eventData.id)
-    
-    // ✅ RABATTE aus props laden (kommen von populateFormFromAppointment)
-    console.log('💰 PriceDisplay mounted - checking for discount props:', {
-      discount: props.discount,
-      discountReason: props.discountReason
+    // Neues Produkt hinzufügen
+    emit('product-added', { 
+      ...product, 
+      quantity: 1,
+      price: product.price_rappen / 100 // Konvertiere zu CHF
     })
   }
   
-  // Initial payment method setup
-  if (props.initialPaymentMethod === 'invoice') {
-    invoiceMode.value = true
-    autoLoadBillingAddress()
-  } else if (props.initialPaymentMethod === 'cash') {
-    cashMode.value = true
+  // Modal nach dem Hinzufügen schließen
+  showProductSelector.value = false
+}
+
+const getProductPrice = (product: any): number => {
+  // Sichere Preisberechnung - unterstützt sowohl price als auch price_rappen
+  if (product.price !== undefined) {
+    return product.price * (product.quantity || 1)
+  } else if (product.price_rappen !== undefined) {
+    return (product.price_rappen / 100) * (product.quantity || 1)
+  }
+  return 0
+}
+
+const selectPaymentMethod = (method: string) => {
+  selectedPaymentMethod.value = method
+  emit('payment-method-changed', method)
+  console.log('💳 PriceDisplay - Payment method selected:', method)
+  
+  // ✅ Debug: Zeige den aktuellen Zustand wenn 'invoice' gewählt wird
+  if (method === 'invoice') {
+    console.log('📋 Invoice selected - current state:', {
+      selectedStudent: props.selectedStudent?.id,
+      studentBillingAddress: !!studentBillingAddress.value,
+      existingPayment: !!existingPayment.value,
+      isEditMode: props.isEditMode
+    })
+  }
+}
+
+// ✅ NEU: Load billing address from existing payments (fallback method)
+const loadBillingAddressFromExistingPayments = async (studentId: string) => {
+  if (!studentId) return null
+  
+  try {
+    console.log('🔍 Fallback: Loading billing address from existing payments for student:', studentId)
+    
+    const supabase = getSupabase()
+    const { data: paymentData, error } = await supabase
+      .from('payments')
+      .select(`
+        company_billing_address_id,
+        company_billing_address:company_billing_addresses!company_billing_address_id (
+          id,
+          company_name,
+          contact_person,
+          email,
+          phone,
+          street,
+          street_number,
+          zip,
+          city,
+          country,
+          vat_number,
+          notes
+        )
+      `)
+      .eq('user_id', studentId)
+      .eq('payment_method', 'invoice')
+      .not('company_billing_address_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('💡 No existing invoice payments with billing address found')
+        return null
+      }
+      throw error
+    }
+
+    if (paymentData?.company_billing_address) {
+      studentBillingAddress.value = paymentData.company_billing_address
+      console.log('✅ Billing address loaded from existing payment:', paymentData.company_billing_address)
+      return paymentData.company_billing_address
+    }
+    
+    return null
+  } catch (error) {
+    console.error('❌ Error loading billing address from payments:', error)
+    return null
+  }
+}
+
+// ✅ NEU: Load student billing address for new appointments or editing
+const loadStudentBillingAddressData = async (studentId: string) => {
+  if (!studentId) return null
+  
+  try {
+    isLoadingStudentBilling.value = true
+    console.log('🏢 Loading student billing address for PriceDisplay:', studentId)
+    
+    const modalForm = useEventModalForm()
+    const billingData = await modalForm.loadStudentBillingAddress(studentId)
+    
+    if (billingData) {
+      studentBillingAddress.value = billingData
+      console.log('✅ Student billing address loaded in PriceDisplay:', billingData)
+    }
+    
+    return billingData
+  } catch (error) {
+    console.error('❌ Error loading student billing address:', error)
+    return null
+  } finally {
+    isLoadingStudentBilling.value = false
+  }
+}
+
+// ✅ NEU: Funktionen für Rechnungsadresse-Bearbeitung
+const startEditingBillingAddress = () => {
+  isEditingBillingAddress.value = true
+  
+  // ✅ NEU: Stelle sicher, dass wir die bestehende Adresse haben
+  const existingAddress = studentBillingAddress.value || existingPayment.value?.company_billing_address
+  
+  if (existingAddress) {
+    console.log('✏️ Loading existing address data for editing:', existingAddress.id || 'no-id')
+    
+    invoiceData.value = {
+      company_name: existingAddress.company_name || '',
+      contact_person: existingAddress.contact_person || '',
+      email: existingAddress.email || '',
+      phone: existingAddress.phone || '',
+      street: existingAddress.street || '',
+      street_number: existingAddress.street_number || '',
+      zip: existingAddress.zip || '',
+      city: existingAddress.city || '',
+      country: existingAddress.country || 'Schweiz',
+      vat_number: existingAddress.vat_number || '',
+      company_register_number: existingAddress.company_register_number || '',
+      notes: existingAddress.notes || ''
+    }
+  } else {
+    console.log('⚠️ No existing address found for editing')
   }
   
-  // ✅ NEU: Synchronisiere das formData mit dem UI-Zustand
-  updatePaymentMode()
-  console.log('✅ Payment mode synchronized on mount')
+  console.log('✏️ Started editing billing address')
+}
+
+const cancelEditingBillingAddress = () => {
+  isEditingBillingAddress.value = false
+  // Formular zurücksetzen
+  invoiceData.value = {
+    company_name: '',
+    contact_person: '',
+    email: '',
+    phone: '',
+    street: '',
+    street_number: '',
+    zip: '',
+    city: '',
+    country: 'Schweiz',
+    vat_number: '',
+    company_register_number: '',
+    notes: ''
+  }
+  console.log('❌ Cancelled editing billing address')
+}
+
+// ✅ NEU: Load existing payment data
+const loadExistingPayment = async () => {
+  console.log('🔍 loadExistingPayment check:', {
+    appointmentId: props.appointmentId,
+    isEditMode: props.isEditMode,
+    shouldLoad: !!(props.appointmentId && props.isEditMode)
+  })
+  
+  if (!props.appointmentId || !props.isEditMode) {
+    console.log('⏭️ Skipping payment loading - no appointmentId or not in edit mode')
+    return
+  }
+  
+  // 🔄 Reset state to avoid leaking previous appointment data
+  existingPayment.value = null
+  
+  isLoadingPayment.value = true
+  try {
+    const supabase = getSupabase()
+    const { data: paymentData, error } = await supabase
+      .from('payments')
+      .select(`
+        *,
+        company_billing_address:company_billing_addresses!company_billing_address_id (
+          id,
+          company_name,
+          contact_person,
+          email,
+          phone,
+          street,
+          street_number,
+          zip,
+          city,
+          country,
+          vat_number,
+          notes
+        ),
+        credit_transaction:credit_transactions!credit_transaction_id (
+          id,
+          amount_rappen,
+          transaction_type,
+          notes
+        )
+      `)
+      .eq('appointment_id', props.appointmentId)
+      .single()
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.warn('⚠️ PriceDisplay - Error loading payment data:', error)
+      return
+    }
+    
+    if (paymentData) {
+      // Initialize with empty products array to avoid stale data
+      existingPayment.value = { ...paymentData, products: [] }
+      console.log('✅ PriceDisplay - Existing payment loaded:', {
+        payment_method: paymentData.payment_method,
+        payment_status: paymentData.payment_status,
+        total_chf: (paymentData.total_amount_rappen / 100).toFixed(2),
+        invoice_address: paymentData.invoice_address ? 'JSONB vorhanden' : 'JSONB nicht vorhanden',
+        company_billing_address_id: paymentData.company_billing_address_id,
+        company_billing_address: paymentData.company_billing_address ? 'Joined vorhanden' : 'Joined nicht vorhanden',
+        paid_at: paymentData.paid_at
+      })
+
+      // 🔗 Produkte für genau diesen Termin laden (discount_sales -> product_sales)
+      try {
+        console.log('📦 Loading existing products for appointment:', props.appointmentId)
+        const { data: discountSale, error: dsError } = await supabase
+          .from('discount_sales')
+          .select('id')
+          .eq('appointment_id', props.appointmentId as string)
+          .single()
+
+        if (!dsError && discountSale?.id) {
+          const { data: productsData, error: psError } = await supabase
+            .from('product_sales')
+            .select(`
+              id,
+              quantity,
+              unit_price_rappen,
+              total_price_rappen,
+              products (
+                name,
+                description
+              )
+            `)
+            .eq('discount_sale_id', discountSale.id)
+
+          if (!psError && Array.isArray(productsData)) {
+            const mapped = productsData.map(p => ({
+              id: p.id,
+              name: p.products?.name || 'Produkt',
+              description: p.products?.description || '',
+              quantity: p.quantity || 1,
+              price_rappen: typeof p.unit_price_rappen === 'number' ? p.unit_price_rappen : undefined,
+              total_price_rappen: typeof p.total_price_rappen === 'number' ? p.total_price_rappen : undefined,
+              price: undefined
+            }))
+            ;(existingPayment.value as any).products = mapped
+            console.log('📦 PriceDisplay - Loaded appointment products:', mapped.length)
+          } else {
+            // Ensure products cleared if query returns nothing
+            ;(existingPayment.value as any).products = []
+            console.log('📦 PriceDisplay - No products for this appointment')
+          }
+        } else {
+          // No discount sale => no products
+          ;(existingPayment.value as any).products = []
+          console.log('📦 PriceDisplay - No discount_sale found for this appointment')
+        }
+      } catch (prodErr) {
+        // On error, still ensure products are empty
+        ;(existingPayment.value as any).products = []
+        console.warn('⚠️ PriceDisplay - Could not load appointment products:', prodErr)
+      }
+    }
+  } catch (err) {
+    console.error('❌ PriceDisplay - Error loading payment:', err)
+  } finally {
+    isLoadingPayment.value = false
+  }
+}
+
+// ✅ Computed: Soll Zahlungsauswahl angezeigt werden?
+const showPaymentSelection = computed(() => {
+  // Im Edit-Modus nur anzeigen wenn kein Payment existiert
+  if (props.isEditMode) {
+    return !existingPayment.value
+  }
+  // Im CREATE-Modus immer anzeigen
+  return true
 })
 
-defineExpose({
-  productSale
+// ✅ Computed: Soll bestehende Payment-Info angezeigt werden?
+const showExistingPaymentInfo = computed(() => {
+  return props.isEditMode && existingPayment.value
 })
+
+// ✅ NEU: Computed für Rechnungsadresse-Anzeige vs. Formular
+const shouldShowBillingAddressForm = computed(() => {
+  const isInvoiceSelected = selectedPaymentMethod.value === 'invoice'
+  const hasPaymentSelection = showPaymentSelection.value
+  const hasNoSavedAddress = !studentBillingAddress.value && !existingPayment.value?.company_billing_address
+  const isExplicitlyEditing = isEditingBillingAddress.value
+  
+  const result = isInvoiceSelected && hasPaymentSelection && (hasNoSavedAddress || isExplicitlyEditing)
+  
+  console.log('📝 shouldShowBillingAddressForm check:', {
+    isInvoiceSelected,
+    hasPaymentSelection,
+    hasNoSavedAddress,
+    isExplicitlyEditing,
+    result
+  })
+  
+  return result
+})
+
+// ✅ NEU: Computed für die Anzeige der gespeicherten Rechnungsadresse
+const shouldShowSavedBillingAddress = computed(() => {
+  const isInvoiceSelected = selectedPaymentMethod.value === 'invoice'
+  const hasStudentBilling = !!studentBillingAddress.value
+  const hasExistingPaymentBilling = !!existingPayment.value?.company_billing_address
+  const isNotEditing = !isEditingBillingAddress.value
+  
+  const result = isInvoiceSelected && (hasStudentBilling || hasExistingPaymentBilling) && isNotEditing
+  
+  console.log('🔍 shouldShowSavedBillingAddress check:', {
+    isInvoiceSelected,
+    hasStudentBilling,
+    hasExistingPaymentBilling,
+    isNotEditing,
+    existingPaymentData: existingPayment.value ? {
+      company_billing_address_id: existingPayment.value.company_billing_address_id,
+      hasCompanyBillingAddress: !!existingPayment.value.company_billing_address
+    } : null,
+    result
+  })
+  
+  return result
+})
+
+// Computed für Rechnungsform-Validierung
+const isInvoiceFormValid = computed(() => {
+  return invoiceData.value.contact_person && 
+         invoiceData.value.email && 
+         invoiceData.value.street && 
+         invoiceData.value.street_number && 
+         invoiceData.value.zip && 
+         invoiceData.value.city
+})
+
+// Rechnungsadresse speichern
+const saveInvoiceAddress = async () => {
+  if (!isInvoiceFormValid.value) return
+  
+  isSavingInvoice.value = true
+  invoiceSaveMessage.value = null
+  
+  try {
+    // Hole den aktuellen Benutzer für created_by
+    const supabase = getSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
+    const currentUserId = user?.id
+    
+    if (!currentUserId) {
+      throw new Error('Benutzer nicht angemeldet')
+    }
+    
+    let result
+    
+    // ✅ NEU: Falls wir im Bearbeitungsmodus sind, UPDATE statt INSERT
+    if (isEditingBillingAddress.value && studentBillingAddress.value?.id) {
+      console.log('✏️ Updating existing billing address:', studentBillingAddress.value.id)
+      
+      const updateData = {
+        ...invoiceData.value,
+        updated_at: new Date().toISOString()
+      }
+      
+      const { data, error } = await supabase
+        .from('company_billing_addresses')
+        .update(updateData)
+        .eq('id', studentBillingAddress.value.id)
+        .select()
+        .single()
+      
+      if (error) {
+        throw new Error(`Update failed: ${error.message}`)
+      }
+      
+      result = { success: true, data }
+      console.log('✅ Billing address updated successfully')
+      
+    } else {
+      // ✅ NEU: Neuen Eintrag erstellen
+      console.log('➕ Creating new billing address')
+      
+      const addressData = {
+        ...invoiceData.value,
+        created_by: currentUserId,
+        is_active: true,
+        is_verified: false
+      }
+      
+      result = await createBillingAddress(addressData)
+    }
+    
+          if (result.success) {
+        // ✅ NEU: Speichere die company_billing_address_id
+        savedCompanyBillingAddressId.value = result.data?.id || null
+        console.log('✅ Company billing address ID saved:', result.data?.id)
+        
+        // ✅ NEU: Unterscheide zwischen Update und Create für die Nachricht
+        const isUpdate = isEditingBillingAddress.value
+        invoiceSaveMessage.value = {
+          type: 'success',
+          text: isUpdate ? '✅ Rechnungsadresse erfolgreich aktualisiert!' : '✅ Rechnungsadresse erfolgreich gespeichert!'
+        }
+        
+        // Emit an Parent Component
+        emit('invoice-address-saved', result.data)
+        
+        // ✅ NEU: Update studentBillingAddress und exit edit mode
+        studentBillingAddress.value = result.data
+        isEditingBillingAddress.value = false
+        
+        // Form zurücksetzen
+        setTimeout(() => {
+          invoiceSaveMessage.value = null
+        }, 3000)
+        
+      } else {
+        throw new Error(result.error || 'Unbekannter Fehler')
+      }
+    
+  } catch (err: any) {
+    console.error('❌ Error saving invoice address:', err)
+    invoiceSaveMessage.value = {
+      type: 'error',
+      text: `❌ Fehler beim Speichern: ${err.message}`
+    }
+  } finally {
+    isSavingInvoice.value = false
+  }
+}
+
+
 </script>

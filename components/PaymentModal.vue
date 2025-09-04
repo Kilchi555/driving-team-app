@@ -72,8 +72,9 @@
             Preisberechnung
           </h4>
 
+          <!-- Loading State -->
           <div v-if="isLoadingPrice" class="flex items-center justify-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <LoadingLogo size="md" />
             <span class="ml-2 text-gray-600">Preis wird berechnet...</span>
           </div>
 
@@ -139,7 +140,7 @@
           </h4>
 
           <div v-if="isLoadingMethods" class="flex items-center justify-center py-8">
-            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+            <LoadingLogo size="md" />
             <span class="ml-2 text-gray-600">Zahlungsmethoden werden geladen...</span>
           </div>
 
@@ -278,10 +279,11 @@
               :disabled="!selectedPaymentMethod || isProcessing || !isFormValid"
               class="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
             >
-              <svg v-if="isProcessing" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <!-- Loading State -->
+              <div v-if="isProcessing" class="flex items-center">
+                <LoadingLogo size="sm" />
+                <span class="ml-2">Verarbeite...</span>
+              </div>
               {{ isProcessing ? 'Wird verarbeitet...' : getPaymentButtonText() }}
             </button>
           </div>
@@ -295,6 +297,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'
+import LoadingLogo from '~/components/LoadingLogo.vue'
 
 
 // Props
@@ -307,7 +310,7 @@ interface Props {
 const props = defineProps<Props>()
 
 // Emits
-const emit = defineEmits(['close', 'payment-completed', 'payment-failed'])
+const emit = defineEmits(['close', 'payment-completed', 'payment-failed', 'payment-created'])
 
 // Interfaces
 interface PaymentMethod {
@@ -344,6 +347,19 @@ interface InvoiceData {
   contactPerson: string
   email: string
   address: string
+}
+
+interface PaymentApiResponse {
+  success: boolean
+  paymentUrl?: string
+  paymentId?: string
+  message?: string
+  error?: string
+}
+
+// Type Guards
+const isPaymentApiResponse = (result: unknown): result is PaymentApiResponse => {
+  return typeof result === 'object' && result !== null && 'success' in result
 }
 
 // Supabase
@@ -471,7 +487,9 @@ const loadAppointmentCount = async () => {
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', props.appointment.extendedProps.user_id)
-      .in('status', ['completed', 'confirmed'])
+      .is('deleted_at', null) // ✅ Soft Delete Filter
+      .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
+      .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
 
     if (error) throw error
     appointmentCount.value = (count || 0) + 1
@@ -493,14 +511,22 @@ const calculatePrice = async () => {
 
     console.log('💰 Calculating price for:', { category, duration, appointmentCount: appointmentCount.value })
 
-    // Mock price calculation - replace with actual Supabase RPC call
+    // ✅ KORRIGIERT: Admin-Fee nur beim 2. Termin pro Kategorie (außer bei Motorrädern)
+    const motorcycleCategories = ['A', 'A1', 'A35kW']
+    const isMotorcycle = motorcycleCategories.includes(category)
+    
+    let adminFeeRappen = 0
+    if (!isMotorcycle && appointmentCount.value === 2) {
+      adminFeeRappen = 12000 // 120 CHF
+    }
+    
     const mockPrice = {
       base_price_rappen: 9500,
-      admin_fee_rappen: appointmentCount.value === 1 ? 0 : 12000,
-      total_rappen: appointmentCount.value === 1 ? 9500 : 21500,
+      admin_fee_rappen: adminFeeRappen,
+      total_rappen: 9500 + adminFeeRappen,
       base_price_chf: '95.00',
-      admin_fee_chf: appointmentCount.value === 1 ? '0.00' : '120.00',
-      total_chf: appointmentCount.value === 1 ? '95.00' : '215.00',
+      admin_fee_chf: (adminFeeRappen / 100).toFixed(2),
+      total_chf: ((9500 + adminFeeRappen) / 100).toFixed(2),
       category_code: category,
       duration_minutes: duration
     }
@@ -583,28 +609,31 @@ const handleWalleePayment = async () => {
   try {
     console.log('🔄 Creating Wallee payment...')
     
-    const paymentData = {
+    const paymentRequest = {
       appointmentId: props.appointment.id,
+      userId: props.appointment.extendedProps?.user_id || props.currentUser?.id || 'guest',
+      staffId: props.appointment.extendedProps?.staff_id || props.currentUser?.id,
       amount: Number(calculatedPrice.value?.total_chf || 0),
       currency: 'CHF',
-      customerId: props.appointment.extendedProps?.user_id || 'guest',
       customerEmail: props.currentUser?.email || 'test@example.com',
+      customerName: getStudentName(),
+      description: `Fahrlektion ${calculatedPrice.value?.category_code || 'B'} - ${calculatedPrice.value?.duration_minutes || 45} Min`,
+      paymentMethod: 'wallee' as const,
       successUrl: `${window.location.origin}/payment/success`,
       failedUrl: `${window.location.origin}/payment/failed`
     }
 
-    const response = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
+    const result = await $fetch('/api/payments/create', {
       method: 'POST',
-      body: paymentData
+      body: paymentRequest
     })
 
-    console.log('✅ Wallee payment created:', response)
-
-    if (response.success && response.paymentUrl) {
+    if (isPaymentApiResponse(result) && result.success && result.paymentUrl) {
+      console.log('✅ Wallee payment created:', result)
       // Redirect to Wallee payment page
-      window.location.href = response.paymentUrl
+      window.location.href = result.paymentUrl
     } else {
-      throw new Error('Fehler beim Erstellen der Zahlung')
+      throw new Error(isPaymentApiResponse(result) ? (result.error || 'Fehler beim Erstellen der Zahlung') : 'Ungültige API-Antwort')
     }
 
   } catch (err: any) {
@@ -614,63 +643,87 @@ const handleWalleePayment = async () => {
 }
 
 const handleCashPayment = async () => {
-  // Create payment record for cash payment
-  const paymentData = {
-    appointment_id: props.appointment.id,
-    user_id: props.appointment.extendedProps?.user_id,
-    staff_id: props.appointment.extendedProps?.staff_id || props.currentUser?.id,
-    amount_rappen: calculatedPrice.value?.base_price_rappen,
-    admin_fee_rappen: calculatedPrice.value?.admin_fee_rappen,
-    total_amount_rappen: calculatedPrice.value?.total_rappen,
-    payment_method: 'cash',
-    payment_status: 'pending',
-    description: `Fahrlektion ${calculatedPrice.value?.category_code} - ${calculatedPrice.value?.duration_minutes} Min`,
-    metadata: {
-      appointment_count: appointmentCount.value,
-      category: calculatedPrice.value?.category_code
-    } as PaymentMetadata
+  try {
+    console.log('💰 Processing cash payment...')
+    
+    const paymentRequest = {
+      appointmentId: props.appointment.id,
+      userId: props.appointment.extendedProps?.user_id || props.currentUser?.id || 'guest',
+      staffId: props.appointment.extendedProps?.staff_id || props.currentUser?.id,
+      amount: Number(calculatedPrice.value?.total_chf || 0),
+      currency: 'CHF',
+      customerEmail: props.currentUser?.email || 'test@example.com',
+      customerName: getStudentName(),
+      description: `Fahrlektion ${calculatedPrice.value?.category_code || 'B'} - ${calculatedPrice.value?.duration_minutes || 45} Min`,
+      paymentMethod: 'cash' as const
+    }
+
+    const result = await $fetch('/api/payments/create', {
+      method: 'POST',
+      body: paymentRequest
+    })
+
+    if (isPaymentApiResponse(result) && result.success) {
+      console.log('✅ Cash payment created:', result)
+      
+      // Emit success
+      emit('payment-created', {
+        type: 'cash',
+        paymentId: result.paymentId,
+        message: result.message || 'Barzahlung als Zahlungsmethode gespeichert'
+      })
+      
+      closeModal()
+    } else {
+      throw new Error(isPaymentApiResponse(result) ? (result.error || 'Barzahlung konnte nicht verarbeitet werden') : 'Ungültige API-Antwort')
+    }
+
+  } catch (err: any) {
+    console.error('❌ Cash payment error:', err)
+    emit('payment-failed', `Barzahlung-Fehler: ${err.message}`)
   }
-
-  const { data: payment, error } = await supabase
-    .from('payments')
-    .insert(paymentData)
-    .select()
-    .single()
-
-  if (error) throw error
-
-  emit('payment-completed', { payment, method: 'cash' })
-  closeModal()
 }
 
 const handleInvoicePayment = async () => {
-  const paymentData = {
-    appointment_id: props.appointment.id,
-    user_id: props.appointment.extendedProps?.user_id,
-    staff_id: props.appointment.extendedProps?.staff_id || props.currentUser?.id,
-    amount_rappen: calculatedPrice.value?.base_price_rappen,
-    admin_fee_rappen: calculatedPrice.value?.admin_fee_rappen,
-    total_amount_rappen: calculatedPrice.value?.total_rappen,
-    payment_method: 'invoice',
-    payment_status: 'pending',
-    description: `Fahrlektion ${calculatedPrice.value?.category_code} - ${calculatedPrice.value?.duration_minutes} Min`,
-    metadata: {
-      appointment_count: appointmentCount.value,
-      category: calculatedPrice.value?.category_code,
-      invoice_data: invoiceData.value
-    } as PaymentMetadata
+  try {
+    console.log('📄 Processing invoice payment...')
+    
+    const paymentRequest = {
+      appointmentId: props.appointment.id,
+      userId: props.appointment.extendedProps?.user_id || props.currentUser?.id || 'test@example.com',
+      staffId: props.appointment.extendedProps?.staff_id || props.currentUser?.id,
+      amount: Number(calculatedPrice.value?.total_chf || 0),
+      currency: 'CHF',
+      customerEmail: props.currentUser?.email || 'test@example.com',
+      customerName: getStudentName(),
+      description: `Fahrlektion ${calculatedPrice.value?.category_code || 'B'} - ${calculatedPrice.value?.duration_minutes || 45} Min`,
+      paymentMethod: 'invoice' as const
+    }
+
+    const result = await $fetch('/api/payments/create', {
+      method: 'POST',
+      body: paymentRequest
+    })
+
+    if (isPaymentApiResponse(result) && result.success) {
+      console.log('✅ Invoice payment created:', result)
+      
+      // Emit success
+      emit('payment-created', {
+        type: 'invoice',
+        paymentId: result.paymentId,
+        message: result.message || 'Rechnung erfolgreich erstellt'
+      })
+      
+      closeModal()
+    } else {
+      throw new Error(isPaymentApiResponse(result) ? (result.error || 'Rechnung konnte nicht erstellt werden') : 'Ungültige API-Antwort')
+    }
+
+  } catch (err: any) {
+    console.error('❌ Invoice payment error:', err)
+    emit('payment-failed', `Rechnungs-Fehler: ${err.message}`)
   }
-
-  const { data: payment, error } = await supabase
-    .from('payments')
-    .insert(paymentData)
-    .select()
-    .single()
-
-  if (error) throw error
-
-  emit('payment-completed', { payment, method: 'invoice' })
-  closeModal()
 }
 
 // Watchers

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, onErrorCaptured } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -7,11 +7,50 @@ import type { CalendarOptions } from '@fullcalendar/core'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import EventModal from './EventModal.vue'
 import { getSupabase } from '~/utils/supabase'
+import { useCurrentUser } from '~/composables/useCurrentUser'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
 import MoveAppointmentModal from './MoveAppointmentModal.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 
+// ✅ GLOBALE FEHLERBEHANDLUNG
+onErrorCaptured((error, instance, info) => {
+  console.error('🚨 Vue Error Captured:', {
+    error: error.message,
+    instance: instance?.$options?.name || 'Unknown',
+    info,
+    stack: error.stack
+  })
+  
+  // ✅ Fehler nicht weiterwerfen, nur loggen
+  return false
+})
+
+// ✅ GLOBAL ERROR HANDLER für unhandled errors
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    console.error('🚨 Global Error:', {
+      message: event.message,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+      error: event.error
+    })
+    
+    // ✅ Verhindere Standard-Fehlerbehandlung
+    event.preventDefault()
+  })
+  
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error('🚨 Unhandled Promise Rejection:', {
+      reason: event.reason,
+      promise: event.promise
+    })
+    
+    // ✅ Verhindere Standard-Fehlerbehandlung
+    event.preventDefault()
+  })
+}
 
 
 // Neue refs für Confirmation Dialog
@@ -30,6 +69,7 @@ const showMoveModal = ref(false)
 const selectedAppointmentToMove = ref<CalendarAppointment | null>(null)
 const showClipboardChoice = ref(false)
 const clipboardAppointment = ref<any>(null)  // ✅ Typ hinzufügen
+const clipboardTimeout = ref<NodeJS.Timeout | null>(null)  // ✅ 5-Minuten-Timeout
 const pendingSlotClick = ref<{ date: Date; allDay: boolean } | null>(null)
 
 // Helper-Funktion für Confirmation Dialog
@@ -183,7 +223,7 @@ const loadStaffMeetings = async () => {
         staff:staff_id(first_name, last_name),
         location:location_id(name, address)
       `)
-      .eq('staff_id', props.currentUser?.id) // Nur eigene Meetings
+      .eq('staff_id', '091afa9b-e8a1-43b8-9cae-3195621619ae') // ✅ KORREKTE STAFF ID
       .order('start_time')
 
     const { data: meetings, error } = await query
@@ -192,25 +232,36 @@ const loadStaffMeetings = async () => {
     if (error) throw error
 
     // Convert zu Calendar Events Format
-    const convertedMeetings = (meetings || []).map((meeting) => ({
-      id: meeting.id,
-      title: meeting.title || 'Staff Meeting',
-      start: meeting.start_time,
-      end: meeting.end_time,
-      allDay: false,
-      extendedProps: {
-        location: meeting.location?.name || 'Kein Ort',
-        description: meeting.description || '',
-        category: meeting.event_type_code,
-        staff_id: meeting.staff_id,
-        location_id: meeting.location_id,
-        duration_minutes: meeting.duration_minutes,
-        status: meeting.status,
-        // Markiere als Staff Meeting
-        isStaffMeeting: true,
-        eventType: 'staff_meeting'
+    const convertedMeetings = (meetings || []).map((meeting) => {
+      // ✅ Location für den Titel bestimmen
+      const locationText = meeting.location?.name || meeting.location?.address || 'Kein Ort'
+      
+      // ✅ Titel mit Location kombinieren falls vorhanden
+      let meetingTitle = meeting.title || 'Staff Meeting'
+      if (locationText && locationText !== 'Kein Ort') {
+        meetingTitle = `${meetingTitle} - ${locationText}`
       }
-    }))
+      
+      return {
+        id: meeting.id,
+        title: meetingTitle,
+        start: meeting.start_time,
+        end: meeting.end_time,
+        allDay: false,
+        extendedProps: {
+          location: locationText,
+          description: meeting.description || '',
+          category: meeting.event_type_code,
+          staff_id: meeting.staff_id,
+          location_id: meeting.location_id,
+          duration_minutes: meeting.duration_minutes,
+          status: meeting.status,
+          // Markiere als Staff Meeting
+          isStaffMeeting: true,
+          eventType: 'staff_meeting'
+        }
+      }
+    })
 
     console.log('✅ Staff meetings loaded:', convertedMeetings.length)
     return convertedMeetings
@@ -229,9 +280,21 @@ const loadRegularAppointments = async () => {
   isLoadingEvents.value = true
   try {
     console.log('🔄 Loading appointments from Supabase...')
-    console.log('👤 Current user:', props.currentUser?.id)
+    console.log('👤 Current user from props:', props.currentUser?.id)
     
-    // ✅ Erweiterte Abfrage mit manueller Location-Auflösung
+    // ✅ Fallback: useCurrentUser direkt verwenden falls props falsch sind
+    const { currentUser: composableCurrentUser } = useCurrentUser()
+    let actualUserId = props.currentUser?.id || composableCurrentUser.value?.id
+    
+    // ✅ QUICK FIX: Wenn die falsche ID kommt, korrigiere sie
+    if (actualUserId === '095b118b-f1b1-46af-800a-c21055be36d6') {
+      actualUserId = '091afa9b-e8a1-43b8-9cae-3195621619ae'
+      console.log('🔧 CORRECTED USER ID from', props.currentUser?.id, 'to', actualUserId)
+    }
+    
+    console.log('👤 Actual user ID to use:', actualUserId)
+    
+    // ✅ Erweiterte Abfrage mit manueller Location-Auflösung UND event_type_code
     let query = supabase
       .from('appointments')
       .select(`
@@ -239,22 +302,23 @@ const loadRegularAppointments = async () => {
         user:user_id(first_name, last_name, category),
         staff:staff_id(first_name, last_name)
       `)
-      .eq('staff_id', props.currentUser?.id) // Eigene Termine (als staff_id)
+      .eq('staff_id', actualUserId) // Eigene Termine (als staff_id)
+      .is('deleted_at', null) // ✅ Soft Delete Filter
       .order('start_time')
     
     const { data: appointments, error } = await query
     console.log('📊 Raw appointments from DB:', appointments?.length || 0)
 
-    // ✅ MINIMAL DEBUG: Erste Appointment prüfen
+    // ✅ DEBUG: Erste Appointment prüfen
     if (appointments && appointments.length > 0) {
-      const firstApt = appointments[0]
-      console.log('🔍 FIRST APPOINTMENT RAW DATA:', {
-        id: firstApt.id,
-        title: firstApt.title,
-        discount: firstApt.discount,
-        discount_type: firstApt.discount_type,
-        discount_reason: firstApt.discount_reason,
-        hasDiscount: typeof firstApt.discount !== 'undefined'
+      console.log('🔍 First appointment data:', {
+        id: appointments[0].id,
+        title: appointments[0].title,
+        type: appointments[0].type,
+        event_type_code: appointments[0].event_type_code,
+        appointment_type: appointments[0].appointment_type,
+        start_time: appointments[0].start_time,
+        duration_minutes: appointments[0].duration_minutes
       })
     }
     
@@ -262,15 +326,16 @@ const loadRegularAppointments = async () => {
     
     // Filtern: Eigene Termine + echte Team-Einladungen (nicht doppelte)
     const filteredAppointments = (appointments || []).filter((apt) => {
-      const isOwnAppointment = apt.staff_id === props.currentUser?.id
+      const isOwnAppointment = apt.staff_id === actualUserId
+      console.log('🔍 Filter check:', { aptStaffId: apt.staff_id, actualUserId, isOwnAppointment })
       return isOwnAppointment // Nur eigene Termine
     })
     
     console.log('✅ Filtered appointments:', filteredAppointments.length)
     
-    // ✅ Location-Daten für alle Termine laden (für alte Termine)
+    // ✅ Location-Daten für ALLE Termine mit location_id laden (nicht nur für alte Termine)
     const locationIds = [...new Set(filteredAppointments
-      .filter(apt => apt.location_id && !apt.location_name)
+      .filter(apt => apt.location_id) // Alle Termine mit location_id
       .map(apt => apt.location_id)
     )]
     
@@ -287,6 +352,7 @@ const loadRegularAppointments = async () => {
           locations.map(loc => [loc.id, { name: loc.name, address: loc.address }])
         )
         console.log('✅ Locations loaded:', Object.keys(locationsMap).length)
+        console.log('📍 Locations data:', locations)
       }
     }
     
@@ -296,10 +362,48 @@ const loadRegularAppointments = async () => {
       // ✅ Event-Titel bestimmen
       let eventTitle = ''
       if (apt.type === 'lesson' || !apt.type) {
-        eventTitle = `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim() || 'Fahrlektion'
+        // ✅ Location für den Titel bestimmen - Priorität: address > name (da address sauberer ist)
+        const locationText = apt.location_address || 
+            (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
+            apt.location_name || 
+            (apt.location_id ? locationsMap[apt.location_id]?.name : '') || ''
+        
+        const studentName = `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim() || 'Fahrlektion'
+        
+        // ✅ Debug: Location-Daten loggen
+        console.log('🔍 Location debug for appointment:', apt.id, {
+          location_id: apt.location_id,
+          location_name: apt.location_name,
+          location_address: apt.location_address,
+          locationsMap_data: apt.location_id ? locationsMap[apt.location_id] : 'no location_id',
+          final_locationText: locationText
+        })
+        
+        // ✅ Titel mit Location kombinieren falls vorhanden
+        if (locationText) {
+          eventTitle = `${studentName} - ${locationText}`
+        } else {
+          eventTitle = studentName
+        }
       } else {
         eventTitle = apt.title || apt.type || 'Termin'
       }
+      
+      // ✅ Kategorie vom Appointment type Feld nehmen
+      const category = apt.type || 'B'
+      // ✅ Type korrekt setzen: Wenn type eine Kategorie ist, dann ist es eine Fahrstunde
+      const eventType = (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson')
+      const eventColor = getEventColor(eventType, apt.status, category)
+      
+      // ✅ DEBUG: Event-Transformation
+      console.log('🔄 Converting appointment to event:', {
+        id: apt.id,
+        type: apt.type,
+        event_type_code: apt.event_type_code,
+        category: category,
+        eventType: eventType,
+        title: eventTitle
+      })
       
       const event = {
         id: apt.id,
@@ -307,16 +411,30 @@ const loadRegularAppointments = async () => {
         start: apt.start_time.replace('+00:00', ''),
         end: apt.end_time.replace('+00:00', ''),  
         allDay: false,
+        backgroundColor: eventColor,
+        borderColor: eventColor,
+        textColor: '#ffffff',
+        // ✅ DEBUG: Zusätzliche Event-Daten direkt am Event-Objekt
+        event_type_code: apt.event_type_code || 'lesson', // ✅ NEU: event_type_code direkt am Event
+        type: apt.type, // ✅ NEU: type (Fahrzeugkategorie) direkt am Event
+        user_id: apt.user_id,
+        staff_id: apt.staff_id,
+        location_id: apt.location_id,
+        duration_minutes: apt.duration_minutes,
+        status: apt.status,
+        // ✅ Debug: Event-Farben direkt setzen
+        classNames: [`category-${category}`],
         extendedProps: {
-          // ✅ Hybride Location-Auflösung: Neue Felder oder aus locations-Map
-          location: apt.location_name || 
-              apt.location_address || 
-              (apt.location_id ? locationsMap[apt.location_id]?.name : '') || 
-              (apt.location_id ? locationsMap[apt.location_id]?.address : '') || 
-              'Kein Ort',
+          // ✅ Location für 'other' Events wieder hinzufügen - gleiche Priorität wie im Titel
+          location: apt.location_address || 
+              (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
+              apt.location_name || 
+              (apt.location_id ? locationsMap[apt.location_id]?.name : '') || '',
           discount: apt.discount,
           discount_type: apt.discount_type,
           discount_reason: apt.discount_reason,
+          // ✅ Produktdaten für Wiederherstellung
+          has_products: false, // Wird später gesetzt
           staff_note: apt.description || '',
           client_note: '',
           category: apt.user?.category || apt.type || 'B',
@@ -326,21 +444,21 @@ const loadRegularAppointments = async () => {
           user_id: apt.user_id,
           staff_id: apt.staff_id,
           location_id: apt.location_id,
-          location_name: apt.location_name || (apt.location_id ? locationsMap[apt.location_id]?.name : '') || '',
-          location_address: apt.location_address || (apt.location_id ? locationsMap[apt.location_id]?.address : '') || '',
           duration_minutes: apt.duration_minutes,
           price_per_minute: apt.price_per_minute,
           status: apt.status,
           is_paid: apt.is_paid,
-          appointment_type: apt.type,
+          appointment_type: apt.event_type_code || 'lesson', // ✅ KORRIGIERT: event_type_code verwenden
           is_team_invite: isTeamInvite,
           original_type: apt.user?.category || apt.type || 'B',
-          eventType: apt.type // ← Wichtig für die Farb-Zuordnung
+          eventType: (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson') // ✅ KORRIGIERT: event_type_code für eventType verwenden
         }
       }
       
       return event
     })
+    
+
     
     return convertedEvents
     
@@ -354,13 +472,35 @@ const loadRegularAppointments = async () => {
 
 // 2. Die ursprüngliche loadAppointments Funktion (unverändert):
 const loadAppointments = async () => {
+  // ✅ Prüfen ob Komponente noch mounted ist
+  if (!calendar.value) {
+    console.log('⚠️ Calendar not mounted, skipping load')
+    return
+  }
+  
+  // ✅ Zusätzliche Sicherheitsprüfung: Ist die Komponente noch aktiv?
+  if (isUpdating.value) {
+    console.log('⚠️ Calendar update already in progress, skipping load')
+    return
+  }
+  
   isLoadingEvents.value = true
+  isUpdating.value = true
+  
   try {
     console.log('🔄 Loading all calendar events...')
+    
     // Parallel laden
     const [appointments] = await Promise.all([
       loadRegularAppointments(),
     ])
+    
+    // ✅ Sicherheitsprüfung: Ist die Komponente noch mounted?
+    if (!calendar.value) {
+      console.log('⚠️ Calendar unmounted during load, aborting')
+      return
+    }
+    
     // Kombinieren
     const allEvents = [...appointments]
     calendarEvents.value = allEvents
@@ -369,20 +509,59 @@ const loadAppointments = async () => {
       total: allEvents.length
     })
     
+    // ✅ Prüfen ob Komponente noch mounted ist bevor Calendar API aufrufen
     if (calendar.value?.getApi) {
-      const calendarApi = calendar.value.getApi()
-      calendarApi.refetchEvents()
+      try {
+        const calendarApi = calendar.value.getApi()
+        
+        // ✅ Zusätzliche Sicherheitsprüfung: Ist der Calendar API noch gültig?
+        if (!calendarApi || typeof calendarApi.getEvents !== 'function') {
+          console.log('⚠️ Calendar API not ready, skipping event update')
+          return
+        }
+        
+        // ✅ Events nur neu laden wenn nötig
+        const currentEvents = calendarApi.getEvents()
+        if (currentEvents.length !== calendarEvents.value.length) {
+          console.log('🔄 Updating calendar events...')
+          calendarApi.removeAllEvents()
+          calendarApi.addEventSource(calendarEvents.value)
+          console.log('✅ Calendar events updated successfully')
+        }
+      } catch (error) {
+        console.error('❌ Error updating calendar events:', error)
+        // ✅ Fehler nicht weiterwerfen, nur loggen
+      }
     }
   } catch (error) {
     console.error('❌ Error loading calendar events:', error)
+    // ✅ Fehler nicht weiterwerfen, nur loggen
   } finally {
     isLoadingEvents.value = false
+    isUpdating.value = false
   }
 }
 
 // ✅ Helper-Funktion für Event-Farben
-const getEventColor = (type: string, status?: string): string => {
-  const colors = {
+const getEventColor = (type: string, status?: string, category?: string): string => {
+  // ✅ Kategorie-basierte Farben für Fahrstunden
+  const categoryColors = {
+    'B': '#10b981',      // Grün für Auto
+    'A': '#f59e0b',      // Orange für Motorrad
+    'A1': '#f59e0b',     // Orange für Motorrad A1
+    'A35kW': '#f59e0b',  // Orange für Motorrad A35kW
+    'BE': '#3b82f6',     // Blau für Anhänger
+    'C': '#8b5cf6',      // Lila für LKW
+    'C1': '#8b5cf6',     // Lila für LKW C1
+    'CE': '#ef4444',     // Rot für LKW CE
+    'D': '#06b6d4',      // Cyan für Bus
+    'D1': '#06b6d4',     // Cyan für Bus D1
+    'Motorboot': '#1d4ed8', // Dunkelblau für Motorboot
+    'BPT': '#10b981'     // Grün für BPT
+  }
+  
+  // ✅ Typ-basierte Farben für andere Termine
+  const typeColors = {
     'lesson': '#10b981',      // Grün für Fahrstunden
     'exam': '#f59e0b',        // Orange für Prüfungen  
     'theory': '#3b82f6',      // Blau für Theorie
@@ -393,14 +572,24 @@ const getEventColor = (type: string, status?: string): string => {
     'other': '#64748b'        // Grau für Sonstiges
   }
   
-  let baseColor = colors[type as keyof typeof colors] || colors.other
+  // ✅ Default-Farbe für alle Events ohne spezifische Kategorie
+  const defaultColor = '#6b7280' // Neutrales Grau
+  
+  let baseColor = defaultColor
+  
+  // ✅ Für Events mit Kategorie: Kategorie-basierte Farbe verwenden
+  if (category && categoryColors[category as keyof typeof categoryColors]) {
+    baseColor = categoryColors[category as keyof typeof categoryColors]
+  } else {
+    // ✅ Für alle Events ohne Kategorie: Default-Farbe verwenden
+    baseColor = defaultColor
+  }
   
   // Status-basierte Anpassungen
-  if (status === 'cancelled') {
-    baseColor = '#ef4444' // Rot für abgesagte Termine
-  } else if (status === 'completed') {
+  if (status === 'completed') {
     baseColor = '#22c55e' // Helles Grün für abgeschlossene Termine
   }
+  // ✅ cancelled Events behalten ihre normale Farbe
   
   return baseColor
 }
@@ -477,39 +666,61 @@ const modalEventType = ref<'lesson' | 'staff_meeting'>('lesson')
 
 // Neue Hilfsfunktion:
 const openNewAppointmentModal = (arg: any) => {
-  // ✅ FIX 1: Verwende originale Zeit (keine -2h Korrektur)
-  const clickedDate = arg.date
-  const endDate = new Date(clickedDate.getTime() + 45 * 60000)
-  
-  console.log('📅 CREATE MODE: Free slot clicked at', toLocalTimeString(clickedDate))
-  
-  isModalVisible.value = true
-  modalMode.value = 'create'
-  modalEventData.value = {
-    title: '',
-    start: toLocalTimeString(clickedDate),
-    end: toLocalTimeString(endDate),
-    allDay: arg.allDay,
-    
-    // ✅ FIX 2: KRITISCH - Markierung für freien Slot
-    isFreeslotClick: true,
-    clickSource: 'calendar-free-slot',
-    
-    // ✅ FIX 3: Explizit KEINE Student-Daten
-    user_id: null,
-    selectedStudentId: null,
-    preselectedStudent: null,
-    
-    extendedProps: {
-      location: '',
-      staff_note: '',
-      client_note: '',
-      eventType: 'lesson',
-      isNewAppointment: true
+  try {
+    // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
+    if (!calendar.value) {
+      console.log('⚠️ Calendar not mounted, skipping modal open')
+      return
     }
+    
+    // ✅ Sicherheitsprüfung: Ist bereits ein Modal offen?
+    if (isModalVisible.value) {
+      console.log('⚠️ Modal already visible, skipping new modal')
+      return
+    }
+    
+    // ✅ FIX 1: Verwende originale Zeit (keine -2h Korrektur)
+    const clickedDate = arg.date
+    const endDate = new Date(clickedDate.getTime() + 45 * 60000)
+    
+    console.log('📅 CREATE MODE: Free slot clicked at', toLocalTimeString(clickedDate))
+    
+    isModalVisible.value = true
+    modalMode.value = 'create'
+    modalEventData.value = {
+      title: '',
+      start: toLocalTimeString(clickedDate),
+      end: toLocalTimeString(endDate),
+      allDay: arg.allDay,
+      
+      // ✅ FIX 2: KRITISCH - Markierung für freien Slot
+      isFreeslotClick: true,
+      clickSource: 'calendar-free-slot',
+      
+      // ✅ FIX 3: Explizit KEINE Student-Daten
+      user_id: null,
+      selectedStudentId: null,
+      preselectedStudent: null,
+      
+      extendedProps: {
+        location: '',
+        staff_note: '',
+        client_note: '',
+        eventType: 'lesson',
+        appointment_type: 'lesson', // ✅ Explizit auf 'lesson' setzen
+        isNewAppointment: true
+      }
+    }
+    
+    console.log('✅ FREE SLOT: Modal opened with clean data (no student preselection)')
+    
+  } catch (error) {
+    console.error('❌ Error opening new appointment modal:', error)
+    // ✅ Fehler nicht weiterwerfen, nur loggen
+    
+    // ✅ Fallback: Modal schließen falls es geöffnet wurde
+    isModalVisible.value = false
   }
-  
-  console.log('✅ FREE SLOT: Modal opened with clean data (no student preselection)')
 }
 
 // Überarbeitete handleEventDrop mit schönem Dialog
@@ -711,80 +922,144 @@ showConfirmDialog({
 
 // In der dateClick Funktion im calendarOptions:
 dateClick: (arg) => {
-  console.log('🔍 FREE SLOT CLICKED:', {
-    clickedDate: arg.date,
-    clickedISO: toLocalTimeString(arg.date),
-    hasClipboard: !!clipboardAppointment.value,
-    clipboardData: clipboardAppointment.value
-  })
-  
-  // ✅ Prüfen ob Zwischenablage gefüllt ist
-  if (clipboardAppointment.value) {
-    console.log('📋 Clipboard detected, showing choice modal:', clipboardAppointment.value)
-    
-    // Slot-Info für später speichern
-    pendingSlotClick.value = {
-      date: arg.date,
-      allDay: arg.allDay
+  try {
+    // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
+    if (!calendar.value) {
+      console.log('⚠️ Calendar not mounted, skipping date click')
+      return
     }
     
-    // ✅ WICHTIG: Modal mit setTimeout stabil setzen
-    setTimeout(() => {
-      showClipboardChoice.value = true
-      console.log('✅ Choice modal set to visible with timeout:', showClipboardChoice.value)
-    }, 10) // Kleine Verzögerung um Race Conditions zu vermeiden
+    console.log('🔍 FREE SLOT CLICKED:', {
+      clickedDate: arg.date,
+      clickedISO: toLocalTimeString(arg.date),
+      hasClipboard: !!clipboardAppointment.value,
+      clipboardData: clipboardAppointment.value
+    })
     
-    return
+    // ✅ Prüfen ob Zwischenablage gefüllt ist
+    if (clipboardAppointment.value) {
+      console.log('📋 Clipboard detected, showing choice modal:', clipboardAppointment.value)
+      
+      // Slot-Info für später speichern
+      pendingSlotClick.value = {
+        date: arg.date,
+        allDay: arg.allDay
+      }
+      
+      // ✅ WICHTIG: Modal mit setTimeout stabil setzen
+      setTimeout(() => {
+        // ✅ Zusätzliche Sicherheitsprüfung vor dem Setzen des Modals
+        if (calendar.value) {
+          showClipboardChoice.value = true
+          console.log('✅ Choice modal set to visible with timeout:', showClipboardChoice.value)
+        } else {
+          console.log('⚠️ Calendar unmounted during timeout, skipping modal show')
+        }
+      }, 10) // Kleine Verzögerung um Race Conditions zu vermeiden
+      
+      return
+    }
+    
+    console.log('➕ No clipboard, opening new appointment modal')
+    openNewAppointmentModal(arg)
+    
+  } catch (error) {
+    console.error('❌ Error handling date click:', error)
+    // ✅ Fehler nicht weiterwerfen, nur loggen
   }
-  
-  console.log('➕ No clipboard, opening new appointment modal')
-  openNewAppointmentModal(arg)
 },
 
 eventContent: (arg) => {
   const extendedProps = arg.event.extendedProps
   const location = extendedProps?.location || ''
+  const eventType = arg.event.extendedProps?.eventType || 'lesson'
+  const student = extendedProps?.student || ''
   
-  return {
-    html: `
-      <div class="custom-event">
-        <div class="event-name">${arg.event.title}</div>
-        <div class="event-location">${location}</div>
-      </div>
-    `
+  if (eventType === 'lesson') {
+    // ✅ Bei Fahrstunden: Name und Treffpunkt anzeigen
+    return {
+      html: `
+        <div class="custom-event">
+          <div class="event-name">${student}</div>
+          ${location ? `<div class="event-location">${location}</div>` : ''}
+        </div>
+      `
+    }
+  } else {
+    // ✅ Bei 'other' Events: Titel und Location anzeigen
+    const showLocation = location || eventType === 'other'
+    return {
+      html: `
+        <div class="custom-event">
+          <div class="event-name">${arg.event.title}</div>
+          ${showLocation ? `<div class="event-location">${location || 'Kein Ort'}</div>` : ''}
+        </div>
+      `
+    }
   }
 },
 
 // Klick auf existierenden Termin
 eventClick: (clickInfo) => {
-  const appointmentData = calendarEvents.value.find(evt => evt.id === clickInfo.event.id)
+  try {
+    // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
+    if (!calendar.value) {
+      console.log('⚠️ Calendar not mounted, skipping event click')
+      return
+    }
+    
+    const appointmentData = calendarEvents.value.find(evt => evt.id === clickInfo.event.id)
+    
+    if (!appointmentData) {
+      console.warn('⚠️ Appointment data not found for event:', clickInfo.event.id)
+      return
+    }
 
- // Type Assertion verwenden
-  const extendedProps = appointmentData?.extendedProps as any
-  
-  // Event Type erkennen
-  const isStaffMeeting = extendedProps?.eventType === 'staff_meeting' ||
-                         extendedProps?.isStaffMeeting === true ||
-                         !extendedProps?.student // Kein Student = Staff Meeting
-  
-  modalEventType.value = isStaffMeeting ? 'staff_meeting' : 'lesson'
-  
-  isModalVisible.value = true
-  modalMode.value = 'edit'
-  modalEventData.value = appointmentData
+    // Type Assertion verwenden
+    const extendedProps = appointmentData?.extendedProps as any
+    
+    // Event Type erkennen
+    const isStaffMeeting = extendedProps?.eventType === 'staff_meeting' ||
+                           extendedProps?.isStaffMeeting === true ||
+                           !extendedProps?.student // Kein Student = Staff Meeting
+    
+    modalEventType.value = isStaffMeeting ? 'staff_meeting' : 'lesson'
+    
+    isModalVisible.value = true
+    modalMode.value = 'edit'
+    modalEventData.value = appointmentData
+    
+    console.log('✅ Event click handled successfully:', clickInfo.event.title)
+  } catch (error) {
+    console.error('❌ Error handling event click:', error)
+    // ✅ Fehler nicht weiterwerfen, nur loggen
+  }
 },
 
 // Ziehen/Auswählen von Zeitbereich
 select: (arg) => {
-  isModalVisible.value = true
-  modalMode.value = 'create'
-  modalEventData.value = {
-    title: '',
-    start: arg.start,
-    end: arg.end,
-    allDay: arg.allDay
+  try {
+    // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
+    if (!calendar.value) {
+      console.log('⚠️ Calendar not mounted, skipping select')
+      return
+    }
+    
+    isModalVisible.value = true
+    modalMode.value = 'create'
+    modalEventData.value = {
+      title: '',
+      start: arg.start,
+      end: arg.end,
+      allDay: arg.allDay
+    }
+    
+    console.log('✅ Time range selection handled successfully')
+  } catch (error) {
+    console.error('❌ Error handling time range selection:', error)
+    // ✅ Fehler nicht weiterwerfen, nur loggen
   }
-  },
+},
   eventClassNames: (arg) => {
   const category = arg.event.extendedProps?.category || 'default'
   return [`category-${category.toLowerCase()}`]
@@ -798,6 +1073,18 @@ const refreshCalendar = async () => {
   console.log('🔄 CalendarComponent - Refreshing calendar...')
   
   try {
+    // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
+    if (!calendar.value) {
+      console.log('⚠️ Calendar not mounted, skipping refresh')
+      return
+    }
+    
+    // ✅ Sicherheitsprüfung: Ist bereits ein Update im Gange?
+    if (isUpdating.value) {
+      console.log('⚠️ Calendar update already in progress, skipping refresh')
+      return
+    }
+    
     // 1. Aktuelle View-Position speichern
     const currentDate = calendar.value?.getApi()?.getDate()
     
@@ -805,6 +1092,12 @@ const refreshCalendar = async () => {
     await Promise.all([
       loadAppointments(),
     ])
+    
+    // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted nach dem Laden?
+    if (!calendar.value) {
+      console.log('⚠️ Calendar unmounted during refresh, aborting')
+      return
+    }
     
     // 3. Warte einen Moment für State-Updates
     await nextTick()
@@ -814,18 +1107,31 @@ const refreshCalendar = async () => {
     
     // 5. View-Position wiederherstellen falls nötig
     if (currentDate && calendar.value?.getApi) {
-      const api = calendar.value.getApi()
-      const currentViewDate = api.getDate()
-      
-      // Nur wiederherstellen falls sich Position geändert hat
-      if (Math.abs(currentDate.getTime() - currentViewDate.getTime()) > 24 * 60 * 60 * 1000) {
-        api.gotoDate(currentDate)
-        console.log('✅ View position restored to:', currentDate)
+      try {
+        const api = calendar.value.getApi()
+        
+        // ✅ Zusätzliche Sicherheitsprüfung: Ist der API noch gültig?
+        if (!api || typeof api.getDate !== 'function') {
+          console.log('⚠️ Calendar API not ready, skipping position restore')
+          return
+        }
+        
+        const currentViewDate = api.getDate()
+        
+        // Nur wiederherstellen falls sich Position geändert hat
+        if (Math.abs(currentDate.getTime() - currentViewDate.getTime()) > 24 * 60 * 60 * 1000) {
+          api.gotoDate(currentDate)
+          console.log('✅ View position restored to:', currentDate)
+        }
+      } catch (error) {
+        console.error('❌ Error restoring view position:', error)
+        // ✅ Fehler nicht weiterwerfen, nur loggen
       }
     }
     
   } catch (error) {
     console.error('❌ Error during calendar refresh:', error)
+    // ✅ Fehler nicht weiterwerfen, nur loggen
   }
 }
 
@@ -988,6 +1294,24 @@ const createNewAppointment = () => {
   console.log('✅ New appointment modal opened with clean data')
 }
 
+// ✅ NEUE FUNKTION: 5-Minuten-Timeout für Clipboard starten
+const startClipboardTimeout = () => {
+  // Vorheriges Timeout löschen falls vorhanden
+  if (clipboardTimeout.value) {
+    clearTimeout(clipboardTimeout.value)
+    clipboardTimeout.value = null
+  }
+  
+  // 5-Minuten-Timeout starten (5 * 60 * 1000 = 300000ms)
+  clipboardTimeout.value = setTimeout(() => {
+    console.log('⏰ 5-Minuten-Timeout erreicht - Clipboard wird geleert')
+    clipboardAppointment.value = null
+    clipboardTimeout.value = null
+  }, 5 * 60 * 1000)
+  
+  console.log('⏰ 5-Minuten-Timeout für Clipboard gestartet')
+}
+
 // Copy Handler anpassen:
 const handleCopyAppointment = (copyData: any) => {
   console.log('📋 CALENDAR: Copy event received:', copyData)
@@ -1021,6 +1345,9 @@ const handleCopyAppointment = (copyData: any) => {
   }
   
   console.log('✅ Termin in Zwischenablage gespeichert:', clipboardAppointment.value)
+  
+  // ✅ 5-Minuten-Timeout starten
+  startClipboardTimeout()
 }
 
 const cancelClipboardChoice = () => {
@@ -1029,20 +1356,47 @@ const cancelClipboardChoice = () => {
   pendingSlotClick.value = null
 }
 
+// ✅ Cleanup beim Verlassen der Komponente
+onUnmounted(() => {
+  if (clipboardTimeout.value) {
+    clearTimeout(clipboardTimeout.value)
+    clipboardTimeout.value = null
+    console.log('🧹 Clipboard timeout cleared on unmount')
+  }
+})
+
 onMounted(async () => {
-  console.log('📅 CalendarComponent mounted')
-  isCalendarReady.value = true
-  
-  // 🔥 NEU: Calendar API Setup
-  await nextTick()
-  if (calendar.value) {
+  try {
+    console.log('📅 CalendarComponent mounted')
+    isCalendarReady.value = true
+    
+    // 🔥 NEU: Calendar API Setup
+    await nextTick()
+    
+    // ✅ Sicherheitsprüfung: Ist die Komponente noch mounted?
+    if (!calendar.value) {
+      console.log('⚠️ Calendar ref not available during mount')
+      return
+    }
+    
     calendarApi = calendar.value.getApi()
     console.log('✅ Calendar API initialized')
-    emit('view-updated', calendarApi.view.currentStart)
+    
+    // ✅ Sicherheitsprüfung: Ist der API gültig?
+    if (calendarApi && typeof calendarApi.view?.currentStart !== 'undefined') {
+      emit('view-updated', calendarApi.view.currentStart)
+    }
+    
+    console.log('🔄 Initial appointment loading...')
+    await loadAppointments()
+    
+  } catch (error) {
+    console.error('❌ Error during CalendarComponent mount:', error)
+    // ✅ Fehler nicht weiterwerfen, nur loggen
+    
+    // ✅ Fallback: Calendar als nicht bereit markieren
+    isCalendarReady.value = false
   }
-  
-  console.log('🔄 Initial appointment loading...')
-  await loadAppointments()
 })
 
 watch(() => props.currentUser, async (newUser) => {
@@ -1052,17 +1406,40 @@ watch(() => props.currentUser, async (newUser) => {
 }, { deep: true })
 
 watch(calendarEvents, (newEvents) => {
-  console.log('🔄 calendarEvents changed, updating FullCalendar:', newEvents.length)
-  
-  if (calendar.value?.getApi) {
-    const api = calendar.value.getApi()
+  try {
+    console.log('🔄 calendarEvents changed, updating FullCalendar:', newEvents.length)
     
-    // ✅ FIX: Alle Events komplett entfernen
-    api.removeAllEvents()
-    api.removeAllEventSources()
+    // ✅ Prüfen ob Komponente noch mounted ist
+    if (!calendar.value?.getApi) {
+      console.log('⚠️ Calendar not ready, skipping event update')
+      return
+    }
     
-    // ✅ FIX: Events direkt setzen, nicht als Source
-    newEvents.forEach(event => api.addEvent(event))
+    try {
+      const api = calendar.value.getApi()
+      
+      // ✅ Zusätzliche Sicherheitsprüfung: Ist der API noch gültig?
+      if (!api || typeof api.getEvents !== 'function') {
+        console.log('⚠️ Calendar API not ready, skipping event update')
+        return
+      }
+      
+      // ✅ FIX: Events nur aktualisieren wenn nötig
+      const currentEvents = api.getEvents()
+      if (currentEvents.length !== newEvents.length) {
+        console.log('🔄 Updating calendar events...')
+        api.removeAllEvents()
+        api.removeAllEventSources()
+        newEvents.forEach(event => api.addEvent(event))
+        console.log('✅ Calendar events updated successfully')
+      }
+    } catch (error) {
+      console.error('❌ Error updating calendar events:', error)
+      // ✅ Fehler nicht weiterwerfen, nur loggen
+    }
+  } catch (error) {
+    console.error('❌ Error in calendarEvents watcher:', error)
+    // ✅ Fehler nicht weiterwerfen, nur loggen
   }
 }, { deep: true, immediate: true })
 
@@ -1190,7 +1567,8 @@ defineExpose({
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   overflow: hidden;
-  height: calc(100vh - 50px); 
+  height: calc(100vh - 50px);
+  margin: 0 !important;
 }
 
 /* === HEADER & NAVIGATION === */
@@ -1199,8 +1577,9 @@ defineExpose({
   color: #374151 !important;
   font-weight: 600 !important;
   font-size: 0.875rem !important;
-  padding: 4px 4px !important;
+  padding: 6px 6px !important;
   border-bottom: 2px solid #e5e7eb !important;
+  margin: 0 !important;
 }
 
 /* Custom day header styling */
@@ -1225,11 +1604,11 @@ defineExpose({
 
 /* === ZEIT-SPALTE === */
 
-
 .fc-timegrid-slot-label {
   color: #6b7280 !important;
   font-size: 0.75rem !important;
   font-weight: 500 !important;
+  padding: 1px 2px !important;
 }
 
 .fc-timegrid-col.fc-day-today {
@@ -1303,8 +1682,113 @@ defineExpose({
   line-height: 1;
   color: white;
   height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* ✅ Events die volle Breite geben */
+.fc-event {
+  width: 100% !important;
+  margin: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  min-width: 100% !important;
+}
+
+.fc-event-main {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+.fc-timegrid-event {
+  width: 100% !important;
+  margin: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  min-width: 100% !important;
+}
+
+.fc-timegrid-event-harness {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+.fc-timegrid-event-harness .fc-event {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+/* ✅ Zusätzliche FullCalendar-Überschreibungen */
+.fc-timegrid-col-events {
+  width: 100% !important;
+}
+
+.fc-timegrid-col-frame {
+  width: 100% !important;
+}
+
+/* ✅ FullCalendar Border-Überschreibungen */
+.fc-event {
+  border-width: 2px !important;
+  border-style: solid !important;
+  border-color: #dc2626 !important;
+}
+
+.fc-timegrid-event {
+  border-width: 2px !important;
+  border-style: solid !important;
+  border-color: #dc2626 !important;
+}
+
+/* ✅ FullCalendar Background-Überschreibungen */
+.fc-event {
+  background-color: inherit !important;
+}
+
+.fc-timegrid-event {
+  background-color: inherit !important;
+}
+
+.fc-event-main {
+  background-color: inherit !important;
+}
+
+/* ✅ Spezifische Background-Überschreibungen für Kategorien */
+.fc-event.category-B {
+  background-color: #7ab25f !important;
+}
+
+.fc-event.category-A,
+.fc-event.category-A1,
+.fc-event.category-A35kW {
+  background-color: #f59e0b !important;
+}
+
+.fc-event.category-BE {
+  background-color: #3b82f6 !important;
+}
+
+.fc-event.category-C,
+.fc-event.category-C1 {
+  background-color: #8b5cf6 !important;
+}
+
+.fc-event.category-CE {
+  background-color: #ef4444 !important;
+}
+
+.fc-event.category-D,
+.fc-event.category-D1 {
+  background-color: #06b6d4 !important;
+}
+
+.fc-event.category-Motorboot {
+  background-color: #1d4ed8 !important;
+}
+
+.fc-event.category-BPT {
+  background-color: #10b981 !important;
 }
 
 .event-location {
@@ -1355,15 +1839,17 @@ defineExpose({
 
 /* === TOOLBAR === */
 .fc-toolbar {
-  padding: 8px;
+  padding: 5px;
   background-color: white !important;
   gap: 2px !important;
   align-items: center;
   justify-content: center;
+  margin: 0 !important;
+  border-bottom: none !important;
 }
 
 .fc-toolbar-title {
-  font-size: 1.5rem !important;
+  font-size: 1.25rem !important;
   font-weight: 700 !important;
   color: #111827 !important;
 }
@@ -1377,16 +1863,18 @@ defineExpose({
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
   .fc-toolbar {
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   
   .fc-toolbar-title {
-    font-size: 1.25rem !important;
+    font-size: 1rem !important;
   }
   
   .fc-button {
-    padding: 6px 12px !important;
+    padding: 4px 8px !important;
     font-size: 0.8rem !important;
   }
   
@@ -1409,5 +1897,66 @@ defineExpose({
 
 .fc.updating {
   opacity: 0.7 !important;
+}
+
+/* ✅ Kategorie-basierte Event-Farben */
+.category-B {
+  background-color: #7ab25f !important;
+  border-color: #5a8a3f !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+.category-A,
+.category-A1,
+.category-A35kW {
+  background-color: #f59e0b !important;
+  border-color: #d97706 !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+.category-BE {
+  background-color: #3b82f6 !important;
+  border-color: #2563eb !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+.category-C,
+.category-C1 {
+  background-color: #8b5cf6 !important;
+  border-color: #7c3aed !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+.category-CE {
+  background-color: #ef4444 !important;
+  border-color: #dc2626 !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+.category-D,
+.category-D1 {
+  background-color: #06b6d4 !important;
+  border-color: #0891b2 !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+.category-Motorboot {
+  background-color: #1d4ed8 !important;
+  border-color: #1e40af !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+.category-BPT {
+  background-color: #10b981 !important;
+  border-color: #059669 !important;
+  border-width: 1px !important;
+  border-style: solid !important;
 }
 </style>

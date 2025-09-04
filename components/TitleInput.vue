@@ -64,8 +64,8 @@ const shouldShow = computed(() => {
 
 const labelText = computed(() => {
   switch (props.eventType) {
-    case 'lesson': return 'Titel der Fahrstunde'
-    case 'staff_meeting': return 'Meeting Titel'
+    case 'lesson': return 'Titel'
+    case 'staff_meeting': return 'Titel'
     case 'other': return 'Titel des Termins'
     default: return 'Titel'
   }
@@ -95,7 +95,48 @@ const suggestions = computed(() => {
     const lastName = props.selectedStudent.last_name
     const fullName = `${firstName} ${lastName}`
     const category = props.categoryCode ? ` ${props.categoryCode}` : ''
-    const location = props.selectedLocation?.name || props.selectedLocation?.address || 'Treffpunkt'
+    // ✅ NEU: Vollständige Adresse mit Ort verwenden
+    let location = 'Treffpunkt'
+    
+    // ✅ PRIORITÄT 1: Verwende die custom_location_address falls verfügbar (enthält den vollständigen Ort)
+    if (props.selectedLocation?.custom_location_address) {
+      const customAddress = props.selectedLocation.custom_location_address
+      if (customAddress.address && customAddress.address.includes(',')) {
+        location = customAddress.address
+        console.log('📍 TitleInput - Using custom_location_address:', location)
+      } else if (customAddress.name) {
+        location = customAddress.name
+        console.log('📍 TitleInput - Using custom_location_address name:', location)
+      }
+    }
+    // ✅ PRIORITÄT 2: Fallback auf normale Location-Daten
+    else if (props.selectedLocation?.name) {
+      location = props.selectedLocation.name
+      console.log('📍 TitleInput - Using location name:', location)
+    } else if (props.selectedLocation?.address) {
+      location = props.selectedLocation.address
+      console.log('📍 TitleInput - Using location address:', location)
+    }
+    
+    // ✅ DEBUG: Zeige was für die Location verwendet wird
+    console.log('📍 TitleInput - Location data:', {
+      name: props.selectedLocation?.name,
+      address: props.selectedLocation?.address,
+      custom_location_address: props.selectedLocation?.custom_location_address,
+      selectedLocation: props.selectedLocation,
+      finalLocation: location
+    })
+    
+    // ✅ NEU: Wenn die Location nur den Namen hat, aber wir brauchen den vollständigen Ort,
+    // versuche die Adresse zu extrahieren
+    if (location && !location.includes(',')) {
+      // Der Name enthält wahrscheinlich nicht den vollständigen Ort
+      // Versuche die Adresse zu verwenden, falls vorhanden
+      if (props.selectedLocation?.address && props.selectedLocation.address.includes(',')) {
+        location = props.selectedLocation.address
+        console.log('📍 TitleInput - Using full address instead of name:', location)
+      }
+    }
     
     return [
       `${fullName} - ${location}`,
@@ -200,6 +241,17 @@ const updateSuggestion = () => {
 // Update suggestion when suggestions change
 watch(() => suggestions.value, updateSuggestion, { immediate: true })
 
+// Helper function to determine if we should auto-update
+const shouldAutoUpdate = (): boolean => {
+  // Auto-update if current title matches a previous suggestion pattern
+  if (props.eventType === 'lesson' && props.selectedStudent) {
+    const firstName = props.selectedStudent.first_name
+    const lastName = props.selectedStudent.last_name
+    return props.title.includes(firstName) || props.title.includes(lastName)
+  }
+  return false
+}
+
 // Auto-generate title when key data changes
 // Watch für Auto-Generierung debuggen:
 watch([
@@ -218,17 +270,6 @@ watch([
     }
   }
 }, { deep: true, immediate: true })
-
-// Helper function to determine if we should auto-update
-const shouldAutoUpdate = (): boolean => {
-  // Auto-update if current title matches a previous suggestion pattern
-  if (props.eventType === 'lesson' && props.selectedStudent) {
-    const firstName = props.selectedStudent.first_name
-    const lastName = props.selectedStudent.last_name
-    return props.title.includes(firstName) || props.title.includes(lastName)
-  }
-  return false
-}
 
 // Expose für Parent-Component
 defineExpose({

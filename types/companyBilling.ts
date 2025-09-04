@@ -106,7 +106,7 @@ export interface PaymentWithCompanyBilling {
   appointment_id: string
   user_id: string
   staff_id?: string
-  amount_rappen: number
+  lesson_price_rappen: number
   admin_fee_rappen: number
   total_amount_rappen: number
   payment_method: string
@@ -146,7 +146,7 @@ export interface PaymentWithCompanyAddressView {
   appointment_id: string
   user_id: string
   staff_id?: string
-  amount_rappen: number
+  lesson_price_rappen: number
   admin_fee_rappen: number
   total_amount_rappen: number
   payment_method: string

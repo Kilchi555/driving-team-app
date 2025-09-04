@@ -8,7 +8,7 @@
 
     <!-- Loading State -->
     <div v-if="isLoadingPrices" class="flex justify-center items-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"/>
     </div>
 
     <!-- Error State -->
@@ -30,8 +30,8 @@
               🚗 Kategorien-Preise ({{ categoriesCount }} Kategorien)
             </h2>
             <button
-              @click="showCreateModal = true"
               class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              @click="showCreateModal = true"
             >
               ➕ Neue Kategorie
             </button>
@@ -80,8 +80,8 @@
                 <td class="px-6 py-4">
                   <div class="flex space-x-2">
                     <button
-                      @click="editRule(rule)"
                       class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                      @click="editRule(rule)"
                     >
                       ✏️ Bearbeiten
                     </button>
@@ -189,8 +189,8 @@
         <!-- Footer -->
         <div class="px-6 py-4 bg-gray-50 rounded-b-xl">
           <button
-            @click="closeSuccessModal"
             class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
+            @click="closeSuccessModal"
           >
             👍 Alles klar!
           </button>
@@ -218,7 +218,7 @@
               type="text"
               class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
               readonly
-            />
+            >
           </div>
 
           <!-- Price per Minute -->
@@ -232,7 +232,7 @@
               step="0.01"
               min="0"
               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            >
             <p class="text-xs text-gray-500 mt-1">
               45min Lektion: CHF {{ Math.round(editForm.price_per_minute_chf * 45) }}.00
             </p>
@@ -249,7 +249,7 @@
               step="0.01"
               min="0"
               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            >
           </div>
 
           <!-- Admin Fee Applies From -->
@@ -273,14 +273,14 @@
 
         <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3">
           <button
-            @click="closeEditModal"
             class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            @click="closeEditModal"
           >
             Abbrechen
           </button>
           <button
-            @click="showConfirmSave"
             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            @click="showConfirmSave"
           >
             💾 Speichern
           </button>
@@ -335,15 +335,15 @@
 
         <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
           <button
-            @click="closeConfirmModal"
             class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            @click="closeConfirmModal"
           >
             ❌ Abbrechen
           </button>
           <button
-            @click="confirmSaveRule"
             :disabled="isSaving"
             class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+            @click="confirmSaveRule"
           >
             {{ isSaving ? 'Speichern...' : '✅ Ja, speichern!' }}
           </button>

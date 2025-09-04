@@ -7,8 +7,13 @@
     <select
       :value="modelValue"
       @change="handleCategoryChange"
-      :disabled="isLoading"
-      class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+      :disabled="isLoading || props.isPastAppointment"
+      :class="[
+        'w-full p-3 border rounded-lg focus:outline-none',
+        props.isPastAppointment
+          ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed'
+          : 'border-gray-300 focus:ring-2 focus:ring-green-500 disabled:opacity-50'
+      ]"
     >
       <option value="">
         {{ isLoading ? 'Kategorien laden...' : 'Kategorie wählen' }}
@@ -40,28 +45,26 @@ interface Category {
   name: string
   code: string
   description?: string
-  price_per_lesson?: number
-  lesson_duration_minutes: number
+  lesson_duration_minutes: number[]
+  theory_durations?: number[]
   exam_duration_minutes?: number  
   color?: string
   is_active: boolean
-  display_order: number
-  price_unit?: string
 }
 
 interface CategoryWithDurations extends Category {
   availableDurations: number[]
 }
 
-interface StaffCategoryDuration {
-  id: string
-  created_at: string
-  staff_id: string
-  category_code: string
-  duration_minutes: number
-  is_active: boolean
-  display_order: number
-}
+// ✅ ENTFERNT: StaffCategoryDuration Interface - wird nicht mehr benötigt
+// interface StaffCategoryDuration {
+//   id: string
+//   created_at: string
+//   staff_id: string
+//   category_code: string
+//   duration_minutes: number
+//   is_active: boolean
+// }
 
 interface Props {
   modelValue: string
@@ -70,6 +73,7 @@ interface Props {
   currentUserRole?: string
   appointmentType?: string
   showDebugInfo?: boolean
+  isPastAppointment?: boolean
 }
 
 interface Emits {
@@ -81,13 +85,15 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   showDebugInfo: false,
-  appointmentType: 'lesson'
+  appointmentType: 'lesson',
+  isPastAppointment: false
 })
 const emit = defineEmits<Emits>()
 
 // State
 const allCategories = ref<Category[]>([])
-const staffCategoryDurations = ref<StaffCategoryDuration[]>([])
+// ✅ ENTFERNT: staffCategoryDurations - wird nicht mehr benötigt
+// const staffCategoryDurations = ref<StaffCategoryDuration[]>([])
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 const isAutoEmitting = ref(false)
@@ -113,7 +119,7 @@ const availableCategoriesForUser = computed(() => {
   console.log('🔍 Computing availableCategoriesForUser:', {
     role: props.currentUserRole,
     allCategoriesCount: allCategories.value.length,
-    staffDurationsCount: staffCategoryDurations.value.length
+    staffDurationsCount: 0 // ✅ ENTFERNT: staffCategoryDurations wird nicht mehr verwendet
   })
   
   // ✅ DEFENSIVE: Warte bis Categories geladen sind
@@ -132,56 +138,15 @@ const availableCategoriesForUser = computed(() => {
       }))
     console.log('👨‍💼 Admin: Showing all categories:', result.length)
   }
-  // Staff sieht nur seine zugewiesenen Kategorien mit seinen verfügbaren Dauern
+  // ✅ Staff sieht alle Kategorien aus der zentralen categories Tabelle
   else if (props.currentUserRole === 'staff') {
-    // ✅ DEFENSIVE: Check ob Staff-Dauern geladen sind
-    if (staffCategoryDurations.value.length === 0) {
-      console.log('⏳ Staff durations not loaded yet, using fallback')
-      result = allCategories.value
-        .filter(cat => cat.is_active)
-        .map(cat => ({
-          ...cat,
+    console.log('👨‍🏫 Staff: Using all categories from central table')
+    result = allCategories.value
+      .filter(cat => cat.is_active)
+      .map(cat => ({
+        ...cat,
         availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
-        }))
-    } else {
-      // Gruppiere Staff-Kategorien-Dauern nach category_code
-      const groupedByCode: Record<string, number[]> = {}
-      
-      staffCategoryDurations.value.forEach(item => {
-        if (!groupedByCode[item.category_code]) {
-          groupedByCode[item.category_code] = []
-        }
-        groupedByCode[item.category_code].push(item.duration_minutes)
-      })
-
-      console.log('📊 Staff categories grouped:', groupedByCode)
-
-      // Erstelle CategoryWithDurations für jede Staff-Kategorie
-      result = Object.entries(groupedByCode).map(([code, durations]) => {
-        const baseCategory = allCategories.value.find(cat => cat.code === code)
-        if (!baseCategory) {
-          console.log(`❌ Category ${code} not found in allCategories`)
-          return null
-        }
-
-        return {
-          ...baseCategory,
-          availableDurations: durations.sort((a, b) => a - b)
-        }
-      }).filter((item): item is CategoryWithDurations => item !== null)
-      
-      // ✅ FALLBACK: Wenn Staff keine spezifischen Dauern hat, alle Kategorien mit Standard-Dauern zeigen
-      if (result.length === 0) {
-        console.log('⚠️ Staff has no specific category durations, showing ALL categories as fallback')
-        result = allCategories.value
-          .filter(cat => cat.is_active)
-          .map(cat => ({
-            ...cat,
-          availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
-          }))
-      }
-    }
-    
+      }))
     console.log('👨‍🏫 Staff: Final categories:', result.length, result.map(r => r.code))
   }
   // Client sieht alle aktiven Kategorien (für Terminbuchung)
@@ -195,10 +160,10 @@ const availableCategoriesForUser = computed(() => {
     console.log('👤 Client: Showing all categories:', result.length)
   }
   
-  // Sortieren nach display_order und dann nach Name
+  // ✅ Sortieren nach Code und dann nach Name (display_order existiert nicht mehr)
   const sortedResult = result.sort((a, b) => {
-    if (a.display_order !== b.display_order) {
-      return a.display_order - b.display_order
+    if (a.code !== b.code) {
+      return a.code.localeCompare(b.code)
     }
     return a.name.localeCompare(b.name)
   })
@@ -237,15 +202,14 @@ const loadCategories = async () => {
         code, 
         description, 
         lesson_duration_minutes, 
+        theory_durations,
         color, 
         is_active, 
-        display_order, 
         exam_duration_minutes,
         created_at
       `)
       .eq('is_active', true)
-      .order('display_order', { ascending: true })
-      .order('name', { ascending: true })
+      .order('code', { ascending: true })
 
     // ✅ Dann Timeout definieren
     const timeoutPromise = new Promise<never>((_, reject) => 
@@ -264,13 +228,32 @@ const loadCategories = async () => {
       throw result.error
     }
 
-    allCategories.value = result.data || []
+    // Transform database data to match expected format
+    allCategories.value = (result.data || []).map(cat => ({
+      ...cat,
+      // Ensure lesson_duration_minutes is always an array
+      lesson_duration_minutes: Array.isArray(cat.lesson_duration_minutes) 
+        ? cat.lesson_duration_minutes 
+        : [cat.lesson_duration_minutes || 45],
+      // Ensure theory_durations is always an array
+      theory_durations: Array.isArray(cat.theory_durations) 
+        ? cat.theory_durations 
+        : cat.theory_durations ? [cat.theory_durations] : [],
+      // Map to availableDurations for compatibility (default to lesson_duration_minutes)
+      availableDurations: Array.isArray(cat.lesson_duration_minutes) 
+        ? cat.lesson_duration_minutes 
+        : [cat.lesson_duration_minutes || 45]
+    }))
+    
     console.log('✅ All categories loaded from database:', result.data?.length)
+    console.log('✅ Categories with durations:', allCategories.value.map(c => ({ 
+      code: c.code, 
+      durations: c.lesson_duration_minutes 
+    })))
 
-    // Staff-spezifische Dauern laden falls nötig
-    if (props.currentUserRole === 'staff' && props.currentUser?.id) {
-      await loadStaffCategoryDurations(props.currentUser.id)
-    }
+    // ✅ Staff-spezifische Dauern werden nicht mehr benötigt
+    // Alle Dauern werden direkt aus der categories Tabelle geladen
+    console.log('✅ Staff durations loading skipped - using central categories table')
 
   } catch (err: any) {
     console.error('❌ Error loading categories (switching to offline mode):', err)
@@ -281,73 +264,85 @@ const loadCategories = async () => {
     allCategories.value = [
       { 
         id: 1, code: 'B', name: 'B - Auto', description: 'Autoprüfung Kategorie B',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 135,
-        color: 'hellgrün', is_active: true, display_order: 1, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90, 120, 180], exam_duration_minutes: 135,
+        color: '#66cc66', is_active: true,
+        availableDurations: [45, 60, 90, 120, 180],
         created_at: toLocalTimeString(new Date())},
       { 
         id: 2, code: 'A1', name: 'A1 - Motorrad 125cc', description: 'Motorrad A1',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 90,
-        color: 'hellgrün', is_active: true, display_order: 2, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90], exam_duration_minutes: 90,
+        color: '#66cc66', is_active: true,
+        availableDurations: [45, 60, 90],
         created_at: toLocalTimeString(new Date())},
    
       { 
         id: 3, code: 'A35kW', name: 'A35kW - Motorrad 35kW', description: 'Motorrad A35kW',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 90,
-        color: 'hellgrün', is_active: true, display_order: 3, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90], exam_duration_minutes: 90,
+        color: '#66cc66', is_active: true,
+        availableDurations: [45, 60, 90],
         created_at: toLocalTimeString(new Date())},
      
       { 
         id: 4, code: 'A', name: 'A - Motorrad', description: 'Motorrad A',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 90,
-        color: 'hellgrün', is_active: true, display_order: 4, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90], exam_duration_minutes: 90,
+        color: '#66cc66', is_active: true,
+        availableDurations: [45, 60, 90],
         created_at: toLocalTimeString(new Date())},
    
       { 
         id: 5, code: 'BE', name: 'BE - Anhänger', description: 'Anhänger BE',
-        price_per_lesson: 120, lesson_duration_minutes: 45, exam_duration_minutes: 135,
-        color: 'orange', is_active: true, display_order: 5, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90, 120], exam_duration_minutes: 135,
+        color: '#ff9900', is_active: true,
+        availableDurations: [45, 60, 90, 120],
         created_at: toLocalTimeString(new Date())},
     
       { 
         id: 6, code: 'C1', name: 'C1 - LKW klein', description: 'LKW C1',
-        price_per_lesson: 150, lesson_duration_minutes: 45, exam_duration_minutes: 180,
-        color: 'gelb', is_active: true, display_order: 6, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90, 120, 180], exam_duration_minutes: 180,
+        color: '#ffcc00', is_active: true,
+        availableDurations: [45, 60, 90, 120, 180],
         created_at: toLocalTimeString(new Date())},
      
       { 
         id: 7, code: 'D1', name: 'D1 - Bus klein', description: 'Bus D1',
-        price_per_lesson: 150, lesson_duration_minutes: 45, exam_duration_minutes: 180,
-        color: 'gelb', is_active: true, display_order: 7, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90, 120, 180], exam_duration_minutes: 180,
+        color: '#ffcc00', is_active: true,
+        availableDurations: [45, 60, 90, 120, 180],
         created_at: toLocalTimeString(new Date())},
    
       { 
         id: 8, code: 'C', name: 'C - LKW', description: 'LKW C',
-        price_per_lesson: 170, lesson_duration_minutes: 45, exam_duration_minutes: 180,
-        color: 'rot', is_active: true, display_order: 8, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90, 120, 180], exam_duration_minutes: 180,
+        color: '#cc0000', is_active: true,
+        availableDurations: [45, 60, 90, 120, 180],
         created_at: toLocalTimeString(new Date())},
      
       { 
         id: 9, code: 'CE', name: 'CE - LKW mit Anhänger', description: 'LKW CE',
-        price_per_lesson: 200, lesson_duration_minutes: 45, exam_duration_minutes: 180,
-        color: 'violett', is_active: true, display_order: 9, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90, 120, 180], exam_duration_minutes: 180,
+        color: '#9900cc', is_active: true,
+        availableDurations: [45, 60, 90, 120, 180],
         created_at: toLocalTimeString(new Date())},
-     
+         
       { 
         id: 10, code: 'D', name: 'D - Bus', description: 'Bus D',
-        price_per_lesson: 200, lesson_duration_minutes: 45, exam_duration_minutes: 180,
-        color: 'türkis', is_active: true, display_order: 10, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90, 120, 180], exam_duration_minutes: 180,
+        color: '#00cccc', is_active: true,
+        availableDurations: [45, 60, 90, 120, 180],
         created_at: toLocalTimeString(new Date())},
      
       { 
         id: 11, code: 'Motorboot', name: 'Motorboot', description: 'Motorboot',
-        price_per_lesson: 95, lesson_duration_minutes: 45, exam_duration_minutes: 135,
-        color: 'hellblau', is_active: true, display_order: 11, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90, 120], exam_duration_minutes: 135,
+        color: '#66ccff', is_active: true,
+        availableDurations: [45, 60, 90, 120],
         created_at: toLocalTimeString(new Date())},
      
       { 
         id: 12, code: 'BPT', name: 'BPT - Berufsprüfung Transport', description: 'Berufsprüfung Transport',
-        price_per_lesson: 100, lesson_duration_minutes: 45, exam_duration_minutes: 135,
-        color: 'dunkelblau', is_active: true, display_order: 12, price_unit: 'per_lesson',
+        lesson_duration_minutes: [45, 60, 90, 120], exam_duration_minutes: 135,
+        color: '#003366', is_active: true,
+        availableDurations: [45, 60, 90, 120],
         created_at: toLocalTimeString(new Date())},
    
     ]
@@ -382,60 +377,14 @@ const loadCategories = async () => {
 
 
 
+// ✅ ENTFERNT: loadStaffCategoryDurations - wird nicht mehr benötigt
+// Da wir jetzt die categories Tabelle als zentrale Quelle verwenden,
+// werden alle Dauern direkt aus der categories Tabelle geladen
 const loadStaffCategoryDurations = async (staffId: string) => {
- console.log('🔄 Loading staff category durations for:', staffId)
- 
- try {
-   const supabase = getSupabase()
-   
-   // Staff-Kategorie-Dauern laden - KORREKTE TABELLE
-   const { data: durationsData, error: durationsError } = await supabase
-     .from('staff_category_durations')
-     .select('id, created_at, staff_id, category_code, duration_minutes, is_active, display_order')
-     .eq('staff_id', staffId)
-     .eq('is_active', true)
-     .order('category_code', { ascending: true })
-     .order('display_order', { ascending: true })
-
-   if (durationsError) throw durationsError
-
-   staffCategoryDurations.value = durationsData || []
-   console.log('✅ Staff category durations loaded:', durationsData?.length)
-
-   if (durationsData && durationsData.length > 0) {
-     const categories = [...new Set(durationsData.map(d => d.category_code))]
-     console.log('📊 Categories found:', categories)
-     
-     // Debug: Zeige Dauern pro Kategorie
-     categories.forEach(code => {
-       const durations = durationsData.filter(d => d.category_code === code).map(d => d.duration_minutes)
-       console.log(`📊 ${code}: [${durations.join(', ')}] Minuten`)
-     })
-   } else {
-     console.log('⚠️ No category durations found for staff:', staffId)
-   }
-
- } catch (err: any) {
-   console.error('❌ Error loading staff category durations:', err)
-   staffCategoryDurations.value = []
- }
-
- // ✅ RACE-SAFE: Nach dem Laden der Staff-Dauern prüfen
- if (props.modelValue && !isInitializing.value) {
-   console.log('🔄 Staff durations loaded, checking current selection:', props.modelValue)
-   const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
-   
-   if (selected) {
-     console.log('✅ Emitting durations after staff load:', selected.availableDurations)
-     
-     // ✅ RACE-SAFE Emit mit Verzögerung
-     setTimeout(() => {
-       if (!isAutoEmitting.value) {
-         emit('durations-changed', selected.availableDurations)
-       }
-     }, 100)
-   }
- }
+  console.log('🔄 Staff category durations loading removed - using categories table instead')
+  console.log('✅ All durations are now loaded from the central categories table')
+  
+  // ✅ Keine Aktion erforderlich - Dauern werden bereits in loadCategories geladen
 }
 
 const handleCategoryChange = (event: Event) => {
@@ -443,6 +392,12 @@ const handleCategoryChange = (event: Event) => {
   const newValue = target.value
   
   console.log('🔄 CategorySelector - Manual category change:', newValue)
+  
+  // ❌ Vergangene Termine können nicht mehr geändert werden
+  if (props.isPastAppointment) {
+    console.log('🚫 Cannot change category for past appointment')
+    return
+  }
   
   // ✅ BLOCKIERE alle anderen Auto-Updates während User-Auswahl
   isAutoEmitting.value = true
@@ -552,10 +507,12 @@ watch(() => props.selectedUser, (newUser, oldUser) => {
  }
 }, { immediate: false })
 
-// Wenn sich der currentUser ändert, Staff-Kategorien neu laden
+// ✅ Staff-Kategorien werden nicht mehr neu geladen
+// Alle Kategorien werden direkt aus der categories Tabelle geladen
 watch(() => props.currentUser?.id, (newUserId) => {
   if (newUserId && props.currentUserRole === 'staff') {
-    loadStaffCategoryDurations(newUserId)
+    console.log('✅ Staff user changed, but no need to reload categories')
+    console.log('✅ All categories are loaded from the central categories table')
   }
 }, { immediate: true })
 

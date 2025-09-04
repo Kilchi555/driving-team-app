@@ -27,11 +27,14 @@ export const usePriceCalculation = (props: PriceCalculationProps) => {
     props.durationMinutes.value * props.pricePerMinute.value
   )
 
-  const shouldShowAdminFee = computed(() => 
-    props.appointmentNumber.value === 2 || 
-    props.showAdminFeeByDefault?.value || 
-    false
-  )
+  // ✅ KORRIGIERT: Admin-Fee nur beim 2. Termin pro Kategorie (außer bei Motorrädern)
+  const shouldShowAdminFee = computed(() => {
+    // Wenn showAdminFeeByDefault gesetzt ist, immer anzeigen
+    if (props.showAdminFeeByDefault?.value) return true
+    
+    // Ansonsten nur beim 2. Termin
+    return props.appointmentNumber.value === 2
+  })
 
   const productsTotal = computed(() => 
     props.selectedProducts.value.reduce((sum, item) => sum + item.total_chf, 0)

@@ -241,7 +241,7 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="">Zahlungsmethode wählen</option>
-                  <option value="twint">TWINT</option>
+                  <option value="online">Online (Karte/TWINT)</option>
                   <option value="debit">Debitkarte</option>
                   <option value="credit">Kreditkarte</option>
                   <option value="invoice">Rechnung</option>

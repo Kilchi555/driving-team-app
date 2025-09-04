@@ -1,4 +1,12 @@
-# Nuxt Minimal Starter
+# 🚫 LOKALE SUPABASE VERBOTEN - NUR CLOUD SUPABASE! 🚫
+
+## ⚠️ WICHTIG: Diese Anwendung verwendet AUSSCHLIESSLICH die Cloud Supabase!
+
+**Alle Datenbankoperationen, API-Calls und Authentifizierungen gehen an die Cloud Supabase. Lokale Datenbankdateien sind verboten und werden automatisch gelöscht.**
+
+---
+
+# Driving Team App
 
 Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
 

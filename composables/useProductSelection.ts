@@ -34,7 +34,6 @@ interface AppointmentProduct {
   quantity: number
   unit_price_rappen: number
   total_price_rappen: number
-  is_paid?: boolean
 }
 
 export const useProductSelection = (appointmentId?: string, initialProducts: ProductItem[] = []) => {
@@ -92,29 +91,32 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
     }
   }
 
-  // ✅ Bestehende appointment_products für einen Termin laden
+  // ✅ Bestehende Produkte aus product_sales für einen Termin laden
   const loadAppointmentProducts = async (id: string) => {
     if (!id) return
     
     try {
-      console.log('🔄 Loading appointment products for:', id)
+      console.log('🔄 Loading products from product_sales for:', id)
       
+      // Lade Produkte aus product_sales über product_sale_items
       const { data, error: dbError } = await supabase
-        .from('appointment_products')
+        .from('product_sales')
         .select(`
           id,
-          product_id,
-          quantity,
-          unit_price_rappen,
-          total_price_rappen,
-          is_paid,
-          products!inner (
+          total_amount_rappen,
+          product_sale_items (
             id,
-            name,
-            description,
-            category,
-            image_url,
-            price_rappen
+            quantity,
+            unit_price_rappen,
+            total_price_rappen,
+            products (
+              id,
+              name,
+              description,
+              category,
+              image_url,
+              price_rappen
+            )
           )
         `)
         .eq('appointment_id', id)
@@ -123,66 +125,90 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
         throw dbError
       }
       
-      // Konvertiere zu ProductItem Format
-      selectedProducts.value = (data || []).map((item: any) => ({
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price_rappen: item.unit_price_rappen,
-        total_price_rappen: item.total_price_rappen,
-        product: item.products ? {
-          id: item.products.id,
-          name: item.products.name,
-          price_rappen: item.products.price_rappen,
-          description: item.products.description,
-          category: item.products.category,
-          image_url: item.products.image_url
-        } as Product : undefined
-      }))
+      // Sammle alle Produkte aus allen product_sales Einträgen
+      const allProducts: any[] = []
+      data?.forEach(sale => {
+        if (sale.product_sale_items && sale.product_sale_items.length > 0) {
+          sale.product_sale_items.forEach(item => {
+            allProducts.push({
+              id: item.id,
+              product_id: item.products?.id,
+              quantity: item.quantity,
+              unit_price_rappen: item.unit_price_rappen,
+              total_price_rappen: item.total_price_rappen,
+              product: item.products ? {
+                id: item.products.id,
+                name: item.products.name,
+                price_rappen: item.products.price_rappen,
+                description: item.products.description,
+                category: item.products.category,
+                image_url: item.products.image_url
+              } as Product : undefined
+            })
+          })
+        }
+      })
       
-      console.log('✅ Appointment products loaded:', selectedProducts.value.length)
+      // Konvertiere zu ProductItem Format
+      selectedProducts.value = allProducts
+      
+      console.log('✅ Products loaded from product_sales:', selectedProducts.value.length)
       
     } catch (err: any) {
-      console.error('❌ Error loading appointment products:', err)
+      console.error('❌ Error loading products from product_sales:', err)
       error.value = err.message
     }
   }
 
-  // ✅ Produkte für einen Termin speichern
+  // ✅ Produkte für einen Termin in product_sales speichern
   const saveAppointmentProducts = async (id: string) => {
     if (!id || selectedProducts.value.length === 0) return
     
     try {
       isSaving.value = true
-      console.log('💾 Saving appointment products for:', id)
+      console.log('💾 Saving products to product_sales for:', id)
       
-      // Zuerst alle bestehenden Produkte für diesen Termin löschen
-      const { error: deleteError } = await supabase
-        .from('appointment_products')
-        .delete()
-        .eq('appointment_id', id)
+      // Verwende useProductSales Composable für konsistente Datenspeicherung
+      const { createProductSale } = useProductSales()
       
-      if (deleteError) throw deleteError
+      // Lade Termin-Daten für user_id und staff_id
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('user_id, staff_id')
+        .eq('id', id)
+        .single()
       
-      // Neue Produkte einfügen
-      const appointmentProducts: AppointmentProduct[] = selectedProducts.value.map(item => ({
+      if (appointmentError) throw appointmentError
+      
+      // Erstelle Produktverkauf
+      const saleData = {
         appointment_id: id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price_rappen: item.unit_price_rappen,
-        total_price_rappen: item.total_price_rappen,
-        is_paid: false
-      }))
+        user_id: appointment.user_id,
+        staff_id: appointment.staff_id,
+        items: selectedProducts.value.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          unit_price_rappen: item.unit_price_rappen,
+          total_price_rappen: item.total_price_rappen
+        })),
+        total_amount_rappen: selectedProducts.value.reduce((sum, item) => sum + item.total_price_rappen, 0),
+        discount_amount_rappen: 0,
+        discount_type: undefined,
+        discount_reason: undefined,
+        payment_method: 'pending',
+        status: 'pending'
+      }
       
-      const { error: insertError } = await supabase
-        .from('appointment_products')
-        .insert(appointmentProducts)
+      const result = await createProductSale(saleData)
       
-      if (insertError) throw insertError
-      
-      console.log('✅ Appointment products saved:', appointmentProducts.length)
+      if (result) {
+        console.log('✅ Products saved to product_sales:', result.id)
+      } else {
+        throw new Error('Failed to create product sale')
+      }
       
     } catch (err: any) {
-      console.error('❌ Error saving appointment products:', err)
+      console.error('❌ Error saving products to product_sales:', err)
       error.value = err.message
       throw err
     } finally {

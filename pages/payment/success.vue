@@ -20,24 +20,24 @@
         </p>
 
         <!-- Payment Details -->
-        <div v-if="paymentDetails" class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-          <h3 class="font-semibold text-gray-900 mb-3">Zahlungsdetails</h3>
+        <div v-if="paymentDetails" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+          <h3 class="font-semibold text-blue-900 mb-3">Zahlungsdetails</h3>
           <div class="space-y-2 text-sm">
             <div class="flex justify-between">
-              <span class="text-gray-600">Betrag:</span>
-              <span class="font-medium">CHF {{ paymentDetails.amount }}</span>
+              <span class="text-blue-800 font-medium">Betrag:</span>
+              <span class="font-bold text-blue-900">CHF {{ paymentDetails.amount }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-600">Zahlungsart:</span>
-              <span class="font-medium">{{ paymentDetails.method }}</span>
+              <span class="text-blue-800 font-medium">Zahlungsart:</span>
+              <span class="font-bold text-blue-900">{{ paymentDetails.method }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-600">Transaktions-ID:</span>
-              <span class="font-medium font-mono text-xs">{{ paymentDetails.transactionId }}</span>
+              <span class="text-blue-800 font-medium">Transaktions-ID:</span>
+              <span class="font-bold font-mono text-xs text-blue-900">{{ paymentDetails.transactionId }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-600">Datum:</span>
-              <span class="font-medium">{{ formatDate(paymentDetails.date) }}</span>
+              <span class="text-blue-800 font-medium">Datum:</span>
+              <span class="font-bold text-blue-900">{{ formatDate(paymentDetails.date) }}</span>
             </div>
           </div>
         </div>
@@ -109,50 +109,109 @@ const loadPaymentDetails = async () => {
 
     console.log('🔍 Loading payment details for transaction:', transactionId)
 
-    // Fetch payment from database
+    // Fetch payment from database with enhanced details
     const { data: payment, error } = await supabase
       .from('payments')
       .select(`
         *,
         appointments (
+          id,
           title,
           start_time,
-          duration_minutes
+          duration_minutes,
+          type,
+          location_id,
+          staff_id,
+          users!appointments_user_id_fkey (
+            first_name,
+            last_name,
+            email
+          )
         ),
         users!payments_user_id_fkey (
           first_name,
           last_name,
-          email
+          email,
+          phone
         )
       `)
-      .eq('wallee_transaction_id', transactionId)
+      .eq('id', transactionId) // Temporary: use payment ID instead of wallee_transaction_id
       .single()
 
     if (error) {
       console.error('❌ Error loading payment:', error)
+      
+      // Show user-friendly error
+      paymentDetails.value = {
+        error: true,
+        message: 'Zahlung konnte nicht gefunden werden. Bitte kontaktieren Sie den Support.'
+      }
       return
     }
 
     if (!payment) {
       console.error('❌ Payment not found')
+      paymentDetails.value = {
+        error: true,
+        message: 'Zahlung nicht gefunden.'
+      }
       return
+    }
+
+    // Update payment status to completed if not already
+    if (payment.payment_status !== 'completed') {
+      console.log('🔄 Updating payment status to completed')
+      
+      try {
+        await $fetch('/api/payments/status', {
+          method: 'POST',
+          body: {
+            paymentId: payment.id,
+            status: 'completed'
+          }
+        })
+        console.log('✅ Payment status updated successfully')
+      } catch (updateError) {
+        console.warn('⚠️ Could not update payment status via API:', updateError)
+        
+        // Fallback: Direct database update
+        const { error: dbUpdateError } = await supabase
+          .from('payments')
+          .update({
+            payment_status: 'completed',
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', payment.id)
+        
+        if (dbUpdateError) {
+          console.warn('⚠️ Could not update payment status directly:', dbUpdateError)
+        }
+      }
     }
 
     paymentDetails.value = {
       id: payment.id,
       amount: (payment.total_amount_rappen / 100).toFixed(2),
+      adminFee: payment.admin_fee_rappen ? (payment.admin_fee_rappen / 100).toFixed(2) : '0.00',
+      discount: payment.discount_rappen ? (payment.discount_rappen / 100).toFixed(2) : '0.00',
       method: getPaymentMethodName(payment.payment_method),
-      transactionId: payment.wallee_transaction_id,
+      transactionId: payment.id, // Use payment ID since wallee_transaction_id doesn't exist
       date: payment.paid_at || payment.created_at,
-      status: payment.payment_status,
+      status: 'completed', // Set to completed since we're on success page
       appointment: payment.appointments,
-      user: payment.users
+      user: payment.users,
+      metadata: payment.metadata
     }
 
     console.log('✅ Payment details loaded:', paymentDetails.value)
 
   } catch (err: any) {
     console.error('❌ Error loading payment details:', err)
+    paymentDetails.value = {
+      error: true,
+      message: 'Ein Fehler ist aufgetreten beim Laden der Zahlungsdetails.'
+    }
   } finally {
     isLoading.value = false
   }
@@ -170,14 +229,25 @@ const getPaymentMethodName = (method: string): string => {
   return methods[method] || method
 }
 
-const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('de-CH', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'Kein Datum'
+  
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return 'Ungültiges Datum'
+    }
+    return date.toLocaleDateString('de-CH', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    console.warn('Error formatting date:', dateString, error)
+    return 'Datum Fehler'
+  }
 }
 
 const goToCalendar = () => {

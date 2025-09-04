@@ -14,6 +14,9 @@ export interface Product {
   image_url?: string
   stock_quantity?: number
   track_stock: boolean
+  min_amount_rappen?: number
+  max_amount_rappen?: number
+  allow_custom_amount?: boolean
 }
 
 export interface ProductItem {
@@ -89,69 +92,58 @@ export const useProducts = () => {
     }
   }
 
-  // Save products to appointment
-  const saveAppointmentProducts = async (appointmentId: string, productItems: ProductItem[]) => {
-    if (productItems.length === 0) return []
+  // ✅ ENTFERNT: saveAppointmentProducts - wird nicht mehr benötigt
+  // Alle Produkte werden jetzt über product_sales gespeichert
 
-    try {
-      const supabase = getSupabase()
-      
-      // Prepare data for insertion
-      const appointmentProducts = productItems.map(item => ({
-        appointment_id: appointmentId,
-        product_id: item.product.id,
-        quantity: item.quantity,
-        unit_price_rappen: item.product.price_rappen,
-        total_price_rappen: item.total_rappen
-      }))
-
-      const { data, error } = await supabase
-        .from('appointment_products')
-        .insert(appointmentProducts)
-        .select(`
-          *,
-          product:product_id(*)
-        `)
-
-      if (error) throw error
-
-      console.log('✅ Appointment products saved:', data?.length)
-      return data || []
-    } catch (err: any) {
-      console.error('❌ Error saving appointment products:', err)
-      throw err
-    }
-  }
-
-  // Load products for an appointment
+  // Load products for an appointment from product_sales
   const loadAppointmentProducts = async (appointmentId: string): Promise<ProductItem[]> => {
     try {
       const supabase = getSupabase()
       const { data, error } = await supabase
-        .from('appointment_products')
+        .from('product_sales')
         .select(`
-          *,
-          product:product_id(*)
+          id,
+          product_sale_items (
+            id,
+            quantity,
+            unit_price_rappen,
+            total_price_rappen,
+            products (
+              id,
+              name,
+              price_rappen,
+              description,
+              category,
+              image_url
+            )
+          )
         `)
         .eq('appointment_id', appointmentId)
 
       if (error) throw error
 
-      // Convert to ProductItem format
-      const productItems: ProductItem[] = (data || []).map(item => ({
-        product: {
-          ...item.product,
-          price_chf: item.product.price_rappen / 100
-        },
-        quantity: item.quantity,
-        total_rappen: item.total_price_rappen,
-        total_chf: item.total_price_rappen / 100
-      }))
+      // Sammle alle Produkte aus allen product_sales Einträgen
+      const allProducts: any[] = []
+      data?.forEach(sale => {
+        if (sale.product_sale_items && sale.product_sale_items.length > 0) {
+          sale.product_sale_items.forEach(item => {
+            allProducts.push({
+              product: {
+                ...item.products,
+                price_chf: item.products.price_rappen / 100
+              },
+              quantity: item.quantity,
+              total_rappen: item.total_price_rappen,
+              total_chf: item.total_price_rappen / 100
+            })
+          })
+        }
+      })
 
-      console.log('✅ Appointment products loaded:', productItems.length)
-      return productItems
+      console.log('✅ Products loaded from product_sales:', allProducts.length)
+      return allProducts
     } catch (err: any) {
-      console.error('❌ Error loading appointment products:', err)
+      console.error('❌ Error loading products from product_sales:', err)
       return []
     }
   }
@@ -170,7 +162,7 @@ export const useProducts = () => {
     loadProducts,
     getProductById,
     calculateProductTotal,
-    saveAppointmentProducts,
+
     loadAppointmentProducts
   }
 }

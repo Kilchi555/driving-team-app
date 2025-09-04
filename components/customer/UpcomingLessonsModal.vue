@@ -79,15 +79,14 @@
                     v-if="lesson.type" 
                     class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
                   >
-                    {{ lesson.type }}
+                    Kategorie {{ lesson.type }}
                   </span>
-                  <span 
-                    :class="[
-                      'inline-flex items-center px-2 py-1 text-xs font-medium rounded-full',
-                      getStatusColor(lesson)
-                    ]"
-                  >
-                    {{ getStatusText(lesson) }}
+                </div>
+                
+                <!-- Lektionstyp basierend auf event_type_code -->
+                <div v-if="lesson.event_type_code" class="mb-2">
+                  <span class="text-sm text-gray-700 font-medium">
+                    {{ getLessonTypeTitle(lesson.event_type_code) }}
                   </span>
                 </div>
                 
@@ -100,7 +99,9 @@
               </div>
             </div>
                 <div class="mt-2 text-sm text-gray-600">
-                    <span>📍 {{ lesson.location_name || 'Ort wird noch bekannt gegeben' }}</span>
+                    <div v-if="lesson.location_details && (lesson.location_details.address || lesson.location_details.formatted_address)" class="mt-1 text-xs text-gray-500">
+                        {{ formatLocationAddress(lesson.location_details) }}
+                    </div>
                 </div>
           </div>
         </div>
@@ -111,6 +112,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { getSupabase } from '~/utils/supabase'
 
 // Props & Emits
 interface Props {
@@ -125,6 +127,10 @@ const emit = defineEmits(['close'])
 const filterStatus = ref('all')
 const filterCategory = ref('all')
 const sortOrder = ref('asc') // 'asc' = früh zuerst, 'desc' = spät zuerst
+
+// Location loading
+const locationsMap = ref<Record<string, any>>({})
+const isLoadingLocations = ref(false)
 
 // Helper functions
 const formatLessonDate = (dateString: string) => {
@@ -181,6 +187,78 @@ const formatTimeRange = (startTime: string, endTime: string) => {
   return `${startStr} - ${endStr}`
 }
 
+const getLessonTypeTitle = (eventTypeCode: string): string => {
+  const titles: Record<string, string> = {
+    'exam': 'Prüfungsfahrt inkl. WarmUp und Rückfahrt',
+    'theory': 'Theorielektion',
+    'lesson': 'Fahrlektion'
+  }
+  return titles[eventTypeCode] || 'Fahrlektion'
+}
+
+const formatLocationAddress = (locationDetails: any): string => {
+  // Verwende formatted_address falls verfügbar
+  if (locationDetails.formatted_address) {
+    return locationDetails.formatted_address
+  }
+  
+  // Fallback auf address
+  if (locationDetails.address) {
+    return locationDetails.address
+  }
+  
+  return 'Adresse nicht verfügbar'
+}
+
+const loadLocations = async () => {
+  if (isLoadingLocations.value) return
+  
+  try {
+    isLoadingLocations.value = true
+    
+    // Sammle alle location_ids aus den lessons
+    const locationIds = [...new Set(props.lessons.map(lesson => lesson.location_id).filter(Boolean))]
+    console.log('🔍 Modal: Loading locations for IDs:', locationIds)
+    
+    if (locationIds.length === 0) {
+      console.log('⚠️ Modal: No location IDs found')
+      return
+    }
+    
+    const supabase = getSupabase()
+    const { data: locations, error } = await supabase
+      .from('locations')
+      .select('id, name, address, formatted_address')
+      .in('id', locationIds)
+    
+    if (error) {
+      console.error('❌ Modal: Error loading locations:', error)
+      return
+    }
+    
+    if (locations) {
+      console.log('✅ Modal: Locations loaded:', locations)
+      
+      locationsMap.value = locations.reduce((acc: Record<string, any>, loc: any) => {
+        acc[loc.id] = {
+          name: loc.name,
+          street: loc.street,
+          street_number: loc.street_number,
+          zip: loc.zip,
+          city: loc.city
+        }
+        return acc
+      }, {} as Record<string, any>)
+      
+      console.log('✅ Modal: LocationsMap created:', locationsMap.value)
+    }
+  } catch (error) {
+    console.error('❌ Modal: Error in loadLocations:', error)
+  } finally {
+    isLoadingLocations.value = false
+  }
+}
+
 const getTimeUntil = (startTime: string) => {
   const start = new Date(startTime)
   const now = new Date()
@@ -200,6 +278,16 @@ const getTimeUntil = (startTime: string) => {
     return `in ${diffMinutes} Min.`
   }
 }
+
+// Watcher für das Modal
+import { watch } from 'vue'
+
+watch(() => props.isOpen, async (isOpen) => {
+  if (isOpen && props.lessons.length > 0) {
+    console.log('🔍 Modal opened, loading locations...')
+    await loadLocations()
+  }
+}, { immediate: true })
 
 const getStatusColor = (lesson: any) => {
   const now = new Date()

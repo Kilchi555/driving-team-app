@@ -4,11 +4,13 @@ import CalendarComponent from '../components/CalendarComponent.vue'
 import StaffSettings from '~/components/StaffSettings.vue'
 import PendenzenModal from '~/components/PendenzenModal.vue'
 import ProfileSetup from '~/components/ProfileSetup.vue'
+import ProductSaleModal from '~/components/ProductSaleModal.vue'
 import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { usePendingTasks } from '~/composables/usePendingTasks'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
 import { useFeatureFlags } from '@/utils/useFeatureFlags'
+import LoadingLogo from '~/components/LoadingLogo.vue'
 
 
 interface CalendarApi {
@@ -48,6 +50,7 @@ const calendarRef = ref<{ getApi(): CalendarApi } | null>(null)
 const showStaffSettings = ref(false)
 const showCustomers = ref(false)
 const showPendenzen = ref(false)
+const showProductSaleModal = ref(false)
 const isTodayActive = ref(false)
 const currentMonth = ref('')
 
@@ -98,7 +101,7 @@ const refreshPendingData = async () => {
     }
     
     // 2. Dann Pending Tasks neu laden
-    await fetchPendingTasks(currentUser.value.id)
+    await fetchPendingTasks(currentUser.value.id, currentUser.value.role)
     console.log('✅ Pending tasks refreshed, count:', pendingCount.value)
     
   } catch (err) {
@@ -214,8 +217,11 @@ onMounted(async () => {
 
   if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
     console.log('🔄 About to refresh pending data...')
+    console.log('🔥 Current user ID:', currentUser.value.id)
+    console.log('🔥 Current user role:', currentUser.value.role)
     await refreshPendingData()
     console.log('✅ Pending data refresh completed')
+    console.log('🔥 Pending count after refresh:', pendingCount.value)
 
   }
   console.log('🔄 About to update today state...')
@@ -258,11 +264,8 @@ onUnmounted(() => {
 <template>
 
   <!-- Loading State -->
-  <div v-if="isLoading" class="min-h-screen flex items-center justify-center">
-    <div class="text-center">
-      <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600 mx-auto"></div>
-      <p class="mt-4 text-gray-600">Lade Dashboard...</p>
-    </div>
+  <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
+    <LoadingLogo size="2xl" />
   </div>
 
   <!-- Auth Error State (nur bei echten Auth-Fehlern) -->
@@ -310,7 +313,7 @@ onUnmounted(() => {
     <div class="fixed bottom-0 left-0 right-0 h-[50px] bg-white shadow z-50 flex justify-around items-center px-4">
       <button 
         @click="goToCustomers" 
-        class="responsive bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200"
+        class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200 min-w-[80px] h-[36px] flex items-center justify-center text-sm"
       >
         📋 Schüler
       </button>   
@@ -321,7 +324,7 @@ onUnmounted(() => {
           console.log('🔥 Opening pendenzen modal, current count:', pendingCount); 
           showPendenzen = true; 
         }"
-        :class="pendenzenButtonClasses"
+        :class="`${pendenzenButtonClasses} min-w-[80px] h-[36px] flex items-center justify-center text-sm`"
       >
         {{ pendenzenButtonText }}
       </button>
@@ -339,9 +342,8 @@ onUnmounted(() => {
       
       <!-- Staff Settings nur für Staff/Admin -->
       <button 
-        v-if="currentUser && (currentUser.role === 'staff' || currentUser.role === 'admin')"
         @click="showStaffSettings = true" 
-        class="responsive bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200"
+        class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200 min-w-[80px] h-[36px] flex items-center justify-center text-sm"
       >
         ⚙️ Profil
       </button>

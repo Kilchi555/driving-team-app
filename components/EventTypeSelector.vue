@@ -3,9 +3,10 @@
     <!-- Header mit Zurück-Button -->
     <div class="flex justify-between items-center mb-3">
       <label class="block text-sm font-semibold text-gray-900">
-        📋 Terminart auswählen
+        📋 Terminart
       </label>
       <button
+        v-if="showBackButton"
         @click="$emit('back-to-student')"
         class="text-md text-purple-600 hover:text-purple-800 text-bold"
       >
@@ -25,11 +26,14 @@
         v-for="eventType in eventTypes" 
         :key="eventType.code"
         @click="selectEventType(eventType)"
+        :disabled="!showBackButton"
         :class="[
           'p-3 text-sm rounded border text-left transition-colors duration-200',
           selectedType === eventType.code
             ? 'bg-purple-600 text-white border-purple-600'
-            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            : showBackButton
+              ? 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
         ]"
       >
         {{ eventType.emoji }} {{ eventType.name }}
@@ -46,7 +50,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-import { useEventTypes } from '~/composables/useEventModalForm'
+import { useEventTypes } from '~/composables/useEventTypes'
 
 // Types
 interface EventType {
@@ -64,11 +68,13 @@ interface EventType {
 interface Props {
   selectedType?: string | null
   autoLoad?: boolean
+  showBackButton?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selectedType: null,
-  autoLoad: true
+  autoLoad: true,
+  showBackButton: true
 })
 
 // Emits
@@ -97,6 +103,12 @@ const loadEventTypes = async (excludeTypes: string[] = []) => {
 }
 
 const selectEventType = (eventType: EventType) => {
+  // ❌ Vergangene Termine können nicht mehr geändert werden
+  if (!props.showBackButton) {
+    console.log('🚫 Cannot change event type for past appointment')
+    return
+  }
+  
   try {
     console.log('📋 Selecting event type:', eventType)
     // Sichere Checks

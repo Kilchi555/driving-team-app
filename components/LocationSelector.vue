@@ -4,8 +4,8 @@
       📍 Standort
     </label>
     
-    <!-- Toggle zwischen Standard und Custom -->
-    <div class="flex gap-2 mb-3">
+    <!-- Toggle zwischen Standard und Custom (nur für zukünftige Termine) -->
+    <div v-if="!props.isPastAppointment" class="flex gap-2 mb-3">
       <button
         @click="useStandardLocations = true"
         :class="[
@@ -90,9 +90,14 @@
       v-if="useStandardLocations"
       v-model="selectedLocationId"
       @change="onLocationChange"
-      class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+      :disabled="isLoadingLocations || props.isPastAppointment"
+      :class="[
+        'w-full p-3 border rounded-lg focus:outline-none',
+        props.isPastAppointment
+          ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed'
+          : 'border-gray-300 focus:ring-2 focus:ring-green-500'
+      ]"
       :required="required"
-      :disabled="isLoadingLocations"
     >
       <option value="">Standort wählen</option>
       
@@ -214,6 +219,14 @@ const props = defineProps({
   currentStaffId: {
     type: String,
     default: null
+  },
+  disableAutoSelection: {  // ✅ NEU: Verhindert automatische Location-Auswahl
+    type: Boolean,
+    default: false
+  },
+  isPastAppointment: {  // ✅ NEU: Verhindert Änderungen für vergangene Termine
+    type: Boolean,
+    default: false
   }
 })
 
@@ -408,8 +421,8 @@ const loadStudentPickupLocations = async (studentId: string) => {
     
     console.log('✅ Student pickup locations loaded:', data?.length)
     
-    // 2. Lade letzten verwendeten Standort nur wenn staffId vorhanden
-    if (props.currentStaffId) {
+    // 2. Lade letzten verwendeten Standort nur wenn staffId vorhanden UND keine Location bereits gesetzt ist
+    if (props.currentStaffId && !props.modelValue && !props.disableAutoSelection) {
       const lastLocation = await loadLastUsedLocation(studentId, props.currentStaffId)
       
       if (lastLocation && !selectedLocationId.value) {
@@ -426,8 +439,14 @@ const loadStudentPickupLocations = async (studentId: string) => {
       }
     }
     
-    // 3. Fallback: Ersten Pickup-Location wählen falls noch nichts ausgewählt
-    if (!selectedLocationId.value && studentPickupLocations.value.length > 0) {
+    // ✅ NEU: Wenn eine Location bereits gesetzt ist (modelValue), zeige sie an
+    if (props.modelValue && !selectedLocationId.value) {
+      console.log('🎯 Location bereits gesetzt, zeige sie an:', props.modelValue)
+      selectedLocationId.value = props.modelValue
+    }
+    
+    // 3. Fallback: Ersten Pickup-Location wählen falls noch nichts ausgewählt UND keine Location bereits gesetzt ist
+    if (!selectedLocationId.value && !props.modelValue && studentPickupLocations.value.length > 0 && !props.disableAutoSelection) {
       const firstPickup = studentPickupLocations.value[0]
       selectedLocationId.value = firstPickup.id
       emit('update:modelValue', firstPickup.id)
@@ -690,6 +709,12 @@ const hideLocationSuggestionsDelayed = () => {
 // === EVENT HANDLERS ===
 
 const onLocationChange = () => {
+  // ❌ Vergangene Termine können nicht mehr geändert werden
+  if (props.isPastAppointment) {
+    console.log('🚫 Cannot change location for past appointment')
+    return
+  }
+  
   const location = [...standardLocations.value, ...studentPickupLocations.value]
     .find(l => l.id === selectedLocationId.value)
     
@@ -748,10 +773,12 @@ watch(() => props.currentStaffId, async (newStaffId) => {
 })
 
 watch(() => props.modelValue, (newValue) => {
+  console.log('🔍 LocationSelector: modelValue changed:', newValue)
   if (newValue && newValue !== selectedLocationId.value) {
     selectedLocationId.value = newValue
     useStandardLocations.value = true
     selectedCustomLocation.value = null
+    console.log('✅ LocationSelector: Location updated from modelValue:', newValue)
   }
 })
 
@@ -771,6 +798,12 @@ onMounted(async () => {
     
     if (props.selectedStudentId) {
       await loadStudentPickupLocations(props.selectedStudentId)
+    }
+    
+    // ✅ NEU: Wenn bereits eine Location gesetzt ist, zeige sie an
+    if (props.modelValue && !selectedLocationId.value) {
+      console.log('🎯 onMounted: Location bereits gesetzt, zeige sie an:', props.modelValue)
+      selectedLocationId.value = props.modelValue
     }
   } catch (err) {
     console.error('Error loading initial location data:', err)

@@ -5,8 +5,8 @@
         🏛️ Prüfungsstandorte verwalten
       </h3>
       <button
-        @click="showAddForm = !showAddForm"
         class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        @click="showAddForm = !showAddForm"
       >
         {{ showAddForm ? 'Abbrechen' : '+ Neuer Standort' }}
       </button>
@@ -112,8 +112,8 @@
         <input
           type="checkbox"
           :checked="formData.available_categories.includes(category)"
-          @change="toggleCategory(category)"
           class="sr-only"
+          @change="toggleCategory(category)"
         >
         <span class="font-medium">{{ category }}</span>
       </label>
@@ -122,15 +122,15 @@
   
   <div class="mt-4 flex gap-3">
     <button
-      @click="saveLocation"
       :disabled="isSaving || !formData.name || !formData.address"
       class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+      @click="saveLocation"
     >
       {{ isSaving ? 'Speichern...' : 'Hinzufügen' }}
     </button>
     <button
-      @click="cancelEdit"
       class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+      @click="cancelEdit"
     >
       Abbrechen
     </button>
@@ -143,9 +143,9 @@
     <div class="p-6">
       <div class="flex justify-between items-center mb-4">
         <h4 class="text-lg font-medium text-gray-900">Prüfungsstandort bearbeiten</h4>
-        <button @click="cancelEdit" class="text-gray-500 hover:text-gray-700">
+        <button class="text-gray-500 hover:text-gray-700" @click="cancelEdit">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
       </div>
@@ -237,8 +237,8 @@
             <input
               type="checkbox"
               :checked="formData.available_categories.includes(category)"
-              @change="toggleCategory(category)"
               class="sr-only"
+              @change="toggleCategory(category)"
             >
             <span class="font-medium">{{ category }}</span>
           </label>
@@ -247,15 +247,15 @@
       
       <div class="mt-6 flex gap-3">
         <button
-          @click="saveLocation"
           :disabled="isSaving || !formData.name || !formData.address"
           class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+          @click="saveLocation"
         >
           {{ isSaving ? 'Speichern...' : 'Aktualisieren' }}
         </button>
         <button
-          @click="cancelEdit"
           class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          @click="cancelEdit"
         >
           Abbrechen
         </button>
@@ -266,7 +266,7 @@
 
     <!-- Loading State -->
     <div v-if="isLoading" class="text-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"/>
       <p class="text-gray-600">Lade Prüfungsstandorte...</p>
     </div>
 
@@ -322,14 +322,14 @@
             <!-- Actions -->
             <div class="flex flex-col sm:flex-row gap-1 sm:gap-2 min-w-max">
             <button
-                @click="startEdit(location)"
                 class="px-2 py-1 text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 rounded hover:bg-blue-50 transition-colors"
+                @click="startEdit(location)"
             >
                 ✏️ Bearbeiten
             </button>
             <button
-                @click="confirmDelete(location)"
                 class="px-2 py-1 text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 rounded hover:bg-red-50 transition-colors"
+                @click="confirmDelete(location)"
             >
                 🗑️ Löschen
             </button>

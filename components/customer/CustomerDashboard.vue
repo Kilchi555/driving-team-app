@@ -47,11 +47,8 @@
       </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div class="text-center">
-        <div class="animate-spin rounded-full h-16 w-16 border-4 border-green-500 border-t-transparent mx-auto"></div>
-        <p class="mt-4 text-gray-600 text-lg">Ihre Daten werden geladen...</p>
-      </div>
+    <div v-if="isLoading" class="flex items-center justify-center py-8">
+      <LoadingLogo size="xl" />
     </div>
 
     <!-- Error State -->
@@ -103,31 +100,42 @@
             </div>
             
             <div class="flex-1">
-              <div v-if="unpaidAppointments.length > 0">
-                <p class="text-3xl font-bold text-yellow-600">{{ unpaidAppointments.length }}</p>
-                <p class="text-xs text-red-500 mt-1">
-                  CHF {{ (totalUnpaidAmount / 100).toFixed(2) }} offen
-                </p>
+              <!-- Loading State für Zahlungsübersicht -->
+              <div v-if="paymentsLoading" class="text-center">
+                <LoadingLogo size="md" />
+                <p class="text-xs text-gray-500 mt-2">Rechnungen werden geladen...</p>
               </div>
+              
+              <!-- Zahlungsdaten anzeigen -->
               <div v-else>
-                <p class="text-3xl font-bold text-green-600">✓ Bezahlt</p>
-                <p class="text-xs text-green-500 mt-1">
-                  Alle {{ paidAppointments.length }} Rechnungen beglichen
-                </p>
+                <div v-if="unpaidAppointments.length > 0">
+                  <p class="text-3xl font-bold text-yellow-600">{{ unpaidAppointments.length }}</p>
+                  <p class="text-xs text-red-500 mt-1">
+                    CHF {{ (totalUnpaidAmount / 100).toFixed(2) }} offen
+                  </p>
+                </div>
+                <div v-else>
+                  <p class="text-3xl font-bold text-green-600">✓ Bezahlt</p>
+                  <p class="text-xs text-green-500 mt-1">
+                    Alle {{ paidAppointments.length }} Rechnungen beglichen
+                  </p>
+                </div>
               </div>
             </div>
             
             <div class="mt-4">
               <button
                 @click="navigateToPayments"
+                :disabled="paymentsLoading"
                 :class="[
                   'w-full px-3 py-2 rounded-lg transition-colors text-sm font-medium',
                   unpaidAppointments.length > 0 
                     ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
-                    : 'bg-green-500 text-white hover:bg-green-600'
+                    : 'bg-green-500 text-white hover:bg-green-600',
+                  paymentsLoading ? 'opacity-50 cursor-not-allowed' : ''
                 ]"
               >
-                {{ unpaidAppointments.length > 0 ? 'Jetzt bezahlen' : 'Zahlungsverlauf' }}
+                {{ paymentsLoading ? 'Wird geladen...' : (unpaidAppointments.length > 0 ? 'Jetzt bezahlen' : 'Zahlungsverlauf') }}
               </button>
             </div>
           </div>
@@ -168,7 +176,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 class="text-sm font-medium text-gray-500">Absolvierte Lektionen</h3>
+              <h3 class="text-sm font-medium text-gray-500">Bewertete Lektionen</h3>
             </div>
             
             <div class="flex-1">
@@ -189,8 +197,8 @@
       </div>
     </div>
       <div v-else class="min-h-screen flex items-center justify-center">
-    <div class="animate-spin rounded-full h-16 w-16 border-4 border-green-500"></div>
-  </div>
+        <LoadingLogo size="xl" />
+      </div>
 
     <!-- Modals -->
     <EvaluationsOverviewModal 
@@ -201,7 +209,7 @@
 
     <UpcomingLessonsModal 
       :is-open="showUpcomingLessonsModal"
-      :lessons="appointments"
+      :lessons="upcomingAppointments"
       @close="showUpcomingLessonsModal = false"
     />
   </div>
@@ -222,6 +230,7 @@ import { storeToRefs } from 'pinia'
 import EvaluationsOverviewModal from './EvaluationsOverviewModal.vue'
 import UpcomingLessonsModal from './UpcomingLessonsModal.vue'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
+import LoadingLogo from '~/components/LoadingLogo.vue'
 
 // Composables
 const authStore = useAuthStore()
@@ -255,7 +264,7 @@ const completedLessonsCount = computed(() => {
 })
 
 const paidAppointments = computed(() => {
-  return appointments.value?.filter(apt => apt.is_paid) || []
+  return appointments.value?.filter(apt => apt.status === 'completed') || []
 })
 
 const recentEvaluations = computed(() => {
@@ -299,13 +308,14 @@ const completedAppointments = computed(() => {
 })
 
 const unpaidAppointments = computed(() => {
-  return appointments.value.filter(apt => !apt.is_paid)
+  // Verwende pendingPayments anstatt appointments für offene Rechnungen
+  return pendingPayments.value || []
 })
 
 const totalUnpaidAmount = computed(() => {
-  return unpaidAppointments.value.reduce((sum, apt) => {
-    const basePrice = (apt.price_per_minute || 0) * (apt.duration_minutes || 0)
-    return sum + Math.round(basePrice * 100) // Convert to Rappen
+  // ✅ total_amount_rappen enthält bereits alle Gebühren (lesson + admin + products - discount)
+  return pendingPayments.value.reduce((sum, payment) => {
+    return sum + (payment.total_amount_rappen || 0)
   }, 0)
 })
 
@@ -359,25 +369,45 @@ const getFirstName = () => {
   return firstName || currentUser.value.email?.split('@')[0] || 'Unbekannt'
 }
 
-const formatDateTime = (dateString: string) => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('de-CH', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+const formatDateTime = (dateString: string | null | undefined) => {
+  if (!dateString) return 'Kein Datum/Zeit'
+  
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return 'Ungültiges Datum/Zeit'
+    }
+    return date.toLocaleDateString('de-CH', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    console.warn('Error formatting dateTime:', dateString, error)
+    return 'Datum/Zeit Fehler'
+  }
 }
 
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('de-CH', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  })
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return 'Kein Datum'
+  
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return 'Ungültiges Datum'
+    }
+    return date.toLocaleDateString('de-CH', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+  } catch (error) {
+    console.warn('Error formatting date:', dateString, error)
+    return 'Datum Fehler'
+  }
 }
 
 const getRatingColorPreview = (rating: number) => {
@@ -394,7 +424,14 @@ const getRatingColorPreview = (rating: number) => {
 
 // Navigation methods
 const navigateToPayments = async () => {
-  await navigateTo('/customer/payments')
+  // Wenn offene Zahlungen vorhanden sind, direkt zum Payment-Prozess
+  if (unpaidAppointments.value.length > 0) {
+    const paymentIds = unpaidAppointments.value.map(p => p.id).join(',')
+    await navigateTo(`/customer/payment-process?payments=${paymentIds}`)
+  } else {
+    // Sonst zum Zahlungsverlauf
+    await navigateTo('/customer/payments')
+  }
 }
 
 const retryLoad = async () => {
@@ -455,10 +492,10 @@ const loadAppointments = async () => {
         status,
         location_id,
         type,
+        event_type_code,
         user_id,
         staff_id,
-        price_per_minute,
-        is_paid,
+
         notes (
           id,
           staff_rating,
@@ -466,26 +503,43 @@ const loadAppointments = async () => {
         )
       `)
       .eq('user_id', userData.id)
+      .is('deleted_at', null)  // ✅ NEU: Nur nicht gelöschte Termine anzeigen
       .order('start_time', { ascending: false })
 
     if (appointmentsError) throw appointmentsError
     console.log('✅ Appointments loaded:', appointmentsData?.length || 0)
 
     const locationIds = [...new Set(appointmentsData?.map(a => a.location_id).filter(Boolean))]
-    let locationsMap: Record<string, string> = {}
+    console.log('🔍 Location IDs found:', locationIds)
+    
+    let locationsMap: Record<string, { name: string; address?: string; formatted_address?: string }> = {}
     
     if (locationIds.length > 0) {
+      console.log('🔍 Loading locations for IDs:', locationIds)
+      
       const { data: locations, error: locationsError } = await supabase
         .from('locations')
-        .select('id, name')
+        .select('id, name, address, formatted_address')
         .in('id', locationIds)
 
-      if (!locationsError && locations) {
+      if (locationsError) {
+        console.error('❌ Error loading locations:', locationsError)
+      } else if (locations) {
+        console.log('✅ Locations loaded:', locations)
+        
         locationsMap = locations.reduce((acc, loc) => {
-          acc[loc.id] = loc.name
+          acc[loc.id] = {
+            name: loc.name,
+            address: loc.address,
+            formatted_address: loc.formatted_address
+          }
           return acc
-        }, {} as Record<string, string>)
+        }, {} as Record<string, any>)
+        
+        console.log('✅ LocationsMap created:', locationsMap)
       }
+    } else {
+      console.log('⚠️ No location IDs found in appointments')
     }
 
     const appointmentIds = appointmentsData?.map(a => a.id) || []
@@ -567,9 +621,18 @@ const loadAppointments = async () => {
 
     const lessonsWithEvaluations = (appointmentsData || []).map(appointment => ({
       ...appointment,
-      location_name: locationsMap[appointment.location_id] || null,
+      location_name: locationsMap[appointment.location_id]?.name || null,
+      location_details: locationsMap[appointment.location_id] || null,
       criteria_evaluations: notesByAppointment[appointment.id] || []
     }))
+
+    // Debug: Zeige location_details für die ersten paar Termine
+    console.log('🔍 Sample location_details:', lessonsWithEvaluations.slice(0, 3).map(lesson => ({
+      id: lesson.id,
+      location_id: lesson.location_id,
+      location_name: lesson.location_name,
+      location_details: lesson.location_details
+    })))
 
     console.log('✅ Final lessons with evaluations:', lessonsWithEvaluations.length)
 

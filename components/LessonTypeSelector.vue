@@ -1,11 +1,11 @@
 <template>
   <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
     <label class="block text-sm font-semibold text-gray-900 mb-2">
-      🎯 Terminart auswählen
+      🎯 Terminart
     </label>
     
     <!-- Lesson Types Grid -->
-    <div class="grid grid-cols-3 gap-2">
+    <div v-if="showButtons" class="grid grid-cols-3 gap-2">
       <button
         v-for="lessonType in lessonTypes"
         :key="lessonType.code"
@@ -19,6 +19,11 @@
       >
         {{ lessonType.name }}
       </button>
+    </div>
+    
+    <!-- Read-only display for past appointments -->
+    <div v-else class="p-2 text-sm text-gray-600 bg-gray-100 rounded border">
+      {{ getSelectedLessonTypeName() }}
     </div>
   </div>
 </template>
@@ -36,11 +41,13 @@ interface LessonType {
 interface Props {
   selectedType?: string
   disabled?: boolean
+  showButtons?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selectedType: 'lesson',
-  disabled: false
+  disabled: false,
+  showButtons: true
 })
 
 const emit = defineEmits<{
@@ -81,10 +88,21 @@ const selectLessonType = (lessonType: LessonType) => {
   emit('update:modelValue', lessonType.code)
 }
 
+const getSelectedLessonTypeName = () => {
+  const lessonType = lessonTypes.value.find(t => t.code === selectedType.value)
+  return lessonType ? lessonType.name : 'Unbekannt'
+}
+
 // ✅ Watch for prop changes
-watch(() => props.selectedType, (newType) => {
+watch(() => props.selectedType, (newType, oldType) => {
+  console.log('🎯 LessonTypeSelector: selectedType prop changed:', {
+    from: oldType,
+    to: newType,
+    will_update_internal: !!newType
+  })
   if (newType) {
     selectedType.value = newType
+    console.log('✅ LessonTypeSelector: internal selectedType updated to:', selectedType.value)
   }
 }, { immediate: true })
 

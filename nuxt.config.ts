@@ -1,4 +1,7 @@
 // nuxt.config.ts
+// 🚫 LOKALE SUPABASE VERBOTEN - NUR CLOUD SUPABASE VERWENDEN! 🚫
+// Alle Datenbankoperationen gehen an die Cloud Supabase (unyjaetebnaexaflpyoc.supabase.co)
+
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
@@ -68,12 +71,16 @@ export default defineNuxtConfig({
     walleeSpaceId: process.env.WALLEE_SPACE_ID,
     walleeApplicationUserId: process.env.WALLEE_APPLICATION_USER_ID,
     walleeSecretKey: process.env.WALLEE_SECRET_KEY,
+    accountoApiKey: process.env.ACCOUNTO_API_KEY,
+    accountoBaseUrl: process.env.ACCOUNTO_BASE_URL,
     
     // Public keys (exposed to client-side)
     public: {
       googleMapsApiKey: process.env.VITE_GOOGLE_MAPS_API_KEY,
       walleeSpaceId: process.env.WALLEE_SPACE_ID,
-      walleeUserId: process.env.WALLEE_USER_ID
+      walleeUserId: process.env.WALLEE_USER_ID,
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY
     }
   },
   

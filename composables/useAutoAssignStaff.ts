@@ -43,6 +43,7 @@ export const useAutoAssignStaff = () => {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', appointmentData.user_id)
         .eq('staff_id', appointmentData.staff_id)
+        .is('deleted_at', null) // ✅ Soft Delete Filter
 
       if (countError) {
         console.error('Fehler beim Zählen der Termine:', countError)
@@ -59,6 +60,7 @@ export const useAutoAssignStaff = () => {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', appointmentData.user_id)
         .eq('staff_id', appointmentData.staff_id)
+        .is('deleted_at', null) // ✅ Soft Delete Filter
 
       // Assignment erfolgt bei erstem Termin mit diesem Staff
       if ((staffSpecificCount || 0) === 1) {
@@ -125,6 +127,7 @@ export const useAutoAssignStaff = () => {
           .select('*', { count: 'exact', head: true })
           .eq('user_id', student.id)
           .eq('staff_id', staffId)
+          .is('deleted_at', null) // ✅ Soft Delete Filter
 
         if (countError) continue
 

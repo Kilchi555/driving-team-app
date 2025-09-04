@@ -1,168 +1,135 @@
 // server/api/wallee/create-transaction.post.ts
-// ✅ TEMPORÄRER DEBUG - Hardcoded Credentials
+// ✅ OFFIZIELLES WALLEE SDK
+
+import { Wallee } from 'wallee'
 
 export default defineEventHandler(async (event) => {
+  console.log('🚀 Wallee Transaction Creation (SDK)...')
+  
   try {
-    console.log('🔥 Wallee API called with HARDCODED credentials')
-    
     const body = await readBody(event)
     console.log('📨 Received body:', body)
     
     const {
-      appointmentId,
+      orderId,
       amount,
       currency = 'CHF',
-      customerId,
       customerEmail,
-      lineItems,
+      customerName,
+      description,
       successUrl,
-      failedUrl
+      failedUrl,
+      // Optional: restrict shown payment methods on Wallee payment page
+      allowedPaymentMethodConfigurationIds
     } = body
 
     // Validierung der erforderlichen Felder
-    if (!appointmentId || !amount || !customerId || !customerEmail) {
-      console.error('❌ Missing required fields:', { appointmentId, amount, customerId, customerEmail })
+    if (!orderId || !amount || !customerEmail) {
+      console.error('❌ Missing required fields:', { orderId, amount, customerEmail })
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required fields: appointmentId, amount, customerId, customerEmail'
+        statusMessage: 'Missing required fields: orderId, amount, customerEmail'
       })
     }
 
-    // ✅ HARDCODED Wallee Credentials (temporär für Debug)
-    const walleeSpaceId = '82592'  
-    const walleeApplicationUserId = '140525'  
-    const walleeSecretKey = 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
-
-    console.log('🔧 HARDCODED Wallee Config:', {
-      spaceId: walleeSpaceId,
-      userId: walleeApplicationUserId ? `${walleeApplicationUserId.substring(0, 3)}...` : 'MISSING',
-      hasSecretKey: !!walleeSecretKey,
-      spaceIdLength: walleeSpaceId?.length,
-      userIdLength: walleeApplicationUserId?.length,
-      secretKeyLength: walleeSecretKey?.length
-    })
-
-    if (!walleeSpaceId || !walleeApplicationUserId || !walleeSecretKey) {
-      console.error('❌ Hardcoded credentials missing')
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Hardcoded Wallee credentials missing'
-      })
-    }
-
-    // Base64 Authentifizierung
-    const auth = Buffer.from(`${walleeApplicationUserId}:${walleeSecretKey}`).toString('base64')
+    // ✅ WALLEE SDK KONFIGURATION
+    const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
+    const userId: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
+    const apiSecret: string = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
     
-    // ✅ TEMPORÄRER DEBUG - für Marco
-    console.log('🔐 DEBUG für Marco:')
-    console.log('Auth String Raw:', `${walleeApplicationUserId}:${walleeSecretKey}`)
-    console.log('Auth Base64:', auth)
-    console.log('Auth Header wird sein:', `Basic ${auth}`)
-
-    console.log('🔐 HARDCODED Auth Debug:', {
-      authStringLength: `${walleeApplicationUserId}:${walleeSecretKey}`.length,
-      base64Length: auth.length,
-      authPreview: `${auth.substring(0, 20)}...`
-    })
-
-    // Get request host for URLs
-    const host = getHeader(event, 'host') || 'localhost:3000'
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-    const baseUrl = `${protocol}://${host}`
-
-    // Transaction Data für Wallee
-    const transactionData = {
-      lineItems: lineItems || [
-        {
-          uniqueId: `appointment-${appointmentId}`,
-          name: 'Fahrstunde',
-          quantity: 1,
-          amountIncludingTax: amount,
-          type: 'PRODUCT'
-        }
-      ],
-      currency: currency,
-      customerId: customerId,
-      merchantReference: `appointment-${appointmentId}`,
-      successUrl: successUrl || `${baseUrl}/payment/success`,
-      failedUrl: failedUrl || `${baseUrl}/payment/failed`,
-      language: 'de-CH',
-      autoConfirmationEnabled: true,
-      customerEmailAddress: customerEmail,
-      metadata: {
-        appointmentId: appointmentId,
-        createdAt: new Date().toISOString()
+    console.log('🔧 SDK Config:', { spaceId, userId, apiSecretPreview: apiSecret.substring(0, 10) + '...' })
+    
+    // ✅ SDK KONFIGURATION
+    const config = {
+      space_id: spaceId,
+      user_id: userId,
+      api_secret: apiSecret
+    }
+    
+    // ✅ TRANSACTION SERVICE mit SDK
+    const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
+    
+    // ✅ LINE ITEM für echte Appointments
+    const lineItem: Wallee.model.LineItemCreate = new Wallee.model.LineItemCreate()
+    lineItem.name = description || 'Driving Team Bestellung'
+    lineItem.uniqueId = `appointment-${orderId}-${Date.now()}`
+    lineItem.sku = 'driving-lesson'
+    lineItem.quantity = 1
+    lineItem.amountIncludingTax = amount
+    lineItem.type = Wallee.model.LineItemType.PRODUCT
+    
+    // ✅ TRANSACTION (exakt wie Dokumentation)
+    const transaction: Wallee.model.TransactionCreate = new Wallee.model.TransactionCreate()
+    transaction.lineItems = [lineItem]
+    transaction.autoConfirmationEnabled = true
+    transaction.currency = currency
+    transaction.customerId = `customer-${orderId}`
+    transaction.merchantReference = `appointment-${orderId}`
+    transaction.language = 'de-CH'
+    transaction.customerEmailAddress = customerEmail
+    
+    // Keine Adresse - testen ob das das Problem löst
+    
+    // ✅ Optional: Limit to specific payment method configurations (e.g., Visa, TWINT)
+    if (Array.isArray(allowedPaymentMethodConfigurationIds) && allowedPaymentMethodConfigurationIds.length > 0) {
+      // Wallee expects an array of numeric IDs
+      try {
+        transaction.allowedPaymentMethodConfigurations = allowedPaymentMethodConfigurationIds.map((id: any) => Number(id)).filter((n: number) => Number.isFinite(n))
+        console.log('🧩 Restricting to payment method configuration IDs:', transaction.allowedPaymentMethodConfigurations)
+      } catch (e) {
+        console.warn('⚠️ Could not set allowedPaymentMethodConfigurations:', e)
       }
     }
-
-    console.log('🔄 Creating Wallee transaction with HARDCODED credentials:', {
-      spaceId: walleeSpaceId,
-      amount: amount,
-      currency: currency,
-      customerId: customerId,
-      url: `https://app-wallee.com/api/transaction/create?spaceId=${walleeSpaceId}`
-    })
-
-    console.log('📋 Transaction Data:', JSON.stringify(transactionData, null, 2))
-
-    // ✅ WALLEE Transaction erstellen
-    console.log('🔄 About to call Wallee Transaction API with HARDCODED auth...')
     
-    let response: any
-    
-    try {
-      response = await $fetch<any>(
-        `https://app-wallee.com/api/transaction/create?spaceId=${walleeSpaceId}`,
-        {
-          method: 'POST',
-          body: transactionData,
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        }
-      )
-      
-      console.log('✅ HARDCODED SUCCESS! Wallee response:', response)
-      
-    } catch (fetchError: any) {
-      console.error('❌ HARDCODED FAILED! Wallee Transaction Error:', {
-        message: fetchError.message,
-        statusCode: fetchError.statusCode,
-        data: fetchError.data,
-        walleeMessage: fetchError.data?.message
-      })
-      
-      if (fetchError.statusCode === 442) {
-        console.error('🚨 STILL 442 with hardcoded credentials!')
-        console.error('🚨 This means either:')
-        console.error('1. Wrong Application User ID copied')
-        console.error('2. Wrong Secret Key copied') 
-        console.error('3. Different issue than credentials')
-        
-        throw createError({
-          statusCode: 442,
-          statusMessage: `HARDCODED TEST: Still 442 error. Wallee Error: ${fetchError.data?.message || 'Unknown'}`
-        })
-      }
-      
-      throw createError({
-        statusCode: fetchError.statusCode || 500,
-        statusMessage: `HARDCODED TEST: ${fetchError.data?.message || fetchError.message || 'Unknown error'}`
-      })
+    // ✅ OPTIONALE FELDER
+    if (successUrl) {
+      transaction.successUrl = successUrl
     }
-
-    // Success handling...
+    if (failedUrl) {
+      transaction.failedUrl = failedUrl
+    }
+    
+    console.log('📤 SDK Transaction Data:', JSON.stringify(transaction, null, 2))
+    
+    // ✅ SDK TRANSACTION CREATE
+    const response = await transactionService.create(spaceId, transaction)
+    const transactionCreate: Wallee.model.Transaction = response.body
+    
+    console.log('✅ SDK Transaction SUCCESS:', {
+      id: transactionCreate.id,
+      state: transactionCreate.state,
+      currency: transactionCreate.currency
+    })
+    
+    // ✅ PAYMENT PAGE URL generieren
+    const paymentPageService: Wallee.api.TransactionPaymentPageService = new Wallee.api.TransactionPaymentPageService(config)
+    const paymentPageResponse = await paymentPageService.paymentPageUrl(spaceId, transactionCreate.id as number)
+    const paymentPageUrl = paymentPageResponse.body
+    
+    console.log('✅ Payment Page URL generated:', paymentPageUrl)
+    
     return {
       success: true,
-      transactionId: response.id,
-      paymentUrl: 'HARDCODED_TEST_SUCCESS',
-      transaction: response
+      transactionId: transactionCreate.id,
+      paymentUrl: paymentPageUrl,
+      transaction: {
+        id: transactionCreate.id,
+        state: transactionCreate.state,
+        currency: transactionCreate.currency
+      },
+      message: 'Transaction created successfully with Wallee SDK!'
     }
-
+    
   } catch (error: any) {
-    console.error('❌ HARDCODED FINAL Error:', error)
-    throw error
+    console.error('❌ SDK Transaction FAILED:', {
+      message: error.message,
+      statusCode: error.statusCode,
+      data: error.data
+    })
+    
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: 'SDK Transaction creation failed'
+    })
   }
 })

@@ -24,27 +24,6 @@
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex space-x-1">
           <NuxtLink
-            to="/admin/products"
-            class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            :class="isActive('/admin/products') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
-          >
-            Produkte
-          </NuxtLink>
-          <NuxtLink
-            to="/admin/exam-locations"
-            class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            :class="isActive('/admin/exam-locations') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
-          >
-            Prüfungsorte
-          </NuxtLink>
-          <NuxtLink
-            to="/admin/pricing"
-            class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            :class="isActive('/admin/pricing') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
-          >
-            Preise
-          </NuxtLink>
-          <NuxtLink
             to="/admin/payment-overview"
             class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
             :class="isActive('/admin/payment-overview') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
@@ -52,11 +31,25 @@
             Zahlungen
           </NuxtLink>
           <NuxtLink
-            to="/admin/users"
+            to="/admin/invoices"
             class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            :class="isActive('/admin/users') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+            :class="isActive('/admin/invoices') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
           >
-            Benutzer
+            Rechnungen
+          </NuxtLink>
+          <NuxtLink
+            to="/admin/student-credits"
+            class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            :class="isActive('/admin/student-credits') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+          >
+            Guthaben
+          </NuxtLink>
+          <NuxtLink
+            to="/admin/cash-control"
+            class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            :class="isActive('/admin/cash-control') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+          >
+            Kassenkontrolle
           </NuxtLink>
         </nav>
 
@@ -98,30 +91,6 @@
           >
             <div class="py-2">
               <NuxtLink
-                to="/admin/products"
-                @click="showMobileMenu = false"
-                class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
-                :class="isActive('/admin/products') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
-              >
-                Produkte
-              </NuxtLink>
-              <NuxtLink
-                to="/admin/exam-locations"
-                @click="showMobileMenu = false"
-                class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
-                :class="isActive('/admin/exam-locations') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
-              >
-                Prüfungsorte
-              </NuxtLink>
-              <NuxtLink
-                to="/admin/pricing"
-                @click="showMobileMenu = false"
-                class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
-                :class="isActive('/admin/pricing') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
-              >
-                Preise
-              </NuxtLink>
-              <NuxtLink
                 to="/admin/payment-overview"
                 @click="showMobileMenu = false"
                 class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
@@ -130,12 +99,28 @@
                 Zahlungen
               </NuxtLink>
               <NuxtLink
-                to="/admin/users"
+                to="/admin/invoices"
                 @click="showMobileMenu = false"
                 class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
-                :class="isActive('/admin/users') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
+                :class="isActive('/admin/invoices') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
               >
-                Benutzer
+                Rechnungen
+              </NuxtLink>
+              <NuxtLink
+                to="/admin/student-credits"
+                @click="showMobileMenu = false"
+                class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
+                :class="isActive('/admin/student-credits') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
+              >
+                Guthaben
+              </NuxtLink>
+              <NuxtLink
+                to="/admin/cash-control"
+                @click="showMobileMenu = false"
+                class="block px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-700"
+                :class="isActive('/admin/cash-control') ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'"
+              >
+                Kassenkontrolle
               </NuxtLink>
             </div>
           </div>
@@ -148,6 +133,73 @@
       <slot />
     </main>
 
+    <!-- Footer -->
+    <footer class="admin-footer bg-gray-800 text-white py-6 mt-auto">
+      <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+          <!-- Left side - Company info -->
+          <div class="mb-4 md:mb-0">
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <span class="text-lg font-semibold">Driving Team</span>
+            </div>
+          </div>
+
+          <!-- Center - Quick links -->
+          <div class="flex flex-wrap justify-center space-x-6 mb-4 md:mb-0">
+            <NuxtLink to="/admin/products" class="text-gray-300 hover:text-white transition-colors text-sm">
+              Produkte
+            </NuxtLink>
+            <NuxtLink to="/admin/discounts" class="text-gray-300 hover:text-white transition-colors text-sm">
+              Rabatte
+            </NuxtLink>
+            <NuxtLink to="/admin/exam-locations" class="text-gray-300 hover:text-white transition-colors text-sm">
+              Prüfungsorte
+            </NuxtLink>
+            <NuxtLink to="/admin/categories" class="text-gray-300 hover:text-white transition-colors text-sm">
+              Kategorien
+            </NuxtLink>
+            <NuxtLink to="/admin/examiners" class="text-gray-300 hover:text-white transition-colors text-sm">
+              Experten
+            </NuxtLink>
+            <NuxtLink to="/admin/pricing" class="text-gray-300 hover:text-white transition-colors text-sm">
+              Preise
+            </NuxtLink>
+            <NuxtLink to="/admin/users" class="text-gray-300 hover:text-white transition-colors text-sm">
+              Benutzer
+            </NuxtLink>
+            <NuxtLink to="/admin/evaluation-system" class="text-gray-300 hover:text-white transition-colors text-sm">
+              Bewertungssystem
+            </NuxtLink>
+          </div>
+
+          <!-- Right side - Version & status -->
+          <div class="text-center md:text-right">
+            <div class="flex items-center space-x-2 mb-2">
+              <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span class="text-sm text-gray-300">System Online</span>
+            </div>
+            <p class="text-xs text-gray-400">v1.0.0 • Admin Panel</p>
+          </div>
+        </div>
+
+        <!-- Bottom border -->
+        <div class="border-t border-gray-700 mt-6 pt-4">
+          <div class="flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
+            <span>&copy; 2025 Driving Team. Alle Rechte vorbehalten.</span>
+            <div class="flex space-x-4 mt-2 md:mt-0">
+              <span>Support: support@drivingteam.ch</span>
+              <span>Tel: +41 44 123 45 67</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
     <!-- Mobile Menu Backdrop -->
     <div
       v-if="showMobileMenu"
@@ -158,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, watchEffect } from 'vue'
 import { useRoute } from '#app'
 
 const route = useRoute()
@@ -189,6 +241,8 @@ watchEffect(() => {
 <style scoped>
 .admin-layout {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .admin-header {
@@ -200,6 +254,7 @@ watchEffect(() => {
 
 .admin-main {
   padding-top: 1rem;
+  flex: 1;
 }
 
 /* Smooth transitions */

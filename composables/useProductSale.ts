@@ -76,38 +76,38 @@ const loadAvailableProducts = async () => {
   }
 }
 
-// ✅ KORRIGIERTE loadProducts Funktion (für Appointment-spezifische Produkte)
+// ✅ KORRIGIERTE loadProducts Funktion (lädt aus beiden Systemen)
 const loadProducts = async (appointmentId: string) => {
   if (!appointmentId) return
 
   try {
     const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('appointment_products')
-      .select(`
-        *,
-        products!inner(id, name, price_rappen, description)
-      `)
-      .eq('appointment_id', appointmentId)
+    
+    // ✅ NEU: Lade Produkte nur noch aus product_sales (neues System)
+    const { loadProductSaleForAppointment } = useProductSales()
+    const productSale = await loadProductSaleForAppointment(appointmentId)
+    
+    if (productSale && productSale.product_sale_items) {
+      // Convert to selectedProducts format
+      selectedProducts.value = productSale.product_sale_items.map((item: any) => ({
+        product: {
+          id: item.products.id,
+          name: item.products.name,
+          price: item.products.price_rappen / 100,
+          description: item.products.description
+        },
+        quantity: item.quantity,
+        total: item.total_price_rappen / 100
+      }))
 
-    if (error) throw error
-
-    // Convert to selectedProducts format
-    selectedProducts.value = (data || []).map(item => ({
-      product: {
-        id: item.products.id,
-        name: item.products.name,
-        price: item.products.price_rappen / 100,
-        description: item.products.description
-      },
-      quantity: item.quantity,
-      total: item.total_price_rappen / 100
-    }))
-
-    console.log('✅ Appointment products loaded:', selectedProducts.value.length)
+      console.log('✅ Products loaded from product_sales:', selectedProducts.value.length)
+    } else {
+      console.log('📦 No products found in product_sales')
+      selectedProducts.value = []
+    }
     
   } catch (err: any) {
-    console.error('❌ Error loading appointment products:', err)
+    console.error('❌ Error loading products:', err)
   }
 }
 
@@ -126,6 +126,10 @@ const loadProducts = async (appointmentId: string) => {
     }
     
     console.log('📦 Product added:', product.name)
+    
+    // ✅ NEU: Produktkatalog nach Auswahl automatisch schließen
+    showProductSelector.value = false
+    console.log('✅ Product selector closed automatically after selection')
   }
 
   const removeProduct = (productId: string) => {
@@ -140,43 +144,58 @@ const loadProducts = async (appointmentId: string) => {
     showProductSelector.value = false
   }
 
-const saveAppointmentProducts = async (appointmentId: string) => {
+// ✅ ENTFERNT: saveAppointmentProducts - wird nicht mehr benötigt
+// Alle Produkte werden jetzt über saveToProductSales in product_sales gespeichert
+
+// ✅ NEUE FUNKTION: Produkte in product_sales kopieren
+const saveToProductSales = async (appointmentId: string) => {
   if (!appointmentId || selectedProducts.value.length === 0) {
-    console.log('❌ No appointmentId or products to save')
+    console.log('❌ No appointmentId or products to copy')
     return
   }
 
   try {
-    const supabase = getSupabase()
+    // ✅ NEUE LOGIK: Verwende product_sales statt appointment_products
+    const { createProductSale } = useProductSales()
     
-    // Zuerst bestehende Produkte löschen
-    const { error: deleteError } = await supabase
-      .from('appointment_products')
-      .delete()
-      .eq('appointment_id', appointmentId)
-    
-    if (deleteError) throw deleteError
-
-    // Neue Produkte einfügen
-    const appointmentProducts = selectedProducts.value.map(item => ({
+    // Erstelle Produktverkauf
+    const saleData = {
       appointment_id: appointmentId,
-      product_id: item.product.id,
-      quantity: item.quantity,
-      unit_price_rappen: Math.round(item.product.price * 100),
-      total_price_rappen: Math.round(item.total * 100),
-      is_paid: false
-    }))
-
-    const { error: insertError } = await supabase
-      .from('appointment_products')
-      .insert(appointmentProducts)
-
-    if (insertError) throw insertError
-
-    console.log('✅ Products saved successfully:', appointmentProducts.length)
+      user_id: '', // Wird aus dem Termin geladen
+      staff_id: '', // Wird aus dem Termin geladen
+      items: selectedProducts.value.map(item => ({
+        product_id: item.product.id,
+        quantity: item.quantity,
+        unit_price_rappen: Math.round(item.product.price * 100),
+        total_price_rappen: Math.round(item.total * 100)
+      }))
+    }
+    
+    // Lade Termin-Daten für user_id und staff_id
+    const supabase = getSupabase()
+    const { data: appointment, error: appointmentError } = await supabase
+      .from('appointments')
+      .select('user_id, staff_id')
+      .eq('id', appointmentId)
+      .is('deleted_at', null) // ✅ Soft Delete Filter
+      .single()
+    
+    if (appointmentError) throw appointmentError
+    
+    saleData.user_id = appointment.user_id
+    saleData.staff_id = appointment.staff_id
+    
+    // Erstelle Produktverkauf
+    const result = await createProductSale(saleData)
+    
+    if (result) {
+      console.log('✅ Product sale created successfully:', result.id)
+    } else {
+      throw new Error('Failed to create product sale')
+    }
     
   } catch (err: any) {
-    console.error('❌ Error saving products:', err)
+    console.error('❌ Error saving products to product_sales:', err)
     throw err
   }
 }
@@ -200,7 +219,7 @@ const saveAppointmentProducts = async (appointmentId: string) => {
     removeProduct,
     openProductSelector,
     closeProductSelector,
-    saveAppointmentProducts,
+    saveToProductSales,
     loadProducts
   }
 }

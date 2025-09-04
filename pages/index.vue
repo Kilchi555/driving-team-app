@@ -132,6 +132,19 @@
             Kostenlos registrieren
           </button>
         </div>
+
+        <!-- Shop Link -->
+        <div class="text-center mt-4">
+          <p class="text-gray-600 text-sm mb-3">
+            Oder direkt Produkte kaufen
+          </p>
+          <button
+            @click="goToShop"
+            class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+          >
+            🛒 Zum Shop
+          </button>
+        </div>
       </div>
     </div>
 
@@ -481,6 +494,10 @@ const updatePassword = async () => {
 // Navigation
 const goToRegister = () => {
   navigateTo('/auswahl')
+}
+
+const goToShop = () => {
+  navigateTo('/shop')
 }
 
 // pages/index.vue - im onMounted nach den bestehenden Checks:

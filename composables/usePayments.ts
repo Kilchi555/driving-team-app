@@ -2,156 +2,70 @@
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
-
-interface CalculatedPrice {
-  base_price_rappen: number
-  admin_fee_rappen: number
-  total_rappen: number
-  base_price_chf: string
-  admin_fee_chf: string
-  total_chf: string
-  category_code: string
-  duration_minutes: number
-}
-
-interface PaymentMethod {
-  method_code: string
-  display_name: string
-  description: string
-  icon_name: string
-  is_active: boolean
-  is_online: boolean
-  display_order: number
-}
-
-interface PaymentData {
-  appointment_id: string
-  user_id: string
-  staff_id?: string
-  amount_rappen: number
-  admin_fee_rappen: number
-  total_amount_rappen: number
-  payment_method: string
-  payment_status: string
-  description: string
-  metadata: Record<string, any>
-}
+import type { Payment, Product, Discount, PaymentMethod } from '~/types/payment'
+import type { PaymentItem } from '~/types/payment'
+import { usePaymentItems } from '~/composables/usePaymentItems'
+import { useDiscounts } from '~/composables/useDiscounts'
 
 export const usePayments = () => {
+  // ✅ RUNDUNGSFUNKTION: Preise auf nächsten Franken runden
+  const roundToNearestFranken = (rappen: number): number => {
+    const remainder = rappen % 100
+    if (remainder === 0) return rappen
+    if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
+    else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
+  }
+
   const supabase = getSupabase()
+  const { createPaymentItem, addAppointmentItem, addProductItem, addDiscountItem } = usePaymentItems()
+  const { validateDiscountCode, applyDiscount, loadDiscounts, loadDiscountsByCategory, availableDiscounts } = useDiscounts()
   
   // State
+  const isLoading = ref(false)
   const isLoadingPrice = ref(false)
+  const priceError = ref<string | null>(null)
   const isProcessing = ref(false)
-  const calculatedPrice = ref<CalculatedPrice | null>(null)
-  const priceError = ref<string>('')
 
-  // Payment Methods (could be loaded from database)
-  const availablePaymentMethods = ref<PaymentMethod[]>([
-    {
-      method_code: 'wallee',
-      display_name: 'Online Zahlung',
-      description: 'Kreditkarte, Twint, etc.',
-      icon_name: 'credit-card',
-      is_active: true,
-      is_online: true,
-      display_order: 1
-    },
-    {
-      method_code: 'cash',
-      display_name: 'Bar',
-      description: 'Zahlung beim Fahrlehrer',
-      icon_name: 'cash',
-      is_active: true,
-      is_online: false,
-      display_order: 2
-    },
-    {
-      method_code: 'invoice',
-      display_name: 'Rechnung',
-      description: 'Firmenrechnung',
-      icon_name: 'document',
-      is_active: true,
-      is_online: false,
-      display_order: 3
-    }
-  ])
+  // Computed
+  const hasPriceError = computed(() => !!priceError.value)
 
-  // Category-specific pricing (from your project data)
-  const categoryPricing: Record<string, { base: number, admin: number }> = {
-    'B': { base: 95, admin: 120 },
-    'A1': { base: 95, admin: 0 },
-    'A35kW': { base: 95, admin: 0 },
-    'A': { base: 95, admin: 0 },
-    'BE': { base: 120, admin: 120 },
-    'C1': { base: 150, admin: 200 },
-    'D1': { base: 150, admin: 200 },
-    'C': { base: 170, admin: 200 },
-    'CE': { base: 200, admin: 250 },
-    'D': { base: 200, admin: 300 },
-    'Motorboot': { base: 95, admin: 120 },
-    'BPT': { base: 100, admin: 120 }
-  }
-
-  // Get appointment count for a user
-  const getAppointmentCount = async (userId: string): Promise<number> => {
-    try {
-      const { count, error } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .in('status', ['completed', 'confirmed'])
-
-      if (error) throw error
-      return (count || 0) + 1
-    } catch (error) {
-      console.error('Error getting appointment count:', error)
-      return 1
-    }
-  }
-
-  // Calculate price based on category, duration, and appointment count
+  // Methods
   const calculatePrice = async (
-    category: string, 
-    duration: number, 
-    userId?: string
-  ): Promise<CalculatedPrice> => {
-    isLoadingPrice.value = true
-    priceError.value = ''
-
+    categoryCode: string,
+    durationMinutes: number,
+    staffId?: string
+  ) => {
     try {
-      // Get appointment count if userId provided
-      const appointmentCount = userId ? await getAppointmentCount(userId) : 1
-      
-      // Get category pricing
-      const pricing = categoryPricing[category] || categoryPricing['B']
-      
-      // Calculate base price (per 45min, scaled to duration)
-      const basePriceChf = (pricing.base / 45) * duration
-      const basePriceRappen = Math.round(basePriceChf * 100)
-      
-      // Admin fee only from 2nd appointment (except for A1/A35kW/A)
-      const adminFeeChf = (appointmentCount > 1 && pricing.admin > 0) ? pricing.admin : 0
-      const adminFeeRappen = adminFeeChf * 100
-      
-      // Total
-      const totalRappen = basePriceRappen + adminFeeRappen
-      const totalChf = totalRappen / 100
+      isLoadingPrice.value = true
+      priceError.value = null
 
-      const result: CalculatedPrice = {
-        base_price_rappen: basePriceRappen,
-        admin_fee_rappen: adminFeeRappen,
-        total_rappen: totalRappen,
-        base_price_chf: basePriceChf.toFixed(2),
-        admin_fee_chf: adminFeeChf.toFixed(2),
-        total_chf: totalChf.toFixed(2),
-        category_code: category,
-        duration_minutes: duration
+      // Get base price from categories table
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('categories')
+        .select('base_price_rappen')
+        .eq('code', categoryCode)
+        .single()
+
+      if (categoryError) throw categoryError
+      if (!categoryData) throw new Error('Kategorie nicht gefunden')
+
+      let basePrice = categoryData.base_price_rappen
+
+      // ✅ ENTFERNT: Staff-specific pricing wird nicht mehr verwendet
+      // Preise werden jetzt direkt aus der categories Tabelle geladen
+
+      // Calculate total based on duration
+      const totalPrice = Math.round((basePrice * durationMinutes) / 45)
+      const adminFee = Math.round(totalPrice * 0.05) // 5% admin fee
+      const totalWithFee = totalPrice + adminFee
+
+      return {
+        base_price_rappen: totalPrice,
+        admin_fee_rappen: adminFee,
+        total_rappen: totalWithFee,
+        category_code: categoryCode,
+        duration_minutes: durationMinutes
       }
-
-      calculatedPrice.value = result
-      return result
-
     } catch (error: any) {
       priceError.value = error.message || 'Fehler bei der Preisberechnung'
       throw error
@@ -160,8 +74,8 @@ export const usePayments = () => {
     }
   }
 
-  // Create payment record in database
-  const createPaymentRecord = async (data: Partial<PaymentData>): Promise<any> => {
+  // Create payment record in database with new structure
+  const createPaymentRecord = async (data: Partial<Payment>): Promise<Payment> => {
     try {
       const { data: payment, error } = await supabase
         .from('payments')
@@ -177,34 +91,148 @@ export const usePayments = () => {
     }
   }
 
-  // Handle cash payment
+  // Create payment items for a payment using the new structure
+  const createPaymentItems = async (paymentId: string, items: Partial<PaymentItem>[]): Promise<void> => {
+    try {
+      for (const item of items) {
+        if (item.item_type === 'appointment' && item.item_id) {
+          await addAppointmentItem(
+            paymentId,
+            item.item_id,
+            item.item_name || 'Fahrstunde',
+            item.unit_price_rappen || 0,
+            item.description
+          )
+        } else if (item.item_type === 'product' && item.item_id) {
+          await addProductItem(
+            paymentId,
+            item.item_id,
+            item.item_name || 'Produkt',
+            item.quantity || 1,
+            item.unit_price_rappen || 0,
+            item.description
+          )
+        } else if (item.item_type === 'discount' && item.item_id) {
+          await addDiscountItem(
+            paymentId,
+            item.item_id,
+            item.item_name || 'Rabatt',
+            Math.abs(item.total_price_rappen || 0),
+            item.description
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Error creating payment items:', error)
+      throw error
+    }
+  }
+
+  // Handle cash payment with new structure
   const processCashPayment = async (
     appointmentId: string,
     userId: string,
     staffId: string,
-    price: CalculatedPrice
+    price: any,
+    products?: Product[],
+    discounts?: Discount[]
   ) => {
     isProcessing.value = true
 
     try {
-      const paymentData: Partial<PaymentData> = {
+      // ✅ Berechne Produkte und Rabatte Gesamtbeträge
+      const productsTotalRappen = products?.reduce((sum, product) => 
+        sum + (product.price_rappen || 0), 0) || 0
+      const discountsTotalRappen = discounts?.reduce((sum, discount) => 
+        sum + (discount.discount_value || 0), 0) || 0
+      const subtotalRappen = price.total_rappen + productsTotalRappen
+      const finalTotalRappen = subtotalRappen - discountsTotalRappen
+
+      // ✅ RUNDUNG: Alle Preise auf nächsten Franken runden
+      const roundedLessonPriceRappen = roundToNearestFranken(price.total_rappen)
+      const roundedProductsTotalRappen = roundToNearestFranken(productsTotalRappen)
+      const roundedDiscountsTotalRappen = roundToNearestFranken(discountsTotalRappen)
+      const roundedSubtotalRappen = roundToNearestFranken(subtotalRappen)
+      const roundedFinalTotalRappen = roundToNearestFranken(finalTotalRappen)
+
+      // Create payment record mit neuen Spalten
+      const paymentData: any = {
         appointment_id: appointmentId,
         user_id: userId,
         staff_id: staffId,
-        amount_rappen: price.base_price_rappen,
-        admin_fee_rappen: price.admin_fee_rappen,
-        total_amount_rappen: price.total_rappen,
+        // ✅ Neue Spalten verwenden (mit gerundeten Preisen)
+        lesson_price_rappen: price.base_price_rappen || roundedLessonPriceRappen,
+        products_price_rappen: roundedProductsTotalRappen,
+        discount_amount_rappen: roundedDiscountsTotalRappen,
+        subtotal_rappen: (price.base_price_rappen || roundedLessonPriceRappen) + roundedProductsTotalRappen,
+        total_amount_rappen: roundedFinalTotalRappen,
+        // ✅ Alte Spalten für Kompatibilität (mit gerundeten Preisen)
+        amount_rappen: price.base_price_rappen || roundedLessonPriceRappen,
+        admin_fee_rappen: price.admin_fee_rappen || 0, // Korrekte Admin-Fee
         payment_method: 'cash',
-        payment_status: 'completed', // Cash is immediately completed
+        payment_status: 'completed',
         description: `Fahrlektion ${price.category_code} - ${price.duration_minutes} Min`,
+        is_standalone: false,
         metadata: {
           category: price.category_code,
           duration: price.duration_minutes,
-          processed_at: toLocalTimeString(new Date)
+          processed_at: toLocalTimeString(new Date),
+          price_breakdown: {
+            lesson_price_rappen: roundedLessonPriceRappen,
+            products_price_rappen: roundedProductsTotalRappen,
+            discount_amount_rappen: roundedDiscountsTotalRappen,
+            subtotal_rappen: roundedSubtotalRappen,
+            total_amount_rappen: roundedFinalTotalRappen
+          }
         }
       }
 
       const payment = await createPaymentRecord(paymentData)
+
+      // Create payment items (mit gerundeten Preisen)
+      const paymentItems: any[] = [
+        {
+          item_type: 'appointment',
+          item_id: appointmentId,
+          item_name: `Fahrlektion ${price.category_code}`,
+          quantity: 1,
+          unit_price_rappen: roundedLessonPriceRappen,
+          total_price_rappen: roundedLessonPriceRappen,
+          description: `${price.duration_minutes} Minuten`
+        }
+      ]
+
+      // Add products if any
+      if (products && products.length > 0) {
+        products.forEach(product => {
+          paymentItems.push({
+            item_type: 'product',
+            item_id: product.id,
+            item_name: product.name,
+            quantity: 1, // Standard quantity
+            unit_price_rappen: product.price_rappen,
+            total_price_rappen: product.price_rappen,
+            description: product.description
+          })
+        })
+      }
+
+      // Add discounts if any
+      if (discounts && discounts.length > 0) {
+        discounts.forEach(discount => {
+          paymentItems.push({
+            item_type: 'discount',
+            item_id: discount.id,
+            item_name: discount.name,
+            quantity: 1,
+            unit_price_rappen: -discount.discount_value || 0,
+            total_price_rappen: -discount.discount_value || 0,
+            description: discount.name || ''
+          })
+        })
+      }
+
+      await createPaymentItems(payment.id, paymentItems)
 
       // Update appointment as paid
       await updateAppointmentPaymentStatus(appointmentId, true, 'cash')
@@ -215,42 +243,256 @@ export const usePayments = () => {
     }
   }
 
-  // Handle invoice payment
+  // Handle invoice payment with new structure
   const processInvoicePayment = async (
     appointmentId: string,
     userId: string,
     staffId: string,
-    price: CalculatedPrice,
-    invoiceData: Record<string, any>
+    price: any,
+    invoiceData: Record<string, any>,
+    products?: Product[],
+    discounts?: Discount[]
   ) => {
     isProcessing.value = true
 
     try {
-      const paymentData: Partial<PaymentData> = {
+      // ✅ Berechne Produkte und Rabatte Gesamtbeträge
+      const productsTotalRappen = products?.reduce((sum, product) => 
+        sum + (product.price_rappen || 0), 0) || 0
+      const discountsTotalRappen = discounts?.reduce((sum, discount) => 
+        sum + (discount.discount_value || 0), 0) || 0
+      const subtotalRappen = price.total_rappen + productsTotalRappen
+      const finalTotalRappen = subtotalRappen - discountsTotalRappen
+
+      // ✅ RUNDUNG: Alle Preise auf nächsten Franken runden
+      const roundedLessonPriceRappen = roundToNearestFranken(price.total_rappen)
+      const roundedProductsTotalRappen = roundToNearestFranken(productsTotalRappen)
+      const roundedDiscountsTotalRappen = roundToNearestFranken(discountsTotalRappen)
+      const roundedSubtotalRappen = roundToNearestFranken(subtotalRappen)
+      const roundedFinalTotalRappen = roundToNearestFranken(finalTotalRappen)
+
+      // Create payment record mit neuen Spalten
+      const paymentData: any = {
         appointment_id: appointmentId,
         user_id: userId,
         staff_id: staffId,
-        amount_rappen: price.base_price_rappen,
-        admin_fee_rappen: price.admin_fee_rappen,
-        total_amount_rappen: price.total_rappen,
+        // ✅ Neue Spalten verwenden (mit gerundeten Preisen)
+        lesson_price_rappen: roundedLessonPriceRappen,
+        products_price_rappen: roundedProductsTotalRappen,
+        discount_amount_rappen: roundedDiscountsTotalRappen,
+        subtotal_rappen: roundedSubtotalRappen,
+        total_amount_rappen: roundedFinalTotalRappen,
+        // ✅ Alte Spalten für Kompatibilität (mit gerundeten Preisen)
+        amount_rappen: roundedLessonPriceRappen,
+        admin_fee_rappen: 0, // Wird aus price.total_rappen berechnet
         payment_method: 'invoice',
-        payment_status: 'pending', // Invoice starts as pending
+        payment_status: 'pending',
         description: `Fahrlektion ${price.category_code} - ${price.duration_minutes} Min`,
+        is_standalone: false,
         metadata: {
           category: price.category_code,
           duration: price.duration_minutes,
           invoice_data: invoiceData,
-          created_at: toLocalTimeString(new Date)
+          created_at: toLocalTimeString(new Date),
+          price_breakdown: {
+            lesson_price_rappen: roundedLessonPriceRappen,
+            products_price_rappen: roundedProductsTotalRappen,
+            discount_amount_rappen: roundedDiscountsTotalRappen,
+            subtotal_rappen: roundedSubtotalRappen,
+            total_amount_rappen: roundedFinalTotalRappen
+          }
         }
       }
 
       const payment = await createPaymentRecord(paymentData)
 
-      // Don't mark appointment as paid yet (wait for invoice payment)
-      
+      // Create payment items (same logic as cash payment)
+      const paymentItems: Partial<PaymentItem>[] = [
+        {
+          item_type: 'appointment',
+          item_id: appointmentId,
+          item_name: `Fahrlektion ${price.category_code}`,
+          quantity: 1,
+          unit_price_rappen: roundedLessonPriceRappen,
+          total_price_rappen: roundedLessonPriceRappen,
+          description: `${price.duration_minutes} Minuten`
+        }
+      ]
+
+      if (products && products.length > 0) {
+        products.forEach(product => {
+          paymentItems.push({
+            item_type: 'product',
+            item_id: product.id,
+            item_name: product.name,
+            quantity: 1, // Standard quantity
+            unit_price_rappen: product.price_rappen,
+            total_price_rappen: product.price_rappen,
+            description: product.description
+          })
+        })
+      }
+
+      if (discounts && discounts.length > 0) {
+        discounts.forEach(discount => {
+          paymentItems.push({
+            item_type: 'discount',
+            item_id: discount.id,
+            item_name: discount.name,
+            quantity: 1,
+            unit_price_rappen: -discount.discount_value || 0,
+            total_price_rappen: -discount.discount_value || 0,
+            description: discount.name || ''
+          })
+        })
+      }
+
+      await createPaymentItems(payment.id, paymentItems)
+
       return payment
     } finally {
       isProcessing.value = false
+    }
+  }
+
+  // Create standalone payment (without appointment)
+  const createStandalonePayment = async (
+    userId: string,
+    staffId: string,
+    products: Product[],
+    discounts: Discount[],
+    paymentMethod: string
+  ): Promise<Payment> => {
+    isProcessing.value = true
+
+    try {
+      // Calculate total
+      const subtotal = products.reduce((sum, product) => 
+        sum + (product.price_rappen), 0
+      )
+      
+      const totalDiscount = discounts.reduce((sum, discount) => 
+        sum + (discount.discount_value || 0), 0
+      )
+      
+      const total = subtotal - totalDiscount
+
+      // ✅ RUNDUNG: Alle Preise auf nächsten Franken runden
+      const roundedSubtotalRappen = roundToNearestFranken(subtotal)
+      const roundedTotalDiscountRappen = roundToNearestFranken(totalDiscount)
+      const roundedTotalRappen = roundToNearestFranken(total)
+
+      // Create payment record mit neuen Spalten
+      const paymentData: Partial<Payment> = {
+        user_id: userId,
+        staff_id: staffId,
+        appointment_id: undefined,
+        // ✅ Neue Spalten verwenden (mit gerundeten Preisen)
+        lesson_price_rappen: 0, // Keine Fahrstunde
+        products_price_rappen: roundedSubtotalRappen,
+        discount_amount_rappen: roundedTotalDiscountRappen,
+        subtotal_rappen: roundedSubtotalRappen,
+        total_amount_rappen: roundedTotalRappen,
+        // ✅ Alte Spalten für Kompatibilität (mit gerundeten Preisen)
+        amount_rappen: 0, // Keine Fahrstunde
+        admin_fee_rappen: 0, // Keine Admin-Gebühr
+        payment_method: paymentMethod as PaymentMethod,
+        payment_status: 'completed',
+        description: 'Produktkauf',
+        is_standalone: true,
+        metadata: {
+          products_count: products.length,
+          discounts_count: discounts.length,
+          price_breakdown: {
+            lesson_price_rappen: 0,
+            products_price_rappen: roundedSubtotalRappen,
+            discount_amount_rappen: roundedTotalDiscountRappen,
+            subtotal_rappen: roundedSubtotalRappen,
+            total_amount_rappen: roundedTotalRappen
+          }
+        }
+      }
+
+      const payment = await createPaymentRecord(paymentData)
+
+      // Create payment items
+      const paymentItems: Partial<PaymentItem>[] = []
+
+      // Add products
+      products.forEach(product => {
+        paymentItems.push({
+          item_type: 'product',
+          item_id: product.id,
+          item_name: product.name,
+          quantity: 1, // Standard quantity
+          unit_price_rappen: product.price_rappen,
+          total_price_rappen: product.price_rappen,
+          description: product.description
+        })
+      })
+
+      // Add discounts
+      discounts.forEach(discount => {
+        paymentItems.push({
+          item_type: 'discount',
+          item_id: discount.id,
+          item_name: discount.name,
+          quantity: 1,
+          unit_price_rappen: -discount.discount_value || 0,
+          total_price_rappen: -discount.discount_value || 0,
+          description: discount.name || ''
+        })
+      })
+
+      await createPaymentItems(payment.id, paymentItems)
+
+      return payment
+    } finally {
+      isProcessing.value = false
+    }
+  }
+
+  // Get payment details with items
+  const getPaymentDetails = async (paymentId: string) => {
+    try {
+      const { data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .select(`
+          *,
+          appointments (
+            id,
+            title,
+            start_time,
+            end_time,
+            duration_minutes,
+            type
+          ),
+          users!payments_user_id_fkey (
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('id', paymentId)
+        .single()
+
+      if (paymentError) throw paymentError
+
+      // Get payment items
+      const { data: items, error: itemsError } = await supabase
+        .from('payment_items')
+        .select('*')
+        .eq('payment_id', paymentId)
+
+      if (itemsError) throw itemsError
+
+      return {
+        ...payment,
+        items: items || []
+      }
+    } catch (error) {
+      console.error('Error getting payment details:', error)
+      throw error
     }
   }
 
@@ -279,71 +521,63 @@ export const usePayments = () => {
     }
   }
 
-  // Get payment history for appointment
-  const getPaymentHistory = async (appointmentId: string) => {
+  // Get available discounts using the new discounts composable
+  const getAvailableDiscounts = async (category?: string, amount?: number) => {
     try {
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('appointment_id', appointmentId)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      return data || []
+      if (category && category !== 'all') {
+        return await loadDiscountsByCategory(category)
+      } else {
+        await loadDiscounts()
+        return availableDiscounts.value.filter(d => 
+          !amount || d.min_amount_rappen <= amount
+        )
+      }
     } catch (error) {
-      console.error('Error getting payment history:', error)
+      console.error('Error getting available discounts:', error)
       return []
     }
   }
 
-  // Get payment method icon class
-  const getPaymentMethodIconClass = (methodCode: string): string => {
-    const classes: Record<string, string> = {
-      wallee: 'bg-blue-100 text-blue-600',
-      cash: 'bg-yellow-100 text-yellow-600',
-      invoice: 'bg-gray-100 text-gray-600',
-      card: 'bg-purple-100 text-purple-600',
-      twint: 'bg-blue-100 text-blue-600'
-    }
-    return classes[methodCode] || 'bg-gray-100 text-gray-600'
-  }
+  // Get products
+  const getProducts = async (category?: string) => {
+    try {
+      let query = supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
 
-  // Get payment button text
-  const getPaymentButtonText = (methodCode: string): string => {
-    const texts: Record<string, string> = {
-      wallee: 'Online bezahlen',
-      cash: 'Bar bezahlen',
-      invoice: 'Rechnung erstellen',
-      card: 'Mit Karte bezahlen',
-      twint: 'Mit Twint bezahlen'
+      if (category) {
+        query = query.eq('category', category)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error getting products:', error)
+      return []
     }
-    return texts[methodCode] || 'Bezahlen'
   }
 
   return {
     // State
+    isLoading: computed(() => isLoading.value),
     isLoadingPrice: computed(() => isLoadingPrice.value),
     isProcessing: computed(() => isProcessing.value),
-    calculatedPrice: computed(() => calculatedPrice.value),
     priceError: computed(() => priceError.value),
-    availablePaymentMethods: computed(() => availablePaymentMethods.value),
+    hasPriceError,
 
     // Methods
     calculatePrice,
-    getAppointmentCount,
     createPaymentRecord,
+    createPaymentItems,
     processCashPayment,
     processInvoicePayment,
+    createStandalonePayment,
+    getPaymentDetails,
     updateAppointmentPaymentStatus,
-    getPaymentHistory,
-
-    // Utilities
-    getPaymentMethodIconClass,
-    getPaymentButtonText,
-
-    // Reset
-    clearErrors: () => {
-      priceError.value = ''
-    }
+    getAvailableDiscounts,
+    getProducts
   }
 }

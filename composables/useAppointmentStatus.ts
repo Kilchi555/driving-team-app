@@ -26,6 +26,7 @@ const updateOverdueAppointments = async () => {
       .select('id, title, start_time, end_time, staff_id, status')
       .in('status', ['confirmed', 'scheduled', 'booked']) // 🆕 Alle relevanten Status
       .lt('end_time', now) // Termine die bereits vorbei sind
+      .is('deleted_at', null) // ✅ Soft Delete Filter
     
     if (findError) {
       throw new Error(`Error finding overdue appointments: ${findError.message}`)
@@ -87,6 +88,7 @@ const updateOverdueAppointments = async () => {
           updated_at: toLocalTimeString(new Date())
         })
         .eq('id', appointmentId)
+        .is('deleted_at', null) // ✅ Soft Delete Filter
         .select('id, title, status')
         .single()
 
@@ -152,6 +154,7 @@ const updateOverdueAppointments = async () => {
       let query = supabase
         .from('appointments')
         .select('status')
+        .is('deleted_at', null) // ✅ Soft Delete Filter
 
       if (staffId) {
         query = query.eq('staff_id', staffId)

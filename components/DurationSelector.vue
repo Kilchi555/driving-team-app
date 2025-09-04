@@ -9,12 +9,18 @@
         v-for="duration in formattedDurations"
         :key="duration.value"
         @click="selectDuration(duration.value)"
+        :disabled="props.isPastAppointment"
         :class="[
           'p-2 text-sm rounded border transition-colors',
-          modelValue === duration.value
-            ? 'bg-green-600 text-white border-green-600'
-            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+          Number(modelValue) === Number(duration.value)
+            ? props.isPastAppointment 
+              ? 'bg-green-400 text-white border-green-400 cursor-not-allowed' 
+              : 'bg-green-600 text-white border-green-600'
+            : props.isPastAppointment
+              ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
         ]"
+        :title="`modelValue: ${modelValue} (${typeof modelValue}), duration.value: ${duration.value} (${typeof duration.value}), match: ${Number(modelValue) === Number(duration.value)}`"
       >
         {{ duration.label }}
       </button>
@@ -39,8 +45,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { useDurationManager } from '~/composables/useDurationManager' 
+import { computed, watch, onMounted } from 'vue'
+import { useDurationManager } from '~/composables/useDurationManager'
+import { getSupabase } from '~/utils/supabase' 
 
 interface Props {
   modelValue: number
@@ -50,6 +57,9 @@ interface Props {
   pricePerMinute?: number
   adminFee?: number
   showDebugInfo?: boolean
+  isPastAppointment?: boolean
+  mode?: 'create' | 'edit' | 'view' // ✅ NEU: mode prop hinzugefügt
+  selectedStudent?: any // ✅ NEU: Für letzte Dauer-Abfrage
 }
 
 interface Emits {
@@ -61,7 +71,8 @@ const props = withDefaults(defineProps<Props>(), {
   pricePerMinute: 0,
   adminFee: 0,
   availableDurations: () => [],
-  showDebugInfo: false
+  showDebugInfo: false,
+  isPastAppointment: false
 })
 
 const emit = defineEmits<Emits>()
@@ -73,6 +84,38 @@ const {
   getDefaultDuration
 } = useDurationManager()
 
+// ✅ NEU: Funktion um die letzte Dauer eines Schülers zu laden
+const getLastStudentDuration = async (studentId: string): Promise<number | null> => {
+  try {
+    const supabase = getSupabase()
+    
+    // Suche nach dem letzten Termin des Schülers
+    const { data: lastAppointment, error } = await supabase
+      .from('appointments')
+      .select('duration_minutes')
+      .eq('user_id', studentId)
+      .order('start_time', { ascending: false })
+      .limit(1)
+      .single()
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 = keine Ergebnisse
+      throw error
+    }
+    
+    if (lastAppointment && lastAppointment.duration_minutes) {
+      console.log('✅ Last student duration found:', lastAppointment.duration_minutes)
+      return lastAppointment.duration_minutes
+    }
+    
+    console.log('ℹ️ No previous appointments found for student')
+    return null
+    
+  } catch (err) {
+    console.error('❌ Error loading last student duration:', err)
+    return null
+  }
+}
+
 // Computed
 const totalPrice = computed(() => {
   return props.modelValue * props.pricePerMinute
@@ -80,36 +123,116 @@ const totalPrice = computed(() => {
 
 const formattedDurations = computed(() => {
   // ✅ Verwende Props-Dauern falls verfügbar, sonst Composable
-  const durations = props.availableDurations?.length > 0 
-    ? props.availableDurations 
-    : [] // Fallback auf leer
-
-  console.log('🎯 DurationSelector - Using durations from props:', durations)
+  let durations = props.availableDurations || []
   
-  return durations.map(duration => ({
+  // ✅ ROBUSTE BEHANDLUNG: Stelle sicher, dass wir immer ein Array haben
+  if (typeof durations === 'string') {
+    try {
+      // Versuche JSON zu parsen falls es ein JSON-String ist
+      const parsed = JSON.parse(durations)
+      durations = Array.isArray(parsed) ? parsed : [parsed]
+    } catch {
+      // Falls kein JSON, versuche Komma-getrennte Werte zu parsen
+      durations = durations.split(',').map((d: string) => parseInt(d.trim(), 10)).filter((d: number) => !isNaN(d))
+    }
+  } else if (!Array.isArray(durations)) {
+    durations = [durations].filter(d => d !== null && d !== undefined)
+  }
+  
+  // ✅ NEU: Behandle verschachtelte Arrays (z.B. [ [ 45, 60, 90 ] ])
+  if (Array.isArray(durations) && durations.length > 0 && Array.isArray(durations[0])) {
+    durations = durations.flat()
+  }
+  
+  // ✅ Stelle sicher, dass alle Werte Zahlen sind
+  durations = durations.map(d => {
+    const num = parseInt(d.toString(), 10)
+    return isNaN(num) ? 45 : num
+  }).filter(d => d > 0)
+  
+  const result = durations.map(duration => ({
     value: duration,
     label: duration >= 120 
       ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
       : `${duration}min`
   }))
+  
+  console.log('🔄 formattedDurations computed:', {
+    availableDurations: props.availableDurations,
+    processedDurations: durations,
+    result: result,
+    modelValue: props.modelValue,
+    hasMatchingValue: result.some(d => d.value === props.modelValue)
+  })
+  
+  return result
 })
 
 // Methods
 const selectDuration = (duration: number) => {
   console.log('🔄 Duration selected:', duration)
+  
+  // ❌ Vergangene Termine können nicht mehr geändert werden
+  if (props.isPastAppointment) {
+    console.log('🚫 Cannot change duration for past appointment')
+    return
+  }
+  
   emit('update:modelValue', duration)
   emit('duration-changed', duration)
 }
 
 // Watchers
-watch(() => props.availableDurations, (newDurations) => {
-  console.log('🔄 DurationSelector - Available durations changed:', newDurations)
+watch(() => props.availableDurations, async (newDurations) => {
+  console.log('🔄 DurationSelector - Available durations changed:', newDurations, 'Mode:', props.mode)
   
-  // Nur prüfen ob aktuelle Auswahl noch gültig ist
-  if (newDurations.length > 0 && !newDurations.includes(props.modelValue)) {
-    console.log('⏱️ Auto-setting duration to first available:', newDurations[0])
-    emit('update:modelValue', newDurations[0])
-    emit('duration-changed', newDurations[0])
+  // ✅ KORRIGIERT: Verwende formattedDurations für die Prüfung
+  const durations = formattedDurations.value.map(d => d.value)
+  
+  // ✅ KORRIGIERT: Immer eine Dauer setzen wenn verfügbar und keine gesetzt ist
+  if (durations.length > 0 && (!props.modelValue || !durations.includes(props.modelValue))) {
+    const isEditMode = props.mode === 'edit' || props.mode === 'view'
+    
+    if (!isEditMode) {
+      // Fallback: Erste verfügbare Dauer verwenden
+      console.log('⏱️ Auto-setting duration to first available (CREATE mode):', durations[0])
+      emit('update:modelValue', durations[0])
+      emit('duration-changed', durations[0])
+    } else {
+      console.log('📝 EDIT/VIEW mode detected - keeping existing duration:', props.modelValue)
+    }
+  }
+}, { immediate: true })
+
+// ✅ NEU: Watcher für selectedStudent - lade letzte Dauer wenn sich der Schüler ändert
+watch(() => props.selectedStudent, async (newStudent) => {
+  // ✅ KORRIGIERT: Immer im CREATE-Modus reagieren, auch wenn bereits eine Dauer gesetzt ist
+  if (newStudent?.id && props.mode === 'create' && props.availableDurations.length > 0) {
+    try {
+      console.log('👤 Student changed, loading last duration for:', newStudent.first_name)
+      const lastDuration = await getLastStudentDuration(newStudent.id)
+      
+      // ✅ KORRIGIERT: Verwende formattedDurations für die Prüfung
+      const durations = formattedDurations.value.map(d => d.value)
+      
+      if (lastDuration && durations.includes(lastDuration)) {
+        console.log('✅ Setting duration to student\'s last used duration:', lastDuration)
+        emit('update:modelValue', lastDuration)
+        emit('duration-changed', lastDuration)
+      } else if (durations.length > 0) {
+        console.log('⚠️ Last duration not available, using first available:', durations[0])
+        emit('update:modelValue', durations[0])
+        emit('duration-changed', durations[0])
+      }
+    } catch (err) {
+      console.error('❌ Error loading last student duration:', err)
+      // Fallback zur ersten verfügbaren Dauer
+      const durations = formattedDurations.value.map(d => d.value)
+      if (durations.length > 0) {
+        emit('update:modelValue', durations[0])
+        emit('duration-changed', durations[0])
+      }
+    }
   }
 }, { immediate: true })
 </script>

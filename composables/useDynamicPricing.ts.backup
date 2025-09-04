@@ -165,7 +165,9 @@ export const usePricing = () => {
         .from('appointments')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .in('status', ['completed', 'confirmed'])
+        .is('deleted_at', null) // ✅ Soft Delete Filter
+        .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
+        .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
 
       if (error) {
         console.error('❌ Error counting appointments:', error)

@@ -18,6 +18,7 @@ export type Database = {
           id: string
           is_paid: boolean
           location_id: string
+          custom_location_address: any | null
           price_per_minute: number
           staff_id: string
           start_time: string
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           is_paid: boolean
           location_id: string
+          custom_location_address?: any | null
           price_per_minute: number
           staff_id: string
           start_time: string
@@ -50,6 +52,7 @@ export type Database = {
           id?: string
           is_paid?: boolean
           location_id?: string
+          custom_location_address?: any | null
           price_per_minute?: number
           staff_id?: string
           start_time?: string
@@ -105,25 +108,37 @@ export type Database = {
       }
       locations: {
         Row: {
-          adress: string | null
+          address: string | null
           created_at: string
           id: string
           name: string
           staff_id: string
+          latitude: number | null
+          longitude: number | null
+          location_type: string | null
+          is_active: boolean | null
         }
         Insert: {
-          adress?: string | null
+          address?: string | null
           created_at?: string
           id?: string
           name: string
           staff_id: string
+          latitude?: number | null
+          longitude?: number | null
+          location_type?: string | null
+          is_active?: boolean | null
         }
         Update: {
-          adress?: string | null
+          address?: string | null
           created_at?: string
           id?: string
           name?: string
           staff_id?: string
+          latitude?: number | null
+          longitude?: number | null
+          location_type?: string | null
+          is_active?: boolean | null
         }
         Relationships: [
           {

@@ -335,7 +335,14 @@ const calculatePrices = async () => {
     }
     
     const fallbackBasePrice = (categoryPricing[props.category] || 95) * (props.duration / 45)
-    const fallbackAdminFee = props.appointmentNumber > 1 ? getAdminFee(props.category) : 0
+    // ✅ KORRIGIERT: Admin-Fee nur beim 2. Termin pro Kategorie (außer bei Motorrädern)
+    const motorcycleCategories = ['A', 'A1', 'A35kW']
+    const isMotorcycle = motorcycleCategories.includes(props.category)
+    
+    let fallbackAdminFee = 0
+    if (!isMotorcycle && props.appointmentNumber === 2) {
+      fallbackAdminFee = getAdminFee(props.category)
+    }
     
     calculatedPriceData.value = {
       base_price_rappen: Math.round(fallbackBasePrice * 100),

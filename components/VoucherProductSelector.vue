@@ -5,7 +5,7 @@
     <div v-if="showVoucherInput" class="border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50">
       <div class="flex items-center justify-between mb-4">
         <h4 class="text-lg font-medium text-blue-900 flex items-center">
-          Gutschein erstellen
+          🎁 Gutschein erstellen
         </h4>
         <button
           @click="cancelVoucher"
@@ -54,7 +54,18 @@
           />
         </div>
 
-        <!-- Gültigkeitsdauer ENTFERNT -->
+        <!-- Empfänger (optional) -->
+        <div>
+          <label class="block text-sm font-medium text-blue-800 mb-2">
+            Empfänger (optional)
+          </label>
+          <input
+            v-model="voucherRecipient"
+            type="text"
+            placeholder="z.B. Max Mustermann"
+            class="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
 
         <!-- Buttons -->
         <div class="flex justify-end space-x-3 pt-2">
@@ -69,7 +80,7 @@
             :disabled="!isValidAmount"
             class="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Gutschein hinzufügen
+            🎁 Gutschein hinzufügen
           </button>
         </div>
       </div>
@@ -81,7 +92,7 @@
         @click="openVoucherInput"
         class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 font-medium shadow-md transition-all"
       >
-        Gutschein erstellen
+        🎁 Gutschein erstellen
       </button>
       <p class="text-xs text-gray-500 mt-2">
         Erstellen Sie einen Gutschein mit individuellem Betrag
@@ -136,6 +147,7 @@ const emit = defineEmits<{
     price_rappen: number
     category: string
     is_voucher: boolean
+    recipient?: string
   }]
   'voucher-selected': [voucher: any]
 }>()
@@ -144,6 +156,7 @@ const emit = defineEmits<{
 const showVoucherInput = ref(false)
 const voucherAmount = ref<number | null>(null)
 const voucherDescription = ref('')
+const voucherRecipient = ref('')
 
 // Computed
 const isValidAmount = computed(() => {
@@ -156,12 +169,14 @@ const openVoucherInput = () => {
   // Reset form
   voucherAmount.value = null
   voucherDescription.value = ''
+  voucherRecipient.value = ''
 }
 
 const cancelVoucher = () => {
   showVoucherInput.value = false
   voucherAmount.value = null
   voucherDescription.value = ''
+  voucherRecipient.value = ''
 }
 
 const createVoucher = () => {
@@ -169,14 +184,16 @@ const createVoucher = () => {
 
   const amount = voucherAmount.value!
   const description = voucherDescription.value.trim() || `Gutschein über CHF ${amount.toFixed(2)}`
+  const recipient = voucherRecipient.value.trim()
   
   // Gutschein-Daten erstellen
   const voucherData = {
-    name: `Gutschein CHF ${amount.toFixed(2)}`,
+    name: recipient ? `Gutschein für ${recipient} - CHF ${amount.toFixed(2)}` : `Gutschein CHF ${amount.toFixed(2)}`,
     description: description,
     price_rappen: Math.round(amount * 100),
     category: 'Gutscheine',
-    is_voucher: true
+    is_voucher: true,
+    recipient: recipient || undefined
   }
 
   console.log('🎁 Creating voucher:', voucherData)
@@ -187,6 +204,7 @@ const createVoucher = () => {
   showVoucherInput.value = false
   voucherAmount.value = null
   voucherDescription.value = ''
+  voucherRecipient.value = ''
 }
 
 const addExistingVoucher = (voucher: any) => {

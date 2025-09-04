@@ -70,8 +70,16 @@
               v-if="showDropdown && filteredCriteria.length > 0"
               class="criteria-dropdown absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg mt-1 shadow-lg z-50 max-h-60 overflow-y-auto"
             >
+                          <!-- Gruppierte Kriterien nach Kategorien -->
+            <template v-for="(categoryGroup, categoryName) in groupedCriteria" :key="categoryName">
+              <!-- Kategorie-Überschrift -->
+              <div class="px-3 py-3 bg-blue-50 border-b border-blue-200">
+                <h3 class="text-base font-bold text-blue-800">{{ categoryName }}</h3>
+              </div>
+              
+              <!-- Kriterien dieser Kategorie -->
               <div
-                v-for="criteria in filteredCriteria"
+                v-for="criteria in categoryGroup"
                 :key="criteria.id"
                 @click="selectCriteria(criteria)"
                 class="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
@@ -79,13 +87,10 @@
                 <div class="flex items-center justify-between">
                   <div>
                     <h4 class="font-medium text-gray-900">{{ criteria.name }}</h4>
-                    <p class="text-sm text-gray-600">{{ criteria.category_name }}</p>
                   </div>
-                  <span v-if="criteria.short_code" class="text-xs bg-gray-100 px-2 py-1 rounded">
-                    {{ criteria.short_code }}
-                  </span>
                 </div>
               </div>
+            </template>
             </div>
           </div>
 
@@ -191,6 +196,8 @@
         </div>
       </div>
     </div>
+    
+
   </div>
 </template>
 
@@ -229,6 +236,10 @@ const error = ref<string | null>(null)
 const showDeleteConfirmation = ref(false)
 
 
+
+
+
+
 // Search & Dropdown
 const searchQuery = ref('')
 const showDropdown = ref(false)
@@ -263,6 +274,21 @@ const filteredCriteria = computed(() => {
      criteria.category_name?.toLowerCase().includes(query) ||
      criteria.short_code?.toLowerCase().includes(query))
   )
+})
+
+// Gruppierte Kriterien nach Kategorien
+const groupedCriteria = computed(() => {
+  const groups: Record<string, any[]> = {}
+  
+  filteredCriteria.value.forEach(criteria => {
+    const categoryName = criteria.category_name || 'Sonstiges'
+    if (!groups[categoryName]) {
+      groups[categoryName] = []
+    }
+    groups[categoryName].push(criteria)
+  })
+  
+  return groups
 })
 
 const isValid = computed(() => {
@@ -343,33 +369,32 @@ const loadAllCriteria = async () => {
   error.value = null
   
   try {
-    // Erste Abfrage: Hole alle category_criteria für die Kategorie
-    const { data: categoryCriteria, error: ccError } = await supabase
-      .from('category_criteria')
-      .select('evaluation_criteria_id, evaluation_category_id, driving_category, is_required, display_order')
-      .eq('driving_category', props.studentCategory)
+    // Neue Abfrage: Hole alle evaluation_criteria für die Fahrkategorie
+    const { data: criteria, error: cError } = await supabase
+      .from('evaluation_criteria')
+      .select(`
+        id, 
+        name, 
+        description, 
+        is_active,
+        display_order,
+        category_id,
+        driving_categories
+      `)
+      .eq('is_active', true)
+      .contains('driving_categories', [props.studentCategory])
 
-    if (ccError) throw ccError
+    if (cError) throw cError
 
-    if (!categoryCriteria || categoryCriteria.length === 0) {
+    if (!criteria || criteria.length === 0) {
       error.value = 'Keine Bewertungskriterien gefunden für Kategorie ' + props.studentCategory
       return
     }
 
-    // Extrahiere alle IDs für weitere Abfragen
-    const criteriaIds = categoryCriteria.map(cc => cc.evaluation_criteria_id)
-    const categoryIds = [...new Set(categoryCriteria.map(cc => cc.evaluation_category_id))]
+    // Extrahiere alle Kategorie-IDs
+    const categoryIds = [...new Set(criteria.map(c => c.category_id).filter(Boolean))]
 
-    // Zweite Abfrage: Hole evaluation_criteria
-    const { data: criteria, error: cError } = await supabase
-      .from('evaluation_criteria')
-      .select('id, name, description, short_code, is_active')
-      .in('id', criteriaIds)
-      .eq('is_active', true)
-
-    if (cError) throw cError
-
-    // Dritte Abfrage: Hole evaluation_categories
+    // Hole evaluation_categories
     const { data: categories, error: catError } = await supabase
       .from('evaluation_categories')
       .select('id, name, color, display_order, is_active')
@@ -378,26 +403,20 @@ const loadAllCriteria = async () => {
 
     if (catError) throw catError
 
-    // Debug: Test der ersten Verknüpfung
-    const testCc = categoryCriteria[0]
-    const testCriterion = criteria?.find(c => c.id === testCc.evaluation_criteria_id)
-    const testCategory = categories?.find(cat => cat.id === testCc.evaluation_category_id)
-
     // Kombiniere alle Daten
-    allCriteria.value = categoryCriteria.map(cc => {
-      const criterion = criteria?.find(c => c.id === cc.evaluation_criteria_id)
-      const category = categories?.find(cat => cat.id === cc.evaluation_category_id)
+    allCriteria.value = criteria.map(criterion => {
+      const category = categories?.find(cat => cat.id === criterion.category_id)
       
       return {
-        id: criterion?.id || '',
-        name: criterion?.name || '',
-        description: criterion?.description || '',
-        short_code: criterion?.short_code || '',
+        id: criterion.id || '',
+        name: criterion.name || '',
+        description: criterion.description || '',
+        short_code: '', // Nicht mehr in der neuen Struktur vorhanden
         category_name: category?.name || '',
         category_color: category?.color || '#gray',
         category_order: category?.display_order || 0,
-        criteria_order: cc.display_order || 0,
-        is_required: cc.is_required || false,
+        criteria_order: criterion.display_order || 0,
+        is_required: false, // Wird nicht mehr verwendet, aber für Kompatibilität beibehalten
         min_rating: 1,
         max_rating: 6
       }
@@ -411,7 +430,10 @@ const loadAllCriteria = async () => {
       return a.criteria_order - b.criteria_order
     })
 
+    console.log('✅ Loaded criteria with new system:', allCriteria.value.length, 'criteria')
+
   } catch (err: any) {
+    console.error('❌ Error loading criteria:', err)
     error.value = err.message || 'Fehler beim Laden der Bewertungskriterien'
   } finally {
     isLoading.value = false
@@ -531,6 +553,8 @@ const saveEvaluation = async () => {
 
     console.log('✅ EvaluationModal - evaluations saved successfully via composable')
     
+
+    
     // Emit saved event
     emit('saved', props.appointment.id)
     
@@ -544,16 +568,17 @@ const saveEvaluation = async () => {
 const loadStudentEvaluationHistory = async () => {
   console.log('🔍 DEBUG: Loading student evaluation history')
   console.log('🔍 DEBUG: student ID:', props.appointment?.user_id)
+  console.log('🔍 DEBUG: current category:', props.studentCategory)
   if (!props.appointment?.user_id) {
     console.log('❌ No student ID')
     return
   }
 
   try {
-    // Schritt 1: Hole alle Termine für diesen Schüler MIT start_time
+    // Schritt 1: Hole alle Termine für diesen Schüler MIT start_time UND type
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
-      .select('id, start_time')
+      .select('id, start_time, type')
       .eq('user_id', props.appointment.user_id)
       .order('start_time', { ascending: false }) // Neueste Termine zuerst
 
@@ -563,13 +588,15 @@ const loadStudentEvaluationHistory = async () => {
     console.log('🔍 DEBUG: found appointments for student:', appointmentIds.length)
     if (appointmentIds.length === 0) return
 
-    // Erstelle ein Mapping von appointment_id zu start_time
+    // Erstelle ein Mapping von appointment_id zu start_time und type
     const appointmentDateMap = new Map()
+    const appointmentTypeMap = new Map()
     appointments?.forEach(apt => {
       appointmentDateMap.set(apt.id, apt.start_time)
+      appointmentTypeMap.set(apt.id, apt.type)
     })
 
-    // Schritt 2: Hole ALLE Bewertungen für diese Termine
+    // Schritt 2: Hole Bewertungen für diese Termine
     const { data, error: supabaseError } = await supabase
       .from('notes')
       .select(`
@@ -584,9 +611,19 @@ const loadStudentEvaluationHistory = async () => {
     console.log('🔍 DEBUG: found historical notes:', data?.length)
     if (supabaseError) throw supabaseError
 
+    // Schritt 3: Filtere Notes nach Kategorie - nur Notes von Terminen der gleichen Kategorie
+    const filteredNotes = data?.filter(note => {
+      const appointmentType = appointmentTypeMap.get(note.appointment_id)
+      const isSameCategory = appointmentType === props.studentCategory
+      console.log(`🔍 Note ${note.evaluation_criteria_id} from appointment ${note.appointment_id}: type=${appointmentType}, current=${props.studentCategory}, include=${isSameCategory}`)
+      return isSameCategory
+    }) || []
+
+    console.log('🔍 DEBUG: filtered notes for current category:', filteredNotes.length)
+
     // Gruppiere Bewertungen nach Kriterien (zeige die neueste pro Kriterium)
     const latestByCriteria = new Map()
-    data?.forEach(note => {
+    filteredNotes.forEach(note => {
       const criteriaId = note.evaluation_criteria_id
       const appointmentDate = appointmentDateMap.get(note.appointment_id)
       
@@ -647,6 +684,10 @@ const formatLessonDate = (criteriaId: string) => {
 }
 
 
+
+
+
+
 // Click outside or escape key to close dropdown
 const handleClickOutside = (event: Event) => {
   const dropdown = document.querySelector('.criteria-dropdown')
@@ -695,6 +736,10 @@ watch(() => props.isOpen, (isOpen) => {
     criteriaNotes.value = {}
     error.value = null
     criteriaTimestamps.value = {}
+    
+
+    
+
     
     // Clean up event listeners
     document.removeEventListener('click', handleClickOutside)

@@ -1,460 +1,380 @@
 <!-- pages/shop.vue -->
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 p-4">
-    <div class="max-w-2xl mx-auto">
+  <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 p-2 md:p-4">
+    <div class="max-w-2xl mx-auto w-full">
       
-      <!-- Header -->
-      <div class="bg-white rounded-t-xl shadow-2xl">
-        <div class="bg-gray-200 text-gray-700 p-6 rounded-t-xl">
-          <div class="text-center">
-            <img src="public/images/Driving_Team_Logo.png" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
-            <h1 class="text-2xl font-bold">Registrierung</h1>
-          </div>
-        </div>
-
-        <!-- Navigation Back -->
-        <div class="px-6 py-3 bg-gray-50 border-b">
-          <button
-            @click="goBack"
-            class="text-gray-600 hover:text-gray-800 flex items-center text-sm"
-          >
-            ← Zurück zur Auswahl
-          </button>
-        </div>
-      </div>
-
-      <!-- Progress Steps -->
-      <div class="bg-white border-b px-6 py-4">
-        <div class="flex items-center justify-center space-x-4">
-          <div :class="currentStep >= 1 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
-               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
-            1
-          </div>
-          <div class="h-1 w-12 bg-gray-300">
-            <div v-if="currentStep >= 2" class="h-full bg-green-500 transition-all duration-300"></div>
-          </div>
-          <div :class="currentStep >= 2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
-               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
-            2
-          </div>
-          <div class="h-1 w-12 bg-gray-300">
-            <div v-if="currentStep >= 3" class="h-full bg-green-500 transition-all duration-300"></div>
-          </div>
-          <div :class="currentStep >= 3 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
-               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
-            3
-          </div>
-        </div>
-        <div class="text-center mt-2">
-          <h4 class=" text-gray-600 font-bold">
-            <span v-if="currentStep === 1">Kontaktdaten</span>
-            <span v-if="currentStep === 2">Produktauswahl</span>
-            <span v-if="currentStep === 3">Bezahlung</span>
-          </h4>
-        </div>
-      </div>
-
-      <!-- Form Content -->
-          <!-- SCHRITT 1: KONTAKTDATEN -->
-          <div v-if="currentStep === 1">
-            <div class="space-y-4 bg-white p-2">
-              <!-- Name -->
-              <div class="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Vorname *
-                  </label>
-                  <input
-                    v-model="formData.firstName"
-                    type="text"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Max"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Nachname *
-                  </label>
-                  <input
-                    v-model="formData.lastName"
-                    type="text"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Mustermann"
-                  />
-                </div>
-              </div>
-
-              <!-- Email -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  E-Mail-Adresse *
-                </label>
-                <input
-                  v-model="formData.email"
-                  type="email"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="max@example.com"
-                />
-              </div>
-
-              <!-- Telefon -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Telefonnummer *
-                </label>
-                <input
-                  v-model="formData.phone"
-                  type="tel"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="+41 79 123 45 67"
-                />
-              </div>
-
-              <!-- Adresse -->
-              <div class="grid md:grid-cols-4 gap-4">
-                <div class="md:col-span-3">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Strasse *
-                  </label>
-                  <input
-                    v-model="formData.street"
-                    type="text"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Musterstrasse"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Nr. *
-                  </label>
-                  <input
-                    v-model="formData.streetNumber"
-                    type="text"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="123"
-                  />
-                </div>
-              </div>
-
-              <!-- PLZ & Ort -->
-              <div class="grid md:grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    PLZ *
-                  </label>
-                  <input
-                    v-model="formData.zip"
-                    type="text"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="8000"
-                  />
-                </div>
-                <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Ort *
-                  </label>
-                  <input
-                    v-model="formData.city"
-                    type="text"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Zürich"
-                  />
-                </div>
-              </div>
-
-              <!-- Führerschein-Kategorie -->
-              <div>
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Kategorie</h3>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-gray-400">
-                  <label v-for="category in availableCategories" :key="category.code"
-                         class="flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer hover:border-green-500 transition-colors text-center"
-                         :class="formData.category === category.code ? 'border-green-500 bg-green-50' : 'border-gray-200'">
-                    <input
-                      v-model="formData.category"
-                      type="radio"
-                      :value="category.code"
-                      class="sr-only"
-                    />
-                    <span class="text-lg font-bold">{{ category.code }}</span>
-                    <span class="text-xs text-gray-600 mt-1">{{ category.name }}</span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Bemerkungen -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Bemerkungen (optional)
-                </label>
-                <textarea
-                  v-model="formData.notes"
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Spezielle Wünsche, Zeitpräferenzen, etc."
-                ></textarea>
-              </div>
+              <!-- Header -->
+        <div class="bg-white rounded-t-xl shadow-2xl">
+          <div class="bg-gray-200 text-gray-700 p-4 md:p-6 rounded-t-xl">
+            <div class="text-center">
+              <img src="public/images/Driving_Team_Logo.png" class="h-10 md:h-12 w-auto mx-auto mb-2 md:mb-3" alt="Driving Team">
+              <h1 class="text-xl md:text-2xl font-bold">Shop</h1>
             </div>
           </div>
 
-          <!-- SCHRITT 2: PRODUKTAUSWAHL -->
-          <div v-if="currentStep === 2">
-            <div class="space-y-6 bg-white p-2">
+          <!-- Navigation Back -->
+          <div class="px-3 md:px-6 py-2 md:py-3 bg-gray-50 border-b">
+            <button
+              @click="goBack"
+              class="text-gray-600 hover:text-gray-800 flex items-center text-sm w-full md:w-auto justify-center md:justify-start"
+            >
+              ← Zurück zur Auswahl
+            </button>
+          </div>
 
-           <!-- Produktauswahl -->
-            <div>
-              <!-- Ausgewählte Produkte anzeigen -->
-              <div v-if="hasProducts" class="space-y-3 mb-6">
-                <h3 class="text-md font-medium text-gray-900">📦 Ihre Auswahl:</h3>
+        <!-- Step Content -->
+        <div class="bg-white p-3 md:p-6">
+          <!-- SCHRITT 1: PRODUKTÜBERSICHT & WARENKORB -->
+          <div v-if="currentStep === 1">
+            <div class="space-y-6">
+              <!-- Willkommensnachricht -->
+              <div class="text-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-2">Willkommen im Driving Team Shop!</h2>
+                <p class="text-gray-600">Wählen Sie Ihre gewünschten Produkte aus und legen Sie sie in den Warenkorb.</p>
+              </div>
+
+              <!-- Produktübersicht -->
+              <div>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">📦 Verfügbare Produkte</h3>
                 
                 <!-- Produktliste -->
-                <div v-for="item in selectedProducts" :key="item.product.id"
-                    class="relative flex justify-between items-center p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div class="flex-1">
-                    <div class="font-medium text-green-800">{{ item.product.name }}</div>
-                    <div class="text-sm text-green-700">CHF {{ (item.product.price_rappen / 100).toFixed(2) }} × {{ item.quantity }}</div>
-                  </div>
-                  <div class="flex items-center space-x-3">
-                    <!-- Quantity Controls und Price vertikal angeordnet -->
-                    <div class="flex flex-col items-center space-y-2">
-                      <!-- Quantity Controls oben - enger zusammen -->
-                      <div class="flex items-center space-x-1">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div v-for="product in availableProducts" :key="product.id" 
+                       class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start mb-3">
+                      <h4 class="font-medium text-gray-900">{{ product.name }}</h4>
+                      <span class="text-lg font-bold text-green-600">CHF {{ (product.price_rappen / 100).toFixed(2) }}</span>
+                    </div>
+                    <p v-if="product.description" class="text-sm text-gray-600 mb-3">{{ product.description }}</p>
+                    
+                    <!-- Menge hinzufügen -->
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2">
                         <button
-                          @click="updateQuantity(item.product.id, item.quantity - 1)"
-                          class="w-7 h-7 flex items-center justify-center bg-white border border-green-300 rounded text-green-600 hover:bg-green-100"
+                          @click="updateQuantity(product.id, getProductQuantity(product.id) - 1)"
+                          :disabled="getProductQuantity(product.id) <= 0"
+                          class="w-8 h-8 flex items-center justify-center bg-gray-100 border border-gray-300 rounded text-gray-600 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           −
                         </button>
-                        <span class="w-6 text-center font-medium text-sm">{{ item.quantity }}</span>
+                        <span class="w-8 text-center font-medium">{{ getProductQuantity(product.id) }}</span>
                         <button
-                          @click="updateQuantity(item.product.id, item.quantity + 1)"
-                          class="w-7 h-7 flex items-center justify-center bg-white border border-green-300 rounded text-green-600 hover:bg-green-100"
+                          @click="updateQuantity(product.id, getProductQuantity(product.id) + 1)"
+                          class="w-8 h-8 flex items-center justify-center bg-green-100 border border-green-300 rounded text-green-600 hover:bg-green-200"
                         >
                           +
                         </button>
                       </div>
-                      <!-- Total Price unten -->
-                      <div class="text-lg font-bold text-green-800 text-center">
-                        CHF {{ item.total.toFixed(2) }}
-                      </div>
+                      <span class="text-sm text-gray-500">
+                        {{ getProductQuantity(product.id) > 0 ? `CHF ${(getProductQuantity(product.id) * product.price_rappen / 100).toFixed(2)}` : '' }}
+                      </span>
                     </div>
                   </div>
-                  <!-- Remove Button - absolut positioniert unten rechts -->
-                  <button
-                    @click="removeProduct(item.product.id)"
-                    class="absolute top-1 left-1 text-red-500 hover:text-red-700 w-6 h-6 flex items-center justify-center text-sm"
-                  >
-                    ✕
-                  </button>
                 </div>
+
+                <!-- Warenkorb Zusammenfassung -->
+                <div v-if="hasProducts" class="bg-blue-50 rounded-lg p-4 border-2 border-blue-300">
+                  <h4 class="text-lg font-medium text-blue-900 mb-3">🛒 Ihr Warenkorb</h4>
+                  
+                  <!-- Produktliste im Warenkorb -->
+                  <div class="space-y-2 mb-4">
+                    <div v-for="item in selectedProducts" :key="item.product.id"
+                         class="flex justify-between items-center text-sm">
+                      <span class="text-blue-800">{{ item.product.name }} × {{ item.quantity }}</span>
+                      <span class="font-medium text-blue-800">CHF {{ item.total.toFixed(2) }}</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Gesamtpreis -->
+                  <div class="flex justify-between items-center pt-3 border-t border-blue-200">
+                    <span class="text-lg font-bold text-blue-900">Gesamtpreis:</span>
+                    <span class="text-xl font-bold text-blue-900">CHF {{ totalPrice.toFixed(2) }}</span>
+                  </div>
+                </div>
+
+                <!-- Gutschein erstellen -->
+                <div class="mt-6">
+                  <VoucherProductSelector
+                    :existing-vouchers="availableVouchers"
+                    @voucher-created="handleVoucherCreated"
+                    @voucher-selected="handleVoucherSelected"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCHRITT 2: KUNDENDATEN -->
+          <div v-if="currentStep === 2">
+            <div class="space-y-6">
+              <!-- Bestellübersicht -->
+              <div v-if="hasProducts" class="bg-blue-50 rounded-lg p-4 border-2 border-blue-300 mb-6">
+                <h3 class="text-lg font-medium text-blue-900 mb-3">📦 Ihre Bestellung</h3>
+                
+                <!-- Produktliste -->
+                <div class="space-y-2 mb-4">
+                  <div v-for="item in selectedProducts" :key="item.product.id"
+                       class="flex justify-between items-center text-sm">
+                    <span class="text-blue-800">{{ item.product.name }} × {{ item.quantity }}</span>
+                    <span class="font-medium text-blue-800">CHF {{ item.total.toFixed(2) }}</span>
+                  </div>
                 </div>
                 
-                <!-- Gesamtpreis (AUSSERHALB der v-for Schleife!) -->
-                <div class="flex justify-between items-center p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
-                  <span class="text-lg font-bold text-blue-900">💳 Gesamtpreis</span>
+                <!-- Gesamtpreis -->
+                <div class="flex justify-between items-center pt-3 border-t border-blue-200">
+                  <span class="text-lg font-bold text-blue-900">Gesamtpreis:</span>
                   <span class="text-xl font-bold text-blue-900">CHF {{ totalPrice.toFixed(2) }}</span>
                 </div>
               </div>
 
+              <!-- Kontaktdaten Formular -->
+              <div>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">👤 Ihre Kontaktdaten</h3>
+                
+                <!-- Name -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Vorname *
+                    </label>
+                    <input
+                      v-model="formData.firstName"
+                      type="text"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder="Max"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Nachname *
+                    </label>
+                    <input
+                      v-model="formData.lastName"
+                      type="text"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder="Muster"
+                    />
+                  </div>
+                </div>
 
-                  
-                <!-- Produkt-Auswahl Button -->
-                <div class="text-center">
-                  <button
-                    @click="showProductSelector = true"
-                    class="px-6 py-3 mb-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                  >
-                    {{ hasProducts ? 'Weitere Produkte hinzufügen' : 'Produkte auswählen' }}
-                  </button>
+                <!-- Contact -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      E-Mail *
+                    </label>
+                    <input
+                      v-model="formData.email"
+                      type="email"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder="max@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Telefon *
+                    </label>
+                    <input
+                      v-model="formData.phone"
+                      type="tel"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder="+41 79 123 45 67"
+                    />
+                  </div>
+                </div>
+
+                <!-- Address -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Straße *
+                    </label>
+                    <input
+                      v-model="formData.street"
+                      type="text"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder="Musterstraße"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Hausnummer *
+                    </label>
+                    <input
+                      v-model="formData.streetNumber"
+                      type="text"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder="123"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      PLZ *
+                    </label>
+                    <input
+                      v-model="formData.zip"
+                      type="text"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder="8000"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Ort *
+                    </label>
+                    <input
+                      v-model="formData.city"
+                      type="text"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder="Zürich"
+                    />
+                  </div>
+                </div>
+
+                <!-- Führerschein-Kategorie -->
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Führerschein-Kategorie *
+                  </label>
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <label v-for="category in availableCategories" :key="category.code"
+                           class="flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer hover:border-green-500 transition-colors text-center"
+                           :class="formData.category === category.code ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600'">
+                      <input
+                        v-model="formData.category"
+                        type="radio"
+                        :value="category.code"
+                        class="sr-only"
+                      />
+                      <span class="text-lg font-bold">{{ category.code }}</span>
+                      <span class="text-xs mt-1">{{ category.name }}</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Bemerkungen -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Bemerkungen (optional)
+                  </label>
+                  <textarea
+                    v-model="formData.notes"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Spezielle Wünsche, Zeitpräferenzen, etc."
+                  ></textarea>
                 </div>
               </div>
             </div>
-
-            <!-- Produkt-Auswahl Modal -->
-              <div v-if="showProductSelector" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-                  
-                  <!-- Header (feste Höhe) mit X-Button -->
-                  <div class="p-2 border-b flex-shrink-0">
-                    <div class="flex justify-end">
-                      <button 
-                        @click="showProductSelector = false" 
-                        class=" text-gray-500 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <!-- Scrollbarer Produktbereich (flexibel) -->
-                  <div class="p-6 overflow-y-auto flex-1">
-                    <!-- Loading State -->
-                    <div v-if="isLoadingProducts" class="text-center py-8">
-                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-                      <p class="text-gray-600">Lade Produkte...</p>
-                    </div>
-                    
-                    <!-- Produktgrid -->
-                    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div v-for="product in availableProducts" :key="product.id"
-                          class="border rounded-lg p-4 hover:border-green-500 hover:shadow-md transition-all cursor-pointer"
-                          @click="addProduct(product)">
-                        <div v-if="product.image_url" class="mb-3">
-                          <img :src="product.image_url" :alt="product.name" class="w-full h-32 object-cover rounded">
-                        </div>
-                        <div class="font-medium text-gray-900 mb-2">{{ product.name }}</div>
-                        <div class="text-sm text-gray-600 mb-3">{{ product.description }}</div>
-                        <div class="text-lg font-bold text-green-600">CHF {{ (product.price_rappen / 100).toFixed(2) }}</div>
-                      </div>
-                    </div>
-                    
-                    <!-- Fallback wenn keine Produkte -->
-                    <div v-if="!isLoadingProducts && availableProducts.length === 0" class="text-center py-8 text-gray-500">
-                      Derzeit sind keine Produkte verfügbar.
-                    </div>
-                  </div>
-                </div>
-              </div>
           </div>
 
           <!-- SCHRITT 3: PAYMENT -->
           <div v-if="currentStep === 3">
-            <div class="p-2 bg-white max-w-2xl mx-auto">
+            <div class="space-y-4 md:space-y-6">
               <!-- Bestellübersicht -->
-              <div class="bg-gray-50 rounded-lg p-4 border">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Bestellübersicht</h3>
+              <div class="bg-gray-50 rounded-lg p-3 md:p-4 border">
+                <h3 class="text-base md:text-lg font-medium text-gray-900 mb-3 md:mb-4">Bestellübersicht</h3>
                 
                 <!-- Kundendaten -->
-                <div class="mb-4 pb-4 border-b">
-                  <h4 class="text-sm font-medium text-gray-700 mb-2">Kunde:</h4>
-                  <div class="text-sm text-gray-600">
-                    <p class="text-sm text-gray-600"><strong>{{ formData.firstName }} {{ formData.lastName }}</strong></p>
-                    <p>{{ formData.street }} {{ formData.streetNumber }}</p>
-                    <p>{{ formData.zip }} {{ formData.city }}</p>
-                    <p>{{ formData.email }}</p>
-                    <p>{{ formData.phone }}</p>
+                <div class="mb-3 md:mb-4 pb-3 md:pb-4 border-b">
+                  <h4 class="text-xs md:text-sm font-medium text-gray-700 mb-2">Kunde:</h4>
+                  <div class="text-xs md:text-sm text-gray-600 space-y-1">
+                    <p class="break-words"><strong>{{ formData.firstName }} {{ formData.lastName }}</strong></p>
+                    <p class="break-words">{{ formData.street }} {{ formData.streetNumber }}</p>
+                    <p class="break-words">{{ formData.zip }} {{ formData.city }}</p>
+                    <p class="break-words">{{ formData.email }}</p>
+                    <p class="break-words">{{ formData.phone }}</p>
                   </div>
                 </div>
 
                 <!-- Produkte -->
-                <div class="mb-4">
-                  <h4 class="text-sm font-medium text-gray-700 mb-2">Bestellte Produkte:</h4>
-                  <div class="space-y-2 text-gray-700 ">
+                <div class="mb-3 md:mb-4">
+                  <h4 class="text-xs md:text-sm font-medium text-gray-700 mb-2">Bestellte Produkte:</h4>
+                  <div class="space-y-2 text-gray-700">
                     <div v-for="item in selectedProducts" :key="item.product.id" 
-                         class="flex justify-between items-center">
-                      <div>
-                        <span class="text-sm font-medium">{{ item.product.name }}</span><br>
-                        <span class="text-xs text-gray-500 ml-2">({{ item.quantity }}x CHF {{ (item.product.price_rappen / 100).toFixed(2) }})</span>
+                         class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
+                      <div class="flex-1 min-w-0">
+                        <span class="text-xs md:text-sm font-medium break-words">{{ item.product.name }}</span>
+                        <div class="text-xs text-gray-500">({{ item.quantity }}x CHF {{ (item.product.price_rappen / 100).toFixed(2) }})</div>
                       </div>
-                      <span class="text-sm font-medium">CHF {{ item.total.toFixed(2) }}</span>
+                      <span class="text-xs md:text-sm font-medium text-right sm:text-left">CHF {{ item.total.toFixed(2) }}</span>
                     </div>
                   </div>
                 </div>
 
                 <!-- Gesamtpreis -->
-                <div class="pt-4 border-t">
+                <div class="pt-3 md:pt-4 border-t">
                   <div class="flex justify-between items-center">
-                    <span class="text-lg font-bold text-gray-900">Gesamtpreis:</span>
-                    <span class="text-xl font-bold text-green-600">CHF {{ totalPrice.toFixed(2) }}</span>
+                    <span class="text-base md:text-lg font-bold text-gray-900">Gesamtpreis:</span>
+                    <span class="text-lg md:text-xl font-bold text-green-600">CHF {{ totalPrice.toFixed(2) }}</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Payment Optionen -->
-              <div class="bg-white border rounded-lg p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Bezahlung</h3>
-                <div class="space-y-4">
-                  
-                  <!-- Online Payment (Wallee) - Hauptoption -->
-                  <div class="p-4 bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-300 rounded-lg">
-                    
-                    <!-- Dynamic Payment Methods basierend auf Geräteerkennung -->
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                      <!-- Twint (immer in der Schweiz) -->
-                      <div class="flex items-center justify-center space-x-2 p-2 bg-white border border-blue-200 rounded-lg">
-                          <img src="public/images/Twint_Logo.png" alt="Twint" class="h-10" />
-                      </div>
-                      
-                      <!-- Apple Pay (nur auf iOS/Safari) -->
-                      <div v-if="isAppleDevice" class="flex items-center justify-center space-x-2 p-2 bg-white border border-blue-200 rounded-lg">
-                          <img src="/images/Apple_Pay_Mark.svg" alt="Apple Pay" class="h-10" />
-                      </div>
-                      
-                      <!-- Google Pay (nur auf Android/Chrome) -->
-                      <div  v-if="isAndroidDevice" class="flex items-center justify-center space-x-2 p-2 bg-white border border-blue-200 rounded-lg">
-                          <img src="public/images/Google_Pay_Logo.png" alt="Google Pay" class="h-10" />
-                      </div>
-                      
-                      <!-- Kreditkarte (immer verfügbar) -->
-                      <div class="flex items-center justify-center space-x-2 p-2 bg-white border border-blue-200 rounded-lg">
-                        <div class="flex space-x-1">
-                          <!-- Visa/Mastercard -->
-                          <img src="public/images/Visa_Mastercard_Logo.png" alt="Kartenzahlung" class="h-10" />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div class="text-sm text-blue-700 mb-3">
-                      <p class="font-medium">Sichere Zahlung über Wallee</p>
-                      <p class="text-xs text-blue-600">
-                        SSL-verschlüsselt
-                      </p>
-                    </div>
-                    
-                    <!-- Online Payment Button -->
-                    <button 
-                      @click="startOnlinePayment"
-                      :disabled="!hasProducts || isSubmitting"
-                      class="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100"
-                    >
-                      <span v-if="isSubmitting">⏳ Wird verarbeitet...</span>
-                      <span v-else>Jetzt bezahlen <br> CHF {{ totalPrice.toFixed(2) }}</span>
-                    </button>
-                  </div>
-
-                  <!-- Rechnung Option - sekundär -->
-                  <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">                    
-                    <!-- Invoice Button -->
-                    <button 
-                      @click="selectInvoicePayment"
-                      :disabled="!hasProducts || isSubmitting"
-                      class="w-full bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                    >
-                      Rechnung senden
-                    </button>
-                  </div>
-                  
-                </div>
-              </div>
+              <!-- Payment Component -->
+              <PaymentComponent
+                :appointment-id="undefined"
+                :user-id="'00000000-0000-0000-0000-000000000001'"
+                :staff-id="'00000000-0000-0000-0000-000000000002'"
+                :is-standalone="true"
+                :initial-products="selectedProducts.map(item => ({
+                  id: item.product.id,
+                  name: item.product.name,
+                  description: item.product.description || '',
+                  price_rappen: item.product.price_rappen,
+                  category: item.product.category || '',
+                  is_active: item.product.is_active || true,
+                  is_voucher: false,
+                  allow_custom_amount: false,
+                  min_amount_rappen: 0,
+                  max_amount_rappen: 0,
+                  display_order: item.product.display_order || 0,
+                  created_at: item.product.created_at || new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  quantity: item.quantity,
+                  unit_price_rappen: item.product.price_rappen,
+                  total_price_rappen: Math.round(item.total * 100)
+                }))"
+                :initial-discounts="[]"
+                @payment-created="handlePaymentCreated"
+                @payment-failed="handlePaymentFailed"
+                @cancel="goBack"
+              />
             </div>
           </div>
+        </div>
 
         <!-- Footer mit Navigation -->
-        <div class="px-6 py-4 bg-gray-50 rounded-b-xl border-t max-w-2xl mx-auto">
-          <div class="flex justify-between">
+        <div class="px-3 md:px-6 py-3 md:py-4 bg-gray-50 rounded-b-xl border-t">
+          <div class="flex flex-col sm:flex-row justify-between space-y-3 sm:space-y-0">
             <!-- Zurück Button -->
             <button
               v-if="currentStep > 1"
               @click="previousStep"
-              class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 md:px-6 rounded-lg transition-colors text-sm md:text-base"
             >
               Zurück
             </button>
-            <div v-else></div>
+            <div v-else class="w-full sm:w-auto"></div>
 
             <button
               v-if="currentStep < 3"
               @click="nextStep"
-              class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              :disabled="!canProceedToNextStep"
+              class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 md:px-6 rounded-lg transition-colors text-sm md:text-base"
             >
-              Weiter →
+              {{ currentStep === 1 ? 'Zur Kontaktdaten' : 'Zur Bezahlung' }} →
             </button>
             
             <!-- Bestellung absenden -->
@@ -462,95 +382,116 @@
               v-if="currentStep === 3"
               @click="submitOrder"
               :disabled="isSubmitting"
-              class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              class="w-full sm:w-auto bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 md:px-6 rounded-lg transition-colors text-sm md:text-base"
             >
               <span v-if="isSubmitting">⏳ Bestellung wird gesendet...</span>
               <span v-else>Absenden</span>
             </button>
           </div>
         </div>
-    </div>
-
-<!-- Auto-Save Status (oben rechts) -->
-<div v-if="autoSave.statusMessage.value" class="fixed top-4 right-4 z-40">
-  <Transition 
-    enter-active-class="transition-all duration-300 ease-out"
-    enter-from-class="opacity-0 transform translate-y-2"
-    enter-to-class="opacity-100 transform translate-y-0"
-    leave-active-class="transition-all duration-200 ease-in"
-    leave-from-class="opacity-100 transform translate-y-0"
-    leave-to-class="opacity-0 transform translate-y-2"
-  >
-    <div v-if="autoSave.isAutoSaving.value" class="bg-blue-100 border border-blue-300 rounded-lg px-3 py-2 flex items-center space-x-2 shadow-lg">
-      <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-      <span class="text-sm text-blue-700 font-medium">{{ autoSave.statusMessage.value }}</span>
-    </div>
-    <div v-else-if="autoSave.showSaveMessage.value" class="bg-green-100 border border-green-300 rounded-lg px-3 py-2 shadow-lg">
-      <span class="text-sm text-green-700 font-medium flex items-center">
-        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-        </svg>
-        {{ autoSave.statusMessage.value }}
-      </span>
-    </div>
-  </Transition>
-</div>
-
-<!-- Universal Recovery Modal -->
-<div v-if="autoSave.showRecoveryModal.value" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
-    <div class="text-center mb-6">
-      <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-        </svg>
-      </div>
-      <h3 class="text-lg font-semibold text-gray-900 mb-2">
-        Eingaben wiederherstellen?
-      </h3>
-      <p class="text-sm text-gray-600">
-        Wir haben Ihre letzte Eingabe gefunden. Möchten Sie dort weitermachen?
-      </p>
-    </div>
-
-    <!-- Recovery Info -->
-    <div v-if="autoSave.recoveryData.value" class="bg-gray-50 rounded-lg p-4 mb-6 text-sm">
-      <div class="flex justify-between items-center mb-2">
-        <span class="font-medium text-gray-700">Gefunden:</span>
-        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-          {{ autoSave.recoveryData.value.source }}
-        </span>
-      </div>
-      <div class="text-xs text-gray-600">
-        Gespeichert: {{ new Date(autoSave.recoveryData.value.timestamp).toLocaleString('de-CH') }}
       </div>
     </div>
 
-    <!-- Buttons -->
-    <div class="flex space-x-3">
-      <button
-        @click="autoSave.clearDraft()"
-        class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+    <!-- Toast Notification (oben zentriert) -->
+    <Transition 
+      enter-active-class="transition-all duration-300 ease-out"
+      enter-from-class="opacity-0 transform translate-y-2"
+      enter-to-class="opacity-100 transform translate-y-0"
+      leave-active-class="transition-all duration-200 ease-in"
+      leave-from-class="opacity-100 transform translate-y-0"
+      leave-to-class="opacity-0 transform translate-y-2"
+    >
+      <div v-if="showToast" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+        <div class="bg-green-100 border border-green-300 rounded-lg shadow-lg px-6 py-2 min-w-80">
+          <div class="flex items-center justify-center text-green-800 font-medium text-sm">
+            <svg class="w-3 h-3 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span class="text-center">{{ toastMessage }}</span>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Auto-Save Status (oben rechts) - nur beim Speichern, nicht bei "Gespeichert!" Nachrichten -->
+    <div v-if="autoSave.isAutoSaving.value" class="fixed top-4 right-4 z-40">
+      <Transition 
+        enter-active-class="transition-all duration-300 ease-out"
+        enter-from-class="opacity-0 transform translate-y-2"
+        enter-to-class="opacity-100 transform translate-y-0"
+        leave-active-class="transition-all duration-200 ease-in"
+        leave-from-class="opacity-100 transform translate-y-0"
+        leave-to-class="opacity-0 transform translate-y-2"
       >
-        Neu beginnen
-      </button>
-      <button
-        @click="autoSave.recoveryData.value && autoSave.restoreFromRecovery(autoSave.recoveryData.value)"
-        :disabled="!autoSave.recoveryData.value"
-        class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-      >
-        Wiederherstellen
-      </button>
+        <!-- Nur Auto-Saving Indicator anzeigen -->
+        <div class="bg-blue-100 border border-blue-300 rounded-lg px-3 py-2 flex items-center space-x-2 shadow-lg">
+          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+          <span class="text-sm text-blue-700 font-medium">Speichere...</span>
+        </div>
+      </Transition>
+    </div>
+
+    <!-- Universal Recovery Modal -->
+    <div v-if="autoSave.showRecoveryModal.value" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">
+            Eingaben wiederherstellen?
+          </h3>
+          <p class="text-sm text-gray-600">
+            Wir haben Ihre letzte Eingabe gefunden. Möchten Sie dort weitermachen?
+          </p>
+        </div>
+
+        <!-- Recovery Info -->
+        <div v-if="autoSave.recoveryData.value" class="bg-gray-50 rounded-lg p-4 mb-6 text-sm">
+          <div class="flex justify-between items-center mb-2">
+            <span class="font-medium text-gray-700">Gefunden:</span>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+              {{ autoSave.recoveryData.value.source }}
+            </span>
+          </div>
+          <div class="text-xs text-gray-600">
+            Gespeichert: {{ new Date(autoSave.recoveryData.value.timestamp).toLocaleString('de-CH') }}
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex space-x-3">
+          <button
+            @click="autoSave.clearDraft()"
+            class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            Neu beginnen
+          </button>
+          <button
+            @click="autoSave.recoveryData.value && autoSave.restoreFromRecovery(autoSave.recoveryData.value)"
+            :disabled="!autoSave.recoveryData.value"
+            class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            Wiederherstellen
+          </button>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { navigateTo } from '#app'
 import { definePageMeta } from '#imports'
 import { useAutoSave } from '~/composables/useAutoSave'
+
+// Components
+import VoucherProductSelector from '~/components/VoucherProductSelector.vue'
+import PaymentComponent from '~/components/PaymentComponent.vue'
+import ProductSelectorModal from '~/components/ProductSelectorModal.vue'
 
 // TypeScript Interfaces
 interface Product {
@@ -571,6 +512,7 @@ interface ProductItem {
   product: Product
   quantity: number
   total: number
+  customAmount?: number
 }
 
 interface WalleeResponse {
@@ -581,12 +523,23 @@ interface WalleeResponse {
 }
 
 // Reactive data - Multi-Step Process
-const currentStep = ref(1) // 1: Anmeldung, 2: Produktauswahl, 3: Payment
+const currentStep = ref(1) // 1: Produktübersicht, 2: Kontaktdaten, 3: Payment
 const isSubmitting = ref(false)
 const isLoadingProducts = ref(false)
 const availableProducts = ref<Product[]>([])
 const selectedProducts = ref<ProductItem[]>([])
 const showProductSelector = ref(false)
+
+// Toast notification
+const toastMessage = ref('')
+const showToast = ref(false)
+const toastTimeout = ref<NodeJS.Timeout | null>(null)
+
+// Debug: Log initial state
+console.log('🔔 Initial toast state:', { showToast: showToast.value, message: toastMessage.value })
+
+// Gutschein-Funktionalität
+const availableVouchers = ref<any[]>([])
 
 // Step 1: Customer Data
 const formData = ref({
@@ -630,7 +583,7 @@ const canSubmitStep1 = computed((): boolean => {
 })
 
 const canProceedToPayment = computed(() => {
-  return selectedProducts.value.length > 0
+  return selectedProducts.value.length > 0 && selectedProducts.value.every(item => item.quantity > 0)
 })
 
 const totalPrice = computed(() => {
@@ -641,8 +594,8 @@ const hasProducts = computed(() => selectedProducts.value.length > 0)
 
 const stepTitle = computed(() => {
   switch (currentStep.value) {
-    case 1: return 'Ihre Kontaktdaten'
-    case 2: return 'Produktauswahl'
+    case 1: return 'Produktübersicht & Warenkorb'
+    case 2: return 'Ihre Kontaktdaten'
     case 3: return 'Bezahlung'
     default: return 'Laufkundschaft'
   }
@@ -650,19 +603,45 @@ const stepTitle = computed(() => {
 
 const canProceedToNextStep = computed(() => {
   switch (currentStep.value) {
-    case 1: return canSubmitStep1.value
-    case 2: return canProceedToPayment.value
-    default: return false
+    case 1: return hasProducts.value
+    case 2: return canSubmitStep1.value
+    default: false
   }
 })
 
+// Verbesserte Produktvalidierung
+const validateProductSelection = () => {
+  if (selectedProducts.value.length === 0) {
+    alert('❌ Bitte wählen Sie mindestens ein Produkt aus.')
+    return false
+  }
+  
+  const invalidProducts = selectedProducts.value.filter(item => item.quantity <= 0)
+  if (invalidProducts.length > 0) {
+    alert('❌ Alle Produkte müssen eine Menge größer als 0 haben.')
+    return false
+  }
+  
+  return true
+}
+
 // Step Navigation
 const nextStep = () => {
-  if (currentStep.value < 3) { // ← canProceedToNextStep.value entfernt
+  if (currentStep.value === 1 && !hasProducts.value) {
+    alert('❌ Bitte wählen Sie mindestens ein Produkt aus.')
+    return
+  }
+  
+  if (currentStep.value === 2 && !canSubmitStep1.value) {
+    alert('❌ Bitte füllen Sie alle Pflichtfelder aus.')
+    return
+  }
+  
+  if (currentStep.value < 3) {
     currentStep.value++
     
-    // Produkte laden wenn wir zu Schritt 2 gehen
-    if (currentStep.value === 2 && availableProducts.value.length === 0) {
+    // Produkte laden wenn wir zu Schritt 1 gehen
+    if (currentStep.value === 1 && availableProducts.value.length === 0) {
       loadProducts()
     }
   }
@@ -698,9 +677,33 @@ const addProduct = (product: Product) => {
       quantity: 1,
       total: product.price_rappen / 100
     })
+    
+    // Show toast notification
+    showToastMessage(`✅ ${product.name} zum Warenkorb hinzugefügt!`)
   }
   console.log('✅ Product added:', product.name)
   showProductSelector.value = false
+}
+
+const handleProductsSelected = (products: any[]) => {
+  // Konvertiere die Produkte vom neuen Format zurück zum bestehenden Format
+  selectedProducts.value = products.map(item => ({
+    product: {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      price_rappen: item.price_rappen,
+      category: item.category,
+      is_active: item.is_active,
+      display_order: item.display_order,
+      created_at: item.created_at
+    },
+    quantity: item.quantity || 1,
+    total: (item.price_rappen / 100) * (item.quantity || 1),
+    customAmount: item.customAmount || 0
+  }))
+  showProductSelector.value = false
+  console.log('✅ Products selected:', products.length)
 }
 
 const removeProduct = (productId: string) => {
@@ -709,21 +712,82 @@ const removeProduct = (productId: string) => {
     const productName = selectedProducts.value[index].product.name
     selectedProducts.value.splice(index, 1)
     console.log('🗑️ Product removed:', productName)
+    
+    // Show toast notification
+    showToastMessage(`🗑️ ${productName} aus dem Warenkorb entfernt`)
   }
 }
 
 const updateQuantity = (productId: string, newQuantity: number) => {
+  console.log('🔄 updateQuantity called:', productId, 'newQuantity:', newQuantity)
+  
   if (newQuantity <= 0) {
     removeProduct(productId)
     return
   }
   
   const item = selectedProducts.value.find(item => item.product.id === productId)
-  if (item) {
+    if (item) {
+    // Produkt existiert bereits, aktualisiere Menge
+    const oldQuantity = item.quantity
     item.quantity = newQuantity
     item.total = newQuantity * (item.product.price_rappen / 100)
     console.log('📊 Quantity updated:', item.product.name, 'x', newQuantity)
+    
+    // Show toast notification for quantity changes
+    if (newQuantity > oldQuantity) {
+      showToastMessage(`📈 ${item.product.name} Menge auf ${newQuantity} erhöht`)
+    } else if (newQuantity < oldQuantity) {
+      showToastMessage(`📉 ${item.product.name} Menge auf ${newQuantity} verringert`)
+    }
+  } else {
+      // Produkt existiert noch nicht, füge es hinzu
+      const product = availableProducts.value.find(p => p.id === productId)
+      if (product) {
+        const newItem = {
+          product,
+          quantity: newQuantity,
+          total: newQuantity * (product.price_rappen / 100)
+        }
+        selectedProducts.value.push(newItem)
+        console.log('✅ Product added to cart:', product.name, 'x', newQuantity, 'total:', newItem.total)
+        
+        // Show toast notification
+        showToastMessage(`✅ ${product.name} zum Warenkorb hinzugefügt!`)
+      } else {
+        console.error('❌ Product not found:', productId)
+      }
+    }
+  
+  // Debug: Zeige aktuellen Warenkorb
+  console.log('🛒 Current cart:', selectedProducts.value)
+}
+
+const getProductQuantity = (productId: string) => {
+  const item = selectedProducts.value.find(item => item.product.id === productId)
+  return item ? item.quantity : 0
+}
+
+// Toast notification functions
+const showToastMessage = (message: string, duration: number = 3000) => {
+  console.log('🔔 showToastMessage called:', message)
+  
+  // Clear existing timeout
+  if (toastTimeout.value) {
+    clearTimeout(toastTimeout.value)
   }
+  
+  toastMessage.value = message
+  showToast.value = true
+  
+  console.log('🔔 Toast state:', { showToast: showToast.value, message: toastMessage.value })
+  
+  // Auto-hide after duration
+  toastTimeout.value = setTimeout(() => {
+    showToast.value = false
+    toastMessage.value = ''
+    console.log('🔔 Toast hidden')
+  }, duration)
 }
 
 // Lade Produkte aus der Datenbank
@@ -744,13 +808,48 @@ const loadProducts = async () => {
     
     availableProducts.value = data || []
     console.log('✅ Products loaded:', availableProducts.value.length)
+    console.log('📦 Available products:', availableProducts.value)
+    
+    // Wenn keine Produkte in der DB sind, zeige Fallback-Produkte
+    if (availableProducts.value.length === 0) {
+      console.log('⚠️ No products in database, showing fallback products')
+      availableProducts.value = [
+        { 
+          id: 'fallback-1', 
+          name: 'Theorielektionen', 
+          description: 'Einzellektionen für die Theorieprüfung', 
+          price_rappen: 4500, 
+          category: 'theory',
+          is_active: true,
+          display_order: 1
+        },
+        { 
+          id: 'fallback-2', 
+          name: 'Lehrmaterial', 
+          description: 'Theoriebücher und Online-Zugang', 
+          price_rappen: 2900, 
+          category: 'material',
+          is_active: true,
+          display_order: 2
+        },
+        { 
+          id: 'fallback-3', 
+          name: 'Praktische Fahrstunden', 
+          description: 'Fahrstunden mit erfahrenem Fahrlehrer', 
+          price_rappen: 8500, 
+          category: 'practical',
+          is_active: true,
+          display_order: 3
+        }
+      ]
+    }
     
   } catch (error) {
     console.error('❌ Error loading products:', error)
     // Fallback Produkte falls DB nicht erreichbar
     availableProducts.value = [
       { 
-        id: '1', 
+        id: 'error-1', 
         name: 'Theorielektionen', 
         description: 'Einzellektionen für die Theorieprüfung', 
         price_rappen: 4500, 
@@ -759,13 +858,22 @@ const loadProducts = async () => {
         display_order: 1
       },
       { 
-        id: '2', 
+        id: 'error-2', 
         name: 'Lehrmaterial', 
         description: 'Theoriebücher und Online-Zugang', 
         price_rappen: 2900, 
         category: 'material',
         is_active: true,
         display_order: 2
+      },
+      { 
+        id: 'error-3', 
+        name: 'Praktische Fahrstunden', 
+        description: 'Fahrstunden mit erfahrenem Fahrlehrer', 
+        price_rappen: 8500, 
+        category: 'practical',
+        is_active: true,
+        display_order: 3
       }
     ]
   } finally {
@@ -794,7 +902,42 @@ const selectInvoicePayment = async () => {
   await submitOrder()
 }
 
-// In shop.vue <script setup> - Ersetzen Sie den Auto-Save Code mit:
+// Gutschein-Handler
+const handleVoucherCreated = (voucherData: any) => {
+  console.log('🎁 Voucher created:', voucherData)
+  
+  // Gutschein als Produkt hinzufügen
+  const voucherProduct = {
+    id: `voucher-${Date.now()}`,
+    name: voucherData.name,
+    description: voucherData.description,
+    price_rappen: voucherData.price_rappen,
+    category: 'Gutscheine',
+    is_active: true,
+    display_order: 999,
+    is_voucher: true
+  }
+  
+  addProduct(voucherProduct)
+}
+
+const handleVoucherSelected = (voucher: any) => {
+  console.log('🎁 Voucher selected:', voucher)
+  
+  // Bestehenden Gutschein als Produkt hinzufügen
+  const voucherProduct = {
+    id: voucher.id,
+    name: voucher.name,
+    description: voucher.description,
+    price_rappen: voucher.price_rappen,
+    category: 'Gutscheine',
+    is_active: true,
+    display_order: 999,
+    is_voucher: true
+  }
+  
+  addProduct(voucherProduct)
+}
 
 // Auto-Save Integration
 const autoSave = useAutoSave(
@@ -883,7 +1026,7 @@ const autoSave = useAutoSave(
   }
 )
 
-// Updated startOnlinePayment mit finalizeDraft
+// Updated startOnlinePayment mit finalizeDraft und besserer Fehlerbehandlung
 const startOnlinePayment = async () => {
   if (!hasProducts.value) return
   
@@ -921,9 +1064,23 @@ const startOnlinePayment = async () => {
       throw new Error('Payment URL konnte nicht erstellt werden')
     }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Online payment error:', error)
-    alert('❌ Fehler beim Starten der Online-Zahlung. Ihre Daten sind gespeichert.')
+    
+    // Spezifische Fehlerbehandlung für Wallee
+    let errorMessage = '❌ Fehler beim Starten der Online-Zahlung.'
+    
+    if (error.statusCode === 442) {
+      errorMessage = '❌ Zahlungssystem temporär nicht verfügbar. Bitte wählen Sie "Rechnung senden" oder versuchen Sie es später erneut.'
+    } else if (error.statusCode === 401) {
+      errorMessage = '❌ Authentifizierungsfehler. Bitte kontaktieren Sie den Support.'
+    } else if (error.statusCode === 403) {
+      errorMessage = '❌ Zugriff verweigert. Bitte kontaktieren Sie den Support.'
+    } else if (error.data?.message?.includes('Permission denied')) {
+      errorMessage = '❌ Zahlungssystem konfiguriert. Bitte wählen Sie "Rechnung senden" oder kontaktieren Sie den Support.'
+    }
+    
+    alert(`${errorMessage}\n\nIhre Daten sind gespeichert und Sie können die Bestellung später abschließen.`)
   } finally {
     isSubmitting.value = false
   }
@@ -1027,8 +1184,46 @@ defineExpose({
 
 // Lifecycle
 onMounted(() => {
-  // Produkte werden nur geladen wenn zu Schritt 2 navigiert wird
+  // Produkte direkt beim Laden der Seite laden
   console.log('🛍️ Shop mounted - Step-by-step process started')
-   loadProducts() 
+  loadProducts()
 })
+
+onUnmounted(() => {
+  // Cleanup toast timeout
+  if (toastTimeout.value) {
+    clearTimeout(toastTimeout.value)
+  }
+})
+
+// Payment handlers
+const handlePaymentCreated = (payment: any) => {
+  console.log('✅ Payment created:', payment)
+  
+  // Bestellung als abgeschlossen markieren
+  submitOrderWithStatus('completed')
+    
+  const productList = selectedProducts.value.map(item => 
+    `• ${item.product.name} (${item.quantity}x à CHF ${(item.product.price_rappen / 100).toFixed(2)})`
+  ).join('\n')
+  
+  alert(`✅ Zahlung erfolgreich!
+
+Hallo ${formData.value.firstName},
+
+Ihre Bestellung wurde erfolgreich bezahlt:
+
+${productList}
+
+Gesamtpreis: CHF ${totalPrice.value.toFixed(2)}
+
+Sie erhalten in Kürze eine Bestätigung per E-Mail.`)
+  
+  goBack()
+}
+
+const handlePaymentFailed = (error: any) => {
+  console.error('❌ Payment failed:', error)
+  alert('❌ Zahlung fehlgeschlagen. Bitte versuchen Sie es erneut oder wählen Sie eine andere Zahlungsmethode.')
+}
 </script>

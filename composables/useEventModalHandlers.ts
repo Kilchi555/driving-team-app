@@ -46,7 +46,9 @@ export const useEventModalHandlers = (
         .from('appointments')
         .select('duration_minutes')
         .eq('user_id', studentId)
-        .in('status', ['completed', 'confirmed'])
+        .is('deleted_at', null) // ✅ Soft Delete Filter
+        .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
+        .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
         .order('start_time', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -74,7 +76,9 @@ export const useEventModalHandlers = (
         .from('appointments')
         .select('type')
         .eq('user_id', studentId)
-        .in('status', ['completed', 'confirmed'])
+        .is('deleted_at', null) // ✅ Soft Delete Filter
+        .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
+        .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
         .order('start_time', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -330,7 +334,7 @@ const handleDurationsChanged = (durations: number[]) => {
    */
   const handlePaymentSuccess = (paymentData: any) => {
     console.log('✅ Payment successful:', paymentData)
-    formData.value.is_paid = true
+          // is_paid removed - not in appointments table
     formData.value.payment_method = paymentData.method
     formData.value.payment_data = paymentData
     formData.value.payment_status = 'completed'
@@ -341,7 +345,7 @@ const handleDurationsChanged = (durations: number[]) => {
    */
   const handlePaymentError = (error: any) => {
     console.error('❌ Payment error:', error)
-    formData.value.is_paid = false
+          // is_paid removed - not in appointments table
     formData.value.payment_status = 'failed'
   }
 
@@ -457,21 +461,22 @@ const handleDurationsChanged = (durations: number[]) => {
     console.log('⏱️ Loading staff durations for category:', categoryCode, 'staff:', staffId)
     
     try {
+      // ✅ NEU: Lade Dauer direkt aus der categories Tabelle
       const { data, error } = await supabase
-        .from('staff_category_durations')
-        .select('durations')
-        .eq('staff_id', staffId)
-        .eq('category_code', categoryCode)
+        .from('categories')
+        .select('lesson_duration_minutes')
+        .eq('code', categoryCode)
+        .eq('is_active', true)
         .maybeSingle()
 
       if (error) throw error
       
-      const durations = data?.durations || [45]
-      console.log('📊 Staff durations loaded:', durations)
+      const durations = data?.lesson_duration_minutes || [45]
+      console.log('📊 Category durations loaded:', durations)
       return durations
 
     } catch (err: any) {
-      console.error('❌ Error loading staff durations:', err)
+      console.error('❌ Error loading category durations:', err)
       return [45] // Default fallback
     }
   }
@@ -503,6 +508,14 @@ const handleDurationsChanged = (durations: number[]) => {
    * Gets admin fee for category.
    */
   const getAdminFeeForCategory = (categoryCode: string, appointmentNumber: number) => {
+    // ✅ KORRIGIERT: Admin-Fee nur beim 2. Termin pro Kategorie (außer bei Motorrädern)
+    const motorcycleCategories = ['A', 'A1', 'A35kW']
+    const isMotorcycle = motorcycleCategories.includes(categoryCode)
+    
+    if (isMotorcycle || appointmentNumber !== 2) {
+      return 0
+    }
+    
     // ✅ VERWENDET NEUE PRICING-DATEN
     return pricing.dynamicPricing.value.hasAdminFee ? pricing.dynamicPricing.value.adminFeeChf : 0
   }

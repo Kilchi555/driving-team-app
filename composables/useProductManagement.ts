@@ -3,21 +3,10 @@ import { useProducts } from './useProducts'
 import type { ProductItem } from './useProducts'
 
 export const useProductManagement = () => {
-  const { saveAppointmentProducts, loadAppointmentProducts } = useProducts()
+  const { loadAppointmentProducts } = useProducts()
   
-  const saveToAppointment = async (appointmentId: string, products: ProductItem[]) => {
-    if (products.length === 0) return []
-    
-    try {
-      console.log('📚 Saving products to appointment:', appointmentId)
-      const result = await saveAppointmentProducts(appointmentId, products)
-      console.log('✅ Products saved successfully')
-      return result
-    } catch (error) {
-      console.error('❌ Error saving products:', error)
-      throw error
-    }
-  }
+  // ✅ ENTFERNT: saveToAppointment - wird nicht mehr benötigt
+  // Alle Produkte werden jetzt über product_sales gespeichert
   
   const loadFromAppointment = async (appointmentId: string): Promise<ProductItem[]> => {
     try {
@@ -36,7 +25,6 @@ export const useProductManagement = () => {
   }
   
   return {
-    saveToAppointment,
     loadFromAppointment,
     calculateTotal
   }

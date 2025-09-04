@@ -10,12 +10,11 @@ interface Category {
   name: string
   description?: string
   code: string
-  price_per_lesson: number
-  price_unit: string
-  lesson_duration: number
   color?: string
   is_active: boolean
-  display_order: number
+  exam_duration_minutes?: number
+  lesson_duration_minutes?: number[]
+  theory_durations?: number[]
 }
 
 // Global shared state
@@ -28,23 +27,18 @@ export const useCategoryData = () => {
 
   // Fallback data wenn DB nicht verfügbar
   const fallbackCategories: Record<string, Partial<Category>> = {
-    'B': { name: 'Autoprüfung Kategorie B', price_per_lesson: 95, color: 'hellgrün' },
-    'A1': { name: 'Motorrad A1/A35kW/A', price_per_lesson: 95, color: 'hellgrün' },
-    'BE': { name: 'Anhänger BE', price_per_lesson: 120, color: 'orange' },
-    'C1': { name: 'LKW C1/D1', price_per_lesson: 150, color: 'gelb' },
-    'C': { name: 'LKW C', price_per_lesson: 170, color: 'rot' },
-    'CE': { name: 'LKW CE', price_per_lesson: 200, color: 'violett' },
-    'D': { name: 'Bus D', price_per_lesson: 200, color: 'türkis' },
-    'Motorboot': { name: 'Motorboot', price_per_lesson: 95, color: 'hellblau' },
-    'BPT': { name: 'Berufsprüfung Transport', price_per_lesson: 100, color: 'dunkelblau' }
+    'B': { name: 'Autoprüfung Kategorie B', color: '#10b981', lesson_duration_minutes: [45, 90], exam_duration_minutes: 60 },
+    'A1': { name: 'Motorrad A1/A35kW/A', color: '#10b981', lesson_duration_minutes: [45, 90], exam_duration_minutes: 60 },
+    'BE': { name: 'Anhänger BE', color: '#f97316', lesson_duration_minutes: [45, 90], exam_duration_minutes: 60 },
+    'C1': { name: 'LKW C1/D1', color: '#eab308', lesson_duration_minutes: [135], exam_duration_minutes: 90 },
+    'C': { name: 'LKW C', color: '#dc2626', lesson_duration_minutes: [135], exam_duration_minutes: 90 },
+    'CE': { name: 'LKW CE', color: '#8b5cf6', lesson_duration_minutes: [135], exam_duration_minutes: 90 },
+    'D': { name: 'Bus D', color: '#06b6d4', lesson_duration_minutes: [135], exam_duration_minutes: 90 },
+    'Motorboot': { name: 'Motorboot', color: '#3b82f6', lesson_duration_minutes: [45, 90], exam_duration_minutes: 60 },
+    'BPT': { name: 'Berufsprüfung Transport', color: '#1e40af', lesson_duration_minutes: [45, 90], exam_duration_minutes: 60 }
   }
 
-  // Admin Fees aus den Projektunterlagen
-  const adminFees: Record<string, number> = {
-    'B': 120, 'A1': 0, 'A35kW': 0, 'A': 0, 'BE': 120,
-    'C1': 200, 'D1': 200, 'C': 200, 'CE': 250, 'D': 300,
-    'Motorboot': 120, 'BPT': 120
-  }
+
 
   // Kategorien aus Datenbank laden
   const loadCategories = async () => {
@@ -57,10 +51,9 @@ export const useCategoryData = () => {
       
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
+        .select('id, created_at, name, description, code, color, is_active, exam_duration_minutes, lesson_duration_minutes, theory_durations')
         .eq('is_active', true)
-        .order('display_order', { ascending: true })
-        .order('name', { ascending: true })
+        .order('code', { ascending: true })
 
       if (error) throw error
 
@@ -93,13 +86,12 @@ export const useCategoryData = () => {
         id: 0,
         code,
         name: fallback.name || code,
-        price_per_lesson: fallback.price_per_lesson || 95,
-        lesson_duration: 45,
         color: fallback.color || 'grau',
         is_active: true,
-        display_order: 0,
-        price_unit: 'per_lesson',
-        created_at: toLocalTimeString(new Date)
+        created_at: toLocalTimeString(new Date),
+        lesson_duration_minutes: fallback.lesson_duration_minutes || [45],
+        exam_duration_minutes: fallback.exam_duration_minutes || 60,
+        theory_durations: fallback.theory_durations || [45]
       } as Category
     }
     
@@ -113,8 +105,8 @@ export const useCategoryData = () => {
   }
 
   const getCategoryPrice = (code: string): number => {
-    const category = getCategoryByCode(code)
-    return category?.price_per_lesson || 95
+    // ✅ Standard-Preis für alle Kategorien (wird jetzt dynamisch berechnet)
+    return 95
   }
 
   const getCategoryColor = (code: string): string => {
@@ -123,7 +115,8 @@ export const useCategoryData = () => {
   }
 
   const getAdminFee = (code: string): number => {
-    return adminFees[code] || 120
+    // ✅ Standard-Admin-Fee für alle Kategorien (wird jetzt dynamisch berechnet)
+    return 120
   }
 
   const getCategoryIcon = (code: string): string => {

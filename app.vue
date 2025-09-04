@@ -8,7 +8,7 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { initializeOfflineSupport } from '~/utils/offlineSupport'
+import { initializeOfflineSupport } from '~/utils/offlineQueue'
 
 // Beim App-Start Offline-Support initialisieren
 onMounted(() => {

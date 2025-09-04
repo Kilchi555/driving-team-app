@@ -58,7 +58,7 @@ export default defineEventHandler(async (event): Promise<ReceiptResponse> => {
         id: payment.id,
         transactionId: payment.wallee_transaction_id,
         amount: payment.total_amount_rappen / 100,
-        baseAmount: payment.amount_rappen / 100,
+        baseAmount: payment.lesson_price_rappen / 100,
         adminFee: payment.admin_fee_rappen / 100,
         method: payment.payment_method,
         status: payment.payment_status,

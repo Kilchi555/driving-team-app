@@ -5,7 +5,16 @@
       
       <!-- Modal Header -->
       <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-        <h2 class="text-xl font-semibold text-gray-900">⚙️ Personaleinstellungen</h2>
+        <div class="flex items-center space-x-3">
+          <!-- Cash Control Button -->
+          <button
+            @click="openCashControl"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+          >
+            <span>💰</span>
+            <span>Bargeldkontrolle</span>
+          </button>
+        </div>
         <button
           @click="$emit('close')"
           class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold"
@@ -563,37 +572,7 @@ const threeMonthsAgoName = computed(() => {
 
 // Methods
 // In StaffSettings.vue - ersetzen Sie die Funktion mit dieser typisierten Version:
-const saveWithOfflineSupport = async (
-  table: string, 
-  data: any, 
-  action: string = 'insert', 
-  where: any, 
-  operationName: string
-) => {
-  try {
-    const supabase = getSupabase()
-    
-    let result
-    switch (action) {
-      case 'delete':
-        result = await supabase.from(table).delete().match(where)
-        break
-      default:
-        throw new Error(`Action ${action} not implemented`)
-    }
-    
-    if (result.error) throw result.error
-    return result
-    
-  } catch (error: any) {
-    // Offline-Queue (vereinfacht)
-    const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]')
-    queue.push({ table, action, data, where, operationName, timestamp: Date.now() })
-    localStorage.setItem('offline_queue', JSON.stringify(queue))
-    
-    throw new Error(`${operationName} wird synchronisiert sobald Internet verfügbar ist`)
-  }
-}
+import { saveWithOfflineSupport } from '~/utils/offlineQueue'
 
 const loadExamLocations = async () => {
   if (!props.currentUser?.id) return;
@@ -1286,6 +1265,15 @@ const saveAllSettings = async () => {
   } finally {
     isSaving.value = false
   }
+}
+
+// Cash Control Funktion
+const openCashControl = () => {
+  // Schließe das Staff Settings Modal
+  emit('close')
+  
+  // Navigiere zur Staff Cash Control Seite
+  navigateTo('/staff/cash-control')
 }
 
 // Lifecycle

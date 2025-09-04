@@ -6276,7 +6276,6 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
 }
 
 const handleTitleGenerated = (title: string) => {
-  console.log('📝 Title auto-generated:', title)
   formData.value.title = title
 }
 

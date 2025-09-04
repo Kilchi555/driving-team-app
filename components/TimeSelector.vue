@@ -47,14 +47,6 @@
           Dauer: {{ durationMinutes }} Minuten
         </div>
       </div>
-
-    <!-- Zeitkonflikt Warnung -->
-    <div v-if="timeConflictWarning" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-      <div class="flex items-center gap-2">
-        <span class="text-yellow-600">⚠️</span>
-        <span class="text-sm text-yellow-800">{{ timeConflictWarning }}</span>
-      </div>
-    </div>
   </div>
 </div>
 </template>
@@ -102,32 +94,6 @@ const shouldShow = computed(() => {
 const minDate = computed(() => {
   const today = new Date()
   return toLocalTimeString(today).split('T')[0]
-})
-
-const timeConflictWarning = computed(() => {
-  if (!props.startDate || !props.startTime) return ''
-  
-  const selectedDateTime = new Date(`${props.startDate}T${props.startTime}`)
-  const now = new Date()
-  
-  if (selectedDateTime < now) {
-    return 'Die gewählte Zeit liegt in der Vergangenheit'
-  }
-  
-  const dayOfWeek = selectedDateTime.getDay()
-  const hour = selectedDateTime.getHours()
-  
-  // Warnung für Wochenenden
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    return 'Termin am Wochenende - bitte prüfen Sie die Verfügbarkeit'
-  }
-  
-  // Warnung für ungewöhnliche Zeiten
-  if (hour < 7 || hour > 20) {
-    return 'Ungewöhnliche Uhrzeit - bitte prüfen Sie die Geschäftszeiten'
-  }
-  
-  return ''
 })
 
 const suggestedTimes = computed(() => {

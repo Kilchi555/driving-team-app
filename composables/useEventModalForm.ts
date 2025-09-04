@@ -1,85 +1,8 @@
 // composables/useEventModalForm.ts
-import { ref, computed, readonly } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-import { useTimeCalculations } from '~/composables/useTimeCalculations'
 import { useCategoryData } from '~/composables/useCategoryData'
-import { toLocalTimeString } from '~/utils/dateUtils'
-import { useAutoAssignStaff } from '~/composables/useAutoAssignStaff'
-
-
-export const useEventTypes = () => {
-  const eventTypesCache = ref<string[]>([])
-  const eventTypesFullCache = ref<any[]>([]) // ✅ NEU: Für komplette Objekte
-  const isEventTypesLoaded = ref(false)
-  
-// useEventModalForm.ts - erweitern Sie die loadEventTypes Funktion
-const loadEventTypes = async (excludeTypes: string[] = [], loadFullObjects: boolean = false) => {
-  if (isEventTypesLoaded.value && !loadFullObjects) return eventTypesCache.value
-  
-  try {
-    const supabase = getSupabase()
-    console.log('🔄 Loading event types from database...')
-    
-    const { data, error } = await supabase
-      .from('event_types')
-      .select(loadFullObjects ? '*' : 'code')
-      .eq('is_active', true)
-      .order('display_order')
-    
-    if (error) throw error
-    
-    if (loadFullObjects) {
-      // ✅ DEBUG: Alle Event Type Codes anzeigen
-      console.log('🔍 All event type codes in DB:', (data || []).map(et => et.code))
-      
-      // Filter anwenden für komplette Objekte
-      const filteredData = (data || []).filter(eventType => 
-        !excludeTypes.includes(eventType.code)
-      )
-      
-      console.log('✅ Full event types loaded (filtered):', filteredData.length, 'of', data?.length, 'total')
-      return filteredData
-      
-    } else {
-      // Original Code logic für nur Codes
-      const allCodes = data?.map((et: any) => et.code) || []
-      console.log('🔍 All event type codes in DB:', allCodes)
-      
-      eventTypesCache.value = allCodes.filter(code => !excludeTypes.includes(code))
-      isEventTypesLoaded.value = true
-      
-      console.log('✅ Event types loaded:', eventTypesCache.value, excludeTypes.length > 0 ? `(excluded: ${excludeTypes.join(', ')})` : '')
-      return eventTypesCache.value
-    }
-    
-  } catch (err) {
-    console.error('❌ Error loading event types from DB:', err)
-    
-    if (loadFullObjects) {
-      return []
-    } else {
-      // Fallback ohne excluded types
-      eventTypesCache.value = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
-      isEventTypesLoaded.value = true
-      return eventTypesCache.value
-    }
-  }
-}
-  
-  return {
-    eventTypesCache: computed(() => eventTypesCache.value),
-    isEventTypesLoaded: computed(() => isEventTypesLoaded.value),
-    loadEventTypes
-  }
-}
-
-interface Refs {
-  customerInviteSelectorRef?: any
-  staffSelectorRef?: any
-  priceDisplayRef?: any  // ✅ HINZUFÜGEN
-  invitedCustomers?: any
-  invitedStaffIds?: any
-}
+import { useEventTypes } from '~/composables/useEventTypes'
 
 // Types (können später in separates types file)
 interface AppointmentData {
@@ -87,8 +10,7 @@ interface AppointmentData {
   title: string
   description: string
   type: string
-  event_type_code?: string      
-  appointment_type?: string       
+  appointment_type?: string  // ✅ Added missing property
   startDate: string
   startTime: string
   endTime: string 
@@ -96,18 +18,18 @@ interface AppointmentData {
   user_id: string
   staff_id: string
   location_id: string
-  price_per_minute: number
+  // ✅ price_per_minute removed - not in appointments table, handled in pricing system
   status: string
   eventType: string 
   selectedSpecialType: string 
-  is_paid: boolean 
+  // ✅ is_paid removed - not in appointments table, handled in payments table
   discount?: number
   discount_type?: string
   discount_reason?: string
-  payment_method?: string
-  payment_data?: any
-  payment_status?: string
-
+  // ✅ Additional missing fields
+  custom_location_address?: any
+  custom_location_name?: string
+  google_place_id?: string
 }
 
 interface Student {
@@ -122,12 +44,7 @@ interface Student {
   preferred_duration?: number 
 }
 
-interface EventModalCallbacks {
-  onCustomerInvites?: (appointmentData: any) => Promise<any[]>
-  onTeamInvites?: (appointmentData: any) => Promise<any[]>
-}
-
-export const useEventModalForm = (currentUser?: any, refs?: {
+const useEventModalForm = (currentUser?: any, refs?: {
   customerInviteSelectorRef?: any,
   staffSelectorRef?: any,
   invitedCustomers?: any,
@@ -136,30 +53,18 @@ export const useEventModalForm = (currentUser?: any, refs?: {
   priceDisplayRef?: any,  
   emit?: any,
   props?: any,
+  selectedPaymentMethod?: any,
+  selectedPaymentData?: any,
+  selectedProducts?: any, // ✅ Selected products from useProductSale
+  dynamicPricing?: any, // ✅ Dynamic pricing for admin fee
 }) => {
   
-    // ✅ Composables initialisieren
-  const categoryData = useCategoryData()
-  const eventTypes = useEventTypes()
-  const { checkFirstAppointmentAssignment } = useAutoAssignStaff()
-  const supabase = getSupabase()
-
-  const customerInviteSelectorRef = ref()
-  const invitedCustomers = ref<any[]>([])  
-  // Setter-Funktionen für EventModal
-  const setCustomerInviteRef = (ref: any) => {
-    customerInviteSelectorRef.value = ref
-  }
-  
-  const setInvitedCustomers = (customers: any[]) => {
-    invitedCustomers.value = customers
-  }
-
   // ============ STATE ============
   const formData = ref<AppointmentData>({
     title: '',
     description: '',
     type: '',
+    appointment_type: 'lesson',
     startDate: '',
     startTime: '',
     endTime: '',
@@ -167,17 +72,18 @@ export const useEventModalForm = (currentUser?: any, refs?: {
     user_id: '',
     staff_id: '',
     location_id: '',
-    price_per_minute: 0,
+    // ✅ price_per_minute removed - not in appointments table
     status: 'booked',
     eventType: 'lesson',
     selectedSpecialType: '',
-    is_paid: false,
+    // ✅ is_paid removed - not in appointments table
     discount: 0,
     discount_type: 'fixed',
     discount_reason: '',
-    payment_method: 'cash',
-    payment_data: null,
-    payment_status: 'pending'
+    // ✅ Additional missing fields
+    custom_location_address: null,
+    custom_location_name: null,
+    google_place_id: null
   })
 
   const selectedStudent = ref<Student | null>(null)
@@ -185,84 +91,44 @@ export const useEventModalForm = (currentUser?: any, refs?: {
   const selectedLocation = ref<any>(null)
   const availableDurations = ref<number[]>([45])
   const appointmentNumber = ref<number>(1)
-  const selectedLessonType = ref('lesson')
-
   
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  // ============ COMPUTED ============
-  
-  const hasValidLocation = computed(() => {
-  // 1. Echte Location ID aus DB
-  if (formData.value.location_id && !formData.value.location_id.startsWith('temp_')) {
-    return true
-  }
-  
-  // 2. Temporäre Location ID (wird beim Speichern konvertiert)
-  if (formData.value.location_id && formData.value.location_id.startsWith('temp_')) {
-    return true
-  }
-  
-  // 3. selectedLocation hat eine ID (Fallback)
-  if (selectedLocation.value && selectedLocation.value.id) {
-    return true
-  }
-  
-  return false
-})
+  // ✅ NEUE COMPOSABLES
+  const categoryData = useCategoryData()
+  const eventTypes = useEventTypes()
 
-const isFormValid = computed(() => {
-  const lessonTypes = ['lesson', 'exam', 'theory']
-  
-  if (lessonTypes.includes(formData.value.eventType)) {
-    const lessonValid = !!(selectedStudent.value &&
-                         formData.value.type &&
-                         formData.value.startDate &&
-                         formData.value.startTime &&
-                         hasValidLocation.value &&  // ✅ Neue Location-Validierung
-                         formData.value.staff_id)
-    
-    console.log('🔍 LESSON VALIDATION (TEMP-FIXED):', {
-      isValid: lessonValid,
-      eventType: formData.value.eventType,
-      selectedStudent: !!selectedStudent.value,
-      studentName: selectedStudent.value ? `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}` : 'FEHLT',
-      type: formData.value.type || 'FEHLT',
-      startDate: formData.value.startDate || 'FEHLT',
-      startTime: formData.value.startTime || 'FEHLT',
-      // ✅ Erweiterte Location-Info:
-      location_id: formData.value.location_id || 'FEHLT',
-      location_is_temp: formData.value.location_id?.startsWith('temp_') || false,
-      selectedLocation_name: selectedLocation.value?.name || 'KEINE',
-      selectedLocation_id: selectedLocation.value?.id || 'KEINE',
-      hasValidLocation: hasValidLocation.value,
-      staff_id: formData.value.staff_id || 'FEHLT'
-    })
-    
-    return lessonValid
-  } else {
-    const otherValid = !!(formData.value.title &&
-                        formData.value.startDate &&
-                        formData.value.startTime &&
-                        hasValidLocation.value &&  // ✅ Neue Location-Validierung
-                        formData.value.staff_id)
-    
-    console.log('🔍 OTHER VALIDATION (TEMP-FIXED):', {
-      isValid: otherValid,
-      eventType: formData.value.eventType,
-      title: formData.value.title || 'FEHLT',
-      startDate: formData.value.startDate || 'FEHLT',
-      startTime: formData.value.startTime || 'FEHLT',
-      location_id: formData.value.location_id || 'FEHLT',
-      location_is_temp: formData.value.location_id?.startsWith('temp_') || false,
-      hasValidLocation: hasValidLocation.value,
-      staff_id: formData.value.staff_id || 'FEHLT'
-    })
-    
-    return otherValid
-  }
-})
+  // ============ COMPUTED ============
+  const isFormValid = computed(() => {
+    const baseValid = formData.value.title && 
+                     formData.value.startDate && 
+                     formData.value.startTime &&
+                     formData.value.endTime
+
+    if (formData.value.eventType === 'lesson') {
+      // ✅ NEU: Debug-Log für Form-Validierung
+      const isValid = baseValid && 
+                     selectedStudent.value && 
+                     formData.value.type && 
+                     formData.value.location_id &&
+                     formData.value.duration_minutes > 0
+      
+      console.log('🔍 Form validation check:', {
+        baseValid,
+        hasStudent: !!selectedStudent.value,
+        hasType: !!formData.value.type,
+        hasLocation: !!formData.value.location_id,
+        hasDuration: formData.value.duration_minutes > 0,
+        isValid
+      })
+      
+      return isValid
+    } else {
+      return baseValid && formData.value.selectedSpecialType
+    }
+  })
+
   const computedEndTime = computed(() => {
     if (!formData.value.startTime || !formData.value.duration_minutes) return ''
     
@@ -278,11 +144,8 @@ const isFormValid = computed(() => {
     return `${endHours}:${endMinutes}`
   })
 
-  const totalPrice = computed(() => {
-    const pricePerMinute = formData.value.price_per_minute || (95/45)
-    const total = pricePerMinute * (formData.value.duration_minutes || 45)
-    return total.toFixed(2)
-  })
+  // ✅ totalPrice removed - pricing handled separately in pricing system
+  const totalPrice = computed(() => '0.00')
 
   // ============ FORM ACTIONS ============
   const resetForm = () => {
@@ -299,11 +162,12 @@ const isFormValid = computed(() => {
       user_id: '',
       staff_id: currentUser?.id || '',
       location_id: '',
-      price_per_minute: 0,
+      // ✅ price_per_minute removed - not in appointments table
       status: 'booked',
       eventType: 'lesson',
+      appointment_type: 'lesson', // ✅ Standard lesson type setzen
       selectedSpecialType: '',
-      is_paid: false,
+      // ✅ is_paid removed - not in appointments table
       discount: 0,
       discount_type: 'fixed',
       discount_reason: ''
@@ -317,653 +181,671 @@ const isFormValid = computed(() => {
     error.value = null
   }
 
+  const populateFormFromAppointment = (appointment: any) => {
+    console.log('📝 Populating form from appointment:', appointment?.id)
+    console.log('🔍 Full appointment data:', appointment)
+    console.log('🔍 Appointment event_type_code check:', {
+      direct_event_type_code: appointment.event_type_code,
+      extendedProps_appointment_type: appointment.extendedProps?.appointment_type,
+      extendedProps_eventType: appointment.extendedProps?.eventType,
+      type: appointment.type,
+      extendedProps_type: appointment.extendedProps?.type,
+    })
+    console.log('🔍 Appointment user_id check:', {
+      user_id: appointment.user_id,
+      extendedProps_user_id: appointment.extendedProps?.user_id,
+      hasUserData: !!(appointment.user_id || appointment.extendedProps?.user_id)
+    })
+    
+    // ✅ KORREKTE TERMINART AUS DB - Mehrere Fallbacks prüfen
+    const appointmentType = appointment.event_type_code || appointment.extendedProps?.appointment_type || 'lesson'
+    console.log('🎯 Determined appointmentType:', appointmentType)
+    
+    // ✅ KORREKTE FAHRZEUGKATEGORIE AUS DB (nur erste Kategorie)  
+    const vehicleCategory = appointment.type ? appointment.type.split(',')[0].trim() : 'B'
+    
+    const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
+    const isOtherEvent = appointmentType && otherEventTypes.includes(appointmentType.toLowerCase())
+    
+    // Zeit-Verarbeitung
+    const startDateTime = new Date(appointment.start_time || appointment.start)
+    const endDateTime = appointment.end_time || appointment.end ? new Date(appointment.end_time || appointment.end) : null
+    const startDate = startDateTime.toISOString().split('T')[0]
+    const startTime = startDateTime.toTimeString().slice(0, 5)
+    const endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : ''
+    
+    let duration = appointment.duration_minutes || appointment.extendedProps?.duration_minutes
+    if (!duration && endDateTime) {
+      duration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60))
+    }
+    duration = duration || 45
+    
+    // ✅ vehicleCategory bereits oben definiert
+    
+    formData.value = {
+      title: appointment.title || '',
+      description: appointment.description || appointment.extendedProps?.description || '',
+      type: isOtherEvent ? appointmentType : vehicleCategory, // Fahrzeugkategorie für lessons, event type für others
+      appointment_type: appointmentType, // Der tatsächliche event_type_code
+      startDate: startDate,
+      startTime: startTime,
+      endTime: endTime,
+      duration_minutes: duration,
+      user_id: appointment.user_id || appointment.extendedProps?.user_id || '',
+      staff_id: appointment.staff_id || appointment.extendedProps?.staff_id || currentUser?.id || '',
+      location_id: appointment.location_id || appointment.extendedProps?.location_id || '',
+      // ✅ price_per_minute removed - not in appointments table
+      status: appointment.status || appointment.extendedProps?.status || 'confirmed',
+      eventType: isOtherEvent ? 'other' : 'lesson',
+      selectedSpecialType: isOtherEvent ? appointmentType : '',
+      // ✅ is_paid removed - not in appointments table
+      discount: appointment.discount || appointment.extendedProps?.discount || 0,
+      discount_type: appointment.discount_type || appointment.extendedProps?.discount_type || 'fixed',
+      discount_reason: appointment.discount_reason || appointment.extendedProps?.discount_reason || '',
+      // ✅ Additional missing fields
+      custom_location_address: appointment.custom_location_address || appointment.extendedProps?.custom_location_address || null,
+      custom_location_name: appointment.custom_location_name || appointment.extendedProps?.custom_location_name || null,
+      google_place_id: appointment.google_place_id || appointment.extendedProps?.google_place_id || null
+    }
+    
+    console.log('✅ Form populated with type:', formData.value.type)
+    
+    // ✅ Load student if user_id exists
+    console.log('🔍 Student loading check:', {
+      user_id: formData.value.user_id,
+      eventType: formData.value.eventType,
+      shouldLoadStudent: !!(formData.value.user_id && formData.value.eventType === 'lesson')
+    })
+    
+    if (formData.value.user_id && formData.value.eventType === 'lesson') {
+      console.log('🎯 Loading student by ID:', formData.value.user_id)
+      loadStudentById(formData.value.user_id)
+    } else {
+      console.log('ℹ️ Skipping student load - missing user_id or not a lesson')
+    }
+    
+    // ✅ Load existing discount if appointment ID exists
+    if (appointment.id) {
+      loadExistingDiscount(appointment.id)
+      // ✅ Load existing products as well
+      loadExistingProducts(appointment.id)
+      // ✅ Admin fee will be loaded automatically by usePricing in edit mode
+    }
+  }
 
-// In useEventModalForm.ts - korrektes System basierend auf event_types DB:
-
-const populateFormFromAppointment = async (appointment: any) => {
-  console.log('📝 Populating form from appointment:', appointment?.id)
-  
-  // Debug: Alle möglichen Type-Felder ausgeben
-  console.log('🔍 ALL TYPE FIELDS:', {
-    'extendedProps.type': appointment.extendedProps?.type,
-    'type': appointment.type,
-    'extendedProps.appointment_type': appointment.extendedProps?.appointment_type,
-    'extendedProps.eventType': appointment.extendedProps?.eventType,
-    'appointment_type': appointment.appointment_type,
-    'eventType': appointment.eventType
-  })
-  
-  // ✅ Event Type Code ermitteln - das ist der wichtigste Wert!
-  const rawEventTypeCode = appointment.extendedProps?.appointment_type || 
-                          appointment.type || 
-                          appointment.extendedProps?.type || 
-                          appointment.extendedProps?.eventType ||
-                          'lesson' // Default
-  
-  // ✅ Event Types aus DB laden
-  const allEventTypeCodes = await eventTypes.loadEventTypes()
-  
-  // ✅ MIGRATIONS-LOGIK für bestehende Termine:
-  // Wenn rawEventTypeCode eine Fahrkategorie ist (B, A1, etc.), dann ist es ein 'lesson'
-  // Wenn rawEventTypeCode ein gültiger Event Type ist, dann verwenden
-  
-  let eventTypeCode: string
-  let drivingCategory: string
-  
-  if (allEventTypeCodes.includes(rawEventTypeCode)) {
-    // Es ist bereits ein gültiger Event Type Code
-    eventTypeCode = rawEventTypeCode
-    drivingCategory = appointment.extendedProps?.category || 
-                     appointment.category ||
-                     'B' // Default Fahrkategorie
-  } else {
-    // Es ist wahrscheinlich eine Fahrkategorie (B, A1, etc.) - Legacy Format
-    eventTypeCode = 'lesson' // ✅ Bestehende Termine sind normale Fahrstunden
-    drivingCategory = rawEventTypeCode // Die Fahrkategorie
-  }
-  
-  console.log('🔍 Migration logic applied:', {
-    rawEventTypeCode,
-    eventTypeCode,
-    drivingCategory,
-    allEventTypeCodes: allEventTypeCodes.slice(0, 5)
-  })
-
-  console.log('🔍 CATEGORY SOURCES DEBUG:', {
-  'appointment.type': appointment.type,
-  'appointment.category': appointment.category,
-  'appointment.extendedProps?.category': appointment.extendedProps?.category,
-  'appointment.extendedProps?.original_type': appointment.extendedProps?.original_type,
-  'rawEventTypeCode': rawEventTypeCode,
-  allSources: {
-    type: appointment.type,
-    category: appointment.category,
-    extPropsCategory: appointment.extendedProps?.category,
-    extPropsOriginalType: appointment.extendedProps?.original_type,
-    extPropsAppointmentType: appointment.extendedProps?.appointment_type
-  }
-})
-  
-  // ✅ EINFACHE LOGIK basierend auf event_types DB:
-  // - lesson, exam, theory = LESSON TYPE (zeigt StudentSelector + LessonTypeSelector)
-  // - meeting, pgs, vku, etc. = OTHER TYPE (zeigt EventTypeSelector)
-  
-  const lessonEventTypes = ['lesson', 'exam', 'theory']
-  const isLessonType = lessonEventTypes.includes(eventTypeCode)
-  
-  console.log('🔍 Event type detection:', {
-    eventTypeCode,
-    isLessonType,
-    allEventTypeCodes: allEventTypeCodes.slice(0, 5),
-    lessonEventTypes
-  })
-  
-  // Zeit-Verarbeitung
-  const startDateTime = new Date(appointment.start_time || appointment.start)
-  const endDateTime = appointment.end_time || appointment.end ? new Date(appointment.end_time || appointment.end) : null
-  const startDate = toLocalTimeString(startDateTime).split('T')[0]
-  const startTime = startDateTime.toTimeString().slice(0, 5)
-  const endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : ''
-  
-  let duration = appointment.duration_minutes || appointment.extendedProps?.duration_minutes
-  if (!duration && endDateTime) {
-    duration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60))
-  }
-  duration = duration || 45
-  
-  // ✅ Form Data setzen - KORREKTE Struktur
-  formData.value = {
-    id: appointment.id || '',
-    title: appointment.title || '',
-    description: appointment.description || appointment.extendedProps?.description || '',
-    type: isLessonType ? drivingCategory : eventTypeCode, // Fahrkategorie für lessons, event_type_code für others
-    appointment_type: eventTypeCode, // Der tatsächliche event_type_code
-    startDate: startDate,
-    startTime: startTime,
-    endTime: endTime,
-    duration_minutes: duration,
-    user_id: appointment.user_id || appointment.extendedProps?.user_id || '',
-    staff_id: appointment.staff_id || appointment.extendedProps?.staff_id || currentUser?.id || '',
-    location_id: appointment.location_id || appointment.extendedProps?.location_id || '',
-    price_per_minute: appointment.price_per_minute || appointment.extendedProps?.price_per_minute || 0,
-    status: appointment.status || appointment.extendedProps?.status || 'confirmed',
-    // ✅ WICHTIG: Korrekte eventType Bestimmung
-    eventType: isLessonType ? 'lesson' : 'other',
-    selectedSpecialType: isLessonType ? '' : eventTypeCode,
-    is_paid: appointment.is_paid || appointment.extendedProps?.is_paid || false,
-    discount: appointment.discount || appointment.extendedProps?.discount || 0,
-    discount_type: appointment.discount_type || appointment.extendedProps?.discount_type || 'fixed',
-    discount_reason: appointment.discount_reason || appointment.extendedProps?.discount_reason || '',
-    payment_method: appointment.payment_method || appointment.extendedProps?.payment_method || 'cash',
-    payment_data: appointment.payment_data || appointment.extendedProps?.payment_data || null,
-    payment_status: appointment.payment_status || appointment.extendedProps?.payment_status || 'pending'
-  }
-  
-  console.log('✅ Form populated:', {
-    eventTypeCode,
-    isLessonType,
-    eventType: formData.value.eventType,
-    type: formData.value.type,
-    appointment_type: formData.value.appointment_type,
-    selectedSpecialType: formData.value.selectedSpecialType
-  })
-
-  if (isLessonType) {
-    selectedLessonType.value = eventTypeCode // ✅ exam, lesson, theory
-  }
-  
-  // ✅ Student für Lesson Types laden
-  if (isLessonType && formData.value.user_id) {
-    console.log('👤 Loading student for lesson type:', formData.value.user_id)
+  // ✅ Load student by ID for existing appointments
+  const loadStudentById = async (userId: string) => {
     try {
+      console.log('📞 loadStudentById called with userId:', userId)
+      const supabase = getSupabase()
+      
+      console.log('🔍 Querying users table for student...')
       const { data: student, error } = await supabase
         .from('users')
         .select('*')
-        .eq('id', formData.value.user_id)
+        .eq('id', userId)
+        .eq('role', 'client')
         .single()
-      
-      if (error) throw error
-      
+
+      console.log('📊 Student query result:', { student, error })
+
+      if (error) {
+        console.error('❌ Error loading student:', error)
+        return
+      }
+
       if (student) {
         selectedStudent.value = student
-        console.log('✅ Student loaded:', student.first_name)
+        console.log('✅ Student loaded for existing appointment:', student.first_name, student.last_name)
+        console.log('🎯 selectedStudent.value now set to:', selectedStudent.value?.id)
+      } else {
+        console.log('⚠️ No student found with ID:', userId)
       }
     } catch (err) {
-      console.error('❌ Error loading student:', err)
+      console.error('❌ Error in loadStudentById:', err)
     }
   }
-  
-  // ✅ Location immer laden falls vorhanden
-  if (formData.value.location_id) {
-    console.log('📍 Loading location:', formData.value.location_id)
-    try {
-      const { data: location, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('id', formData.value.location_id)
-        .single()
-      
-      if (error) throw error
-      
-      if (location) {
-        selectedLocation.value = location
-        console.log('✅ Location loaded:', location.name)
-      }
-    } catch (err) {
-      console.error('❌ Error loading location:', err)
+
+  const calculateEndTime = () => {
+    if (formData.value.startTime && formData.value.duration_minutes) {
+      formData.value.endTime = computedEndTime.value
+      console.log('⏰ End time calculated:', formData.value.endTime)
     }
   }
-// useEventModalForm.ts - Zeile 478 ersetzen (den Debug-Code erweitern):
-
-// ✅ VOLLSTÄNDIGES DEBUGGING der appointment Struktur
-console.log('🔍 COMPLETE APPOINTMENT STRUCTURE:', JSON.stringify(appointment, null, 2))
-console.log('🔍 APPOINTMENT TOP LEVEL:', {
-  id: appointment.id,
-  title: appointment.title,
-  discount: appointment.discount,
-  discount_type: appointment.discount_type,
-  discount_reason: appointment.discount_reason
-})
-console.log('🔍 APPOINTMENT EXTENDED PROPS:', {
-  extendedProps: appointment.extendedProps,
-  'extendedProps.discount': appointment.extendedProps?.discount,
-  'extendedProps.discount_type': appointment.extendedProps?.discount_type,
-  'extendedProps.discount_reason': appointment.extendedProps?.discount_reason
-})
-
-// ✅ ERWEITERTE Suche nach Rabatt-Daten in allen möglichen Orten
-const discountAmount = appointment.discount || 
-                      appointment.extendedProps?.discount || 
-                      appointment.extendedProps?.discountAmount ||
-                      0
-
-const discountType = appointment.discount_type || 
-                    appointment.extendedProps?.discount_type ||
-                    appointment.extendedProps?.discountType ||
-                    'fixed'
-
-const discountReason = appointment.discount_reason || 
-                      appointment.extendedProps?.discount_reason ||
-                      appointment.extendedProps?.discountReason ||
-                      ''
-
-console.log('💰 Loading discount from appointment data:', {
-  discount: discountAmount,
-  discount_type: discountType,
-  discount_reason: discountReason,
-  sources: {
-    'appointment.discount': appointment.discount,
-    'extendedProps.discount': appointment.extendedProps?.discount,
-    'appointment.discount_type': appointment.discount_type,
-    'extendedProps.discount_type': appointment.extendedProps?.discount_type
-  }
-})
-
-// Setze Rabatt-Werte
-formData.value.discount = discountAmount
-formData.value.discount_type = discountType
-formData.value.discount_reason = discountReason
-
-console.log('✅ Discount loaded from appointment:', {
-  amount: formData.value.discount,
-  type: formData.value.discount_type,
-  reason: formData.value.discount_reason
-})
-}
-
-const { calculateEndTime } = useTimeCalculations(formData)
-
 
   // ============ SAVE/DELETE LOGIC ============ 
-  // Zuerst diese Hilfsfunktion ganz oben in useEventModalForm.ts hinzufügen:
-const saveWithOfflineSupport = async (
-  table: string, 
-  data: any, 
-  action: string = 'insert', 
-  where: any = null, 
-  operationName: string
-) => {
-  try {
-    const supabase = getSupabase()
-    
-    let result
-    switch (action) {
-      case 'insert':
-        result = await supabase.from(table).insert(data).select().single()
-        break
-      case 'update':
-        result = await supabase.from(table).update(data).eq('id', where.id).select().single()
-        break
-      case 'delete':
-        result = await supabase.from(table).delete().eq('id', where.id)
-        break
-      default:
-        throw new Error(`Unknown action: ${action}`)
-    }
-    
-    if (result.error) throw result.error
-    console.log(`✅ Online save successful: ${operationName}`)
-    return result
-    
-  } catch (error: any) {
-    console.log(`📦 Network error, saving offline: ${operationName}`)
-    
-    // In Offline-Queue speichern
-    const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]')
-    queue.push({ 
-      table, 
-      action, 
-      data, 
-      where, 
-      operationName, 
-      timestamp: Date.now(),
-      retryCount: 0
-    })
-    localStorage.setItem('offline_queue', JSON.stringify(queue))
-    
-    // Fake Success für UI (Optimistic Update)
-    const fakeResult = { 
-      data: action === 'delete' ? null : { ...data, id: `temp_${Date.now()}` },
-      error: null 
-    }
-    
-    console.log(`📦 Saved to offline queue: ${operationName}`)
-    
-    // Bei Netzwerk-Fehlern: Optimistic Update
-    if (error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
-      return fakeResult
-    }
-    
-    // Bei echten DB-Fehlern: Fehler weiterwerfen
-    throw error
-  }
-}
-
-const cleanUUIDFields = (data: any) => {
-  const cleaned = { ...data }
   
-  // Bereinige alle UUID-Felder von temporären IDs
-  const uuidFields = ['user_id', 'staff_id', 'location_id', 'id']
-  
-  uuidFields.forEach(field => {
-    if (cleaned[field] && typeof cleaned[field] === 'string') {
-      // Entferne temporäre IDs (setze auf null)
-      if (cleaned[field].startsWith('temp_') || 
-          cleaned[field].startsWith('manual_') ||
-          cleaned[field].includes('temp_manual_')) {
-        console.log(`🧹 Removing temp ID from ${field}:`, cleaned[field])
-        cleaned[field] = null
-      }
-    }
-  })
-  
-  console.log('🧹 UUID fields cleaned:', cleaned)
-  return cleaned
-}
-
-// Dann die saveAppointment Funktion ersetzen:
-const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {
-    console.log('🔥🔥🔥 useEventModalForm saveAppointment called!') 
-
-  isLoading.value = true
-  error.value = null
-  
-  try {
-        // ✅ 1. DEBUG: Aktuelle formData Werte loggen
-    console.log('💾 SAVE DEBUG - Current formData before save:', {
-      price_per_minute: formData.value.price_per_minute,
-      type: formData.value.type,
-      duration_minutes: formData.value.duration_minutes,
-      eventType: formData.value.eventType,
-    })
-// ✅ SOFORTIGE KORREKTUR vor dem Speichern
-if (!formData.value.price_per_minute || formData.value.price_per_minute <= 0) {
-  console.log('🔧 Korrigiere fehlenden price_per_minute...')
-  
-  // Direkte Fallback-Preise basierend auf Kategorie
-  const fallbackPrices: Record<string, number> = {
-    'B': 2.111,         // 95 CHF / 45min
-    'A': 2.111,         // 95 CHF / 45min  
-    'A1': 2.111,        // 95 CHF / 45min
-    'BE': 2.667,        // 120 CHF / 45min
-    'C': 3.778,         // 170 CHF / 45min
-    'C1': 3.333,        // 150 CHF / 45min
-    'D': 4.444,         // 200 CHF / 45min
-    'CE': 4.444,        // 200 CHF / 45min
-    'D1': 3.333,        // 150 CHF / 45min
-    'Motorboot': 2.667,      // 120 CHF / 45min
-    'BPT': 2.222        // 100 CHF / 45min
-  }
-  
-  const category = formData.value.type || 'B'
-  const fallbackPrice = fallbackPrices[category] || fallbackPrices['B']
-  
-  console.log(`💰 Using fallback price for category ${category}: ${fallbackPrice} CHF/min`)
-  formData.value.price_per_minute = fallbackPrice
-  
-  // Debug: Log korrigierte Werte
-  console.log('💾 CORRECTED formData.price_per_minute:', formData.value.price_per_minute)
-}
-
-// Zusätzlicher Debug-Log nach der Korrektur
-console.log('💾 FINAL formData before save:', {
-  price_per_minute: formData.value.price_per_minute,
-  type: formData.value.type,
-  duration_minutes: formData.value.duration_minutes,
-  title: formData.value.title
-})
-    if (!isFormValid.value) {
-      throw new Error('Bitte füllen Sie alle Pflichtfelder aus')
-    }
-    
-    // Auth Check (mit Offline-Fallback)
-    let dbUser
+  // ✅ Load existing discount from discount_sales table
+  const loadExistingDiscount = async (appointmentId: string) => {
     try {
       const supabase = getSupabase()
+      
+      const { data: discount, error } = await supabase
+        .from('discount_sales')
+        .select('*')
+        .eq('appointment_id', appointmentId)
+        .single()
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.warn('⚠️ Error loading discount:', error)
+        return null
+      }
+      
+      if (discount) {
+        console.log('💰 Existing discount loaded:', discount)
+        
+        // Convert rappen back to CHF for fixed discounts
+        const discountAmount = discount.discount_type === 'percentage' 
+          ? discount.discount_amount_rappen // Percentage stays as is
+          : discount.discount_amount_rappen / 100 // Convert rappen to CHF
+        
+        // Update formData with discount info
+        formData.value.discount = discountAmount
+        formData.value.discount_type = discount.discount_type
+        formData.value.discount_reason = discount.discount_reason || ''
+        
+        console.log('✅ Discount data populated into form:', {
+          amount: discountAmount,
+          type: discount.discount_type,
+          reason: discount.discount_reason
+        })
+        
+        return discount
+      }
+      
+      return null
+    } catch (err: any) {
+      console.error('❌ Error loading existing discount:', err)
+      return null
+    }
+  }
+  
+  // ✅ NEU: Lade Standard-Rechnungsadresse eines Studenten
+  const loadStudentBillingAddress = async (studentId: string) => {
+    try {
+      console.log('🏢 Loading student billing address for:', studentId)
+      
+      const supabaseClient = getSupabase()
+      console.log('🔍 Supabase client check:', { 
+        hasSupabase: !!supabaseClient,
+        hasFrom: typeof supabaseClient?.from,
+        supabaseType: typeof supabaseClient
+      })
+      
+      // ✅ DEBUG: Erst schauen welche Spalten es gibt und alle Adressen laden
+      console.log('🔍 Looking for billing addresses with created_by =', studentId)
+      
+      // Alle aktiven Adressen laden um die Struktur zu sehen
+      const { data: allData, error: allError } = await supabaseClient
+        .from('company_billing_addresses')
+        .select('*')
+        .eq('is_active', true)
+        .limit(5)
+        
+      if (!allError && allData) {
+        console.log('🔍 Sample billing addresses (to check structure):', allData)
+      }
+      
+      // Jetzt spezifisch für diesen User suchen
+      const { data, error } = await supabaseClient
+        .from('company_billing_addresses')
+        .select('*')
+        .eq('created_by', studentId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('❌ Database error:', error)
+        throw error
+      }
+
+      console.log('🔍 Found billing addresses:', { 
+        count: data?.length || 0, 
+        addresses: data 
+      })
+
+      // Die neueste Adresse zurückgeben (falls vorhanden)
+      const latestAddress = data && data.length > 0 ? data[0] : null
+      if (latestAddress) {
+        console.log('✅ Student billing address loaded:', latestAddress)
+      } else {
+        console.log('💡 No billing address found for student')
+      }
+      
+      return latestAddress
+    } catch (error) {
+      console.error('❌ Error loading student billing address:', error)
+      return null
+    }
+  }
+
+  // ✅ Load existing payment data for edit mode
+  const loadExistingPayment = async (appointmentId: string) => {
+    if (!appointmentId) {
+      console.log('ℹ️ No appointment ID provided for payment loading')
+      return null
+    }
+
+    try {
+      const supabase = getSupabase()
+      
+      const { data: paymentData, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('appointment_id', appointmentId)
+        .single()
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.warn('⚠️ Error loading existing payment:', error)
+        return null
+      }
+      
+      if (paymentData) {
+        console.log('✅ Existing payment loaded:', {
+          id: paymentData.id,
+          payment_method: paymentData.payment_method,
+          payment_status: paymentData.payment_status,
+          total_amount_chf: (paymentData.total_amount_rappen / 100).toFixed(2)
+        })
+        
+        // Update selectedPaymentMethod ref if available
+        if (refs?.selectedPaymentMethod) {
+          refs.selectedPaymentMethod.value = paymentData.payment_method
+          console.log('💳 Payment method set from existing payment:', paymentData.payment_method)
+        }
+        
+        return paymentData
+      }
+      
+      console.log('ℹ️ No existing payment found for appointment:', appointmentId)
+      return null
+      
+    } catch (err: any) {
+      console.error('❌ Error loading existing payment:', err)
+      return null
+    }
+  }
+
+  // ✅ Save discount to discount_sales table if discount exists
+  const saveDiscountIfExists = async (appointmentId: string) => {
+    if (!formData.value.discount || formData.value.discount <= 0) {
+      console.log('ℹ️ No discount to save')
+      return null
+    }
+    
+    try {
+      const supabase = getSupabase()
+      
+      // First, check if discount already exists for this appointment
+      const { data: existingDiscount, error: checkError } = await supabase
+        .from('discount_sales')
+        .select('id')
+        .eq('appointment_id', appointmentId)
+        .single()
+      
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.warn('⚠️ Error checking existing discount:', checkError)
+      }
+      
+      const discountData = {
+        appointment_id: appointmentId,
+        user_id: formData.value.user_id,
+        staff_id: formData.value.staff_id,
+        discount_amount_rappen: formData.value.discount_type === 'percentage' 
+          ? Math.round(formData.value.discount || 0) // Percentage as whole number (e.g., 10 for 10%)
+          : Math.round((formData.value.discount || 0) * 100), // Convert CHF to rappen
+        discount_type: formData.value.discount_type || 'fixed',
+        discount_reason: formData.value.discount_reason || '',
+        payment_method: refs?.selectedPaymentMethod?.value || 'pending',
+        status: 'pending'
+      }
+      
+      console.log('💰 Saving discount data:', discountData)
+      
+      let discountRecord = null
+      
+      if (existingDiscount) {
+        // Update existing discount
+        const { data: updatedDiscount, error: updateError } = await supabase
+          .from('discount_sales')
+          .update(discountData)
+          .eq('id', existingDiscount.id)
+          .select()
+          .single()
+        
+        if (updateError) throw updateError
+        discountRecord = updatedDiscount
+        console.log('✅ Discount updated successfully')
+      } else {
+        // Create new discount
+        const { data: newDiscount, error: insertError } = await supabase
+          .from('discount_sales')
+          .insert(discountData)
+          .select()
+          .single()
+        
+        if (insertError) throw insertError
+        discountRecord = newDiscount
+        console.log('✅ Discount saved successfully')
+      }
+      
+      return discountRecord
+      
+    } catch (err: any) {
+      console.error('❌ Error saving discount:', err)
+      // Don't throw - discount saving shouldn't fail the entire appointment save
+      return null
+    }
+  }
+  
+  // ✅ Save discount OR create discount_sales record for products linkage
+  const saveDiscountOrCreateForProducts = async (appointmentId: string) => {
+    const hasDiscount = formData.value.discount && formData.value.discount > 0
+    const hasProducts = refs?.selectedProducts?.value && refs.selectedProducts.value.length > 0
+    
+    if (!hasDiscount && !hasProducts) {
+      console.log('ℹ️ No discount or products to save')
+      return null
+    }
+    
+    try {
+      const supabase = getSupabase()
+      
+      // Check if discount_sales record already exists for this appointment
+      const { data: existingRecord, error: checkError } = await supabase
+        .from('discount_sales')
+        .select('id')
+        .eq('appointment_id', appointmentId)
+        .single()
+      
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.warn('⚠️ Error checking existing discount_sales:', checkError)
+      }
+      
+      const discountData = {
+        appointment_id: appointmentId,
+        user_id: formData.value.user_id,
+        staff_id: formData.value.staff_id,
+        discount_amount_rappen: hasDiscount 
+          ? (formData.value.discount_type === 'percentage' 
+            ? Math.round(formData.value.discount || 0) // Percentage as whole number
+            : Math.round((formData.value.discount || 0) * 100)) // Convert CHF to rappen
+          : 0,
+        discount_type: formData.value.discount_type || 'fixed',
+        discount_reason: formData.value.discount_reason || '',
+        payment_method: refs?.selectedPaymentMethod?.value || 'pending',
+        status: 'pending'
+      }
+      
+      console.log('💰 Saving/creating discount_sales record:', discountData)
+      
+      let discountRecord = null
+      
+      if (existingRecord) {
+        // Update existing record
+        const { data: updatedRecord, error: updateError } = await supabase
+          .from('discount_sales')
+          .update(discountData)
+          .eq('id', existingRecord.id)
+          .select()
+          .single()
+        
+        if (updateError) throw updateError
+        discountRecord = updatedRecord
+        console.log('✅ Discount_sales record updated')
+      } else {
+        // Create new record
+        const { data: newRecord, error: insertError } = await supabase
+          .from('discount_sales')
+          .insert(discountData)
+          .select()
+          .single()
+        
+        if (insertError) throw insertError
+        discountRecord = newRecord
+        console.log('✅ Discount_sales record created')
+      }
+      
+      return discountRecord
+      
+    } catch (err: any) {
+      console.error('❌ Error saving discount_sales record:', err)
+      return null
+    }
+  }
+  
+  // ✅ Load existing products via discount_sales → product_sales chain
+  const loadExistingProducts = async (appointmentId: string) => {
+    console.log('📦 Loading existing products for appointment:', appointmentId)
+    try {
+      const supabase = getSupabase()
+      
+      // First get the discount_sales record for this appointment
+      const { data: discountSale, error: discountError } = await supabase
+        .from('discount_sales')
+        .select('id')
+        .eq('appointment_id', appointmentId)
+        .single()
+      
+      if (discountError && discountError.code !== 'PGRST116') {
+        console.warn('⚠️ Error loading discount_sales:', discountError)
+        return []
+      }
+      
+      if (!discountSale) {
+        console.log('📦 No discount_sales record found, no products to load')
+        return []
+      }
+
+      console.log('📦 Found discount_sales record:', discountSale.id)
+
+      // Now load product_sales that reference this discount_sales
+      const { data: productItems, error } = await supabase
+        .from('product_sales')
+        .select(`
+          *,
+          products (
+            id,
+            name,
+            description,
+            price_rappen
+          )
+        `)
+        .eq('product_sale_id', discountSale.id)
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('⚠️ Error loading product_sales:', error)
+        return []
+      }
+
+      if (!productItems || productItems.length === 0) {
+        console.log('📦 No product items found')
+        return []
+      }
+
+      console.log('📦 Found product items:', productItems.length)
+
+      // Format products for UI
+      const allProducts = productItems.map((item: any) => ({
+        id: item.id,
+        product: {
+          id: item.products?.id || item.product_id,
+          name: item.products?.name || 'Unknown Product',
+          price: (item.products?.price_rappen || item.unit_price_rappen || 0) / 100,
+          description: item.products?.description || ''
+        },
+        quantity: item.quantity || 1,
+        total: item.total_price_rappen / 100
+      }))
+      
+      console.log('✅ Products formatted for UI:', allProducts.length)
+      
+      // Set products in refs if available
+      if (refs?.selectedProducts) {
+        refs.selectedProducts.value = allProducts
+        console.log('✅ Products set in selectedProducts ref')
+      }
+      
+      return allProducts
+    } catch (err: any) {
+      console.error('❌ Error loading existing products:', err)
+      return []
+    }
+  }
+  
+  // ✅ Note: Admin fee loading is now handled directly in usePricing for edit mode
+  
+  // ✅ Save products to product_sales table if products exist
+  const saveProductsIfExists = async (appointmentId: string, discountSaleId?: string) => {
+    // Check if we have selected products (from refs or other sources)
+    const selectedProducts = refs?.selectedProducts?.value || []
+    
+    if (!selectedProducts || selectedProducts.length === 0) {
+      console.log('ℹ️ No products to save')
+      return
+    }
+    
+    if (!discountSaleId) {
+      console.log('❌ No discount_sale_id provided for product linkage')
+      return
+    }
+    
+    try {
+      const supabase = getSupabase()
+      
+      // First, delete existing products for this discount_sale
+      const { error: deleteError } = await supabase
+        .from('product_sales')
+        .delete()
+        .eq('product_sale_id', discountSaleId)
+      
+      if (deleteError) {
+        console.warn('⚠️ Error deleting existing products:', deleteError)
+      }
+      
+      // Prepare product data for insertion
+      const productData = selectedProducts.map((item: any) => ({
+        product_sale_id: discountSaleId, // Link to discount_sales record
+        product_id: item.product?.id || item.id,
+        quantity: item.quantity || 1,
+        unit_price_rappen: Math.round((item.product?.price || item.price || 0) * 100),
+        total_price_rappen: Math.round((item.total || (item.product?.price || item.price || 0) * (item.quantity || 1)) * 100)
+      }))
+      
+      console.log('📦 Saving product data:', productData)
+      
+      // Insert new products
+      const { error: insertError } = await supabase
+        .from('product_sales')
+        .insert(productData)
+      
+      if (insertError) throw insertError
+      
+      console.log('✅ Products saved successfully:', productData.length)
+      
+    } catch (err: any) {
+      console.error('❌ Error saving products:', err)
+      // Don't throw - product saving shouldn't fail the entire appointment save
+    }
+  }
+  
+  const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      if (!isFormValid.value) {
+        throw new Error('Bitte füllen Sie alle Pflichtfelder aus')
+      }
+      
+      const supabase = getSupabase()
+      
+      // Auth Check
       const { data: authData, error: authError } = await supabase.auth.getUser()
       if (!authData?.user) {
         throw new Error('Nicht authentifiziert')
       }
       
-      const { data, error: dbError } = await supabase
+      // User Check
+      const { data: dbUser, error: dbError } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authData.user.id)
         .single()
       
-      if (!data) {
+      if (!dbUser) {
         throw new Error('User-Profil nicht gefunden')
       }
       
-      dbUser = data
-    } catch (authError) {
-      console.log('⚠️ Auth check failed (offline?), using fallback')
-      // Bei Offline: Verwende aktuelle User-Daten als Fallback
-      dbUser = { 
-        id: formData.value.staff_id || 'offline_staff_' + Date.now() 
-      }
-    }
-
-const localStartString = `${formData.value.startDate}T${formData.value.startTime}:00`
-const localEndString = `${formData.value.startDate}T${formData.value.endTime}:00`
-
-console.log('🔍 SAVING TO DB (LOCAL TIME):', {
-  start_time: localStartString,
-  end_time: localEndString,
-  note: 'NO TIMEZONE INFO - PURE LOCAL TIME'
-})
-
-console.log('🔍 EVENT_TYPE_CODE DEBUG:', {
-  'formData.eventType': formData.value.eventType,
-  'formData.appointment_type': formData.value.appointment_type,
-  'formData.selectedSpecialType': formData.value.selectedSpecialType,
-  'selectedLessonType': selectedLessonType?.value,
-  'will_set_event_type_code_to': formData.value.eventType === 'lesson' ? formData.value.appointment_type : formData.value.selectedSpecialType
-})
-
-// Appointment Data
-const appointmentData = {
-  title: formData.value.title,
-  description: formData.value.description,
-  user_id: formData.value.user_id,
-  staff_id: formData.value.staff_id || dbUser.id,
-  location_id: formData.value.location_id,
-  start_time: localStartString,  
-  end_time: localEndString,     
-  duration_minutes: formData.value.duration_minutes,
-  type: formData.value.eventType === 'lesson' ? formData.value.type : formData.value.type,  // Immer formData.value.type (die Fahrkategorie)
-  event_type_code: formData.value.eventType === 'lesson' ? (formData.value.appointment_type || selectedLessonType?.value || 'lesson'): formData.value.selectedSpecialType,
-    status: formData.value.status,
-}
-
-    const cleanedAppointmentData = cleanUUIDFields({
-      ...appointmentData,
-      user_id: appointmentData.user_id || appointmentData.staff_id || dbUser.id,        
-      staff_id: appointmentData.staff_id || null,
-      location_id: appointmentData.location_id || null
-    })
-    
-    console.log('💾 Saving appointment data:', cleanedAppointmentData)
-    
-
-    // Dann cleanedAppointmentData verwenden statt appointmentData:
-    let result
-    if (mode === 'edit' && eventId) {
-      result = await saveWithOfflineSupport(
-        'appointments',
-        cleanedAppointmentData,  // ← Gereinigte Daten verwenden
-        'update',
-        { id: eventId },
-        `Termin "${cleanedAppointmentData.title}" bearbeiten`
-      )
-    } else {
-      result = await saveWithOfflineSupport(
-        'appointments', 
-        cleanedAppointmentData,  // ← Gereinigte Daten verwenden
-        'insert',
-        null,
-        `Termin "${cleanedAppointmentData.title}" erstellen`
-      )
-    }
-    
-    console.log('✅ Appointment saved:', result?.data?.id || 'offline')
-
-const savedAppointmentId = result.data.id
-
-// ✅ AUTO-ASSIGNMENT beim ersten Termin mit spezifischem Staff
-if (savedAppointmentId && 
-    cleanedAppointmentData.user_id && 
-    cleanedAppointmentData.staff_id &&
-    !String(savedAppointmentId).startsWith('temp_')) {
-  
-  try {
-    const assignment = await checkFirstAppointmentAssignment({
-      user_id: cleanedAppointmentData.user_id,
-      staff_id: cleanedAppointmentData.staff_id
-    })
-    
-    if (assignment.assigned) {
-      console.log(`✅ Auto-Assignment: ${assignment.studentName} - Staff hinzugefügt (${assignment.totalStaff} Staff total)`)
-    } else {
-      console.log(`ℹ️ No auto-assignment: ${assignment.reason}`)
-    }
-  } catch (assignmentError) {
-    console.error('❌ Auto-Assignment Fehler:', assignmentError)
-    // Fehler nicht weiterwerfen - Termin ist bereits gespeichert
-  }
-}
-
-// useEventModalForm.ts - ändere den Debug:
-console.log('🔍 DEBUG Payment Method:', {
-  paymentMethod: cleanedAppointmentData.payment_method, // ← Das richtige Objekt
-  formDataMethod: formData.value.payment_method, // ← Vergleich
-  savedAppointmentId,
-  willCreatePayment: cleanedAppointmentData.payment_method === 'twint' || cleanedAppointmentData.payment_method === 'online'
-})
-
-// ✅ EINFACHER TEST - mit RPC Call (umgeht RLS):
-if (savedAppointmentId) { // ← Erstelle IMMER einen Payment für den Test
-  console.log('🔥 Creating payment record for TESTING...')
-  
-  // Verwende den direkten Supabase Insert statt RPC:
-  try {
-    const supabase = getSupabase()
-    const { error: paymentError } = await supabase
-      .from('payments')
-      .insert({
-        appointment_id: savedAppointmentId,
-        user_id: cleanedAppointmentData.user_id,
-        staff_id: cleanedAppointmentData.staff_id,
-        amount_rappen: 9500, // Hardcode für Test
-        total_amount_rappen: 9500,
-        payment_method: 'twint', // Hardcode für Test
-        payment_status: 'pending',
-        currency: 'CHF',
-        description: 'Test Payment'
-      })
-
-    if (paymentError) {
-      console.error('❌ RPC Error:', paymentError)
-    } else {
-      console.log('✅ Payment record created via RPC')
-    }
-    
-  } catch (err) {
-    console.error('❌ Payment creation failed:', err)
-  }
-}
-
-console.log('🔍 PRODUCT DEBUGGING:', {
-  savedAppointmentId,
-  hasRefs: !!refs,
-  hasPriceDisplayRef: !!refs?.priceDisplayRef,
-  priceDisplayRefValue: refs?.priceDisplayRef?.value
-})
-
-// ✅ SICHERE Null-Checks mit optionalem Chaining
-if (refs?.priceDisplayRef?.value && savedAppointmentId) {
-  console.log('📦 PriceDisplay found:', refs.priceDisplayRef.value)
-  
-  // ✅ DIREKT auf productSale zugreifen
-  const priceDisplayInstance = refs.priceDisplayRef.value
-  if (priceDisplayInstance.productSale?.selectedProducts?.value?.length > 0) {
-    console.log('📦 ProductSale found with products:', priceDisplayInstance.productSale.selectedProducts.value.length)
-    
-    try {
-      // ✅ KORREKTE Speicherung über das productSale composable
-      await priceDisplayInstance.productSale.saveAppointmentProducts(savedAppointmentId)
-      console.log('✅ Products saved via productSale')
-    } catch (error) {
-      console.error('❌ Error saving products:', error)
-    }
-  } else {
-    console.log('❌ No productSale or products found')
-  }
-} else {
-  console.log('❌ No PriceDisplay ref or savedAppointmentId')
-}
-
-    // 🔍 DEBUG LOGS HINZUFÜGEN:
-    console.log('🔍 SMS Debug:', {
-      hasRefs: !!refs,
-      hasCustomerRef: !!refs?.customerInviteSelectorRef,
-      hasCustomerRefValue: !!refs?.customerInviteSelectorRef?.value,
-      resultId: result?.data?.id,
-      isTemporary: String(result?.data?.id || '').startsWith('temp_')
-    })
-    
-    // Handle customer invites with SMS (nur bei echten IDs, nicht temp_)
-    if (refs?.customerInviteSelectorRef?.value && result?.data?.id && !String(result.data.id).startsWith('temp_')) {
-      console.log('📱 Creating customer invites with SMS...')
-      try {
-        const customerInvites = await refs.customerInviteSelectorRef.value.createInvitedCustomers({
-          ...appointmentData,
-          id: result.data.id
-        })
-        console.log('✅ Customer invites created with SMS:', customerInvites.length)
-      } catch (inviteError) {
-        console.error('❌ Error creating customer invites:', inviteError)
-        // Continue even if invites fail - main appointment is saved
-      }
-    } else if (refs?.customerInviteSelectorRef?.value && String(result?.data?.id || '').startsWith('temp_')) {
-      console.log('📦 Customer invites will be created when synced online')
-    }
-
-    // ✅ SUCCESS: Emit save event (Modal wird von EventModal.vue geschlossen)
-    const savedData = result?.data || cleanedAppointmentData
-    console.log('✅ Emitting save event - modal will close automatically')
-    
-    // Events emittieren - EventModal.vue behandelt das Schließen
-    if (refs?.emit) {
-      refs.emit('save-event', savedData)
-      refs.emit('appointment-saved', savedData)
-    }
-    
-    return savedData
-    
-  } catch (err: any) {
-    console.error('❌ Save error:', err)
-    
-    // Bei Offline: Benutzerfreundliche Behandlung
-    if (err.message?.includes('synchronisiert')) {
-      console.log('📦 Appointment will be synced when online')
-      // Nicht als Fehler behandeln - optimistic update
-      error.value = null
-      
-      // Erstelle Fallback-Objekt mit den Form-Daten
-      const fallbackAppointment = {
-        id: `temp_${Date.now()}`,
+      // Appointment Data
+      const appointmentData = {
         title: formData.value.title,
         description: formData.value.description,
         user_id: formData.value.user_id,
-        staff_id: formData.value.staff_id,
+        staff_id: formData.value.staff_id || dbUser.id,
         location_id: formData.value.location_id,
         start_time: `${formData.value.startDate}T${formData.value.startTime}:00`,
         end_time: `${formData.value.startDate}T${formData.value.endTime}:00`,
         duration_minutes: formData.value.duration_minutes,
-        type: formData.value.eventType === 'lesson' ? formData.value.appointment_type || formData.value.type : formData.value.type,
-        event_type_code: formData.value.eventType === 'lesson' ? formData.value.appointment_type : formData.value.selectedSpecialType,
+        type: formData.value.type,
         status: formData.value.status,
-        price_per_minute: formData.value.price_per_minute,
-        is_paid: formData.value.is_paid
+        // ✅ Missing fields added
+        event_type_code: formData.value.appointment_type || 'lesson',
+        custom_location_address: formData.value.custom_location_address || null,
+        custom_location_name: formData.value.custom_location_name || null,
+        google_place_id: formData.value.google_place_id || null
+        // ✅ price_per_minute and is_paid removed - not in appointments table
       }
       
-      // ✅ AUCH BEI OFFLINE: Events emittieren - Modal wird von EventModal.vue geschlossen
-      if (refs?.emit) {
-        refs.emit('save-event', fallbackAppointment)
-        refs.emit('appointment-saved', fallbackAppointment)
+      console.log('💾 Saving appointment data:', appointmentData)
+      
+      let result
+      if (mode === 'edit' && eventId) {
+        // Update
+        const { data, error: updateError } = await supabase
+          .from('appointments')
+          .update(appointmentData)
+          .eq('id', eventId)
+          .select()
+          .single()
+        
+        if (updateError) throw updateError
+        result = data
+      } else {
+        // Create
+        const { data, error: insertError } = await supabase
+          .from('appointments')
+          .insert(appointmentData)
+          .select()
+          .single()
+        
+        if (insertError) throw insertError
+        result = data
       }
       
-      return fallbackAppointment
-    } else {
-      // Echte Fehler normal behandeln - Modal BLEIBT OFFEN
+      console.log('✅ Appointment saved:', result.id)
+      
+      // ✅ Save discount and products (create discount_sales record even if no discount, for products linkage)
+      const discountSale = await saveDiscountOrCreateForProducts(result.id)
+      
+      // ✅ Save products if exists
+      await saveProductsIfExists(result.id, discountSale?.id)
+      
+      // ✅ Create payment entry
+      console.log('🚀 About to create payment entry for appointment:', result.id)
+      const paymentResult = await createPaymentEntry(result.id, discountSale?.id)
+      console.log('📊 Payment creation result:', paymentResult)
+      
+      return result
+      
+    } catch (err: any) {
+      console.error('❌ Save error:', err)
       error.value = err.message
       throw err
+    } finally {
+      isLoading.value = false
     }
-  } finally {
-    isLoading.value = false
   }
-}
 
   const deleteAppointment = async (eventId: string) => {
     isLoading.value = true
@@ -1010,6 +892,244 @@ if (refs?.priceDisplayRef?.value && savedAppointmentId) {
     }
   }
 
+  // ✅ NEUE FUNKTION: Lade letzte Kategorie aus Cloud Supabase
+  const loadLastAppointmentCategory = async (studentId?: string): Promise<string | null> => {
+    try {
+      console.log('🎯 Loading last appointment category from Cloud Supabase...')
+      
+      if (!currentUser?.id) {
+        console.log('🚫 No current user ID available')
+        return null
+      }
+
+      const supabase = getSupabase()
+      
+      let query = supabase
+        .from('appointments')
+        .select('type, start_time, user_id, title')
+        .eq('staff_id', currentUser.id)
+        .order('start_time', { ascending: false })
+      
+      if (studentId) {
+        console.log('🎯 Loading last category for specific student:', studentId)
+        query = query.eq('user_id', studentId)
+      }
+      
+      const { data: lastAppointment, error } = await query.limit(1).single()
+
+      if (error) {
+        console.error('❌ Error loading last appointment:', error)
+        return null
+      }
+
+      if (lastAppointment?.type) {
+        console.log('✅ Last appointment category loaded:', lastAppointment.type)
+        return lastAppointment.type
+      } else {
+        console.log('ℹ️ No last appointment category found')
+        return null
+      }
+
+    } catch (error) {
+      console.error('❌ Error in loadLastAppointmentCategory:', error)
+      return null
+    }
+  }
+
+  // ✅ Create payment entry for appointment
+  const createPaymentEntry = async (appointmentId: string, discountSaleId?: string) => {
+    try {
+      const supabase = getSupabase()
+      
+      // Calculate prices from form data and selected products
+      const durationMinutes = formData.value.duration_minutes || 45
+      const pricePerMinute = 2.11 // Default price per minute - could be made dynamic later
+      const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
+      // Round to nearest 100 rappen (CHF 1.00)
+      const lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+      
+      // Calculate products total
+      const selectedProducts = refs?.selectedProducts?.value || []
+      const productsPriceRappen = selectedProducts.reduce((total: number, item: any) => {
+        const price = item.product?.price || item.price || 0
+        const quantity = item.quantity || 1
+        return total + Math.round(price * quantity * 100)
+      }, 0)
+      
+      // Discount amount
+      const discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
+      
+      // Admin fee - get from dynamicPricing (already calculated by pricing system)
+      const adminFeeRappen = Math.round((refs?.dynamicPricing?.value?.adminFeeRappen || 0))
+      
+      console.log('💰 Admin fee for payment:', {
+        adminFeeChf: refs?.dynamicPricing?.value?.adminFeeChf,
+        adminFeeRappen: adminFeeRappen,
+        hasAdminFee: refs?.dynamicPricing?.value?.hasAdminFee
+      })
+      
+      // Get payment method from refs or default
+      const rawPaymentMethod = refs?.selectedPaymentMethod?.value || 'wallee'
+      
+      // Map payment method to correct database values (UI values → DB values)
+      const paymentMethodMapping: Record<string, string> = {
+        'wallee': 'wallee',
+        'online': 'wallee',
+        'twint': 'wallee',
+        'card': 'wallee',
+        'credit-card': 'wallee',
+        'cash': 'cash',
+        'bar': 'cash',
+        'invoice': 'invoice',
+        'rechnung': 'invoice'
+      }
+      
+      const paymentMethod = paymentMethodMapping[rawPaymentMethod] || 'wallee'
+      
+      console.log('💳 Payment method debug:', {
+        rawPaymentMethod,
+        mappedPaymentMethod: paymentMethod,
+        availableMappings: Object.keys(paymentMethodMapping),
+        refsAvailable: refs ? true : false,
+        selectedPaymentMethodRef: refs?.selectedPaymentMethod?.value,
+        willSaveAs: paymentMethod
+      })
+      
+      // Total calculation
+      const totalAmountRappen = lessonPriceRappen + productsPriceRappen + adminFeeRappen - discountAmountRappen
+      
+      // Get invoice address from PriceDisplay component if payment method is invoice
+      let companyBillingAddressId = null
+      let invoiceAddress = null
+      
+      if (paymentMethod === 'invoice' && refs?.priceDisplayRef?.value) {
+        const priceDisplay = refs.priceDisplayRef.value
+        
+        // Check if there's a saved company billing address ID from EventModal
+        // This should be set when the invoice address is saved
+        const eventModalScope = (globalThis as any).savedCompanyBillingAddressId
+        if (eventModalScope) {
+          companyBillingAddressId = eventModalScope
+          console.log('📋 Using company billing address ID from EventModal scope:', companyBillingAddressId)
+        }
+        // Fallback: Check PriceDisplay component directly
+        if (priceDisplay && priceDisplay.savedCompanyBillingAddressId) {
+          companyBillingAddressId = priceDisplay.savedCompanyBillingAddressId
+          console.log('📋 Using company billing address ID from PriceDisplay:', companyBillingAddressId)
+        }
+        // Fallback: Copy invoice data as JSONB if no company billing address was saved
+        else if (priceDisplay && priceDisplay.invoiceData) {
+          invoiceAddress = {
+            company_name: priceDisplay.invoiceData.company_name || '',
+            contact_person: priceDisplay.invoiceData.contact_person || '',
+            email: priceDisplay.invoiceData.email || '',
+            phone: priceDisplay.invoiceData.phone || '',
+            street: priceDisplay.invoiceData.street || '',
+            street_number: priceDisplay.invoiceData.street_number || '',
+            zip: priceDisplay.invoiceData.zip || '',
+            city: priceDisplay.invoiceData.city || '',
+            country: priceDisplay.invoiceData.country || 'Schweiz',
+            vat_number: priceDisplay.invoiceData.vat_number || '',
+            notes: priceDisplay.invoiceData.notes || ''
+          }
+          console.log('📋 Using fallback invoice address as JSONB:', invoiceAddress)
+        }
+      }
+
+      const paymentData = {
+        appointment_id: appointmentId,
+        user_id: formData.value.user_id,
+        staff_id: formData.value.staff_id,
+        lesson_price_rappen: lessonPriceRappen,
+        admin_fee_rappen: adminFeeRappen,
+        products_price_rappen: productsPriceRappen,
+        discount_amount_rappen: discountAmountRappen,
+        total_amount_rappen: Math.max(0, totalAmountRappen), // Ensure no negative totals
+        payment_method: paymentMethod,
+        payment_status: 'pending',
+        currency: 'CHF',
+        description: `Payment for appointment: ${formData.value.title}`,
+        created_by: formData.value.staff_id,
+        notes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
+        company_billing_address_id: companyBillingAddressId, // ✅ NEU: Referenz zu company_billing_addresses
+        invoice_address: invoiceAddress // ✅ Fallback: Rechnungsadresse als JSONB
+      }
+      
+      console.log('💳 Creating payment entry:', paymentData)
+      
+      const { data: payment, error } = await supabase
+        .from('payments')
+        .insert(paymentData)
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('❌ Error creating payment:', error)
+        // Don't throw - payment creation shouldn't fail the entire appointment save
+        return null
+      }
+      
+      console.log('✅ Payment entry created:', payment.id)
+      return payment
+      
+    } catch (err: any) {
+      console.error('❌ Error in createPaymentEntry:', err)
+      // Don't throw - payment creation shouldn't fail the entire appointment save
+      return null
+    }
+  }
+
+  // ✅ NEUE FUNKTION: Lade letzten Standort aus Cloud Supabase
+  const loadLastAppointmentLocation = async (studentId?: string): Promise<{ location_id: string | null, custom_location_address: any | null }> => {
+    try {
+      console.log('📍 Loading last appointment location from Cloud Supabase...')
+      
+      if (!currentUser?.id) {
+        console.log('🚫 No current user ID available')
+        return { location_id: null, custom_location_address: null }
+      }
+
+      const supabase = getSupabase()
+      
+      let query = supabase
+        .from('appointments')
+        .select('location_id, custom_location_address, start_time, user_id, title')
+        .eq('staff_id', currentUser.id)
+        .order('start_time', { ascending: false })
+      
+      if (studentId) {
+        console.log('🎯 Loading last location for specific student:', studentId)
+        query = query.eq('user_id', studentId)
+      }
+      
+      const { data: lastAppointment, error } = await query.limit(1).single()
+
+      if (error) {
+        console.error('❌ Error loading last appointment location:', error)
+        return { location_id: null, custom_location_address: null }
+      }
+
+      if (lastAppointment?.location_id || lastAppointment?.custom_location_address) {
+        console.log('✅ Last appointment location loaded:', {
+          location_id: lastAppointment.location_id,
+          has_custom_address: !!lastAppointment.custom_location_address
+        })
+        
+        return {
+          location_id: lastAppointment.location_id,
+          custom_location_address: lastAppointment.custom_location_address
+        }
+      } else {
+        console.log('ℹ️ No last appointment location found')
+        return { location_id: null, custom_location_address: null }
+      }
+
+    } catch (error) {
+      console.error('❌ Error in loadLastAppointmentLocation:', error)
+      return { location_id: null, custom_location_address: null }
+    }
+  }
+
   return {
     // State
     formData,
@@ -1029,18 +1149,27 @@ if (refs?.priceDisplayRef?.value && savedAppointmentId) {
     // Actions
     resetForm,
     populateFormFromAppointment,
+    loadStudentById,
     calculateEndTime,
     saveAppointment,
     deleteAppointment,
     getAppointmentNumber,
+    loadLastAppointmentCategory,
+    loadLastAppointmentLocation,
+    loadExistingDiscount,
+    loadExistingPayment,
+    loadStudentBillingAddress, // ✅ NEU: Export für Student Billing Address
 
-        // Composables
+    saveDiscountIfExists,
+    saveDiscountOrCreateForProducts,
+    loadExistingProducts,
+    saveProductsIfExists,
+    createPaymentEntry,
+
+    // Composables
     categoryData,
     eventTypes,
-
-        // SMS-spezifische Funktionen exportieren
-    setCustomerInviteRef,
-    setInvitedCustomers,
-    invitedCustomers: readonly(invitedCustomers)
   }
 }
+
+export { useEventModalForm }

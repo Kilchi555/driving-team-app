@@ -120,6 +120,7 @@ export const useStudents = () => {
           )
         `)
         .eq('user_id', studentId)
+        .is('deleted_at', null) // ✅ Soft Delete Filter
         .order('start_time', { ascending: false })
 
       if (fetchError) throw fetchError

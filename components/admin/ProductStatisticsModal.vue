@@ -16,8 +16,8 @@
             </p>
           </div>
           <button
-            @click="$emit('close')"
             class="text-gray-400 hover:text-gray-600 text-2xl font-bold w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"
+            @click="$emit('close')"
           >
             ✕
           </button>
@@ -29,7 +29,7 @@
         
         <!-- Loading State -->
         <div v-if="isLoading" class="p-8 text-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"/>
           <p class="text-gray-600">Lade Produktstatistiken...</p>
         </div>
 
@@ -151,7 +151,7 @@
                     type="text"
                     placeholder="Produkt suchen..."
                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
+                  >
                 </div>
                 <div>
                   <select
@@ -260,7 +260,7 @@
                           <div 
                             class="bg-blue-600 h-2 rounded-full"
                             :style="{ width: `${(product.total_quantity / topProducts[0]?.total_quantity * 100) || 0}%` }"
-                          ></div>
+                          />
                         </div>
                         <span class="text-xs text-gray-500">
                           {{ ((product.total_quantity / overallStats.totalSales) * 100).toFixed(1) }}%

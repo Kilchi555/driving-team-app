@@ -28,7 +28,7 @@ export const useCustomerPayments = () => {
       // Get user data from users table
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id')
+        .select('id, auth_user_id')
         .eq('auth_user_id', currentUser.value.id)
         .single()
       
@@ -36,18 +36,77 @@ export const useCustomerPayments = () => {
       if (!userData) throw new Error('User nicht in Datenbank gefunden')
 
       console.log('🔍 Loading payments for user:', userData.id)
+      console.log('🔍 Current auth user ID:', currentUser.value?.id)
+      console.log('🔍 User table auth_user_id:', userData.auth_user_id)
 
-      // Load payments using the detailed view
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('v_payments_detailed')
-        .select('*')
-        .eq('user_id', userData.id)
-        .order('created_at', { ascending: false })
+      // ✅ Lade nur echte payments aus der payments Tabelle
+      let allPayments: any[] = []
 
-      if (paymentsError) throw paymentsError
-      console.log('✅ Payments loaded:', paymentsData?.length || 0)
+      // 1. Lade alle payments für diesen User (nur für nicht gelöschte Termine)
+      try {
+        // ✅ Lade alle payments für den User (sowohl mit interner ID als auch Auth-ID)
+        const { data: paymentsData, error: paymentsError } = await supabase
+          .from('payments')
+          .select(`
+            id,
+            created_at,
+            updated_at,
+            appointment_id,
+            user_id,
+            staff_id,
+            lesson_price_rappen,
+            admin_fee_rappen,
+            products_price_rappen,
+            discount_amount_rappen,
+            total_amount_rappen,
+            payment_method,
+            payment_status,
+            paid_at,
+            description,
+            metadata
+          `)
+          .or(`user_id.eq.${userData.id},user_id.eq.${currentUser.value.id}`)
+          .order('created_at', { ascending: false })
 
-      payments.value = paymentsData || []
+        console.log('🔍 Searching payments with user_id:', userData.id, 'OR', currentUser.value.id)
+
+        if (paymentsError) {
+          console.warn('⚠️ Error loading payments:', paymentsError)
+          console.error('⚠️ Full error details:', paymentsError)
+        } else {
+          console.log('✅ Payments loaded:', paymentsData?.length || 0)
+          console.log('📊 Payments details:', paymentsData?.map(p => ({
+            id: p.id,
+            appointment_id: p.appointment_id,
+            lesson_price: p.lesson_price_rappen / 100,
+            total: p.total_amount_rappen / 100,
+            status: p.payment_status
+          })))
+          allPayments = paymentsData || []
+        }
+      } catch (error: any) {
+        console.warn('⚠️ Could not load payments table:', error.message)
+      }
+
+      // ✅ Verwende nur echte Payments aus der Datenbank - keine Appointment-Konvertierung mehr
+
+      // ✅ Sortiere payments nach Datum (neueste zuerst)
+      allPayments.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0)
+        const dateB = new Date(b.created_at || 0)
+        return dateB.getTime() - dateA.getTime()
+      })
+
+      console.log('✅ Total payments loaded:', allPayments.length)
+      console.log('📊 Payments summary:', allPayments.map(p => ({
+        id: p.id,
+        appointment_id: p.appointment_id,
+        lesson_price: p.lesson_price_rappen / 100,
+        admin_fee: p.admin_fee_rappen / 100,
+        total: p.total_amount_rappen / 100,
+        status: p.payment_status
+      })))
+      payments.value = allPayments
 
     } catch (err: any) {
       console.error('❌ Error loading payments:', err)
@@ -59,9 +118,9 @@ export const useCustomerPayments = () => {
 
   return {
     payments,
-    pendingPayments,
     isLoading,
     error,
+    pendingPayments,
     loadPayments
   }
 }

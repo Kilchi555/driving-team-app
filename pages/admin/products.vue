@@ -12,12 +12,20 @@
             Verwalten Sie alle verfügbaren Produkte für Ihre Kunden
           </p>
         </div>
-        <button
-          @click="openCreateModal"
-          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex-shrink-0"
-        >
-          ➕ Neues Produkt
-        </button>
+        <div class="flex space-x-3">
+          <NuxtLink
+            to="/admin/product-sales"
+            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0"
+          >
+            📊 Produktverkäufe
+          </NuxtLink>
+          <button
+            @click="openCreateModal"
+            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex-shrink-0"
+          >
+            ➕ Neues Produkt
+          </button>
+        </div>
       </div>
     </div>
 
@@ -222,8 +230,8 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="flex justify-center items-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    <div v-if="isLoading" class="flex items-center justify-center py-8">
+      <LoadingLogo size="lg" />
     </div>
 
     <!-- Create/Edit Modal -->
@@ -473,6 +481,7 @@ import { ref, computed, onMounted } from 'vue'
 import { definePageMeta } from '#imports'
 import { getSupabase } from '~/utils/supabase'
 import ProductStatisticsModal from '~/components/admin/ProductStatisticsModal.vue'
+import LoadingLogo from '~/components/LoadingLogo.vue'
 
 definePageMeta({
   layout: 'admin',
@@ -511,7 +520,7 @@ const topSellingProduct = ref<{ name: string; quantity: number }>({ name: '', qu
 const formData = ref({
   name: '',
   description: '',
-  price: 0,
+  price: 0.01, // Changed from 0 to 0.01 to make form valid initially
   category: '',
   track_stock: false,
   stock_quantity: 0,
@@ -566,7 +575,7 @@ const isFormValid = computed(() => {
   if (formData.value.allow_custom_amount) {
     return formData.value.name.trim() !== ''
   }
-  // Sonst brauchen wir Name und Preis
+  // Sonst brauchen wir Name und Preis (Preis muss > 0 sein)
   return formData.value.name.trim() !== '' && formData.value.price > 0
 })
 
@@ -652,7 +661,7 @@ const openCreateModal = () => {
   formData.value = {
     name: '',
     description: '',
-    price: 0,
+    price: 0.01, // Changed from 0 to 0.01 to make form valid initially
     category: '',
     track_stock: false,
     stock_quantity: 0,
@@ -689,7 +698,17 @@ const closeModal = () => {
 }
 
 const saveProduct = async () => {
-  if (!isFormValid.value) return
+  console.log('🔍 Form validation:', {
+    isValid: isFormValid.value,
+    name: formData.value.name,
+    price: formData.value.price,
+    allowCustomAmount: formData.value.allow_custom_amount
+  })
+  
+  if (!isFormValid.value) {
+    console.log('❌ Form validation failed')
+    return
+  }
 
   try {
     const supabase = getSupabase()
@@ -707,6 +726,8 @@ const saveProduct = async () => {
       is_voucher: formData.value.is_voucher,
       allow_custom_amount: formData.value.is_voucher ? formData.value.allow_custom_amount : false
     }
+
+    console.log('📦 Product data to save:', productData)
 
     if (editingProduct.value) {
       // Update existing product

@@ -28,9 +28,10 @@
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
       <div class="flex justify-between items-center mb-3">
         <label class="block text-sm font-semibold text-gray-900">
-          🎓 Fahrschüler auswählen
+          🎓 Fahrschüler:in
         </label>
        <button 
+          v-if="showSwitchToOther"
           @click="handleSwitchToOther"
           class="text-xs text-blue-600 font-bold hover:text-blue-800 border-solid border-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed"
         >
@@ -49,7 +50,11 @@
               Kat. {{ selectedStudent.category }} | {{ selectedStudent.phone }}
             </div>
           </div>
-          <button @click="clearStudent" class="text-red-500 hover:text-red-700">
+          <button 
+            v-if="showClearButton" 
+            @click="clearStudent" 
+            class="text-red-500 hover:text-red-700"
+          >
             ✕
           </button>
         </div>
@@ -74,7 +79,7 @@
           @click="loadStudents()"
           class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          👥 Schüler laden
+          👥 Schüler:in laden
         </button>
       </div>
 
@@ -166,6 +171,8 @@ interface Props {
   showAllStudents?: boolean
   isFreeslotMode?: boolean
   editStudentId?: string | null
+  showClearButton?: boolean
+  showSwitchToOther?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -175,7 +182,9 @@ const props = withDefaults(defineProps<Props>(), {
   autoLoad: true,
   showAllStudents: false,
   isFreeslotMode: false,
-  editStudentId: undefined
+  editStudentId: undefined,
+  showClearButton: true,
+  showSwitchToOther: true
 })
 
 // Emits
@@ -246,6 +255,12 @@ const loadStudents = async (editStudentId?: string | null) => {
   if (!staffId && !props.showAllStudents) { // Zeige Fehler nur, wenn staffId erwartet wird und fehlt
     console.error('❌ No staff ID available for staff-specific load or showAllStudents is false.')
     return // Nur hier zurückkehren, wenn staffId wirklich obligatorisch ist
+  }
+
+  // ✅ FIX: Bei Freeslot-Modus editStudentId ignorieren
+  if (props.isFreeslotMode && editStudentId) {
+    console.log('🎯 Freeslot mode detected - ignoring editStudentId to prevent auto-selection')
+    editStudentId = null
   }
 
   isLoading.value = true
@@ -346,10 +361,19 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
     const staffId = props.currentUser?.id;
 
     // Staff-spezifische Logik
-    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && staffId) {
+    const condition = Boolean(props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && staffId)
+    console.log('🔍 Debug loadStudentsFromDB:', {
+      userRole: props.currentUser?.role,
+      showAllStudents: showAllStudentsLocal.value,
+      staffId: staffId,
+      condition: condition
+    })
+    
+    if (condition) {
       console.log('👨‍🏫 Loading students for staff member:', props.currentUser.id)
       
       // 1. Direkt zugewiesene Schüler laden
+      console.log('🔍 Loading assigned students for staff:', staffId)
       const { data: assignedStudents, error: assignedError } = await supabase
         .from('users')
         .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
@@ -359,8 +383,10 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         .order('first_name')
 
       if (assignedError) throw assignedError
+      console.log('🔍 Assigned students loaded:', assignedStudents?.length || 0)
 
       // 2. Schüler mit Termin-Historie laden
+      console.log('🔍 Loading students with appointment history for staff:', props.currentUser.id)
       const { data: appointmentStudents, error: appointmentError } = await supabase
         .from('appointments')
         .select(`
@@ -374,6 +400,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         .not('users.id', 'is', null)
 
       if (appointmentError) throw appointmentError
+      console.log('🔍 Appointments with students loaded:', appointmentStudents?.length || 0)
 
       const typedAppointmentStudents = appointmentStudents as unknown as AppointmentResponse[]
       
@@ -394,15 +421,21 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
       // 4. Falls ein editStudentId angegeben ist, diesen auch laden falls nicht enthalten
       if (editStudentId && !uniqueStudents.find(s => s.id === editStudentId)) {
         console.log('🔍 Loading specific student for edit mode:', editStudentId)
-        const { data: editStudent } = await supabase
-          .from('users')
-          .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
-          .eq('id', editStudentId)
-          .eq('role', 'client')
-          .single()
+        
+        // ✅ FIX: Bei Freeslot-Modus keinen Schüler automatisch auswählen
+        if (props.isFreeslotMode) {
+          console.log('🎯 Freeslot mode detected - not auto-selecting editStudentId')
+        } else {
+          const { data: editStudent } = await supabase
+            .from('users')
+            .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
+            .eq('id', editStudentId)
+            .eq('role', 'client')
+            .single()
 
-        if (editStudent) {
-          uniqueStudents.unshift(editStudent)
+          if (editStudent) {
+            uniqueStudents.unshift(editStudent)
+          }
         }
       }
 
@@ -422,11 +455,17 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         
         availableStudents.value = typedStudents
         console.log('✅ Staff students loaded:', availableStudents.value.length)
+        console.log('🔍 Available students:', availableStudents.value)
       }
 
     } else {
       // Admin oder "Alle anzeigen" Modus
       console.log('👑 Loading all active students (Admin mode or show all)')
+      console.log('🔍 Reason for admin mode:', {
+        userRole: props.currentUser?.role,
+        showAllStudents: showAllStudentsLocal.value,
+        staffId: staffId
+      })
       
       let query = supabase
         .from('users')
@@ -550,10 +589,14 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
   console.log(`👨‍🎓 StudentSelector: Selecting student by ID: ${userId}, Retry: ${retryCount}`)
   console.log('📍 CALL STACK:', new Error().stack)
   
-  // ✅ FIX: Respektiere Free-Slot-Mode auch hier
+  // ✅ FIX: Bei Freeslot-Modus Schüler laden aber nicht automatisch auswählen
   if (props.isFreeslotMode) {
-    console.log('🚫 selectStudentById blocked - freeslot mode detected')
-    return null
+    console.log('🎯 Freeslot mode detected - loading students but not auto-selecting')
+    // Schüler laden falls noch nicht geladen
+    if (availableStudents.value.length === 0) {
+      await loadStudents()
+    }
+    return null // Keine automatische Auswahl
   }
   
   while (isLoading.value) {

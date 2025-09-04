@@ -57,52 +57,54 @@
     <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
       <!-- Payment Status Overview -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         
-       <!-- ✅ KORRIGIERTE VERSION: Button rechts unten -->
-          <div class="bg-white rounded-xl shadow-lg border relative"
-              :class="unpaidPayments.length > 0 ? 'border-red-200' : 'border-green-200'">
-            <div class="p-6">
-              <!-- Hauptinhalt links -->
-              <div class="flex justify-between">
-                <div>
-                  <div class="flex mb-2">
-                    <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
-                        :class="unpaidPayments.length > 0 ? 'bg-red-100' : 'bg-green-100'">
-                      <svg v-if="unpaidPayments.length > 0" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                      </svg>
-                      <svg v-else class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <h3 class="text-sm font-medium text-gray-500">
-                      {{ unpaidPayments.length > 0 ? 'Offene Rechnungen' : 'Zahlungsstatus' }}
-                    </h3>
-                  </div>
-                  
-                  <div v-if="unpaidPayments.length > 0">
-                    <p class="text-3xl font-bold text-red-600">{{ unpaidPayments.length }}</p>
-                    <p class="text-sm text-red-500 mt-1">CHF {{ totalUnpaidAmount.toFixed(2) }}</p>
-                  </div>
-                  <div v-else>
-                    <p class="text-3xl font-bold text-green-600">Alles bezahlt</p>
-                    <p class="text-sm text-green-500 mt-1">✓ Keine offenen Beträge</p>
-                  </div>
-                </div>
+        <!-- Offene Rechnungen -->
+        <div class="bg-white rounded-xl shadow-lg border relative"
+            :class="unpaidPayments.length > 0 ? 'border-red-200' : 'border-green-200'">
+          <div class="p-6">
+            <div class="flex mb-2">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
+                  :class="unpaidPayments.length > 0 ? 'bg-red-100' : 'bg-green-100'">
+                <svg v-if="unpaidPayments.length > 0" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <svg v-else class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-              
-              <!-- ✅ Button absolut rechts unten positioniert -->
-              <button
-                v-if="unpaidPayments.length > 0"
-                @click="payAllUnpaid"
-                :disabled="isProcessingPayment"
-                class="absolute bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium disabled:opacity-50"
-              >
-                {{ isProcessingPayment ? 'Verarbeitung...' : 'Details' }}
-              </button>
+              <h3 class="text-sm font-medium text-gray-500">
+                {{ unpaidPayments.length > 0 ? 'Offene Rechnungen' : 'Zahlungsstatus' }}
+              </h3>
             </div>
+            
+            <div v-if="unpaidPayments.length > 0">
+              <p class="text-3xl font-bold text-red-600">{{ unpaidPayments.length }}</p>
+              <p class="text-sm text-red-500 mt-1">CHF {{ totalUnpaidAmount.toFixed(2) }}</p>
+            </div>
+            <div v-else>
+              <p class="text-3xl font-bold text-green-600">Alles bezahlt</p>
+              <p class="text-sm text-green-500 mt-1">✓ Keine offenen Beträge</p>
+            </div>
+            
+            <!-- Action Button -->
+            <button
+              v-if="unpaidPayments.length > 0"
+              @click="payAllUnpaid"
+              :disabled="isProcessingPayment"
+              class="mt-4 w-full bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium disabled:opacity-50"
+            >
+              <span v-if="isProcessingPayment" class="flex items-center justify-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Wird verarbeitet...
+              </span>
+              <span v-else>Alle bezahlen</span>
+            </button>
           </div>
+        </div>
 
         <!-- Bezahlte Rechnungen -->
         <div class="bg-white rounded-xl shadow-lg border border-blue-200 relative">
@@ -118,12 +120,12 @@
             <p class="text-3xl font-bold text-gray-900">{{ paidPayments.length }}</p>
             <p class="text-sm text-gray-500 mt-1">CHF {{ totalPaidAmount.toFixed(2) }}</p>
           </div>
-            <button 
-              @click="showSettings = true"
-                class="absolute bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:opacity-50"
-            >
-              Details
-            </button>
+          <button 
+            @click="showSettings = true"
+            class="absolute bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:opacity-50"
+          >
+            Details
+          </button>
         </div>
 
         <!-- Bevorzugte Zahlungsart -->
@@ -140,10 +142,141 @@
             <p class="text-lg font-bold text-gray-900">{{ preferredPaymentMethodLabel }}</p>
             <button 
               @click="showSettings = true"
-                class="absolute bottom-4 right-4 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors font-medium disabled:opacity-50"
+              class="absolute bottom-4 right-4 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors font-medium disabled:opacity-50"
             >
               Ändern
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment List -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-900">Zahlungsdetails</h2>
+            <div class="flex space-x-2">
+              <select v-model="statusFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="all">Alle Status</option>
+                <option value="pending">Offen</option>
+                <option value="completed">Bezahlt</option>
+              </select>
+              <select v-model="methodFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="all">Alle Methoden</option>
+                <option value="cash">Bar</option>
+                <option value="twint">Twint</option>
+                <option value="invoice">Rechnung</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Items -->
+        <div v-if="filteredPayments.length === 0" class="px-6 py-12 text-center">
+          <div class="text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Keine Zahlungen gefunden</h3>
+            <p class="mt-1 text-sm text-gray-500">Es wurden keine Zahlungen mit den aktuellen Filtern gefunden.</p>
+          </div>
+        </div>
+
+        <div v-else class="divide-y divide-gray-200">
+          <div v-for="(payment, index) in filteredPayments" :key="payment.id" 
+               class="px-6 py-6 hover:bg-gray-50 transition-colors">
+            
+            <!-- Payment Header -->
+            <div class="flex justify-between items-start mb-4">
+              <div class="flex-1">
+                <div class="flex items-center space-x-3 mb-2">
+                  <span class="text-sm text-gray-500">Position {{ index + 1 }} von {{ filteredPayments.length }}</span>
+                  <span :class="getStatusClass(payment.payment_status)" 
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {{ getStatusLabel(payment.payment_status) }}
+                  </span>
+                </div>
+                
+                <!-- Payment Description -->
+                <h3 class="text-lg font-semibold text-gray-900 mb-1">
+                  {{ payment.description || 'Zahlung' }}
+                </h3>
+                
+                <!-- Date and Time -->
+                <div class="flex items-center space-x-4 text-sm text-gray-600 mb-2">
+                  <span>{{ formatDateTime(payment.created_at) }}</span>
+                </div>
+                
+                <!-- Payment Type -->
+                <div class="flex items-center space-x-3 text-sm text-gray-600">
+                  <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-md">
+                    {{ payment.payment_method || 'Unbekannt' }}
+                  </span>
+
+                </div>
+              </div>
+              
+              <!-- Payment Amount -->
+              <div class="text-right ml-6">
+                <div class="text-2xl font-bold text-gray-900">
+                  CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}
+                </div>
+                <div class="text-sm text-gray-500">
+                  {{ getPaymentMethodLabel(payment.payment_method) }}
+                </div>
+              </div>
+            </div>
+            
+            <!-- Payment Details -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-4">
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Fahrlektion</span>
+                  <span class="font-medium text-gray-600">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
+                </div>
+                
+                <div v-if="payment.admin_fee_rappen > 0" class="flex justify-between">
+                  <span class="text-gray-600">Administrationsgebühr</span>
+                  <span class="font-medium text-gray-600">CHF {{ (payment.admin_fee_rappen / 100).toFixed(2) }}</span>
+                </div>
+                
+                <div v-if="payment.products_price_rappen > 0" class="flex justify-between">
+                  <span class="text-gray-600">Produkte</span>
+                  <span class="font-medium text-gray-600">CHF {{ (payment.products_price_rappen / 100).toFixed(2) }}</span>
+                </div>
+                
+                <div v-if="payment.discount_amount_rappen > 0" class="flex justify-between">
+                  <span class="text-gray-600">Rabatt</span>
+                  <span class="font-medium text-green-600">- CHF {{ (payment.discount_amount_rappen / 100).toFixed(2) }}</span>
+                </div>
+                
+                <div class="border-t border-gray-200 pt-2 flex justify-between font-semibold">
+                  <span>Gesamtbetrag</span>
+                  <span>CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex justify-end space-x-3">
+              <button v-if="payment.payment_status === 'pending'"
+                      @click="payIndividual(payment)"
+                      :disabled="isProcessingPayment"
+                      class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50">
+                {{ isProcessingPayment ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
+              </button>
+              
+              <button v-if="payment.payment_status === 'completed'"
+                      @click="downloadReceipt(payment)"
+                      class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                Quittung herunterladen
+              </button>
+              
+              <button @click="showPaymentDetails(payment)"
+                      class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                Details anzeigen
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -158,6 +291,7 @@ import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
 import { definePageMeta } from '#imports'
+import { useCustomerPayments } from '~/composables/useCustomerPayments'
 
 
 // Components (these would need to be created)
@@ -174,10 +308,18 @@ definePageMeta({
 const authStore = useAuthStore()
 const { user: currentUser, isClient } = storeToRefs(authStore)
 
+// ✅ Verwende das neue useCustomerPayments Composable
+const {
+  payments: customerPayments,
+  pendingPayments,
+  loadPayments: loadCustomerPayments,
+  isLoading: paymentsLoading,
+  error: paymentsError
+} = useCustomerPayments()
+
 // State
 const isLoading = ref(true)
 const error = ref<string | null>(null)
-const payments = ref<any[]>([])
 const isProcessingPayment = ref(false)
 const statusFilter = ref('all')
 const methodFilter = ref('all')
@@ -188,19 +330,37 @@ const preferredPaymentMethod = ref<string | null>(null)
 
 // Computed properties
 const unpaidPayments = computed(() => 
-  payments.value.filter(p => p.payment_status === 'pending' || !p.paid_at)
+  customerPayments.value.filter(p => p.payment_status === 'pending' || !p.paid_at)
 )
 
 const paidPayments = computed(() => 
-  payments.value.filter(p => p.payment_status === 'completed' && p.paid_at)
+  customerPayments.value.filter(p => p.payment_status === 'completed' && p.paid_at)
 )
 
 const totalUnpaidAmount = computed(() => 
-  unpaidPayments.value.reduce((sum, p) => sum + (p.total_amount_chf || 0), 0)
+  unpaidPayments.value.reduce((sum, p) => {
+    let totalAmount = 0
+    if (p.total_amount_rappen) {
+      totalAmount += p.total_amount_rappen / 100
+    }
+    if (p.admin_fee_rappen) {
+      totalAmount += p.admin_fee_rappen / 100
+    }
+    return sum + totalAmount
+  }, 0)
 )
 
 const totalPaidAmount = computed(() => 
-  paidPayments.value.reduce((sum, p) => sum + (p.total_amount_chf || 0), 0)
+  paidPayments.value.reduce((sum, p) => {
+    let totalAmount = 0
+    if (p.total_amount_rappen) {
+      totalAmount += p.total_amount_rappen / 100
+    }
+    if (p.admin_fee_rappen) {
+      totalAmount += p.admin_fee_rappen / 100
+    }
+    return sum + totalAmount
+  }, 0)
 )
 
 const preferredPaymentMethodLabel = computed(() => {
@@ -215,7 +375,7 @@ const preferredPaymentMethodLabel = computed(() => {
 })
 
 const filteredPayments = computed(() => {
-  let filtered = payments.value
+  let filtered = customerPayments.value
 
   // Status filter
   if (statusFilter.value !== 'all') {
@@ -237,9 +397,12 @@ const filteredPayments = computed(() => {
     filtered = filtered.filter(p => p.payment_method === methodFilter.value)
   }
 
-  return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  return filtered.sort((a, b) => {
+    const dateA = new Date(a.created_at || a.start_time || 0)
+    const dateB = new Date(b.created_at || b.start_time || 0)
+    return dateB.getTime() - dateA.getTime()
+  })
 })
-
 
 // Methods
 const goBack = async () => {
@@ -249,10 +412,10 @@ const goBack = async () => {
 const retryLoad = async () => {
   error.value = null
   isLoading.value = true
-  await loadPayments()
+  await loadAllData()
 }
 
-const loadPayments = async () => {
+const loadAllData = async () => {
   if (!currentUser.value?.id) return
 
   try {
@@ -270,22 +433,13 @@ const loadPayments = async () => {
 
     preferredPaymentMethod.value = userData.preferred_payment_method
 
-    console.log('🔍 Loading payments for user:', userData.id)
+    console.log('🔍 Loading data for user:', userData.id)
 
-    // Load payments using the detailed view
-    const { data: paymentsData, error: paymentsError } = await supabase
-      .from('v_payments_detailed')
-      .select('*')
-      .eq('user_id', userData.id)
-      .order('created_at', { ascending: false })
-
-    if (paymentsError) throw paymentsError
-    console.log('✅ Payments loaded:', paymentsData?.length || 0)
-
-    payments.value = paymentsData || []
+    // ✅ Verwende das neue useCustomerPayments Composable
+    await loadCustomerPayments()
 
   } catch (err: any) {
-    console.error('❌ Error loading payments:', err)
+    console.error('❌ Error loading data:', err)
     error.value = err.message
   } finally {
     isLoading.value = false
@@ -352,9 +506,10 @@ const getPaymentMethodLabel = (method: string): string => {
   const labels: Record<string, string> = {
     'cash': 'Bar',
     'invoice': 'Rechnung',
-    'twint': 'Twint',
-    'stripe_card': 'Kreditkarte',
-    'debit_card': 'Debitkarte'
+    'wallee': 'Online-Zahlung',
+    'twint': 'Online-Zahlung',
+    'stripe_card': 'Online-Zahlung',
+    'debit_card': 'Online-Zahlung'
   }
   return labels[method] || method
 }
@@ -363,9 +518,10 @@ const getPaymentMethodClass = (method: string): string => {
   const classes: Record<string, string> = {
     'cash': 'bg-yellow-100 text-yellow-800',
     'invoice': 'bg-blue-100 text-blue-800',
-    'twint': 'bg-purple-100 text-purple-800',
+    'wallee': 'bg-green-100 text-green-800',
+    'twint': 'bg-green-100 text-green-800',
     'stripe_card': 'bg-green-100 text-green-800',
-    'debit_card': 'bg-gray-100 text-gray-800'
+    'debit_card': 'bg-green-100 text-green-800'
   }
   return classes[method] || 'bg-gray-100 text-gray-800'
 }
@@ -431,7 +587,7 @@ onMounted(async () => {
     return
   }
 
-  await loadPayments()
+  await loadAllData()
 })
 </script>
 

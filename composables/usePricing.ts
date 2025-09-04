@@ -102,28 +102,28 @@ export const COMPLETE_FALLBACK_RULES = [
   {
     id: 'fallback-C1', category_code: 'C1', name: 'LKW C1/D1',
     description: 'Kleinlastwagen 3500-7500kg',
-    price_per_minute_rappen: 333, price_per_minute_chf: 3.33, // 150 CHF / 45min = 3.33
+    price_per_minute_rappen: 334, price_per_minute_chf: 3.34, // Updated from database
     admin_fee_rappen: 20000, admin_fee_chf: 200, admin_fee_applies_from: 2,
     base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback C1'
   },
   {
     id: 'fallback-CE', category_code: 'CE', name: 'LKW CE',
     description: 'Lastwagen mit Anhänger',
-    price_per_minute_rappen: 444, price_per_minute_chf: 4.44, // 200 CHF / 45min = 4.44
+    price_per_minute_rappen: 445, price_per_minute_chf: 4.45, // Updated from database
     admin_fee_rappen: 25000, admin_fee_chf: 250, admin_fee_applies_from: 2,
     base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback CE'
   },
   {
     id: 'fallback-D', category_code: 'D', name: 'Bus D',
     description: 'Autobus über 8 Personen',
-    price_per_minute_rappen: 444, price_per_minute_chf: 4.44, // 200 CHF / 45min = 4.44
+    price_per_minute_rappen: 445, price_per_minute_chf: 4.45, // Updated from database
     admin_fee_rappen: 30000, admin_fee_chf: 300, admin_fee_applies_from: 2,
     base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D'
   },
   {
     id: 'fallback-D1', category_code: 'D1', name: 'D1 (Kleinbus)',
     description: 'Kleinbus 9-16 Personen',
-    price_per_minute_rappen: 333, price_per_minute_chf: 3.33, // 150 CHF / 45min = 3.33
+    price_per_minute_rappen: 334, price_per_minute_chf: 3.34, // Updated from database
     admin_fee_rappen: 20000, admin_fee_chf: 200, admin_fee_applies_from: 2,
     base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D1'
   },
@@ -154,7 +154,15 @@ export const calculateOfflinePrice = (categoryCode: string, durationMinutes: num
   if (!rule) return { basePrice: 0, adminFee: 0, total: 0, rule: null }
   
   const basePrice = Math.round(rule.price_per_minute_chf * durationMinutes * 100) / 100
-  const adminFee = appointmentNumber >= rule.admin_fee_applies_from ? rule.admin_fee_chf : 0
+  
+  // ✅ KORRIGIERT: Admin-Fee nur beim 2. Termin pro Kategorie (außer bei Motorrädern)
+  const motorcycleCategories = ['A', 'A1', 'A35kW']
+  const isMotorcycle = motorcycleCategories.includes(categoryCode)
+  
+  let adminFee = 0
+  if (!isMotorcycle && appointmentNumber === 2) {
+    adminFee = rule.admin_fee_chf
+  }
   
   return {
     basePrice,
@@ -256,6 +264,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     pricingError.value = ''
 
     try {
+      console.log('🔄 Loading pricing rules from Supabase...')
       const { data, error } = await supabase
         .from('pricing_rules')
         .select('*')
@@ -267,51 +276,123 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         throw new Error(`Database error: ${error.message}`)
       }
 
+      console.log('📊 Raw pricing rules from DB:', data.length, 'rules')
+      console.log('📊 Raw pricing rules from DB:', data.map(r => ({
+        id: r.id,
+        category: r.category_code,
+        rule_type: r.rule_type,
+        updated_at: r.updated_at
+      })))
+
       if (!data || data.length === 0) {
         console.warn('⚠️ No pricing rules found, using fallback')
         await createFallbackPricingRules()
         return
       }
 
-      // Kombiniere die Regeln nach category_code
+      // ✅ KORRIGIERT: Kombiniere base_price und admin_fee Regeln basierend auf rule_type
       const rulesByCategory = data.reduce((acc, rule) => {
+        console.log(`🔍 Verarbeite Regel für ${rule.category_code}:`, {
+          rule_type: rule.rule_type,
+          rule_name: rule.rule_name,
+          price_per_minute: rule.price_per_minute_rappen,
+          admin_fee: rule.admin_fee_rappen,
+          admin_fee_applies_from: rule.admin_fee_applies_from
+        })
+        
         if (!acc[rule.category_code]) {
-          acc[rule.category_code] = {}
+          acc[rule.category_code] = {
+            category_code: rule.category_code,
+            rule_name: rule.rule_name || `${rule.category_code} - Regel`,
+            price_per_minute_rappen: 0,
+            admin_fee_rappen: 0,
+            admin_fee_applies_from: 2,
+            base_duration_minutes: 45,
+            is_active: true,
+            valid_from: rule.valid_from,
+            valid_until: rule.valid_until
+          }
+          console.log(`🆕 Neue Kategorie erstellt: ${rule.category_code}`)
         }
-        acc[rule.category_code][rule.rule_type] = rule
+        
+        // ✅ KORRIGIERT: Kombiniere die Werte basierend auf dem rule_type
+        if (rule.rule_type === 'base' || rule.rule_type === 'pricing' || rule.rule_type === 'base_price' || !rule.rule_type) {
+          // Base/Pricing Regeln für Grundpreis
+          console.log(`📊 Base/Pricing Regel für ${rule.category_code}:`, {
+            price_per_minute: rule.price_per_minute_rappen,
+            base_duration: rule.base_duration_minutes
+          })
+          if (rule.price_per_minute_rappen) {
+            acc[rule.category_code].price_per_minute_rappen = rule.price_per_minute_rappen
+          }
+          if (rule.base_duration_minutes) {
+            acc[rule.category_code].base_duration_minutes = rule.base_duration_minutes
+          }
+          if (rule.rule_name && !acc[rule.category_code].rule_name.includes('Admin-Fee')) {
+            acc[rule.category_code].rule_name = rule.rule_name
+          }
+        }
+        
+        if (rule.rule_type === 'admin_fee') {
+          // ✅ Admin-Fee spezifische Regeln
+          console.log(`💰 Admin-Fee Regel für ${rule.category_code}:`, {
+            admin_fee_rappen: rule.admin_fee_rappen,
+            admin_fee_applies_from: rule.admin_fee_applies_from
+          })
+          if (rule.admin_fee_rappen !== undefined) {
+            acc[rule.category_code].admin_fee_rappen = rule.admin_fee_rappen
+            console.log(`💰 Admin-Fee Regel geladen für ${rule.category_code}: ${rule.admin_fee_rappen} Rappen`)
+          }
+          if (rule.admin_fee_applies_from !== undefined) {
+            acc[rule.category_code].admin_fee_applies_from = rule.admin_fee_applies_from
+            console.log(`🎯 Admin-Fee ab Termin ${rule.admin_fee_applies_from} für ${rule.category_code}`)
+          }
+          if (rule.rule_name) {
+            acc[rule.category_code].rule_name = rule.rule_name
+          }
+        }
+        
+        console.log(`📊 Aktueller Stand für ${rule.category_code}:`, {
+          price_per_minute: acc[rule.category_code].price_per_minute_rappen,
+          admin_fee: acc[rule.category_code].admin_fee_rappen,
+          admin_fee_applies_from: acc[rule.category_code].admin_fee_applies_from
+        })
+        
         return acc
-      }, {} as Record<string, Record<string, any>>)
+      }, {} as Record<string, any>)
 
-      const combinedRules = Object.entries(rulesByCategory).map(([categoryCode, rules]) => {
-        const baseRule = (rules as any).base_price
-        const adminRule = (rules as any).admin_fee
+      const pricingRulesData = Object.values(rulesByCategory) as PricingRule[]
 
-        return {
-          id: baseRule?.id || adminRule?.id || `combined-${categoryCode}`,
-          category_code: categoryCode,
-          rule_name: `${categoryCode} - Kombiniert`,
-          price_per_minute_rappen: baseRule?.price_per_minute_rappen || 212,
-          admin_fee_rappen: adminRule?.admin_fee_rappen || (
-            ['A', 'A1', 'A35kW'].includes(categoryCode) ? 0 : 12000
-          ),
-          admin_fee_applies_from: adminRule?.admin_fee_applies_from || (
-            ['A', 'A1', 'A35kW'].includes(categoryCode) ? 999 : 2
-          ),
-          base_duration_minutes: baseRule?.base_duration_minutes || 45,
-          is_active: true,
-          valid_from: baseRule?.valid_from || null,
-          valid_until: baseRule?.valid_until || null
-        }
-      })
+      console.log('📊 Processed pricing rules (combined by rule_type):', pricingRulesData.map((r: PricingRule) => ({
+        category: r.category_code,
+        pricePerMinute: r.price_per_minute_rappen / 100,
+        adminFee: r.admin_fee_rappen / 100,
+        adminFeeAppliesFrom: r.admin_fee_applies_from,
+        ruleName: r.rule_name
+      })))
 
-      pricingRules.value = combinedRules
+      // ✅ SPEZIELLER DEBUG für Kategorie B
+      const categoryBRule = pricingRulesData.find(r => r.category_code === 'B')
+      if (categoryBRule) {
+        console.log('🎯 KATEGORIE B REGEL GELADEN:', {
+          category: categoryBRule.category_code,
+          pricePerMinute: categoryBRule.price_per_minute_rappen / 100,
+          adminFee: categoryBRule.admin_fee_rappen / 100,
+          adminFeeAppliesFrom: categoryBRule.admin_fee_applies_from,
+          ruleName: categoryBRule.rule_name
+        })
+      } else {
+        console.warn('⚠️ Keine Regel für Kategorie B gefunden!')
+      }
+
+      pricingRules.value = pricingRulesData
       lastLoaded.value = new Date()
 
       // Cache invalidierung
       priceCalculationCache.value.clear()
       appointmentCountCache.value.clear()
 
-      console.log('✅ Pricing rules loaded:', combinedRules.length, 'categories')
+      console.log('✅ Pricing rules loaded:', pricingRulesData.length, 'categories (combined by rule_type)')
 
     } catch (err: any) {
       console.error('❌ Error loading pricing rules:', err)
@@ -322,32 +403,102 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     }
   }
 
-  const getAppointmentCount = async (userId: string): Promise<number> => {
+  // ✅ NEUE LOGIK: Admin-Fee basierend auf tatsächlichen Zahlungen
+  const hasAdminFeeBeenPaid = async (userId: string, categoryCode: string): Promise<boolean> => {
+    try {
+      console.log(`🔍 Checking if admin fee already paid for user ${userId} in category ${categoryCode}`)
+      
+      // ✅ KORRIGIERT: Verwende metadata um die Kategorie zu ermitteln (einfacher als JOIN)
+      const { data, error } = await supabase
+        .from('payments')
+        .select('id, admin_fee_rappen, metadata')
+        .eq('user_id', userId)
+        .gt('admin_fee_rappen', 0) // Admin-Fee wurde bereits bezahlt
+        .limit(100) // Lade alle relevanten Payments für diesen User
+      
+      if (error) {
+        console.error('❌ Error checking admin fee payments:', error)
+        return false
+      }
+      
+      // ✅ Filtere nach Kategorie in den metadata
+      const paymentsWithAdminFee = data?.filter(payment => {
+        try {
+          const metadata = payment.metadata ? JSON.parse(payment.metadata) : {}
+          return metadata.category === categoryCode
+        } catch (e) {
+          console.warn('⚠️ Could not parse payment metadata:', payment.metadata)
+          return false
+        }
+      }) || []
+      
+      const hasPaid = paymentsWithAdminFee.length > 0
+      console.log(`📊 Admin fee payment check: ${hasPaid ? 'Already paid' : 'Not yet paid'}`, {
+        totalPayments: data?.length || 0,
+        paymentsWithAdminFee: paymentsWithAdminFee.length,
+        category: categoryCode
+      })
+      
+      return hasPaid
+      
+    } catch (error) {
+      console.error('❌ Error in hasAdminFeeBeenPaid:', error)
+      return false
+    }
+  }
+
+  // ✅ NEUE LOGIK: Admin-Fee nur verrechnen wenn noch nie bezahlt
+  const shouldApplyAdminFee = async (userId: string, categoryCode: string): Promise<boolean> => {
+    // Admin-Fee nur beim 2. Termin UND wenn noch nie bezahlt
+    const appointmentCount = await getAppointmentCount(userId, categoryCode)
+    const adminFeeAlreadyPaid = await hasAdminFeeBeenPaid(userId, categoryCode)
+    
+    const shouldApply = appointmentCount === 2 && !adminFeeAlreadyPaid
+    
+    console.log(`🎯 Admin fee decision for ${categoryCode}:`, {
+      appointmentCount,
+      adminFeeAlreadyPaid,
+      shouldApply,
+      reason: shouldApply ? '2. Termin + noch nie bezahlt' : 'Nicht anwendbar'
+    })
+    
+    return shouldApply
+  }
+
+  const getAppointmentCount = async (userId: string, categoryCode: string): Promise<number> => {
     // Prüfe Cache
-    const cached = appointmentCountCache.value.get(userId)
+    const cacheKey = `${userId}-${categoryCode}`
+    const cached = appointmentCountCache.value.get(cacheKey)
     if (cached && isCacheValid(cached.timestamp, APPOINTMENT_COUNT_CACHE_DURATION)) {
       return cached.count
     }
 
     try {
+      // ✅ KORRIGIERT: Nur aktive Termine zählen (keine stornierten/abgebrochenen)
+      // Das ist wichtig, damit die AdminFee korrekt beim 2. aktiven Termin berechnet wird
       const { count, error } = await supabase
         .from('appointments')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .in('status', ['completed', 'confirmed'])
+        .eq('type', categoryCode)
+        .is('deleted_at', null) // ✅ Soft Delete Filter
+        .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
+        .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
 
       if (error) {
-        console.error('❌ Error counting appointments:', error)
+        console.error('❌ Error counting appointments for category:', error)
         return 1
       }
 
       const appointmentNumber = (count || 0) + 1
       
       // Cache speichern
-      appointmentCountCache.value.set(userId, {
+      appointmentCountCache.value.set(cacheKey, {
         count: appointmentNumber,
         timestamp: Date.now()
       })
+      
+      console.log(`📊 Appointment count for ${categoryCode}: ${appointmentNumber} (${count || 0} active + 1 new)`)
       
       return appointmentNumber
 
@@ -363,6 +514,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       console.warn(`⚠️ No pricing rule found for category: ${categoryCode}`)
       return null
     }
+    
     return rule
   }
 
@@ -377,12 +529,89 @@ const roundToNearestFranken = (rappen: number): number => {
   const calculatePrice = async (
     categoryCode: string,
     durationMinutes: number,
-    userId?: string
+    userId?: string,
+    appointmentType?: string, // ✅ NEU: appointment_type Parameter hinzugefügt
+    isEditMode?: boolean, // ✅ NEU: Edit-Mode flag
+    appointmentId?: string // ✅ NEU: Appointment ID für Edit-Mode
   ): Promise<CalculatedPrice> => {
+    
+    // ✅ NEU: Bei vergangenen Terminen (Edit-Mode) direkt aus der Datenbank laden
+    if (isEditMode && appointmentId) {
+      console.log(`📝 Edit-Mode: Loading existing pricing from database for appointment: ${appointmentId}`)
+      try {
+        const supabase = getSupabase()
+        const { data: payment, error } = await supabase
+          .from('payments')
+          .select('lesson_price_rappen, admin_fee_rappen, total_amount_rappen, credit_used_rappen, credit_transaction_id')
+          .eq('appointment_id', appointmentId)
+          .single()
+        
+        if (error && error.code !== 'PGRST116') {
+          console.warn('⚠️ Error loading existing pricing from payments:', error)
+        } else if (payment) {
+          console.log('✅ Existing pricing loaded from database:', {
+            lesson_price: (payment.lesson_price_rappen / 100).toFixed(2),
+            admin_fee: (payment.admin_fee_rappen / 100).toFixed(2),
+            total: (payment.total_amount_rappen / 100).toFixed(2),
+            credit_used: (payment.credit_used_rappen / 100).toFixed(2),
+            credit_transaction_id: payment.credit_transaction_id
+          })
+          
+          return {
+            base_price_rappen: payment.lesson_price_rappen || 0,
+            admin_fee_rappen: payment.admin_fee_rappen || 0,
+            total_rappen: payment.total_amount_rappen || 0,
+            credit_used_rappen: payment.credit_used_rappen || 0,
+            credit_transaction_id: payment.credit_transaction_id,
+            base_price_chf: ((payment.lesson_price_rappen || 0) / 100).toFixed(2),
+            admin_fee_chf: ((payment.admin_fee_rappen || 0) / 100).toFixed(2),
+            total_chf: ((payment.total_amount_rappen || 0) / 100).toFixed(2),
+            credit_used_chf: ((payment.credit_used_rappen || 0) / 100).toFixed(2),
+            category_code: categoryCode, // Verwende den übergebenen categoryCode
+            duration_minutes: durationMinutes, // Verwende die übergebene durationMinutes
+            appointment_number: 1 // Nicht relevant für Edit-Mode
+          }
+        }
+      } catch (err: any) {
+        console.error('❌ Error loading existing pricing from database:', err)
+        // Fallback zur normalen Berechnung
+      }
+    }
       
-  // ✅ NEUE VALIDIERUNG: Nur für Fahrkategorien berechnen
+  // ✅ NEUE VALIDIERUNG: Theorielektionen und Fahrkategorien behandeln
   const validDrivingCategories = ['A', 'A1', 'A35kW', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE', 'Motorboot', 'BPT']
   
+  // ✅ Theorielektionen: Immer 85.- CHF, unabhängig von der Kategorie
+  if (appointmentType === 'theory') {
+    console.log(`📚 Theorielektion erkannt (appointment_type: ${appointmentType}): Verwende Standardpreis 85.- CHF`)
+    
+    const theoryPriceRappen = 8500 // 85.00 CHF in Rappen
+    const totalRappen = theoryPriceRappen // Keine Admin-Fee für Theorielektionen
+    
+    const result: CalculatedPrice = {
+      base_price_rappen: theoryPriceRappen,
+      admin_fee_rappen: 0,
+      total_rappen: totalRappen,
+      base_price_chf: (theoryPriceRappen / 100).toFixed(2),
+      admin_fee_chf: '0.00',
+      total_chf: (totalRappen / 100).toFixed(2),
+      category_code: categoryCode, // Bleibt die gewählte Fahrkategorie (z.B. 'B', 'A', etc.)
+      duration_minutes: durationMinutes,
+      appointment_number: 1
+    }
+    
+    console.log('✅ Theorielektion Preis berechnet:', {
+      category: categoryCode, // Zeigt die gewählte Fahrkategorie
+      appointmentType: appointmentType,
+      duration: durationMinutes,
+      total: result.total_chf,
+      note: 'Standardpreis für Theorielektionen, unabhängig von der Kategorie'
+    })
+    
+    return result
+  }
+  
+  // ✅ Nicht-Fahrkategorien: Keine Preisberechnung
   if (!validDrivingCategories.includes(categoryCode)) {
     console.log(`🚫 Skipping price calculation for non-driving category: ${categoryCode}`)
     // Fallback für andere Terminarten
@@ -399,7 +628,9 @@ const roundToNearestFranken = (rappen: number): number => {
     }
   }
   
-    const cacheKey = generatePriceKey(categoryCode, durationMinutes, userId)
+  // ✅ NEU: Stelle sicher, dass durationMinutes eine Zahl ist
+  const durationValue = Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes
+  const cacheKey = generatePriceKey(categoryCode, durationValue, userId)
     
     // Prüfe Cache
     const cachedPrice = priceCalculationCache.value.get(cacheKey)
@@ -408,25 +639,52 @@ const roundToNearestFranken = (rappen: number): number => {
       return cachedPrice.data
     }
 
-    // Lade Pricing Rules falls noch nicht geladen
-    if (pricingRules.value.length === 0) {
-      await loadPricingRules()
+    // ✅ KORRIGIERT: Pricing Rules nur im Create-Mode laden
+    let rule = null
+    if (!isEditMode) {
+      // Lade Pricing Rules falls noch nicht geladen
+      if (pricingRules.value.length === 0) {
+        await loadPricingRules()
+      }
+
+      rule = getPricingRule(categoryCode)
+      if (!rule) {
+        throw new Error(`Keine Preisregel für Kategorie ${categoryCode} gefunden`)
+      }
     }
 
-    const rule = getPricingRule(categoryCode)
-    if (!rule) {
-      throw new Error(`Keine Preisregel für Kategorie ${categoryCode} gefunden`)
+    // ✅ KORRIGIERT: Appointment count nur im Create-Mode ermitteln
+    let appointmentNumber = 1
+    if (!isEditMode && userId) {
+      appointmentNumber = await getAppointmentCount(userId, categoryCode)
     }
 
-    // Appointment count ermitteln
-    const appointmentNumber = userId ? await getAppointmentCount(userId) : 1
+    // ✅ KORRIGIERT: Grundpreis nur im Create-Mode berechnen
+    let basePriceRappen = 0
+    if (!isEditMode && rule) {
+      basePriceRappen = Math.round(rule.price_per_minute_rappen * durationValue)
+      basePriceRappen = roundToNearestFranken(basePriceRappen)
+    }
 
-    // Grundpreis berechnen mit Rundung
-    let basePriceRappen = Math.round(rule.price_per_minute_rappen * durationMinutes)
-    basePriceRappen = roundToNearestFranken(basePriceRappen)
-
-    // Admin-Fee nur ab entsprechendem Termin
-    const adminFeeRappen = appointmentNumber >= rule.admin_fee_applies_from ? rule.admin_fee_rappen : 0
+    // ✅ NEUE LOGIK: Admin-Fee basierend auf tatsächlichen Zahlungen
+    const motorcycleCategories = ['A', 'A1', 'A35kW']
+    const isMotorcycle = motorcycleCategories.includes(categoryCode)
+    
+    let adminFeeRappen = 0
+    
+    // ✅ KORRIGIERT: Im Edit-Mode wird Admin-Fee bereits aus der Datenbank geladen
+    // (siehe oben: calculatePrice lädt bereits alle Preise aus payments Tabelle)
+    if (!isEditMode && rule) {
+      // Create-Mode: Admingebühr basierend auf Regeln berechnen
+      if (!isMotorcycle && userId) {
+        // Prüfe ob Admin-Fee bereits bezahlt wurde
+        const shouldApply = await shouldApplyAdminFee(userId, categoryCode)
+        
+        if (shouldApply) {
+          adminFeeRappen = rule.admin_fee_rappen
+        }
+      }
+    }
     
     // Gesamtpreis
     const totalRappen = basePriceRappen + adminFeeRappen
@@ -451,8 +709,13 @@ const roundToNearestFranken = (rappen: number): number => {
     
     console.log('✅ Price calculated and cached:', {
       category: categoryCode,
-      duration: durationMinutes,
-      total: result.total_chf
+      duration: Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes,
+      originalDuration: durationMinutes,
+      appointmentNumber: appointmentNumber,
+      isMotorcycle: motorcycleCategories.includes(categoryCode),
+      adminFee: adminFeeRappen > 0 ? `${(adminFeeRappen / 100).toFixed(2)} CHF` : 'Keine',
+      total: result.total_chf,
+      note: appointmentNumber === 2 && !motorcycleCategories.includes(categoryCode) ? 'Admin-Fee verrechnet (2. Termin dieser Kategorie)' : 'Keine Admin-Fee'
     })
 
     return result
@@ -464,16 +727,19 @@ const roundToNearestFranken = (rappen: number): number => {
     dynamicPricing.value.error = ''
 
     try {
-      const result = await calculatePrice(categoryCode, durationMinutes, userId)
+      // ✅ NEU: Stelle sicher, dass durationMinutes eine Zahl ist
+      const durationValue = Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes
+      
+      const result = await calculatePrice(categoryCode, durationValue, userId)
       
       dynamicPricing.value = {
-        pricePerMinute: result.base_price_rappen / durationMinutes / 100,
+        pricePerMinute: result.base_price_rappen / durationValue / 100,
         adminFeeChf: parseFloat(result.admin_fee_chf),
         appointmentNumber: result.appointment_number,
         hasAdminFee: result.admin_fee_rappen > 0,
         totalPriceChf: result.total_chf,
         category: categoryCode,
-        duration: durationMinutes,
+        duration: durationValue,
         isLoading: false,
         error: ''
       }
@@ -481,17 +747,20 @@ const roundToNearestFranken = (rappen: number): number => {
     } catch (error: any) {
       console.error('❌ Error updating dynamic pricing:', error)
       
+      // ✅ NEU: Stelle sicher, dass durationMinutes eine Zahl ist
+      const durationValue = Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes
+      
       // Fallback zur Offline-Berechnung
-      const offlineResult = calculateOfflinePrice(categoryCode, durationMinutes, 1)
+      const offlineResult = calculateOfflinePrice(categoryCode, durationValue, 1)
       
       dynamicPricing.value = {
-        pricePerMinute: offlineResult.basePrice / durationMinutes,
+        pricePerMinute: offlineResult.basePrice / durationValue,
         adminFeeChf: offlineResult.adminFee,
         appointmentNumber: 1,
         hasAdminFee: offlineResult.adminFee > 0,
         totalPriceChf: offlineResult.total.toFixed(2),
         category: categoryCode,
-        duration: durationMinutes,
+        duration: durationValue,
         isLoading: false,
         error: error.message || 'Fehler bei Preisberechnung (Offline-Fallback aktiv)'
       }
@@ -563,6 +832,10 @@ const roundToNearestFranken = (rappen: number): number => {
     calculatePrice,
     getAppointmentCount,
     getPricingRule,
+    
+    // ✅ NEUE Admin-Fee-Funktionen
+    hasAdminFeeBeenPaid,
+    shouldApplyAdminFee,
 
     // Dynamic Pricing Functions
     updateDynamicPricing,
