@@ -103,7 +103,6 @@ export const useWallee = () => {
           item_id: request.appointmentId,
           quantity: 1,
           unit_price_rappen: Math.round(request.amount * 100), // CHF zu Rappen
-          total_price_rappen: Math.round(request.amount * 100),
           description: request.description || 'Fahrstunde'
         })
       }
@@ -116,7 +115,6 @@ export const useWallee = () => {
             item_id: product.id,
             quantity: 1,
             unit_price_rappen: product.price_rappen,
-            total_price_rappen: product.price_rappen,
             description: product.name
           })
         })
@@ -134,7 +132,6 @@ export const useWallee = () => {
             item_id: discount.id,
             quantity: 1,
             unit_price_rappen: -discountAmount, // Negativ für Rabatte
-            total_price_rappen: -discountAmount,
             description: discount.name
           })
         })
@@ -257,7 +254,8 @@ export const useWallee = () => {
         staffId: appointment.staff_id,
         description: `Fahrstunde ${appointment.type} - ${appointment.duration_minutes}min`,
         products: [], // Können später hinzugefügt werden
-        discounts: [] // Können später hinzugefügt werden
+        discounts: [], // Können später hinzugefügt werden
+        paymentMethod: 'online' // Wallee ist immer online
       })
     } catch (error: any) {
       console.error('❌ Error creating appointment payment:', error)
@@ -286,7 +284,8 @@ export const useWallee = () => {
         staffId,
         description: `Produktkauf: ${products.map(p => p.name).join(', ')}`,
         products,
-        discounts
+        discounts,
+        paymentMethod: 'online' // Wallee ist immer online
       })
     } catch (error: any) {
       console.error('❌ Error creating product payment:', error)
