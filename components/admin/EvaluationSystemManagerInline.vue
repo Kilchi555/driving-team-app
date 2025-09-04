@@ -1120,8 +1120,8 @@ const startDrag = (event: DragEvent, criteria: any, categoryId: string) => {
   
   // Speichere die ursprüngliche Reihenfolge für diese Kategorie
   originalOrder.value[categoryId] = criteria.value
-    .filter(c => c.category_id === categoryId)
-    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+    .filter((c: any) => c.category_id === categoryId)
+    .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
   
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move'

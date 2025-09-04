@@ -1417,7 +1417,7 @@ const loadUserAppointments = async () => {
       
       // Merge Zahlungsstatus und Methode in Termin-Datensatz
       ;(appointment as any).payment_status = payment?.payment_status || 'pending'
-      ;(appointment as any).payment_method = payment?.payment_method || appointment.payment_method
+      ;(appointment as any).payment_method = payment?.payment_method || 'pending'
       
       console.log(`📋 Appointment ${appointment.id}: payment_status=${payment?.payment_status}, is_paid=${isPaid}`)
       

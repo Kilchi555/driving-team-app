@@ -18,6 +18,7 @@
 <script setup lang="ts">
 import EvaluationSystemManagerInline from '~/components/admin/EvaluationSystemManagerInline.vue'
 
+// @ts-ignore
 definePageMeta({
   layout: 'admin',
   middleware: ['auth', 'admin']

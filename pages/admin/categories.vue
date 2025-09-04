@@ -316,6 +316,7 @@ import { getSupabase } from '~/utils/supabase'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 
 // Use admin layout
+// @ts-ignore
 definePageMeta({
   layout: 'admin',
   middleware: ['auth', 'admin']
