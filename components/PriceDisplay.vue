@@ -941,7 +941,7 @@ const getUsedCredit = () => {
 const calculateTotalPrice = () => {
   const basePrice = getBasePrice()
   const discountAmount = getDiscountAmount()
-  const productsTotal = getProducts().reduce((total, product) => {
+  const productsTotal = getProducts().reduce((total: any, product: any) => {
     return total + getProductPrice(product)
   }, 0)
   const adminFeeAmount = getAdminFee()
@@ -956,7 +956,7 @@ const calculateTotalPrice = () => {
 const calculatePriceBeforeCredit = () => {
   const basePrice = getBasePrice()
   const discountAmount = getDiscountAmount()
-  const productsTotal = getProducts().reduce((total, product) => {
+  const productsTotal = getProducts().reduce((total: any, product: any) => {
     return total + getProductPrice(product)
   }, 0)
   const adminFeeAmount = getAdminFee()
@@ -1231,7 +1231,7 @@ const loadExistingPayment = async () => {
             .eq('discount_sale_id', discountSale.id)
 
           if (!psError && Array.isArray(productsData)) {
-            const mapped = productsData.map(p => ({
+            const mapped = productsData.map((p: any) => ({
               id: p.id,
               name: p.products?.name || 'Produkt',
               description: p.products?.description || '',
