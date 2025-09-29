@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Simy – Plattform für Fahrschulen</title>
+    <meta name="description" content="Simy hilft Fahrschulen bei Terminplanung, Zahlungen und Kundenverwaltung.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      :root { --blue:#2563eb; --bg:#0b1020; --text:#0f172a; --muted:#475569; }
+      * { box-sizing:border-box }
+      body { margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--text); }
+      .container { max-width:1120px; margin:0 auto; padding:0 16px; }
+      .hero { padding:96px 0; background:#fff; }
+      .title { font-size:40px; line-height:1.1; font-weight:800; letter-spacing:-0.02em; }
+      .lead { margin-top:12px; font-size:18px; color:var(--muted); }
+      .cta { margin-top:24px; display:flex; gap:12px; flex-wrap:wrap }
+      .btn { display:inline-flex; align-items:center; justify-content:center; padding:12px 20px; border-radius:10px; font-weight:600; text-decoration:none }
+      .btn-primary { background:var(--blue); color:#fff }
+      .btn-secondary { border:1px solid #e2e8f0; color:var(--blue); background:#fff }
+      .features { background:#f8fafc; padding:56px 0 }
+      .grid { display:grid; gap:16px }
+      @media (min-width:640px){ .grid { grid-template-columns:repeat(2,1fr) } }
+      @media (min-width:1024px){ .grid { grid-template-columns:repeat(3,1fr) } }
+      .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px }
+      .card h3 { margin:0 0 6px 0; font-size:18px }
+      .card p { margin:0; color:var(--muted) }
+      .footer { padding:32px 0; text-align:center; color:#64748b; font-size:14px }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="container">
+        <h1 class="title">Simy – Die smarte Plattform für Fahrschulen</h1>
+        <p class="lead">Termine, Zahlungen und Kunden an einem Ort. Einfach. Schnell. Effizient.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="mailto:info@simy.ch?subject=Interesse%20an%20Simy&body=Hallo%20Simy%2C%0Aich%20interessiere%20mich%20f%C3%BCr%20eure%20Plattform.%20Bitte%20kontaktiert%20mich.%0A%0AName%3A%20%0AFirma%3A%20%0ATelefon%3A%20">Kontakt aufnehmen</a>
+          <a class="btn btn-secondary" href="mailto:info@simy.ch?subject=Demo%20anfragen">Demo anfragen</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="features">
+        <div class="container">
+          <div class="grid">
+            <div class="card">
+              <h3>Kalender & Verfügbarkeit</h3>
+              <p>Intelligente Terminplanung, Auslastung und automatische Erinnerungen.</p>
+            </div>
+            <div class="card">
+              <h3>Online-Zahlungen</h3>
+              <p>Sichere Zahlungen, Rechnungen und Abos mit Stripe (Testbetrieb).</p>
+            </div>
+            <div class="card">
+              <h3>Kunden-Management</h3>
+              <p>Alle Kundendaten, Fortschritte und Dokumente zentral organisiert.</p>
+            </div>
+            <div class="card">
+              <h3>Kurse & Kategorien</h3>
+              <p>Flexible Kurs-Templates und klare Auswertungen.</p>
+            </div>
+            <div class="card">
+              <h3>Branding</h3>
+              <p>Eigenes Logo, Farben und Domain – professioneller Auftritt.</p>
+            </div>
+            <div class="card">
+              <h3>Analytics</h3>
+              <p>Wichtige Kennzahlen auf einen Blick: Auslastung, Umsatz, Conversion.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">© <span id="year"></span> Simy – Alle Rechte vorbehalten</div>
+    </footer>
+
+    <script>document.getElementById('year').textContent = new Date().getFullYear()</script>
+  </body>
+  </html>
+
+
