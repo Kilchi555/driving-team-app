@@ -44,10 +44,27 @@ export const useStudents = () => {
 
     try {
       const supabase = getSupabase()
+      
+      // Get current user's tenant_id
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', authUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+      
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+
+      console.log('🔍 useStudents - Current tenant_id:', tenantId)
+      
       let query = supabase
         .from('users')
         .select('*')
         .eq('role', 'client')
+        .eq('tenant_id', tenantId) // Filter by current tenant
 
       // Staff sieht nur eigene Schüler, außer showAllStudents ist true
       if (userRole === 'staff' && !showAllStudents.value) {
@@ -62,6 +79,7 @@ export const useStudents = () => {
       if (fetchError) throw fetchError
 
       students.value = data || []
+      console.log('✅ Students loaded for tenant:', students.value.length)
 
     } catch (err: any) {
       error.value = err.message
@@ -76,6 +94,19 @@ export const useStudents = () => {
     try {
       const supabase = getSupabase()
       
+      // Get current user's tenant_id
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', authUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+      
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+      
       const { data, error: fetchError } = await supabase
         .from('users')
         .select(`
@@ -88,6 +119,7 @@ export const useStudents = () => {
         `)
         .eq('id', studentId)
         .eq('role', 'client')
+        .eq('tenant_id', tenantId) // Filter by current tenant
         .single()
 
       if (fetchError) throw fetchError

@@ -4,7 +4,7 @@
 
 
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-3 sm:space-y-0">
-      <h2 class="text-xl sm:text-lg font-semibold text-gray-900">💰 Kassenverwaltung</h2>
+      <h2 class="text-xl sm:text-lg font-semibold text-gray-900">💰 Kassen</h2>
       <div class="flex space-x-2">
         <button
           class="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
@@ -559,21 +559,41 @@ const loadStaffBalances = async () => {
   isLoading.value = true
   
   try {
-    // First, get all staff users (and admins who might have cash balances)
+    // Get current user's tenant_id first
+    const { data: currentUserData } = await supabase.auth.getUser()
+    if (!currentUserData?.user) throw new Error('Not authenticated')
+    
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUserData.user.id)
+      .single()
+    
+    if (profileError || !userProfile?.tenant_id) {
+      throw new Error('User has no tenant assigned')
+    }
+    
+    console.log('🔍 Loading staff balances for tenant:', userProfile.tenant_id)
+    
+    // Get only staff users (exclude admins) - FILTERED BY TENANT
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select('id, first_name, last_name, email, role')
-      .in('role', ['staff', 'admin'])
+      .eq('role', 'staff')
+      .eq('tenant_id', userProfile.tenant_id)
+      .eq('is_active', true)
+      .is('deleted_at', null)
       .order('first_name')
 
     if (usersError) throw usersError
     
     console.log('👥 Found users:', users?.map(u => ({ name: `${u.first_name} ${u.last_name}`, role: u.role, id: u.id })))
 
-    // Load existing balances from cash_balances
+    // Load existing balances from cash_balances - FILTERED BY TENANT
     const { data: balancesRows, error: balancesError } = await supabase
       .from('cash_balances')
       .select('*')
+      .eq('tenant_id', userProfile.tenant_id)
 
     if (balancesError) throw balancesError
     
@@ -581,10 +601,11 @@ const loadStaffBalances = async () => {
 
     const instructorIdToBalance = new Map((balancesRows || []).map(row => [row.instructor_id, row]))
 
-    // Get all movements and transactions for all staff
+    // Get all movements and transactions for all staff - FILTERED BY TENANT
     const { data: movements, error: movementsError } = await supabase
       .from('cash_movements')
       .select('*')
+      .eq('tenant_id', userProfile.tenant_id)
 
     if (movementsError) throw movementsError
     
@@ -593,6 +614,7 @@ const loadStaffBalances = async () => {
     const { data: transactions, error: transactionsError } = await supabase
       .from('cash_transactions')
       .select('*')
+      .eq('tenant_id', userProfile.tenant_id)
 
     if (transactionsError) throw transactionsError
     

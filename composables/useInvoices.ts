@@ -36,9 +36,20 @@ export const useInvoices = () => {
       const { getSupabase } = await import('~/utils/supabase')
       const supabase = getSupabase()
 
+      // Get current user's tenant_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+      console.log('🔍 Admin Invoice Create - Current tenant_id:', tenantId)
+
       // Rechnung erstellen - nur definierte Werte einfügen
       const invoiceInsertData: any = {
         user_id: invoiceData.user_id,
+        tenant_id: tenantId, // Assign to current tenant
         billing_type: invoiceData.billing_type,
         billing_email: invoiceData.billing_email,
         billing_country: invoiceData.billing_country,
@@ -160,10 +171,20 @@ export const useInvoices = () => {
       const { getSupabase } = await import('~/utils/supabase')
       const supabase = getSupabase()
 
+      // Get current user's tenant_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+
       const { data: invoice, error: fetchError } = await supabase
         .from('invoices_with_details')
         .select('*')
         .eq('id', id)
+        .eq('tenant_id', tenantId) // Filter by current tenant
         .single()
 
       if (fetchError) throw fetchError
@@ -189,9 +210,20 @@ export const useInvoices = () => {
       const { getSupabase } = await import('~/utils/supabase')
       const supabase = getSupabase()
 
+      // Get current user's tenant_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+      console.log('🔍 Admin Invoices - Current tenant_id:', tenantId)
+
       let query = supabase
         .from('invoices_with_details')
         .select('*', { count: 'exact' })
+        .eq('tenant_id', tenantId) // Filter by current tenant
 
       console.log('🔍 Building query with filters:', filters)
 
@@ -300,6 +332,15 @@ export const useInvoices = () => {
       const { getSupabase } = await import('~/utils/supabase')
       const supabase = getSupabase()
 
+      // Get current user's tenant_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+
       const { data: invoice, error: updateError } = await supabase
         .from('invoices')
         .update({
@@ -307,6 +348,7 @@ export const useInvoices = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
+        .eq('tenant_id', tenantId) // Ensure user can only update their tenant's invoices
         .select()
         .single()
 
@@ -350,10 +392,20 @@ export const useInvoices = () => {
       const { getSupabase } = await import('~/utils/supabase')
       const supabase = getSupabase()
 
+      // Get current user's tenant_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+
       const { error: deleteError } = await supabase
         .from('invoices')
         .delete()
         .eq('id', id)
+        .eq('tenant_id', tenantId) // Ensure user can only delete their tenant's invoices
 
       if (deleteError) throw deleteError
 
@@ -403,6 +455,15 @@ export const useInvoices = () => {
       const { getSupabase } = await import('~/utils/supabase')
       const supabase = getSupabase()
       
+      // Get current user's tenant_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+      
       // Status auf 'sent' setzen
       const { data, error } = await supabase
         .from('invoices')
@@ -411,6 +472,7 @@ export const useInvoices = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
+        .eq('tenant_id', tenantId) // Ensure user can only send their tenant's invoices
         .select()
         .single()
       
@@ -445,11 +507,22 @@ export const useInvoices = () => {
       const supabase = getSupabase()
       console.log('🔗 Supabase client obtained:', !!supabase)
       
+      // Get current user's tenant_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+      console.log('🔍 Admin Invoice Summary - Current tenant_id:', tenantId)
+      
       // Test connection first
       console.log('🧪 Testing Supabase connection...')
       const { data: testData, error: testError } = await supabase
         .from('invoices')
         .select('id')
+        .eq('tenant_id', tenantId) // Filter by current tenant
         .limit(1)
       
       if (testError) {
@@ -459,11 +532,12 @@ export const useInvoices = () => {
       
       console.log('✅ Connection test successful, test data:', testData)
 
-      // Einfache SQL-Abfrage anstatt RPC-Funktion
+      // Einfache SQL-Abfrage anstatt RPC-Funktion - gefiltert nach tenant_id
       console.log('📊 Fetching invoice summary data...')
       const { data: invoices, error } = await supabase
         .from('invoices')
         .select('status, payment_status, total_amount_rappen, due_date')
+        .eq('tenant_id', tenantId) // Filter by current tenant
 
       if (error) {
         console.error('❌ Error fetching invoices:', error)
@@ -565,11 +639,21 @@ export const useInvoices = () => {
       const { getSupabase } = await import('~/utils/supabase')
       const supabase = getSupabase()
 
+      // Get current user's tenant_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+
       // Rechnung laden
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices_with_details')
         .select('*')
         .eq('id', invoiceId)
+        .eq('tenant_id', tenantId) // Filter by current tenant
         .single()
 
       if (invoiceError) throw invoiceError

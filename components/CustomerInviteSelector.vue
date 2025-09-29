@@ -311,6 +311,7 @@
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { useSmsService } from '~/composables/useSmsService'
 
 // Customer Interface - vereinfacht für temp users
 interface NewCustomer {
@@ -410,20 +411,46 @@ const createInvitationSmsMessage = (customer: NewCustomer, appointmentData?: any
   const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Kunde'
   
   // Basis-Einladungs-SMS
-  let message = `Hallo ${customerName}! 🚗 Willkommen bei Driving Team Zürich! `
+  let message = `Hallo ${customerName}! `
   
   if (appointmentData) {
-    const appointmentDate = new Date(appointmentData.start_time).toLocaleDateString('de-CH')
-    const appointmentTime = new Date(appointmentData.start_time).toLocaleTimeString('de-CH', { 
+    // ✅ KRITISCHER FIX: Entferne das +00:00 UTC-Suffix
+    const cleanStartTime = appointmentData.start_time.replace('+00:00', '').replace('T', ' ')
+    
+    // Jetzt wird es als lokale Zeit interpretiert
+    const startDate = new Date(cleanStartTime)
+    
+    const appointmentDate = startDate.toLocaleDateString('de-CH')
+    const appointmentTime = startDate.toLocaleTimeString('de-CH', { 
       hour: '2-digit', 
       minute: '2-digit' 
     })
     
-    message += `Ihr Fahrstunden-Termin ist am ${appointmentDate} um ${appointmentTime} Uhr bestätigt. `
+    // Staff-Informationen aus appointmentData
+    const staffName = appointmentData.staff?.first_name || 'Ihr Fahrlehrer'
+    const staffPhone = appointmentData.staff?.phone || ''
+    
+    // Location-Informationen aus appointmentData
+    const locationName = appointmentData.location_name || 'Treffpunkt'
+    const locationAddress = appointmentData.location_address || ''
+    
+    message += `Dein Termin ist am ${appointmentDate} um ${appointmentTime} Uhr bestätigt.\n\n`
+    
+    // Staff-Name mit Telefonnummer
+    if (staffPhone) {
+      message += `${staffName} (${staffPhone}) wird dich gerne hier erwarten: ${locationName}`
+    } else {
+      message += `${staffName} wird dich gerne hier erwarten: ${locationName}`
+    }
+    
+    if (locationAddress) {
+      message += ` (${locationAddress})`
+    }
+    
+    message += `.\n\n`
   }
   
-  message += `Laden Sie unsere App herunter: https://app.drivingteam.ch 📱 `
-  message += `Bei Fragen: 044 431 00 33. Beste Grüsse, Ihr Driving Team!`
+  message += `Beste Grüsse,\nDein Driving Team!`
   
   return message
 }
@@ -449,9 +476,9 @@ const loadCategories = async () => {
     
     const { data, error } = await supabase
       .from('categories')
-      .select('code, name, is_active, display_order')
+      .select('code, name, is_active')
       .eq('is_active', true)
-      .order('display_order')
+      .order('code')
     
     if (error) throw error
     
@@ -570,32 +597,8 @@ const resetSelection = () => {
   console.log('🔄 CustomerInviteSelector: Selection reset')
 }
 
-// 1. FÜGE DIESE DIREKTE sendSms FUNKTION HINZU (vor createInvitedCustomers):
-const sendSms = async (phoneNumber: string, message: string) => {
-  try {
-    const supabase = getSupabase();
-    
-    const { data, error } = await supabase.functions.invoke('send-twilio-sms', {
-      body: {
-        to: phoneNumber,
-        message: message
-      },
-      method: 'POST'
-    });
-
-    if (error) {
-      console.error('Fehler beim Aufruf der SMS-Funktion:', error);
-      return { success: false, error: error.message };
-    }
-
-    console.log('SMS-Funktion erfolgreich aufgerufen:', data);
-    return { success: true, data };
-
-  } catch (err) {
-    console.error('Unerwarteter Fehler beim Senden der SMS:', err);
-    return { success: false, error: 'Unerwarteter Fehler' };
-  }
-};
+// 1. VERWENDE useSmsService STATT DIREKTER EDGE FUNCTION:
+const { sendSms } = useSmsService()
 
 // 2. DEINE createInvitedCustomers FUNKTION BLEIBT UNVERÄNDERT:
 const createInvitedCustomers = async (appointmentData: any) => {

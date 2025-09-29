@@ -15,10 +15,24 @@ export const useEventTypes = () => {
       const supabase = getSupabase()
       console.log('🔄 Loading event types from database...')
       
+      // Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+      
       const { data, error } = await supabase
         .from('event_types')
-        .select(loadFullObjects ? '*' : 'code')
+        .select(loadFullObjects ? '*, require_payment' : 'code')
         .eq('is_active', true)
+        .eq('tenant_id', tenantId)
         .order('display_order')
       
       if (error) throw error

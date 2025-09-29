@@ -1,14 +1,13 @@
 <template>
-  <UserPaymentDetails />
+  <UserDetails />
 </template>
 
 <script setup lang="ts">
-import UserPaymentDetails from '~/components/admin/UserPaymentDetails.vue'
+import UserDetails from '~/components/admin/UserDetails.vue'
 import { definePageMeta } from '#imports';
 
 // Page Meta für Admin-Layout
 definePageMeta({
-  layout: 'admin',
-  middleware: 'auth'
+  layout: 'admin'
 })
 </script>

@@ -1,0 +1,2 @@
+ALTER TABLE locations ALTER COLUMN category TYPE VARCHAR(10)[] USING ARRAY[category]::VARCHAR(10)[];
+

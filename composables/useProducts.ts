@@ -54,10 +54,25 @@ export const useProducts = () => {
 
     try {
       const supabase = getSupabase()
+      
+      // Get current user's tenant_id
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+      
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+      
+      if (userError) throw userError
+      if (!userData?.tenant_id) throw new Error('User has no tenant assigned')
+
       const { data, error: fetchError } = await supabase
         .from('products')
         .select('*')
         .eq('is_active', true)
+        .eq('tenant_id', userData.tenant_id) // Filter by tenant
         .order('display_order')
         .order('name')
 
@@ -69,7 +84,7 @@ export const useProducts = () => {
         price_chf: product.price_rappen / 100
       }))
 
-      console.log('✅ Products loaded:', products.value.length)
+      console.log('✅ Products loaded for tenant:', userData.tenant_id, products.value.length)
     } catch (err: any) {
       console.error('❌ Error loading products:', err)
       error.value = err.message
@@ -99,6 +114,20 @@ export const useProducts = () => {
   const loadAppointmentProducts = async (appointmentId: string): Promise<ProductItem[]> => {
     try {
       const supabase = getSupabase()
+      
+      // Get current user's tenant_id
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+      
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+      
+      if (userError) throw userError
+      if (!userData?.tenant_id) throw new Error('User has no tenant assigned')
+      
       const { data, error } = await supabase
         .from('product_sales')
         .select(`
@@ -119,6 +148,7 @@ export const useProducts = () => {
           )
         `)
         .eq('appointment_id', appointmentId)
+        .eq('tenant_id', userData.tenant_id)
 
       if (error) throw error
 

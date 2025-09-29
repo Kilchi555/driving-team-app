@@ -81,9 +81,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
     discount_type: 'fixed',
     discount_reason: '',
     // ✅ Additional missing fields
-    custom_location_address: null,
-    custom_location_name: null,
-    google_place_id: null
+    custom_location_address: undefined,
+    custom_location_name: undefined,
+    google_place_id: undefined
   })
 
   const selectedStudent = ref<Student | null>(null)
@@ -198,13 +198,30 @@ const useEventModalForm = (currentUser?: any, refs?: {
     })
     
     // ✅ KORREKTE TERMINART AUS DB - Mehrere Fallbacks prüfen
-    const appointmentType = appointment.event_type_code || appointment.extendedProps?.appointment_type || 'lesson'
-    console.log('🎯 Determined appointmentType:', appointmentType)
+    const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other', 'vku', 'nothelfer']
     
-    // ✅ KORREKTE FAHRZEUGKATEGORIE AUS DB (nur erste Kategorie)  
-    const vehicleCategory = appointment.type ? appointment.type.split(',')[0].trim() : 'B'
+    // Prüfe zuerst, ob appointment.type ein event type ist (falsch gespeichert)
+    const isTypeAnEventType = appointment.type && otherEventTypes.includes(appointment.type.toLowerCase())
     
-    const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
+    let appointmentType = 'lesson' // Default
+    let vehicleCategory = 'B' // Default
+    
+    if (isTypeAnEventType) {
+      // appointment.type ist ein event type, nicht die Fahrzeugkategorie
+      // Das ist der korrekte Termintyp
+      appointmentType = appointment.type.toLowerCase()
+      vehicleCategory = 'B' // Standard für andere Events
+      console.log('🎯 Detected event type in appointment.type:', appointmentType)
+    } else {
+      // appointment.type ist die Fahrzeugkategorie, verwende event_type_code
+      appointmentType = appointment.event_type_code || appointment.extendedProps?.appointment_type || 'lesson'
+      vehicleCategory = appointment.type ? appointment.type.split(',')[0].trim() : 'B'
+      console.log('🎯 Using event_type_code:', appointmentType)
+    }
+    
+    console.log('🎯 Final appointmentType:', appointmentType)
+    console.log('🎯 Final vehicleCategory:', vehicleCategory)
+    
     const isOtherEvent = appointmentType && otherEventTypes.includes(appointmentType.toLowerCase())
     
     // Zeit-Verarbeitung
@@ -215,18 +232,29 @@ const useEventModalForm = (currentUser?: any, refs?: {
     const endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : ''
     
     let duration = appointment.duration_minutes || appointment.extendedProps?.duration_minutes
+    console.log('🔍 Duration calculation debug:', {
+      appointmentDuration: appointment.duration_minutes,
+      extendedPropsDuration: appointment.extendedProps?.duration_minutes,
+      hasEndDateTime: !!endDateTime,
+      startDateTime: startDateTime.toISOString(),
+      endDateTime: endDateTime?.toISOString(),
+      calculatedDuration: endDateTime ? Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60)) : 'N/A'
+    })
+    
     if (!duration && endDateTime) {
       duration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60))
+      console.log('✅ Duration calculated from start/end times:', duration, 'minutes')
     }
     duration = duration || 45
+    console.log('🎯 Final duration:', duration, 'minutes')
     
     // ✅ vehicleCategory bereits oben definiert
     
     formData.value = {
       title: appointment.title || '',
       description: appointment.description || appointment.extendedProps?.description || '',
-      type: isOtherEvent ? appointmentType : vehicleCategory, // Fahrzeugkategorie für lessons, event type für others
-      appointment_type: appointmentType, // Der tatsächliche event_type_code
+      type: vehicleCategory, // Immer Fahrzeugkategorie (B, A, etc.)
+      appointment_type: appointmentType, // Der tatsächliche event_type_code (lesson, meeting, etc.)
       startDate: startDate,
       startTime: startTime,
       endTime: endTime,
@@ -236,7 +264,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       location_id: appointment.location_id || appointment.extendedProps?.location_id || '',
       // ✅ price_per_minute removed - not in appointments table
       status: appointment.status || appointment.extendedProps?.status || 'confirmed',
-      eventType: isOtherEvent ? 'other' : 'lesson',
+      eventType: isOtherEvent ? appointmentType : 'lesson',
       selectedSpecialType: isOtherEvent ? appointmentType : '',
       // ✅ is_paid removed - not in appointments table
       discount: appointment.discount || appointment.extendedProps?.discount || 0,
@@ -247,6 +275,13 @@ const useEventModalForm = (currentUser?: any, refs?: {
       custom_location_name: appointment.custom_location_name || appointment.extendedProps?.custom_location_name || null,
       google_place_id: appointment.google_place_id || appointment.extendedProps?.google_place_id || null
     }
+    
+    console.log('🔍 DEBUG: Form populated with duration:', {
+      originalDuration: duration,
+      formDataDuration: formData.value.duration_minutes,
+      startTime: formData.value.startTime,
+      endTime: formData.value.endTime
+    })
     
     console.log('✅ Form populated with type:', formData.value.type)
     
@@ -269,14 +304,32 @@ const useEventModalForm = (currentUser?: any, refs?: {
       loadExistingDiscount(appointment.id)
       // ✅ Load existing products as well
       loadExistingProducts(appointment.id)
+      // ✅ Load invited staff and customers for other event types
+      if (isOtherEvent) {
+        loadInvitedStaffAndCustomers(appointment.id)
+      }
       // ✅ Admin fee will be loaded automatically by usePricing in edit mode
     }
+  }
+
+  // ✅ Helper function to check if event type is a lesson type
+  const isLessonType = (eventType: string) => {
+    const lessonTypes = ['lesson', 'exam', 'theory']
+    return lessonTypes.includes(eventType)
   }
 
   // ✅ Load student by ID for existing appointments
   const loadStudentById = async (userId: string) => {
     try {
       console.log('📞 loadStudentById called with userId:', userId)
+      
+      // ✅ PRÜFE ZUERST: Ist das ein bezahlbarer Termin (Lektion)?
+      if (!isLessonType(formData.value.eventType)) {
+        console.log('🚫 Not loading student for other event type:', formData.value.eventType)
+        selectedStudent.value = null
+        return
+      }
+      
       const supabase = getSupabase()
       
       console.log('🔍 Querying users table for student...')
@@ -693,6 +746,47 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
   }
   
+  // ✅ Load invited staff and customers for other event types
+  const loadInvitedStaffAndCustomers = async (appointmentId: string) => {
+    console.log('👥 Loading invited staff and customers for appointment:', appointmentId)
+    try {
+      const supabase = getSupabase()
+      
+      // Load invited customers
+      const { data: customers, error: customersError } = await supabase
+        .from('invited_customers')
+        .select('*')
+        .eq('appointment_id', appointmentId)
+      
+      if (customersError) {
+        console.warn('⚠️ Error loading invited customers:', customersError)
+      } else {
+        console.log('👥 Loaded invited customers:', customers?.length || 0)
+        // Set invited customers in the form - convert to NewCustomer format
+        if (refs?.invitedCustomers) {
+          const newCustomers = (customers || []).map(customer => ({
+            first_name: customer.first_name || '',
+            last_name: customer.last_name || '',
+            phone: customer.phone || '',
+            category: customer.category || '',
+            notes: customer.notes || ''
+          }))
+          refs.invitedCustomers.value = newCustomers
+          console.log('✅ Set invited customers in form:', newCustomers.length)
+        } else {
+          console.warn('⚠️ invitedCustomers ref not available')
+        }
+      }
+      
+      // TODO: Load invited staff when invited_staff table is created
+      // For now, we'll need to create this table first
+      console.log('ℹ️ Staff invitations loading not yet implemented - need invited_staff table')
+      
+    } catch (err: any) {
+      console.error('❌ Error loading invited staff and customers:', err)
+    }
+  }
+  
   // ✅ Note: Admin fee loading is now handled directly in usePricing for edit mode
   
   // ✅ Save products to product_sales table if products exist
@@ -778,10 +872,13 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
       
       // Appointment Data
+      // ✅ FIX: Für "other" EventTypes ohne Schüler, verwende staff_id als user_id
+      const userId = formData.value.user_id || (formData.value.eventType === 'other' ? formData.value.staff_id || dbUser.id : null)
+      
       const appointmentData = {
         title: formData.value.title,
         description: formData.value.description,
-        user_id: formData.value.user_id,
+        user_id: userId,
         staff_id: formData.value.staff_id || dbUser.id,
         location_id: formData.value.location_id,
         start_time: `${formData.value.startDate}T${formData.value.startTime}:00`,
@@ -791,9 +888,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
         status: formData.value.status,
         // ✅ Missing fields added
         event_type_code: formData.value.appointment_type || 'lesson',
-        custom_location_address: formData.value.custom_location_address || null,
-        custom_location_name: formData.value.custom_location_name || null,
-        google_place_id: formData.value.google_place_id || null
+        custom_location_address: formData.value.custom_location_address || undefined,
+        custom_location_name: formData.value.custom_location_name || undefined,
+        google_place_id: formData.value.google_place_id || undefined,
+        // ✅ Add tenant_id and category_code for availability checking
+        tenant_id: dbUser.tenant_id,
+        category_code: formData.value.category_code || dbUser.category
         // ✅ price_per_minute and is_paid removed - not in appointments table
       }
       
@@ -831,10 +931,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ Save products if exists
       await saveProductsIfExists(result.id, discountSale?.id)
       
-      // ✅ Create payment entry
-      console.log('🚀 About to create payment entry for appointment:', result.id)
-      const paymentResult = await createPaymentEntry(result.id, discountSale?.id)
-      console.log('📊 Payment creation result:', paymentResult)
+      // ✅ Create payment entry nur für Lektionen (lesson, exam, theory)
+      const appointmentType = formData.value.appointment_type || 'lesson' // Fallback zu 'lesson' wenn undefined
+      const isLessonType = ['lesson', 'exam', 'theory'].includes(appointmentType)
+      if (isLessonType) {
+        console.log('🚀 Creating payment entry for lesson type:', appointmentType)
+        const paymentResult = await createPaymentEntry(result.id, discountSale?.id)
+        console.log('📊 Payment creation result:', paymentResult)
+      } else {
+        console.log('ℹ️ Skipping payment creation for other event type:', appointmentType)
+      }
       
       return result
       
@@ -941,12 +1047,22 @@ const useEventModalForm = (currentUser?: any, refs?: {
     try {
       const supabase = getSupabase()
       
-      // Calculate prices from form data and selected products
+      // ✅ KORRIGIERT: Verwende die korrekte Preisberechnung aus dynamicPricing
       const durationMinutes = formData.value.duration_minutes || 45
-      const pricePerMinute = 2.11 // Default price per minute - could be made dynamic later
-      const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
-      // Round to nearest 100 rappen (CHF 1.00)
-      const lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+      const appointmentType = formData.value.appointment_type || 'lesson'
+      
+      // ✅ Für Theorielektionen: Verwende den korrekten Preis (85.- CHF)
+      let lessonPriceRappen: number
+      if (appointmentType === 'theory') {
+        lessonPriceRappen = 8500 // 85.00 CHF in Rappen
+        console.log('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
+      } else {
+        // ✅ Für andere Lektionen: Verwende die dynamische Preisberechnung
+        const pricePerMinute = 2.11 // Default price per minute
+        const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
+        // Round to nearest 100 rappen (CHF 1.00)
+        lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+      }
       
       // Calculate products total
       const selectedProducts = refs?.selectedProducts?.value || []
@@ -959,8 +1075,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // Discount amount
       const discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
       
-      // Admin fee - get from dynamicPricing (already calculated by pricing system)
-      const adminFeeRappen = Math.round((refs?.dynamicPricing?.value?.adminFeeRappen || 0))
+      // ✅ KORRIGIERT: Admin fee - für Theorielektionen immer 0, sonst aus dynamicPricing
+      let adminFeeRappen: number
+      if (appointmentType === 'theory') {
+        adminFeeRappen = 0 // Keine Admin-Fee für Theorielektionen
+        console.log('📚 Theorielektion: Keine Admin-Fee')
+      } else {
+        adminFeeRappen = Math.round((refs?.dynamicPricing?.value?.adminFeeRappen || 0))
+      }
       
       console.log('💰 Admin fee for payment:', {
         adminFeeChf: refs?.dynamicPricing?.value?.adminFeeChf,
@@ -1038,7 +1160,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
 
       const paymentData = {
         appointment_id: appointmentId,
-        user_id: formData.value.user_id,
+        user_id: formData.value.user_id || null,
         staff_id: formData.value.staff_id,
         lesson_price_rappen: lessonPriceRappen,
         admin_fee_rappen: adminFeeRappen,
@@ -1049,9 +1171,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
         payment_status: 'pending',
         currency: 'CHF',
         description: `Payment for appointment: ${formData.value.title}`,
-        created_by: formData.value.staff_id,
+        created_by: formData.value.staff_id || null,
         notes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
-        company_billing_address_id: companyBillingAddressId, // ✅ NEU: Referenz zu company_billing_addresses
+        company_billing_address_id: companyBillingAddressId || null, // ✅ NEU: Referenz zu company_billing_addresses
         invoice_address: invoiceAddress // ✅ Fallback: Rechnungsadresse als JSONB
       }
       

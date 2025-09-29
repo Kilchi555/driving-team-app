@@ -272,7 +272,7 @@ const filteredCriteria = computed(() => {
   return unratedCriteria.filter(criteria => 
     (criteria.name?.toLowerCase().includes(query) ||
      criteria.category_name?.toLowerCase().includes(query) ||
-     criteria.short_code?.toLowerCase().includes(query))
+     false)
   )
 })
 
@@ -369,7 +369,20 @@ const loadAllCriteria = async () => {
   error.value = null
   
   try {
-    // Neue Abfrage: Hole alle evaluation_criteria für die Fahrkategorie
+    // Get current user's tenant_id first
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+    // Neue Abfrage: Hole alle evaluation_criteria für die Fahrkategorie (filtered by tenant)
     const { data: criteria, error: cError } = await supabase
       .from('evaluation_criteria')
       .select(`
@@ -379,9 +392,11 @@ const loadAllCriteria = async () => {
         is_active,
         display_order,
         category_id,
-        driving_categories
+        driving_categories,
+        evaluation_categories!inner(tenant_id)
       `)
       .eq('is_active', true)
+      .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
       .contains('driving_categories', [props.studentCategory])
 
     if (cError) throw cError
@@ -394,12 +409,13 @@ const loadAllCriteria = async () => {
     // Extrahiere alle Kategorie-IDs
     const categoryIds = [...new Set(criteria.map(c => c.category_id).filter(Boolean))]
 
-    // Hole evaluation_categories
+    // Hole evaluation_categories (filtered by tenant)
     const { data: categories, error: catError } = await supabase
       .from('evaluation_categories')
       .select('id, name, color, display_order, is_active')
       .in('id', categoryIds)
       .eq('is_active', true)
+      .eq('tenant_id', userProfile.tenant_id)
 
     if (catError) throw catError
 

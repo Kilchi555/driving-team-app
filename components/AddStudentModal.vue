@@ -213,20 +213,20 @@
             <h3 class="text-lg font-medium text-gray-900 mb-4">Zusätzliche Informationen</h3>
             
             <div class="space-y-4">
-              <!-- Lernfahrausweis -->
+              <!-- Lernfahrausweis Nummer -->
               <div>
                 <label for="lernfahrausweis" class="block text-sm font-medium text-gray-700 mb-1">
                   Lernfahrausweis-Nummer
                 </label>
                 <input
                   id="lernfahrausweis"
-                  v-model="form.lernfahrausweis_url"
+                  v-model="form.lernfahrausweis_nr"
                   type="text"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   placeholder="z.B. L-123456789"
                 >
                 <p class="text-xs text-gray-500 mt-1">
-                  Später kann ein Foto des Lernfahrausweises hochgeladen werden
+                  Die Nummer des Lernfahrausweises. Dokumente können später hochgeladen werden.
                 </p>
               </div>
 
@@ -327,7 +327,7 @@ const form = ref({
   zip: '',
   city: '',
   category: '',
-  lernfahrausweis_url: '',
+  lernfahrausweis_nr: '',
   payment_prov: '',
   assigned_staff_id: ''
 })
@@ -380,7 +380,7 @@ const resetForm = () => {
     zip: '',
     city: '',
     category: '',
-    lernfahrausweis_url: '',
+    lernfahrausweis_nr: '',
     payment_prov: '',
     assigned_staff_id: ''
   }

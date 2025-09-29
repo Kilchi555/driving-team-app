@@ -12,7 +12,7 @@
             class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
           >
             <span>💰</span>
-            <span>Bargeldkontrolle</span>
+            <span>Kasse</span>
           </button>
         </div>
         <button
@@ -44,6 +44,29 @@
         <!-- Accordion Sections -->
         <div v-if="!isLoading" class="space-y-3">
 
+        <!-- Externe Kalender Einstellungen -->
+        <div class="border border-gray-200 rounded-lg">
+          <button  
+            @click="toggleSection('externalCalendars')" 
+            class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 transition-colors"
+          >
+            <div class="flex items-center space-x-3">
+              <span class="text-xl">📅</span>
+              <div>
+                <h3 class="font-semibold text-gray-900">Externe Kalender</h3>
+                <p class="text-sm text-gray-600">Private Kalender verbinden (Google, Microsoft, Apple)</p>
+              </div>
+            </div>
+            <span class="text-gray-400 transform transition-transform" :class="{ 'rotate-180': openSections.externalCalendars }">
+              ▼
+            </span>
+          </button>
+          
+          <div v-if="openSections.externalCalendars" class="px-4 pb-4 border-t">
+            <ExternalCalendarSettings />
+          </div>
+        </div>
+
         <!-- Nur Arbeitsstunden für 4 Monate - KEINE lessons mehr! -->
         <div class="border border-gray-200 rounded-lg">
           <button  
@@ -57,11 +80,41 @@
           <div v-if="openSections.workingStats" class="px-4 pb-4 border-t border-gray-100">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               
-              <!-- Aktueller Monat -->
-              <div class="bg-blue-50 p-4 rounded-lg">
-                <h4 class="font-semibold text-blue-900 mb-3">{{ currentMonthName }}</h4>
-                <div class="text-2xl font-bold text-blue-800">
-                  {{ monthlyStats.currentMonth.worked }}h
+              <!-- Kommender Monat - Geplant -->
+              <div class="bg-orange-50 p-4 rounded-lg border-2 border-orange-200">
+                <h4 class="font-semibold text-orange-900 mb-3 text-center">{{ nextMonthName }}</h4>
+                <div class="text-center">
+                  <div class="text-sm text-orange-700 font-medium mb-1">Geplant</div>
+                  <div class="text-2xl font-bold text-orange-800">
+                    {{ monthlyStats.nextMonth.planned.toFixed(2) }}h
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Aktueller Monat - Kombiniert -->
+              <div class="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border-2 border-blue-200">
+                <h4 class="font-semibold text-gray-800 mb-4 text-center">{{ currentMonthName }}</h4>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="text-center">
+                    <div class="text-sm text-blue-700 font-medium mb-1">Gearbeitet</div>
+                    <div class="text-2xl font-bold text-blue-800">
+                      {{ monthlyStats.currentMonth.worked.toFixed(2) }}h
+                    </div>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-sm text-green-700 font-medium mb-1">Geplant</div>
+                    <div class="text-2xl font-bold text-green-800">
+                      {{ monthlyStats.currentMonth.planned.toFixed(2) }}h
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-gray-300">
+                  <div class="text-center">
+                    <div class="text-xs text-gray-600 font-medium mb-1">Total</div>
+                    <div class="text-lg font-bold text-gray-800">
+                      {{ (monthlyStats.currentMonth.worked + monthlyStats.currentMonth.planned).toFixed(2) }}h
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -69,7 +122,7 @@
               <div class="bg-gray-50 p-4 rounded-lg">
                 <h4 class="font-semibold text-gray-700 mb-3">{{ previousMonthName }}</h4>
                 <div class="text-2xl font-bold text-gray-800">
-                  {{ monthlyStats.previousMonth.worked }}h
+                  {{ monthlyStats.previousMonth.worked.toFixed(2) }}h
                 </div>
               </div>
               
@@ -77,7 +130,7 @@
               <div class="bg-gray-50 p-4 rounded-lg">
                 <h4 class="font-semibold text-gray-700 mb-3">{{ twoMonthsAgoName }}</h4>
                 <div class="text-2xl font-bold text-gray-800">
-                  {{ monthlyStats.twoMonthsAgo.worked }}h
+                  {{ monthlyStats.twoMonthsAgo.worked.toFixed(2) }}h
                 </div>
               </div>
               
@@ -85,7 +138,7 @@
               <div class="bg-gray-50 p-4 rounded-lg">
                 <h4 class="font-semibold text-gray-700 mb-3">{{ threeMonthsAgoName }}</h4>
                 <div class="text-2xl font-bold text-gray-800">
-                  {{ monthlyStats.threeMonthsAgo.worked }}h
+                  {{ monthlyStats.threeMonthsAgo.worked.toFixed(2) }}h
                 </div>
               </div>
               
@@ -105,101 +158,15 @@
           
           <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
             <div class="space-y-4 mt-4">
-              
-              <!-- Info Text -->
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p class="text-sm text-blue-800">
-                  📍 Aktivieren Sie die Prüfungsstandorte, die Sie für Ihre Schüler nutzen möchten.
-                </p>
+
+              <!-- New Search Dropdown -->
+              <div class="space-y-4">
+                <ExamLocationSearchDropdown
+                  :current-staff-id="props.currentUser?.id || ''"
+                  @locations-changed="handleExamLocationsChanged"
+                />
               </div>
 
-              <!-- Loading State -->
-              <div v-if="isLoadingExamLocations" class="text-center py-8">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p class="text-gray-600 text-sm">Prüfungsstandorte werden geladen...</p>
-              </div>
-
-              <!-- Verfügbare Prüfungsstandorte -->
-              <div v-else class="space-y-3">
-                <div v-if="availableExamLocations.length === 0" class="text-center py-8 text-gray-500">
-                  <div class="text-4xl mb-2">🏛️</div>
-                  <p class="text-sm">Keine Prüfungsstandorte verfügbar</p>
-                  <p class="text-xs mt-1">Kontaktieren Sie Ihren Administrator</p>
-                </div>
-                
-                <div
-                  v-for="location in availableExamLocations"
-                  :key="location.id + locationsKey"
-                  class="border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow"
-                >
-                  <div class="space-y-3">
-                    
-                    <!-- Header mit Name und Toggle -->
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="flex-1 min-w-0">
-                        <h4 class="font-semibold text-gray-900 text-sm leading-tight break-words">{{ location.name }}</h4>
-                      </div>
-                      
-                      <!-- Toggle Switch -->
-                        <button
-                        @click="toggleExamLocation(location)"
-                        :disabled="isSavingExamLocation"
-                        :class="[
-                          'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex-shrink-0 mt-0.5',
-                          isExamLocationActive(location.id) ? 'bg-green-600' : 'bg-gray-300'
-                        ]"
-                      >
-                        <span
-                          :class="[
-                            'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
-                            isExamLocationActive(location.id) ? 'translate-x-5' : 'translate-x-1'
-                          ]"
-                        ></span>
-                      </button>
-                    </div>
-                    
-                    <!-- Status Badge -->
-                    <div class="flex justify-start">
-                      <span 
-                        :class="[
-                          'text-xs px-2 py-1 rounded-full font-medium inline-block',
-                          isExamLocationActive(location.id) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                        ]"
-                      >
-                        {{ isExamLocationActive(location.id) ? 'Für mich aktiv' : 'Inaktiv' }}
-                      </span>
-                    </div>
-                    
-                   <!-- Adresse -->
-                    <div class="text-sm text-gray-600">
-                      <div class="flex items-start gap-1">
-                        <span class="text-xs">📍</span>
-                        <div class="break-words">
-                          <div>{{ location.address }}</div>
-                          <div v-if="location.postal_code || location.city" class="text-gray-500 mt-1">
-                            {{ location.postal_code }} {{ location.city }}
-                            <span v-if="location.canton" class="ml-1">({{ location.canton }})</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <!-- Verfügbare Kategorien -->
-                    <div v-if="location.available_categories && location.available_categories.length > 0" class="space-y-2">
-                      <div class="text-xs text-gray-500 font-medium">Verfügbare Kategorien:</div>
-                      <div class="flex flex-wrap gap-1">
-                        <span
-                          v-for="category in location.available_categories"
-                          :key="category"
-                          class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
-                        >
-                          {{ category }}
-                        </span>
-                      </div>
-                    </div>                   
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -269,142 +236,95 @@
             </div>
           </div>
 
-          <!-- 2. Fahrzeugkategorien -->
-          <div class="border border-gray-200 rounded-lg">
-            <button
-              @click="toggleSection('categories')"
-              class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
-            >
-              <span class="font-medium text-gray-900">🚗 Fahrzeugkategorien</span>
-              <span class="text-gray-600 font-bold">{{ openSections.categories ? '−' : '+' }}</span>
-            </button>
-            
-            <div v-if="openSections.categories" class="px-4 pb-4 border-t border-gray-100">
-              <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
-                <label 
-                  v-for="category in availableCategories"
-                  :key="category.id"
-                  class="flex items-center p-2 border rounded cursor-pointer hover:bg-gray-50 text-sm"
-                  :class="{
-                    'border-green-500 bg-green-50': selectedCategories.includes(category.id),
-                    'border-gray-300': !selectedCategories.includes(category.id)
-                  }"
-                >
-                  <input
-                    type="checkbox"
-                    :checked="selectedCategories.includes(category.id)"
-                    @change="toggleCategory(category.id)"
-                    class="w-3 h-3 text-green-600 border-gray-300 rounded focus:ring-green-500 mr-2"
-                  >
-                  <div>
-                    <div class="font-medium text-gray-900">{{ category.code }}</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3. Lektionsdauern pro Kategorie -->
-          <div class="border border-gray-200 rounded-lg">
-            <button
-              @click="toggleSection('durations')"
-              class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
-            >
-              <span class="font-medium text-gray-900">⏱️ Lektionsdauern</span>
-              <span class="text-gray-600 font-bold">{{ openSections.durations ? '−' : '+' }}</span>
-            </button>
-            
-            <div v-if="openSections.durations" class="px-4 pb-4 border-t border-gray-100">
-              <div class="space-y-4 mt-3">
-                <div 
-                  v-for="category in filteredCategoriesForDurations"
-                  :key="category.code"
-                  class="border border-gray-100 rounded p-3"
-                >
-                  <div class="flex items-center gap-2 mb-2">
-                    <div 
-                      class="w-3 h-3 rounded-full"
-                      :style="{ backgroundColor: category.color || '#gray' }"
-                    ></div>
-                    <span class="font-medium text-sm text-gray-900">{{ category.code }} - {{ category.name }}</span>
-                  </div>
-
-                  <div class="grid grid-cols-4 md:grid-cols-6 gap-1">
-                    <label 
-                      v-for="duration in getRelevantDurations(category)"
-                      :key="`${category.code}-${duration.value}`"
-                      class="flex items-center justify-center p-1 border rounded cursor-pointer hover:bg-gray-50 text-xs"
-                      :class="{
-                        'border-green-500 bg-green-50': isDurationSelectedForCategory(category.code, duration.value),
-                        'border-gray-300': !isDurationSelectedForCategory(category.code, duration.value)
-                      }"
-                    >
-                      <input
-                        type="checkbox"
-                        :checked="isDurationSelectedForCategory(category.code, duration.value)"
-                        @change="toggleDurationForCategory(category.code, duration.value)"
-                        class="sr-only"
-                      >
-                      <span class="text-gray-900 font-medium">{{ duration.label }}</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- 4. Arbeitszeiten -->
           <div class="border border-gray-200 rounded-lg">
             <button
               @click="toggleSection('worktime')"
               class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
             >
-              <span class="font-medium text-gray-900">🕒 Arbeitszeiten</span>
+              <span class="font-medium text-gray-900">⏰ Arbeitszeiten</span>
               <span class="text-gray-600 font-bold">{{ openSections.worktime ? '−' : '+' }}</span>
             </button>
             
             <div v-if="openSections.worktime" class="px-4 pb-4 border-t border-gray-100">
-              <div class="space-y-3 mt-3">
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1">Von:</label>
-                    <input
-                      v-model="workingHours.start"
-                      type="time"
-                      class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1">Bis:</label>
-                    <input
-                      v-model="workingHours.end"
-                      type="time"
-                      class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
+              <div class="space-y-4 mt-4">
+                
+                <!-- Info Text -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p class="text-sm text-blue-800">
+                    💡 <strong>Arbeitszeiten:</strong> Diese Zeiten werden automatisch als "gesperrt" im Kalender angezeigt und verhindern Terminbuchungen außerhalb Ihrer Arbeitszeiten.
+                  </p>
+                </div>
+
+                <!-- Arbeitszeiten pro Wochentag -->
+                <div class="space-y-3">
+                  <div
+                    v-for="day in weekdays"
+                    :key="day.value"
+                    class="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 p-3 border border-gray-200 rounded-lg"
+                  >
+                    <!-- Wochentag -->
+                    <div class="w-full sm:w-20 text-sm font-medium text-gray-700">
+                      {{ day.label }}
+                    </div>
+                    
+                    <!-- Aktiv/Inaktiv Toggle -->
+                    <div class="flex items-center space-x-2">
+                      <input
+                        :id="`active-${day.value}`"
+                        v-model="workingHoursForm[day.value].is_active"
+                        type="checkbox"
+                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      >
+                      <label :for="`active-${day.value}`" class="text-sm text-gray-700">
+                        Aktiv
+                      </label>
+                    </div>
+                    
+                    <!-- Zeiten Container -->
+                    <div class="flex flex-col sm:flex-row sm:flex-1 sm:space-x-3 space-y-3 sm:space-y-0">
+                      <!-- Start Zeit -->
+                      <div class="flex-1">
+                        <label class="block text-xs text-gray-500 mb-1">Von</label>
+                        <input
+                          v-model="workingHoursForm[day.value].start_time"
+                          type="time"
+                          :disabled="!workingHoursForm[day.value].is_active"
+                          class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        >
+                      </div>
+                      
+                      <!-- End Zeit -->
+                      <div class="flex-1">
+                        <label class="block text-xs text-gray-500 mb-1">Bis</label>
+                        <input
+                          v-model="workingHoursForm[day.value].end_time"
+                          type="time"
+                          :disabled="!workingHoursForm[day.value].is_active"
+                          class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        >
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label class="block text-sm font-medium text-gray-800 mb-2">Arbeitstage:</label>
-                  <div class="flex flex-wrap gap-2">
-                    <label 
-                      v-for="(day, index) in weekDays"
-                      :key="day"
-                      class="flex items-center p-2 border rounded cursor-pointer hover:bg-gray-50 text-sm"
-                      :class="{
-                        'border-green-500 bg-green-50': availableDays.includes(index + 1),
-                        'border-gray-300': !availableDays.includes(index + 1)
-                      }"
-                    >
-                      <input
-                        type="checkbox"
-                        :checked="availableDays.includes(index + 1)"
-                        @change="toggleDay(index + 1)"
-                        class="sr-only"
-                      >
-                      <span class="text-gray-900 font-medium">{{ day }}</span>
-                    </label>
-                  </div>
+                <!-- Aktionen -->
+                <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    @click="saveWorkingHours"
+                    :disabled="isSavingWorkingHours"
+                    class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {{ isSavingWorkingHours ? 'Speichern...' : 'Arbeitszeiten speichern' }}
+                  </button>
+                  
+                  <button
+                    @click="clearWorkingHours"
+                    :disabled="isSavingWorkingHours"
+                    class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    Alle löschen
+                  </button>
                 </div>
               </div>
             </div>
@@ -434,8 +354,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
+import { navigateTo } from '#app/composables/router'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import ExamLocationSearchDropdown from './ExamLocationSearchDropdown.vue'
+import { useStaffWorkingHours, WEEKDAYS } from '~/composables/useStaffWorkingHours'
 
 interface Props {
   currentUser: any
@@ -487,6 +410,7 @@ const isSavingExamLocation = ref(false)
 
 // Accordion State
 const openSections = reactive({
+  externalCalendars: false,
   locations: false,
   categories: false,
   durations: false,
@@ -506,7 +430,8 @@ const newExamLocation = ref({
 
 // NEUE STATE für Arbeitszeit
 const monthlyStats = ref({
-  currentMonth: { worked: 0 },
+  currentMonth: { worked: 0, planned: 0 },
+  nextMonth: { planned: 0 },
   previousMonth: { worked: 0 },
   twoMonthsAgo: { worked: 0 },
   threeMonthsAgo: { worked: 0 }
@@ -518,9 +443,20 @@ const availableCategories = ref<any[]>([])
 const selectedCategories = ref<number[]>([])
 const myLocations = ref<any[]>([])
 const categoryDurations = ref<Record<string, number[]>>({})
-const workingHours = ref({ start: '08:00', end: '18:00' })
-const availableDays = ref<number[]>([1, 2, 3, 4, 5]) // Mo-Fr
-const notifications = ref({ sms: true, email: true })
+
+// Working Hours Management
+const { 
+  workingHours: staffWorkingHours,
+  isLoading: isLoadingWorkingHours,
+  loadWorkingHours,
+  saveWorkingHour,
+  workingHoursByDay
+} = useStaffWorkingHours()
+
+// Working Hours Form (per day)
+const workingHoursForm = ref<Record<number, { start_time: string; end_time: string; is_active: boolean }>>({})
+const weekdays = WEEKDAYS
+const isSavingWorkingHours = ref(false)
 
 // New Location
 const newLocationName = ref('')
@@ -567,6 +503,12 @@ const twoMonthsAgoName = computed(() => {
 const threeMonthsAgoName = computed(() => {
   const date = new Date()
   date.setMonth(date.getMonth() - 3)
+  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
+})
+
+const nextMonthName = computed(() => {
+  const date = new Date()
+  date.setMonth(date.getMonth() + 1)
   return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
 })
 
@@ -707,9 +649,9 @@ const loadAllData = async () => {
   error.value = null
 
   try {
-    await Promise.all([
-      loadExamLocations() // ✅ HINZUFÜGEN
-    ])
+    // Exam Locations werden nur in der Prüfungsstandorte-Sektion geladen
+    // Standard Locations werden separat geladen
+    console.log('✅ Basic data loading completed')
   } catch (err: any) {
     console.error('❌ Error loading data:', err)
     error.value = err.message
@@ -732,6 +674,51 @@ const isExamLocationActive = (examLocationId: string): boolean => {
 const getExamLocationMapsUrl = (location: any): string => {
   const query = encodeURIComponent(location.address)
   return `https://maps.google.com/maps?q=${query}`
+}
+
+// New function to handle exam locations changes from dropdown
+const handleExamLocationsChanged = (locations: any[]) => {
+  console.log('🔄 Exam locations changed:', locations.length)
+  // Reload the staff exam locations to reflect changes
+  loadExamLocations()
+}
+
+// New function to remove exam location
+const removeExamLocation = async (location: any) => {
+  if (!props.currentUser?.id) {
+    console.error('❌ Keine Benutzer-ID vorhanden, kann Standort nicht entfernen.')
+    return
+  }
+
+  isSavingExamLocation.value = true
+  error.value = null
+
+  try {
+    const supabase = getSupabase()
+    const staffId = props.currentUser.id
+
+    // Remove from database
+    const { error: deleteError } = await supabase
+      .from('locations')
+      .delete()
+      .eq('staff_id', staffId)
+      .eq('name', location.name)
+      .eq('address', location.address)
+      .eq('location_type', 'exam')
+
+    if (deleteError) throw deleteError
+
+    console.log('✅ Prüfungsstandort entfernt:', location.name)
+    
+    // Reload the data
+    await loadExamLocations()
+
+  } catch (err: any) {
+    console.error('❌ Fehler beim Entfernen des Prüfungsstandorts:', err)
+    error.value = `Fehler beim Entfernen: ${err.message}`
+  } finally {
+    isSavingExamLocation.value = false
+  }
 }
 
 
@@ -790,14 +777,15 @@ const toggleCategory = (categoryId: number) => {
   }
 }
 
-const toggleDay = (dayNumber: number) => {
-  const index = availableDays.value.indexOf(dayNumber)
-  if (index > -1) {
-    availableDays.value.splice(index, 1)
-  } else {
-    availableDays.value.push(dayNumber)
-  }
-}
+// Legacy function - not used in new working hours system
+// const toggleDay = (dayNumber: number) => {
+//   const index = availableDays.value.indexOf(dayNumber)
+//   if (index > -1) {
+//     availableDays.value.splice(index, 1)
+//   } else {
+//     availableDays.value.push(dayNumber)
+//   }
+// }
 
 const addLocation = async () => {
   if (!newLocationName.value || !newLocationAddress.value) return
@@ -811,7 +799,7 @@ const addLocation = async () => {
         name: newLocationName.value,
         address: newLocationAddress.value,
         staff_id: props.currentUser.id,
-        location_type: 'exam' // 👈 Diese Zeile wurde hinzugefügt
+        location_type: 'standard' // Standard-Treffpunkte, nicht Exam Locations
       })
       .select()
       .single()
@@ -868,25 +856,6 @@ const addExamLocation = async () => {
   }
 }
 
-const removeExamLocation = async (locationId: string) => {
-  try {
-    const supabase = getSupabase()
-    
-    const { error } = await supabase
-      .from('staff_exam_locations')
-      .delete()
-      .eq('id', locationId)
-
-    if (error) throw error
-
-    examLocations.value = examLocations.value.filter(loc => loc.id !== locationId)
-    console.log('✅ Exam location removed:', locationId)
-
-  } catch (err: any) {
-    console.error('❌ Error removing exam location:', err)
-    error.value = `Fehler beim Entfernen: ${err.message}`
-  }
-}
 
 const removeLocation = async (locationId: string) => {
   try {
@@ -948,72 +917,32 @@ const loadData = async () => {
       .from('categories')
       .select('*')
       .eq('is_active', true)
-      .order('display_order')
+      .order('name')
 
     if (categoriesError) throw categoriesError
     availableCategories.value = categories || []
 
-    // Standorte laden
+    // Standard Standorte laden (nur standard locations, nicht exam locations)
     const { data: locations, error: locationsError } = await supabase
       .from('locations')
       .select('*')
       .eq('staff_id', props.currentUser.id)
+      .eq('location_type', 'standard') // Nur Standard Locations, keine Exam Locations
 
     if (locationsError) throw locationsError
     myLocations.value = locations || []
 
-    // Zugewiesene Kategorien laden
-    const { data: staffCategories, error: staffCatError } = await supabase
-      .from('staff_categories')
-      .select('category_id')
-      .eq('staff_id', props.currentUser.id)
-      .eq('is_active', true)
+    // Zugewiesene Kategorien laden (temporär deaktiviert - Tabelle existiert nicht)
+    // TODO: Implementiere staff_categories Tabelle oder alternative Lösung
+    selectedCategories.value = []
 
-    if (staffCatError) throw staffCatError
-    selectedCategories.value = staffCategories?.map(sc => sc.category_id) || []
+    // Lektionsdauern laden (temporär deaktiviert - Tabelle existiert nicht)
+    // TODO: Implementiere staff_category_durations Tabelle oder alternative Lösung
+    categoryDurations.value = {}
 
-    // Lektionsdauern laden
-    const { data: durations, error: durationsError } = await supabase
-      .from('staff_category_durations')
-      .select('category_code, duration_minutes')
-      .eq('staff_id', props.currentUser.id)
-      .eq('is_active', true)
-
-    if (durationsError) throw durationsError
-
-    const grouped: Record<string, number[]> = {}
-    durations?.forEach(item => {
-      if (!grouped[item.category_code]) {
-        grouped[item.category_code] = []
-      }
-      grouped[item.category_code].push(item.duration_minutes)
-    })
-    categoryDurations.value = grouped
-
-    // Staff Settings laden (falls vorhanden)
-    const { data: settings, error: settingsError } = await supabase
-      .from('staff_settings')
-      .select('*')
-      .eq('staff_id', props.currentUser.id)
-      .maybeSingle()
-
-    if (settingsError && !settingsError.message.includes('does not exist')) {
-      console.warn('⚠️ Staff settings error:', settingsError.message)
-    }
-
-    if (settings) {
-      workingHours.value = {
-        start: settings.work_start_time || '08:00',
-        end: settings.work_end_time || '18:00'
-      }
-      availableDays.value = settings.available_weekdays 
-        ? settings.available_weekdays.split(',').map(Number)
-        : [1, 2, 3, 4, 5]
-      notifications.value = {
-        sms: settings.sms_notifications ?? true,
-        email: settings.email_notifications ?? true
-      }
-    }
+    // Staff Settings laden (temporär deaktiviert - Tabelle existiert nicht)
+    // TODO: Implementiere staff_settings Tabelle oder alternative Lösung
+    console.log('🔥 Staff settings loading disabled - table does not exist')
 
     console.log('✅ All data loaded successfully')
 
@@ -1060,25 +989,42 @@ const loadWorkingHoursData = async () => {
       return
     }
     
-    // Filter nur completed/confirmed Termine
+    // Filter completed/confirmed Termine für gearbeitete Stunden
     const validAppointments = appointments.filter(apt => 
       ['completed', 'confirmed'].includes(apt.status)
     )
     
-    console.log('🔍 DEBUG: Valid appointments:', validAppointments.length)
+    // Filter alle Termine im aktuellen Monat für geplante Stunden
+    const now = new Date()
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
     
-    if (validAppointments.length === 0) {
+    // Filter alle Termine im kommenden Monat für geplante Stunden
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59)
+    
+    const plannedAppointments = appointments.filter(apt => {
+      const appointmentDate = new Date(apt.appointment_datetime || apt.start_time)
+      return appointmentDate >= currentMonthStart && appointmentDate <= currentMonthEnd
+    })
+    
+    const nextMonthPlannedAppointments = appointments.filter(apt => {
+      const appointmentDate = new Date(apt.appointment_datetime || apt.start_time)
+      return appointmentDate >= nextMonthStart && appointmentDate <= nextMonthEnd
+    })
+    
+    console.log('🔍 DEBUG: Valid appointments (worked):', validAppointments.length)
+    console.log('🔍 DEBUG: Planned appointments (current month):', plannedAppointments.length)
+    
+    if (validAppointments.length === 0 && plannedAppointments.length === 0) {
       console.log('⚠️ DEBUG: No valid appointments found')
       return
     }
     
     // Berechne Stunden für jeden Monat
-    const now = new Date()
     console.log('🔍 DEBUG: Current date:', now)
     
-    // Alle 4 Monate definieren
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+    // Alle 4 Monate definieren (currentMonthStart und currentMonthEnd bereits oben definiert)
     
     const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
@@ -1121,8 +1067,27 @@ const loadWorkingHoursData = async () => {
     const twoMonthsAgoHours = calculateHoursForPeriod(twoMonthsAgoStart, twoMonthsAgoEnd, 'Two Months Ago')
     const threeMonthsAgoHours = calculateHoursForPeriod(threeMonthsAgoStart, threeMonthsAgoEnd, 'Three Months Ago')
     
+    // Berechne geplante Stunden für aktuellen Monat
+    const plannedHours = plannedAppointments.reduce((sum, apt) => {
+      const minutes = apt.duration_minutes || 45
+      return sum + minutes
+    }, 0)
+    const plannedHoursFormatted = plannedHours / 60
+    
+    // Berechne geplante Stunden für kommenden Monat
+    const nextMonthPlannedHours = nextMonthPlannedAppointments.reduce((sum, apt) => {
+      const minutes = apt.duration_minutes || 45
+      return sum + minutes
+    }, 0)
+    const nextMonthPlannedHoursFormatted = nextMonthPlannedHours / 60
+    
+    console.log('🔍 DEBUG: Planned hours for current month:', plannedHoursFormatted)
+    console.log('🔍 DEBUG: Planned hours for next month:', nextMonthPlannedHoursFormatted)
+    
     // Setze alle Werte
     monthlyStats.value.currentMonth.worked = currentHours
+    monthlyStats.value.currentMonth.planned = plannedHoursFormatted
+    monthlyStats.value.nextMonth.planned = nextMonthPlannedHoursFormatted
     monthlyStats.value.previousMonth.worked = previousHours
     monthlyStats.value.twoMonthsAgo.worked = twoMonthsAgoHours
     monthlyStats.value.threeMonthsAgo.worked = threeMonthsAgoHours
@@ -1142,111 +1107,17 @@ const saveAllSettings = async () => {
   try {
     const supabase = getSupabase()
 
-    // 1. Staff-Kategorien speichern
-    console.log('🔥 Saving staff categories...', selectedCategories.value)
-    
-    // Erst alle alten löschen
-    const { error: deleteError } = await supabase
-      .from('staff_categories')
-      .delete()
-      .eq('staff_id', props.currentUser.id)
+    // 1. Staff-Kategorien speichern (temporär deaktiviert - Tabelle existiert nicht)
+    console.log('🔥 Staff categories saving disabled - table does not exist')
+    // TODO: Implementiere staff_categories Tabelle oder alternative Lösung
 
-    if (deleteError) throw deleteError
+    // 2. Lektionsdauern speichern (temporär deaktiviert - Tabelle existiert nicht)
+    console.log('🔥 Lesson durations saving disabled - table does not exist')
+    // TODO: Implementiere staff_category_durations Tabelle oder alternative Lösung
 
-    // Dann neue einfügen
-    if (selectedCategories.value.length > 0) {
-      const categoryData = selectedCategories.value.map(categoryId => ({
-        staff_id: props.currentUser.id,
-        category_id: categoryId,
-        is_active: true
-      }))
-
-      const { error: insertError } = await supabase
-        .from('staff_categories')
-        .insert(categoryData)
-
-      if (insertError) throw insertError
-      console.log('✅ Staff categories saved:', categoryData.length)
-    }
-
-    // 2. Lektionsdauern speichern
-    console.log('🔥 Saving lesson durations...', categoryDurations.value)
-    
-    // Erst alle alten löschen
-    const { error: deleteDurationsError } = await supabase
-      .from('staff_category_durations')
-      .delete()
-      .eq('staff_id', props.currentUser.id)
-
-    if (deleteDurationsError) throw deleteDurationsError
-
-    // Dann neue einfügen
-    const durationData = []
-    for (const [categoryCode, durations] of Object.entries(categoryDurations.value)) {
-      for (const duration of durations) {
-        durationData.push({
-          staff_id: props.currentUser.id,
-          category_code: categoryCode,
-          duration_minutes: duration,
-          is_active: true
-        })
-      }
-    }
-
-    if (durationData.length > 0) {
-      const { error: insertDurationsError } = await supabase
-        .from('staff_category_durations')
-        .insert(durationData)
-
-      if (insertDurationsError) throw insertDurationsError
-      console.log('✅ Lesson durations saved:', durationData.length)
-    }
-
-    // 3. Staff Settings speichern (falls Tabelle existiert)
-    console.log('🔥 Saving staff settings...')
-    
-    const settingsData = {
-      staff_id: props.currentUser.id,
-      work_start_time: workingHours.value.start,
-      work_end_time: workingHours.value.end,
-      available_weekdays: availableDays.value.join(','),
-      sms_notifications: notifications.value.sms,
-      email_notifications: notifications.value.email,
-      updated_at: toLocalTimeString(new Date())
-    }
-
-    // Erst prüfen ob Eintrag existiert
-    const { data: existingSettings } = await supabase
-      .from('staff_settings')
-      .select('id')
-      .eq('staff_id', props.currentUser.id)
-      .maybeSingle()
-
-    if (existingSettings) {
-      // Update existing record
-      const { error: updateError } = await supabase
-        .from('staff_settings')
-        .update({
-          work_start_time: workingHours.value.start,
-          work_end_time: workingHours.value.end,
-          available_weekdays: availableDays.value.join(','),
-          sms_notifications: notifications.value.sms,
-          email_notifications: notifications.value.email,
-          updated_at: toLocalTimeString(new Date())
-        })
-        .eq('staff_id', props.currentUser.id)
-
-      if (updateError) throw updateError
-      console.log('✅ Staff settings updated')
-    } else {
-      // Insert new record
-      const { error: insertError } = await supabase
-        .from('staff_settings')
-        .insert(settingsData)
-
-      if (insertError) throw insertError
-      console.log('✅ Staff settings created')
-    }
+    // 3. Staff Settings speichern (temporär deaktiviert - Tabelle existiert nicht)
+    console.log('🔥 Staff settings saving disabled - table does not exist')
+    // TODO: Implementiere staff_settings Tabelle oder alternative Lösung
 
     console.log('✅ All settings saved successfully!')
     saveSuccess.value = true
@@ -1276,12 +1147,89 @@ const openCashControl = () => {
   navigateTo('/staff/cash-control')
 }
 
-// Lifecycle
-onMounted(() => {
-  loadData()
-  loadWorkingHoursData()
-  loadExamLocations() 
+// Working Hours Methods
+const initializeWorkingHoursForm = () => {
+  // Initialize form for all weekdays
+  weekdays.forEach(day => {
+    const existingHour = workingHoursByDay.value[day.value]
+    workingHoursForm.value[day.value] = {
+      start_time: existingHour?.start_time || '08:00',
+      end_time: existingHour?.end_time || '18:00',
+      is_active: existingHour?.is_active || false
+    }
+  })
+}
 
+const saveWorkingHours = async () => {
+  if (!props.currentUser?.id) return
+  
+  isSavingWorkingHours.value = true
+  try {
+    // Save each day's working hours
+    for (const day of weekdays) {
+      const formData = workingHoursForm.value[day.value]
+      if (formData.is_active) {
+        await saveWorkingHour(props.currentUser.id, {
+          day_of_week: day.value,
+          start_time: formData.start_time,
+          end_time: formData.end_time,
+          is_active: formData.is_active
+        })
+      }
+    }
+    
+    console.log('✅ Working hours saved successfully')
+    alert('✅ Arbeitszeiten erfolgreich gespeichert!')
+    
+  } catch (err: any) {
+    console.error('❌ Error saving working hours:', err)
+    alert(`❌ Fehler beim Speichern: ${err.message}`)
+  } finally {
+    isSavingWorkingHours.value = false
+  }
+}
+
+
+const clearWorkingHours = async () => {
+  if (!props.currentUser?.id) return
+  
+  if (!confirm('Möchten Sie wirklich alle Arbeitszeiten löschen?')) return
+  
+  isSavingWorkingHours.value = true
+  try {
+    const supabase = getSupabase()
+    
+    // Delete all working hours for this staff
+    const { error } = await supabase
+      .from('staff_working_hours')
+      .delete()
+      .eq('staff_id', props.currentUser.id)
+    
+    if (error) throw error
+    
+    // Reload and reinitialize form
+    await loadWorkingHours(props.currentUser.id)
+    initializeWorkingHoursForm()
+    
+    console.log('✅ All working hours cleared')
+    alert('✅ Alle Arbeitszeiten wurden gelöscht!')
+    
+  } catch (err: any) {
+    console.error('❌ Error clearing working hours:', err)
+    alert(`❌ Fehler beim Löschen: ${err.message}`)
+  } finally {
+    isSavingWorkingHours.value = false
+  }
+}
+
+// Lifecycle
+onMounted(async () => {
+  await loadData()
+  await loadWorkingHoursData()
+  await loadExamLocations()
+  
+  // Initialize working hours form after data is loaded
+  initializeWorkingHoursForm()
 })
 </script>
 

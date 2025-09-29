@@ -1209,26 +1209,89 @@ const loadExistingPayment = async () => {
       // 🔗 Produkte für genau diesen Termin laden (discount_sales -> product_sales)
       try {
         console.log('📦 Loading existing products for appointment:', props.appointmentId)
+        
+        // ✅ DEBUG: Prüfe zuerst, ob es überhaupt eine discount_sale gibt
         const { data: discountSale, error: dsError } = await supabase
           .from('discount_sales')
           .select('id')
           .eq('appointment_id', props.appointmentId as string)
           .single()
 
+        console.log('🔍 DEBUG - discount_sale query result:', {
+          discountSale,
+          dsError,
+          appointmentId: props.appointmentId
+        })
+
         if (!dsError && discountSale?.id) {
-          const { data: productsData, error: psError } = await supabase
-            .from('product_sales')
-            .select(`
-              id,
-              quantity,
-              unit_price_rappen,
-              total_price_rappen,
-              products (
-                name,
-                description
-              )
-            `)
-            .eq('discount_sale_id', discountSale.id)
+          console.log('✅ Found discount_sale, loading products with discount_sale_id:', discountSale.id)
+          
+          // ✅ FIX: Versuche verschiedene Verknüpfungsmöglichkeiten
+          let productsData = null
+          let psError = null
+          
+          // Versuche 1: Über discount_sale_id (falls die Spalte existiert)
+          try {
+            const result1 = await supabase
+              .from('product_sales')
+              .select(`
+                id,
+                quantity,
+                unit_price_rappen,
+                total_price_rappen,
+                products (
+                  name,
+                  description
+                )
+              `)
+              .eq('discount_sale_id', discountSale.id)
+            
+            if (!result1.error) {
+              productsData = result1.data
+              psError = result1.error
+              console.log('✅ Method 1 (discount_sale_id) worked')
+            } else {
+              console.log('❌ Method 1 failed:', result1.error.message)
+            }
+          } catch (e) {
+            console.log('❌ Method 1 exception:', e)
+          }
+          
+          // Versuche 2: Direkt über die product_sale_id aus der payment
+          if (!productsData) {
+            try {
+              console.log('🔄 Trying method 2: direct product_sale_id lookup from discount_sale.id:', discountSale.id)
+              const result2 = await supabase
+                .from('product_sales')
+                .select(`
+                  id,
+                  quantity,
+                  unit_price_rappen,
+                  total_price_rappen,
+                  products (
+                    name,
+                    description
+                  )
+                `)
+                .eq('product_sale_id', discountSale.id)
+              
+              if (!result2.error) {
+                productsData = result2.data
+                psError = result2.error
+                console.log('✅ Method 2 (direct product_sale_id) worked')
+              } else {
+                console.log('❌ Method 2 failed:', result2.error.message)
+              }
+            } catch (e) {
+              console.log('❌ Method 2 exception:', e)
+            }
+          }
+
+          console.log('🔍 DEBUG - product_sales query result:', {
+            productsData,
+            psError,
+            discountSaleId: discountSale.id
+          })
 
           if (!psError && Array.isArray(productsData)) {
             const mapped = productsData.map((p: any) => ({
@@ -1241,16 +1304,16 @@ const loadExistingPayment = async () => {
               price: undefined
             }))
             ;(existingPayment.value as any).products = mapped
-            console.log('📦 PriceDisplay - Loaded appointment products:', mapped.length)
+            console.log('📦 PriceDisplay - Loaded appointment products:', mapped.length, mapped)
           } else {
             // Ensure products cleared if query returns nothing
             ;(existingPayment.value as any).products = []
-            console.log('📦 PriceDisplay - No products for this appointment')
+            console.log('📦 PriceDisplay - No products for this appointment, error:', psError)
           }
         } else {
           // No discount sale => no products
           ;(existingPayment.value as any).products = []
-          console.log('📦 PriceDisplay - No discount_sale found for this appointment')
+          console.log('📦 PriceDisplay - No discount_sale found for this appointment, error:', dsError)
         }
       } catch (prodErr) {
         // On error, still ensure products are empty

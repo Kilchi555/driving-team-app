@@ -272,11 +272,27 @@ const loadStaff = async () => {
     console.log('👥 StaffSelector: Loading staff members...')
     const supabase = getSupabase()
 
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    const tenantId = userProfile?.tenant_id
+    
+    if (!tenantId) {
+      throw new Error('User has no tenant assigned')
+    }
+
+    console.log('🔍 StaffSelector - Current tenant_id:', tenantId)
+
     let query = supabase
       .from('users')
       .select('id, first_name, last_name, email, role, is_active')
       .eq('role', 'staff')  // Nur Staff, keine Admins
       .eq('is_active', true)
+      .eq('tenant_id', tenantId) // Filter by current tenant
       .order('first_name')
 
     // Aktuellen User ausschließen falls gewünscht
@@ -298,7 +314,7 @@ const loadStaff = async () => {
     }))
     
     availableStaff.value = typedStaff
-    console.log('✅ Staff members loaded:', availableStaff.value.length)
+    console.log('✅ Staff members loaded for tenant:', availableStaff.value.length)
 
   } catch (err: any) {
     console.error('❌ StaffSelector: Error loading staff:', err)

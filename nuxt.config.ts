@@ -9,25 +9,12 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   ssr: false,
   
-  // --- Module Configuration (MIT @nuxtjs/supabase hinzugefügt) ---
+  // --- Module Configuration ---
   modules: [
     '@nuxt/ui',
     '@pinia/nuxt',
-    '@nuxt/eslint',
-    // '@nuxtjs/supabase' // ✅ DIESE ZEILE HINZUFÜGEN
+    '@nuxt/eslint'
   ],
-  
-  // ✅ SUPABASE KONFIGURATION MIT UMGEBUNGSVARIABLEN
-  // @ts-ignore - Supabase Konfiguration wird vom @nuxtjs/supabase Modul erweitert
-  supabase: {
-    url: process.env.SUPABASE_URL,
-    key: process.env.SUPABASE_ANON_KEY,
-    redirectOptions: {
-      login: '/',
-      callback: '/dashboard',
-      exclude: ['/']
-    }
-  },
   
   // --- Build Configuration ---
   build: {
@@ -73,6 +60,7 @@ export default defineNuxtConfig({
     walleeSecretKey: process.env.WALLEE_SECRET_KEY,
     accountoApiKey: process.env.ACCOUNTO_API_KEY,
     accountoBaseUrl: process.env.ACCOUNTO_BASE_URL,
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
     
     // Public keys (exposed to client-side)
     public: {
@@ -95,8 +83,10 @@ export default defineNuxtConfig({
       ]
     }
   },
-    css: [
+  css: [
     // Globales Loading CSS
-    '~/assets/css/loading.css'
+    '~/assets/css/loading.css',
+    // Tenant-Branding CSS System
+    '~/assets/css/tenant-branding.css'
   ]
 })

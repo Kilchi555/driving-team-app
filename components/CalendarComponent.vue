@@ -12,6 +12,7 @@ import ConfirmationDialog from './ConfirmationDialog.vue'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
 import MoveAppointmentModal from './MoveAppointmentModal.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { useStaffWorkingHours } from '~/composables/useStaffWorkingHours'
 
 // ✅ GLOBALE FEHLERBEHANDLUNG
 onErrorCaptured((error, instance, info) => {
@@ -130,12 +131,47 @@ const openMoveModal = (appointment: CalendarAppointment) => {
 
 const { updateOverdueAppointments } = useAppointmentStatus()
 
+// View switcher method
+const switchView = () => {
+  if (!calendar.value) return
+  
+  const api = calendar.value.getApi()
+  if (currentView.value === 'timeGridWeek') {
+    currentView.value = 'timeGridDay'
+    // Set abbreviated month names for day view only
+    api.setOption('titleFormat', { year: 'numeric', month: 'short', day: 'numeric' })
+    // Update button text
+    api.setOption('customButtons', {
+      viewSwitcher: {
+        text: 'Woche',
+        click: switchView
+      }
+    })
+    api.changeView('timeGridDay')
+  } else {
+    currentView.value = 'timeGridWeek'
+    // Update button text
+    api.setOption('customButtons', {
+      viewSwitcher: {
+        text: 'Tag',
+        click: switchView
+      }
+    })
+    // Reset to default format for week view (no changes needed)
+    api.changeView('timeGridWeek')
+  }
+}
+
 
 const calendar = ref()
 const supabase = getSupabase()
 
+// View switcher
+const currentView = ref<'timeGridWeek' | 'timeGridDay'>('timeGridWeek')
+
 interface Props {
   currentUser?: any
+  adminStaffFilter?: string | null
 }
 
 const props = defineProps<Props>()
@@ -166,6 +202,11 @@ type CalendarEvent = {
   start: string
   end: string
   allDay?: boolean
+  backgroundColor?: string
+  borderColor?: string
+  textColor?: string
+  display?: string
+  classNames?: string[]
   extendedProps?: {
     location?: string
     staff_note?: string
@@ -184,6 +225,8 @@ type CalendarEvent = {
     appointment_type?: string
     is_team_invite?: boolean
     original_type?: string
+    type?: string
+    isNonWorkingHours?: boolean
   }
 }
 
@@ -210,7 +253,124 @@ interface CalendarAppointment {
 const calendarEvents = ref<CalendarEvent[]>([])
 const isLoadingEvents = ref(false)
 
+// Working Hours Management
+const { 
+  loadWorkingHours, 
+  getActiveWorkingHours, 
+  isOutsideWorkingHours,
+  workingHoursByDay 
+} = useStaffWorkingHours()
+
 const emit = defineEmits(['view-updated', 'appointment-changed'])
+
+// Arbeitszeiten als Kalender-Events generieren (wiederkehrend)
+const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: Date) => {
+  const workingHoursEvents: CalendarEvent[] = []
+  const activeHours = getActiveWorkingHours()
+  
+  console.log('🔍 Generating working hours events:', {
+    staffId,
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    activeHours: activeHours.length,
+    workingHoursByDay: workingHoursByDay.value
+  })
+  
+  if (!activeHours.length) {
+    console.log('⚠️ No active working hours found')
+    return workingHoursEvents
+  }
+  
+  // Erweitere den Zeitraum um 3 Monate vor und nach dem sichtbaren Bereich
+  const extendedStart = new Date(startDate)
+  extendedStart.setMonth(extendedStart.getMonth() - 3)
+  
+  const extendedEnd = new Date(endDate)
+  extendedEnd.setMonth(extendedEnd.getMonth() + 3)
+  
+  // Für jeden Tag im erweiterten Bereich
+  const currentDate = new Date(extendedStart)
+  while (currentDate <= extendedEnd) {
+    const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // Sonntag = 7
+    const workingHour = workingHoursByDay.value[dayOfWeek]
+    
+    if (workingHour && workingHour.is_active) {
+      // Arbeitszeit-Block vor der Arbeitszeit (grau)
+      const workStart = new Date(currentDate)
+      const [startHour, startMinute] = workingHour.start_time.split(':').map(Number)
+      workStart.setHours(startHour, startMinute, 0, 0)
+      
+      const workEnd = new Date(currentDate)
+      const [endHour, endMinute] = workingHour.end_time.split(':').map(Number)
+      workEnd.setHours(endHour, endMinute, 0, 0)
+      
+      // Block vor Arbeitsbeginn (00:00 bis Arbeitsbeginn) - GRAU
+      if (workStart.getHours() > 0) {
+        const beforeEvent = {
+          id: `working-hours-before-${dayOfWeek}-${currentDate.toISOString().split('T')[0]}`,
+          title: '', // Leerer Titel für besseres Aussehen
+          start: new Date(currentDate).toISOString().split('T')[0] + 'T00:00:00',
+          end: workStart.toISOString(),
+          backgroundColor: '#e5e7eb',
+          borderColor: 'transparent',
+          textColor: 'transparent',
+          display: 'background',
+          classNames: ['non-working-hours-block'],
+          extendedProps: {
+            type: 'non_working_hours',
+            isNonWorkingHours: true
+          }
+        }
+        workingHoursEvents.push(beforeEvent)
+      }
+      
+      // Block nach Arbeitsende (Arbeitsende bis 23:59) - GRAU
+      if (workEnd.getHours() < 23) {
+        const dayEnd = new Date(currentDate)
+        dayEnd.setHours(23, 59, 59, 999)
+        
+        const afterEvent = {
+          id: `working-hours-after-${dayOfWeek}-${currentDate.toISOString().split('T')[0]}`,
+          title: '', // Leerer Titel für besseres Aussehen
+          start: workEnd.toISOString(),
+          end: dayEnd.toISOString(),
+          backgroundColor: '#e5e7eb',
+          borderColor: 'transparent',
+          textColor: 'transparent',
+          display: 'background',
+          classNames: ['non-working-hours-block'],
+          extendedProps: {
+            type: 'non_working_hours',
+            isNonWorkingHours: true
+          }
+        }
+        workingHoursEvents.push(afterEvent)
+      }
+    } else {
+      // Ganzer Tag blockiert wenn keine Arbeitszeiten definiert
+      workingHoursEvents.push({
+        id: `working-hours-full-${dayOfWeek}-${currentDate.toISOString().split('T')[0]}`,
+        title: '', // Leerer Titel für besseres Aussehen
+        start: new Date(currentDate).toISOString().split('T')[0] + 'T00:00:00',
+        end: new Date(currentDate).toISOString().split('T')[0] + 'T23:59:59',
+        backgroundColor: '#ffffff',
+        borderColor: 'transparent',
+        textColor: 'transparent',
+        display: 'background',
+        classNames: ['non-working-hours-block'],
+        extendedProps: {
+          type: 'non_working_hours',
+          isNonWorkingHours: true
+        }
+      })
+    }
+    
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
+  
+  console.log('✅ Generated working hours events:', workingHoursEvents.length)
+  return workingHoursEvents
+}
 
 const loadStaffMeetings = async () => {
   console.log('🔄 Loading staff meetings...')
@@ -286,28 +446,75 @@ const loadRegularAppointments = async () => {
     const { currentUser: composableCurrentUser } = useCurrentUser()
     let actualUserId = props.currentUser?.id || composableCurrentUser.value?.id
     
-    // ✅ QUICK FIX: Wenn die falsche ID kommt, korrigiere sie
-    if (actualUserId === '095b118b-f1b1-46af-800a-c21055be36d6') {
-      actualUserId = '091afa9b-e8a1-43b8-9cae-3195621619ae'
-      console.log('🔧 CORRECTED USER ID from', props.currentUser?.id, 'to', actualUserId)
-    }
-    
     console.log('👤 Actual user ID to use:', actualUserId)
     
-    // ✅ Erweiterte Abfrage mit manueller Location-Auflösung UND event_type_code
+    // Get user's tenant_id for filtering
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('id', actualUserId)
+      .single()
+    
+    if (userError) throw userError
+    if (!userData?.tenant_id) throw new Error('User has no tenant assigned')
+    
+    console.log('🏢 User tenant_id:', userData.tenant_id)
+
+    // ✅ Optimierte Abfrage mit weniger JOINs für bessere Performance
     let query = supabase
       .from('appointments')
       .select(`
-        *,
-        user:user_id(first_name, last_name, category),
-        staff:staff_id(first_name, last_name)
+        id,
+        title,
+        start_time,
+        end_time,
+        type,
+        event_type_code,
+        status,
+        duration_minutes,
+        location_id,
+        user_id,
+        staff_id,
+        created_by,
+        description,
+        user:users!appointments_user_id_fkey(first_name, last_name, category),
+        staff:users!appointments_staff_id_fkey(first_name, last_name),
+        created_by_user:users!appointments_created_by_fkey(first_name, last_name)
       `)
-      .eq('staff_id', actualUserId) // Eigene Termine (als staff_id)
       .is('deleted_at', null) // ✅ Soft Delete Filter
+      .eq('tenant_id', userData.tenant_id) // ✅ Tenant Filter
       .order('start_time')
+      .limit(1000) // ✅ Limit für bessere Performance
+    
+    // ✅ Admin vs Staff Logic: Admins sehen alle Termine, Staff nur eigene
+    const userRole = props.currentUser?.role || composableCurrentUser.value?.role
+    if (userRole === 'admin') {
+      console.log('🔥 Admin detected - loading appointments for tenant:', userData.tenant_id)
+      // Admin Staff Filter: Wenn ein spezifischer Staff ausgewählt ist
+      if (props.adminStaffFilter) {
+        console.log('🔥 Admin filtering by staff:', props.adminStaffFilter)
+        query = query.eq('staff_id', props.adminStaffFilter)
+      } else {
+        console.log('🔥 Admin loading ALL appointments for tenant')
+        // Alle Termine des Tenants (kein zusätzlicher Filter)
+      }
+    } else {
+      console.log('🔥 Staff detected - loading own appointments only for tenant:', userData.tenant_id)
+      query = query.eq('staff_id', actualUserId) // Nur eigene Termine
+    }
     
     const { data: appointments, error } = await query
     console.log('📊 Raw appointments from DB:', appointments?.length || 0)
+    console.log('🔍 Query details:', {
+      staff_id: actualUserId,
+      tenant_id: userData.tenant_id,
+      deleted_at: 'null',
+      order: 'start_time'
+    })
+    console.log('🔍 Full query:', query)
+    if (error) {
+      console.error('❌ Supabase query error:', error)
+    }
 
     // ✅ DEBUG: Erste Appointment prüfen
     if (appointments && appointments.length > 0) {
@@ -316,19 +523,37 @@ const loadRegularAppointments = async () => {
         title: appointments[0].title,
         type: appointments[0].type,
         event_type_code: appointments[0].event_type_code,
-        appointment_type: appointments[0].appointment_type,
+        appointment_type: appointments[0].event_type_code || 'lesson', // Verwende event_type_code als appointment_type
         start_time: appointments[0].start_time,
         duration_minutes: appointments[0].duration_minutes
+      })
+    } else {
+      console.log('❌ NO APPOINTMENTS FOUND!')
+      console.log('🔍 Debug info:', {
+        actualUserId,
+        tenant_id: userData.tenant_id,
+        userRole: props.currentUser?.role || composableCurrentUser.value?.role
       })
     }
     
     if (error) throw error
     
-    // Filtern: Eigene Termine + echte Team-Einladungen (nicht doppelte)
+    // Filtern: Admins sehen alle Termine (oder gefilterte), Staff nur eigene
     const filteredAppointments = (appointments || []).filter((apt) => {
-      const isOwnAppointment = apt.staff_id === actualUserId
-      console.log('🔍 Filter check:', { aptStaffId: apt.staff_id, actualUserId, isOwnAppointment })
-      return isOwnAppointment // Nur eigene Termine
+      if (userRole === 'admin') {
+        if (props.adminStaffFilter) {
+          const isSelectedStaff = apt.staff_id === props.adminStaffFilter
+          console.log('🔍 Admin staff filter check:', { aptStaffId: apt.staff_id, selectedStaff: props.adminStaffFilter, isSelectedStaff })
+          return isSelectedStaff // Admin sieht nur Termine des ausgewählten Staff
+        } else {
+          console.log('🔍 Admin filter: showing all appointments')
+          return true // Admin sieht alle Termine
+        }
+      } else {
+        const isOwnAppointment = apt.staff_id === actualUserId
+        console.log('🔍 Staff filter check:', { aptStaffId: apt.staff_id, actualUserId, isOwnAppointment })
+        return isOwnAppointment // Staff nur eigene Termine
+      }
     })
     
     console.log('✅ Filtered appointments:', filteredAppointments.length)
@@ -368,7 +593,7 @@ const loadRegularAppointments = async () => {
             apt.location_name || 
             (apt.location_id ? locationsMap[apt.location_id]?.name : '') || ''
         
-        const studentName = `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim() || 'Fahrlektion'
+        const studentName = `${apt.user?.[0]?.first_name || ''} ${apt.user?.[0]?.last_name || ''}`.trim() || 'Fahrlektion'
         
         // ✅ Debug: Location-Daten loggen
         console.log('🔍 Location debug for appointment:', apt.id, {
@@ -426,13 +651,7 @@ const loadRegularAppointments = async () => {
         classNames: [`category-${category}`],
         extendedProps: {
           // ✅ Location für 'other' Events wieder hinzufügen - gleiche Priorität wie im Titel
-          location: apt.location_address || 
-              (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
-              apt.location_name || 
-              (apt.location_id ? locationsMap[apt.location_id]?.name : '') || '',
-          discount: apt.discount,
-          discount_type: apt.discount_type,
-          discount_reason: apt.discount_reason,
+          location: (apt.location_id ? locationsMap[apt.location_id]?.address : '') || '',
           // ✅ Produktdaten für Wiederherstellung
           has_products: false, // Wird später gesetzt
           staff_note: apt.description || '',
@@ -440,14 +659,13 @@ const loadRegularAppointments = async () => {
           category: apt.user?.category || apt.type || 'B',
           instructor: `${apt.staff?.first_name || ''} ${apt.staff?.last_name || ''}`.trim(),
           student: `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim(),
-          price: (apt.price_per_minute || 0) * (apt.duration_minutes || 45),
+          created_by: `${apt.created_by_user?.first_name || ''} ${apt.created_by_user?.last_name || ''}`.trim() || 'Unbekannt',
+          price: 0, // Preis wird nicht mehr in appointments gespeichert
           user_id: apt.user_id,
           staff_id: apt.staff_id,
           location_id: apt.location_id,
           duration_minutes: apt.duration_minutes,
-          price_per_minute: apt.price_per_minute,
           status: apt.status,
-          is_paid: apt.is_paid,
           appointment_type: apt.event_type_code || 'lesson', // ✅ KORRIGIERT: event_type_code verwenden
           is_team_invite: isTeamInvite,
           original_type: apt.user?.category || apt.type || 'B',
@@ -471,7 +689,17 @@ const loadRegularAppointments = async () => {
 }
 
 // 2. Die ursprüngliche loadAppointments Funktion (unverändert):
-const loadAppointments = async () => {
+// ✅ Caching für bessere Performance
+const lastLoadTime = ref<number>(0)
+const CACHE_DURATION = 30000 // 30 Sekunden Cache
+
+// ✅ Cache-Invalidierung für bessere Performance
+const invalidateCache = () => {
+  lastLoadTime.value = 0
+  console.log('🔄 Calendar cache invalidated')
+}
+
+const loadAppointments = async (forceReload = false) => {
   // ✅ Prüfen ob Komponente noch mounted ist
   if (!calendar.value) {
     console.log('⚠️ Calendar not mounted, skipping load')
@@ -483,12 +711,19 @@ const loadAppointments = async () => {
     console.log('⚠️ Calendar update already in progress, skipping load')
     return
   }
+
+  // ✅ Cache-Check: Nur neu laden wenn nötig
+  const now = Date.now()
+  if (!forceReload && (now - lastLoadTime.value) < CACHE_DURATION) {
+    console.log('⚡ Using cached calendar data (last load:', Math.round((now - lastLoadTime.value) / 1000), 'seconds ago)')
+    return
+  }
   
   isLoadingEvents.value = true
   isUpdating.value = true
   
   try {
-    console.log('🔄 Loading all calendar events...')
+    console.log('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '(cached check)')
     
     // Parallel laden
     const [appointments] = await Promise.all([
@@ -501,13 +736,52 @@ const loadAppointments = async () => {
       return
     }
     
+    // Arbeitszeiten laden und als Events generieren
+    let workingHoursEvents: CalendarEvent[] = []
+    if (props.currentUser?.id) {
+      try {
+        console.log('🔄 Loading working hours for staff:', props.currentUser.id)
+        await loadWorkingHours(props.currentUser.id)
+        
+        // Kalender-View-Bereich ermitteln
+        const calendarApi = calendar.value?.getApi()
+        if (calendarApi) {
+          const view = calendarApi.view
+          const startDate = view.currentStart
+          const endDate = view.currentEnd
+          
+          console.log('📅 Calendar view range:', { startDate, endDate })
+          workingHoursEvents = generateWorkingHoursEvents(props.currentUser.id, startDate, endDate)
+          console.log('✅ Working hours events generated:', workingHoursEvents.length, workingHoursEvents)
+        } else {
+          console.log('⚠️ Calendar API not available for working hours generation')
+        }
+      } catch (error) {
+        console.error('❌ Error loading working hours:', error)
+        // Fehler nicht weiterwerfen, nur loggen
+      }
+    } else {
+      console.log('⚠️ No current user ID available for working hours')
+    }
+    
     // Kombinieren
-    const allEvents = [...appointments]
+    const allEvents = [...appointments, ...workingHoursEvents]
     calendarEvents.value = allEvents
+    lastLoadTime.value = now // ✅ Cache-Zeit aktualisieren
+    
     console.log('✅ Final calendar summary:', {
       appointments: appointments.length,
-      total: allEvents.length
+      workingHours: workingHoursEvents.length,
+      total: allEvents.length,
+      cacheTime: new Date(lastLoadTime.value).toLocaleTimeString(),
+      workingHoursEvents: workingHoursEvents
     })
+    
+    // ✅ DEBUG: Zeige alle Events
+    console.log('🔍 ALL EVENTS:', allEvents)
+    if (appointments.length > 0) {
+      console.log('🔍 FIRST APPOINTMENT EVENT:', appointments[0])
+    }
     
     // ✅ Prüfen ob Komponente noch mounted ist bevor Calendar API aufrufen
     if (calendar.value?.getApi) {
@@ -527,6 +801,8 @@ const loadAppointments = async () => {
           calendarApi.removeAllEvents()
           calendarApi.addEventSource(calendarEvents.value)
           console.log('✅ Calendar events updated successfully')
+        } else {
+          console.log('⚡ Calendar events unchanged, skipping update')
         }
       } catch (error) {
         console.error('❌ Error updating calendar events:', error)
@@ -909,12 +1185,28 @@ showConfirmDialog({
     timeZone: 'local',
     allDaySlot: false,
     slotMinTime: '05:00:00',
-    slotMaxTime: '23:00:00',
+    slotMaxTime: '23:30:00',
     firstDay: 1,
     displayEventTime: false,
     forceEventDuration: true, 
     selectable: true,
     editable: true,
+    slotLabelFormat: {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    },
+    headerToolbar: {
+      left: 'title',
+      center: 'viewSwitcher',
+      right: 'prev,next today'
+    },
+    customButtons: {
+      viewSwitcher: {
+        text: 'Tag',
+        click: switchView
+      }
+    },
     events: calendarEvents.value,
     eventDrop: handleEventDrop,
     eventResize: handleEventResize,
@@ -1208,7 +1500,7 @@ const pasteAppointmentDirectly = async () => {
         // Kopierte Felder
         type: category,
         price_per_minute: Number(pricePerMinute),
-        status: 'scheduled',
+        status: 'pending_confirmation',
         
         // Pflichtfelder mit Defaults
         is_paid: clipboardAppointment.value.is_paid || false,
@@ -1390,6 +1682,7 @@ onMounted(async () => {
     console.log('🔄 Initial appointment loading...')
     await loadAppointments()
     
+    
   } catch (error) {
     console.error('❌ Error during CalendarComponent mount:', error)
     // ✅ Fehler nicht weiterwerfen, nur loggen
@@ -1399,9 +1692,24 @@ onMounted(async () => {
   }
 })
 
-watch(() => props.currentUser, async (newUser) => {
-  if (newUser) {
-    await loadAppointments()
+
+
+
+// Watch for admin staff filter changes
+watch(() => props.adminStaffFilter, async (newFilter) => {
+  console.log('🔄 Admin staff filter changed:', newFilter)
+  if (props.currentUser?.role === 'admin') {
+    invalidateCache() // ✅ Cache invalidieren bei Filter-Änderungen
+    await loadAppointments(true) // ✅ Force reload
+  }
+}, { immediate: false })
+
+// ✅ Watch für User-Änderungen mit Cache-Invalidierung
+watch(() => props.currentUser, async (newUser, oldUser) => {
+  if (newUser && newUser.id !== oldUser?.id) {
+    console.log('🔄 User changed, invalidating cache and reloading')
+    invalidateCache()
+    await loadAppointments(true)
   }
 }, { deep: true })
 
@@ -1463,10 +1771,11 @@ defineExpose({
   </div>
   
   <FullCalendar
-    v-else-if="isCalendarReady"
+    v-if="isCalendarReady"
     ref="calendar"
     :options="calendarOptions"
   />
+  
   <div v-else>
     Kalender wird geladen...
   </div>
@@ -1571,6 +1880,80 @@ defineExpose({
   margin: 0 !important;
 }
 
+/* === NICHT-ARBEITSZEITEN BLÖCKE (grau für blockierte Zeit) === */
+.non-working-hours-block {
+  opacity: 0.2 !important;
+  pointer-events: none !important;
+  z-index: 0 !important; /* Niedrigere z-index damit Termine darüber erscheinen */
+  border: none !important;
+  box-shadow: none !important;
+  background-color: #e5e7eb !important;
+}
+
+/* Stelle sicher, dass Nicht-Arbeitszeit-Blöcke grau bleiben */
+.non-working-hours-block * {
+  background-color: inherit !important;
+}
+
+.non-working-hours-block .fc-event {
+  background-color: #e5e7eb !important;
+}
+
+.non-working-hours-block .fc-event-title {
+  display: none !important;
+}
+
+.non-working-hours-block .fc-event-main {
+  display: none !important;
+}
+
+/* Nicht-Arbeitszeit-Block Hover-Effekt deaktivieren */
+.non-working-hours-block:hover {
+  opacity: 0.2 !important;
+  transform: none !important;
+  box-shadow: none !important;
+  background-color: #e5e7eb !important;
+}
+
+/* Schraffierung für Nicht-Arbeitszeit-Blöcke */
+.non-working-hours-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.05) 3px,
+    rgba(0, 0, 0, 0.05) 6px
+  );
+  pointer-events: none;
+}
+
+/* Freie Slots sollen weiß bleiben */
+.fc-timegrid-slot {
+  background-color: white !important;
+}
+
+/* ARBEITSZEIT soll weiß sein - nur Slots ohne non-working-hours-block */
+.fc-timegrid-slot:not(.non-working-hours-block) {
+  background-color: white !important;
+}
+
+/* Entferne rote Ränder von allen Events */
+.fc-event {
+  z-index: 10 !important; /* Höhere z-index damit Termine über Arbeitszeiten erscheinen */
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.fc-event:hover {
+  box-shadow: none !important;
+}
+
 /* === HEADER & NAVIGATION === */
 .fc-col-header-cell {
   background-color: #f8fafc !important;
@@ -1578,7 +1961,7 @@ defineExpose({
   font-weight: 600 !important;
   font-size: 0.875rem !important;
   padding: 6px 6px !important;
-  border-bottom: 2px solid #e5e7eb !important;
+  border-bottom: 2px solid #ffffff !important;
   margin: 0 !important;
 }
 
@@ -1606,10 +1989,20 @@ defineExpose({
 
 .fc-timegrid-slot-label {
   color: #6b7280 !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  padding: 1px 2px !important;
+}
+
+/* === ZEIT-SPALTE === */
+
+.fc-timegrid-slot-label {
+  color: #6b7280 !important;
   font-size: 0.75rem !important;
   font-weight: 500 !important;
   padding: 1px 2px !important;
 }
+
 
 .fc-timegrid-col.fc-day-today {
     color: #1d4ed8 !important;
@@ -1728,8 +2121,8 @@ defineExpose({
   width: 100% !important;
 }
 
-/* ✅ FullCalendar Border-Überschreibungen */
-.fc-event {
+/* ✅ FullCalendar Border-Überschreibungen - ENTFERNT um rote Trennstriche zu vermeiden */
+/* .fc-event {
   border-width: 2px !important;
   border-style: solid !important;
   border-color: #dc2626 !important;
@@ -1739,7 +2132,7 @@ defineExpose({
   border-width: 2px !important;
   border-style: solid !important;
   border-color: #dc2626 !important;
-}
+} */
 
 /* ✅ FullCalendar Background-Überschreibungen */
 .fc-event {
@@ -1804,10 +2197,29 @@ defineExpose({
   border: 1px solid #d1d5db !important;
   color: #374151 !important;
   border-radius: 8px !important;
+  padding: 10px 16px !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s ease !important;
+}
+
+/* View Switcher Button - matches fc-button style */
+.view-switcher-btn {
+  background-color: white !important;
+  border: 1px solid #d1d5db !important;
+  color: #374151 !important;
+  border-radius: 8px !important;
   padding: 8px 16px !important;
   font-weight: 500 !important;
   font-size: 0.875rem !important;
   transition: all 0.2s ease !important;
+  cursor: pointer;
+}
+
+.view-switcher-btn:hover {
+  background-color: #f9fafb !important;
+  border-color: #9ca3af !important;
+  transform: translateY(-1px);
 }
 
 .fc-button:hover {
@@ -1839,7 +2251,7 @@ defineExpose({
 
 /* === TOOLBAR === */
 .fc-toolbar {
-  padding: 5px;
+  padding: 8px;
   background-color: white !important;
   gap: 2px !important;
   align-items: center;
@@ -1874,7 +2286,12 @@ defineExpose({
   }
   
   .fc-button {
-    padding: 4px 8px !important;
+    padding: 6px 8px !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .view-switcher-btn {
+    padding: 6px 8px !important;
     font-size: 0.8rem !important;
   }
   
@@ -1959,4 +2376,16 @@ defineExpose({
   border-width: 1px !important;
   border-style: solid !important;
 }
+
+/* ENTFERNT: Zu aggressive Regel die alles weiß macht */
+/* .fc-timegrid * {
+  background-color: white !important;
+  background: white !important;
+} */
+
+/* Tailwind CSS ::selection Duplikate bereinigen */
+::selection {
+  background-color: rgb(var(--color-primary-DEFAULT) / 0.4);
+}
+
 </style>

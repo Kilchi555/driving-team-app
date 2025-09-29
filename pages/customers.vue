@@ -2,7 +2,7 @@
 <template>
   <!-- Loading State -->
   <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
-    <LoadingLogo size="2xl" />
+    <LoadingLogo size="2xl"  />
   </div>
 
   <!-- Error State -->
@@ -27,12 +27,20 @@
         <!-- Back Button & Title -->
         <div class="flex items-center gap-4">
           <button 
-            @click="navigateTo('/dashboard')"
-            class="text-gray-600 hover:text-gray-800 text-2xl"
+            @click="goBack"
+            :class="[
+              'text-2xl transition-colors duration-200',
+              isNavigating 
+                ? 'text-gray-400 cursor-not-allowed' 
+                : 'text-gray-600 hover:text-gray-800 cursor-pointer'
+            ]"
+            :disabled="isNavigating"
           >
-            ← 
+            {{ isNavigating ? '⟳' : '←' }}
           </button>
-          <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Schülerliste</h1>
+          <h1 class="text-xl sm:text-2xl font-bold text-gray-900">
+            {{ isNavigating ? 'Lade Kalender...' : 'Schülerliste' }}
+          </h1>
         </div>
 
         <!-- Add Student Button (nur Desktop) -->
@@ -60,38 +68,50 @@
         </div>
 
         <!-- Filter Toggles -->
-        <!-- Filter Toggles -->
-        <div class="flex gap-4 items-center text-sm">
+        <div class="grid grid-cols-3 gap-4 text-sm">
           <!-- Inactive Toggle -->
-          <div class="flex items-center justify-between rounded-lg">
-            <span class="text-sm font-medium text-gray-700 mr-2">
-              {{ showInactive ? 'Nur Inaktive' : 'Nur Aktive' }}
+          <div class="flex items-center gap-3 rounded-lg">
+            <span class="text-sm font-medium text-gray-700">
+              {{ showInactive ? 'Inaktive' : 'Aktive' }}
             </span>
             <label class="relative inline-flex items-center cursor-pointer">
               <input 
                 v-model="showInactive" 
                 type="checkbox" 
                 class="sr-only peer"
-                @change="() => console.log('🔄 Inactive toggle changed to:', showInactive)"
+                @change="() => loadStudents(true)"
               >
               <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
 
           <!-- All Students Toggle (nur für Staff) -->
-          <div v-if="currentUser.role === 'staff' || 'admin'" class="flex items-center justify-between rounded-lg">
-            <span class="text-sm font-medium text-gray-700 mr-2">Alle Fahrschüler</span>
+          <div v-if="currentUser.role === 'staff' || 'admin'" class="flex items-center gap-3 rounded-lg">
+            <span class="text-sm font-medium text-gray-700">
+              {{ showAllStudents ? 'Alle' : 'Meine' }}
+            </span>
             <label class="relative inline-flex items-center cursor-pointer">
-              <input v-model="showAllStudents" type="checkbox" class="sr-only peer" @change="loadStudents">
+              <input v-model="showAllStudents" type="checkbox" class="sr-only peer" @change="() => loadStudents(true)">
               <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          <!-- No Upcoming Appointments Toggle -->
+          <div class="flex items-center gap-3 rounded-lg">
+            <span class="text-sm font-medium text-gray-700">
+              {{ showOnlyNoUpcoming ? 'Keine Termine geplant' : 'Termin geplant' }}
+            </span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input v-model="showOnlyNoUpcoming" type="checkbox" class="sr-only peer" @change="handleNoUpcomingToggle">
+              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
             </label>
           </div>
         </div>
 
         <!-- Statistics -->
         <div class="flex gap-3 text-xs sm:text-sm text-gray-600">
-          <span v-if="!showAllStudents">Meine Schüler: {{ students.length }}</span>
-          <span v-else>Alle Schüler: {{ students.length }}</span>
+          <span v-if="!showAllStudents">Meine: {{ students.length }}</span>
+          <span v-else>Alle: {{ students.length }}</span>
           <span>Aktiv: {{ students.filter(s => s.is_active).length }}</span>
           <span>Inaktiv: {{ students.filter(s => !s.is_active).length }}</span>
         </div>
@@ -100,18 +120,13 @@
 
     <!-- Content -->
     <div class="flex-1 overflow-hidden">
-      <!-- Loading Students -->
-      <div v-if="isLoading" class="flex items-center justify-center py-8">
-        <LoadingLogo size="xl" />
-      </div>
-
       <!-- Error Loading Students -->
-      <div v-else-if="error" class="flex items-center justify-center h-full">
+      <div v-if="error" class="h-full flex items-center justify-center">
         <div class="text-center max-w-md p-6 bg-red-50 rounded-lg">
           <h3 class="text-lg font-bold text-red-800 mb-2">Fehler beim Laden</h3>
           <p class="text-red-600 mb-4">{{ error }}</p>
           <button 
-            @click="loadStudents" 
+            @click="() => loadStudents(true)" 
             class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
           >
             Erneut versuchen
@@ -120,7 +135,7 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="filteredStudents.length === 0" class="flex items-center justify-center h-full">
+      <div v-else-if="filteredStudents.length === 0" class="h-full flex items-center justify-center">
         <div class="text-center px-4">
           <div class="text-6xl mb-4">👥</div>
           <h3 class="text-lg font-semibold text-gray-900 mb-2">
@@ -130,7 +145,15 @@
       </div>
 
       <!-- Mobile-Optimierte Students List -->
-      <div v-else class="h-full overflow-y-auto">
+      <div v-else class="h-full overflow-y-auto relative">
+        <!-- Loading Overlay für Schülerliste -->
+        <div v-if="isLoading" class="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
+          <div class="text-center">
+            <LoadingLogo size="xl"  />
+            <p class="text-gray-600 mt-4">Lade Schüler...</p>
+          </div>
+        </div>
+        
         <!-- Mobile: Single Column, Desktop: Grid -->
         <div class="p-2 sm:p-4">
           <div class="space-y-2 sm:grid sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:space-y-0">
@@ -149,10 +172,16 @@
                     <h3 class="font-semibold text-gray-900 truncate flex-1">
                       {{ student.first_name }} {{ student.last_name }}
                     </h3>
-                    <!-- Category Badge - compact -->
-                    <span v-if="student.category" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded font-medium">
-                      {{ student.category }}
-                    </span>
+                    <!-- Category Badges - compact -->
+                    <div v-if="student.category && student.category.length > 0" class="flex flex-wrap gap-1">
+                      <span 
+                        v-for="cat in student.category" 
+                        :key="cat"
+                        class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded font-medium"
+                      >
+                        {{ cat }}
+                      </span>
+                    </div>
                   </div>
                   
                   <!-- Contact Info - compact -->
@@ -193,18 +222,38 @@
                 <div class="flex items-center justify-between text-xs text-gray-400">
                   <!-- Left: Additional info -->
                   <div class="flex items-center gap-3">
-                    <span v-if="student.assignedInstructor">
-                      Fahrlehrer: {{ student.assignedInstructor }}
+                    <span>
+                      Fahrlehrer: {{ student.assignedInstructor || '-' }}
                     </span>
-              <span v-if="student.completedLessonsCount" class="text-gray-400">
-                Lektionen: {{ student.completedLessonsCount }}
-              </span>
+                    <span>
+                      Lektionen: {{ student.completedLessonsCount || '-' }}
+                    </span>
 
                   </div>
                   
                   <!-- Right: Date -->
-                  <span v-if="student.lastLesson" class="text-xs text-gray-400">
-                    Letzter Termin: {{ formatRelativeDate(student.lastLesson) }}
+                  <span class="text-xs text-gray-400">
+                    Letzter Termin: {{ student.lastLesson ? formatRelativeDate(student.lastLesson) : '-' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Desktop: Additional Info Row (hidden on mobile) -->
+              <div class="mt-2 pt-2 border-t border-gray-100 hidden sm:block">
+                <div class="flex items-center justify-between text-xs text-gray-400">
+                  <!-- Left: Additional info -->
+                  <div class="flex items-center gap-3">
+                    <span>
+                      Fahrlehrer: {{ student.assignedInstructor || '-' }}
+                    </span>
+                    <span>
+                      Lektionen: {{ student.completedLessonsCount || '-' }}
+                    </span>
+                  </div>
+                  
+                  <!-- Right: Date -->
+                  <span class="text-xs text-gray-400">
+                    Letzter Termin: {{ student.lastLesson ? formatRelativeDate(student.lastLesson) : '-' }}
                   </span>
                 </div>
               </div>
@@ -234,6 +283,7 @@
     @edit="editStudent"
     @create-appointment="handleCreateAppointment"
     @evaluate-lesson="handleEvaluateLesson"
+    @student-updated="handleStudentUpdated"
   />
     </div>
 </template>
@@ -258,47 +308,26 @@ const selectedStudent = ref<any>(null)
 const showAddModal = ref(false)
 const students = ref<any[]>([])
 const isLoading = ref(false)
+const isNavigating = ref(false)
 const error = ref<string | null>(null)
 const searchQuery = ref('')
 const showInactive = ref(false)
 const showAllStudents = ref(false)
+const showOnlyNoUpcoming = ref(false)
 
 // Computed
 const filteredStudents = computed(() => {
   console.log('🔄 filteredStudents computed triggered:', {
     studentsCount: students.value.length,
     showInactive: showInactive.value,
+    showOnlyNoUpcoming: showOnlyNoUpcoming.value,
     searchQuery: searchQuery.value
   })
   
   let filtered = students.value
 
-  // Filter by active/inactive
-  if (!showInactive.value) {
-    // ✅ Regler AUS: Nur aktive Schüler
-    const beforeFilter = filtered.length
-    filtered = filtered.filter(s => s.is_active)
-    const afterFilter = filtered.length
-    console.log(`✅ Showing active students only: ${beforeFilter} → ${afterFilter} students`)
-    
-    // ✅ DEBUG: Zeige welche Schüler gefiltert wurden
-    if (beforeFilter !== afterFilter) {
-      const filteredOut = students.value.filter(s => !s.is_active)
-      console.log('🚫 Filtered out inactive students:', filteredOut.map(s => `${s.first_name} ${s.last_name}`))
-    }
-  } else {
-    // ✅ Regler AN: Nur inaktive Schüler
-    const beforeFilter = filtered.length
-    filtered = filtered.filter(s => !s.is_active)
-    const afterFilter = filtered.length
-    console.log(`✅ Showing inactive students only: ${beforeFilter} → ${afterFilter} students`)
-    
-    // ✅ DEBUG: Zeige welche Schüler gefiltert wurden
-    if (beforeFilter !== afterFilter) {
-      const filteredOut = students.value.filter(s => s.is_active)
-      console.log('🚫 Filtered out active students:', filteredOut.map(s => `${s.first_name} ${s.last_name}`))
-    }
-  }
+  // ✅ Aktiv/Inaktiv Filterung passiert jetzt in der DB-Abfrage (loadStudents)
+  // Keine lokale Filterung mehr nötig
 
   // Filter by search query
   if (searchQuery.value) {
@@ -311,11 +340,88 @@ const filteredStudents = computed(() => {
     console.log('✅ Filtered by search query:', filtered.length, 'students')
   }
 
+  // Filter by upcoming appointments
+  if (showOnlyNoUpcoming.value) {
+    const beforeFilter = filtered.length
+    const now = new Date()
+    
+    filtered = filtered.filter(student => {
+      // Prüfe ob der Schüler geplante Termine hat
+      const hasUpcomingAppointments = student.appointments?.some((apt: any) => {
+        const appointmentDate = new Date(apt.start_time)
+        return appointmentDate > now && ['scheduled', 'confirmed'].includes(apt.status)
+      })
+      return !hasUpcomingAppointments
+    })
+    
+    // Sortiere nach dem letzten Termin (die am längsten her sind zuoberst)
+    filtered = filtered.sort((a, b) => {
+      const aLastAppointment = a.appointments?.length > 0 
+        ? new Date(Math.max(...a.appointments.map((apt: any) => new Date(apt.start_time).getTime())))
+        : new Date(0) // Falls keine Termine, ganz nach oben
+      
+      const bLastAppointment = b.appointments?.length > 0 
+        ? new Date(Math.max(...b.appointments.map((apt: any) => new Date(apt.start_time).getTime())))
+        : new Date(0) // Falls keine Termine, ganz nach oben
+      
+      return aLastAppointment.getTime() - bLastAppointment.getTime() // Älteste zuerst
+    })
+    
+    console.log(`✅ Showing students without upcoming appointments: ${beforeFilter} → ${filtered.length} students`)
+  }
+
   console.log('🔄 Final filtered students:', filtered.length)
   return filtered
 })
 
-// Navigation zum Register
+// Filter students (for toggle changes)
+const filterStudents = () => {
+  // This function is called when the "No Upcoming" toggle changes
+  // The filteredStudents computed property will automatically update
+  console.log('🔄 Filtering students - showOnlyNoUpcoming:', showOnlyNoUpcoming.value)
+}
+
+const handleNoUpcomingToggle = async () => {
+  console.log('🔄 No upcoming toggle changed:', showOnlyNoUpcoming.value)
+  
+  if (showOnlyNoUpcoming.value) {
+    // If switching to "No Upcoming", we need appointments data
+    console.log('📅 Loading appointments for "No Upcoming" filter...')
+    await loadStudents(true)
+  }
+  
+  // The filteredStudents computed property will handle the rest
+}
+
+// Navigation functions
+const goBack = async () => {
+  if (isNavigating.value) return // Prevent multiple clicks
+  
+  try {
+    isNavigating.value = true
+    console.log('🔙 Navigating back to dashboard...')
+    
+    // ✅ Optimierte Navigation mit Cache-Invalidierung
+    try {
+      // Verwende replace statt navigateTo für bessere Performance
+      await navigateTo('/dashboard', { replace: true })
+    } catch (navError) {
+      console.warn('⚠️ navigateTo failed, trying window.location:', navError)
+      // Fallback 1: Direct window navigation
+      window.location.href = '/dashboard'
+    }
+  } catch (error) {
+    console.error('❌ All navigation methods failed:', error)
+    // Fallback 2: Force reload to dashboard
+    window.location.replace('/dashboard')
+  } finally {
+    // ✅ Kürzere Timeout für bessere UX
+    setTimeout(() => {
+      isNavigating.value = false
+    }, 1000)
+  }
+}
+
 const navigateToAuswahl = () => {
   console.log('🚀 Navigating to register page for new student')
   navigateTo('/auswahl')
@@ -387,6 +493,24 @@ const handleEvaluateLesson = (lesson: any) => {
   // selectedAppointment.value = lesson
 }
 
+const handleStudentUpdated = (updateData: { id: string, [key: string]: any }) => {
+  console.log('📡 Received student update:', updateData)
+  
+  // Find and update the student in the local students array
+  const studentIndex = students.value.findIndex(s => s.id === updateData.id)
+  if (studentIndex !== -1) {
+    // Update the student object with new data
+    Object.assign(students.value[studentIndex], updateData)
+    console.log('✅ Updated local student data')
+    
+    // Also update selectedStudent if it's the same student
+    if (selectedStudent.value?.id === updateData.id) {
+      Object.assign(selectedStudent.value, updateData)
+      console.log('✅ Updated selectedStudent data')
+    }
+  }
+}
+
 const emailStudent = (student: any) => {
   if (student.email) {
     window.open(`mailto:${student.email}`)
@@ -416,50 +540,92 @@ onMounted(async () => {
     return
   }
 
-  await loadStudents()
+  // Load students with appointments for complete data
+  await loadStudents(true)
 })
 
 // Methods - ECHTE SUPABASE CALLS mit korrekten Spaltennamen
-const loadStudents = async () => {
+const loadStudents = async (loadAppointments = true) => {
   if (!currentUser.value) return
   
   isLoading.value = true
   error.value = null
   
   try {
-    console.log('🔄 Loading students from database...')
+    console.log('🔄 Loading students from database...', loadAppointments ? 'with appointments' : 'without appointments')
     console.log('Current user role:', currentUser.value.role)
+    
+    // Get current user's tenant_id
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', authUser?.id)
+      .single()
+    const tenantId = userProfile?.tenant_id
+    
+    if (!tenantId) {
+      throw new Error('User has no tenant assigned')
+    }
+
+    console.log('🔍 Customers page - Current tenant_id:', tenantId)
+    
+    // Base query without appointments for faster loading
+    let baseQuery = `
+      id,
+      created_at,
+      email,
+      first_name,
+      last_name,
+      phone,
+      birthdate,
+      street,
+      street_nr,
+      zip,
+      city,
+      is_active,
+      category,
+      assigned_staff_id,
+      payment_provider_customer_id
+    `
+    
+    // Only add appointments if specifically requested
+    if (loadAppointments) {
+      baseQuery += `,
+        appointments!user_id (
+          id,
+          start_time,
+          status,
+          type,
+          title
+        )`
+    }
     
     let query = supabase
       .from('users')
-      .select(`
-        id,
-        created_at,
-        email,
-        first_name,
-        last_name,
-        phone,
-        birthdate,
-        street,
-        street_nr,
-        zip,
-        city,
-        is_active,
-        category,
-        assigned_staff_id,
-        payment_provider_customer_id,
-        lernfahrausweis_url
-      `)
+      .select(baseQuery)
       .eq('role', 'client') // Nur Schüler laden
+      .eq('tenant_id', tenantId) // Filter by current tenant
       .order('first_name', { ascending: true })
 
-    // ✅ KORRIGIERT: Filterung basierend auf Benutzerrolle
+    // ✅ Filterung basierend auf Benutzerrolle
     if (currentUser.value.role === 'staff' && !showAllStudents.value) {
-      // Staff sieht alle Schüler (nicht nur assigned_staff_id)
-      console.log('📚 Loading all students for staff (will filter by lessons later):', currentUser.value.id)
+      // Staff sieht alle Schüler des Tenants (nicht nur assigned_staff_id)
+      console.log('📚 Loading all students for staff (showing all students in tenant):', currentUser.value.id)
     } else if (currentUser.value.role === 'admin') {
       // Admin sieht alle Schüler
       console.log('👑 Loading all students for admin')
+    }
+
+    // ✅ Filterung basierend auf Aktiv/Inaktiv Status
+    if (showInactive.value) {
+      // Nur inaktive Schüler laden
+      query = query.eq('is_active', false)
+      console.log('📚 Loading inactive students only')
+    } else {
+      // Nur aktive Schüler laden
+      query = query.eq('is_active', true)
+      console.log('📚 Loading active students only')
     }
 
     const { data, error: supabaseError } = await query
@@ -475,10 +641,10 @@ const loadStudents = async () => {
     }
 
     // ✅ NEU: Intelligente Filterung basierend auf showAllStudents
-    let studentsToProcess = data
+    let studentsToProcess = data as any[]
     
     // ✅ DEBUG: Zeige alle geladenen Schüler
-    console.log('🔍 All loaded students:', data.map(s => ({ 
+    console.log('🔍 All loaded students:', studentsToProcess.map((s: any) => ({ 
       id: s.id, 
       name: `${s.first_name} ${s.last_name}`, 
       is_active: s.is_active,
@@ -486,8 +652,8 @@ const loadStudents = async () => {
     })))
     
     // ✅ DEBUG: Zeige is_active Status aller Schüler
-    const activeCount = data.filter(s => s.is_active).length
-    const inactiveCount = data.filter(s => !s.is_active).length
+    const activeCount = studentsToProcess.filter((s: any) => s.is_active).length
+    const inactiveCount = studentsToProcess.filter((s: any) => !s.is_active).length
     console.log(`📊 Students status: ${activeCount} active, ${inactiveCount} inactive`)
     
     if (!showAllStudents.value) {
@@ -501,187 +667,159 @@ const loadStudents = async () => {
       })
       
       const studentsWithMyLessons = []
-      for (const student of data) {
-        console.log(`🔍 Checking student: ${student.first_name} ${student.last_name} (ID: ${student.id})`)
+      for (const student of studentsToProcess) {
+        console.log(`🔍 Checking student: ${(student as any).first_name} ${(student as any).last_name} (ID: ${(student as any).id})`)
         
         // ✅ KORRIGIERT: Prüfe ob der Schüler Lektionen mit dem aktuellen Fahrlehrer hat
         const { data: myLessons, error: lessonError } = await supabase
           .from('appointments')
           .select('staff_id')
-          .eq('user_id', student.id)
+          .eq('user_id', (student as any).id)
           .eq('staff_id', currentUser.value.id)
           .limit(1)
 
         if (lessonError) {
-          console.error('❌ Error checking my lessons for student:', student.id, lessonError)
+          console.error('❌ Error checking my lessons for student:', (student as any).id, lessonError)
           continue
         }
 
-        console.log(`🔍 Lessons found for ${student.first_name}:`, myLessons)
+        console.log(`🔍 Lessons found for ${(student as any).first_name}:`, myLessons)
 
         if (myLessons && myLessons.length > 0) {
           studentsWithMyLessons.push(student)
-          console.log(`✅ Added ${student.first_name} to my students list`)
+          console.log(`✅ Added ${(student as any).first_name} to my students list`)
         } else {
-          console.log(`⚠️ No lessons found for ${student.first_name} with current staff`)
+          console.log(`⚠️ No lessons found for ${(student as any).first_name} with current staff`)
           
           // ✅ DEBUG: Zeige alle Termine für diesen Schüler
           const { data: allLessons } = await supabase
             .from('appointments')
             .select('staff_id, start_time, status')
-            .eq('user_id', student.id)
+            .eq('user_id', (student as any).id)
             .limit(5)
           
-          console.log(`🔍 All lessons for ${student.first_name}:`, allLessons)
+          console.log(`🔍 All lessons for ${(student as any).first_name}:`, allLessons)
         }
       }
       
       studentsToProcess = studentsWithMyLessons
-      console.log(`✅ Found ${studentsWithMyLessons.length} students with lessons from current staff out of ${data.length} total`)
+      console.log(`✅ Found ${studentsWithMyLessons.length} students with lessons from current staff out of ${(data as any[]).length} total`)
     } else {
-      // Alle aktiven Schüler der ganzen Fahrschule
-      console.log('👑 Loading all active students from entire driving school')
-      studentsToProcess = data.filter(student => student.is_active)
-      console.log(`✅ Found ${studentsToProcess.length} active students in entire driving school`)
+      // Alle aktiven Kunden
+      console.log('👑 Loading all active customers')
+      studentsToProcess = (data as any[]).filter((student: any) => student.is_active)
+      console.log(`✅ Found ${studentsToProcess.length} active customers`)
+    }
+
+    // ✅ OPTIMIERT: Lade alle Fahrlehrer-Daten in EINER Abfrage
+    console.log('🚀 Loading all staff data in one query...')
+    
+    // Alle Schüler-IDs sammeln
+    const studentIds = studentsToProcess.map((s: any) => s.id)
+    
+    // EINE Abfrage für alle Fahrlehrer aller Schüler
+    const { data: allLessonInstructors, error: lessonError } = await supabase
+      .from('appointments')
+      .select('user_id, staff_id')
+      .in('user_id', studentIds)
+      .not('staff_id', 'is', null)
+
+    if (lessonError) {
+      console.error('❌ Error loading lesson instructors:', lessonError)
+    }
+
+    // EINE Abfrage für alle Fahrlehrer-Details
+    let instructorData: any[] = []
+    if (allLessonInstructors && allLessonInstructors.length > 0) {
+      const uniqueInstructorIds = [...new Set(allLessonInstructors.map((l: any) => l.staff_id))]
+      console.log('🔍 Unique instructor IDs for all students:', uniqueInstructorIds)
+      
+      const { data: instructors, error: instructorError } = await supabase
+        .from('users')
+        .select('id, first_name, last_name')
+        .in('id', uniqueInstructorIds)
+
+      if (instructorError) {
+        console.error('❌ Error loading instructor data:', instructorError)
+      } else {
+        instructorData = instructors || []
+        console.log('✅ Loaded instructor data for all students:', instructorData.length)
+      }
     }
 
     // Erweiterte Schüler-Daten mit zusätzlichen Informationen
-    const enrichedStudents = await Promise.all(
-      studentsToProcess.map(async (student: any) => {
-        // ✅ NEU: Alle Fahrlehrer laden, die Lektionen mit dem Schüler hatten
-        let assignedInstructor = 'Nicht zugewiesen'
+    const enrichedStudents = studentsToProcess.map((student: any) => {
+      // ✅ OPTIMIERT: Verwende bereits geladene Daten
+      let assignedInstructor = '-'
+      
+      // Finde Fahrlehrer für diesen Schüler
+      const studentInstructors = allLessonInstructors?.filter((l: any) => l.user_id === student.id) || []
+      
+      if (studentInstructors.length > 0) {
+        const uniqueInstructorIds = [...new Set(studentInstructors.map((l: any) => l.staff_id))]
+        const instructors = instructorData.filter((i: any) => uniqueInstructorIds.includes(i.id))
         
-        try {
-          console.log('🔍 Loading instructors for student:', student.id)
+        if (instructors.length > 0) {
+          const instructorInitials = instructors.map((instructor: any) => 
+            `${instructor.first_name.charAt(0)}.${instructor.last_name.charAt(0)}.`
+          ).join(', ')
           
-          const { data: lessonInstructors, error: lessonError } = await supabase
-            .from('appointments')
-            .select('staff_id')
-            .eq('user_id', student.id)
-            .not('staff_id', 'is', null)
-
-          if (lessonError) {
-            console.error('❌ Error loading lesson instructors:', lessonError)
-          } else {
-            console.log('🔍 Lesson instructors found:', lessonInstructors)
-          }
-
-          if (lessonInstructors && lessonInstructors.length > 0) {
-            // Eindeutige Fahrlehrer-IDs extrahieren
-            const uniqueInstructorIds = [...new Set(lessonInstructors.map(l => l.staff_id))]
-            console.log('🔍 Unique instructor IDs:', uniqueInstructorIds)
-            
-            // Fahrlehrer-Daten laden
-            const { data: instructorData, error: instructorError } = await supabase
-              .from('users')
-              .select('first_name, last_name')
-              .in('id', uniqueInstructorIds)
-
-            if (instructorError) {
-              console.error('❌ Error loading instructor data:', instructorError)
-            } else {
-              console.log('🔍 Instructor data loaded:', instructorData)
-            }
-
-            if (instructorData && instructorData.length > 0) {
-              // Initialen aller Fahrlehrer anzeigen
-              const instructorInitials = instructorData.map(instructor => 
-                `${instructor.first_name.charAt(0)}.${instructor.last_name.charAt(0)}.`
-              ).join(', ')
-              
-              assignedInstructor = instructorInitials
-              console.log('✅ Final instructor display:', assignedInstructor)
-            }
-          } else {
-            console.log('⚠️ No lesson instructors found for student:', student.id)
-          }
-        } catch (err) {
-          console.error('❌ Error in instructor loading logic:', err)
+          assignedInstructor = instructorInitials
         }
+      }
 
-        // Anzahl geplante Termine (scheduled) - nur nicht gelöschte
-        const { count: scheduledLessonsCount } = await supabase
-          .from('appointments')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', student.id)
-          .eq('status', 'scheduled')
-          .is('deleted_at', null)
-
-        // Anzahl durchgeführte Termine (confirmed/completed) - nur nicht gelöschte
-        const { count: completedLessonsCount } = await supabase
-          .from('appointments')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', student.id)
-          .in('status', ['confirmed', 'completed'])
-          .is('deleted_at', null)
-
-        // Anzahl gecancellte Termine (auch gelöschte gecancelte Termine zählen)
-        const { count: cancelledLessonsCount } = await supabase
-          .from('appointments')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', student.id)
-          .in('status', ['cancelled', 'aborted', 'no_show'])
-          // ✅ Auch gelöschte gecancelte Termine zählen
-
-        // DEBUG: Alle Status für diesen Schüler anzeigen
-        const { data: allStatuses } = await supabase
-          .from('appointments')
-          .select('status')
-          .eq('user_id', student.id)
-          .is('deleted_at', null)
+        // ✅ OPTIMIERT: Verwende bereits geladene Termine statt neue DB-Abfragen
+        const studentAppointments = student.appointments || []
         
-        console.log(`🔍 Student ${student.first_name} ${student.last_name} - All appointment statuses:`, allStatuses?.map(s => s.status))
-        console.log(`🚫 Cancelled lessons count for ${student.first_name}:`, cancelledLessonsCount)
+        // Zähle Termine basierend auf Status (nur nicht gelöschte)
+        const scheduledLessonsCount = studentAppointments.filter((apt: any) => 
+          apt.status === 'scheduled' && !apt.deleted_at
+        ).length
 
-        // Anzahl gelöschte Termine (soft delete)
-        const { count: deletedLessonsCount } = await supabase
-          .from('appointments')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', student.id)
-          .not('deleted_at', 'is', null)
+        const completedLessonsCount = studentAppointments.filter((apt: any) => 
+          ['confirmed', 'completed'].includes(apt.status) && !apt.deleted_at
+        ).length
 
-        // DEBUG: Gelöschte Termine anzeigen
-        const { data: deletedAppointments } = await supabase
-          .from('appointments')
-          .select('status, deleted_at')
-          .eq('user_id', student.id)
-          .not('deleted_at', 'is', null)
+        const cancelledLessonsCount = studentAppointments.filter((apt: any) => 
+          ['cancelled', 'aborted', 'no_show'].includes(apt.status) && !apt.deleted_at
+        ).length
+
+        const deletedLessonsCount = studentAppointments.filter((apt: any) => 
+          apt.deleted_at
+        ).length
+
+        // Letzter Termin (nur nicht gelöschte)
+        const lastLesson = studentAppointments
+          .filter((apt: any) => !apt.deleted_at)
+          .sort((a: any, b: any) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0]
         
-        console.log(`🗑️ Deleted appointments for ${student.first_name}:`, deletedAppointments)
+        console.log(`🔍 Student ${(student as any).first_name} ${(student as any).last_name} - Appointments:`, studentAppointments.length)
 
-        // Letzte durchgeführte Lektion finden (nicht gecancelt, nicht gelöscht)
-        const { data: lastLessonData } = await supabase
-          .from('appointments')
-          .select('start_time')
-          .eq('user_id', student.id)
-          .in('status', ['confirmed', 'completed'])
-          .is('deleted_at', null)
-          .order('start_time', { ascending: false })
-          .limit(1)
+        // ✅ Alle Berechnungen verwenden jetzt bereits geladene Daten
+        console.log(`🔍 Student ${(student as any).first_name} ${(student as any).last_name} - Appointments loaded:`, studentAppointments.length)
 
         return {
-          ...student,
+          ...(student as any),
           assignedInstructor,
           scheduledLessonsCount: scheduledLessonsCount || 0,
           completedLessonsCount: completedLessonsCount || 0,
           cancelledLessonsCount: cancelledLessonsCount || 0,
           deletedLessonsCount: deletedLessonsCount || 0,
           lessonsCount: (scheduledLessonsCount || 0) + (completedLessonsCount || 0) + (cancelledLessonsCount || 0), // Gesamt alle Termine
-          lastLesson: lastLessonData?.[0]?.start_time || null,
+          lastLesson: lastLesson?.start_time || null,
           // Formatierte Adresse
-          fullAddress: [student.street, student.street_nr, student.zip, student.city]
+          fullAddress: [(student as any).street, (student as any).street_nr, (student as any).zip, (student as any).city]
             .filter(Boolean)
             .join(' '),
           // Payment provider korrekt mappen
-          payment_provider: student.payment_provider_customer_id ? 'Konfiguriert' : 'Nicht konfiguriert'
+          payment_provider: (student as any).payment_provider_customer_id ? 'Konfiguriert' : 'Nicht konfiguriert'
         }
       })
-    )
 
     students.value = enrichedStudents
     console.log('✅ Students loaded successfully:', students.value.length)
     console.log('📊 Sample student:', students.value[0])
-    console.log('🔍 Final students list:', students.value.map(s => ({ name: `${s.first_name} ${s.last_name}`, instructor: s.assignedInstructor })))
+    console.log('🔍 Final students list:', students.value.map((s: any) => ({ name: `${s.first_name} ${s.last_name}`, instructor: s.assignedInstructor })))
 
   } catch (err: any) {
     console.error('❌ Error loading students:', err)

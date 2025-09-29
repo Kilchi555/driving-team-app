@@ -46,8 +46,17 @@
             <div class="font-semibold text-green-800">
               {{ selectedStudent.first_name }} {{ selectedStudent.last_name }}
             </div>
-            <div class="text-sm text-green-600">
-              Kat. {{ selectedStudent.category }} | {{ selectedStudent.phone }}
+            <div class="text-sm text-green-600 flex items-center gap-2">
+              <span 
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200"
+                :title="`Kategorie: ${Array.isArray(selectedStudent.category) ? selectedStudent.category.join(', ') : (selectedStudent.category || '-')}`"
+              >
+                <span>
+                  {{ Array.isArray(selectedStudent.category) ? selectedStudent.category.join(', ') : (selectedStudent.category || '-') }}
+                </span>
+              </span>
+              <span class="text-green-700">•</span>
+              <span>{{ selectedStudent.phone }}</span>
             </div>
           </div>
           <button 
@@ -79,7 +88,7 @@
           @click="loadStudents()"
           class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          👥 Schüler:in laden
+          Schüler:in laden
         </button>
       </div>
 
@@ -117,8 +126,11 @@
                 <div class="text-sm text-gray-500 flex items-center gap-2">
                   <span>{{ student.phone }}</span>
                   <span>•</span>
-                  <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-medium">
-                    Kat. {{ student.category }}
+                  <span 
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                    :title="`Kategorie: ${Array.isArray(student.category) ? student.category.join(', ') : (student.category || '-')}`"
+                  >
+                    <span>{{ Array.isArray(student.category) ? student.category.join(', ') : (student.category || '-') }}</span>
                   </span>
                 </div>
               </div>
@@ -370,9 +382,22 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
     })
     
     if (condition) {
-      console.log('👨‍🏫 Loading students for staff member:', props.currentUser.id)
+      console.log('👨‍🏫 Loading students for staff member:', props.currentUser?.id)
       
-      // 1. Direkt zugewiesene Schüler laden
+      // Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+      
+      // 1. Direkt zugewiesene Schüler laden - FILTERED BY TENANT
       console.log('🔍 Loading assigned students for staff:', staffId)
       const { data: assignedStudents, error: assignedError } = await supabase
         .from('users')
@@ -380,13 +405,14 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         .eq('role', 'client')
         .eq('is_active', true)
         .eq('assigned_staff_id', staffId)
+        .eq('tenant_id', tenantId)
         .order('first_name')
 
       if (assignedError) throw assignedError
       console.log('🔍 Assigned students loaded:', assignedStudents?.length || 0)
 
-      // 2. Schüler mit Termin-Historie laden
-      console.log('🔍 Loading students with appointment history for staff:', props.currentUser.id)
+      // 2. Schüler mit Termin-Historie laden - FILTERED BY TENANT
+      console.log('🔍 Loading students with appointment history for staff:', props.currentUser?.id)
       const { data: appointmentStudents, error: appointmentError } = await supabase
         .from('appointments')
         .select(`
@@ -396,7 +422,8 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
             assigned_staff_id, preferred_location_id, role, is_active
           )
         `)
-        .eq('staff_id', props.currentUser.id)
+        .eq('staff_id', props.currentUser?.id as string)
+        .eq('tenant_id', tenantId)
         .not('users.id', 'is', null)
 
       if (appointmentError) throw appointmentError
@@ -413,10 +440,29 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         })
 
       // 3. Kombinieren und deduplizieren
-      const allStudents = [...(assignedStudents || []), ...historyStudents]
-      const uniqueStudents = allStudents.filter((student, index, self) => 
-        index === self.findIndex(s => s.id === student.id)
-      )
+      //    Priorität: Daten aus Termin-Historie (appointments/users) vor zugewiesenen Nutzern (users)
+      const byId: Record<string, UserFromDB> = {}
+
+      // Zuerst: Studenten aus der Termin-Historie (bevorzugt für Kategorie)
+      for (const u of historyStudents) {
+        if (u) byId[u.id] = { ...u }
+      }
+
+      // Danach: Zugewiesene Studenten – nur ergänzen, falls noch nicht vorhanden
+      for (const u of (assignedStudents || [])) {
+        const existing = byId[u.id]
+        if (!existing) {
+          byId[u.id] = { ...u }
+        } else {
+          // Falls Kategorie aus Termin-Daten fehlt, übernehme Kategorie aus users
+          const hasCategory = Boolean(existing.category && String(existing.category).length > 0)
+          if (!hasCategory && u.category) {
+            byId[u.id] = { ...existing, category: u.category }
+          }
+        }
+      }
+
+      const uniqueStudents = Object.values(byId)
 
       // 4. Falls ein editStudentId angegeben ist, diesen auch laden falls nicht enthalten
       if (editStudentId && !uniqueStudents.find(s => s.id === editStudentId)) {
@@ -459,7 +505,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
       }
 
     } else {
-      // Admin oder "Alle anzeigen" Modus
+      // Admin oder "Alle anzeigen" Modus - FILTERED BY TENANT
       console.log('👑 Loading all active students (Admin mode or show all)')
       console.log('🔍 Reason for admin mode:', {
         userRole: props.currentUser?.role,
@@ -467,11 +513,25 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         staffId: staffId
       })
       
+      // Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+      
       let query = supabase
         .from('users')
         .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
         .eq('role', 'client')
         .eq('is_active', true)
+        .eq('tenant_id', tenantId)
         .order('first_name')
 
       if (props.currentUser?.role === 'staff') {

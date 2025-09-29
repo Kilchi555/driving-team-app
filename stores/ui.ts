@@ -1,11 +1,22 @@
 // stores/ui.ts
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 
 export const useUIStore = defineStore('ui', () => {
   // State
   const sidebarOpen = ref(false)
-  const theme = ref<'light' | 'dark'>('light')
+  const theme = ref<'light' | 'dark' | 'auto'>('light')
+  
+  // Tenant-spezifische Theme-Einstellungen
+  const tenantThemeSettings = ref<{
+    defaultTheme: 'light' | 'dark' | 'auto'
+    allowThemeSwitch: boolean
+    customThemeApplied: boolean
+  }>({
+    defaultTheme: 'light',
+    allowThemeSwitch: true,
+    customThemeApplied: false
+  })
   const notifications = ref<Array<{
     id: string
     type: 'success' | 'error' | 'warning' | 'info'
@@ -33,7 +44,25 @@ export const useUIStore = defineStore('ui', () => {
 
   const unreadCount = computed(() => unreadNotifications.value.length)
 
-  const isDark = computed(() => theme.value === 'dark')
+  const isDark = computed(() => {
+    if (theme.value === 'auto') {
+      // Auto-Theme: Basiert auf System-Präferenz
+      if (process.client) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches
+      }
+      return false
+    }
+    return theme.value === 'dark'
+  })
+  
+  const effectiveTheme = computed(() => {
+    if (theme.value === 'auto') {
+      return isDark.value ? 'dark' : 'light'
+    }
+    return theme.value
+  })
+  
+  const canSwitchTheme = computed(() => tenantThemeSettings.value.allowThemeSwitch)
 
   // Actions
   const toggleSidebar = () => {
@@ -48,16 +77,79 @@ export const useUIStore = defineStore('ui', () => {
     sidebarOpen.value = false
   }
 
-  const setTheme = (newTheme: 'light' | 'dark') => {
+  const setTheme = (newTheme: 'light' | 'dark' | 'auto') => {
+    // Prüfe ob Theme-Wechsel erlaubt ist
+    if (!tenantThemeSettings.value.allowThemeSwitch) {
+      console.warn('Theme switching is disabled for this tenant')
+      return
+    }
+    
     theme.value = newTheme
     // Persist to localStorage
     if (process.client) {
       localStorage.setItem('theme', newTheme)
+      // Dark/Light Mode CSS-Klasse auf HTML-Element setzen
+      updateThemeClass()
     }
   }
 
   const toggleTheme = () => {
-    setTheme(theme.value === 'light' ? 'dark' : 'light')
+    if (!tenantThemeSettings.value.allowThemeSwitch) {
+      return
+    }
+    
+    const currentTheme = theme.value
+    if (currentTheme === 'light') {
+      setTheme('dark')
+    } else if (currentTheme === 'dark') {
+      setTheme('auto')
+    } else {
+      setTheme('light')
+    }
+  }
+  
+  // Tenant-Theme-Einstellungen aktualisieren
+  const setTenantThemeSettings = (settings: {
+    defaultTheme?: 'light' | 'dark' | 'auto'
+    allowThemeSwitch?: boolean
+  }) => {
+    if (settings.defaultTheme) {
+      tenantThemeSettings.value.defaultTheme = settings.defaultTheme
+    }
+    if (settings.allowThemeSwitch !== undefined) {
+      tenantThemeSettings.value.allowThemeSwitch = settings.allowThemeSwitch
+    }
+    
+    // Wenn Theme-Wechsel deaktiviert ist, auf Standard-Theme zurücksetzen
+    if (!tenantThemeSettings.value.allowThemeSwitch) {
+      theme.value = tenantThemeSettings.value.defaultTheme
+    }
+    
+    tenantThemeSettings.value.customThemeApplied = true
+  }
+  
+  // Theme-CSS-Klasse auf HTML-Element aktualisieren
+  const updateThemeClass = () => {
+    if (!process.client) return
+    
+    const html = document.documentElement
+    const currentTheme = effectiveTheme.value
+    
+    // Entferne alle Theme-Klassen
+    html.classList.remove('theme-light', 'theme-dark', 'theme-auto')
+    
+    // Füge aktuelle Theme-Klasse hinzu
+    html.classList.add(`theme-${theme.value}`)
+    
+    // Setze data-theme Attribut für CSS-Selektoren
+    html.setAttribute('data-theme', currentTheme)
+    
+    // Dark-Klasse für Kompatibilität mit anderen Libraries
+    if (currentTheme === 'dark') {
+      html.classList.add('dark')
+    } else {
+      html.classList.remove('dark')
+    }
   }
 
   const addNotification = (notification: {
@@ -139,13 +231,31 @@ export const useUIStore = defineStore('ui', () => {
     })
   }
 
-  // Initialize theme from localStorage
+  // Initialize theme from localStorage and tenant settings
   const initializeTheme = () => {
     if (process.client) {
-      const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-      if (savedTheme) {
+      const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' | null
+      
+      // Wenn ein Theme gespeichert ist und Theme-Wechsel erlaubt ist
+      if (savedTheme && tenantThemeSettings.value.allowThemeSwitch) {
         theme.value = savedTheme
+      } else {
+        // Verwende Tenant-Standard-Theme
+        theme.value = tenantThemeSettings.value.defaultTheme
       }
+      
+      // CSS-Klassen initial setzen
+      updateThemeClass()
+      
+      // System-Theme-Änderungen überwachen (für auto-mode)
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      const handleSystemThemeChange = () => {
+        if (theme.value === 'auto') {
+          updateThemeClass()
+        }
+      }
+      
+      mediaQuery.addEventListener('change', handleSystemThemeChange)
     }
   }
 
@@ -166,10 +276,18 @@ export const useUIStore = defineStore('ui', () => {
     return addNotification({ type: 'info', title, message })
   }
 
+  // Watch für automatische Theme-Updates
+  watch(effectiveTheme, () => {
+    if (process.client) {
+      updateThemeClass()
+    }
+  })
+
   return {
     // State
     sidebarOpen,
     theme,
+    tenantThemeSettings,
     notifications,
     loadingStates,
     modals,
@@ -178,6 +296,8 @@ export const useUIStore = defineStore('ui', () => {
     unreadNotifications,
     unreadCount,
     isDark,
+    effectiveTheme,
+    canSwitchTheme,
 
     // Actions
     toggleSidebar,
@@ -185,6 +305,8 @@ export const useUIStore = defineStore('ui', () => {
     closeSidebar,
     setTheme,
     toggleTheme,
+    setTenantThemeSettings,
+    updateThemeClass,
     initializeTheme,
 
     // Notifications

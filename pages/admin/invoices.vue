@@ -1,8 +1,8 @@
 <template>
-  <AdminLayout>
+  <div>
       <div class="flex items-center justify-between">
         <div class="p-4">
-          <h1 class="text-2xl font-bold text-gray-900">Rechnungsverwaltung</h1>
+          <h1 class="text-2xl font-bold text-gray-900">Rechnungen</h1>
         </div>
         <div class="flex space-x-3">
           <button
@@ -74,7 +74,7 @@
                     type="checkbox" 
                     :checked="filters.status?.includes('draft') || false"
                     @change="toggleStatusFilter('draft')"
-                    class="mr-2 text-blue-600"
+                    class="mr-2 text-blue-600 keep-checkbox"
                   >
                   <span class="text-sm text-gray-700">Entwurf</span>
                 </label>
@@ -83,7 +83,7 @@
                     type="checkbox" 
                     :checked="filters.status?.includes('sent') || false"
                     @change="toggleStatusFilter('sent')"
-                    class="mr-2 text-blue-600"
+                    class="mr-2 text-blue-600 keep-checkbox"
                   >
                   <span class="text-sm text-gray-700">Versendet</span>
                 </label>
@@ -92,7 +92,7 @@
                     type="checkbox" 
                     :checked="filters.status?.includes('paid') || false"
                     @change="toggleStatusFilter('paid')"
-                    class="mr-2 text-blue-600"
+                    class="mr-2 text-blue-600 keep-checkbox"
                   >
                   <span class="text-sm text-gray-700">Bezahlt</span>
                 </label>
@@ -101,7 +101,7 @@
                     type="checkbox" 
                     :checked="filters.status?.includes('overdue') || false"
                     @change="toggleStatusFilter('overdue')"
-                    class="mr-2 text-blue-600"
+                    class="mr-2 text-blue-600 keep-checkbox"
                   >
                   <span class="text-sm text-gray-700">Überfällig</span>
                 </label>
@@ -110,7 +110,7 @@
                     type="checkbox" 
                     :checked="filters.status?.includes('cancelled') || false"
                     @change="toggleStatusFilter('cancelled')"
-                    class="mr-2 text-blue-600"
+                    class="mr-2 text-blue-600 keep-checkbox"
                   >
                   <span class="text-sm text-gray-700">Storniert</span>
                 </label>
@@ -141,7 +141,7 @@
                     type="checkbox" 
                     :checked="filters.payment_status?.includes('pending') || false"
                     @change="togglePaymentStatusFilter('pending')"
-                    class="mr-2 text-blue-600"
+                    class="mr-2 text-blue-600 keep-checkbox"
                   >
                   <span class="text-sm text-gray-700">Ausstehend</span>
                 </label>
@@ -150,7 +150,7 @@
                     type="checkbox" 
                     :checked="filters.payment_status?.includes('partial') || false"
                     @change="togglePaymentStatusFilter('partial')"
-                    class="mr-2 text-blue-600"
+                    class="mr-2 text-blue-600 keep-checkbox"
                   >
                   <span class="text-sm text-gray-700">Teilweise bezahlt</span>
                 </label>
@@ -159,7 +159,7 @@
                     type="checkbox" 
                     :checked="filters.payment_status?.includes('paid') || false"
                     @change="togglePaymentStatusFilter('paid')"
-                    class="mr-2 text-blue-600"
+                    class="mr-2 text-blue-600 keep-checkbox"
                   >
                   <span class="text-sm text-gray-700">Vollständig bezahlt</span>
                 </label>
@@ -168,7 +168,7 @@
                     type="checkbox" 
                     :checked="filters.payment_status?.includes('overdue') || false"
                     @change="togglePaymentStatusFilter('overdue')"
-                    class="mr-2 text-blue-600"
+                    class="mr-2 text-blue-600 keep-checkbox"
                   >
                   <span class="text-sm text-gray-700">Überfällig</span>
                 </label>
@@ -234,7 +234,7 @@
     </div>
     <!-- Statistiken -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-      <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
           <div class="p-5">
             <div class="flex items-center">
               <div class="flex-shrink-0">
@@ -246,6 +246,7 @@
                 <dl>
                   <dt class="text-sm font-medium text-gray-500 truncate">Gesamt Rechnungen</dt>
                   <dd class="text-lg font-medium text-gray-900">{{ summary.total_invoices || 0 }}</dd>
+                  <dd v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</dd>
                 </dl>
               </div>
             </div>
@@ -264,6 +265,7 @@
                 <dl>
                   <dt class="text-sm font-medium text-gray-500 truncate">Bezahlt</dt>
                   <dd class="text-lg font-medium text-gray-900">{{ formatCurrency(summary.paid_amount) }}</dd>
+                  <dd v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</dd>
                 </dl>
               </div>
             </div>
@@ -282,6 +284,7 @@
                 <dl>
                   <dt class="text-sm font-medium text-gray-500 truncate">Ausstehend</dt>
                   <dd class="text-lg font-medium text-gray-900">{{ formatCurrency(summary.pending_amount) }}</dd>
+                  <dd v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</dd>
                 </dl>
               </div>
             </div>
@@ -300,6 +303,7 @@
                 <dl>
                   <dt class="text-sm font-medium text-gray-500 truncate">Überfällig</dt>
                   <dd class="text-lg font-medium text-gray-900">{{ formatCurrency(summary.overdue_amount) }}</dd>
+                  <dd v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</dd>
                 </dl>
               </div>
             </div>
@@ -347,7 +351,9 @@
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Fälligkeitsdatum
                 </th>
-
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tenant
+                </th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -395,6 +401,10 @@
                   <div v-if="isOverdue(invoice.due_date)" class="text-sm text-red-600">
                     Überfällig
                   </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ currentTenant?.name || 'Unbekannt' }}</div>
+                  <div class="text-xs text-gray-500">{{ currentTenant?.slug || 'Kein Slug' }}</div>
                 </td>
               </tr>
             </tbody>
@@ -447,16 +457,22 @@
       @updated="onInvoiceUpdated"
     />
   </div>
-  </AdminLayout>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
+// definePageMeta is auto-imported by Nuxt
 import { useInvoices } from '~/composables/useInvoices'
-import AdminLayout from '~/layouts/admin.vue'
 import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
 import InvoiceDetailModal from '~/components/admin/InvoiceDetailModal.vue'
 import type { InvoiceStatus, PaymentStatus, InvoiceFilters } from '~/types/invoice'
+
+// Page meta
+// definePageMeta({
+//   layout: 'admin',
+//   middleware: ['auth']
+// })
 
 // Simple debounce implementation
 const useDebounce = (callback: Function, delay: number) => {
@@ -466,10 +482,6 @@ const useDebounce = (callback: Function, delay: number) => {
     timeoutId = setTimeout(callback, delay)
   }
 }
-
-// Components werden als externe Komponenten verwendet
-
-// Layout wird automatisch erkannt
 
 // Composables
 const { 
@@ -497,6 +509,7 @@ const showStatusDropdown = ref(false)
 const showPaymentStatusDropdown = ref(false)
 const showDateDropdown = ref(false)
 const itemsPerPage = ref(10)
+const currentTenant = ref<any>(null)
 const summary = ref({
   total_invoices: 0,
   total_amount: 0,
@@ -546,6 +559,29 @@ watch(filters, (newFilters) => {
 // Methods
 const refreshData = async () => {
   console.log('🔄 refreshData called')
+  
+  // Load current tenant info
+  const { getSupabase } = await import('~/utils/supabase')
+  const supabase = getSupabase()
+  
+  const { data: { user: currentUser } } = await supabase.auth.getUser()
+  const { data: userProfile } = await supabase
+    .from('users')
+    .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+    .single()
+  const tenantId = userProfile?.tenant_id
+  
+  if (tenantId) {
+    const { data: tenantData } = await supabase
+      .from('tenants')
+      .select('name, slug')
+      .eq('id', tenantId)
+      .single()
+    currentTenant.value = tenantData
+    console.log('🔍 Current tenant:', tenantData)
+  }
+  
   const [invoicesResult, summaryResult] = await Promise.all([
     fetchInvoices(filters.value, currentPage.value),
     fetchInvoiceSummary()

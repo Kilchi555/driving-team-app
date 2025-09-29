@@ -25,11 +25,25 @@ export const useStudentCredits = () => {
     try {
       const supabase = getSupabase()
       
-      // Verwende .maybeSingle() statt .single() um 406 Fehler zu vermeiden
+      // Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+      
+      // Verwende .maybeSingle() statt .single() um 406 Fehler zu vermeiden - FILTERED BY TENANT
       const { data, error: fetchError } = await supabase
         .from('student_credits')
         .select('*')
         .eq('user_id', userId)
+        .eq('tenant_id', tenantId)
         .maybeSingle()
 
       if (fetchError) {
@@ -51,10 +65,24 @@ export const useStudentCredits = () => {
     try {
       const supabase = getSupabase()
       
+      // Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+      
       const { data, error: fetchError } = await supabase
         .from('student_credits')
         .select('*')
         .in('user_id', userIds)
+        .eq('tenant_id', tenantId)
 
       if (fetchError) throw fetchError
 
@@ -338,6 +366,19 @@ export const useStudentCredits = () => {
     try {
       const supabase = getSupabase()
       
+      // Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+      
       const { data, error: fetchError } = await supabase
         .from('credit_transactions')
         .select(`
@@ -353,6 +394,7 @@ export const useStudentCredits = () => {
           )
         `)
         .eq('user_id', userId)
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .limit(limit)
 
@@ -376,9 +418,23 @@ export const useStudentCredits = () => {
     try {
       const supabase = getSupabase()
       
+      // Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+      
       const { data, error: fetchError } = await supabase
         .from('student_credits')
         .select('balance_rappen')
+        .eq('tenant_id', tenantId)
 
       if (fetchError) throw fetchError
 

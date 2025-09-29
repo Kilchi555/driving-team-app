@@ -12,16 +12,17 @@
         'w-full p-3 border rounded-lg focus:outline-none',
         props.isPastAppointment
           ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed'
-          : 'border-gray-300 focus:ring-2 focus:ring-green-500 disabled:opacity-50'
+          : 'border-gray-300 bg-gray-800 text-white focus:ring-2 focus:ring-green-500 disabled:opacity-50'
       ]"
     >
-      <option value="">
+      <option value="" class="text-white bg-gray-800">
         {{ isLoading ? 'Kategorien laden...' : 'Kategorie wählen' }}
       </option>
       <option 
         v-for="category in availableCategoriesForUser" 
         :key="category.code"
         :value="category.code"
+        class="text-white bg-gray-800"
       >
         {{ category.name }}
       </option>
@@ -107,7 +108,7 @@ const selectedCategory = computed(() => {
 
 const getCorrectDuration = (category: Category): number => {
   if (props.appointmentType === 'exam') {
-    return category.exam_duration_minutes || 180
+    return category.exam_duration_minutes || 135
   } else {
     return category.lesson_duration_minutes || 45
   }
@@ -193,7 +194,22 @@ const loadCategories = async () => {
   try {
     const supabase = getSupabase()
     
-    // ✅ KORREKTE REIHENFOLGE: Query zuerst definieren
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+    console.log('🔍 Loading categories for tenant:', userProfile.tenant_id)
+    
+    // ✅ KORREKTE REIHENFOLGE: Query zuerst definieren (with tenant filter)
     const queryPromise = supabase
       .from('categories')
       .select(`
@@ -209,6 +225,7 @@ const loadCategories = async () => {
         created_at
       `)
       .eq('is_active', true)
+      .eq('tenant_id', userProfile.tenant_id)
       .order('code', { ascending: true })
 
     // ✅ Dann Timeout definieren
@@ -229,21 +246,55 @@ const loadCategories = async () => {
     }
 
     // Transform database data to match expected format
-    allCategories.value = (result.data || []).map(cat => ({
-      ...cat,
-      // Ensure lesson_duration_minutes is always an array
-      lesson_duration_minutes: Array.isArray(cat.lesson_duration_minutes) 
-        ? cat.lesson_duration_minutes 
-        : [cat.lesson_duration_minutes || 45],
-      // Ensure theory_durations is always an array
-      theory_durations: Array.isArray(cat.theory_durations) 
-        ? cat.theory_durations 
-        : cat.theory_durations ? [cat.theory_durations] : [],
-      // Map to availableDurations for compatibility (default to lesson_duration_minutes)
-      availableDurations: Array.isArray(cat.lesson_duration_minutes) 
-        ? cat.lesson_duration_minutes 
-        : [cat.lesson_duration_minutes || 45]
-    }))
+    allCategories.value = (result.data || []).map(cat => {
+      // ✅ CONVERT STRING ARRAYS TO NUMBER ARRAYS
+      let lessonDurations = cat.lesson_duration_minutes
+      if (Array.isArray(lessonDurations)) {
+        // Convert string array ["45","60","90"] to number array [45,60,90]
+        lessonDurations = lessonDurations.map((d: any) => {
+          const num = parseInt(d.toString(), 10)
+          return isNaN(num) ? 45 : num
+        })
+      } else if (lessonDurations) {
+        // Single value - convert to number array
+        const num = parseInt(lessonDurations.toString(), 10)
+        lessonDurations = [isNaN(num) ? 45 : num]
+      } else {
+        lessonDurations = [45] // fallback
+      }
+
+      let theoryDurations = cat.theory_durations
+      if (Array.isArray(theoryDurations)) {
+        // Convert string array to number array
+        theoryDurations = theoryDurations.map((d: any) => {
+          const num = parseInt(d.toString(), 10)
+          return isNaN(num) ? 45 : num
+        })
+      } else if (theoryDurations) {
+        // Single value - convert to number array
+        const num = parseInt(theoryDurations.toString(), 10)
+        theoryDurations = [isNaN(num) ? 45 : num]
+      } else {
+        theoryDurations = []
+      }
+
+      // ✅ CONVERT exam_duration_minutes from string to number
+      let examDuration = cat.exam_duration_minutes
+      if (examDuration) {
+        const num = parseInt(examDuration.toString(), 10)
+        examDuration = isNaN(num) ? 135 : num // fallback to 135 minutes
+      } else {
+        examDuration = 135 // default exam duration
+      }
+
+      return {
+        ...cat,
+        lesson_duration_minutes: lessonDurations,
+        theory_durations: theoryDurations,
+        exam_duration_minutes: examDuration,  // ✅ CONVERTED TO NUMBER
+        availableDurations: lessonDurations // Use converted lesson durations
+      }
+    })
     
     console.log('✅ All categories loaded from database:', result.data?.length)
     console.log('✅ Categories with durations:', allCategories.value.map(c => ({ 

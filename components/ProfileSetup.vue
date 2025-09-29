@@ -20,10 +20,12 @@
         <div class="form-group">
           <label for="role">Rolle:</label>
           <select id="role" v-model="profileData.role" required>
-            <option value="user">Benutzer</option>
-            <option value="staff">Staff</option>
-            <option value="admin">Administrator</option>
+            <option value="client">Kunde</option>
           </select>
+          <p class="role-info">
+            Neue Benutzer werden automatisch als Kunde registriert. 
+            Für Staff- oder Admin-Zugriff wenden Sie sich an den Administrator.
+          </p>
         </div>
         
         <button type="submit" :disabled="isLoading" class="submit-btn">
@@ -49,7 +51,7 @@ const { createUserProfile, isLoading, userError } = useCurrentUser()
 
 const profileData = ref({
   company_name: '',
-  role: 'user'
+  role: 'client'
 })
 
 const error = ref('')
@@ -157,5 +159,12 @@ async function createProfile() {
   color: #721c24;
   border-radius: 4px;
   border: 1px solid #f5c6cb;
+}
+
+.role-info {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
 }
 </style>

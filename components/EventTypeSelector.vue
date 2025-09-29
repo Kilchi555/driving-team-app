@@ -3,7 +3,7 @@
     <!-- Header mit Zurück-Button -->
     <div class="flex justify-between items-center mb-3">
       <label class="block text-sm font-semibold text-gray-900">
-        📋 Terminart
+        📋 {{ get('label_event_type_header', 'Terminart') }}
       </label>
       <button
         v-if="showBackButton"
@@ -21,23 +21,31 @@
     </div>
 
     <!-- Event Types Grid -->
-    <div v-else class="grid grid-cols-2 gap-2 mb-4">
-      <button
-        v-for="eventType in eventTypes" 
-        :key="eventType.code"
-        @click="selectEventType(eventType)"
-        :disabled="!showBackButton"
-        :class="[
-          'p-3 text-sm rounded border text-left transition-colors duration-200',
-          selectedType === eventType.code
-            ? 'bg-purple-600 text-white border-purple-600'
-            : showBackButton
-              ? 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-        ]"
-      >
-        {{ eventType.emoji }} {{ eventType.name }}
-      </button>
+    <div v-else class="space-y-3 mb-4">
+      <!-- No paid dropdown here by design -->
+
+      <!-- Free types -->
+      <div>
+        <div class="text-xs font-semibold text-gray-500 mb-1">{{ get('label_free_event_types', 'Andere Terminarten') }}</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            v-for="eventType in freeEventTypes" 
+            :key="'free-' + eventType.code"
+            @click="selectEventType(eventType)"
+            :disabled="!showBackButton"
+            :class="[
+              'p-3 text-sm rounded border text-left transition-colors duration-200',
+              selectedType === eventType.code
+                ? 'bg-purple-600 text-white border-purple-600'
+                : showBackButton
+                  ? 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+            ]"
+          >
+            {{ eventType.emoji }} {{ eventType.name }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Empty State -->
@@ -51,6 +59,7 @@
 import { ref, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useEventTypes } from '~/composables/useEventTypes'
+import { useUILabels } from '~/composables/useUILabels'
 
 // Types
 interface EventType {
@@ -85,10 +94,13 @@ const emit = defineEmits<{
 
 // State
 const eventTypes = ref<EventType[]>([])
+const freeEventTypes = computed(() => eventTypes.value.filter((et: any) => !et.require_payment))
 const isLoading = ref(false)
+const selectedPaidCode = ref<string>('')
 
 // Methods
 const { loadEventTypes: loadEventTypesFromComposable } = useEventTypes()
+const { get, load: loadUILabels } = useUILabels()
 
 // EventTypeSelector.vue
 const loadEventTypes = async (excludeTypes: string[] = []) => {
@@ -129,11 +141,14 @@ const selectEventType = (eventType: EventType) => {
   }
 }
 
+// removed paid selection logic for this component
+
 // Lifecycle
 onMounted(() => {
   if (props.autoLoad) {
     loadEventTypes(['exam', 'theorie']) // ✅ Diese rausfiltern
   }
+  loadUILabels()
 })
 
 // Expose methods for manual loading

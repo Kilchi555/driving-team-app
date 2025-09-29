@@ -230,13 +230,13 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="flex items-center justify-center py-8">
-      <LoadingLogo size="lg" />
+    <div v-if="isLoading" class="bg-white shadow rounded-lg">
+      <SkeletonLoader type="table" :columns="6" :rows="4" />
     </div>
 
     <!-- Create/Edit Modal -->
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="admin-modal bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-200">
           <div class="flex justify-between items-center">
@@ -482,6 +482,7 @@ import { definePageMeta } from '#imports'
 import { getSupabase } from '~/utils/supabase'
 import ProductStatisticsModal from '~/components/admin/ProductStatisticsModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import SkeletonLoader from '~/components/SkeletonLoader.vue'
 
 definePageMeta({
   layout: 'admin',
@@ -584,10 +585,27 @@ const loadProducts = async () => {
   isLoading.value = true
   try {
     const supabase = getSupabase()
+    
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    const tenantId = userProfile?.tenant_id
+    if (!tenantId) {
+      throw new Error('User has no tenant assigned')
+    }
+    
+    console.log('🔍 Loading products for tenant:', tenantId)
+    
     const { data, error } = await supabase
       .from('products')
       .select('*')
-      .order('display_order', { ascending: true })
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -610,16 +628,33 @@ const loadTopSellingProduct = async () => {
   try {
     const supabase = getSupabase()
     
-    // Query für meistverkauftes Produkt
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    const tenantId = userProfile?.tenant_id
+    if (!tenantId) {
+      console.warn('⚠️ User has no tenant assigned, skipping top selling product')
+      topSellingProduct.value = { name: '', quantity: 0 }
+      return
+    }
+    
+    // Query für meistverkauftes Produkt über product_sales (tenant-spezifisch)
     const { data, error } = await supabase
-      .from('appointment_products')
+      .from('product_sales')
       .select(`
         product_id,
         quantity,
-        products!inner (
+        products (
           name
         )
       `)
+      .eq('tenant_id', tenantId)
+      .not('product_id', 'is', null) // Nur Einträge mit gültiger product_id
     
     if (error) throw error
     
@@ -713,6 +748,19 @@ const saveProduct = async () => {
   try {
     const supabase = getSupabase()
     
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    const tenantId = userProfile?.tenant_id
+    if (!tenantId) {
+      throw new Error('User has no tenant assigned')
+    }
+    
     const productData = {
       name: formData.value.name.trim(),
       description: formData.value.description.trim() || null,
@@ -724,7 +772,8 @@ const saveProduct = async () => {
       display_order: formData.value.display_order,
       is_active: formData.value.is_active,
       is_voucher: formData.value.is_voucher,
-      allow_custom_amount: formData.value.is_voucher ? formData.value.allow_custom_amount : false
+      allow_custom_amount: formData.value.is_voucher ? formData.value.allow_custom_amount : false,
+      tenant_id: tenantId // ✅ Tenant ID hinzufügen
     }
 
     console.log('📦 Product data to save:', productData)
@@ -788,8 +837,12 @@ const toggleProductStatus = async (product: Product) => {
 }
 
 // Lifecycle
+// Load data immediately when component is created (not waiting for mount)
+loadProducts()
+
 onMounted(() => {
-  loadProducts()
+  // Page is already displayed, data loads in background
+  console.log('🛍️ Products page mounted, data loading in background')
 })
 </script>
 

@@ -4,8 +4,13 @@
       <!-- Header -->
       <div class="bg-gray-100 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <img src="public/images/Driving_Team_Logo.png" class="h-12 w-auto mx-auto mb-3" alt="Driving Team">
-          <h1 class="text-2xl font-bold text-gray-700">Registrierung</h1>
+          <LoadingLogo size="lg" class="mx-auto mb-3" />
+          <h1 class="text-2xl font-bold text-gray-700">
+          {{ isAdminRegistration ? 'Admin-Account erstellen' :
+             serviceType === 'fahrlektion' ? 'Registrierung für Fahrlektionen' : 
+             serviceType === 'theorie' ? 'Registrierung für Theorielektion' : 
+             serviceType === 'beratung' ? 'Registrierung für Beratung' : 'Registrierung' }}
+        </h1>
         </div>
       </div>
                       <!-- Navigation Back -->
@@ -14,7 +19,7 @@
             @click="goBack"
             class="text-gray-600 hover:text-gray-800 flex items-center text-sm"
           >
-            ← Zurück zur Auswahl
+            {{ isAdminRegistration ? '← Zurück zur Firmenregistrierung' : '← Zurück zur Auswahl' }}
           </button>
         </div>
 
@@ -25,24 +30,24 @@
                class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
             1
           </div>
-          <div class="h-1 w-12 bg-gray-300">
+          <div v-if="requiresLernfahrausweis" class="h-1 w-12 bg-gray-300">
             <div v-if="currentStep >= 2" class="h-full bg-green-500 transition-all duration-300"></div>
           </div>
-          <div :class="currentStep >= 2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
+          <div v-if="requiresLernfahrausweis" :class="currentStep >= 2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
                class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
             2
           </div>
           <div class="h-1 w-12 bg-gray-300">
-            <div v-if="currentStep >= 3" class="h-full bg-green-500 transition-all duration-300"></div>
+            <div v-if="currentStep >= maxSteps" class="h-full bg-green-500 transition-all duration-300"></div>
           </div>
-          <div :class="currentStep >= 3 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
+          <div :class="currentStep >= maxSteps ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
                class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
-            3
+            {{ requiresLernfahrausweis ? 3 : 2 }}
           </div>
         </div>
-        <div class="flex justify-center text-center mt-2 space-x-6 text-xs text-gray-600">
+        <div class="flex justify-center text-center mt-2 text-xs text-gray-600" :class="requiresLernfahrausweis ? 'space-x-6' : 'space-x-12'">
           <span>Persönliche Daten</span>
-          <span>Lernfahrausweis</span>
+          <span v-if="requiresLernfahrausweis">Lernfahrausweis</span>
           <span>Account</span>
         </div>
       </div>
@@ -52,6 +57,25 @@
         
         <!-- Step 1: Personal Data -->
         <div v-if="currentStep === 1" class="space-y-6">
+          
+          <!-- Admin Registration Header -->
+          <div v-if="isAdminRegistration" class="text-center mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-2">👤 Admin-Account erstellen</h2>
+            <p class="text-gray-600">Erstellen Sie Ihren Administrator-Account für {{ tenantParam }}</p>
+            
+            <!-- Pre-filled data notice -->
+            <div v-if="prefilledData.first_name || prefilledData.last_name || prefilledData.email || prefilledData.phone" 
+                 class="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+              <p class="text-blue-800 text-sm">
+                <span class="font-medium">ℹ️ Vorausgefüllte Daten:</span> 
+                Die Kontaktdaten aus der Firmenregistrierung wurden automatisch übernommen.
+              </p>
+              <p class="text-blue-700 text-xs mt-1">
+                <span class="font-medium">📍 Adresse:</span> 
+                Bitte geben Sie hier Ihre <strong>Privatadresse</strong> ein. Falls diese von der Firmenadresse abweicht, können Sie die Felder entsprechend anpassen.
+              </p>
+            </div>
+          </div>
 
           <!-- Personal Information Form -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -112,6 +136,20 @@
               <p class="text-xs text-gray-500 mt-1">Format: +41791234567</p>
             </div>
 
+            <!-- Email (for Admin Registration) -->
+            <div v-if="isAdminRegistration">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                E-Mail-Adresse *
+              </label>
+              <input
+                v-model="formData.email"
+                type="email"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="admin@ihre-firma.ch"
+              />
+            </div>
+
             <!-- Street -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -170,8 +208,8 @@
             </div>
           </div>
 
-          <!-- Categories -->
-          <div>
+          <!-- Categories (only for normal registration) -->
+          <div v-if="!isAdminRegistration">
             <label class="block text-sm font-medium text-gray-700 mb-3">
               Führerschein-Kategorien *
             </label>
@@ -198,8 +236,8 @@
           </div>
         </div>
 
-        <!-- Step 2: Lernfahrausweis Upload -->
-        <div v-if="currentStep === 2" class="space-y-6">
+        <!-- Step 2: Lernfahrausweis Upload (only for Fahrlektionen) -->
+        <div v-if="currentStep === 2 && requiresLernfahrausweis" class="space-y-6">
           <div class="text-center">
             <h2 class="text-xl font-semibold text-gray-900 mb-2">📄 Lernfahr- oder Führerausweis hochladen</h2>
           </div>
@@ -302,8 +340,8 @@
           </div>
         </div>
 
-        <!-- Schritt 3: Account & Registrierung -->
-        <div v-else-if="currentStep === 3" class="space-y-6">
+        <!-- Account & Registrierung (Step 2 for theory/consultation, Step 3 for driving lessons) -->
+        <div v-else-if="(currentStep === 2 && !requiresLernfahrausweis) || (currentStep === 3 && requiresLernfahrausweis)" class="space-y-6">
           <div class="text-center mb-6">
             <div class="text-4xl mb-2">🔐</div>
             <h3 class="text-xl font-semibold text-gray-900">Account erstellen</h3>
@@ -432,7 +470,7 @@
         <div v-else></div>
 
         <button
-          v-if="currentStep < 3"
+          v-if="currentStep < maxSteps"
           @click="nextStep"
           :disabled="!canProceed"
           class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
@@ -441,7 +479,7 @@
         </button>
         
         <button
-          v-if="currentStep === 3"
+          v-if="currentStep === maxSteps"
           @click="submitRegistration"
           :disabled="!canSubmit || isSubmitting"
           class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
@@ -470,11 +508,85 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
-import { navigateTo } from '#app'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { navigateTo, useRoute } from '#app'
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
+import { useTenant } from '~/composables/useTenant'
 
 const supabase = getSupabase()
+const route = useRoute()
+
+// Tenant Management
+const { loadTenant, tenantSlug } = useTenant()
+
+// Get service type from URL parameter
+const serviceType = ref(route.query.service as string || 'fahrlektion')
+
+// Get tenant from URL parameter
+const tenantParam = ref(route.query.tenant as string || '')
+
+// Get role from URL parameter (for admin registration)
+const roleParam = ref(route.query.role as string || 'client')
+
+// Get pre-filled data from URL parameters (for admin registration)
+const prefilledData = ref({
+  first_name: route.query.first_name as string || '',
+  last_name: route.query.last_name as string || '',
+  email: route.query.email as string || '',
+  phone: route.query.phone as string || ''
+})
+
+// Watch for route changes to update service type and tenant
+watch(() => route.query.service, (newService) => {
+  if (newService && newService !== serviceType.value) {
+    serviceType.value = newService as string
+    console.log('🔄 Service type updated from URL:', serviceType.value)
+  }
+}, { immediate: true })
+
+watch(() => route.query.tenant, (newTenant) => {
+  if (newTenant && newTenant !== tenantParam.value) {
+    tenantParam.value = newTenant as string
+    console.log('🏢 Tenant updated from URL:', tenantParam.value)
+    // Load tenant data when tenant parameter changes
+    loadTenant(tenantParam.value)
+  }
+}, { immediate: true })
+
+watch(() => route.query.role, (newRole) => {
+  if (newRole && newRole !== roleParam.value) {
+    roleParam.value = newRole as string
+    console.log('👤 Role updated from URL:', roleParam.value)
+  }
+}, { immediate: true })
+
+// Watch for pre-filled data changes
+watch(() => route.query, (newQuery) => {
+  if (roleParam.value === 'admin') {
+    // Update pre-filled data when URL changes
+    prefilledData.value = {
+      first_name: newQuery.first_name as string || '',
+      last_name: newQuery.last_name as string || '',
+      email: newQuery.email as string || '',
+      phone: newQuery.phone as string || ''
+    }
+    
+    // Update form data if fields are empty
+    if (!formData.value.firstName && prefilledData.value.first_name) {
+      formData.value.firstName = prefilledData.value.first_name
+    }
+    if (!formData.value.lastName && prefilledData.value.last_name) {
+      formData.value.lastName = prefilledData.value.last_name
+    }
+    if (!formData.value.email && prefilledData.value.email) {
+      formData.value.email = prefilledData.value.email
+    }
+    if (!formData.value.phone && prefilledData.value.phone) {
+      formData.value.phone = prefilledData.value.phone
+    }
+  }
+}, { immediate: true })
 
 // State
 const currentStep = ref(1)
@@ -488,7 +600,7 @@ const fileInput = ref<HTMLInputElement>()
 const videoElement = ref<HTMLVideoElement>()
 const canvasElement = ref<HTMLCanvasElement>()
 
-// Form data
+// Form data - initialize after computed properties are defined
 const formData = ref({
   // Personal data
   firstName: '',
@@ -521,15 +633,38 @@ const availableCategories = ref([
 ])
 
 // Computed
+const isAdminRegistration = computed(() => {
+  return roleParam.value === 'admin'
+})
+
+const requiresLernfahrausweis = computed(() => {
+  return serviceType.value === 'fahrlektion' && !isAdminRegistration.value
+})
+
+const maxSteps = computed(() => {
+  if (isAdminRegistration.value) {
+    return 2 // Admin: Personal data + Account
+  }
+  return requiresLernfahrausweis.value ? 3 : 2
+})
+
 const canProceed = computed(() => {
   if (currentStep.value === 1) {
+    if (isAdminRegistration.value) {
+      // Admin registration: basic info + address required
+      return formData.value.firstName && formData.value.lastName && 
+             formData.value.phone && formData.value.email &&
+             formData.value.street && formData.value.streetNr && 
+             formData.value.zip && formData.value.city
+    }
+    // Normal registration: all fields required
     return formData.value.firstName && formData.value.lastName && 
            formData.value.birthDate && formData.value.phone && 
            formData.value.street && formData.value.streetNr && 
            formData.value.zip && formData.value.city && 
            formData.value.categories.length > 0
   }
-  if (currentStep.value === 2) {
+  if (currentStep.value === 2 && requiresLernfahrausweis.value) {
     return formData.value.lernfahrausweisNr && uploadedImage.value
   }
   return true
@@ -569,20 +704,47 @@ const normalizePhone = () => {
 }
 
 const nextStep = () => {
-  if (canProceed.value) {
-    currentStep.value++
+  if (canProceed.value && currentStep.value < maxSteps.value) {
+    if (isAdminRegistration.value) {
+      // Admin registration: go directly to account step
+      currentStep.value = 2
+    } else if (currentStep.value === 1 && !requiresLernfahrausweis.value) {
+      // Skip step 2 (Lernfahrausweis) for theory and consultation
+      currentStep.value = 2 // This becomes the account step
+    } else {
+      currentStep.value++
+    }
   }
 }
 
 const prevStep = () => {
-  currentStep.value--
+  if (currentStep.value > 1) {
+    if (isAdminRegistration.value) {
+      // Admin registration: go back to step 1
+      currentStep.value = 1
+    } else if (currentStep.value === 2 && !requiresLernfahrausweis.value) {
+      // Skip step 2 (Lernfahrausweis) when going back
+      currentStep.value = 1
+    } else {
+      currentStep.value--
+    }
+  }
 }
 
 const goBack = () => {
-  if (typeof navigateTo !== 'undefined') {
-    navigateTo('/auswahl')
+  if (isAdminRegistration.value) {
+    // For admin registration, go back to tenant registration
+    navigateTo('/tenant-register')
   } else {
-    window.location.href = '/auswahl'
+    const tenant = tenantParam.value || tenantSlug.value || 'driving-team'
+    const url = `/auswahl?tenant=${tenant}`
+    console.log('🔙 Going back to:', url)
+    
+    if (typeof navigateTo !== 'undefined') {
+      navigateTo(url)
+    } else {
+      window.location.href = url
+    }
   }
 }
 
@@ -694,13 +856,28 @@ const submitRegistration = async () => {
     }
     
     // 2. ✅ Auth User erstellen - Trigger erstellt automatisch public.users
+    // Get current tenant ID for registration
+    const { currentTenant, tenantId } = useTenant()
+    const activeTenantId = tenantId.value || currentTenant.value?.id
+    
+    console.log('🏢 Registering user for tenant:', activeTenantId)
+    
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: formData.value.email.trim().toLowerCase(),
       password: formData.value.password,
       options: {
         data: {
           first_name: formData.value.firstName.trim(),
-          last_name: formData.value.lastName.trim()
+          last_name: formData.value.lastName.trim(),
+          tenant_id: activeTenantId,
+          phone: formData.value.phone?.trim() || null,
+          birthdate: formData.value.birthDate || null,
+          street: formData.value.street?.trim() || null,
+          street_nr: formData.value.streetNr?.trim() || null,
+          zip: formData.value.zip?.trim() || null,
+          city: formData.value.city?.trim() || null,
+          category: formData.value.selectedCategory || null,
+          lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null
         }
       }
     })
@@ -718,70 +895,179 @@ const submitRegistration = async () => {
     
     console.log('✅ Auth User created:', authData.user.id)
     
-    // 3. ✅ Warte und prüfe bis Trigger-User existiert, dann ergänze Daten
-    console.log('⏳ Waiting for trigger to create base user...')
+    // 3. ✅ Warten und dann public.users Eintrag manuell aktualisieren
+    // (Falls der Trigger nicht funktioniert oder noch nicht existiert)
+    console.log('⏳ Waiting for trigger to create public.users entry...')
     
+    let publicUser = null
     let attempts = 0
-    let triggerUser = null
+    const maxAttempts = 10
     
-    // Warte bis der Trigger den User erstellt hat (max 5 Sekunden)
-    while (attempts < 10 && !triggerUser) {
+    // Warte auf Trigger-Erstellung oder erstelle manuell
+    while (attempts < maxAttempts && !publicUser) {
       await new Promise(resolve => setTimeout(resolve, 500)) // 500ms warten
       
-      const { data: checkUser, error: checkError } = await supabase
+      const { data: existingUser } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authData.user.id)
         .single()
       
-      if (!checkError && checkUser) {
-        triggerUser = checkUser
-        console.log('✅ Trigger user found:', triggerUser.id)
+      if (existingUser) {
+        publicUser = existingUser
+        console.log('✅ Public user found via trigger:', publicUser.id)
         break
       }
       
       attempts++
-      console.log(`⏳ Attempt ${attempts}/10: Waiting for trigger user...`)
+      console.log(`⏳ Attempt ${attempts}/${maxAttempts} - waiting for trigger...`)
     }
     
-    if (!triggerUser) {
-      console.error('❌ Trigger user not created after 5 seconds')
-      throw new Error('Benutzer wurde erstellt, aber Profil ist unvollständig. Bitte wenden Sie sich an den Support.')
-    }
-    
-    // 4. ✅ Jetzt die zusätzlichen Daten ergänzen
-    console.log('📝 Updating user with additional data...')
-    const { data: updatedUser, error: updateError } = await supabase
-      .from('users')
-      .update({
-        // Ergänze nur die zusätzlichen Daten (Basis wurde vom Trigger erstellt)
-        phone: formData.value.phone?.trim() || null,
-        birthdate: formData.value.birthDate || null,
-        street: formData.value.street?.trim() || null,
-        street_nr: formData.value.streetNr?.trim() || null,
-        zip: formData.value.zip?.trim() || null,
-        city: formData.value.city?.trim() || null,
-        category: formData.value.categories.join(','),
-        lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null,
-        lernfahrausweis_url: uploadedImage.value || null
-      })
-      .eq('id', triggerUser.id) // Verwende die ID vom Trigger-User
-      .select()
-      .single()
-    
-    if (updateError) {
-      console.error('❌ Profile update error:', updateError)
-      console.log('ℹ️ Basic profile exists, but additional data could not be saved')
-      // Nicht kritisch - User kann sich trotzdem einloggen
+    // Falls Trigger nicht funktioniert hat, manuell erstellen/aktualisieren
+    if (!publicUser) {
+      console.log('🔧 Trigger did not create user, creating manually...')
+      
+      const { data: manualUser, error: manualError } = await supabase
+        .from('users')
+        .insert({
+          auth_user_id: authData.user.id,
+          email: formData.value.email.trim().toLowerCase(),
+          first_name: formData.value.firstName.trim(),
+          last_name: formData.value.lastName.trim(),
+          phone: formData.value.phone?.trim() || null,
+          birthdate: isAdminRegistration.value ? null : formData.value.birthDate || null,
+          street: formData.value.street?.trim() || null,
+          street_nr: formData.value.streetNr?.trim() || null,
+          zip: formData.value.zip?.trim() || null,
+          city: formData.value.city?.trim() || null,
+          role: isAdminRegistration.value ? 'admin' : 'client',
+          tenant_id: activeTenantId,
+          category: formData.value.selectedCategory ? [formData.value.selectedCategory] : null,
+          lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+      
+      if (manualError) {
+        console.error('❌ Manual user creation failed:', manualError)
+        throw new Error(`Fehler beim Erstellen des Benutzerprofils: ${manualError.message}`)
+      }
+      
+      publicUser = manualUser
+      console.log('✅ Manual user creation successful:', publicUser.id)
     } else {
-      console.log('✅ Profile completed with additional data:', updatedUser)
+      // Aktualisiere den vom Trigger erstellten User mit vollständigen Daten
+      console.log('🔄 Updating trigger-created user with complete data...')
+      
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update({
+          phone: formData.value.phone?.trim() || null,
+          birthdate: isAdminRegistration.value ? null : formData.value.birthDate || null,
+          street: formData.value.street?.trim() || null,
+          street_nr: formData.value.streetNr?.trim() || null,
+          zip: formData.value.zip?.trim() || null,
+          city: formData.value.city?.trim() || null,
+          tenant_id: activeTenantId,
+          category: isAdminRegistration.value ? null : (formData.value.selectedCategory ? [formData.value.selectedCategory] : null),
+          lernfahrausweis_nr: isAdminRegistration.value ? null : formData.value.lernfahrausweisNr?.trim() || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('auth_user_id', authData.user.id)
+        .select()
+        .single()
+      
+      if (updateError) {
+        console.error('❌ User update failed:', updateError)
+        // Nicht kritisch, da Grunddaten bereits vorhanden sind
+      } else {
+        publicUser = updatedUser
+        console.log('✅ User update successful')
+      }
     }
     
-    console.log('✅ Complete registration successful:', updatedUser || 'Basic profile created by trigger')
+    // 4. ✅ Upload Lernfahrausweis image to Supabase Storage (if exists)
+    if (uploadedImage.value && publicUser) {
+      console.log('📸 Uploading Lernfahrausweis image to storage...')
+      
+      try {
+        // Convert base64 to blob
+        const base64Data = uploadedImage.value.split(',')[1]
+        const byteCharacters = atob(base64Data)
+        const byteNumbers = new Array(byteCharacters.length)
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i)
+        }
+        const byteArray = new Uint8Array(byteNumbers)
+        const blob = new Blob([byteArray], { type: 'image/jpeg' })
+        
+        // Generate unique filename
+        const fileName = `${publicUser.id}_lernfahrausweis_${Date.now()}.jpg`
+        const filePath = `lernfahrausweise/${fileName}`
+        
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('user-documents')
+          .upload(filePath, blob, {
+            cacheControl: '3600',
+            upsert: true,
+            contentType: 'image/jpeg'
+          })
+        
+        if (uploadError) {
+          console.error('❌ Image upload failed:', uploadError)
+          // Don't fail registration for image upload error
+        } else {
+          console.log('✅ Image uploaded successfully:', uploadData.path)
+          
+          // Storage path is now managed via user_documents table
+          // No need to update users table with document URL
+        }
+      } catch (imageError) {
+        console.error('❌ Image processing failed:', imageError)
+        // Don't fail registration for image processing error
+      }
+    }
+    
+    console.log('🎉 Final user data:', {
+      id: publicUser.id,
+      email: publicUser.email,
+      tenant_id: publicUser.tenant_id,
+      category: publicUser.category,
+      lernfahrausweis_nr: publicUser.lernfahrausweis_nr,
+    })
+    
     
     // 4. ✅ Erfolgreiche Registrierung
-    alert('🎉 Registrierung erfolgreich!\n\nIhr Account wurde erstellt. Bitte prüfen Sie Ihre E-Mails zur Bestätigung und loggen Sie sich dann ein.')
-    await navigateTo('/')
+    if (isAdminRegistration.value) {
+      // For admin registration, try to auto-login and redirect to admin dashboard
+      try {
+        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+          email: formData.value.email.trim().toLowerCase(),
+          password: formData.value.password
+        })
+        
+        if (loginError) {
+          console.warn('Auto-login failed, user needs to login manually:', loginError)
+          alert('🎉 Admin-Account erfolgreich erstellt!\n\nBitte loggen Sie sich mit Ihren Zugangsdaten ein.')
+          await navigateTo('/login')
+        } else {
+          console.log('✅ Auto-login successful for admin')
+          alert('🎉 Admin-Account erfolgreich erstellt!\n\nSie werden automatisch angemeldet...')
+          await navigateTo('/admin')
+        }
+      } catch (autoLoginError) {
+        console.warn('Auto-login failed:', autoLoginError)
+        alert('🎉 Admin-Account erfolgreich erstellt!\n\nBitte loggen Sie sich mit Ihren Zugangsdaten ein.')
+        await navigateTo('/login')
+      }
+    } else {
+      alert('🎉 Registrierung erfolgreich!\n\nIhr Account wurde erstellt. Bitte prüfen Sie Ihre E-Mails zur Bestätigung und loggen Sie sich dann ein.')
+      await navigateTo('/')
+    }
     
   } catch (error: any) {
     console.error('❌ Registration failed:', error)
@@ -805,24 +1091,347 @@ const submitRegistration = async () => {
   }
 }
 
-// Load categories from database
-onMounted(async () => {
+// Load categories from database with service-specific pricing
+const loadCategories = async () => {
   try {
-    const { data: categories } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order')
+    // Get tenant context from URL parameter or current tenant
+    const { currentTenant, tenantId } = useTenant()
+    const activeTenantId = tenantId.value || currentTenant.value?.id
     
-    if (categories) {
-      availableCategories.value = categories.map(cat => ({
+    console.log('🏢 Loading categories for tenant:', activeTenantId || 'fallback')
+    console.log('🔍 Loading categories from database for service:', serviceType.value)
+    
+    let categories, categoriesError
+    
+    if (activeTenantId) {
+      // Load tenant-specific categories first
+      const { data: tenantCategories, error: tenantError } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('tenant_id', activeTenantId)
+        .eq('is_active', true)
+        .order('code')
+      
+      categories = tenantCategories
+      categoriesError = tenantError
+      
+      console.log('🏢 Loaded tenant-specific categories:', categories?.length || 0)
+    } else {
+      // Fallback: Load global categories (tenant_id = null)
+      const { data: globalCategories, error: globalError } = await supabase
+        .from('categories')
+        .select('*')
+        .is('tenant_id', null)
+        .eq('is_active', true)
+        .order('code')
+      
+      categories = globalCategories
+      categoriesError = globalError
+      
+      console.log('🌐 Loaded global categories:', categories?.length || 0)
+    }
+    
+    // Use fallback only if DB loading failed
+    let finalCategories
+    if (categoriesError || !categories || categories.length === 0) {
+      console.warn('⚠️ Could not load categories from DB, using fallback:', categoriesError?.message || 'No categories found')
+      finalCategories = [
+        { code: 'B', name: 'Auto', description: 'Personenwagen', price_per_lesson: 95, display_order: 1 },
+        { code: 'A', name: 'Motorrad', description: 'Motorrad', price_per_lesson: 95, display_order: 2 },
+        { code: 'BE', name: 'Auto + Anhänger', description: 'Personenwagen mit Anhänger', price_per_lesson: 120, display_order: 3 },
+        { code: 'C', name: 'LKW', description: 'Lastwagen', price_per_lesson: 170, display_order: 4 },
+        { code: 'CE', name: 'LKW + Anhänger', description: 'Lastwagen mit Anhänger', price_per_lesson: 200, display_order: 5 },
+        { code: 'D', name: 'Bus', description: 'Autobus', price_per_lesson: 200, display_order: 6 },
+        { code: 'BPT', name: 'Berufspersonentransport', description: 'Berufspersonentransport', price_per_lesson: 100, display_order: 7 }
+      ]
+    } else {
+      console.log('✅ Loaded categories from DB:', categories.length)
+      finalCategories = categories
+    }
+    
+    // Load pricing rules for the specific service type
+    let pricingRules = null
+    if (serviceType.value === 'fahrlektion') {
+      console.log('🔍 Loading driving lesson pricing rules (base_price) for tenant:', activeTenantId || 'global')
+      
+      let basePriceRules, basePriceError
+      
+      if (activeTenantId) {
+        // Try to load tenant-specific pricing rules first
+        const { data: tenantRules, error: tenantError } = await supabase
+          .from('pricing_rules')
+          .select('*')
+          .eq('rule_type', 'base_price')
+          .eq('tenant_id', activeTenantId)
+          .eq('is_active', true)
+        
+        if (tenantRules && tenantRules.length > 0) {
+          basePriceRules = tenantRules
+          basePriceError = tenantError
+          console.log('🏢 Using tenant-specific pricing rules:', basePriceRules.length)
+        } else {
+          // Fallback to global rules
+          const { data: globalRules, error: globalError } = await supabase
+            .from('pricing_rules')
+            .select('*')
+            .eq('rule_type', 'base_price')
+            .is('tenant_id', null)
+            .eq('is_active', true)
+          
+          basePriceRules = globalRules
+          basePriceError = globalError
+          console.log('🌐 Using global pricing rules as fallback:', basePriceRules?.length || 0)
+        }
+      } else {
+        // Load global rules directly
+        const { data: globalRules, error: globalError } = await supabase
+          .from('pricing_rules')
+          .select('*')
+          .eq('rule_type', 'base_price')
+          .is('tenant_id', null)
+          .eq('is_active', true)
+        
+        basePriceRules = globalRules
+        basePriceError = globalError
+        console.log('🌐 Loading global pricing rules:', basePriceRules?.length || 0)
+      }
+      
+      if (basePriceError) {
+        console.error('❌ Error loading base price rules:', basePriceError)
+      } else {
+        console.log('✅ Loaded global base price rules:', basePriceRules?.length || 0)
+        if (basePriceRules && basePriceRules.length > 0) {
+          console.log('📊 Base price rules details:', basePriceRules.map(r => ({
+            category_code: r.category_code,
+            price_per_minute_rappen: r.price_per_minute_rappen,
+            base_duration_minutes: r.base_duration_minutes,
+            tenant_id: r.tenant_id
+          })))
+        } else {
+          console.log('⚠️ No global base price rules found - checking what exists...')
+          // Debug: Check all base_price rules
+          const { data: debugRules } = await supabase
+            .from('pricing_rules')
+            .select('rule_type, category_code, tenant_id, is_active')
+            .eq('rule_type', 'base_price')
+          console.log('🔍 All base_price rules in DB:', debugRules)
+        }
+      }
+      pricingRules = basePriceRules
+    } else if (serviceType.value === 'theorie') {
+      console.log('🔍 Loading theory pricing rules for tenant:', activeTenantId || 'global')
+      
+      let theoryRules, theoryError
+      
+      if (activeTenantId) {
+        // Try to load tenant-specific theory rules first
+        const { data: tenantRules, error: tenantErr } = await supabase
+          .from('pricing_rules')
+          .select('*')
+          .eq('rule_type', 'theory')
+          .eq('tenant_id', activeTenantId)
+          .eq('is_active', true)
+        
+        if (tenantRules && tenantRules.length > 0) {
+          theoryRules = tenantRules
+          theoryError = tenantErr
+          console.log('🏢 Using tenant-specific theory rules:', theoryRules.length)
+        } else {
+          // Fallback to global rules
+          const { data: globalRules, error: globalErr } = await supabase
+            .from('pricing_rules')
+            .select('*')
+            .eq('rule_type', 'theory')
+            .is('tenant_id', null)
+            .eq('is_active', true)
+          
+          theoryRules = globalRules
+          theoryError = globalErr
+          console.log('🌐 Using global theory rules as fallback:', theoryRules?.length || 0)
+        }
+      } else {
+        // Load global rules directly
+        const { data: globalRules, error: globalErr } = await supabase
+          .from('pricing_rules')
+          .select('*')
+          .eq('rule_type', 'theory')
+          .is('tenant_id', null)
+          .eq('is_active', true)
+        
+        theoryRules = globalRules
+        theoryError = globalErr
+        console.log('🌐 Loading global theory rules:', theoryRules?.length || 0)
+      }
+      
+      if (theoryError) {
+        console.error('❌ Error loading theory rules:', theoryError)
+      } else {
+        console.log('✅ Loaded global theory rules:', theoryRules?.length || 0)
+        if (theoryRules && theoryRules.length > 0) {
+          console.log('📊 Theory rules details:', theoryRules.map(r => ({
+            category_code: r.category_code,
+            price_per_minute_rappen: r.price_per_minute_rappen,
+            base_duration_minutes: r.base_duration_minutes,
+            tenant_id: r.tenant_id
+          })))
+        } else {
+          console.log('⚠️ No global theory rules found - checking what exists...')
+          // Debug: Check all theory rules
+          const { data: debugRules } = await supabase
+            .from('pricing_rules')
+            .select('rule_type, category_code, tenant_id, is_active')
+            .eq('rule_type', 'theory')
+          console.log('🔍 All theory rules in DB:', debugRules)
+        }
+      }
+      pricingRules = theoryRules
+    } else if (serviceType.value === 'beratung') {
+      console.log('🔍 Loading consultation pricing rules for tenant:', activeTenantId || 'global')
+      
+      let consultationRules, consultationError
+      
+      if (activeTenantId) {
+        // Try to load tenant-specific consultation rules first
+        const { data: tenantRules, error: tenantErr } = await supabase
+          .from('pricing_rules')
+          .select('*')
+          .eq('rule_type', 'consultation')
+          .eq('tenant_id', activeTenantId)
+          .eq('is_active', true)
+        
+        if (tenantRules && tenantRules.length > 0) {
+          consultationRules = tenantRules
+          consultationError = tenantErr
+          console.log('🏢 Using tenant-specific consultation rules:', consultationRules.length)
+        } else {
+          // Fallback to global rules
+          const { data: globalRules, error: globalErr } = await supabase
+            .from('pricing_rules')
+            .select('*')
+            .eq('rule_type', 'consultation')
+            .is('tenant_id', null)
+            .eq('is_active', true)
+          
+          consultationRules = globalRules
+          consultationError = globalErr
+          console.log('🌐 Using global consultation rules as fallback:', consultationRules?.length || 0)
+        }
+      } else {
+        // Load global rules directly
+        const { data: globalRules, error: globalErr } = await supabase
+          .from('pricing_rules')
+          .select('*')
+          .eq('rule_type', 'consultation')
+          .is('tenant_id', null)
+          .eq('is_active', true)
+        
+        consultationRules = globalRules
+        consultationError = globalErr
+        console.log('🌐 Loading global consultation rules:', consultationRules?.length || 0)
+      }
+      
+      if (consultationError) {
+        console.error('❌ Error loading consultation rules:', consultationError)
+      } else {
+        console.log('✅ Loaded global consultation rules:', consultationRules?.length || 0)
+        if (consultationRules && consultationRules.length > 0) {
+          console.log('📊 Consultation rules details:', consultationRules.map(r => ({
+            category_code: r.category_code,
+            price_per_minute_rappen: r.price_per_minute_rappen,
+            base_duration_minutes: r.base_duration_minutes,
+            tenant_id: r.tenant_id
+          })))
+        } else {
+          console.log('⚠️ No global consultation rules found - checking what exists...')
+          // Debug: Check all consultation rules
+          const { data: debugRules } = await supabase
+            .from('pricing_rules')
+            .select('rule_type, category_code, tenant_id, is_active')
+            .eq('rule_type', 'consultation')
+          console.log('🔍 All consultation rules in DB:', debugRules)
+        }
+      }
+      pricingRules = consultationRules
+    }
+    
+    // Map categories with service-specific pricing
+    console.log('🗂️ Mapping categories for service:', serviceType.value, 'Categories:', finalCategories.length, 'Pricing rules:', pricingRules?.length || 0)
+    
+    availableCategories.value = finalCategories.map(cat => {
+      // All services now use pricing rules - no more price_per_lesson column
+      let price = 95 // Fallback
+      
+      // Find matching pricing rule for this category
+      if (pricingRules) {
+        const rule = pricingRules.find(r => r.category_code === cat.code)
+        if (rule) {
+          const calculatedPrice = (rule.price_per_minute_rappen * rule.base_duration_minutes) / 100 // Convert to CHF
+          price = Math.round(calculatedPrice) // Apply rounding like in admin interface
+          console.log(`💰 Found pricing rule for ${cat.code} (${serviceType.value}):`, {
+            rule_type: rule.rule_type,
+            price_per_minute_rappen: rule.price_per_minute_rappen,
+            base_duration_minutes: rule.base_duration_minutes,
+            calculated_price_raw: calculatedPrice,
+            calculated_price_rounded: price
+          })
+        } else {
+          console.log(`⚠️ No pricing rule found for category: ${cat.code} (service: ${serviceType.value})`)
+        }
+      } else {
+        console.log(`⚠️ No pricing rules loaded for service: ${serviceType.value}`)
+      }
+      
+      const result = {
         code: cat.code || cat.name,
         name: cat.description || cat.name,
-        price: cat.price_per_lesson || 95
-      }))
-    }
+        price: price
+      }
+      
+      console.log(`📋 Mapped category ${cat.code}:`, result)
+      return result
+    })
+    
+    console.log('✅ Final available categories:', availableCategories.value)
   } catch (error) {
     console.error('Error loading categories:', error)
+  }
+}
+
+// Load categories on mount and when service type changes
+onMounted(async () => {
+  // Pre-fill form data for admin registration
+  if (roleParam.value === 'admin') {
+    formData.value.firstName = prefilledData.value.first_name || ''
+    formData.value.lastName = prefilledData.value.last_name || ''
+    formData.value.email = prefilledData.value.email || ''
+    formData.value.phone = prefilledData.value.phone || ''
+  }
+  
+  // Load tenant if tenant parameter is provided
+  if (tenantParam.value) {
+    console.log('🏢 Loading tenant from URL parameter:', tenantParam.value)
+    await loadTenant(tenantParam.value)
+  } else if (route.query.tenant) {
+    console.log('🏢 Loading tenant from route query:', route.query.tenant)
+    await loadTenant(route.query.tenant as string)
+  }
+  
+  loadCategories()
+})
+
+// Watch for service type changes and reload categories (only on actual changes, not initial value)
+watch(serviceType, (newValue, oldValue) => {
+  if (oldValue !== undefined && newValue !== oldValue) {
+    console.log('🔄 Service type changed from', oldValue, 'to', newValue, '- reloading categories')
+    loadCategories()
+  }
+})
+
+// Watch for tenant changes and reload categories
+watch(() => tenantParam.value, (newTenant, oldTenant) => {
+  if (oldTenant !== undefined && newTenant !== oldTenant && newTenant) {
+    console.log('🏢 Tenant changed from', oldTenant, 'to', newTenant, '- reloading categories')
+    loadCategories()
   }
 })
 </script>

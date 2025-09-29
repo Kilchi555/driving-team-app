@@ -89,11 +89,25 @@ const getLastStudentDuration = async (studentId: string): Promise<number | null>
   try {
     const supabase = getSupabase()
     
-    // Suche nach dem letzten Termin des Schülers
+    // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+    
+    // ✅ TENANT-GEFILTERTE Suche nach dem letzten Termin des Schülers
     const { data: lastAppointment, error } = await supabase
       .from('appointments')
       .select('duration_minutes')
       .eq('user_id', studentId)
+      .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
       .order('start_time', { ascending: false })
       .limit(1)
       .single()
@@ -150,12 +164,37 @@ const formattedDurations = computed(() => {
     return isNaN(num) ? 45 : num
   }).filter(d => d > 0)
   
-  const result = durations.map(duration => ({
-    value: duration,
-    label: duration >= 120 
-      ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
-      : `${duration}min`
-  }))
+  const result = durations.map(duration => {
+    let label: string
+    
+    if (duration >= 120) {
+      const hours = Math.floor(duration / 60)
+      const minutes = duration % 60
+      
+      if (minutes > 0) {
+        label = `${hours}h ${minutes}min`
+      } else {
+        label = `${hours}h`
+      }
+    } else {
+      label = `${duration}min`
+    }
+    
+    // ✅ DEBUG: Log specific durations to identify the issue
+    if (duration === 135) {
+      console.log('🔍 DEBUG 135min formatting:', {
+        duration,
+        hours: Math.floor(duration / 60),
+        minutes: duration % 60,
+        label
+      })
+    }
+    
+    return {
+      value: duration,
+      label
+    }
+  })
   
   console.log('🔄 formattedDurations computed:', {
     availableDurations: props.availableDurations,

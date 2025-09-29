@@ -2,6 +2,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 let supabaseInstance: SupabaseClient | null = null
+let supabaseAdminInstance: SupabaseClient | null = null
 
 export const getSupabase = (): SupabaseClient => {
   if (!supabaseInstance) {
@@ -52,6 +53,29 @@ export const getSupabase = (): SupabaseClient => {
     })
   }
   return supabaseInstance
+}
+
+// Server-side admin client (uses service role to bypass RLS for trusted jobs)
+export const getSupabaseAdmin = (): SupabaseClient => {
+  if (!process.server) {
+    throw new Error('getSupabaseAdmin can only be used on the server')
+  }
+  if (!supabaseAdminInstance) {
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceKey) {
+      console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY for admin client')
+      throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY')
+    }
+    supabaseAdminInstance = createClient(supabaseUrl, serviceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false
+      }
+    })
+  }
+  return supabaseAdminInstance
 }
 
 export default getSupabase

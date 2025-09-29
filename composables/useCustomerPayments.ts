@@ -25,17 +25,18 @@ export const useCustomerPayments = () => {
     try {
       isLoading.value = true
       
-      // Get user data from users table
+      // Get user data from users table with tenant_id
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, auth_user_id')
+        .select('id, auth_user_id, tenant_id')
         .eq('auth_user_id', currentUser.value.id)
         .single()
       
       if (userError) throw userError
       if (!userData) throw new Error('User nicht in Datenbank gefunden')
+      if (!userData.tenant_id) throw new Error('User has no tenant assigned')
 
-      console.log('🔍 Loading payments for user:', userData.id)
+      console.log('🔍 Loading payments for user:', userData.id, 'tenant:', userData.tenant_id)
       console.log('🔍 Current auth user ID:', currentUser.value?.id)
       console.log('🔍 User table auth_user_id:', userData.auth_user_id)
 
@@ -44,7 +45,7 @@ export const useCustomerPayments = () => {
 
       // 1. Lade alle payments für diesen User (nur für nicht gelöschte Termine)
       try {
-        // ✅ Lade alle payments für den User (sowohl mit interner ID als auch Auth-ID)
+        // ✅ Lade alle payments für den User mit Tenant-Filter
         const { data: paymentsData, error: paymentsError } = await supabase
           .from('payments')
           .select(`
@@ -63,12 +64,14 @@ export const useCustomerPayments = () => {
             payment_status,
             paid_at,
             description,
-            metadata
+            metadata,
+            tenant_id
           `)
+          .eq('tenant_id', userData.tenant_id) // Filter by tenant
           .or(`user_id.eq.${userData.id},user_id.eq.${currentUser.value.id}`)
           .order('created_at', { ascending: false })
 
-        console.log('🔍 Searching payments with user_id:', userData.id, 'OR', currentUser.value.id)
+        console.log('🔍 Searching payments with user_id:', userData.id, 'tenant:', userData.tenant_id)
 
         if (paymentsError) {
           console.warn('⚠️ Error loading payments:', paymentsError)

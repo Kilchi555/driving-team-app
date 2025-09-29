@@ -7,7 +7,7 @@
         <div class="bg-white rounded-t-xl shadow-2xl">
           <div class="bg-gray-200 text-gray-700 p-4 md:p-6 rounded-t-xl">
             <div class="text-center">
-              <img src="public/images/Driving_Team_Logo.png" class="h-10 md:h-12 w-auto mx-auto mb-2 md:mb-3" alt="Driving Team">
+              <LoadingLogo size="lg" class="mx-auto mb-2 md:mb-3" />
               <h1 class="text-xl md:text-2xl font-bold">Shop</h1>
             </div>
           </div>
@@ -483,10 +483,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { navigateTo } from '#app'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { navigateTo, useRoute } from '#app'
 import { definePageMeta } from '#imports'
 import { useAutoSave } from '~/composables/useAutoSave'
+import { useTenant } from '~/composables/useTenant'
+
+const route = useRoute()
+const { loadTenant, tenantSlug } = useTenant()
+
+// Get tenant from URL parameter
+const tenantParam = ref(route.query.tenant as string || '')
+
+// Watch for route changes to update tenant
+watch(() => route.query.tenant, (newTenant) => {
+  if (newTenant && newTenant !== tenantParam.value) {
+    tenantParam.value = newTenant as string
+    console.log('🏢 Shop - Tenant updated from URL:', tenantParam.value)
+    loadTenant(tenantParam.value)
+  }
+}, { immediate: true })
 
 // Components
 import VoucherProductSelector from '~/components/VoucherProductSelector.vue'
@@ -655,10 +671,14 @@ const previousStep = () => {
 
 // Methods
 const goBack = () => {
+  const tenant = tenantParam.value || tenantSlug.value || 'driving-team'
+  const url = `/auswahl?tenant=${tenant}`
+  console.log('🔙 Shop - Going back to:', url)
+  
   if (typeof navigateTo !== 'undefined') {
-    navigateTo('/auswahl')
+    navigateTo(url)
   } else {
-    window.location.href = '/auswahl'
+    window.location.href = url
   }
 }
 
@@ -1183,7 +1203,16 @@ defineExpose({
 })
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
+  // Load tenant if tenant parameter is provided
+  if (tenantParam.value) {
+    console.log('🏢 Shop - Loading tenant from URL parameter:', tenantParam.value)
+    await loadTenant(tenantParam.value)
+  } else if (route.query.tenant) {
+    console.log('🏢 Shop - Loading tenant from route query:', route.query.tenant)
+    await loadTenant(route.query.tenant as string)
+  }
+  
   // Produkte direkt beim Laden der Seite laden
   console.log('🛍️ Shop mounted - Step-by-step process started')
   loadProducts()

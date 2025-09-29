@@ -24,7 +24,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-8">
-        <LoadingLogo size="lg" />
+        <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
       </div>
 
       <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-6">

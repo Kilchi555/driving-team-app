@@ -21,14 +21,13 @@ export const toLocalTimeString = (date: Date): string => {
 
 /**
  * Formatiert ein Datum als lokale Zeit (de-CH)
- * Wichtig: Zeiten sind bereits als lokale Zeiten in der DB gespeichert
- * Keine Zeitzonenkonvertierung durchführen
+ * Konvertiert UTC-Zeiten zu lokaler Zeit für die Anzeige
  */
 export const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Kein Datum'
   
   try {
-    // Kein Z hinzufügen, da die Zeiten bereits lokal sind
+    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
     // Prüfe ob das Datum gültig ist
@@ -49,14 +48,13 @@ export const formatDate = (dateString: string | null | undefined): string => {
 
 /**
  * Formatiert eine Zeit als lokale Zeit (de-CH)
- * Wichtig: Zeiten sind bereits als lokale Zeiten in der DB gespeichert
- * Keine Zeitzonenkonvertierung durchführen
+ * Konvertiert UTC-Zeiten zu lokaler Zeit für die Anzeige
  */
 export const formatTime = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Keine Zeit'
   
   try {
-    // Kein Z hinzufügen, da die Zeiten bereits lokal sind
+    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
     // Prüfe ob das Datum gültig ist
@@ -76,12 +74,13 @@ export const formatTime = (dateString: string | null | undefined): string => {
 
 /**
  * Formatiert Datum und Zeit zusammen
+ * Konvertiert UTC-Zeiten zu lokaler Zeit für die Anzeige
  */
 export const formatDateTime = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Kein Datum/Zeit'
   
   try {
-    // Kein Z hinzufügen, da die Zeiten bereits lokal sind
+    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
     // Prüfe ob das Datum gültig ist
@@ -89,7 +88,14 @@ export const formatDateTime = (dateString: string | null | undefined): string =>
       return 'Ungültiges Datum/Zeit'
     }
     
-    return `${formatDate(dateString)} ${formatTime(dateString)}`
+    // Format als lokale Zeit (de-CH)
+    return date.toLocaleDateString('de-CH', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   } catch (error) {
     console.warn('Error formatting dateTime:', dateString, error)
     return 'Datum/Zeit Fehler'
@@ -97,14 +103,14 @@ export const formatDateTime = (dateString: string | null | undefined): string =>
 }
 
 /**
- * Erstellt ein Date-Objekt aus einem lokalen Zeitstring
- * Wichtig: Zeiten sind bereits als lokale Zeiten in der DB gespeichert
+ * Erstellt ein Date-Objekt aus einem Zeitstring
+ * Konvertiert UTC-Zeiten zu lokaler Zeit
  */
 export const createLocalDate = (dateString: string | null | undefined): Date | null => {
   if (!dateString) return null
   
   try {
-    // Kein Z hinzufügen, da die Zeiten bereits lokal sind
+    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
     // Prüfe ob das Datum gültig ist
@@ -121,12 +127,13 @@ export const createLocalDate = (dateString: string | null | undefined): Date | n
 
 /**
  * Formatiert ein Datum mit Monat und Jahr (de-CH)
+ * Konvertiert UTC-Zeiten zu lokaler Zeit für die Anzeige
  */
 export const formatMonthYear = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Kein Datum'
   
   try {
-    // Kein Z hinzufügen, da die Zeiten bereits lokal sind
+    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
     // Prüfe ob das Datum gültig ist
@@ -146,12 +153,13 @@ export const formatMonthYear = (dateString: string | null | undefined): string =
 
 /**
  * Formatiert ein Datum mit Monat, Tag und Jahr (de-CH)
+ * Konvertiert UTC-Zeiten zu lokaler Zeit für die Anzeige
  */
 export const formatMonthDayYear = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Kein Datum'
   
   try {
-    // Kein Z hinzufügen, da die Zeiten bereits lokal sind
+    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
     // Prüfe ob das Datum gültig ist
@@ -171,11 +179,13 @@ export const formatMonthDayYear = (dateString: string | null | undefined): strin
 
 /**
  * Formatiert ein Datum kurz (de-CH)
+ * Konvertiert UTC-Zeiten zu lokaler Zeit für die Anzeige
  */
 export const formatDateShort = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Kein Datum'
   
   try {
+    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
     if (isNaN(date.getTime())) {
@@ -195,11 +205,13 @@ export const formatDateShort = (dateString: string | null | undefined): string =
 
 /**
  * Formatiert eine Zeit kurz (de-CH)
+ * Konvertiert UTC-Zeiten zu lokaler Zeit für die Anzeige
  */
 export const formatTimeShort = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Keine Zeit'
   
   try {
+    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
     if (isNaN(date.getTime())) {

@@ -93,8 +93,13 @@
         </div>
       </div>
 
+      <!-- Loading State -->
+      <div v-if="isLoading" class="bg-white shadow rounded-lg">
+        <SkeletonLoader type="table" :columns="6" :rows="3" />
+      </div>
+
       <!-- Experten Liste -->
-      <div class="bg-white shadow rounded-lg">
+      <div v-else class="bg-white shadow rounded-lg">
         <div class="px-4 py-3 border-b border-gray-200">
           <h3 class="text-base font-medium text-gray-900">Alle Experten</h3>
         </div>
@@ -105,12 +110,6 @@
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Experte
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Code
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Spezialisierungen
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Bewertung
@@ -142,28 +141,6 @@
                         {{ examiner.contact_info?.email || 'Keine E-Mail' }}
                       </div>
                     </div>
-                  </div>
-                </td>
-                
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span v-if="examiner.examiner_code" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {{ examiner.examiner_code }}
-                  </span>
-                  <span v-else class="text-gray-400 text-sm">-</span>
-                </td>
-                
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex flex-wrap gap-1">
-                    <span 
-                      v-for="category in examiner.specializations" 
-                      :key="category"
-                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                    >
-                      {{ category }}
-                    </span>
-                    <span v-if="!examiner.specializations || examiner.specializations.length === 0" class="text-gray-400 text-sm">
-                      Keine
-                    </span>
                   </div>
                 </td>
                 
@@ -256,10 +233,6 @@
             <input v-model="formData.last_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
           </div>
           
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Experten-Code</label>
-            <input v-model="formData.examiner_code" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="z.B. EXP001">
-          </div>
           
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
@@ -271,20 +244,6 @@
             <input v-model="formData.phone" type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
           
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Spezialisierungen</label>
-            <div class="flex flex-wrap gap-2">
-              <label v-for="category in availableCategories" :key="category" class="flex items-center">
-                <input 
-                  type="checkbox" 
-                  :value="category" 
-                  v-model="formData.specializations"
-                  class="mr-2 text-blue-600"
-                >
-                <span class="text-sm">{{ category }}</span>
-              </label>
-            </div>
-          </div>
         </div>
         
         <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
@@ -303,6 +262,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import SkeletonLoader from '~/components/SkeletonLoader.vue'
 
 // Configure page meta for admin layout
 definePageMeta({
@@ -320,14 +280,10 @@ const editingExaminer = ref<any>(null)
 const formData = ref({
   first_name: '',
   last_name: '',
-  examiner_code: '',
   email: '',
-  phone: '',
-  specializations: [] as string[]
+  phone: ''
 })
 
-// Available categories
-const availableCategories = ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT']
 
 // Computed
 const totalExaminers = computed(() => examiners.value.length)
@@ -352,7 +308,22 @@ const loadExaminers = async () => {
   try {
     const supabase = getSupabase()
     
-    // Load examiners with their average ratings
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+    console.log('🔍 Loading examiners for tenant:', userProfile.tenant_id)
+    
+    // Load examiners with their average ratings (filtered by tenant)
     const { data, error } = await supabase
       .from('examiners')
       .select(`
@@ -361,6 +332,7 @@ const loadExaminers = async () => {
           examiner_behavior_rating
         )
       `)
+      .eq('tenant_id', userProfile.tenant_id)
       .order('last_name')
     
     if (error) throw error
@@ -395,10 +367,8 @@ const editExaminer = (examiner: any) => {
   formData.value = {
     first_name: examiner.first_name,
     last_name: examiner.last_name,
-    examiner_code: examiner.examiner_code || '',
     email: examiner.contact_info?.email || '',
-    phone: examiner.contact_info?.phone || '',
-    specializations: [...(examiner.specializations || [])]
+    phone: examiner.contact_info?.phone || ''
   }
 }
 
@@ -412,10 +382,8 @@ const resetForm = () => {
   formData.value = {
     first_name: '',
     last_name: '',
-    examiner_code: '',
     email: '',
-    phone: '',
-    specializations: []
+    phone: ''
   }
 }
 
@@ -428,15 +396,26 @@ const saveExaminer = async () => {
   try {
     const supabase = getSupabase()
     
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+    
     const examinerData = {
       first_name: formData.value.first_name.trim(),
       last_name: formData.value.last_name.trim(),
-      examiner_code: formData.value.examiner_code.trim() || null,
       contact_info: {
         email: formData.value.email.trim() || null,
         phone: formData.value.phone.trim() || null
-      },
-      specializations: formData.value.specializations.length > 0 ? formData.value.specializations : null
+      }
     }
     
     if (editingExaminer.value) {
@@ -445,6 +424,7 @@ const saveExaminer = async () => {
         .from('examiners')
         .update(examinerData)
         .eq('id', editingExaminer.value.id)
+        .eq('tenant_id', userProfile.tenant_id) // Ensure tenant can only update their own examiners
       
       if (error) throw error
       
@@ -454,6 +434,7 @@ const saveExaminer = async () => {
         .from('examiners')
         .insert({
           ...examinerData,
+          tenant_id: userProfile.tenant_id,
           is_active: true
         })
       
@@ -473,10 +454,24 @@ const toggleExaminerStatus = async (examiner: any) => {
   try {
     const supabase = getSupabase()
     
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+    
     const { error } = await supabase
       .from('examiners')
       .update({ is_active: !examiner.is_active })
       .eq('id', examiner.id)
+      .eq('tenant_id', userProfile.tenant_id) // Ensure tenant can only toggle their own examiners
     
     if (error) throw error
     
@@ -489,7 +484,11 @@ const toggleExaminerStatus = async (examiner: any) => {
 }
 
 // Lifecycle
+// Load data immediately when component is created (not waiting for mount)
+loadExaminers()
+
 onMounted(() => {
-  loadExaminers()
+  // Page is already displayed, data loads in background
+  console.log('👨‍🏫 Examiners page mounted, data loading in background')
 })
 </script>

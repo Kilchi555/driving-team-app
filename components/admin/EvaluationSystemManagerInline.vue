@@ -33,6 +33,21 @@
               <p class="text-sm text-gray-600">Bewertungskriterien für {{ drivingCat.name }}</p>
             </div>
             <div class="flex space-x-2">
+              <!-- Load Standards Button (only show if no tenant-specific categories exist) -->
+              <button
+                v-if="filteredEvaluationCategories.length === 0 && evaluationCategories.length === 0"
+                @click="loadStandardEvaluationCategories"
+                :disabled="isLoadingStandards"
+                class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg v-if="isLoadingStandards" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                {{ isLoadingStandards ? 'Lade Standards...' : 'Standard-Templates laden' }}
+              </button>
               <button
                 @click="showAddCategoryModal = true"
                 class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -51,7 +66,7 @@
 
         <!-- Kategorien und Kriterien für diese Fahrkategorie -->
         <div class="space-y-4">
-          <template v-for="category in evaluationCategories" :key="category.id">
+          <template v-for="category in filteredEvaluationCategories" :key="category.id">
             <!-- Kategorie-Header -->
             <div class="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 hover:border-blue-300 border border-transparent transition-all"
                  @click="editCategory(category)">
@@ -208,12 +223,29 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Bewertungsskala</h3>
             <p class="text-sm text-gray-600">Verwalten Sie die Bewertungsstufen und deren Labels</p>
           </div>
-          <button
-            @click="showAddScaleModal = true"
-            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            + Bewertungsstufe hinzufügen
-          </button>
+          <div class="flex space-x-2">
+            <!-- Load Standards Button (only show if no tenant-specific scale exists) -->
+            <button
+              v-if="scale.length === 0"
+              @click="loadStandardEvaluationScale"
+              :disabled="isLoadingStandards"
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg v-if="isLoadingStandards" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              {{ isLoadingStandards ? 'Lade Standards...' : 'Standard-Skala laden' }}
+            </button>
+            <button
+              @click="showAddScaleModal = true"
+              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              + Bewertungsstufe hinzufügen
+            </button>
+          </div>
         </div>
       </div>
       
@@ -710,6 +742,7 @@ const showAddCategoryModal = ref(false)
 const showAddCriteriaModal = ref(false)
 const showAddScaleModal = ref(false)
 const showInlineAddCriteria = ref<string | null>(null)
+const isLoadingStandards = ref(false)
 
 const editingCategory = ref<EvaluationCategory | null>(null)
 const editingCriteria = ref<Criteria | null>(null)
@@ -759,44 +792,387 @@ const tabs = computed(() => {
   return [...baseTabs, ...drivingCategoryTabs]
 })
 
+// Get current driving category from active tab
+const currentDrivingCategory = computed(() => {
+  if (!activeTab.value.startsWith('category-')) return null
+  const categoryCode = activeTab.value.replace('category-', '')
+  return drivingCategories.value.find(dc => dc.code === categoryCode)
+})
+
+// Get evaluation categories filtered by current driving category
+const filteredEvaluationCategories = computed(() => {
+  console.log('🔍 filteredEvaluationCategories - currentDrivingCategory:', currentDrivingCategory.value)
+  console.log('🔍 filteredEvaluationCategories - evaluationCategories:', evaluationCategories.value.length)
+  
+  if (!currentDrivingCategory.value) {
+    console.log('🔍 filteredEvaluationCategories - no driving category, returning all:', evaluationCategories.value.length)
+    return evaluationCategories.value
+  }
+  
+  // If driving_categories column doesn't exist, return all categories
+  const filtered = evaluationCategories.value.filter(category => {
+    if (!category.driving_categories) return true
+    return category.driving_categories.includes(currentDrivingCategory.value!.code)
+  })
+  
+  console.log('🔍 filteredEvaluationCategories - filtered result:', filtered.length)
+  return filtered
+})
+
+// Get evaluation criteria filtered by current driving category
+const filteredEvaluationCriteria = computed(() => {
+  if (!currentDrivingCategory.value) return criteria.value
+  
+  // If driving_categories column doesn't exist, return all criteria
+  return criteria.value.filter(criterion => {
+    if (!criterion.driving_categories) return true
+    return criterion.driving_categories.includes(currentDrivingCategory.value!.code)
+  })
+})
+
 // Methods
 const loadData = async () => {
   try {
-    // Load evaluation categories
-    const { data: evalCatData } = await supabase
-      .from('evaluation_categories')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order')
-    evaluationCategories.value = evalCatData || []
+    // Get current user's tenant_id first
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
 
-    // Load driving categories
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+    console.log('🔍 Loading evaluation data for tenant:', userProfile.tenant_id)
+
+    // Load evaluation categories (filtered by tenant)
+    const { data: evalCatData, error: evalCatError } = await supabase
+      .from('evaluation_categories')
+      .select('id, name, description, color, display_order, is_active, tenant_id')
+      .eq('is_active', true)
+      .eq('tenant_id', userProfile.tenant_id)
+      .order('display_order')
+    
+    if (evalCatError) {
+      console.error('❌ Error loading evaluation categories:', evalCatError)
+      // Fallback: try without driving_categories column
+      const { data: evalCatDataFallback, error: evalCatErrorFallback } = await supabase
+        .from('evaluation_categories')
+        .select('id, name, description, color, display_order, is_active, tenant_id')
+        .eq('is_active', true)
+        .eq('tenant_id', userProfile.tenant_id)
+        .order('display_order')
+      
+      if (evalCatErrorFallback) {
+        console.error('❌ Fallback also failed:', evalCatErrorFallback)
+      } else {
+        evaluationCategories.value = evalCatDataFallback || []
+        console.log('📊 Loaded evaluation categories (fallback):', evalCatDataFallback?.length || 0, evalCatDataFallback)
+      }
+    } else {
+      evaluationCategories.value = evalCatData || []
+      console.log('📊 Loaded evaluation categories:', evalCatData?.length || 0, evalCatData)
+    }
+
+    console.log('🔍 Loading driving categories for tenant:', userProfile.tenant_id)
+
+    // Load driving categories (filtered by tenant)
     const { data: drivingCatData } = await supabase
       .from('categories')
       .select('*')
       .eq('is_active', true)
+      .eq('tenant_id', userProfile.tenant_id)
       .order('code')
     drivingCategories.value = drivingCatData || []
 
-    // Load criteria with driving categories
+    // Load criteria with driving categories (filtered by tenant through categories)
     const { data: critData } = await supabase
       .from('evaluation_criteria')
-      .select('*, driving_categories')
+      .select(`
+        id,
+        category_id,
+        name,
+        description,
+        display_order,
+        is_active,
+        driving_categories,
+        tenant_id,
+        evaluation_categories!inner(tenant_id)
+      `)
+      .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
       .order('display_order')
     criteria.value = critData || []
+    console.log('📊 Loaded evaluation criteria:', critData?.length || 0, critData)
 
-    // Load scale
+    // Load scale (filtered by tenant)
     const { data: scaleData } = await supabase
       .from('evaluation_scale')
-      .select('*')
+      .select('id, rating, label, description, color, is_active, tenant_id')
+      .eq('tenant_id', userProfile.tenant_id)
       .order('rating')
     scale.value = scaleData || []
+    console.log('📊 Loaded evaluation scale:', scaleData?.length || 0, scaleData)
   } catch (error) {
     console.error('Error loading data:', error)
   }
 }
 
+// Load standard evaluation scale for tenant
+const loadStandardEvaluationScale = async () => {
+  isLoadingStandards.value = true
+  
+  try {
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
 
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+    console.log('📥 Loading standard evaluation scale for tenant:', userProfile.tenant_id)
+
+    // Load global evaluation scale (tenant_id IS NULL)
+    const { data: globalScale, error: fetchError } = await supabase
+      .from('evaluation_scale')
+      .select('*')
+      .is('tenant_id', null)
+      .order('rating')
+
+    if (fetchError) throw fetchError
+
+    if (!globalScale || globalScale.length === 0) {
+      alert('Keine Standard-Bewertungsskala gefunden. Bitte wenden Sie sich an den Administrator.')
+      return
+    }
+
+    // Copy global scale to tenant
+    const { error: insertError } = await supabase
+      .from('evaluation_scale')
+      .insert(
+        globalScale.map(item => ({
+          rating: item.rating,
+          label: item.label,
+          description: item.description,
+          color: item.color,
+          is_active: item.is_active,
+          tenant_id: userProfile.tenant_id
+          // id and created_at will be auto-generated by the database
+        }))
+      )
+
+    if (insertError) throw insertError
+
+    console.log('✅ Standard evaluation scale copied for tenant:', userProfile.tenant_id)
+    
+    // Reload data to show the new scale
+    await loadData()
+    
+    alert('Standard-Bewertungsskala erfolgreich geladen!')
+    
+  } catch (error: any) {
+    console.error('❌ Error loading standard evaluation scale:', error)
+    alert(`Fehler beim Laden der Standard-Skala: ${error.message}`)
+  } finally {
+    isLoadingStandards.value = false
+  }
+}
+
+// Load standard evaluation categories and criteria for tenant
+const loadStandardEvaluationCategories = async () => {
+  isLoadingStandards.value = true
+  
+  try {
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+    console.log('📥 Loading standard evaluation categories for tenant:', userProfile.tenant_id)
+
+    // First check if tenant already has evaluation categories
+    const { data: existingCategories, error: checkError } = await supabase
+      .from('evaluation_categories')
+      .select('id')
+      .eq('tenant_id', userProfile.tenant_id)
+      .limit(1)
+
+    if (checkError) throw checkError
+
+    if (existingCategories && existingCategories.length > 0) {
+      const shouldOverwrite = confirm('Standard-Templates wurden bereits für diesen Tenant geladen. Möchten Sie sie überschreiben? (Achtung: Dies löscht alle vorhandenen Bewertungskategorien und -kriterien!)')
+      if (!shouldOverwrite) {
+        return
+      }
+      
+      // Delete existing categories and criteria for this tenant
+      console.log('🗑️ Deleting existing evaluation data for tenant:', userProfile.tenant_id)
+      
+      const { error: deleteCriteriaError } = await supabase
+        .from('evaluation_criteria')
+        .delete()
+        .eq('tenant_id', userProfile.tenant_id)
+      
+      if (deleteCriteriaError) throw deleteCriteriaError
+      
+      const { error: deleteCategoriesError } = await supabase
+        .from('evaluation_categories')
+        .delete()
+        .eq('tenant_id', userProfile.tenant_id)
+      
+      if (deleteCategoriesError) throw deleteCategoriesError
+      
+      console.log('✅ Existing evaluation data deleted')
+    }
+
+    // Load global evaluation categories (tenant_id IS NULL)
+    const { data: globalCategories, error: categoriesError } = await supabase
+      .from('evaluation_categories')
+      .select('*')
+      .is('tenant_id', null)
+      .order('display_order')
+
+    if (categoriesError) throw categoriesError
+
+    if (!globalCategories || globalCategories.length === 0) {
+      alert('Keine Standard-Bewertungskategorien gefunden. Bitte wenden Sie sich an den Administrator.')
+      return
+    }
+
+    // Load global evaluation criteria (tenant_id IS NULL)
+    const { data: globalCriteria, error: criteriaError } = await supabase
+      .from('evaluation_criteria')
+      .select('id, category_id, name, description, display_order, is_active, driving_categories, tenant_id')
+      .is('tenant_id', null)
+      .order('display_order')
+
+    if (criteriaError) throw criteriaError
+
+    // Copy categories to tenant
+    const categoryMapping: Record<string, string> = {}
+    
+    for (const category of globalCategories) {
+      const { data: newCategory, error: insertError } = await supabase
+        .from('evaluation_categories')
+        .insert({
+          name: category.name,
+          description: category.description,
+          color: category.color,
+          display_order: category.display_order,
+          driving_categories: category.driving_categories,
+          is_active: category.is_active,
+          tenant_id: userProfile.tenant_id
+        })
+        .select('id')
+        .single()
+
+      if (insertError) throw insertError
+      categoryMapping[category.id] = newCategory.id
+    }
+
+    // Copy criteria to tenant with new category IDs
+    if (globalCriteria && globalCriteria.length > 0) {
+      const criteriaToInsert = globalCriteria.map(criterion => ({
+        category_id: categoryMapping[criterion.category_id],
+        name: criterion.name,
+        description: criterion.description,
+        display_order: criterion.display_order,
+        is_active: criterion.is_active,
+        driving_categories: criterion.driving_categories || [],
+        tenant_id: userProfile.tenant_id
+      }))
+
+      const { error: insertError } = await supabase
+        .from('evaluation_criteria')
+        .insert(criteriaToInsert)
+
+      if (insertError) throw insertError
+    }
+
+    console.log('✅ Standard evaluation categories copied for tenant:', userProfile.tenant_id)
+    
+    // Reload data to show the new categories
+    await loadData()
+    
+    alert('Standard-Bewertungskategorien erfolgreich geladen!')
+    
+  } catch (error: any) {
+    console.error('❌ Error loading standard evaluation categories:', error)
+    alert(`Fehler beim Laden der Standard-Kategorien: ${error.message}`)
+  } finally {
+    isLoadingStandards.value = false
+  }
+}
+
+// Load evaluation data for specific driving category
+const loadEvaluationDataForCategory = async (drivingCategoryCode: string) => {
+  try {
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+    console.log('🔍 Loading evaluation data for driving category:', drivingCategoryCode, 'and tenant:', userProfile.tenant_id)
+
+    // Load evaluation categories that apply to this driving category
+    const { data: evalCatData, error: catError } = await supabase
+      .from('evaluation_categories')
+      .select('*')
+      .eq('is_active', true)
+      .eq('tenant_id', userProfile.tenant_id)
+      .contains('driving_categories', [drivingCategoryCode])
+      .order('display_order')
+
+    if (catError) throw catError
+
+    // Load evaluation criteria that apply to this driving category
+    const { data: critData, error: critError } = await supabase
+      .from('evaluation_criteria')
+      .select(`
+        *,
+        driving_categories,
+        evaluation_categories!inner(tenant_id)
+      `)
+      .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
+      .contains('driving_categories', [drivingCategoryCode])
+      .order('display_order')
+
+    if (critError) throw critError
+
+    return {
+      categories: evalCatData || [],
+      criteria: critData || []
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error loading evaluation data for category:', error)
+    throw error
+  }
+}
 
 // Category methods
 const editCategory = (category: EvaluationCategory) => {

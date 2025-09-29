@@ -49,18 +49,57 @@ export const useCategoryData = () => {
     try {
       console.log('🔄 Loading categories from database...')
       
+      // Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+      
       const { data, error } = await supabase
         .from('categories')
         .select('id, created_at, name, description, code, color, is_active, exam_duration_minutes, lesson_duration_minutes, theory_durations')
         .eq('is_active', true)
+        .eq('tenant_id', tenantId)
         .order('code', { ascending: true })
 
       if (error) throw error
 
-      allCategories.value = data || []
+      // ✅ CONVERT STRING VALUES TO NUMBERS
+      const processedData = (data || []).map(cat => ({
+        ...cat,
+        // Convert lesson_duration_minutes from string array to number array
+        lesson_duration_minutes: Array.isArray(cat.lesson_duration_minutes) 
+          ? cat.lesson_duration_minutes.map((d: any) => {
+              const num = parseInt(d.toString(), 10)
+              return isNaN(num) ? 45 : num
+            })
+          : cat.lesson_duration_minutes ? [parseInt(cat.lesson_duration_minutes.toString(), 10)] : [45],
+        
+        // Convert theory_durations from string array to number array  
+        theory_durations: Array.isArray(cat.theory_durations)
+          ? cat.theory_durations.map((d: any) => {
+              const num = parseInt(d.toString(), 10)
+              return isNaN(num) ? 45 : num
+            })
+          : cat.theory_durations ? [parseInt(cat.theory_durations.toString(), 10)] : [],
+        
+        // Convert exam_duration_minutes from string to number
+        exam_duration_minutes: cat.exam_duration_minutes 
+          ? parseInt(cat.exam_duration_minutes.toString(), 10) 
+          : 135
+      }))
+
+      allCategories.value = processedData
       isLoaded.value = true
       
-      console.log('✅ Categories loaded:', data?.length)
+      console.log('✅ Categories loaded and processed:', processedData.length)
       
     } catch (err: any) {
       console.error('❌ Error loading categories:', err)

@@ -354,7 +354,23 @@ const fetchUsersSummary = async () => {
   try {
     console.log('🔄 Loading users payment summary...')
     
-    // Lade alle aktiven Benutzer (außer Admins)
+    // Get current user's tenant_id first
+    const { data: currentUserData } = await supabase.auth.getUser()
+    if (!currentUserData?.user) throw new Error('Not authenticated')
+    
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUserData.user.id)
+      .single()
+    
+    if (profileError || !userProfile?.tenant_id) {
+      throw new Error('User has no tenant assigned')
+    }
+    
+    console.log('🔍 Loading users for tenant:', userProfile.tenant_id)
+    
+    // Lade nur Kunden/Schüler (keine Admins oder Staff) - FILTERED BY TENANT
     const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select(`
@@ -369,13 +385,14 @@ const fetchUsersSummary = async () => {
         is_active
       `)
       .eq('is_active', true)
-      .neq('role', 'admin')
+      .eq('role', 'client')
+      .eq('tenant_id', userProfile.tenant_id)
     
     if (usersError) {
       throw new Error(usersError.message)
     }
 
-    // ✅ GEÄNDERT: Lade alle Termine für alle Benutzer (nicht nur Payments)
+    // ✅ GEÄNDERT: Lade alle Termine für alle Benutzer (nicht nur Payments) - FILTERED BY TENANT
     const { data: appointmentsData, error: appointmentsError } = await supabase
       .from('appointments')
       .select(`
@@ -386,6 +403,7 @@ const fetchUsersSummary = async () => {
         status,
         created_at
       `)
+      .eq('tenant_id', userProfile.tenant_id)
       .order('start_time', { ascending: false })
 
     if (appointmentsError) {
@@ -393,7 +411,7 @@ const fetchUsersSummary = async () => {
       throw new Error(`Appointments error: ${appointmentsError.message}`)
     }
 
-    // ✅ Lade alle Payments für die Zahlungsinformationen
+    // ✅ Lade alle Payments für die Zahlungsinformationen - FILTERED BY TENANT
     const { data: paymentsData, error: paymentsError } = await supabase
       .from('payments')
       .select(`
@@ -404,6 +422,7 @@ const fetchUsersSummary = async () => {
         total_amount_rappen,
         description
       `)
+      .eq('tenant_id', userProfile.tenant_id)
 
     if (paymentsError) {
       console.error('❌ Error loading payments:', paymentsError)

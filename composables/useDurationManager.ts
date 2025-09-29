@@ -28,12 +28,26 @@ export const useDurationManager = () => {
     try {
       const supabase = getSupabase()
 
-      // NUR Staff Settings laden - KEINE Categories!
-      console.log('📋 Querying ONLY staff_settings...')
+      // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Nicht angemeldet')
+
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+      if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+      // ✅ TENANT-GEFILTERTE Staff Settings laden
+      console.log('📋 Querying staff_settings with tenant filter...')
       const { data: staffSettings, error: staffError } = await supabase
         .from('staff_settings')
         .select('preferred_durations')
         .eq('staff_id', staffId)
+        .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
         .maybeSingle()
 
       console.log('📋 Staff settings result:', { data: staffSettings, error: staffError })
@@ -103,6 +117,20 @@ export const useDurationManager = () => {
     
     try {
       const supabase = getSupabase()
+      
+      // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Nicht angemeldet')
+
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+      if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+      
       // Als JSON Array speichern um konsistent mit bestehenden Daten zu sein
       const durationsString = JSON.stringify(newDurations.sort((a: number, b: number) => a - b))
       
@@ -110,6 +138,7 @@ export const useDurationManager = () => {
         .from('staff_settings')
         .upsert({
           staff_id: staffId,
+          tenant_id: userProfile.tenant_id,  // ✅ TENANT ID
           preferred_durations: durationsString,
           updated_at: toLocalTimeString(new Date)
         })
@@ -157,10 +186,25 @@ export const useDurationManager = () => {
     
     try {
       const supabase = getSupabase()
+      
+      // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Nicht angemeldet')
+
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+      if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+      
       const { data, error } = await supabase
         .from('staff_settings')
         .select('*')
         .eq('staff_id', staffId)
+        .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
         .maybeSingle()
 
       if (error) throw error

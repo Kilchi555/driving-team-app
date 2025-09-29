@@ -47,7 +47,7 @@
           @focus="showLocationSuggestions = true"
           type="text"
           placeholder="z.B. Zürich HB, Bahnhofstrasse 1, 8001 Zürich"
-          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-white bg-gray-800"
         />
       </div>
 
@@ -95,28 +95,28 @@
         'w-full p-3 border rounded-lg focus:outline-none',
         props.isPastAppointment
           ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed'
-          : 'border-gray-300 focus:ring-2 focus:ring-green-500'
+          : 'border-gray-300 bg-gray-800 text-white focus:ring-2 focus:ring-green-500'
       ]"
       :required="required"
     >
-      <option value="">Standort wählen</option>
+      <option value="" class="text-white bg-gray-800">Standort wählen</option>
       
-      <!-- Standard Locations (Fahrschule) -->
-      <optgroup label="🏢 Fahrschule-Standorte" v-if="standardLocations.length > 0">
-        <option v-for="location in standardLocations" :key="`standard-${location.id}`" :value="location.id">
+      <!-- Standard Locations -->
+      <optgroup label="Standorte" v-if="standardLocations.length > 0" class="text-white bg-gray-800">
+        <option v-for="location in standardLocations" :key="`standard-${location.id}`" :value="location.id" class="text-white bg-gray-800">
           {{ location.address }}
         </option>
       </optgroup>
       
       <!-- Pickup Locations (Schüler) -->
-      <optgroup label="📍 Gespeicherte Treffpunkte" v-if="studentPickupLocations.length > 0 && selectedStudentId">
-          <option v-for="location in studentPickupLocations" :key="`pickup-${location.id}`" :value="location.id">
+      <optgroup label="📍 Gespeicherte Treffpunkte" v-if="studentPickupLocations.length > 0 && selectedStudentId" class="text-white bg-gray-800">
+          <option v-for="location in studentPickupLocations" :key="`pickup-${location.id}`" :value="location.id" class="text-white bg-gray-800">
           {{ location.address }}
           </option>
       </optgroup>
       
       <!-- Loading State -->
-      <option v-if="isLoadingLocations" disabled>Lade Standorte...</option>
+      <option v-if="isLoadingLocations" disabled class="text-white bg-gray-800">Lade Standorte...</option>
     </select>
 
     <!-- Selected Custom Location Preview -->
@@ -322,6 +322,19 @@ const clearManualLocation = () => {
 
 const loadStandardLocations = async () => {
   try {
+    // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
     let query = supabase
       .from('locations')
       .select('id, name, address, latitude, longitude, location_type, staff_id')
@@ -329,9 +342,20 @@ const loadStandardLocations = async () => {
       .eq('is_active', true)
       .order('name')
 
-    // Filter by current staff if provided
+    // ✅ TENANT FILTER: tenant_id ist verfügbar
+    query = query.eq('tenant_id', userProfile.tenant_id)
+    console.log('✅ Using tenant_id filter for locations:', userProfile.tenant_id)
+
+    // ✅ ADMIN & STAFF FILTER: Admins sehen alle Tenant-Locations, Staff nur ihre eigenen
     if (props.currentStaffId) {
-      query = query.eq('staff_id', props.currentStaffId)
+      // Staff: Lade staff-spezifische UND globale Tenant-Locations
+      query = query.or(`staff_id.eq.${props.currentStaffId},staff_id.is.null`)
+      console.log('🔍 Loading staff-specific OR global tenant locations for staff:', props.currentStaffId)
+    } else {
+      // Admin oder kein Staff: Lade ALLE Tenant-Locations (staff-spezifische UND globale)
+      // Admins sollten alle Standorte des Tenants sehen können
+      console.log('🔍 Loading ALL tenant locations (admin access or no staff specified)')
+      // Kein zusätzlicher staff_id Filter - lädt alle Locations des Tenants
     }
 
     const { data, error: fetchError } = await query
@@ -345,6 +369,13 @@ const loadStandardLocations = async () => {
     }))
     
     console.log('✅ Standard locations loaded:', data?.length)
+    console.log('🔍 LocationSelector Debug:', {
+      tenantId: userProfile.tenant_id,
+      currentStaffId: props.currentStaffId,
+      isAdmin: !props.currentStaffId,
+      locationsCount: data?.length,
+      locations: data?.map(l => ({ id: l.id, name: l.name, staff_id: l.staff_id, address: l.address }))
+    })
     
   } catch (err: any) {
     console.error('❌ Error loading standard locations:', err)
@@ -364,11 +395,25 @@ const loadLastUsedLocation = async (userId: string, staffId: string): Promise<an
       return null
     }
     
+    // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+    
     const { data, error } = await supabase
       .from('appointments')
       .select('location_id, custom_location_name, custom_location_address')
       .eq('user_id', userId)
       .eq('staff_id', staffId)
+      .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
       .eq('status', 'completed')
       .order('start_time', { ascending: false })
       .limit(1)
@@ -402,12 +447,26 @@ const loadStudentPickupLocations = async (studentId: string) => {
   try {
     console.log('🔍 Loading student pickup locations for:', studentId)
     
-    // 1. Lade alle Pickup-Locations des Schülers
+    // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+    
+    // 1. Lade alle Pickup-Locations des Schülers mit Tenant-Filter
     const { data, error: fetchError } = await supabase
       .from('locations')
       .select('id, name, address, latitude, longitude, location_type, user_id, google_place_id')
       .eq('location_type', 'pickup')
       .eq('user_id', studentId)
+      .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
       .eq('is_active', true)
       .order('name')
 
@@ -445,13 +504,25 @@ const loadStudentPickupLocations = async (studentId: string) => {
       selectedLocationId.value = props.modelValue
     }
     
-    // 3. Fallback: Ersten Pickup-Location wählen falls noch nichts ausgewählt UND keine Location bereits gesetzt ist
-    if (!selectedLocationId.value && !props.modelValue && studentPickupLocations.value.length > 0 && !props.disableAutoSelection) {
-      const firstPickup = studentPickupLocations.value[0]
-      selectedLocationId.value = firstPickup.id
-      emit('update:modelValue', firstPickup.id)
-      emit('locationSelected', firstPickup)
-      console.log('📍 Auto-selected first pickup location:', firstPickup.name)
+    // 3. Fallback: Ersten verfügbaren Standort wählen (Pickup oder Standard)
+    if (!selectedLocationId.value && !props.modelValue && !props.disableAutoSelection) {
+      if (studentPickupLocations.value.length > 0) {
+        // Erste Pickup-Location wählen
+        const firstPickup = studentPickupLocations.value[0]
+        selectedLocationId.value = firstPickup.id
+        emit('update:modelValue', firstPickup.id)
+        emit('locationSelected', firstPickup)
+        console.log('📍 Auto-selected first pickup location:', firstPickup.name)
+      } else if (standardLocations.value.length > 0) {
+        // ✅ FALLBACK: Erste Standard-Location wählen wenn keine Pickup-Locations vorhanden
+        const firstStandard = standardLocations.value[0]
+        selectedLocationId.value = firstStandard.id
+        emit('update:modelValue', firstStandard.id)
+        emit('locationSelected', firstStandard)
+        console.log('📍 Auto-selected first standard location (no pickup locations):', firstStandard.name)
+      } else {
+        console.log('⚠️ No locations available for auto-selection')
+      }
     }
     
   } catch (err: any) {
@@ -465,18 +536,34 @@ const loadStudentPickupLocations = async (studentId: string) => {
 
 const savePickupLocation = async (locationData: any, studentId: string) => {
   try {
+    // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
     const locationName = `${props.selectedStudentName} - ${locationData.name}`.trim()
     
     const locationToSave = {
       location_type: 'pickup',
       user_id: studentId,
       staff_id: null,
+      tenant_id: userProfile.tenant_id,  // ✅ TENANT ID
       name: locationName,
       address: locationData.address,
       latitude: locationData.latitude || null,
       longitude: locationData.longitude || null,
       google_place_id: locationData.place_id || null,
-      is_active: true
+      is_active: true,
+      created_by_user_id: user.id,
+      created_for_staff_id: props.currentStaffId || null
     }
     
     console.log('📤 Saving pickup location:', locationToSave)
@@ -636,10 +723,10 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
     )
     
     if (existingLocation) {
-      // Use existing pickup location - ABER BEI ADRESSEINGABE BLEIBEN
+      // Use existing pickup location - Input-Feld mit bestehender Location aktualisieren
       selectedLocationId.value = existingLocation.id
-      // 🔥 ENTFERNT: useStandardLocations.value = true
-      // 🔥 ENTFERNT: manualLocationInput.value = ''
+      // ✅ Input-Feld mit der bestehenden Location aktualisieren
+      manualLocationInput.value = existingLocation.address || existingLocation.name
       selectedCustomLocation.value = existingLocation
       
       emit('update:modelValue', existingLocation.id)
@@ -656,8 +743,8 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       // ✅ WARTE EINEN MOMENT FÜR UI-UPDATE:
       await nextTick()
       selectedLocationId.value = savedLocation.id
-      // 🔥 ENTFERNT: useStandardLocations.value = true
-      // 🔥 ENTFERNT: manualLocationInput.value = ''
+      // ✅ Input-Feld mit der gespeicherten Location aktualisieren
+      manualLocationInput.value = savedLocation.address || savedLocation.name
       selectedCustomLocation.value = savedLocation
       
       emit('update:modelValue', savedLocation.id)
@@ -669,25 +756,95 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       isLoadingGooglePlaces.value = false
       console.log('💾 Saved and selected new pickup location:', savedLocation.name)
     } else {
-      // Kein Student selected - temporäre Location
-      const tempLocation = {
-        id: `temp_${Date.now()}`,
-        name: locationData.name,
-        address: locationData.address,
-        place_id: locationData.place_id,
-        latitude: null,
-        longitude: null,
-        location_type: 'pickup',
-        source: 'google'
+      // Kein Student selected - speichere als Standard-Location für Staff
+      try {
+        isLoadingGooglePlaces.value = true
+        
+        // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('Nicht angemeldet')
+
+        const { data: userProfile, error: profileError } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('auth_user_id', user.id)
+          .single()
+
+        if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+        if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+        
+        const locationToSave = {
+          location_type: 'standard',
+          user_id: null,
+          staff_id: props.currentStaffId,
+          tenant_id: userProfile.tenant_id,  // ✅ TENANT ID
+          name: locationData.name,
+          address: locationData.address,
+          latitude: locationData.latitude || null,
+          longitude: locationData.longitude || null,
+          google_place_id: locationData.place_id || null,
+          is_active: true,
+          created_by_user_id: user.id,
+          created_for_staff_id: props.currentStaffId || null
+        }
+        
+        console.log('📤 Saving standard location for staff:', locationToSave)
+        
+        const { data: savedLocation, error: saveError } = await supabase
+          .from('locations')
+          .insert(locationToSave)
+          .select()
+          .single()
+
+        if (saveError) {
+          console.error('❌ Supabase Error:', saveError)
+          throw saveError
+        }
+
+        const location = {
+          ...savedLocation,
+          address: savedLocation.address || '',
+          source: 'standard' as const
+        }
+        
+        // Füge zur Standard-Locations Liste hinzu
+        standardLocations.value.push(location)
+        
+        selectedLocationId.value = savedLocation.id
+        manualLocationInput.value = savedLocation.address || savedLocation.name
+        selectedCustomLocation.value = location
+        
+        emit('update:modelValue', savedLocation.id)
+        emit('locationSelected', location)
+        
+        console.log('✅ Standard location saved for staff:', savedLocation.name)
+        isLoadingGooglePlaces.value = false
+        
+      } catch (err: any) {
+        console.error('❌ Error saving standard location:', err)
+        error.value = `Fehler beim Speichern des Standorts: ${err.message}`
+        isLoadingGooglePlaces.value = false
+        
+        // Fallback: temporäre Location
+        const tempLocation = {
+          id: `temp_${Date.now()}`,
+          name: locationData.name,
+          address: locationData.address,
+          place_id: locationData.place_id,
+          latitude: null,
+          longitude: null,
+          location_type: 'pickup',
+          source: 'google'
+        }
+        
+        selectedCustomLocation.value = tempLocation
+        manualLocationInput.value = locationData.address
+        
+        emit('update:modelValue', null)
+        emit('locationSelected', tempLocation)
+        
+        console.log('⚠️ Fallback to temporary location:', tempLocation)
       }
-      
-      selectedCustomLocation.value = tempLocation
-      // manualLocationInput.value bereits gesetzt am Anfang
-      
-      emit('update:modelValue', null)
-      emit('locationSelected', tempLocation)
-      
-      console.log('⚠️ Temporary location (no student selected):', tempLocation)
     }
     
     showLocationSuggestions.value = false
@@ -794,16 +951,32 @@ onMounted(async () => {
   isLoadingLocations.value = true
   
   try {
+    // ✅ IMMER Standard-Locations laden (für alle Benutzer)
     await loadStandardLocations()
+    console.log('📍 Standard locations loaded on mount:', standardLocations.value.length)
     
+    // ✅ Zusätzlich Pickup-Locations laden wenn Student ausgewählt
     if (props.selectedStudentId) {
       await loadStudentPickupLocations(props.selectedStudentId)
+      console.log('📍 Pickup locations loaded on mount:', studentPickupLocations.value.length)
+    } else {
+      console.log('ℹ️ No student selected - only standard locations available')
     }
     
     // ✅ NEU: Wenn bereits eine Location gesetzt ist, zeige sie an
     if (props.modelValue && !selectedLocationId.value) {
       console.log('🎯 onMounted: Location bereits gesetzt, zeige sie an:', props.modelValue)
       selectedLocationId.value = props.modelValue
+    }
+    
+    // ✅ FALLBACK: Wenn kein Student ausgewählt und keine Location gesetzt, erste Standard-Location wählen
+    if (!props.selectedStudentId && !selectedLocationId.value && !props.modelValue && 
+        standardLocations.value.length > 0 && !props.disableAutoSelection) {
+      const firstStandard = standardLocations.value[0]
+      selectedLocationId.value = firstStandard.id
+      emit('update:modelValue', firstStandard.id)
+      emit('locationSelected', firstStandard)
+      console.log('📍 Auto-selected first standard location (no student):', firstStandard.name)
     }
   } catch (err) {
     console.error('Error loading initial location data:', err)
@@ -816,5 +989,9 @@ onMounted(async () => {
 <style scoped>
 .relative .absolute {
   z-index: 50;
+}
+
+input::placeholder {
+  color: #9ca3af;
 }
 </style>

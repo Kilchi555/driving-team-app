@@ -10,7 +10,7 @@
       @input="updateTitle(($event.target as HTMLInputElement)?.value || '')"
       @blur="handleBlur"
       type="text"
-      class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+      class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors text-white bg-gray-800"
       :placeholder="computedPlaceholder"
       :disabled="disabled"
       :maxlength="maxLength"
@@ -23,7 +23,7 @@ import { computed, ref, watch } from 'vue'
 
 interface Props {
   title: string
-  eventType: 'lesson' | 'staff_meeting' | 'other'
+  eventType: 'lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite' | 'nothelfer' | 'vku'
   selectedStudent?: any
   selectedSpecialType?: string
   categoryCode?: string
@@ -57,6 +57,8 @@ const currentSuggestion = ref('')
 const shouldShow = computed(() => {
   if (props.eventType === 'lesson') {
     return !!props.selectedStudent
+  } else if (props.eventType === 'nothelfer' || props.eventType === 'vku') {
+    return true // Always show for these event types
   } else {
     return !!props.selectedSpecialType
   }
@@ -67,6 +69,8 @@ const labelText = computed(() => {
     case 'lesson': return 'Titel'
     case 'staff_meeting': return 'Titel'
     case 'other': return 'Titel des Termins'
+    case 'nothelfer': return 'Titel des Termins'
+    case 'vku': return 'Titel des Termins'
     default: return 'Titel'
   }
 })
@@ -82,6 +86,14 @@ const computedPlaceholder = computed(() => {
   
   if (props.eventType === 'other' && props.selectedSpecialType) {
     return props.selectedSpecialType
+  }
+  
+  if (props.eventType === 'nothelfer') {
+    return 'Nothelfer-Begrüssung'
+  }
+  
+  if (props.eventType === 'vku') {
+    return 'VKU'
   }
   
   return 'Titel eingeben...'
@@ -172,6 +184,22 @@ const suggestions = computed(() => {
     ]
   }
   
+  if (props.eventType === 'nothelfer') {
+    return [
+      'Nothelfer-Begrüssung',
+      'Nothelfer-Kurs',
+      'Nothelfer-Prüfung'
+    ]
+  }
+  
+  if (props.eventType === 'vku') {
+    return [
+      'VKU',
+      'Verkehrskundeunterricht',
+      'VKU-Prüfung'
+    ]
+  }
+  
   return []
 })
 
@@ -247,7 +275,16 @@ const shouldAutoUpdate = (): boolean => {
   if (props.eventType === 'lesson' && props.selectedStudent) {
     const firstName = props.selectedStudent.first_name
     const lastName = props.selectedStudent.last_name
-    return props.title.includes(firstName) || props.title.includes(lastName)
+    
+    // ✅ ERWEITERT: Auch bei generischen Standard-Titeln auto-updaten
+    const isGenericTitle = props.title === 'Fahrstunde' || 
+                          props.title === 'Lektion' || 
+                          props.title === 'Stunde' ||
+                          props.title.trim() === ''
+    
+    return props.title.includes(firstName) || 
+           props.title.includes(lastName) || 
+           isGenericTitle
   }
   return false
 }
@@ -261,7 +298,19 @@ watch([
 ], ([student, location, specialType]) => {
   
   if (props.autoGenerate && suggestions.value.length > 0) {
-    if (!props.title || shouldAutoUpdate()) {
+    const shouldUpdate = !props.title || shouldAutoUpdate()
+    
+    console.log('🎯 TitleInput Auto-Generate Check:', {
+      autoGenerate: props.autoGenerate,
+      hasTitle: !!props.title,
+      currentTitle: props.title,
+      shouldAutoUpdate: shouldAutoUpdate(),
+      shouldUpdate,
+      suggestionsCount: suggestions.value.length,
+      firstSuggestion: suggestions.value[0]
+    })
+    
+    if (shouldUpdate) {
       console.log('✅ Auto-generating title:', suggestions.value[0])
       emit('update:title', suggestions.value[0])
       emit('title-generated', suggestions.value[0])
@@ -295,6 +344,10 @@ input:disabled {
   background-color: #f9fafb;
   color: #6b7280;
   cursor: not-allowed;
+}
+
+input::placeholder {
+  color: #9ca3af;
 }
 
 button:hover:not(:disabled) {

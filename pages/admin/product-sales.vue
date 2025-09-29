@@ -11,6 +11,9 @@
           <p class="text-gray-600">
             Alle Verkäufe - sowohl aus dem Online-Shop als auch direkte Verkäufe
           </p>
+          <p v-if="currentTenant" class="text-sm text-gray-500 mt-1">
+            Tenant: <span class="font-medium text-blue-600">{{ currentTenant.name }}</span>
+          </p>
         </div>
         <div class="flex space-x-3">
           <button
@@ -43,6 +46,7 @@
           <div>
             <p class="text-sm text-gray-600">Alle Verkäufe</p>
             <p class="text-2xl font-bold text-gray-900">{{ totalSales }}</p>
+            <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
           </div>
           <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
             <span class="text-blue-600 text-xl">📊</span>
@@ -55,6 +59,7 @@
           <div>
             <p class="text-sm text-gray-600">Shop-Verkäufe</p>
             <p class="text-2xl font-bold text-green-600">{{ shopSales }}</p>
+            <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
           </div>
           <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
             <span class="text-green-600 text-xl">🛒</span>
@@ -67,6 +72,7 @@
           <div>
             <p class="text-sm text-gray-600">Direkte Verkäufe</p>
             <p class="text-2xl font-bold text-purple-600">{{ directSales }}</p>
+            <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
           </div>
           <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
             <span class="text-purple-600 text-xl">💼</span>
@@ -79,6 +85,7 @@
           <div>
             <p class="text-sm text-gray-600">Anonyme Verkäufe</p>
             <p class="text-2xl font-bold text-orange-600">{{ anonymousSales }}</p>
+            <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
           </div>
           <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
             <span class="text-orange-600 text-xl">👤</span>
@@ -91,6 +98,7 @@
           <div>
             <p class="text-sm text-gray-600">Gesamtumsatz</p>
             <p class="text-2xl font-bold text-indigo-600">CHF {{ totalRevenue }}</p>
+            <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
           </div>
           <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
             <span class="text-indigo-600 text-xl">💰</span>
@@ -176,6 +184,9 @@
         <div class="text-gray-400 text-6xl mb-4">📦</div>
         <p class="text-gray-600 text-lg mb-2">Keine Verkäufe gefunden</p>
         <p class="text-gray-500">Versuchen Sie andere Filter oder erstellen Sie einen neuen Verkauf</p>
+        <p v-if="currentTenant" class="text-sm text-gray-400 mt-2">
+          Tenant: {{ currentTenant.name }}
+        </p>
       </div>
 
       <div v-else class="overflow-x-auto">
@@ -202,6 +213,9 @@
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Typ
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tenant
               </th>
               <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Aktionen
@@ -239,6 +253,10 @@
                       class="px-2 py-1 text-xs font-medium rounded-full">
                   {{ sale.sale_type === 'shop' ? 'Shop' : 'Direkt' }}
                 </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900">{{ currentTenant?.name || 'Unbekannt' }}</div>
+                <div class="text-xs text-gray-500">{{ currentTenant?.slug || 'Kein Slug' }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex justify-end space-x-2">
@@ -406,6 +424,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { definePageMeta } from '#imports'
 import { getSupabase } from '~/utils/supabase'
+import { formatDateTime } from '~/utils/dateUtils'
 import ProductSaleModal from '~/components/ProductSaleModal.vue'
 
 definePageMeta({
@@ -441,6 +460,7 @@ const showAnonymousSaleModal = ref(false)
 const anonymousCustomerName = ref('')
 const anonymousCustomerNotes = ref('')
 const anonymousPaymentMethod = ref('cash') // Added for anonymous sale payment method
+const currentTenant = ref<any>(null)
 
 // Computed
 const filteredSales = computed(() => {
@@ -522,12 +542,34 @@ const loadSales = async () => {
     const supabase = getSupabase()
     const allSales: ProductSale[] = []
 
-    // 1. Lade direkte Verkäufe (aus ProductSaleModal)
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+      .single()
+    const tenantId = userProfile?.tenant_id
+    console.log('🔍 Admin Product Sales - Current tenant_id:', tenantId)
+    
+    // Load current tenant info
+    if (tenantId) {
+      const { data: tenantData } = await supabase
+        .from('tenants')
+        .select('name, slug')
+        .eq('id', tenantId)
+        .single()
+      currentTenant.value = tenantData
+      console.log('🔍 Current tenant:', tenantData)
+    }
+
+    // 1. Lade direkte Verkäufe (aus ProductSaleModal) - gefiltert nach tenant_id
     console.log('🔄 Lade direkte Verkäufe...')
     const { data: directSalesData, error: directSalesError } = await supabase
       .from('product_sales')
       .select('*')
       .not('user_id', 'is', null) // Nur Verkäufe mit registrierten Benutzern
+      .eq('tenant_id', tenantId) // Filter by current tenant
       .order('created_at', { ascending: false })
 
     if (directSalesError) throw directSalesError
@@ -586,12 +628,13 @@ const loadSales = async () => {
       })
     })
 
-    // 1b. Lade anonyme Verkäufe (aus ProductSaleModal ohne user_id)
+    // 1b. Lade anonyme Verkäufe (aus ProductSaleModal ohne user_id) - gefiltert nach tenant_id
     console.log('🔄 Lade anonyme Verkäufe...')
     const { data: anonymousSalesData, error: anonymousSalesError } = await supabase
       .from('product_sales')
       .select('*')
       .is('user_id', null) // Nur anonyme Verkäufe
+      .eq('tenant_id', tenantId) // Filter by current tenant
       .order('created_at', { ascending: false })
 
     if (anonymousSalesError) throw anonymousSalesError
@@ -641,12 +684,13 @@ const loadSales = async () => {
       })
     })
 
-    // 2. Lade Shop-Verkäufe (aus invited_customers)
+    // 2. Lade Shop-Verkäufe (aus invited_customers) - gefiltert nach tenant_id
     console.log('🔄 Lade Shop-Verkäufe...')
     const { data: shopSalesData, error: shopSalesError } = await supabase
       .from('invited_customers')
       .select('*')
       .not('metadata->products', 'is', null) // Nur Kunden mit Produkten
+      .eq('tenant_id', tenantId) // Filter by current tenant
       .order('created_at', { ascending: false })
 
     if (shopSalesError) throw shopSalesError
@@ -757,7 +801,17 @@ const getStatusText = (status: string) => {
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('de-CH', {
+  // Convert UTC timestamp to local time for display
+  // PostgreSQL stores timestamps as UTC, but we want to display them as local time
+  const date = new Date(dateString)
+  
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return 'Ungültiges Datum'
+  }
+  
+  // Format as local time (de-CH)
+  return date.toLocaleDateString('de-CH', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -779,6 +833,15 @@ const createAnonymousSale = async () => {
   try {
     const supabase = getSupabase()
     
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+      .single()
+    const tenantId = userProfile?.tenant_id
+    
     // Bestimme den initialen Status basierend auf der Zahlungsart
     const initialStatus = anonymousPaymentMethod.value === 'cash' ? 'completed' : 'pending'
     
@@ -787,6 +850,7 @@ const createAnonymousSale = async () => {
       .from('product_sales')
       .insert({
         user_id: null, // Kein registrierter Benutzer
+        tenant_id: tenantId, // Assign to current tenant
         total_amount_rappen: 0, // Wird später aktualisiert
         status: initialStatus,
         metadata: {

@@ -49,19 +49,23 @@ export const useCurrentUser = () => {
 
       if (!usersData || usersData.length === 0) {
         console.log('Business-User nicht gefunden für:', user.email)
-        // 🆕 WICHTIGE ÄNDERUNG: Setze profileExists auf false, aber keinen userError
         profileExists.value = false
         currentUser.value = {
           email: user.email,
           auth_user_id: user.id
         }
-        // 🚫 ENTFERNT: userError.value = `Kein Benutzerprofil für ${user.email} gefunden.`
         return
       }
 
       // ✅ User gefunden
       const userData = usersData[0]
       console.log('✅ Business-User geladen:', userData)
+      
+      if (!userData.tenant_id) {
+        console.warn('⚠️ User nicht zugewiesen:', userData.email)
+        userError.value = 'Benutzer nicht zugewiesen'
+        return
+      }
       
       currentUser.value = {
         ...userData,

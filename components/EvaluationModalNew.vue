@@ -280,10 +280,24 @@ const loadData = async () => {
     if (criteriaError) throw criteriaError
     allCriteria.value = criteriaData || []
 
-    // Load evaluation scale
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+    // Load evaluation scale (filtered by tenant)
     const { data: scaleData, error: scaleError } = await supabase
       .from('evaluation_scale')
       .select('*')
+      .eq('tenant_id', userProfile.tenant_id)
       .order('rating')
 
     if (scaleError) throw scaleError

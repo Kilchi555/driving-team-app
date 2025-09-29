@@ -12,7 +12,7 @@
           @input="updateStartDate(($event.target as HTMLInputElement)?.value || '')"
           type="date"
           :min="minDate"
-          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-white bg-gray-800"
           :disabled="disabled"
         />
       </div>
@@ -26,7 +26,7 @@
           :value="startTime"
           @input="updateStartTime(($event.target as HTMLInputElement)?.value || '')"
           type="time"
-          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-white bg-gray-800"
           :disabled="disabled"
         />
       </div>
@@ -40,7 +40,7 @@
           :value="endTime"
           @input="updateEndTime(($event.target as HTMLInputElement)?.value || '')"
           type="time"
-          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-white bg-gray-800"
           :disabled="disabled"
         />
           <div v-if="durationMinutes" class="text-xs text-gray-500 mt-1">
@@ -61,7 +61,7 @@ interface Props {
   endTime: string
   durationMinutes: number
   disabled?: boolean
-  eventType?: 'lesson' | 'staff_meeting' | 'other'
+  eventType?: 'lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite'
   selectedStudent?: any
   selectedSpecialType?: string
   mode?: 'create' | 'edit' | 'view'

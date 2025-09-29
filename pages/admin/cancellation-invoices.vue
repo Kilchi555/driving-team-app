@@ -7,6 +7,9 @@
         <p class="mt-2 text-gray-600">
           Übersicht aller Stornierungs- und Rückerstattungs-Rechnungen und deren Zahlungsstatus
         </p>
+        <p v-if="currentTenant" class="text-sm text-gray-500 mt-1">
+          Tenant: <span class="font-medium text-blue-600">{{ currentTenant.name }}</span>
+        </p>
       </div>
 
       <!-- Stats Cards -->
@@ -19,6 +22,7 @@
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">Gesamt</p>
               <p class="text-2xl font-semibold text-gray-900">{{ stats.total }}</p>
+              <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
             </div>
           </div>
         </div>
@@ -31,6 +35,7 @@
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">Ausstehend</p>
               <p class="text-2xl font-semibold text-gray-900">{{ stats.pending }}</p>
+              <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
             </div>
           </div>
         </div>
@@ -43,6 +48,7 @@
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">Bezahlt</p>
               <p class="text-2xl font-semibold text-gray-900">{{ stats.paid }}</p>
+              <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
             </div>
           </div>
         </div>
@@ -55,6 +61,7 @@
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">Gesamtbetrag</p>
               <p class="text-2xl font-semibold text-gray-900">{{ formatCurrency(stats.totalAmount) }}</p>
+              <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
             </div>
           </div>
         </div>
@@ -110,6 +117,9 @@
 
         <div v-else-if="cancellationInvoices.length === 0" class="p-8 text-center">
           <div class="text-gray-500">Keine Stornierungs- oder Rückerstattungs-Rechnungen gefunden</div>
+          <p v-if="currentTenant" class="text-sm text-gray-400 mt-2">
+            Tenant: {{ currentTenant.name }}
+          </p>
         </div>
 
         <div v-else class="overflow-x-auto">
@@ -136,6 +146,9 @@
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Erstellt
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tenant
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Aktionen
@@ -181,6 +194,10 @@
                   <div class="text-sm text-gray-900">
                     {{ formatDate(invoice.created_at) }}
                   </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ currentTenant?.name || 'Unbekannt' }}</div>
+                  <div class="text-xs text-gray-500">{{ currentTenant?.slug || 'Kein Slug' }}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
@@ -271,6 +288,7 @@ const isLoading = ref(false)
 const cancellationInvoices = ref<any[]>([])
 const showInvoiceModal = ref(false)
 const selectedInvoice = ref<any>(null)
+const currentTenant = ref<any>(null)
 
 // Filters
 const filters = ref({
@@ -294,6 +312,27 @@ const loadCancellationInvoices = async () => {
     isLoading.value = true
     const supabase = getSupabase()
 
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+      .single()
+    const tenantId = userProfile?.tenant_id
+    console.log('🔍 Admin Cancellation Invoices - Current tenant_id:', tenantId)
+    
+    // Load current tenant info
+    if (tenantId) {
+      const { data: tenantData } = await supabase
+        .from('tenants')
+        .select('name, slug')
+        .eq('id', tenantId)
+        .single()
+      currentTenant.value = tenantData
+      console.log('🔍 Current tenant:', tenantData)
+    }
+
     let query = supabase
       .from('invoices')
       .select(`
@@ -306,6 +345,7 @@ const loadCancellationInvoices = async () => {
         )
       `)
       .in('invoice_type', ['cancellation_fee', 'refund'])
+      .eq('tenant_id', tenantId) // Filter by current tenant
 
     // Apply status filter
     if (filters.value.status) {
@@ -362,6 +402,15 @@ const markInvoiceAsPaid = async (invoiceId: string) => {
   try {
     const supabase = getSupabase()
     
+    // Get current user's tenant_id for security
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+      .single()
+    const tenantId = userProfile?.tenant_id
+    
     const { data, error } = await supabase
       .from('invoices')
       .update({
@@ -369,6 +418,7 @@ const markInvoiceAsPaid = async (invoiceId: string) => {
         paid_at: new Date().toISOString()
       })
       .eq('id', invoiceId)
+      .eq('tenant_id', tenantId) // Ensure user can only update their tenant's invoices
       .select()
       .single()
 

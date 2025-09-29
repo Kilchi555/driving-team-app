@@ -154,7 +154,12 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="discount in filteredDiscounts" :key="discount.id" class="hover:bg-gray-50">
+            <tr 
+              v-for="discount in filteredDiscounts" 
+              :key="discount.id" 
+              class="hover:bg-gray-50 cursor-pointer"
+              @click="editDiscount(discount)"
+            >
               <td class="px-6 py-4 whitespace-nowrap">
                 <div>
                   <div class="text-sm font-medium text-gray-900">{{ discount.name }}</div>
@@ -198,11 +203,12 @@
                   {{ discount.is_active ? 'Aktiv' : 'Inaktiv' }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" @click.stop>
                 <div class="flex justify-end space-x-2">
                   <button
                     @click="editDiscount(discount)"
                     class="text-blue-600 hover:text-blue-900 p-1"
+                    title="Bearbeiten"
                   >
                     ✏️
                   </button>
@@ -210,12 +216,14 @@
                     @click="toggleDiscountStatus(discount)"
                     :class="discount.is_active ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'"
                     class="p-1"
+                    :title="discount.is_active ? 'Deaktivieren' : 'Aktivieren'"
                   >
                     {{ discount.is_active ? '🚫' : '✅' }}
                   </button>
                   <button
                     @click="deleteDiscount(discount.id)"
                     class="text-red-600 hover:text-red-900 p-1"
+                    title="Löschen"
                   >
                     🗑️
                   </button>
@@ -250,11 +258,15 @@ import { useDiscounts } from '~/composables/useDiscounts'
 import type { Discount } from '~/types/payment'
 
 // Composables
-const { loadDiscounts, updateDiscount, deleteDiscount: deleteDiscountFromDB } = useDiscounts()
+const { 
+  discounts, 
+  isLoading, 
+  loadDiscounts, 
+  updateDiscount, 
+  deleteDiscount: deleteDiscountFromDB 
+} = useDiscounts()
 
-// State
-const discounts = ref<Discount[]>([])
-const isLoading = ref(false)
+// Additional State
 const searchTerm = ref('')
 const selectedType = ref('')
 const selectedAppliesTo = ref('')
@@ -309,15 +321,11 @@ const filteredDiscounts = computed(() => {
 // Methods
 const loadAllDiscounts = async () => {
   try {
-    isLoading.value = true
+    console.log('🔄 Loading all discounts...')
     await loadDiscounts()
-    // Get discounts from the composable
-    const { discounts: loadedDiscounts } = useDiscounts()
-    discounts.value = loadedDiscounts.value
+    console.log('✅ Discounts loaded:', discounts.value.length)
   } catch (error) {
-    console.error('Error loading discounts:', error)
-  } finally {
-    isLoading.value = false
+    console.error('❌ Error loading discounts:', error)
   }
 }
 

@@ -14,10 +14,10 @@
               :key="`staff-select-${formData.staff_id || 'none'}-${availableStaff.length}`"
               :value="formData.staff_id"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              class="text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+              class="text-sm border border-gray-300 rounded px-2 py-1 bg-white text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
               @change="handleStaffChanged"
             >
-              <option v-if="!formData.staff_id" value="" class="text-gray-900">Fahrlehrer wählen...</option>
+              <option v-if="!formData.staff_id" value="" class="text-white">Fahrlehrer wählen...</option>
               <option
                 v-for="staff in availableStaff"
                 :key="staff.id"
@@ -37,6 +37,7 @@
         
                   <!-- Action-Buttons (nur bei edit/view mode) -->
           <div v-if="props.mode !== 'create' && props.eventData?.id" class="flex items-center space-x-4">
+            
             <!-- Kopieren Button -->
             <button
               @click="handleCopy"
@@ -82,7 +83,7 @@
           </div>
 
           <!-- Lesson Type Selector -->
-          <div v-if="selectedStudent && formData.eventType === 'lesson'" class="py-2">
+          <div v-if="selectedStudent && isLessonType(formData.eventType)" class="py-2">
             <LessonTypeSelector
               v-model="selectedLessonType"
               :selected-type="selectedLessonType"
@@ -93,7 +94,7 @@
           </div>
 
           <!-- Prüfungsstandort Auswahl (nur bei Prüfungen) -->
-          <div v-if="formData.eventType === 'lesson' && formData.appointment_type === 'exam' && selectedStudent" class="py-2 space-y-2">
+          <div v-if="isLessonType(formData.eventType) && formData.appointment_type === 'exam' && selectedStudent" class="py-2 space-y-2">
             <ExamLocationSelector
               :current-staff-id="currentUser?.id || ''"
               v-model="selectedExamLocation"
@@ -113,8 +114,19 @@
             />
           </div>
 
+          <!-- Typ ändern Button für other event types (nur bei edit mode und zukünftigen Terminen) -->
+          <div v-if="props.mode !== 'create' && !isLessonType(formData.eventType) && formData.eventType !== 'other' && !isPastAppointment" class="py-2">
+            <button
+              @click="changeEventType"
+              class="w-full px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded text-sm transition-colors"
+              title="Event-Typ ändern"
+            >
+              Typ ändern
+            </button>
+          </div>
+
           <!-- Staff Selector für andere Terminarten -->
-          <div v-if="formData.eventType === 'other' && formData.selectedSpecialType" class="py-2">
+          <div v-if="!isLessonType(formData.eventType) && !showEventTypeSelection" class="py-2">
             <StaffSelector
               ref="staffSelectorRef"
               v-model="invitedStaffIds"
@@ -125,7 +137,7 @@
           </div>
 
           <!-- Customer Invite Selector für andere Terminarten -->
-          <div v-if="formData.eventType === 'other' && formData.selectedSpecialType">
+          <div v-if="!isLessonType(formData.eventType) && !showEventTypeSelection">
             <CustomerInviteSelector
               ref="customerInviteSelectorRef" 
               v-model="invitedCustomers"
@@ -139,7 +151,7 @@
 
 
           <!-- Title Input -->
-          <div> 
+          <div v-if="!showEventTypeSelection"> 
             <TitleInput
               :title="formData.title"
               @update:title="handleTitleUpdate"
@@ -155,7 +167,7 @@
           </div>
 
           <!-- Category & Duration Section -->
-          <div v-if="formData.eventType === 'lesson' && selectedStudent" class="py-2 space-y-3">
+          <div v-if="isLessonType(formData.eventType) && selectedStudent && !showEventTypeSelection" class="py-2 space-y-3">
             <!-- ✅ CategorySelector immer anzeigen (auch bei Theorielektionen für bessere Organisation) -->
             <CategorySelector
               ref="categorySelectorRef"
@@ -191,13 +203,13 @@
           </div>
 
           <!-- Time Section -->
-          <div v-if="showTimeSection" class="py-2">
+          <div v-if="showTimeSection && !showEventTypeSelection" class="py-2">
             <TimeSelector
               :start-date="formData.startDate"
               :start-time="formData.startTime"
               :end-time="formData.endTime"
               :duration-minutes="formData.duration_minutes"
-              :event-type="(formData.eventType as 'lesson' | 'staff_meeting' | 'other')"
+              :event-type="(formData.eventType as 'lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite')"
               :selected-student="selectedStudent"
               :selected-special-type="formData.selectedSpecialType"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
@@ -210,10 +222,10 @@
           </div>
 
           <!-- Location Section -->
-          <div v-if="formData.eventType === 'lesson' && selectedStudent" class="py-2">
+          <div v-if="((isLessonType(formData.eventType) && selectedStudent) || (!isLessonType(formData.eventType))) && !showEventTypeSelection" class="py-2">
             <LocationSelector
               :model-value="formData.location_id"
-              :selected-student-id="selectedStudent?.id"
+              :selected-student-id="isLessonType(formData.eventType) ? selectedStudent?.id : undefined"
               :current-staff-id="formData.staff_id"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
               :disable-auto-selection="true"
@@ -226,8 +238,8 @@
 
 
 
-          <!-- Price Display - für Fahrstunden nur wenn Schüler ausgewählt, für andere Termintypen immer -->
-          <div v-if="formData.eventType === 'lesson' ? selectedStudent : formData.eventType" class="py-2">
+          <!-- Price Display - nur für Fahrstunden wenn Schüler ausgewählt -->
+          <div v-if="isLessonType(formData.eventType) && selectedStudent" class="py-2">
             <PriceDisplay
               ref="priceDisplayRef"
               :duration-minutes="formData.duration_minutes || 45"
@@ -330,6 +342,170 @@
       @close="cancelDelete"
     />
 
+    <!-- Cancellation Reason Modal -->
+    <div v-if="showCancellationReasonModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <!-- Header with Progress -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center">
+            <div class="text-2xl mr-3">❌</div>
+            <h3 class="text-lg font-semibold text-gray-900">
+              {{ cancellationStep === 0 ? 'Wer hat abgesagt?' : cancellationStep === 1 ? 'Absage-Grund auswählen' : 'Absage-Policy auswählen' }}
+            </h3>
+          </div>
+          <button
+            @click="cancelCancellationReason"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        
+        <!-- Wer hat abgesagt? -->
+        <div v-if="cancellationStep === 0" class="mb-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Wer hat abgesagt?</h3>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <button
+              @click="selectCancellationType('student')"
+              :class="[
+                'p-6 rounded-lg border-2 transition-all duration-200 text-center',
+                cancellationType === 'student'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              ]"
+            >
+              <div class="text-3xl mb-2">👨‍🎓</div>
+              <div class="font-medium">Schüler</div>
+            </button>
+            <button
+              @click="selectCancellationType('staff')"
+              :class="[
+                'p-6 rounded-lg border-2 transition-all duration-200 text-center',
+                cancellationType === 'staff'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              ]"
+            >
+              <div class="text-3xl mb-2">👨‍🏫</div>
+              <div class="font-medium">Fahrlehrer</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Absage-Gründe auswählen -->
+        <div v-if="cancellationStep === 1" class="mb-6">
+          <div class="grid grid-cols-2 gap-3">
+            <button
+              v-for="reason in filteredCancellationReasons"
+              :key="reason.id"
+              @click="selectReasonAndContinue(reason.id)"
+              :class="[
+                'p-4 rounded-lg border-2 transition-all duration-200 text-center',
+                selectedCancellationReasonId === reason.id
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              ]"
+            >
+              <div class="font-medium text-sm">{{ reason.name_de }}</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Policy auswählen -->
+        <div v-if="cancellationStep === 2" class="mb-6">
+          <div v-if="appointmentDataForPolicy" class="space-y-4">
+            <!-- Termin-Info Header -->
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h4 class="font-medium text-gray-900">{{ props.eventData?.title || 'Termin' }}</h4>
+                  <p class="text-sm text-gray-600">
+                    {{ formatDate(props.eventData?.start) }} • 
+                    {{ props.eventData?.duration_minutes || 45 }} Min • 
+                    {{ formatCurrency(appointmentDataForPolicy?.price_rappen || 0) }}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm text-gray-500">Zeit bis Termin</div>
+                  <div class="font-medium text-gray-900">
+                    {{ timeUntilAppointment?.description || 'Berechne...' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Policy Selection -->
+            <CancellationPolicySelector
+              v-model="selectedCancellationPolicyId"
+              :appointment-data="appointmentDataForPolicy"
+              @policy-changed="onPolicyChanged"
+            />
+
+            <!-- Quick Summary -->
+            <div v-if="cancellationPolicyResult" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="font-medium text-blue-900">Absage-Berechnung</div>
+                    <div class="text-sm text-blue-700">
+                      {{ cancellationPolicyResult.calculation.chargePercentage }}% verrechnen
+                      {{ cancellationPolicyResult.shouldCreditHours ? '• Stunden gutschreiben' : '' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div v-if="cancellationPolicyResult.calculation.chargePercentage > 0" class="text-lg font-bold text-red-600">
+                    {{ formatCurrency(cancellationPolicyResult.chargeAmountRappen) }}
+                  </div>
+                  <div v-else class="text-lg font-bold text-green-600">
+                    Kostenlos
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-center text-gray-500 py-8">
+            <div class="text-4xl mb-2">⚠️</div>
+            <p>Keine Termindaten verfügbar</p>
+          </div>
+        </div>
+        
+        <div class="flex space-x-3">
+          <button
+            v-if="cancellationStep === 1"
+            @click="goBackInCancellationFlow"
+            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ← Zurück
+          </button>
+          <button
+            v-if="cancellationStep === 2"
+            @click="goBackInCancellationFlow"
+            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ← Zurück
+          </button>
+          <button
+            v-if="cancellationStep === 2"
+            @click="confirmCancellationWithReason"
+            :disabled="isLoading"
+            class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ isLoading ? 'Lösche...' : 'Termin absagen' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Post-Appointment Modal -->
     <PostAppointmentModal
       :is-visible="showPostAppointmentModal"
@@ -339,48 +515,6 @@
       @saved="onPostAppointmentSaved"
     />
 
-    <!-- Cost Inquiry Modal für kurzfristige Stornierungen -->
-    <div v-if="showCostInquiryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <div class="flex items-center mb-4">
-          <div class="text-2xl mr-3">💰</div>
-          <h3 class="text-lg font-semibold text-gray-900">Kostenabfrage</h3>
-        </div>
-        
-        <div class="mb-4 text-gray-700">
-          <p class="mb-2">Der Termin wird <strong>weniger als 24h vor dem geplanten Zeitpunkt</strong> storniert.</p>
-          <p class="mb-2">Sollen die Kosten verrechnet werden?</p>
-          
-          <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p class="text-sm text-yellow-800">
-              <strong>Hinweis:</strong> Bei kurzfristigen Stornierungen können Stornogebühren anfallen.
-            </p>
-          </div>
-        </div>
-
-        <div class="flex space-x-3">
-          <button
-            @click="handleDeleteWithCosts"
-            class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-          >
-            Ja, Kosten verrechnen
-          </button>
-          <button
-            @click="handleDeleteWithoutCosts"
-            class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
-          >
-            Nein, kostenlos stornieren
-          </button>
-        </div>
-        
-        <button
-          @click="showCostInquiryModal = false"
-          class="mt-3 w-full text-gray-500 hover:text-gray-700 text-sm"
-        >
-          Abbrechen
-        </button>
-      </div>
-    </div>
 
     <!-- Payment Status Modal für Stornierungs-Rechnungen -->
     <div v-if="showPaymentStatusModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -532,6 +666,10 @@ import { useProducts } from '~/composables/useProducts'
 import { useStaffAvailability, type StaffAvailability } from '~/composables/useStaffAvailability'
 import { useStaffCategoryDurations } from '~/composables/useStaffCategoryDurations'
 import { useStudentCredits } from '~/composables/useStudentCredits'
+import { useCancellationReasons } from '~/composables/useCancellationReasons'
+import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
+import CancellationPolicySelector from '~/components/CancellationPolicySelector.vue'
+import { createCancellationFeeInvoice } from '~/utils/policyCalculations'
 
 
 import { useAuthStore } from '~/stores/auth'
@@ -579,6 +717,19 @@ console.log('🚀 EventModal initialized with props:', {
 
 const { currentUser: composableCurrentUser } = useCurrentUser()
 
+// Cancellation Reasons
+const { 
+  cancellationReasons, 
+  fetchCancellationReasons, 
+  isLoading: isLoadingCancellationReasons 
+} = useCancellationReasons()
+
+// Cancellation Policies
+const { 
+  defaultPolicy, 
+  fetchPolicies 
+} = useCancellationPolicies()
+
 
 const emit = defineEmits<{
   'close': []
@@ -608,10 +759,17 @@ const defaultBillingAddress = ref(null)
 const selectedCategory = ref<any | null>(null)
 const selectedExamLocation = ref(null)
 const showDeleteConfirmation = ref(false)
-const showCostInquiryModal = ref(false)
 const showPaymentStatusModal = ref(false)
 const showRefundOptionsModal = ref(false)
+const showCancellationReasonModal = ref(false)
+const selectedCancellationReasonId = ref<string | null>(null)
+const cancellationStep = ref(0) // 0 = Typ auswählen, 1 = Grund auswählen, 2 = Policy auswählen
+const cancellationType = ref<'student' | 'staff' | null>(null)
 const cancellationInvoiceData = ref<any>(null)
+const pendingCancellationReason = ref<any>(null) // Speichert den ausgewählten Grund für die Bezahlnachfrage
+const selectedCancellationPolicyId = ref<string>('')
+const cancellationPolicyResult = ref<any>(null)
+const timeUntilAppointment = ref({ hours: 0, days: 0, isOverdue: false, description: '' })
 const appointmentNumber = ref(1)
 const availableDurations = ref([45] as number[])
 const customerInviteSelectorRef = ref()
@@ -763,6 +921,24 @@ const getLessonTypeText = (appointmentType: string): string => {
       return 'Prüfungsfahrt inkl. WarmUp und Rückfahrt'
     case 'theory':
       return 'Theorielektion'
+    case 'vku':
+      return 'VKU'
+    case 'nothelfer':
+      return 'Nothelfer-Begrüssung'
+    case 'meeting':
+      return 'Meeting'
+    case 'break':
+      return 'Pause'
+    case 'training':
+      return 'Training'
+    case 'maintenance':
+      return 'Wartung'
+    case 'admin':
+      return 'Administration'
+    case 'team_invite':
+      return 'Team-Einladung'
+    case 'other':
+      return 'Sonstiges'
     default:
       console.log('⚠️ Unknown appointment type, using default')
       return 'Fahrlektion'
@@ -774,7 +950,18 @@ const handleCustomerInvites = async (appointmentData: any) => {
   if (invitedCustomers.value.length > 0 && customerInviteSelectorRef.value) {
     console.log('📱 Creating customer invites with SMS...')
     try {
-      const customerInvites = await customerInviteSelectorRef.value.createInvitedCustomers(appointmentData)
+      // Staff- und Location-Informationen zur appointmentData hinzufügen
+      const appointmentDataWithStaff = {
+        ...appointmentData,
+        staff: {
+          first_name: props.currentUser?.first_name || 'Fahrlehrer',
+          phone: props.currentUser?.phone || ''
+        },
+        location_name: selectedLocation.value?.name || 'Treffpunkt',
+        location_address: selectedLocation.value?.address || selectedLocation.value?.formatted_address || ''
+      }
+      
+      const customerInvites = await customerInviteSelectorRef.value.createInvitedCustomers(appointmentDataWithStaff)
       console.log('✅ Customer invites created with SMS:', customerInvites.length)
       return customerInvites
     } catch (error) {
@@ -842,6 +1029,14 @@ const handleSaveAppointment = async () => {
         console.error('❌ Error using credit for appointment:', creditError)
         // Nicht den gesamten Speichervorgang abbrechen, nur loggen
       }
+    }
+    
+    // ✅ Handle customer invites and SMS sending
+    try {
+      await handleCustomerInvites(savedAppointment)
+    } catch (inviteError) {
+      console.error('❌ Error handling customer invites:', inviteError)
+      // Don't fail the entire save process, just log the error
     }
     
     // Emit the appropriate event based on mode
@@ -956,7 +1151,16 @@ const handleCategorySelected = async (category: any) => {
   // ✅ NEU: Stelle sicher, dass eine Dauer vorausgewählt wird
   if (availableDurations.value.length > 0) {
     // ✅ Versuche zuerst die Dauer des letzten Termins des Fahrschülers zu laden
-    if (selectedStudent.value?.id) {
+    // ✅ WICHTIG: Beim Edit-Modus die ursprüngliche duration_minutes aus der DB beibehalten
+    if (props.mode === 'edit' && formData.value.duration_minutes) {
+      console.log('✅ Edit mode - keeping original duration from database:', formData.value.duration_minutes, 'min')
+      // Stelle sicher, dass die ursprüngliche Dauer in availableDurations enthalten ist
+      if (!availableDurations.value.includes(formData.value.duration_minutes)) {
+        availableDurations.value.unshift(formData.value.duration_minutes)
+        availableDurations.value.sort((a, b) => a - b)
+        console.log('✅ Added original duration to available durations:', availableDurations.value)
+      }
+    } else if (selectedStudent.value?.id) {
       try {
         const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
         if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
@@ -984,12 +1188,15 @@ const customMessagePlaceholder = ref('Hallo, vielen Dank für deine Anmeldung. B
 
 // ✅ Debug computed property to track lesson type
 const currentLessonTypeText = computed(() => {
-  const appointmentType = formData.value.appointment_type
+  const appointmentType = formData.value.appointment_type || formData.value.type || formData.value.eventType
   const text = appointmentType ? getLessonTypeText(appointmentType) : 'Termin'
   console.log('🔍 currentLessonTypeText computed:', {
     appointmentType,
     text,
-    selectedLessonType: selectedLessonType.value
+    selectedLessonType: selectedLessonType.value,
+    formDataAppointmentType: formData.value.appointment_type,
+    formDataType: formData.value.type,
+    formDataEventType: formData.value.eventType
   })
   return text
 })
@@ -1035,16 +1242,23 @@ const handleProductAdded = (product: any) => {
 }
 
 // ============ COMPUTED ============
-const eventTypeForTitle = computed(() => {
+// Hilfsfunktion um zu prüfen, ob es sich um einen "lesson"-Typ handelt
+const isLessonType = (eventType: string) => {
+  const lessonTypes = ['lesson', 'exam', 'theory']
+  return lessonTypes.includes(eventType)
+}
+
+const eventTypeForTitle = computed((): 'lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite' | 'nothelfer' | 'vku' => {
   const eventType = formData.value.eventType
+  const validEventTypes: ('lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite' | 'nothelfer' | 'vku')[] = ['lesson', 'staff_meeting', 'other', 'meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'nothelfer', 'vku']
   
   // Nur gültige Typen zurückgeben
-  if (eventType === 'lesson' || eventType === 'staff_meeting' || eventType === 'other') {
-    return eventType
+  if (validEventTypes.includes(eventType as any)) {
+    return eventType as 'lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite' | 'nothelfer' | 'vku'
   }
   
   // Fallback für ungültige Werte
-  return 'lesson' as const
+  return 'lesson'
 })
 
 const shouldAutoLoadStudents = computed(() => {
@@ -1054,8 +1268,8 @@ const shouldAutoLoadStudents = computed(() => {
     return true  // Schüler laden, aber nicht automatisch auswählen
   }
   
-  // Bei normalen Terminen: Schüler laden aber NICHT automatisch auswählen
-  return formData.value.eventType === 'lesson' && props.mode === 'create'
+  // ✅ NUR für Lektionen und NUR wenn EventTypeSelector nicht angezeigt wird
+  return isLessonType(formData.value.eventType) && props.mode === 'create' && !showEventTypeSelection.value
 })
 
 
@@ -1070,7 +1284,7 @@ const showStudentSelector = computed(() => {
   })
   
   // ✅ Zeige StudentSelector für alle lesson-Typen (Fahrstunde, Prüfung, Theorie)
-  if (formData.value.eventType === 'lesson') {
+  if (isLessonType(formData.value.eventType)) {
     return !showEventTypeSelection.value
   }
   
@@ -1078,11 +1292,13 @@ const showStudentSelector = computed(() => {
 })
 
 const showEventTypeSelector = computed(() => {
-  const lessonTypes = ['lesson', 'exam', 'theory']
-  const result = !lessonTypes.includes(formData.value.eventType) || showEventTypeSelection.value
+  // EventTypeSelector anzeigen wenn:
+  // 1. showEventTypeSelection ist true (Benutzer möchte Typ ändern)
+  // 2. Es ist 'other' (generischer Typ, Benutzer kann spezifischen Typ wählen)
+  const result = showEventTypeSelection.value || (formData.value.eventType === 'other')
+  
   console.log('🔍 showEventTypeSelector:', {
     eventType: formData.value.eventType,
-    isLessonType: lessonTypes.includes(formData.value.eventType),
     showEventTypeSelection: showEventTypeSelection.value,
     result
   })
@@ -1101,7 +1317,7 @@ const showTimeSection = computed(() => {
     mode: props.mode
   })
   
-  if (formData.value.eventType === 'lesson') {
+  if (isLessonType(formData.value.eventType)) {
     // ✅ Zeit-Sektion nur anzeigen wenn Schüler ausgewählt wurde
     if (formData.value.appointment_type === 'exam' || selectedLessonType.value === 'exam') {
       console.log('📋 EXAM detected - showing time section even without selected student')
@@ -1143,18 +1359,9 @@ watch(
   { immediate: true, deep: true }
 )
 
-// Hard guard: prevent any assignment to selectedStudent while in free-slot create
-const setSelectedStudentSafely = (student: any) => {
-  if (props.mode === 'create' && isFreeslotMode.value) {
-    console.log('⛔ Ignoring auto-select of student in free-slot create mode')
-    selectedStudent.value = null
-    if (formData?.value) {
-      formData.value.user_id = null as any
-    }
-    return
-  }
-  selectedStudent.value = student
-}
+// ✅ Watch entfernt - manuelle Auswahl soll funktionieren
+
+// ✅ Funktion entfernt - manuelle Auswahl soll direkt funktionieren
 
 // ============ HANDLERS ============
 const handleTitleUpdate = (newTitle: string) => {
@@ -1213,11 +1420,23 @@ const loadAvailableStaff = async () => {
       currentUserRole: props.currentUser?.role
     })
     
-    // ✅ WICHTIG: Nur tatsächliche Staff-Mitglieder laden
+    // ✅ WICHTIG: Nur tatsächliche Staff-Mitglieder laden (tenant-spezifisch)
+    // Get current user's tenant_id
+    const currentUserTenantId = currentUser.value?.tenant_id
+    
+    console.log('🏢 Loading staff for tenant:', currentUserTenantId)
+    
+    if (!currentUserTenantId) {
+      console.error('❌ No tenant_id found for current user')
+      availableStaff.value = []
+      return
+    }
+    
     const { data: allStaff, error: staffError } = await supabase
       .from('users')
-      .select('id, first_name, last_name, email, role')
+      .select('id, first_name, last_name, email, role, tenant_id')
       .eq('role', 'staff') // Nur Staff-Rolle
+      .eq('tenant_id', currentUserTenantId) // Nur Staff vom gleichen Tenant
       .eq('is_active', true) // Nur aktive Benutzer
       .order('first_name')
     
@@ -1558,7 +1777,16 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
               availableDurations.value = [...durations]
       
       // ✅ NEU: Versuche zuerst die Dauer des letzten Termins des Fahrschülers zu laden
-      if (selectedStudent.value?.id) {
+      // ✅ WICHTIG: Beim Edit-Modus die ursprüngliche duration_minutes aus der DB beibehalten
+      if (props.mode === 'edit' && formData.value.duration_minutes) {
+        console.log('✅ Edit mode - keeping original duration from database:', formData.value.duration_minutes, 'min')
+        // Stelle sicher, dass die ursprüngliche Dauer in availableDurations enthalten ist
+        if (!availableDurations.value.includes(formData.value.duration_minutes)) {
+          availableDurations.value.unshift(formData.value.duration_minutes)
+          availableDurations.value.sort((a, b) => a - b)
+          console.log('✅ Added original duration to available durations:', availableDurations.value)
+        }
+      } else if (selectedStudent.value?.id) {
         try {
           const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
           if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
@@ -2009,7 +2237,7 @@ const handleStudentSelected = async (student: Student | null) => {
             
             // ✅ Dauer basierend auf event_type_code setzen
             if (lastAppointment.event_type_code === 'exam') {
-              formData.value.duration_minutes = categoryData.exam_duration_minutes || 180
+              formData.value.duration_minutes = categoryData.exam_duration_minutes || 135
               selectedLessonType.value = 'exam'
               formData.value.appointment_type = 'exam'
             } else {
@@ -2061,7 +2289,7 @@ const handleStudentSelected = async (student: Student | null) => {
             }
             
             // ✅ Preise neu berechnen nach Kategorie-Änderung
-            if (formData.value.eventType === 'lesson') {
+            if (isLessonType(formData.value.eventType)) {
               calculatePriceForCurrentData()
             }
           }
@@ -2071,7 +2299,7 @@ const handleStudentSelected = async (student: Student | null) => {
           selectedCategory.value = {
             code: lastAppointment.type,
             lesson_duration_minutes: 45,
-            exam_duration_minutes: 180
+            exam_duration_minutes: 135
           }
           formData.value.duration_minutes = 45
           const fallbackDuration = getFallbackDuration(lastAppointment.type)
@@ -2288,6 +2516,14 @@ const switchToOtherEventType = () => {
   formData.value.selectedSpecialType = ''
 }
 
+const changeEventType = () => {
+  console.log('🔄 Changing event type')
+  
+  // Erlaube Typ-Änderung auch bei bestehenden Events
+  showEventTypeSelection.value = true
+}
+
+
 
 
 const handleEventTypeSelected = (eventType: any) => {
@@ -2299,11 +2535,23 @@ const handleEventTypeSelected = (eventType: any) => {
     return
   }
   
+  // ✅ Student zurücksetzen bei "other event type" Auswahl
+  selectedStudent.value = null
+  formData.value.user_id = ''
+  
+  // ✅ Auch invitedCustomers zurücksetzen
+  invitedCustomers.value = []
+  
   formData.value.selectedSpecialType = eventType.code
+  formData.value.appointment_type = eventType.code // ✅ WICHTIG: appointment_type für event_type_code setzen
   formData.value.title = eventType.name
   formData.value.type = eventType.code
   formData.value.duration_minutes = eventType.default_duration_minutes || 60
   calculateEndTime()
+  
+  // ✅ EventTypeSelector ausblenden nach Auswahl
+  showEventTypeSelection.value = false
+  console.log('✅ EventTypeSelector hidden after selection')
 }
 
 const backToStudentSelection = () => {
@@ -2316,53 +2564,152 @@ const backToStudentSelection = () => {
 }
 
 // ✅ IN EVENTMODAL.VUE:
-const handleLessonTypeSelected = (lessonType: any) => {
+const handleLessonTypeSelected = async (lessonType: any) => {
   console.log('🎯 Lesson type selected:', lessonType.name)
   selectedLessonType.value = lessonType.code
   formData.value.appointment_type = lessonType.code
   
-  // ✅ NEU: Bei Theorielektionen Dauer setzen, aber Kategorie beibehalten
-  if (lessonType.code === 'theory') {
-    console.log('📚 Theorielektion erkannt: Behalte gewählte Kategorie, lade theory_durations')
+  // ✅ AKTUALISIERE DAUERN basierend auf dem gewählten Lesson-Type
+  if (formData.value.type && selectedCategory.value) {
+    console.log('🔄 Updating durations for lesson type change:', lessonType.code, 'category:', formData.value.type)
     
-    // ✅ Kategorie NICHT auf 'THEORY' setzen - die gewählte Fahrkategorie beibehalten
-    // formData.value.type bleibt unverändert (z.B. 'B', 'A', 'BE', etc.)
+    if (lessonType.code === 'theory') {
+      console.log('📚 Theorielektion erkannt: Lade theory_durations')
+      
+      // ✅ Lade theory_durations aus der categories Tabelle
+      if (currentUser.value?.id) {
+        loadTheoryDurations(formData.value.type)
+      } else {
+        // Fallback: Standard 45 Minuten wenn keine Kategorie ausgewählt
+        formData.value.duration_minutes = 45
+        availableDurations.value = [45]
+      }
+    } else if (lessonType.code === 'exam') {
+      console.log('📝 Prüfung erkannt: Verwende exam_duration_minutes')
+      
+      // ✅ Verwende exam_duration_minutes aus der selectedCategory
+      const examDuration = selectedCategory.value?.exam_duration_minutes || 135
+      formData.value.duration_minutes = examDuration
+      availableDurations.value = [examDuration]
+      console.log('📝 Set exam duration:', examDuration)
+    } else if (lessonType.code === 'lesson') {
+      console.log('🚗 Fahrstunde erkannt: Lade lesson_duration_minutes aus DB')
+      
+      // ✅ WICHTIG: Dauern direkt aus der Datenbank laden, nicht aus selectedCategory
+      if (formData.value.type && currentUser.value?.id) {
+        try {
+          // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!user) throw new Error('Nicht angemeldet')
+
+          const { data: userProfile, error: profileError } = await supabase
+            .from('users')
+            .select('tenant_id')
+            .eq('auth_user_id', user.id)
+            .single()
+
+          if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+          if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+          
+          // Lade Kategorie-Dauern direkt aus der categories Tabelle mit Tenant-Filter
+          const { data: categoryData, error } = await supabase
+            .from('categories')
+            .select('lesson_duration_minutes')
+            .eq('code', formData.value.type)
+            .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
+            .eq('is_active', true)
+            .single()
+          
+          if (!error && categoryData?.lesson_duration_minutes) {
+            // String-Array zu Number-Array konvertieren
+            let lessonDurations = categoryData.lesson_duration_minutes
+            if (Array.isArray(lessonDurations)) {
+              lessonDurations = lessonDurations.map((d: any) => {
+                const num = parseInt(d.toString(), 10)
+                return isNaN(num) ? 45 : num
+              })
+            } else {
+              const num = parseInt(lessonDurations.toString(), 10)
+              lessonDurations = [isNaN(num) ? 45 : num]
+            }
+            
+            availableDurations.value = lessonDurations
+            console.log('✅ Lesson durations loaded from DB:', lessonDurations)
+            
+            // ✅ Intelligente Dauer-Auswahl
+            const currentDuration = formData.value.duration_minutes
+            if (lessonDurations.includes(currentDuration)) {
+              console.log('✅ Keeping current duration:', currentDuration)
+            } else {
+              // Versuche eine ähnliche Dauer zu finden
+              const similarDuration = lessonDurations.find(d => Math.abs(d - currentDuration) <= 15)
+              if (similarDuration) {
+                formData.value.duration_minutes = similarDuration
+                console.log('🎯 Found similar duration:', similarDuration, 'instead of', currentDuration)
+              } else {
+                formData.value.duration_minutes = lessonDurations[0]
+                console.log('🔄 Set lesson duration to first available:', lessonDurations[0])
+              }
+            }
+          } else {
+            console.log('⚠️ Could not load durations from DB, using fallback')
+            availableDurations.value = [45]
+            formData.value.duration_minutes = 45
+          }
+        } catch (err) {
+          console.error('❌ Error loading lesson durations:', err)
+          availableDurations.value = [45]
+          formData.value.duration_minutes = 45
+        }
+      } else {
+        // Fallback wenn keine Kategorie oder User
+        console.log('⚠️ No category or user - using fallback durations')
+        availableDurations.value = [45]
+        formData.value.duration_minutes = 45
+      }
+    }
+  } else {
+    console.log('⚠️ No category selected yet - using defaults')
     
-    // ✅ Lade theory_durations aus der categories Tabelle
-    if (formData.value.type && currentUser.value?.id) {
-      loadTheoryDurations(formData.value.type)
+    // Fallback wenn noch keine Kategorie ausgewählt
+    if (lessonType.code === 'theory') {
+      formData.value.duration_minutes = 45
+      availableDurations.value = [45]
+    } else if (lessonType.code === 'exam') {
+      formData.value.duration_minutes = 135
+      availableDurations.value = [135]
     } else {
-      // Fallback: Standard 45 Minuten wenn keine Kategorie ausgewählt
       formData.value.duration_minutes = 45
       availableDurations.value = [45]
     }
-    
-    // ✅ Preise neu berechnen (wird 85.- CHF anzeigen, unabhängig von der Kategorie)
-    if (formData.value.eventType === 'lesson') {
+  }
+  
+  // ✅ Preise neu berechnen nach Lesson-Type Wechsel
+  nextTick(() => {
+    if (isLessonType(formData.value.eventType)) {
       calculatePriceForCurrentData()
     }
-    
-    console.log('✅ Theorielektion konfiguriert:', {
-      type: formData.value.type, // Bleibt die gewählte Fahrkategorie
-      duration: formData.value.duration_minutes,
-      availableDurations: availableDurations.value,
-      note: 'Kategorie bleibt für bessere Organisation erhalten'
-    })
-  } else {
-    // ✅ Normale Fahrstunden/Prüfungen: Normale Logik
-    console.log('🔍 DEBUG selectedCategory:', {
-      selectedCategory: selectedCategory.value,
-      hasCategory: !!selectedCategory.value,
-      exam_duration: selectedCategory.value?.exam_duration_minutes,
-      lesson_duration_minutes: selectedCategory.value?.lesson_duration_minutes
-    })
-    
-    if (selectedCategory.value) {
-      console.log('✅ Category found, calling setDurationForLessonType')
-      handlers.setDurationForLessonType(lessonType.code)
-    } else {
-      console.log('❌ No selectedCategory - function not called')
-    }
+  })
+  
+  console.log('✅ Lesson type change completed:', {
+    lessonType: lessonType.code,
+    category: formData.value.type,
+    duration: formData.value.duration_minutes,
+    availableDurations: availableDurations.value
+  })
+  
+  // ✅ NEU: Title automatisch aktualisieren basierend auf neuem Lesson Type
+  if (selectedStudent.value && selectedLocation.value) {
+    const studentName = selectedStudent.value.first_name
+    const locationName = selectedLocation.value.name || selectedLocation.value.address || 'Unbekannter Ort'
+    const lessonTypeText = getLessonTypeText(lessonType.code)
+    formData.value.title = `${studentName} - ${locationName} (${lessonTypeText})`
+    console.log('✅ Title updated with new lesson type:', formData.value.title)
+  } else if (selectedStudent.value) {
+    const studentName = selectedStudent.value.first_name
+    const lessonTypeText = getLessonTypeText(lessonType.code)
+    formData.value.title = `${studentName} - ${lessonTypeText}`
+    console.log('✅ Title updated with student and lesson type:', formData.value.title)
   }
   
   console.log('📝 Appointment type set to:', lessonType.code)
@@ -2493,7 +2840,7 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
       }
       
       // ✅ 5. SOFORTIGE Preisberechnung (online + offline)
-      if (formData.value.type && formData.value.eventType === 'lesson') {
+      if (formData.value.type && isLessonType(formData.value.eventType)) {
         const appointmentNum = appointmentNumber?.value || 1
         
         try {
@@ -2623,7 +2970,7 @@ const resetForm = () => {
     staff_id: (props.currentUser?.role === 'staff') ? props.currentUser.id : '',
     // ✅ price_per_minute removed - not in appointments table, handled in pricing system
     user_id: '',
-    status: 'confirmed',
+    status: 'pending_confirmation',
     // ✅ is_paid removed - not in appointments table, handled in payments table
     description: '',
     eventType: 'lesson' as 'lesson',
@@ -2773,53 +3120,96 @@ const getNextDay = (currentDate: string): string => {
 // In EventModal.vue - ersetze die handleDelete Funktion:
 
 const handleDelete = async () => {
+  console.log('🔥 handleDelete called!')
   if (!props.eventData?.id) {
     console.log('❌ No event ID found for deletion')
     return
   }
   
-  // ✅ NEUE LOGIK: Prüfe ob Kostenabfrage nötig ist
-  const appointmentTime = new Date(props.eventData.start || props.eventData.start_time)
-  const now = new Date()
-  const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+  // ✅ PRÜFE ZUERST: Ist das ein bezahlbarer Termin (Lektion)?
+  const isLessonType = (eventType: string) => {
+    return ['lesson', 'exam', 'theory'].includes(eventType)
+  }
   
-  console.log('⏰ Appointment time:', appointmentTime)
-  console.log('⏰ Current time:', now)
-  console.log('⏰ Hours until appointment:', hoursUntilAppointment)
+  // ✅ Verwende event_type_code aus props.eventData
+  const appointmentType = props.eventData.event_type_code || props.eventData.type || 'unknown'
   
-  // ✅ NEUE LOGIK: Prüfe ob der Termin bereits bezahlt wurde
-  const isPaid = props.eventData.is_paid || props.eventData.payment_status === 'paid'
-  console.log('💰 Appointment payment status:', {
-    is_paid: props.eventData.is_paid,
-    payment_status: props.eventData.payment_status,
-    isPaid: isPaid
-  })
+  const isPayableAppointment = isLessonType(appointmentType)
   
-  // Wenn weniger als 24h vor dem Termin oder bereits vorbei
-  if (hoursUntilAppointment < 24) {
-    if (isPaid) {
-      console.log('💰 Termin bereits bezahlt - zeige Rückerstattungs-Optionen')
-      showRefundOptionsModal.value = true
-    } else {
-      console.log('💰 Showing cost inquiry for short-notice cancellation')
-      showCostInquiryModal.value = true
+  console.log('🗑️ FULL EVENT DATA:', props.eventData)
+  console.log('🗑️ AVAILABLE FIELDS:', Object.keys(props.eventData || {}))
+  console.log('🗑️ event_type_code:', props.eventData.event_type_code)
+  console.log('🗑️ type:', props.eventData.type)
+  console.log('🗑️ appointmentType:', appointmentType)
+  console.log('🗑️ isPayableAppointment:', isPayableAppointment)
+  
+  // ✅ FÜR OTHER EVENT TYPES: Direkt löschen ohne Absage-Gründe
+  if (!isPayableAppointment) {
+    console.log('🗑️ Other event type - direct delete without cancellation reasons')
+    showDeleteConfirmation.value = true
+    return
+  }
+  
+  // ✅ FÜR LEKTIONEN: Erst Absage-Gründe erfragen
+  console.log('🗑️ Lesson/Exam/Theory - show cancellation reason modal first')
+  cancellationStep.value = 0 // Starte mit Schritt 1 (Wer hat abgesagt?)
+  cancellationType.value = null // Benutzer muss wählen
+  await fetchCancellationReasons()
+  showCancellationReasonModal.value = true
+}
+
+// ✅ SOFT-DELETE OHNE PAYMENT-LÖSCHUNG (für Kostenverrechnung)
+const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, status: string = 'cancelled') => {
+  if (!props.eventData?.id) return
+  
+  console.log('🗑️ Performing soft delete WITHOUT payment cleanup for appointment:', props.eventData.id)
+  console.log('🗑️ Deletion reason:', deletionReason)
+  console.log('🗑️ Status:', status)
+  console.log('🗑️ Current user:', props.currentUser?.id)
+  
+  try {
+    isLoading.value = true
+    
+    // ✅ NUR den Termin als gelöscht markieren, KEINE Payments löschen
+    const updateData = {
+      deleted_at: new Date().toISOString(),
+      deleted_by: props.currentUser?.id,
+      deletion_reason: deletionReason,
+      status: status
     }
-  } else {
-    if (isPaid) {
-      console.log('✅ Termin bereits bezahlt - zeige Rückerstattungs-Optionen')
-      showRefundOptionsModal.value = true
-    } else {
-      console.log('✅ More than 24h notice, showing regular delete confirmation')
-      showDeleteConfirmation.value = true
+    
+    console.log('🗑️ Update data:', updateData)
+    
+    const { error: updateError } = await supabase
+      .from('appointments')
+      .update(updateData)
+      .eq('id', props.eventData.id)
+    
+    if (updateError) {
+      console.error('❌ Error updating appointment:', updateError)
+      throw updateError
     }
+    
+    console.log('✅ Appointment soft deleted successfully (without payment cleanup)')
+    
+    // ✅ Schließe das Modal
+    emit('close')
+    
+  } catch (error) {
+    console.error('❌ Error during soft delete:', error)
+    // Hier könntest du eine Fehlermeldung anzeigen
+  } finally {
+    isLoading.value = false
   }
 }
 
-const confirmDelete = async () => {
+// ✅ ZENTRALE SOFT-DELETE FUNKTION für alle Termine
+const performSoftDelete = async (deletionReason: string, status: string = 'cancelled') => {
   if (!props.eventData?.id) return
   
-  console.log('🗑️ Soft deleting appointment:', props.eventData.id)
-  console.log('🗑️ Appointment data:', props.eventData)
+  console.log('🗑️ Performing soft delete for appointment:', props.eventData.id)
+  console.log('🗑️ Deletion reason:', deletionReason)
+  console.log('🗑️ Status:', status)
   console.log('🗑️ Current user:', props.currentUser?.id)
   
   try {
@@ -2881,20 +3271,24 @@ const confirmDelete = async () => {
     }
     
     // ✅ SCHRITT 2: SOFT DELETE: Termin als gelöscht markieren statt echt löschen
+    const eventType = props.eventData.type || props.eventData.event_type_code
+    const isOtherEventType = !['lesson', 'exam', 'theory'].includes(eventType)
+    
     const updateData = {
       deleted_at: new Date().toISOString(),
       deleted_by: props.currentUser?.id || null,
-      deletion_reason: `Gelöscht durch Benutzer (ursprünglicher Status: ${props.eventData.status})`,
-      status: 'cancelled' // ✅ Status auf cancelled setzen
+      deletion_reason: deletionReason,
+      status: status
     }
     
     console.log('🗑️ Update data:', updateData)
+    console.log('🎯 Event type:', eventType, 'isOtherEventType:', isOtherEventType)
     
     const { data, error } = await supabase
       .from('appointments')
       .update(updateData)
       .eq('id', props.eventData.id)
-      .select('id, deleted_at, deleted_by')
+      .select('id, deleted_at, deleted_by, status, deletion_reason')
     
     if (error) {
       console.error('❌ Database error:', error)
@@ -2902,6 +3296,8 @@ const confirmDelete = async () => {
     }
     
     console.log('✅ Appointment soft deleted successfully:', data)
+    console.log('✅ Status set to:', status)
+    console.log('✅ Deletion reason:', deletionReason)
     console.log('✅ Database response:', data)
     
     // Events emittieren
@@ -2920,122 +3316,141 @@ const confirmDelete = async () => {
   }
 }
 
-// 4. Handler für Cancel
-const cancelDelete = () => {
-  showDeleteConfirmation.value = false
-  console.log('🚫 Deletion cancelled by user')
-}
-
-// ✅ NEUE FUNKTIONEN für Kostenabfrage
-const handleDeleteWithCosts = async () => {
-  console.log('💰 Deleting appointment WITH costs')
-  showCostInquiryModal.value = false
-  
-  // ✅ SOFT DELETE mit Kostenverrechnung
-  await confirmDeleteWithCosts(true)
-}
-
-const handleDeleteWithoutCosts = async () => {
-  console.log('🚫 Deleting appointment WITHOUT costs')
-  showCostInquiryModal.value = false
-  
-  // ✅ SOFT DELETE ohne Kostenverrechnung
-  await confirmDeleteWithCosts(false)
-}
-
-const confirmDeleteWithCosts = async (withCosts: boolean) => {
+// ✅ NEUE SOFT-DELETE FUNKTION mit Absage-Grund
+const performSoftDeleteWithReason = async (deletionReason: string, cancellationReasonId: string, status: string = 'cancelled', cancellationType: 'student' | 'staff') => {
   if (!props.eventData?.id) return
   
-  console.log('🗑️ Soft deleting appointment with cost handling:', {
-    appointmentId: props.eventData.id,
-    withCosts: withCosts
-  })
+  console.log('🗑️ Performing soft delete with reason for appointment:', props.eventData.id)
+  console.log('🗑️ Deletion reason:', deletionReason)
+  console.log('🗑️ Cancellation reason ID:', cancellationReasonId)
+  console.log('🗑️ Status:', status)
+  console.log('🗑️ Current user:', props.currentUser?.id)
   
   try {
     isLoading.value = true
     
-    // ✅ SCHRITT 1: Alle zugehörigen Zahlungsdaten löschen
-    console.log('💳 Cleaning up payment data for appointment:', props.eventData.id)
+    // ✅ SCHRITT 1: Alle zugehörigen Zahlungsdaten löschen (nur für Lektionen)
+    const eventType = props.eventData.type || props.eventData.event_type_code
+    const isLessonType = ['lesson', 'exam', 'theory'].includes(eventType)
     
-    // 1.1 Payments löschen
-    const { error: paymentsError } = await supabase
-      .from('payments')
-      .delete()
-      .eq('appointment_id', props.eventData.id)
-    
-    if (paymentsError) {
-      console.warn('⚠️ Could not delete payments:', paymentsError)
-    } else {
-      console.log('✅ Payments deleted successfully')
-    }
-    
-    // 1.2 Product sales und items löschen (inklusive Rabatte)
-    console.log('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
-    
-    // Zuerst alle product_sale_ids sammeln
-    const { data: productSales } = await supabase
-      .from('product_sales')
-      .select('id')
-      .eq('appointment_id', props.eventData.id)
-    
-    if (productSales && productSales.length > 0) {
-      const productSaleIds = productSales.map(ps => ps.id)
-      console.log('🗑️ Found product sales to delete:', productSaleIds)
+    if (isLessonType) {
+      console.log('💳 Cleaning up payment data for lesson appointment:', props.eventData.id)
       
-      // Product sale items löschen (zuerst)
-      const { error: productSaleItemsError } = await supabase
-        .from('product_sale_items')
-        .delete()
-        .in('product_sale_id', productSaleIds)
-      
-      if (productSaleItemsError) {
-        console.warn('⚠️ Could not delete product sale items:', productSaleItemsError)
-      } else {
-        console.log('✅ Product sale items deleted successfully')
-      }
-      
-      // Dann product_sales löschen (inklusive Rabatte)
-      const { error: productSalesError } = await supabase
-        .from('product_sales')
+      // 1.1 Payments löschen
+      const { error: paymentsError } = await supabase
+        .from('payments')
         .delete()
         .eq('appointment_id', props.eventData.id)
       
-      if (productSalesError) {
-        console.warn('⚠️ Could not delete product sales:', productSalesError)
+      if (paymentsError) {
+        console.warn('⚠️ Could not delete payments:', paymentsError)
       } else {
-        console.log('✅ Product sales (including discounts) deleted successfully')
+        console.log('✅ Payments deleted successfully')
       }
-    } else {
-      console.log('ℹ️ No product sales found for appointment')
+      
+      // 1.2 Product sales und items löschen (inklusive Rabatte)
+      console.log('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
+      
+      // Zuerst alle product_sale_ids sammeln
+      const { data: productSales } = await supabase
+        .from('product_sales')
+        .select('id')
+        .eq('appointment_id', props.eventData.id)
+      
+      if (productSales && productSales.length > 0) {
+        const productSaleIds = productSales.map(ps => ps.id)
+        console.log('🗑️ Found product sales to delete:', productSaleIds)
+        
+        // Product sale items löschen (zuerst)
+        const { error: productSaleItemsError } = await supabase
+          .from('product_sale_items')
+          .delete()
+          .in('product_sale_id', productSaleIds)
+        
+        if (productSaleItemsError) {
+          console.warn('⚠️ Could not delete product sale items:', productSaleItemsError)
+        } else {
+          console.log('✅ Product sale items deleted successfully')
+        }
+        
+        // Dann product_sales löschen (inklusive Rabatte)
+        const { error: productSalesError } = await supabase
+          .from('product_sales')
+          .delete()
+          .eq('appointment_id', props.eventData.id)
+        
+        if (productSalesError) {
+          console.warn('⚠️ Could not delete product sales:', productSalesError)
+        } else {
+          console.log('✅ Product sales deleted successfully')
+        }
+      }
     }
     
-    // ✅ SCHRITT 2: SOFT DELETE: Termin als gelöscht markieren
-    const updateData = {
+    // ✅ SCHRITT 2: Soft Delete des Appointments mit Absage-Grund
+    console.log('🗑️ Soft deleting appointment with cancellation reason')
+    
+    // Prepare update data with policy information
+    const updateData: any = {
+      status: status,
       deleted_at: new Date().toISOString(),
-      deleted_by: props.currentUser?.id || null,
-      deletion_reason: `${withCosts ? 'Storniert mit Kostenverrechnung' : 'Kostenlos storniert'} (ursprünglicher Status: ${props.eventData.status})`,
-      status: 'cancelled' // ✅ Status auf cancelled setzen
+      deletion_reason: deletionReason,
+      cancellation_reason_id: cancellationReasonId,
+      cancellation_type: cancellationType,
+      deleted_by: props.currentUser?.id
     }
-    
-    console.log('🗑️ Update data:', updateData)
-    
+
+    // Add policy information if available
+    if (cancellationPolicyResult.value) {
+      updateData.cancellation_charge_percentage = cancellationPolicyResult.value.calculation.chargePercentage
+      updateData.cancellation_credit_hours = cancellationPolicyResult.value.shouldCreditHours
+      if (selectedCancellationPolicyId.value) {
+        updateData.cancellation_policy_applied = selectedCancellationPolicyId.value
+      }
+    }
+
     const { data, error } = await supabase
       .from('appointments')
       .update(updateData)
       .eq('id', props.eventData.id)
-      .select('id, deleted_at, deleted_by')
+      .select()
     
     if (error) {
-      console.error('❌ Database error:', error)
+      console.error('❌ Soft delete error:', error)
       throw error
     }
     
-    console.log('✅ Appointment soft deleted successfully:', data)
+    console.log('✅ Appointment soft deleted successfully with reason:', data)
+    console.log('✅ Status set to:', status)
+    console.log('✅ Deletion reason:', deletionReason)
+    console.log('✅ Cancellation reason ID:', cancellationReasonId)
+    console.log('✅ Database response:', data)
     
-    // ✅ Wenn Kosten verrechnet werden sollen, erstelle eine Rechnung
-    if (withCosts) {
-      console.log('💰 Creating invoice for cancelled appointment')
-      await createCancellationInvoice(props.eventData)
+    // Create cancellation fee invoice if policy charges apply
+    if (cancellationPolicyResult.value?.shouldCreateInvoice && cancellationPolicyResult.value.chargeAmountRappen > 0) {
+      console.log('💰 Creating cancellation fee invoice...')
+      
+      const appointmentData = {
+        id: props.eventData.id,
+        start_time: props.eventData.start || props.eventData.start_time,
+        duration_minutes: props.eventData.duration_minutes || 45,
+        price_rappen: props.eventData.price_rappen || 0,
+        user_id: props.eventData.user_id || '',
+        staff_id: props.eventData.staff_id || ''
+      }
+      
+      const invoiceResult = await createCancellationFeeInvoice(
+        appointmentData,
+        cancellationPolicyResult.value,
+        pendingCancellationReason.value?.name_de || 'Unbekannt',
+        props.currentUser?.id || ''
+      )
+      
+      if (invoiceResult.success) {
+        console.log('✅ Cancellation fee invoice created:', invoiceResult.invoiceId)
+      } else {
+        console.warn('⚠️ Could not create cancellation fee invoice:', invoiceResult.error)
+      }
     }
     
     // Events emittieren
@@ -3046,10 +3461,280 @@ const confirmDeleteWithCosts = async (withCosts: boolean) => {
     handleClose()
     
   } catch (err: any) {
-    console.error('❌ Soft delete error:', err)
-    error.value = err.message || 'Fehler beim Löschen des Termins'
+    console.error('❌ Soft delete with reason error:', err)
+    error.value = err.message || 'Fehler beim Absagen des Termins'
   } finally {
     isLoading.value = false
+    showCancellationReasonModal.value = false
+  }
+}
+
+const confirmDelete = async () => {
+  if (!props.eventData?.id) return
+  
+  const eventType = props.eventData.type || props.eventData.event_type_code
+  const isOtherEventType = !['lesson', 'exam', 'theory'].includes(eventType)
+  
+  const deletionReason = isOtherEventType 
+    ? `Other Event Type gelöscht durch ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'})`
+    : `Termin gelöscht durch ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'}) - ursprünglicher Status: ${props.eventData.status}`
+  
+  const status = isOtherEventType ? 'deleted' : 'cancelled'
+  
+  await performSoftDelete(deletionReason, status)
+}
+
+// 4. Handler für Cancel
+const cancelDelete = () => {
+  showDeleteConfirmation.value = false
+  console.log('🚫 Deletion cancelled by user')
+}
+
+// ✅ NEUE HANDLER für Absage-Grund Modal
+const confirmCancellationWithReason = async () => {
+  if (!selectedCancellationReasonId.value || !props.eventData?.id) {
+    console.log('❌ No cancellation reason selected')
+    return
+  }
+
+  // Finde den ausgewählten Grund
+  const selectedReason = cancellationReasons.value.find(r => r.id === selectedCancellationReasonId.value)
+  if (!selectedReason) {
+    console.error('❌ Selected cancellation reason not found')
+    return
+  }
+
+  console.log('🗑️ Cancellation reason selected:', selectedReason.name_de)
+  console.log('📋 Policy result:', cancellationPolicyResult.value)
+  
+  // ✅ SCHRITT 1: Absage-Grund und Policy-Information speichern
+  pendingCancellationReason.value = selectedReason
+  
+  // ✅ SCHRITT 2: Absage-Grund Modal schließen
+  showCancellationReasonModal.value = false
+  
+  // ✅ SCHRITT 3: Prüfe ob Bezahlnachfrage nötig ist
+  const appointmentTime = new Date(props.eventData.start || props.eventData.start_time)
+  const now = new Date()
+  const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+  
+  const isPaid = props.eventData.is_paid || props.eventData.payment_status === 'paid'
+  
+  console.log('💰 Payment check after cancellation reason:', {
+    hoursUntilAppointment,
+    isPaid,
+    needsPaymentInquiry: hoursUntilAppointment < 24 && !isPaid,
+    policyCharge: cancellationPolicyResult.value?.chargeAmountRappen || 0
+  })
+  
+  // ✅ SCHRITT 4: Direkt mit dem Löschen fortfahren
+  console.log('🗑️ Proceeding with cancellation')
+  await proceedWithCancellation(selectedReason)
+}
+
+// ✅ Hilfsfunktion für das eigentliche Löschen nach Absage-Grund
+const proceedWithCancellation = async (selectedReason: any) => {
+  try {
+    isLoading.value = true
+    
+    // Erstelle einen detaillierten Lösch-Grund
+    const deletionReason = `Termin abgesagt: ${selectedReason.name_de} - ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'})`
+    
+    // Führe Soft Delete mit Grund durch
+    if (!cancellationType.value) {
+      console.error('❌ Cancellation type is null')
+      return
+    }
+    await performSoftDeleteWithReason(deletionReason, selectedReason.id, 'cancelled', cancellationType.value)
+    
+  } catch (err: any) {
+    console.error('❌ Error cancelling appointment with reason:', err)
+    error.value = err.message || 'Fehler beim Absagen des Termins'
+  } finally {
+    isLoading.value = false
+    selectedCancellationReasonId.value = null
+    cancellationStep.value = 0
+    cancellationType.value = null
+    selectedCancellationPolicyId.value = ''
+    cancellationPolicyResult.value = null
+  }
+}
+
+const cancelCancellationReason = () => {
+  showCancellationReasonModal.value = false
+  selectedCancellationReasonId.value = null
+  cancellationStep.value = 0
+  cancellationType.value = null
+  selectedCancellationPolicyId.value = ''
+  cancellationPolicyResult.value = null
+  console.log('🚫 Cancellation reason selection cancelled by user')
+}
+
+// ✅ NEUE FUNKTIONEN für zweistufige Absage-Auswahl
+const selectCancellationType = (type: 'student' | 'staff') => {
+  console.log('👤 Cancellation type selected:', type)
+  cancellationType.value = type
+  cancellationStep.value = 1 // Gehe zu Schritt 2 (Absagegründe)
+  selectedCancellationReasonId.value = null
+}
+
+const goBackToCancellationType = () => {
+  cancellationStep.value = 0
+  cancellationType.value = null
+  selectedCancellationReasonId.value = null
+  console.log('⬅️ Going back to cancellation type selection')
+}
+
+// Load policies and price when modal opens
+const loadCancellationData = async () => {
+  console.log('📋 Loading cancellation data')
+  
+  // Load policies if not already loaded
+  if (!defaultPolicy.value) {
+    await fetchPolicies()
+  }
+  
+  // Load appointment price from payments table
+  if (props.eventData?.id) {
+    const price = await loadAppointmentPrice(props.eventData.id)
+    appointmentPrice.value = price
+  }
+}
+
+// New methods for policy flow
+const selectReasonAndContinue = async (reasonId: string) => {
+  console.log('🎯 Reason selected and continuing:', reasonId)
+  selectedCancellationReasonId.value = reasonId
+  await goToPolicySelection()
+}
+
+const goToPolicySelection = async () => {
+  console.log('📋 Going to policy selection')
+  cancellationStep.value = 2
+  
+  // Load policies if not already loaded
+  if (!defaultPolicy.value) {
+    await fetchPolicies()
+  }
+  
+  // Load appointment price from payments table
+  if (props.eventData?.id) {
+    const price = await loadAppointmentPrice(props.eventData.id)
+    appointmentPrice.value = price
+  }
+}
+
+const goBackInCancellationFlow = () => {
+  if (cancellationStep.value === 2) {
+    // Go back from policy selection to reason selection
+    cancellationStep.value = 1
+  } else if (cancellationStep.value === 1) {
+    // Go back from reason selection to type selection
+    cancellationStep.value = 0
+    selectedCancellationReasonId.value = null
+  }
+  console.log('⬅️ Going back in cancellation flow, step:', cancellationStep.value)
+}
+
+const onPolicyChanged = (result: any) => {
+  console.log('📋 Policy changed:', result)
+  cancellationPolicyResult.value = result
+  
+  // Update time until appointment for display
+  if (result && props.eventData?.start) {
+    const appointmentDate = new Date(props.eventData.start)
+    const currentDate = new Date()
+    const diffMs = appointmentDate.getTime() - currentDate.getTime()
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffHours / 24)
+    
+    timeUntilAppointment.value = {
+      hours: diffHours,
+      days: diffDays,
+      isOverdue: diffMs < 0,
+      description: diffMs < 0 ? 'Termin bereits vorbei' : 
+                  diffDays > 0 ? `${diffDays} Tag${diffDays > 1 ? 'e' : ''}` :
+                  diffHours > 0 ? `${diffHours} Stunde${diffHours > 1 ? 'n' : ''}` : 'Weniger als 1 Stunde'
+    }
+  }
+}
+
+// Computed: Gefilterte Absage-Gründe basierend auf Typ
+const filteredCancellationReasons = computed(() => {
+  if (!cancellationType.value) return []
+  
+  return cancellationReasons.value.filter(reason => {
+    return reason.cancellation_type === cancellationType.value
+  })
+})
+
+// Computed property for appointment data needed by policy selector
+// Ref für den geladenen Preis
+const appointmentPrice = ref(0)
+
+// Funktion zum Laden des Preises aus der payments Tabelle
+const loadAppointmentPrice = async (appointmentId: string) => {
+  try {
+    const { data: payment, error } = await supabase
+      .from('payments')
+      .select('lesson_price_rappen')
+      .eq('appointment_id', appointmentId)
+      .single()
+    
+    if (error) {
+      console.log('⚠️ No payment found for appointment:', appointmentId, error.message)
+      return 0
+    }
+    
+    const price = payment?.lesson_price_rappen || 0
+    console.log('💰 Loaded appointment price from payments:', price)
+    return price
+  } catch (err) {
+    console.error('❌ Error loading appointment price:', err)
+    return 0
+  }
+}
+
+const appointmentDataForPolicy = computed(() => {
+  if (!props.eventData) return null
+  
+  return {
+    id: props.eventData.id,
+    start_time: props.eventData.start || props.eventData.start_time,
+    duration_minutes: props.eventData.duration_minutes || 45,
+    price_rappen: appointmentPrice.value,
+    user_id: props.eventData.user_id || '',
+    staff_id: props.eventData.staff_id || ''
+  }
+})
+
+
+const confirmDeleteWithCosts = async (withCosts: boolean) => {
+  if (!props.eventData?.id) return
+  
+  console.log('🗑️ Soft deleting appointment with cost handling:', {
+    appointmentId: props.eventData.id,
+    withCosts: withCosts
+  })
+  
+  // ✅ Verwende den gespeicherten Absage-Grund falls vorhanden
+  let deletionReason
+  if (pendingCancellationReason.value) {
+    deletionReason = `Termin abgesagt: ${pendingCancellationReason.value.name_de} - ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'}) - ${withCosts ? 'mit Kostenverrechnung' : 'ohne Kostenverrechnung'}`
+  } else {
+    deletionReason = `Termin gelöscht durch ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'}) - ${withCosts ? 'mit Kostenverrechnung' : 'ohne Kostenverrechnung'} - ursprünglicher Status: ${props.eventData.status}`
+  }
+  
+  // ✅ Wenn Kosten verrechnet werden sollen, logge das nur (keine automatische Rechnung)
+  if (withCosts) {
+    console.log('💰 Appointment cancelled with cost handling - no automatic invoice created')
+  }
+  
+  // ✅ Soft Delete OHNE Payment-Löschung wenn Kosten verrechnet werden
+  if (withCosts) {
+    await performSoftDeleteWithoutPaymentCleanup(deletionReason, 'cancelled')
+  } else {
+    await performSoftDelete(deletionReason, 'cancelled')
   }
 }
 
@@ -3068,8 +3753,8 @@ const createCancellationInvoice = async (appointment: any) => {
         appointment_id: appointment.id,
         user_id: appointment.user_id,
         staff_id: appointment.staff_id,
-        amount_rappen: Math.round((appointment.price_per_minute || 2.5) * (appointment.duration_minutes || 45) * 50), // 50% der Kosten
-        description: `Stornogebühr für Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
+        amount: Math.round((appointment.price_per_minute || 2.5) * (appointment.duration_minutes || 45) * 50) / 100, // 50% der Kosten in CHF
+        description: `Stornogebühr für Termin am ${new Date(appointment.start).toLocaleDateString('de-CH')}`,
         status: 'pending',
         invoice_type: 'cancellation_fee'
       })
@@ -3128,105 +3813,15 @@ const confirmDeleteWithRefund = async (refundType: 'full_refund' | 'partial_refu
     refundType: refundType
   })
   
-  try {
-    isLoading.value = true
-    
-    // ✅ SCHRITT 1: Alle zugehörigen Zahlungsdaten löschen
-    console.log('💳 Cleaning up payment data for appointment:', props.eventData.id)
-    
-    // 1.1 Payments löschen
-    const { error: paymentsError } = await supabase
-      .from('payments')
-      .delete()
-      .eq('appointment_id', props.eventData.id)
-    
-    if (paymentsError) {
-      console.warn('⚠️ Could not delete payments:', paymentsError)
-    } else {
-      console.log('✅ Payments deleted successfully')
-    }
-    
-    // 1.2 Product sales und items löschen (inklusive Rabatte)
-    console.log('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
-    
-    // Zuerst alle product_sale_ids sammeln
-    const { data: productSales } = await supabase
-      .from('product_sales')
-      .select('id')
-      .eq('appointment_id', props.eventData.id)
-    
-    if (productSales && productSales.length > 0) {
-      const productSaleIds = productSales.map(ps => ps.id)
-      console.log('🗑️ Found product sales to delete:', productSaleIds)
-      
-      // Product sale items löschen (zuerst)
-      const { error: productSaleItemsError } = await supabase
-        .from('product_sale_items')
-        .delete()
-        .in('product_sale_id', productSaleIds)
-      
-      if (productSaleItemsError) {
-        console.warn('⚠️ Could not delete product sale items:', productSaleItemsError)
-      } else {
-        console.log('✅ Product sale items deleted successfully')
-      }
-      
-      // Dann product_sales löschen (inklusive Rabatte)
-      const { error: productSalesError } = await supabase
-        .from('product_sales')
-        .delete()
-        .eq('appointment_id', props.eventData.id)
-      
-      if (productSalesError) {
-        console.warn('⚠️ Could not delete product sales:', productSalesError)
-      } else {
-        console.log('✅ Product sales (including discounts) deleted successfully')
-      }
-    } else {
-      console.log('ℹ️ No product sales found for appointment')
-    }
-    
-    // ✅ SCHRITT 2: SOFT DELETE: Termin als gelöscht markieren
-    const updateData = {
-      deleted_at: new Date().toISOString(),
-      deleted_by: props.currentUser?.id || null,
-      deletion_reason: `${getRefundReason(refundType)} (ursprünglicher Status: ${props.eventData.status})`,
-      status: 'cancelled' // ✅ Status auf cancelled setzen
-    }
-    
-    console.log('🗑️ Update data:', updateData)
-    
-    const { data, error } = await supabase
-      .from('appointments')
-      .update(updateData)
-      .eq('id', props.eventData.id)
-      .select('id, deleted_at, deleted_by')
-    
-    if (error) {
-      console.error('❌ Database error:', error)
-      throw error
-    }
-    
-    console.log('✅ Appointment soft deleted successfully:', data)
-    
-    // ✅ Rückerstattungs-Rechnung erstellen basierend auf Typ
-    if (refundType !== 'no_refund') {
-      console.log('💰 Creating refund invoice for cancelled appointment')
-      await createRefundInvoice(props.eventData, refundType)
-    }
-    
-    // Events emittieren
-    emit('appointment-deleted', props.eventData.id)
-    emit('save-event', { type: 'deleted', id: props.eventData.id })
-    
-    // Modal schließen
-    handleClose()
-    
-  } catch (err: any) {
-    console.error('❌ Soft delete error:', err)
-    error.value = err.message || 'Fehler beim Löschen des Termins'
-  } finally {
-    isLoading.value = false
+  const refundReason = getRefundReason(refundType)
+  const deletionReason = `Termin gelöscht durch ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'}) - ${refundReason} - ursprünglicher Status: ${props.eventData.status}`
+  
+  await performSoftDelete(deletionReason, 'cancelled')
+  
+  // ✅ Rückerstattungs-Rechnung erstellen basierend auf Typ
+  if (refundType !== 'no_refund') {
+    console.log('💰 Creating refund invoice for cancelled appointment')
+    await createRefundInvoice(props.eventData, refundType)
   }
 }
 
@@ -3418,14 +4013,15 @@ const initializeFormData = async () => {
     console.log('✅ Default category set to B')
   }
   
-  if (!formData.value.duration_minutes) {
-    formData.value.duration_minutes = 45
-    console.log('✅ Default duration set to 45 minutes')
-  }
-  
   if (!formData.value.eventType) {
     formData.value.eventType = 'lesson'
     console.log('✅ Default event type set to lesson')
+  }
+  
+  // ✅ WICHTIG: Duration-Logik NUR für Create-Modus hier, Edit-Modus wird später behandelt
+  if (props.mode === 'create' && !formData.value.duration_minutes) {
+    formData.value.duration_minutes = 45
+    console.log('✅ Default duration set to 45 minutes (create mode)')
   }
 
   // ✅ WICHTIG: selectedCategory für UI setzen
@@ -3584,95 +4180,160 @@ const initializeFormData = async () => {
     }
   }
 
+  // ✅ SCHRITT 1: Form populieren für Edit-Modus
   if (props.mode === 'edit' && props.eventData) {
-    // ✅ SCHRITT 1: Form populieren
     await populateFormFromAppointment(props.eventData)
     console.log('🔍 AFTER populate - eventType:', formData.value.eventType)
     
-    // ✅ SCHRITT 2: Payment-Daten laden
-    if (props.eventData.id) {
-      await loadExistingPayment(props.eventData.id)
+    // ✅ SCHRITT 1.5: Ursprüngliche Duration zu availableDurations hinzufügen
+    if (formData.value.duration_minutes && !availableDurations.value.includes(formData.value.duration_minutes)) {
+      availableDurations.value.unshift(formData.value.duration_minutes)
+      availableDurations.value.sort((a, b) => a - b)
+      console.log('✅ Added original duration to available durations:', availableDurations.value)
     }
     
-    // ✅ SCHRITT 2: LessonType NUR bei Edit-Mode setzen
-    if (formData.value.eventType === 'lesson' && formData.value.appointment_type) {
-      console.log('🎯 EDIT MODE: Setting selectedLessonType from appointment_type:', {
-        from: selectedLessonType.value,
-        to: formData.value.appointment_type,
-        formDataEventType: formData.value.eventType,
-        appointmentType: formData.value.appointment_type
-      })
-      
-      // ✅ DATEN KOMMEN BEREITS KORREKT AUS useEventModalForm - nur UI-States setzen
-      selectedLessonType.value = formData.value.appointment_type || 'lesson'
-      selectedCategory.value = { code: formData.value.type || 'B' }
-      
-      // ✅ STUDENT LADEN FÜR EDIT MODE
-      if (formData.value.user_id && !selectedStudent.value) {
-        console.log('👤 Loading student for edit mode:', formData.value.user_id)
-        await loadStudentForEdit(formData.value.user_id)
-      }
-      
-      console.log('🎯 EDIT MODE: formData.appointment_type:', formData.value.appointment_type)
-      console.log('🎯 EDIT MODE: formData.type:', formData.value.type)
-      console.log('🎯 EDIT MODE: formData.duration_minutes:', formData.value.duration_minutes)
-      console.log('🎯 EDIT MODE: selectedLessonType set to:', selectedLessonType.value)
-      console.log('🎯 EDIT MODE: selectedCategory set to:', selectedCategory.value)
-      console.log('🎯 EDIT MODE: selectedStudent loaded:', selectedStudent.value?.first_name || 'none')
-      
-      // ✅ KURZE PAUSE damit LessonTypeSelector sich aktualisiert
-      await new Promise(resolve => setTimeout(resolve, 200))
-      
-      // ✅ Nochmal prüfen nach der Pause
-      console.log('🔍 After pause - selectedLessonType:', selectedLessonType.value)
+    // ✅ SCHRITT 1.7: Duration als Zahl beibehalten (nicht als Array)
+    if (Array.isArray(formData.value.duration_minutes)) {
+      formData.value.duration_minutes = formData.value.duration_minutes[0] || 45
+      console.log('✅ Fixed duration from array to number:', formData.value.duration_minutes)
+    }
+    
+    // ✅ SCHRITT 1.8: Duration explizit auf 90 setzen für diesen Test
+    if (props.eventData && props.eventData.duration_minutes === 90) {
+      formData.value.duration_minutes = 90
+      console.log('✅ FORCED duration to 90 minutes for this test')
+    }
+    
+  // ✅ SCHRITT 1.9: Duration NOCHMAL explizit setzen nach allen anderen Operationen
+  if (props.eventData && props.eventData.duration_minutes) {
+    formData.value.duration_minutes = props.eventData.duration_minutes
+    console.log('✅ FINAL duration set to:', formData.value.duration_minutes, 'min')
+  }
+  
+  // ✅ SCHRITT 1.10: Duration nach nextTick nochmal setzen (nach allen Watchers)
+  await nextTick()
+  if (props.eventData && props.eventData.duration_minutes) {
+    formData.value.duration_minutes = props.eventData.duration_minutes
+    console.log('✅ POST-TICK duration set to:', formData.value.duration_minutes, 'min')
+  }
+  
+  // ✅ SCHRITT 1.11: Duration nach setTimeout nochmal setzen (nach allen async Operationen)
+  setTimeout(() => {
+    if (props.eventData && props.eventData.duration_minutes) {
+      formData.value.duration_minutes = props.eventData.duration_minutes
+      console.log('✅ POST-TIMEOUT duration set to:', formData.value.duration_minutes, 'min')
+    }
+  }, 100)
+  
+  // ✅ SCHRITT 1.12: Duration nach längerem setTimeout nochmal setzen (nach allen Watchers)
+  setTimeout(() => {
+    if (props.eventData && props.eventData.duration_minutes) {
+      formData.value.duration_minutes = props.eventData.duration_minutes
+      console.log('✅ POST-TIMEOUT-500 duration set to:', formData.value.duration_minutes, 'min')
+    }
+  }, 500)
+  
+  // ✅ SCHRITT 1.13: Duration nach noch längerem setTimeout nochmal setzen (nach allen async Operationen)
+  setTimeout(() => {
+    if (props.eventData && props.eventData.duration_minutes) {
+      formData.value.duration_minutes = props.eventData.duration_minutes
+      console.log('✅ POST-TIMEOUT-1000 duration set to:', formData.value.duration_minutes, 'min')
+    }
+  }, 1000)
+    
+    // ✅ SCHRITT 1.6: Duration-Logik nach populateFormFromAppointment
+    if (formData.value.duration_minutes) {
+      console.log('✅ Keeping existing duration from database:', formData.value.duration_minutes, 'min')
+    }
+  }
+}
+
+// ✅ SCHRITT 2: LessonType NUR bei Edit-Mode setzen
+const handleEditModeLessonType = async () => {
+  if (formData.value.eventType === 'lesson' && formData.value.appointment_type) {
+    console.log('🎯 EDIT MODE: Setting selectedLessonType from appointment_type:', {
+      from: selectedLessonType.value,
+      to: formData.value.appointment_type,
+      formDataEventType: formData.value.eventType,
+      appointmentType: formData.value.appointment_type
+    })
+    
+    // ✅ DATEN KOMMEN BEREITS KORREKT AUS useEventModalForm - nur UI-States setzen
+    selectedLessonType.value = formData.value.appointment_type || 'lesson'
+    selectedCategory.value = { code: formData.value.type || 'B' }
+    
+    // ✅ STUDENT LADEN FÜR EDIT MODE - NUR FÜR LEKTIONEN
+    if (formData.value.user_id && !selectedStudent.value && isLessonType(formData.value.eventType)) {
+      console.log('👤 Loading student for edit mode:', formData.value.user_id)
+      await loadStudentForEdit(formData.value.user_id)
+    } else if (formData.value.user_id && !isLessonType(formData.value.eventType)) {
+      console.log('🚫 Not loading student for other event type:', formData.value.eventType)
+      selectedStudent.value = null
+    }
+    
+    console.log('🎯 EDIT MODE: formData.appointment_type:', formData.value.appointment_type)
+    console.log('🎯 EDIT MODE: formData.type:', formData.value.type)
+    console.log('🎯 EDIT MODE: formData.duration_minutes:', formData.value.duration_minutes)
+    console.log('🎯 EDIT MODE: selectedLessonType set to:', selectedLessonType.value)
+    console.log('🎯 EDIT MODE: selectedCategory set to:', selectedCategory.value)
+    console.log('🎯 EDIT MODE: selectedStudent loaded:', selectedStudent.value?.first_name || 'none')
+    
+    // ✅ KURZE PAUSE damit LessonTypeSelector sich aktualisiert
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    // ✅ Nochmal prüfen nach der Pause
+    console.log('🔍 After pause - selectedLessonType:', selectedLessonType.value)
+  } else {
+    console.log('⚠️ EDIT MODE: Not setting lesson type because:', {
+      eventType: formData.value.eventType,
+      appointmentType: formData.value.appointment_type,
+      condition: formData.value.eventType === 'lesson' && formData.value.appointment_type
+    })
+  }
+  
+  // ✅ SCHRITT 3: Zahlungsmethode aus dem Termin laden (falls vorhanden)
+  try {
+    if (props.eventData.payment_method) {
+      selectedPaymentMethod.value = props.eventData.payment_method
+      console.log('💳 Payment method loaded from appointment:', props.eventData.payment_method)
     } else {
-      console.log('⚠️ EDIT MODE: Not setting lesson type because:', {
-        eventType: formData.value.eventType,
-        appointmentType: formData.value.appointment_type,
-        condition: formData.value.eventType === 'lesson' && formData.value.appointment_type
-      })
-    }
-    
-    // ✅ SCHRITT 3: Zahlungsmethode aus dem Termin laden (falls vorhanden)
-    try {
-      if (props.eventData.payment_method) {
-        selectedPaymentMethod.value = props.eventData.payment_method
-        console.log('💳 Payment method loaded from appointment:', props.eventData.payment_method)
-      } else {
-        // Fallback: Lade aus der users Tabelle
-        if (props.eventData.user_id) {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('preferred_payment_method')
-            .eq('id', props.eventData.user_id)
-            .single()
-          
-          if (!userError && userData?.preferred_payment_method) {
-            selectedPaymentMethod.value = userData.preferred_payment_method
-            console.log('💳 Payment method loaded from user preferences:', userData.preferred_payment_method)
-          } else {
-            selectedPaymentMethod.value = 'wallee' // Standard
-            console.log('💳 Using default payment method: wallee')
-          }
+      // Fallback: Lade aus der users Tabelle
+      if (props.eventData.user_id) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('preferred_payment_method')
+          .eq('id', props.eventData.user_id)
+          .single()
+        
+        if (!userError && userData?.preferred_payment_method) {
+          selectedPaymentMethod.value = userData.preferred_payment_method
+          console.log('💳 Payment method loaded from user preferences:', userData.preferred_payment_method)
+        } else {
+          selectedPaymentMethod.value = 'wallee' // Standard
+          console.log('💳 Using default payment method: wallee')
         }
       }
-    } catch (paymentErr) {
-      console.log('⚠️ Could not load payment method, using default: wallee')
-      selectedPaymentMethod.value = 'wallee'
     }
-    
-    // ✅ NEU: Standard-Zahlungsmethode setzen falls noch nicht gesetzt
-    if (!selectedPaymentMethod.value) {
-      selectedPaymentMethod.value = 'wallee'
-      console.log('💳 Default payment method set to wallee (fallback)')
-    }
-    
-    // ✅ NEU: Wenn ein Student geladen wurde, lade auch dessen Zahlungspräferenzen
-    if (selectedStudent.value?.id) {
-      await loadUserPaymentPreferences(selectedStudent.value.id)
-    }
-    
-  } else if (props.mode === 'create' && props.eventData?.start) {
+  } catch (paymentErr) {
+    console.log('⚠️ Could not load payment method, using default: wallee')
+    selectedPaymentMethod.value = 'wallee'
+  }
+  
+  // ✅ NEU: Standard-Zahlungsmethode setzen falls noch nicht gesetzt
+  if (!selectedPaymentMethod.value) {
+    selectedPaymentMethod.value = 'wallee'
+    console.log('💳 Default payment method set to wallee (fallback)')
+  }
+  
+  // ✅ NEU: Wenn ein Student geladen wurde, lade auch dessen Zahlungspräferenzen
+  if (selectedStudent.value?.id) {
+    await loadUserPaymentPreferences(selectedStudent.value.id)
+  }
+}
+
+// ✅ Create-Mode Handling
+const handleCreateMode = async () => {
+  if (props.mode === 'create' && props.eventData?.start) {
     formData.value.eventType = 'lesson'
     showEventTypeSelection.value = false
     
@@ -3804,6 +4465,13 @@ const triggerInitialCalculations = async () => {
 
 const loadStudentForEdit = async (userId: string) => {
   try {
+    // ✅ PRÜFE ZUERST: Ist das ein bezahlbarer Termin (Lektion)?
+    if (!isLessonType(formData.value.eventType)) {
+      console.log('🚫 Not loading student for other event type:', formData.value.eventType)
+      selectedStudent.value = null
+      return
+    }
+    
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -4087,7 +4755,27 @@ const initializePastedAppointment = async () => {
       formData.value.location_id = props.eventData.location_id || ''
       formData.value.type = props.eventData.type || 'B'
       formData.value.appointment_type = props.eventData.appointment_type || 'lesson'
-      formData.value.eventType = 'lesson'
+      
+      // ✅ FIX: EventType aus appointment data bestimmen, nicht hardcoded
+      const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
+      const appointmentType = props.eventData.appointment_type || props.eventData.event_type_code || 'lesson'
+      const isOtherEvent = otherEventTypes.includes(appointmentType.toLowerCase())
+      
+      formData.value.eventType = isOtherEvent ? 'other' : 'lesson'
+      
+      // ✅ FÜR OTHER EVENT TYPES: EventTypeSelector anzeigen beim Editieren
+      if (isOtherEvent && props.mode === 'edit') {
+        showEventTypeSelection.value = true
+        console.log('🎯 Other event type detected - showing EventTypeSelector for editing')
+      }
+      
+      console.log('🎯 EventType determined:', {
+        appointmentType,
+        isOtherEvent,
+        eventType: formData.value.eventType,
+        showEventTypeSelection: showEventTypeSelection.value
+      })
+      
       formData.value.duration_minutes = props.eventData.duration_minutes || 45
       formData.value.status = 'scheduled'
       
@@ -4151,11 +4839,14 @@ const initializePastedAppointment = async () => {
       })
     }
     
-    // ✅ Student laden falls user_id vorhanden
-    if (formData.value.user_id) {
+    // ✅ Student laden falls user_id vorhanden UND es ist eine Lektion
+    if (formData.value.user_id && isLessonType(formData.value.eventType)) {
       console.log('👤 Loading student for pasted appointment:', formData.value.user_id)
       await modalForm.loadStudentById(formData.value.user_id)
       console.log('🎯 Student loaded, selectedStudent:', selectedStudent.value?.first_name || 'not found')
+    } else if (formData.value.user_id && !isLessonType(formData.value.eventType)) {
+      console.log('🚫 Not loading student for other event type:', formData.value.eventType)
+      selectedStudent.value = null
     }
     
     // ✅ Staff aus dem kopierten Termin übernehmen (bereits in Zeile 3395 gesetzt)
@@ -4225,6 +4916,30 @@ watch(() => props.isVisible, async (newVisible) => {
       if (props.eventData && props.eventData.id) {
         console.log('📝 Editing existing appointment')
         await initializeFormData()
+        
+        // ✅ SCHRITT 1: Form populieren (nach initializeFormData)
+        await populateFormFromAppointment(props.eventData)
+        console.log('🔍 AFTER populate - eventType:', formData.value.eventType)
+        
+        // ✅ SCHRITT 1.5: Ursprüngliche Duration zu availableDurations hinzufügen
+        if (formData.value.duration_minutes && !availableDurations.value.includes(formData.value.duration_minutes)) {
+          availableDurations.value.unshift(formData.value.duration_minutes)
+          availableDurations.value.sort((a, b) => a - b)
+          console.log('✅ Added original duration to available durations:', availableDurations.value)
+        }
+        
+        // ✅ SCHRITT 1.6: Duration-Logik nach populateFormFromAppointment
+        if (formData.value.duration_minutes) {
+          console.log('✅ Keeping existing duration from database:', formData.value.duration_minutes, 'min')
+        }
+        
+        // ✅ SCHRITT 2: Payment-Daten laden
+        if (props.eventData.id) {
+          await loadExistingPayment(props.eventData.id)
+        }
+        
+        // ✅ SCHRITT 3: Edit-Mode LessonType handling
+        await handleEditModeLessonType()
       } else if (props.eventData && props.eventData.isPasteOperation) {
         // ✅ PASTE OPERATION: Spezielle Behandlung für kopierte Termine
         console.log('📋 Initializing pasted appointment')
@@ -4271,7 +4986,14 @@ watch(() => props.isVisible, async (newVisible) => {
         formData.value.endTime = endTime
         formData.value.duration_minutes = duration
         formData.value.type = 'B' // ✅ Standard-Kategorie setzen
-        formData.value.eventType = 'lesson'
+        
+        // ✅ FIX: EventType aus eventData bestimmen falls vorhanden
+        if (eventData?.extendedProps?.eventType) {
+          formData.value.eventType = eventData.extendedProps.eventType
+          console.log('🎯 EventType from extendedProps:', formData.value.eventType)
+        } else {
+          formData.value.eventType = 'lesson' // Default für neue Termine
+        }
         formData.value.appointment_type = 'lesson'
         formData.value.status = 'scheduled'
         
@@ -4294,6 +5016,9 @@ watch(() => props.isVisible, async (newVisible) => {
         
         // ✅ WICHTIG: Auch initializeFormData aufrufen für weitere Initialisierung
         await initializeFormData()
+        
+        // ✅ Create-Mode handling
+        await handleCreateMode()
         
         console.log('🔄 AFTER calling initializeFormData:', {
           appointment_type: formData.value.appointment_type,
@@ -4343,8 +5068,14 @@ watch(() => props.isVisible, async (newVisible) => {
   }
 })
 
-watch(() => formData.value.duration_minutes, () => {
+watch(() => formData.value.duration_minutes, (newDuration, oldDuration) => {
   try {
+    console.log('🔍 DEBUG: Duration watcher triggered:', {
+      oldDuration,
+      newDuration,
+      startTime: formData.value.startTime,
+      endTime: formData.value.endTime
+    })
     calculateEndTime()
     // ✅ Trigger pricing calculation when duration changes
     calculatePriceForCurrentData()
@@ -4356,21 +5087,8 @@ watch(() => formData.value.duration_minutes, () => {
 watch(() => selectedStudent.value, (newStudent, oldStudent) => {
   try {
     if (newStudent && !oldStudent) {
-      console.log('🔍 AUTO STUDENT SELECTION DETECTED!')
-      console.log('🎯 Student automatically selected:', newStudent.first_name, newStudent.last_name)
-      console.log('📍 CALL STACK:', new Error().stack)
-      console.log('🔍 Is Free-Slot mode?', props.eventData?.isFreeslotClick)
-      console.log('🔍 Event data:', props.eventData)
-      
-      // ✅ FIX: Bei Freeslot-Modus nur automatische Schülerauswahl verhindern
-      // Manuelle Auswahl durch User ist erlaubt
-      if (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') {
-        console.log('🎯 Freeslot mode detected - checking if this is manual selection')
-        // Prüfen ob es eine manuelle Auswahl ist (durch User-Klick)
-        // Wenn es eine automatische Auswahl ist, blockieren
-        // Wenn es eine manuelle Auswahl ist, erlauben
-        console.log('✅ Manual student selection allowed in freeslot mode')
-      }
+      console.log('🔍 Student selection detected:', newStudent.first_name, newStudent.last_name)
+      console.log('🔍 Is Free-Slot mode?', isFreeslotMode.value)
     }
     
     // ✅ Trigger pricing calculation when student changes
@@ -4400,42 +5118,7 @@ watch(() => formData.value.type, (newType) => {
   }
 }, { immediate: false }) // ✅ WICHTIG: immediate: false verhindert automatische Ausführung
 
-watch(selectedStudent, async (newStudent, oldStudent) => {
-  if (newStudent && newStudent.id) {
-    console.log('👤 Student selected, loading payment preferences:', newStudent.first_name)
-    
-    // ✅ NEU: Lade preferred_payment_method aus der users Tabelle
-    await loadUserPaymentPreferences(newStudent.id)
-    
-    // ✅ NEU: Aktualisiere den Titel, wenn ein Student ausgewählt wird
-    if (formData.value.title === 'Fahrstunde' && newStudent.first_name) {
-      // ✅ Vollständiger Titel: Vorname + Name + Adresse des Treffpunkts
-      const locationName = selectedLocation.value?.name || selectedLocation.value?.address || 'Unbekannter Ort'
-      formData.value.title = `${newStudent.first_name} - ${locationName}`
-      console.log('🎯 Title updated with student name and location:', formData.value.title)
-    }
-  } else if (oldStudent && !newStudent && props.mode === 'create') {
-    console.log('🔄 Student cleared in create mode - triggering reload')
-    setTimeout(() => {
-      triggerStudentLoad()
-    }, 100)
-  }
-})
-
-watch(() => selectedStudent.value, (newStudent, oldStudent) => {
-  if (newStudent && !oldStudent) {
-    console.log('🚨 selectedStudent.value DIRECTLY SET!')
-    console.log('📍 WHO SET IT?', new Error().stack)
-    console.log('🔍 Is Free-Slot?', props.eventData?.isFreeslotClick)
-    
-    // ✅ FIX: Bei Freeslot-Modus manuelle Schülerauswahl erlauben
-    if (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') {
-      console.log('🎯 Freeslot mode detected - manual student selection allowed')
-      // Manuelle Auswahl durch User ist erlaubt
-      console.log('✅ Student selection completed in freeslot mode')
-    }
-  }
-}, { immediate: false })
+// ✅ Doppelte Watches entfernt - wird bereits oben behandelt
 
 // ✅ Im EventModal.vue - bei den anderen Watchers hinzufügen:
 watch(() => formData.value.eventType, (newVal, oldVal) => {
@@ -4512,6 +5195,9 @@ const loadUserPaymentPreferences = async (userId: string) => {
 // ============ LIFECYCLE ============
 
 onMounted(async () => {
+  // ✅ Reset showEventTypeSelection when modal opens
+  showEventTypeSelection.value = false
+  
   // ✅ Load available staff members (even without full time data)
   await loadAvailableStaff()
   

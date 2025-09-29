@@ -3,7 +3,7 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="flex justify-center items-center py-12">
       <div class="text-center">
-        <LoadingLogo size="lg" />
+        <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
         <p class="text-gray-600 mt-4">Dashboard wird geladen...</p>
       </div>
     </div>
@@ -23,7 +23,7 @@
           <div class="p-6">
             <div v-if="isLoadingInvoices" class="h-64 flex items-center justify-center text-gray-500">
               <div class="text-center">
-                <LoadingLogo size="lg" />
+                <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
                 <div class="mt-2">Rechnungen werden geladen...</div>
               </div>
             </div>
@@ -104,7 +104,7 @@
           <div class="p-6">
             <div v-if="isLoadingPendingStudents" class="h-64 flex items-center justify-center text-gray-500">
               <div class="text-center">
-                <LoadingLogo size="lg" />
+                <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
                 <div class="mt-2">Wird geladen...</div>
               </div>
             </div>
@@ -194,7 +194,7 @@
       <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
         <div v-if="isLoadingPendingStudents" class="flex items-center justify-center py-12">
           <div class="text-center">
-            <LoadingLogo size="lg" />
+            <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
             <div class="mt-2 text-gray-500">Wird geladen...</div>
           </div>
         </div>
@@ -282,11 +282,14 @@ import { definePageMeta, navigateTo } from '#imports'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString, formatDate } from '~/utils/dateUtils'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import { useCurrentUser } from '~/composables/useCurrentUser'
 
 definePageMeta({
-  layout: 'admin',
-  middleware: ['auth'] 
+  layout: 'admin'
 })
+
+// Current User für Tenant-ID
+const { currentUser } = useCurrentUser()
 
 // Types
 interface DashboardStats {
@@ -336,7 +339,7 @@ interface PendingStudent {
 }
 
 // State
-const isLoading = ref(true)
+const isLoading = ref(false) // Start with false for immediate page display
 const supabase = getSupabase()
 
 const stats = ref<DashboardStats>({
@@ -359,7 +362,21 @@ const loadRecentActivities = async () => {
   try {
     console.log('🔄 Loading recent activities...')
     
-    // Get recent pending payments
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    const tenantId = userProfile?.tenant_id
+    if (!tenantId) {
+      console.error('❌ User hat keine tenant_id zugewiesen')
+      return
+    }
+    
+    // Get recent pending payments - FILTERED BY TENANT
     const { data: pendingPayments, error: pendingError } = await supabase
       .from('payments')
       .select(`
@@ -370,6 +387,7 @@ const loadRecentActivities = async () => {
         user_id
       `)
       .eq('payment_status', 'pending')
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(5)
     
@@ -386,6 +404,7 @@ const loadRecentActivities = async () => {
         .from('users')
         .select('id, first_name, last_name')
         .in('id', userIds)
+        .eq('tenant_id', tenantId)
       
       if (!usersError && users) {
         userNames = users.reduce((acc, user) => {
@@ -484,30 +503,48 @@ const loadDashboardStats = async () => {
     // Get week range
     const weekStart = toLocalTimeString(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000))
     
-    // Load various stats in parallel
+    // Get current user's tenant_id for filtering
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    const tenantId = userProfile?.tenant_id
+    if (!tenantId) {
+      console.error('❌ User hat keine tenant_id zugewiesen')
+      return
+    }
+    console.log('🔍 Admin Dashboard - Current tenant_id:', tenantId)
+
+    // Load various stats in parallel - FILTERED BY TENANT
     const [
       paymentsResponse,
       usersResponse,
       appointmentsResponse
     ] = await Promise.all([
-      // Today's payments
+      // Today's payments - FILTERED BY TENANT
       supabase
         .from('payments')
         .select('total_amount_rappen')
         .eq('payment_status', 'completed')
+        .eq('tenant_id', tenantId)
         .gte('created_at', todayStart)
         .lte('created_at', todayEnd),
       
-      // Active users
+      // Active users - FILTERED BY TENANT
       supabase
         .from('users')
         .select('id, created_at')
-        .eq('is_active', true),
+        .eq('is_active', true)
+        .eq('tenant_id', tenantId),
       
-      // Today's appointments
+      // Today's appointments - FILTERED BY TENANT
       supabase
         .from('appointments')
         .select('id, start_time, type')
+        .eq('tenant_id', tenantId)
         .gte('start_time', todayStart)
         .lte('start_time', todayEnd)
     ])
@@ -537,6 +574,7 @@ const loadDashboardStats = async () => {
       const { data: tomorrowAppts } = await supabase
         .from('appointments')
         .select('id')
+        .eq('tenant_id', tenantId)
         .gte('start_time', tomorrowStart)
         .lte('start_time', tomorrowEnd)
       
@@ -558,11 +596,12 @@ const loadDashboardStats = async () => {
         .slice(0, 5)
     }
 
-    // Get pending payments
+    // Get pending payments - FILTERED BY TENANT
     const { data: pendingPayments, error: pendingError } = await supabase
       .from('payments')
       .select('total_amount_rappen, payment_method, created_at')
       .eq('payment_status', 'pending')
+      .eq('tenant_id', tenantId)
 
     if (pendingError) {
       console.error('❌ Error loading pending payments:', pendingError)
@@ -599,6 +638,20 @@ const loadRecentInvoices = async () => {
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
     const twoWeeksAgoStr = toLocalTimeString(twoWeeksAgo)
     
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    const tenantId = userProfile?.tenant_id
+    if (!tenantId) {
+      console.error('❌ User hat keine tenant_id zugewiesen')
+      return
+    }
+
     const { data: invoices, error } = await supabase
       .from('payments')
       .select(`
@@ -609,6 +662,7 @@ const loadRecentInvoices = async () => {
         user_id
       `)
       .eq('payment_method', 'invoice')
+      .eq('tenant_id', tenantId)
       .gte('created_at', twoWeeksAgoStr)
       .order('created_at', { ascending: false })
     
@@ -623,6 +677,7 @@ const loadRecentInvoices = async () => {
         .from('users')
         .select('id, first_name, last_name')
         .in('id', userIds)
+        .eq('tenant_id', tenantId)
       
       if (!usersError && users) {
         userNames = users.reduce((acc, user) => {
@@ -654,7 +709,21 @@ const loadPendingStudents = async () => {
     isLoadingPendingStudents.value = true
     console.log('🔄 Loading students with pending payments...')
     
-    // Get all pending payments
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    const tenantId = userProfile?.tenant_id
+    if (!tenantId) {
+      console.error('❌ User hat keine tenant_id zugewiesen')
+      return
+    }
+    
+    // Get all pending payments - FILTERED BY TENANT
     const { data: pendingPayments, error: paymentsError } = await supabase
       .from('payments')
       .select(`
@@ -666,6 +735,7 @@ const loadPendingStudents = async () => {
         created_at
       `)
       .eq('payment_status', 'pending')
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
     
     if (paymentsError) throw paymentsError
@@ -754,8 +824,12 @@ const navigateToStudentPayments = (userId: string) => {
 }
 
 // Lifecycle
+// Load data immediately when component is created (not waiting for mount)
+loadDashboardStats()
+
 onMounted(() => {
-  loadDashboardStats()
+  // Page is already displayed, data loads in background
+  console.log('📊 Dashboard page mounted, data loading in background')
 })
 </script>
 

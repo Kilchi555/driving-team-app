@@ -349,10 +349,27 @@ const loadCashTransactions = async () => {
   error.value = null
 
   try {
-    // Lade zuerst die cash_transactions
+    // Get current user's tenant_id first
+    const { data: currentUserData } = await supabase.auth.getUser()
+    if (!currentUserData?.user) throw new Error('Not authenticated')
+    
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUserData.user.id)
+      .single()
+    
+    if (profileError || !userProfile?.tenant_id) {
+      throw new Error('User has no tenant assigned')
+    }
+    
+    console.log('🔍 Loading cash transactions for tenant:', userProfile.tenant_id)
+    
+    // Lade zuerst die cash_transactions - FILTERED BY TENANT
     let query = supabase
       .from('cash_transactions')
       .select('*')
+      .eq('tenant_id', userProfile.tenant_id)
       .order('created_at', { ascending: false })
 
     // Filter by instructor if not admin OR if staff filter is applied
@@ -395,19 +412,21 @@ const loadCashTransactions = async () => {
       if (t.appointment_id) appointmentIds.add(t.appointment_id)
     })
 
-    // Lade alle benötigten Benutzerdaten
+    // Lade alle benötigten Benutzerdaten - FILTERED BY TENANT
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select('id, first_name, last_name')
       .in('id', Array.from(userIds))
+      .eq('tenant_id', userProfile.tenant_id)
 
     if (usersError) throw usersError
 
-    // Lade alle benötigten Appointment-Daten
+    // Lade alle benötigten Appointment-Daten - FILTERED BY TENANT
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
       .select('id, start_time')
       .in('id', Array.from(appointmentIds))
+      .eq('tenant_id', userProfile.tenant_id)
 
     if (appointmentsError) throw appointmentsError
 

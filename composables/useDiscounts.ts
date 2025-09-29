@@ -58,15 +58,29 @@ export const useDiscounts = () => {
       isLoading.value = true
       error.value = null
       
+      // Get current user's tenant_id
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (!userProfile?.tenant_id) throw new Error('No tenant_id found for user')
+      
       const { data, error: dbError } = await supabase
         .from('discounts')
         .select('*')
+        .eq('tenant_id', userProfile.tenant_id)
         .order('created_at', { ascending: false })
       
       if (dbError) throw dbError
       
       discounts.value = data || []
-      console.log('✅ Discounts loaded:', discounts.value.length)
+      console.log('✅ Discounts loaded for tenant:', discounts.value.length, userProfile.tenant_id)
+      console.log('📋 Loaded discount IDs:', discounts.value.map(d => ({ id: d.id, name: d.name, code: d.code })))
       
     } catch (err: any) {
       console.error('❌ Error loading discounts:', err)
@@ -78,9 +92,22 @@ export const useDiscounts = () => {
 
   const loadDiscountsByCategory = async (categoryCode: string) => {
     try {
+      // Get current user's tenant_id
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (!userProfile?.tenant_id) throw new Error('No tenant_id found for user')
+
       const { data, error: dbError } = await supabase
         .from('discounts')
         .select('*')
+        .eq('tenant_id', userProfile.tenant_id)
         .eq('is_active', true)
         .or(`category_filter.eq.${categoryCode},category_filter.eq.all`)
         .order('created_at', { ascending: false })
@@ -227,16 +254,34 @@ export const useDiscounts = () => {
 
   const createDiscount = async (discountData: Partial<DiscountCode>) => {
     try {
+      // Get current user's tenant_id
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (!userProfile?.tenant_id) throw new Error('No tenant_id found for user')
+
+      // Add tenant_id to discount data
+      const discountWithTenant = {
+        ...discountData,
+        tenant_id: userProfile.tenant_id
+      }
+
       const { data, error: dbError } = await supabase
         .from('discounts')
-        .insert(discountData)
+        .insert(discountWithTenant)
         .select()
         .single()
       
       if (dbError) throw dbError
       
       discounts.value.unshift(data)
-      console.log('✅ Discount created:', data.id)
+      console.log('✅ Discount created with tenant_id:', data.id, userProfile.tenant_id)
       
       return data
     } catch (err: any) {

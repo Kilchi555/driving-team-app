@@ -455,6 +455,21 @@ const loadStudents = async () => {
   try {
     const supabase = getSupabase()
     
+    // Get current user's tenant_id first
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    const tenantId = userProfile?.tenant_id
+    if (!tenantId) {
+      throw new Error('User has no tenant assigned')
+    }
+    
+    console.log('🔍 Loading students for tenant:', tenantId)
+    
     const { data, error: fetchError } = await supabase
       .from('users')
       .select(`
@@ -470,6 +485,7 @@ const loadStudents = async () => {
         )
       `)
       .eq('role', 'client')
+      .eq('tenant_id', tenantId)
       .order('first_name')
 
     if (fetchError) throw fetchError

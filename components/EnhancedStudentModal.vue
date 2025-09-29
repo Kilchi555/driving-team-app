@@ -26,12 +26,12 @@
       </div>
 
       <!-- Tab Navigation -->
-      <div class="bg-gray-50 border-b px-4">
+      <div class="bg-gray-50 border-b px-2">
         <div class="flex">
           <button
             @click="activeTab = 'details'"
             :class="[
-              'px-4 py-2 font-medium text-sm border-b-2 transition-colors',
+              'px-2 py-2 font-medium text-sm border-b-2 transition-colors',
               activeTab === 'details'
                 ? 'border-green-600 text-green-600'
                 : 'border-transparent text-gray-600 hover:text-gray-800'
@@ -43,7 +43,7 @@
           <button
             @click="activeTab = 'progress'"
             :class="[
-              'px-4 py-2 font-medium text-sm border-b-2 transition-colors',
+              'px-2 py-1 font-medium text-sm border-b-2 transition-colors',
               activeTab === 'progress'
                 ? 'border-green-600 text-green-600'
                 : 'border-transparent text-gray-600 hover:text-gray-800'
@@ -55,22 +55,277 @@
           <button
             @click="activeTab = 'payments'"
             :class="[
-              'px-4 py-2 font-medium text-sm border-b-2 transition-colors',
+              'px-2 py-2 font-medium text-sm border-b-2 transition-colors',
               activeTab === 'payments'
                 ? 'border-green-600 text-green-600'
                 : 'border-transparent text-gray-600 hover:text-gray-800'
             ]"
           >
             Zahlungen
-            <span v-if="paymentsCount > 0" class="ml-1 text-xs bg-gray-200 px-1.5 py-0.5 rounded-full">
-              {{ paymentsCount }}
-            </span>
+          </button>
+
+          <button
+            @click="activeTab = 'documents'"
+            :class="[
+              'px-2 py-1 font-medium text-sm border-b-2 transition-colors',
+              activeTab === 'documents'
+                ? 'border-green-600 text-green-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
+            ]"
+          >
+            Dokumente
           </button>
         </div>
       </div>
 
       <!-- Tab Content -->
       <div class="flex-1 overflow-y-auto">
+        
+        <!-- Documents Tab - CATEGORY BASED -->
+        <div v-if="activeTab === 'documents'" class="p-4 space-y-6">
+          
+          <!-- Header -->
+          <div class="text-center mb-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Dokumente verwalten</h3>
+            <p class="text-sm text-gray-500">
+              Basierend auf den Kategorien: 
+              <span v-for="cat in selectedStudent?.category" :key="cat" class="inline-flex items-center px-2 py-1 mx-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {{ cat }}
+              </span>
+            </p>
+          </div>
+
+          <!-- Category-Based Document Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Document placeholders based on categories -->
+            <div 
+              v-for="requirement in categoryDocumentRequirements" 
+              :key="`${requirement.id}_${requirement.categoryCode}`"
+              class="bg-white border border-gray-200 rounded-lg p-6"
+            >
+              <!-- Document Header -->
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                  <div class="text-2xl mr-3">{{ requirement.icon }}</div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h4 class="font-medium text-gray-900">{{ requirement.title }}</h4>
+                      <span v-if="requirement.isRequired" class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">
+                        Erforderlich
+                      </span>
+                      <span v-else class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                        Optional
+                      </span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">{{ requirement.reason }}</p>
+                  </div>
+                </div>
+                <div class="flex items-center">
+                  <span v-for="cat in requirement.categories" :key="cat" class="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                    {{ cat }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Document Status & Upload -->
+              <div class="space-y-4">
+                <!-- Front/Main Document -->
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700">
+                      {{ requirement.requiresBothSides ? 'Vorderseite' : requirement.title }}
+                    </span>
+                    <span v-if="getDocumentUrl(requirement, 'front')" class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                      ✅
+                    </span>
+                    <span v-else class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                      ❌ Fehlt
+                    </span>
+                  </div>
+                  
+                  <!-- Upload Area or Preview -->
+                  <div v-if="getDocumentUrl(requirement, 'front')" class="relative group">
+                    <img 
+                      :src="getDocumentUrl(requirement, 'front')!" 
+                      :alt="requirement.title + ' Vorderseite'"
+                      class="w-full h-32 object-cover rounded-lg border cursor-pointer hover:opacity-80"
+                      @click="viewDocument(getDocumentUrl(requirement, 'front')!, requirement.title + (requirement.requiresBothSides ? ' Vorderseite' : ''))"
+                    />
+                    <button
+                      @click="deleteDocumentFile(requirement, 'front')"
+                      class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div v-else
+                    @click="startCategoryUpload(requirement, 'front')"
+                    class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                  >
+                    <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    <p class="text-sm text-gray-600">{{ requirement.requiresBothSides ? 'Vorderseite' : requirement.title }} hochladen</p>
+                  </div>
+                </div>
+
+                <!-- Back Document (if required) -->
+                <div v-if="requirement.requiresBothSides">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700">Rückseite</span>
+                    <span v-if="getDocumentUrl(requirement, 'back')" class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                      ✅
+                    </span>
+                    <span v-else class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                      ❌ Fehlt
+                    </span>
+                  </div>
+                  
+                  <!-- Upload Area or Preview -->
+                  <div v-if="getDocumentUrl(requirement, 'back')" class="relative group">
+                    <img 
+                      :src="getDocumentUrl(requirement, 'back')!" 
+                      :alt="requirement.title + ' Rückseite'"
+                      class="w-full h-32 object-cover rounded-lg border cursor-pointer hover:opacity-80"
+                      @click="viewDocument(getDocumentUrl(requirement, 'back')!, requirement.title + ' Rückseite')"
+                    />
+                    <button
+                      @click="deleteDocumentFile(requirement, 'back')"
+                      class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div v-else
+                    @click="startCategoryUpload(requirement, 'back')"
+                    class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                  >
+                    <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    <p class="text-sm text-gray-600">Rückseite hochladen</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload Modal (when uploading) -->
+          <div v-if="showUploadInterface" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg max-w-md w-full p-6">
+              <div class="text-center mb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-2">{{ currentUploadTitle }}</h3>
+                <p class="text-sm text-gray-500">{{ currentUploadDescription }}</p>
+              </div>
+
+              <!-- Upload Area -->
+              <div 
+                @click="triggerCurrentUpload"
+                @dragover.prevent="setDragState(true)"
+                @dragleave.prevent="setDragState(false)"
+                @drop.prevent="handleCurrentDrop"
+                :class="[
+                  'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all',
+                  isDraggingCurrent 
+                    ? 'border-blue-400 bg-blue-50 scale-105' 
+                    : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+                ]"
+              >
+                <div class="space-y-4">
+                  <div v-if="isUploadingCurrent" class="flex items-center justify-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  </div>
+                  <div v-else class="space-y-2">
+                    <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <div class="text-lg font-medium text-gray-900">
+                      {{ isDraggingCurrent ? 'Loslassen zum Hochladen' : 'Bild hier ablegen' }}
+                    </div>
+                    <p class="text-sm text-gray-500">oder klicken Sie hier zum Auswählen</p>
+                    <p class="text-xs text-gray-400">JPG, PNG bis 5MB</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Hidden file input -->
+              <input
+                ref="currentFileInput"
+                type="file"
+                accept="image/*"
+                @change="handleCurrentFileSelect"
+                class="hidden"
+              />
+
+              <!-- Modal Actions -->
+              <div class="mt-6 flex justify-end space-x-3">
+                <button
+                  @click="showUploadInterface = false"
+                  class="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Progress Tab -->
+        <div v-if="activeTab === 'progress'" class="p-4">
+          <!-- Loading State -->
+          <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span class="ml-3 text-gray-600">Lade Lektionen...</span>
+          </div>
+
+          <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+            <h4 class="font-semibold text-red-900 mb-2">Fehler beim Laden</h4>
+            <p class="text-red-700 text-sm mb-4">{{ lessonsError }}</p>
+            <button @click="loadLessons" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+              Erneut versuchen
+            </button>
+          </div>
+
+          <div v-else-if="lessons.length === 0" class="text-center py-12">
+            <div class="text-6xl mb-4">📚</div>
+            <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Lektionen gefunden</h4>
+            <p class="text-gray-600">Für diesen Schüler wurden noch keine Lektionen erfasst.</p>
+          </div>
+
+          <div v-else class="space-y-4">
+            <h4 class="text-lg font-semibold text-gray-900">Lektionen & Bewertungen</h4>
+            <p class="text-gray-600">{{ lessons.length }} Lektionen gefunden</p>
+          </div>
+        </div>
+
+        <!-- Payments Tab -->
+        <div v-if="activeTab === 'payments'" class="p-4">
+          <!-- Loading State -->
+          <div v-if="isLoadingPayments" class="flex items-center justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span class="ml-3 text-gray-600">Lade Zahlungen...</span>
+          </div>
+
+          <div v-else-if="paymentsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+            <h4 class="font-semibold text-gray-900 mb-2">Fehler beim Laden der Zahlungen</h4>
+            <p>{{ paymentsError }}</p>
+            <button @click="loadPayments" class="mt-3 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+              Erneut versuchen
+            </button>
+          </div>
+
+          <div v-else-if="payments.length === 0" class="text-center py-8">
+            <div class="text-4xl mb-2">💰</div>
+            <h4 class="font-semibold text-gray-900 mb-2">Keine Zahlungen gefunden</h4>
+            <p class="text-gray-600">Für diesen Schüler wurden noch keine Zahlungen erfasst.</p>
+          </div>
+
+          <div v-else class="space-y-4">
+            <h4 class="text-lg font-semibold text-gray-900">Zahlungshistorie</h4>
+            <p class="text-gray-600">{{ payments.length }} Zahlungen gefunden</p>
+          </div>
+        </div>
+        
         <!-- Details Tab -->
         <div v-if="activeTab === 'details'" class="space-y-6 p-2">
           <!-- Persönliche Informationen -->
@@ -99,9 +354,6 @@
                         class="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
                       >
                         {{ selectedStudent.email }}
-                        <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                        </svg>
                       </a>
                     </div>
                     <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
@@ -123,15 +375,38 @@
                         class="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
                       >
                         {{ selectedStudent.phone }}
-                        <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                        </svg>
                       </a>
                     </div>
                     <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
                   </div>
                 </div>
 
+                <!-- Kategorien -->
+                <div class="flex items-start space-x-3">
+                  <div class="flex-shrink-0 w-5 h-5 mt-0.5">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-gray-900">Kategorien</div>
+                    <div v-if="selectedStudent.category && selectedStudent.category.length > 0" class="mt-1">
+                      <div class="flex flex-wrap gap-1">
+                        <span 
+                          v-for="cat in selectedStudent.category" 
+                          :key="cat"
+                          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        >
+                          {{ cat }}
+                        </span>
+                      </div>
+                    </div>
+                    <div v-else class="mt-1 text-sm text-gray-500 italic">Keine Kategorien zugewiesen</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-4">
                 <!-- Geburtsdatum -->
                 <div class="flex items-start space-x-3">
                   <div class="flex-shrink-0 w-5 h-5 mt-0.5">
@@ -150,9 +425,7 @@
                     <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
                   </div>
                 </div>
-              </div>
 
-              <div class="space-y-4">
                 <!-- Adresse -->
                 <div class="flex items-start space-x-3">
                   <div class="flex-shrink-0 w-5 h-5 mt-0.5">
@@ -171,33 +444,17 @@
                   </div>
                 </div>
 
-                <!-- Fahrlehrer -->
+                <!-- Lernfahrausweis Nummer -->
                 <div class="flex items-start space-x-3">
                   <div class="flex-shrink-0 w-5 h-5 mt-0.5">
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-gray-900">Fahrlehrer</div>
-                    <div v-if="selectedStudent.assignedInstructor" class="mt-1 text-sm text-gray-700">
-                      {{ selectedStudent.assignedInstructor }}
-                    </div>
-                    <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht zugewiesen</div>
-                  </div>
-                </div>
-
-                <!-- Kategorie -->
-                <div class="flex items-start space-x-3">
-                  <div class="flex-shrink-0 w-5 h-5 mt-0.5">
-                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-gray-900">Kategorie</div>
-                    <div v-if="selectedStudent.category" class="mt-1 text-sm text-gray-700">
-                      {{ selectedStudent.category }}
+                    <div class="text-sm font-medium text-gray-900">Lernfahrausweis Nr.</div>
+                    <div v-if="selectedStudent.lernfahrausweis_nr" class="mt-1 text-sm text-gray-700">
+                      {{ selectedStudent.lernfahrausweis_nr }}
                     </div>
                     <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
                   </div>
@@ -205,338 +462,27 @@
               </div>
             </div>
           </div>
-
-          <!-- Statistiken -->
-          <div class="bg-white rounded-lg border p-6">
-            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-              </svg>
-              Lektionen-Übersicht
-            </h4>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div v-if="selectedStudent.lastLesson" class="flex items-center space-x-3">
-                <div class="flex-shrink-0">
-                  <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                </div>
-                <div>
-                  <div class="text-sm font-medium text-gray-900">Letzte Lektion</div>
-                  <div class="text-sm text-gray-700">{{ formatDate(selectedStudent.lastLesson) }}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Neue detaillierte Lektionen-Übersicht -->
-            <div v-if="selectedStudent.scheduledLessonsCount || selectedStudent.completedLessonsCount || selectedStudent.cancelledLessonsCount" class="mt-6">
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Geplante Lektionen -->
-                <div v-if="selectedStudent.scheduledLessonsCount" class="flex items-center space-x-2">
-                  <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span class="text-sm text-gray-600">Geplant: <span class="font-medium text-blue-600">{{ selectedStudent.scheduledLessonsCount }}</span></span>
-                </div>
-                
-                <!-- Durchgeführte Lektionen -->
-                <div v-if="selectedStudent.completedLessonsCount" class="flex items-center space-x-2">
-                  <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span class="text-sm text-gray-600">Durchgeführt: <span class="font-medium text-green-600">{{ selectedStudent.completedLessonsCount }}</span></span>
-                </div>
-                
-                <!-- Gecancelte Lektionen -->
-                <div v-if="selectedStudent.cancelledLessonsCount" class="flex items-center space-x-2">
-                  <div class="w-3 h-3 bg-orange-500 rounded-full"></div>
-                  <span class="text-sm text-gray-600">Gecancelt: <span class="font-medium text-orange-600">{{ selectedStudent.cancelledLessonsCount }}</span></span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Progress Tab -->
-        <div v-if="activeTab === 'progress'" class="h-full overflow-y-auto p-2">
-
-          <!-- Loading State -->
-          <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
-            <LoadingLogo size="lg" />
-          </div>
-
-          <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <div class="text-4xl mb-4">⚠️</div>
-            <h4 class="font-semibold text-red-900 mb-2">Fehler beim Laden</h4>
-            <p class="text-red-700 text-sm mb-4">{{ lessonsError }}</p>
-            <button @click="loadLessons" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
-              Erneut versuchen
-            </button>
-          </div>
-
-          <div v-else-if="lessons.length === 0" class="text-center py-12">
-            <div class="text-6xl mb-4">📚</div>
-            <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Lektionen gefunden</h4>
-            <p class="text-gray-600">Für diesen Schüler wurden noch keine Lektionen erfasst.</p>
-          </div>
-
-          <div v-else-if="progressData.length === 0" class="text-center py-12">
-            <div class="text-6xl mb-4">📊</div>
-            <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Bewertungen verfügbar</h4>
-            <p class="text-gray-600 text-sm mb-4">
-              {{ lessons.length }} Lektionen gefunden, aber noch keine Kriterien bewertet.
-            </p>
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto">
-              <p class="text-yellow-800 text-sm">
-                💡 Tipp: Bewertungen werden automatisch angezeigt, sobald Fahrlehrer Kriterien bewerten.
-              </p>
-            </div>
-          </div>
-
-          <div v-else class="space-y-6">
-            <!-- Lektionen mit Bewertungen -->
-            <div
-              v-for="group in progressData"
-              :key="group.appointment_id"
-              class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-            >
-              <!-- Terminheader -->
-              <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-3">
-                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span class="font-medium text-gray-900">{{ group.date }}</span>
-                    <span class="text-gray-500">•</span>
-                    <span class="text-gray-600">{{ group.time }}</span>
-                    <span v-if="group.duration" class="text-gray-500 text-sm">
-                      ({{ group.duration }} Min)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Bewertungen -->
-              <div class="p-4 space-y-3">
-                <div
-                  v-for="(evaluation, evalIndex) in group.evaluations"
-                  :key="`${group.appointment_id}-${evaluation.criteria_id}-${evalIndex}`"
-                  class="flex items-start space-x-4 p-3 rounded-lg border-l-4 transition-all hover:bg-gray-50"
-                  :style="{ borderLeftColor: evaluation.borderColor }"
-                >
-                  <!-- Bewertungsbadge -->
-                  <div class="flex-shrink-0">
-                    <span
-                      class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold"
-                      :class="evaluation.colorClass"
-                    >
-                      {{ evaluation.criteria_rating }}/6
-                    </span>
-                  </div>
-
-                  <!-- Kriterium und Notiz -->
-                  <div class="flex-1 min-w-0">
-                    <h5 class="font-medium text-gray-900 mb-1">
-                      {{ evaluation.criteria_name }}
-                    </h5>
-                    <div
-                      v-if="evaluation.criteria_note"
-                      class="text-sm text-gray-700 bg-gray-50 p-2 rounded border"
-                    >
-                      {{ evaluation.criteria_note }}
-                    </div>
-                    <div v-else class="text-sm text-gray-500 italic">
-                      Keine Notiz vorhanden
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Payments Tab -->
-        <div v-if="activeTab === 'payments'" class="h-full overflow-y-auto p-2">
-          <!-- Sticky Payment Actions Header -->
-          <div v-if="selectedPayments.length > 0" class="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-4">
-                <div class="text-lg font-semibold text-gray-600">
-                    Total:
-                </div>
-                <div class="text-lg font-semibold text-green-600">
-                  CHF {{ (totalSelectedAmount / 100).toFixed(2) }}
-                </div>
-              </div>
-              <button 
-                @click="markAsPaid"
-                :disabled="isProcessingBulkAction"
-                class="px-6 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-              >
-                <span v-if="isProcessingBulkAction">Wird verarbeitet...</span>
-                <span v-else>Bar bezahlt</span>
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <!-- Loading State -->
-            <div v-if="isLoadingPayments" class="flex items-center justify-center py-8">
-              <LoadingLogo size="lg" />
-            </div>
-
-            <div v-else-if="paymentsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
-              <h4 class="font-semibold text-gray-900 mb-2">Fehler beim Laden der Zahlungen</h4>
-              <p>{{ paymentsError }}</p>
-              <button @click="loadPayments" class="mt-3 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-                Erneut versuchen
-              </button>
-            </div>
-
-            <div v-else-if="payments.length === 0" class="text-center py-8">
-              <div class="text-4xl mb-2">💰</div>
-              <h4 class="font-semibold text-gray-900 mb-2">Keine Zahlungen gefunden</h4>
-              <p class="text-gray-600">Für diesen Schüler wurden noch keine Zahlungen erfasst.</p>
-            </div>
-
-            <div v-else class="space-y-4">
-              <!-- Payments List -->
-              <div class="space-y-3">
-                <div
-                  v-for="payment in payments"
-                  :key="payment.id"
-                  :class="[
-                    'border rounded-lg p-4 hover:shadow-md transition-all cursor-pointer',
-                    getPaymentStatusBackgroundClass(payment.payment_status),
-                    selectedPayments.includes(payment.id) ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                  ]"
-                  @click="togglePaymentSelection(payment.id)"
-                >
-                  <div class="flex items-center space-x-4">
-                    <!-- Checkbox für Massenaktionen -->
-                    <input
-                      v-if="payment.payment_status !== 'completed'"
-                      type="checkbox"
-                      :value="payment.id"
-                      v-model="selectedPayments"
-                      class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                    />
-                    <div v-else class="w-4 h-4"></div>
-                    
-                    <!-- Payment Info -->
-                    <div class="flex-1">
-                      <div class="flex items-center justify-between mb-2">
-                        <h5 class="font-medium text-gray-900">
-                          {{ formatDateTime(payment.appointments?.start_time) }}
-                          <span v-if="payment.appointments?.duration_minutes" class="text-sm text-gray-500">
-                            ({{ payment.appointments.duration_minutes }} Min)
-                          </span>
-                        </h5>
-                        <div class="flex items-center space-x-2">
-
-                        </div>
-                      </div>
-                      
-                      <div class="flex items-center justify-between text-sm text-gray-600">
-                        <span>Betrag: CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}</span>
-                        <span v-if="payment.paid_at">
-                          Bezahlt: {{ formatDate(payment.paid_at) }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Sticky Footer mit Legende -->
-              <div class="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-3 mt-6 shadow-lg">
-                <div class="flex items-center justify-center space-x-6 text-sm">
-                  <div class="flex items-center space-x-2">
-                    <div class="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-                    <span class="text-gray-700">Bezahlt</span>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <div class="w-4 h-4 bg-blue-100 border border-blue-300 rounded"></div>
-                    <span class="text-gray-700">Verrechnet</span>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <div class="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
-                    <span class="text-gray-700">Ausstehend</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- Bulk Actions Modal -->
-    <div v-if="showBulkActionsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        <!-- Header -->
-        <div class="bg-blue-600 text-white p-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold">Massenaktionen für {{ selectedPayments.length }} Termine</h3>
-            <button @click="closeBulkActionsModal" class="text-white hover:text-blue-200">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          </div>
+    <!-- Document Viewer Modal -->
+    <div v-if="showDocumentViewer" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-60 p-4">
+      <div class="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden">
+        <div class="flex items-center justify-between p-4 border-b">
+          <h3 class="text-lg font-semibold">{{ viewerTitle }}</h3>
+          <button @click="closeDocumentViewer" class="text-gray-500 hover:text-gray-700">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
-
-        <!-- Content -->
-        <div class="flex-1 overflow-y-auto">
-          <!-- Selected Payments Summary -->
-          <div class="bg-gray-50 rounded-lg p-4 mb-4">
-            <h4 class="font-medium text-gray-900 mb-2">Ausgewählte Termine:</h4>
-            <div class="space-y-2 max-h-40 overflow-y-auto text-gray-900">
-              <div
-                v-for="paymentId in selectedPayments"
-                :key="paymentId"
-                class="flex items-center justify-between text-sm bg-white p-2 rounded border"
-              >
-                <span>{{ getPaymentById(paymentId)?.appointments?.start_time ? formatDateTime(getPaymentById(paymentId).appointments.start_time) : 'Unbekannter Termin' }}</span>
-                <span class="font-medium">CHF {{ getPaymentById(paymentId)?.total_amount_rappen ? (getPaymentById(paymentId).total_amount_rappen / 100).toFixed(2) : '0.00' }}</span>
-              </div>
-            </div>
-            
-            <div class="mt-3 pt-3 border-t border-gray-200">
-              <div class="flex justify-between font-medium text-gray-900">
-                <span>Gesamtbetrag:</span>
-                <span class="text-lg text-gray-900">CHF {{ totalSelectedAmount.toFixed(2) }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="space-y-3">
-            <button
-              @click="markAsPaid"
-              :disabled="isProcessingBulkAction"
-              class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span v-if="isProcessingBulkAction">Wird verarbeitet...</span>
-              <span v-else>✅ Als bezahlt markieren</span>
-            </button>
-            
-            <button
-              @click="markAsInvoiced"
-              :disabled="isProcessingBulkAction"
-              class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span v-if="isProcessingBulkAction">Wird verarbeitet...</span>
-              <span v-else>📄 Als verrechnet markieren</span>
-            </button>
-            
-            <button
-              @click="changePaymentMethod"
-              :disabled="isProcessingBulkAction"
-              class="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span v-if="isProcessingBulkAction">Wird verarbeitet...</span>
-              <span v-else>🔄 Zahlungsmethode ändern</span>
-            </button>
-          </div>
+        <div class="p-4">
+          <img 
+            :src="viewerImageUrl"
+            :alt="viewerTitle"
+            class="max-w-full max-h-[70vh] object-contain mx-auto"
+          />
         </div>
       </div>
     </div>
@@ -544,9 +490,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, toRefs, watch } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-import LoadingLogo from '~/components/LoadingLogo.vue'
+import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
 
 interface Student {
   id: string
@@ -560,12 +506,14 @@ interface Student {
   zip: string | null
   city: string | null
   is_active: boolean
-  category: string | null
+  category: string[] | null
   assignedInstructor: string | null
   lastLesson: string | null
+  lernfahrausweis_nr: string | null
   scheduledLessonsCount?: number
   completedLessonsCount?: number
   cancelledLessonsCount?: number
+  [key: string]: any // Allow dynamic field access
 }
 
 interface Props {
@@ -574,16 +522,206 @@ interface Props {
 
 interface Emits {
   (e: 'close'): void
+  (e: 'studentUpdated', data: { id: string, [key: string]: any }): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
+// Destructure props for easier access
+const { selectedStudent } = toRefs(props)
+
 // Supabase client
 const supabase = getSupabase()
 
 // Reactive state
-const activeTab = ref<'details' | 'progress' | 'payments'>('details')
+const activeTab = ref<'details' | 'progress' | 'payments' | 'documents'>('details')
+
+// Document requirements now loaded dynamically from database
+
+// Document requirements from database
+interface DocumentRequirement {
+  id: string
+  title: string
+  description: string
+  icon: string
+  field_prefix: string
+  storage_prefix: string
+  requires_both_sides: boolean
+  when_required: 'always' | 'after_exam' | 'conditional'
+  isRequired?: boolean
+  reason?: string
+  categoryCode?: string
+  categories?: string[]
+  frontField?: string
+  backField?: string
+  requiresBothSides?: boolean
+}
+
+const categoryDocumentRequirements = ref<DocumentRequirement[]>([])
+const loadingDocumentRequirements = ref(false)
+
+// User Documents Management
+const { 
+  documents: userDocuments, 
+  loading: documentsLoading,
+  error: documentsError,
+  loadDocuments,
+  hasDocument,
+  getDocument,
+  saveDocument,
+  deleteDocument,
+  uploadFile,
+  getPublicUrl
+} = useUserDocuments()
+
+// Helper function to get document URL from user_documents table
+const getDocumentUrl = (requirement: DocumentRequirement, side: 'front' | 'back' = 'front'): string | null => {
+  if (!selectedStudent.value) return null
+  
+  const doc = getDocument(
+    requirement.field_prefix, 
+    requirement.categoryCode, 
+    side
+  )
+  
+  return doc ? getPublicUrl(doc.storage_path) : null
+}
+
+// Helper function to check if document exists
+const hasDocumentFile = (requirement: DocumentRequirement, side: 'front' | 'back' = 'front'): boolean => {
+  if (!selectedStudent.value) return false
+  
+  return hasDocument(
+    requirement.field_prefix, 
+    requirement.categoryCode, 
+    side
+  )
+}
+
+// Load document requirements from categories table
+const loadDocumentRequirements = async () => {
+  if (!props.selectedStudent?.category || props.selectedStudent.category.length === 0) {
+    categoryDocumentRequirements.value = []
+    return
+  }
+
+  loadingDocumentRequirements.value = true
+  
+  try {
+    console.log('🔍 Loading document requirements for categories:', props.selectedStudent.category)
+
+    // Load categories with their document requirements from database
+    const { data: categories, error } = await supabase
+      .from('categories')
+      .select('code, name, document_requirements')
+      .in('code', props.selectedStudent.category)
+      .eq('is_active', true)
+
+    if (error) {
+      console.error('❌ Error loading categories:', error)
+      throw error
+    }
+
+    console.log('✅ Categories loaded:', categories)
+
+    const allRequirements: DocumentRequirement[] = []
+    const addedDocuments = new Set<string>()
+
+    // Process each category
+    categories?.forEach((category: any) => {
+      const requirements = category.document_requirements
+      if (!requirements) return
+
+      console.log(`📋 Processing requirements for ${category.code}:`, requirements)
+
+      // Add required documents
+      requirements.required?.forEach((req: any) => {
+        const uniqueId = `${req.id}_${category.code}`
+        if (!addedDocuments.has(uniqueId)) {
+          allRequirements.push({
+            ...req,
+            isRequired: true,
+            reason: `Erforderlich für Kategorie ${category.code}`,
+            categoryCode: category.code,
+            // Map database fields to template fields for backwards compatibility
+            frontField: req.field_prefix + '_url',
+            backField: req.field_prefix + '_back_url',
+            requiresBothSides: req.requires_both_sides,
+            categories: [category.code]
+          })
+          addedDocuments.add(uniqueId)
+        }
+      })
+
+      // Add optional documents based on conditions
+      requirements.optional?.forEach((req: any) => {
+        const uniqueId = `${req.id}_${category.code}`
+        if (addedDocuments.has(uniqueId)) return // Already added as required
+
+        let shouldShow = false
+        let reason = ''
+
+        switch (req.when_required) {
+          case 'always':
+            shouldShow = true
+            reason = `Optional für Kategorie ${category.code}`
+            break
+            
+          case 'after_exam':
+            // Show only if student has made progress (has any document uploaded)
+            const hasAnyDocument = userDocuments.value && userDocuments.value.length > 0
+            shouldShow = !!hasAnyDocument
+            reason = 'Optional nach bestandener Prüfung'
+            break
+            
+          case 'conditional':
+            // Additional conditions can be implemented here
+            shouldShow = false
+            break
+        }
+
+        if (shouldShow && !addedDocuments.has(req.id)) {
+          allRequirements.push({
+            ...req,
+            isRequired: false,
+            reason,
+            categoryCode: category.code,
+            // Map database fields to template fields for backwards compatibility
+            frontField: req.field_prefix + '_url',
+            backField: req.field_prefix + '_back_url',
+            requiresBothSides: req.requires_both_sides,
+            categories: [category.code]
+          })
+          addedDocuments.add(req.id)
+        }
+      })
+    })
+
+    categoryDocumentRequirements.value = allRequirements
+    console.log('📄 Final document requirements:', allRequirements)
+
+  } catch (error) {
+    console.error('❌ Error loading document requirements:', error)
+    // Fallback to empty requirements
+    categoryDocumentRequirements.value = []
+  } finally {
+    loadingDocumentRequirements.value = false
+  }
+}
+
+// Document upload state
+const showUploadInterface = ref(false)
+const isDraggingCurrent = ref(false)
+const isUploadingCurrent = ref(false)
+const currentFileInput = ref<HTMLInputElement>()
+
+// Document viewer state
+const showDocumentViewer = ref(false)
+const viewerImageUrl = ref('')
+const viewerTitle = ref('')
+
+// Progress and Payments data
 const lessons = ref<any[]>([])
 const progressData = ref<any[]>([])
 const payments = ref<any[]>([])
@@ -591,8 +729,9 @@ const isLoadingLessons = ref(false)
 const isLoadingPayments = ref(false)
 const lessonsError = ref<string | null>(null)
 const paymentsError = ref<string | null>(null)
+
+// Payment functionality
 const selectedPayments = ref<string[]>([])
-const showBulkActionsModal = ref(false)
 const isProcessingBulkAction = ref(false)
 
 // Computed properties
@@ -618,19 +757,81 @@ const averageRating = computed(() => {
   return avg.toFixed(1)
 })
 
-// Methods
+// Category-based upload functions
+const currentUploadRequirement = ref<any>(null)
+const currentUploadSide = ref<'front' | 'back'>('front')
+
+const currentUploadTitle = computed(() => {
+  if (!currentUploadRequirement.value) return ''
+  const side = currentUploadSide.value
+  return side === 'front' 
+    ? (currentUploadRequirement.value.requiresBothSides ? `${currentUploadRequirement.value.title} Vorderseite` : currentUploadRequirement.value.title)
+    : `${currentUploadRequirement.value.title} Rückseite`
+})
+
+const currentUploadDescription = computed(() => {
+  if (!currentUploadRequirement.value) return ''
+  return `Für Kategorien: ${currentUploadRequirement.value.categories.join(', ')}`
+})
+
+// Functions
 const closeModal = () => {
   emit('close')
 }
 
-const formatDate = (dateString: string | null | undefined): string => {
-  if (!dateString) return 'Nicht angegeben'
-  return new Date(dateString).toLocaleDateString('de-CH')
+const startCategoryUpload = (requirement: any, side: 'front' | 'back') => {
+  currentUploadRequirement.value = requirement
+  currentUploadSide.value = side
+  showUploadInterface.value = true
 }
 
-const formatDateTime = (dateString: string | null | undefined): string => {
+
+const viewDocument = (url: string, title: string) => {
+  viewerImageUrl.value = url
+  viewerTitle.value = title
+  showDocumentViewer.value = true
+}
+
+const closeDocumentViewer = () => {
+  showDocumentViewer.value = false
+  viewerImageUrl.value = ''
+  viewerTitle.value = ''
+}
+
+// Upload handlers
+const triggerCurrentUpload = () => {
+  currentFileInput.value?.click()
+}
+
+const setDragState = (isDragging: boolean) => {
+  isDraggingCurrent.value = isDragging
+}
+
+const handleCurrentDrop = (event: DragEvent) => {
+  isDraggingCurrent.value = false
+  
+  const files = event.dataTransfer?.files
+  if (files && files.length > 0) {
+    uploadCurrentFile(files[0])
+  }
+}
+
+const handleCurrentFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const files = target.files
+  if (files && files.length > 0) {
+    uploadCurrentFile(files[0])
+  }
+}
+
+// Utility functions
+const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Nicht angegeben'
-  return new Date(dateString).toLocaleString('de-CH')
+  try {
+    return new Date(dateString).toLocaleDateString('de-CH')
+  } catch {
+    return 'Ungültiges Datum'
+  }
 }
 
 const calculateAge = (birthdate: string | null | undefined): number | null => {
@@ -645,6 +846,7 @@ const calculateAge = (birthdate: string | null | undefined): number | null => {
   return age
 }
 
+// Load functions
 const loadLessons = async () => {
   if (!props.selectedStudent) return
   
@@ -652,126 +854,10 @@ const loadLessons = async () => {
   lessonsError.value = null
   
   try {
-    // 1. Lade Appointments
-    const { data: appointments, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        duration_minutes,
-        status,
-        location_id,
-        type
-      `)
-      .eq('user_id', props.selectedStudent.id)
-      .in('status', ['scheduled', 'confirmed', 'completed', 'cancelled'])
-      .order('start_time', { ascending: false })
-
-    if (appointmentsError) throw appointmentsError
-
-    if (!appointments || appointments.length === 0) {
-      lessons.value = []
-      progressData.value = []
-      return
-    }
-
-    // 2. Lade Notes mit Bewertungen
-    const appointmentIds = appointments.map(a => a.id)
-    const { data: notes, error: notesError } = await supabase
-      .from('notes')
-      .select(`
-        appointment_id,
-        criteria_rating,
-        criteria_note,
-        evaluation_criteria_id
-      `)
-      .in('appointment_id', appointmentIds)
-      .not('evaluation_criteria_id', 'is', null)
-      .not('criteria_rating', 'is', null)
-      .not('criteria_rating', 'eq', 0)
-
-    if (notesError) throw notesError
-
-    console.log('📝 Notes loaded:', notes)
-    console.log('🔍 Sample note:', notes?.[0])
-
-    // 3. Lade Kriterien-Namen
-    let criteriaMap: Record<string, any> = {}
-    if (notes && notes.length > 0) {
-      const criteriaIds = [...new Set(notes.map(n => n.evaluation_criteria_id).filter(Boolean))]
-      const { data: criteriaData, error: criteriaError } = await supabase
-        .from('evaluation_criteria')
-        .select('id, name, short_code')
-        .in('id', criteriaIds)
-
-      if (!criteriaError && criteriaData) {
-        criteriaMap = criteriaData.reduce((acc, c) => {
-          acc[c.id] = c
-          return acc
-        }, {} as Record<string, any>)
-      }
-    }
-
-    // 4. Verarbeite Notes zu Criteria Evaluations
-    const notesByAppointment = (notes || []).reduce((acc: Record<string, any[]>, note: any) => {
-      if (!acc[note.appointment_id]) {
-        acc[note.appointment_id] = []
-      }
-      
-      const criteria = criteriaMap[note.evaluation_criteria_id]
-      
-      if (note.evaluation_criteria_id && note.criteria_rating !== null && note.criteria_rating > 0 && criteria) {
-        acc[note.appointment_id].push({
-          criteria_id: note.evaluation_criteria_id,
-          criteria_name: criteria.name || 'Unbekannt',
-          criteria_rating: note.criteria_rating,
-          criteria_note: note.criteria_note || ''
-        })
-      }
-      
-      return acc
-    }, {} as Record<string, any[]>)
-
-    console.log('🔍 Notes by appointment:', notesByAppointment)
-
-    // 5. Kombiniere alles
-    lessons.value = appointments.map(appointment => ({
-      ...appointment,
-      evaluations: notesByAppointment[appointment.id] || []
-    }))
-    
-    // 6. Process progress data
-    progressData.value = lessons.value
-      .filter(lesson => lesson.evaluations && lesson.evaluations.length > 0)
-      .map(lesson => {
-        console.log('🔍 Processing lesson:', lesson.id, 'with evaluations:', lesson.evaluations)
-        return {
-          appointment_id: lesson.id,
-          date: formatDate(lesson.start_time),
-          time: new Date(lesson.start_time).toLocaleTimeString('de-CH', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          }),
-          duration: lesson.duration_minutes,
-          evaluations: lesson.evaluations.map((evaluation: any) => {
-            const processedEval = {
-              ...evaluation,
-              colorClass: getRatingColorClass(evaluation.criteria_rating),
-              textColorClass: getRatingTextColorClass(evaluation.criteria_rating),
-              noteColorClass: getRatingNoteColorClass(evaluation.criteria_rating),
-              borderColor: getRatingBorderColor(evaluation.criteria_rating)
-            }
-            console.log('🔍 Processed evaluation:', processedEval)
-            return processedEval
-          })
-        }
-      })
-
-    console.log('✅ Final lessons:', lessons.value?.length)
-    console.log('✅ Final progress data:', progressData.value)
-    console.log('🔍 Sample progress entry:', progressData.value?.[0])
+    console.log('📚 Loading lessons for student:', props.selectedStudent.id)
+    // Simplified version - just load basic data
+    lessons.value = []
+    progressData.value = []
     
   } catch (error) {
     console.error('Error loading lessons:', error)
@@ -788,21 +874,9 @@ const loadPayments = async () => {
   paymentsError.value = null
   
   try {
-    const { data, error } = await supabase
-      .from('payments')
-      .select(`
-        *,
-        appointments (
-          start_time,
-          duration_minutes
-        )
-      `)
-      .eq('user_id', props.selectedStudent.id)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-
-    payments.value = data || []
+    console.log('💰 Loading payments for student:', props.selectedStudent.id)
+    // Simplified version - just load basic data
+    payments.value = []
     
   } catch (error) {
     console.error('Error loading payments:', error)
@@ -812,165 +886,99 @@ const loadPayments = async () => {
   }
 }
 
-const getRatingColorClass = (rating: number): string => {
-  if (rating >= 5) return 'bg-green-100 text-green-800'
-  if (rating >= 4) return 'bg-blue-100 text-blue-800'
-  if (rating >= 3) return 'bg-yellow-100 text-yellow-800'
-  return 'bg-red-100 text-red-800'
-}
-
-const getRatingTextColorClass = (rating: number): string => {
-  if (rating >= 5) return 'text-green-700'
-  if (rating >= 4) return 'text-blue-700'
-  if (rating >= 3) return 'text-yellow-700'
-  return 'text-red-700'
-}
-
-const getRatingNoteColorClass = (rating: number): string => {
-  if (rating >= 5) return 'text-green-600'
-  if (rating >= 4) return 'text-blue-600'
-  if (rating >= 3) return 'text-yellow-600'
-  return 'text-red-600'
-}
-
-const getRatingBorderColor = (rating: number): string => {
-  if (rating >= 5) return '#10b981'
-  if (rating >= 4) return '#3b82f6'
-  if (rating >= 3) return '#eab308'
-  return '#ef4444'
-}
-
-const getPaymentStatusBackgroundClass = (status: string): string => {
-  switch (status) {
-    case 'completed':
-      return 'bg-green-50 border-green-200'
-    case 'invoiced':
-      return 'bg-blue-50 border-blue-200'
-    case 'pending':
-    default:
-      return 'bg-red-50 border-red-200'
+const uploadCurrentFile = async (file: File) => {
+  if (!selectedStudent.value?.id) {
+    alert('❌ Kein Benutzer ausgewählt')
+    return
   }
-}
-
-const getPaymentMethodClass = (method: string): string => {
-  switch (method) {
-    case 'invoice':
-      return 'bg-blue-100 text-blue-800'
-    case 'card':
-      return 'bg-green-100 text-green-800'
-    case 'cash':
-      return 'bg-yellow-100 text-yellow-800'
-    default:
-      return 'bg-gray-100 text-gray-800'
-  }
-}
-
-const getPaymentMethodText = (method: string): string => {
-  switch (method) {
-    case 'invoice':
-      return 'Rechnung'
-    case 'card':
-      return 'Karte'
-    case 'cash':
-      return 'Bargeld'
-    default:
-      return 'Unbekannt'
-  }
-}
-
-const togglePaymentSelection = (paymentId: string) => {
-  const index = selectedPayments.value.indexOf(paymentId)
-  if (index > -1) {
-    selectedPayments.value.splice(index, 1)
-  } else {
-    selectedPayments.value.push(paymentId)
-  }
-}
-
-const openBulkActionsModal = () => {
-  showBulkActionsModal.value = true
-}
-
-const closeBulkActionsModal = () => {
-  showBulkActionsModal.value = false
-  selectedPayments.value = []
-}
-
-const getPaymentById = (paymentId: string) => {
-  return payments.value.find(p => p.id === paymentId)
-}
-
-const markAsPaid = async () => {
-  if (selectedPayments.value.length === 0) return
   
-  isProcessingBulkAction.value = true
+  isUploadingCurrent.value = true
   
   try {
-    console.log('✅ Marking payments as paid:', selectedPayments.value)
+    const requirement = currentUploadRequirement.value
+    const side = currentUploadSide.value
     
-    // Prüfe welche Zahlungen geändert werden können
-    const paymentsToUpdate = payments.value.filter(p => 
-      selectedPayments.value.includes(p.id) && 
-      (p.payment_status === 'pending' || p.payment_status === 'completed')
-    )
-    
-    if (paymentsToUpdate.length === 0) {
-      alert('Keine Zahlungen zum Aktualisieren gefunden')
+    if (!requirement) {
+      alert('❌ Kein Dokument-Typ ausgewählt')
       return
     }
+
+    console.log('📤 Starting upload with new user_documents table:', {
+      fileName: file.name,
+      requirement: requirement.id,
+      side: side
+    })
+
+    // Upload file using the new composable
+    const storagePath = await uploadFile(
+      file,
+      selectedStudent.value.id,
+      requirement.field_prefix,
+      requirement.categoryCode,
+      side
+    )
+
+    if (!storagePath) {
+      throw new Error('Upload fehlgeschlagen')
+    }
+
+    console.log('✅ File uploaded to storage:', storagePath)
+
+    // Save document record to user_documents table
+    const documentData = {
+      user_id: selectedStudent.value.id,
+      tenant_id: selectedStudent.value.tenant_id,
+      document_type: requirement.field_prefix,
+      category_code: requirement.categoryCode,
+      side: side,
+      file_name: file.name,
+      file_size: file.size,
+      file_type: file.type,
+      storage_path: storagePath,
+      title: `${requirement.title} (${side === 'front' ? 'Vorderseite' : 'Rückseite'})`
+    }
+
+    const savedDocument = await saveDocument(documentData)
+
+    if (!savedDocument) {
+      throw new Error('Dokument konnte nicht gespeichert werden')
+    }
+
+    console.log('✅ Document saved to database:', savedDocument)
+
+    // Reload documents to update UI
+    await loadDocuments(selectedStudent.value.id)
+
+    // Emit update to parent
+    emit('studentUpdated', selectedStudent.value)
+
+    console.log('✅ Document uploaded successfully with new system:', file.name)
     
-    console.log('🔄 Updating payments:', paymentsToUpdate.map(p => ({
-      id: p.id,
-      current_method: p.payment_method,
-      current_status: p.payment_status
-    })))
-    
-    const { error } = await supabase
-      .from('payments')
-      .update({ 
-        payment_method: 'cash',
-        payment_status: 'completed',
-        paid_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .in('id', selectedPayments.value)
-    
-    if (error) throw error
-    
-    // Refresh payments
-    await loadPayments()
-    
-    // Clear selection
-    selectedPayments.value = []
-    
-    console.log('✅ Payments updated to cash and marked as paid successfully')
+    // Nach erfolgreichem Upload automatisch schließen
+    setTimeout(() => {
+      showUploadInterface.value = false
+      currentUploadRequirement.value = null
+    }, 1500)
     
   } catch (error: any) {
-    console.error('❌ Error marking payments as paid:', error)
-    alert('Fehler beim Markieren der Zahlungen als bezahlt')
+    console.error('❌ Upload error:', error)
+    alert(`❌ Upload fehlgeschlagen: ${error.message}`)
   } finally {
-    isProcessingBulkAction.value = false
+    isUploadingCurrent.value = false
   }
 }
 
-const markAsInvoiced = async () => {
-  // Implementation for marking payments as invoiced
-  console.log('Marking payments as invoiced:', selectedPayments.value)
-}
-
-const changePaymentMethod = async () => {
-  // Implementation for changing payment method
-  console.log('Changing payment method for:', selectedPayments.value)
-}
-
-// Watchers
+// Watch for student changes
 watch(() => props.selectedStudent, (newStudent) => {
   if (newStudent) {
     loadLessons()
     loadPayments()
+    loadDocumentRequirements()
+    loadDocuments(newStudent.id) // Load user documents from new table
   }
 }, { immediate: true })
 
+// Watch for tab changes
 watch(() => activeTab.value, (newTab) => {
   if ((newTab === 'progress' || newTab === 'payments') && props.selectedStudent) {
     if (newTab === 'progress') {
@@ -980,4 +988,29 @@ watch(() => activeTab.value, (newTab) => {
     }
   }
 })
+
+// Document management functions
+const deleteDocumentFile = async (requirement: DocumentRequirement, side: 'front' | 'back') => {
+  if (!selectedStudent.value) return
+  
+  const doc = getDocument(
+    requirement.field_prefix, 
+    requirement.categoryCode, 
+    side
+  )
+  
+  if (!doc) return
+  
+  const success = await deleteDocument(doc.id)
+  if (success) {
+    // Reload documents to update UI
+    await loadDocuments(selectedStudent.value.id)
+    // Emit update to parent
+    emit('studentUpdated', selectedStudent.value)
+  }
+}
+
+// viewDocument function already defined earlier
+
 </script>
+

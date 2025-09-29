@@ -13,6 +13,7 @@ interface UserProfile {
   first_name: string | null
   last_name: string | null
   phone: string | null
+  tenant_id: string | null
   is_active: boolean
   preferred_payment_method?: string | null
 }
@@ -220,6 +221,7 @@ const isAdmin = computed(() => {
           first_name,
           last_name,
           phone,
+          tenant_id,
           is_active,
           preferred_payment_method
         `)
@@ -240,7 +242,12 @@ const isAdmin = computed(() => {
       userProfile.value = data
       userRole.value = data.role || ''
       
-      console.log('✅ User profile loaded:', data.role)
+      console.log('✅ User profile loaded:', {
+        role: data.role,
+        tenant_id: data.tenant_id,
+        email: data.email,
+        user_id: data.id
+      })
     } catch (err: any) {
       console.error('❌ Error fetching user profile:', err.message)
       errorMessage.value = 'Konnte Benutzerprofil nicht laden.'

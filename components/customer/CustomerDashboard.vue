@@ -80,7 +80,59 @@
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         
-        <!-- Zahlungsübersicht - NACH OBEN VERSCHOBEN -->
+        <!-- Termin-Bestätigungen - NEU -->
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border" 
+             :class="pendingConfirmations.length > 0 ? 'border-orange-100' : 'border-green-100'">
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
+                   :class="pendingConfirmations.length > 0 ? 'bg-orange-100' : 'bg-green-100'">
+                <svg v-if="pendingConfirmations.length > 0" class="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <svg v-else class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 class="text-sm font-medium text-gray-500">
+                {{ pendingConfirmations.length > 0 ? 'Termine bestätigen' : 'Alle Termine bestätigt' }}
+              </h3>
+            </div>
+            
+            <div class="flex-1">
+              <div v-if="pendingConfirmations.length > 0">
+                <p class="text-3xl font-bold text-orange-600">{{ pendingConfirmations.length }}</p>
+                <p class="text-xs text-orange-500 mt-1">
+                  Warten auf deine Bestätigung
+                </p>
+              </div>
+              <div v-else>
+                <p class="text-3xl font-bold text-green-600">✓ Bestätigt</p>
+                <p class="text-xs text-green-500 mt-1">
+                  Alle Termine bestätigt
+                </p>
+              </div>
+            </div>
+            
+            <div class="mt-4">
+              <button
+                @click="navigateToConfirmations"
+                :disabled="isLoading"
+                :class="[
+                  'w-full px-3 py-2 rounded-lg transition-colors text-sm font-medium',
+                  pendingConfirmations.length > 0 
+                    ? 'bg-orange-500 text-white hover:bg-orange-600' 
+                    : 'bg-green-500 text-white hover:bg-green-600',
+                  isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                ]"
+              >
+                {{ pendingConfirmations.length > 0 ? 'Termine bestätigen' : 'Bestätigungen ansehen' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zahlungsübersicht -->
         <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border" 
              :class="unpaidAppointments.length > 0 ? 'border-yellow-100' : 'border-green-100'">
           <div class="p-6 h-full flex flex-col">
@@ -95,7 +147,7 @@
                 </svg>
               </div>
               <h3 class="text-sm font-medium text-gray-500">
-                {{ unpaidAppointments.length > 0 ? 'Offene Rechnungen' : 'Zahlungsstatus' }}
+                {{ unpaidAppointments.length > 0 ? 'Offene Zahlungen' : 'Zahlungsstatus' }}
               </h3>
             </div>
             
@@ -176,7 +228,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 class="text-sm font-medium text-gray-500">Bewertete Lektionen</h3>
+              <h3 class="text-sm font-medium text-gray-500">Absolvierte Lektionen</h3>
             </div>
             
             <div class="flex-1">
@@ -307,6 +359,11 @@ const completedAppointments = computed(() => {
   ).sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
 })
 
+const pendingConfirmations = computed(() => {
+  // Termine die auf Bestätigung warten
+  return appointments.value?.filter(apt => apt.status === 'pending_confirmation') || []
+})
+
 const unpaidAppointments = computed(() => {
   // Verwende pendingPayments anstatt appointments für offene Rechnungen
   return pendingPayments.value || []
@@ -423,6 +480,11 @@ const getRatingColorPreview = (rating: number) => {
 }
 
 // Navigation methods
+const navigateToConfirmations = async () => {
+  // Navigiere zur Bestätigungsseite
+  await navigateTo('/customer/confirmations')
+}
+
 const navigateToPayments = async () => {
   // Wenn offene Zahlungen vorhanden sind, direkt zum Payment-Prozess
   if (unpaidAppointments.value.length > 0) {
@@ -572,7 +634,7 @@ const loadAppointments = async () => {
       
       const { data: criteria, error: criteriaError } = await supabase
         .from('evaluation_criteria')
-        .select('id, name, short_code')
+        .select('id, name')
         .in('id', criteriaIds)
 
       if (criteriaError) {
@@ -590,7 +652,7 @@ const loadAppointments = async () => {
         criteriaMap = criteria.reduce((acc, crit) => {
           acc[crit.id] = {
             name: crit.name || 'Unbekanntes Kriterium',
-            short_code: crit.short_code,
+            short_code: null,
             category_name: null
           }
           return acc
@@ -609,7 +671,7 @@ const loadAppointments = async () => {
         acc[note.appointment_id].push({
           criteria_id: note.evaluation_criteria_id,
           criteria_name: criteriaDetails.name || 'Unbekannt',
-          criteria_short_code: criteriaDetails.short_code || null,
+          criteria_short_code: null,
           criteria_rating: note.criteria_rating,
           criteria_note: note.criteria_note || '',
           criteria_category_name: criteriaDetails.category_name || null

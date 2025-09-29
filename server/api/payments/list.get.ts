@@ -30,7 +30,20 @@ export default defineEventHandler(async (event): Promise<PaymentListResponse> =>
     
     const supabase = getSupabase()
     
-    // Base query
+    // Get user's tenant_id for filtering
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+    
+    if (userError) throw userError
+    if (!userData?.tenant_id) throw createError({ statusCode: 400, statusMessage: 'User has no tenant assigned' })
+    
+    // Base query with tenant filter
     let queryBuilder = supabase
       .from('payments')
       .select(`
@@ -49,8 +62,10 @@ export default defineEventHandler(async (event): Promise<PaymentListResponse> =>
         payment_status,
         paid_at,
         description,
-        metadata
+        metadata,
+        tenant_id
       `, { count: 'exact' })
+      .eq('tenant_id', userData.tenant_id) // ✅ Tenant Filter
 
     // Apply filters
     if (query.userId) {

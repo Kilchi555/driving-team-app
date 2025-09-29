@@ -206,8 +206,8 @@ const handleCategorySelected = async (category: any) => {
     switch (lessonTypeCode) {
       case 'exam':
         // Prüfung: Verwende category exam_duration_minutes
-        const examDuration = selectedCategory.value?.exam_duration_minutes || 180
-        console.log('📝 Auto-setting EXAM duration:', examDuration)
+        const examDuration = selectedCategory.value?.exam_duration_minutes || 135
+        console.log('📝 Auto-setting EXAM duration:', examDuration, 'for category:', selectedCategory.value?.code)
         
         formData.value.duration_minutes = examDuration
         availableDurations.value = [examDuration]
@@ -279,6 +279,7 @@ const handleCategorySelected = async (category: any) => {
 const handleDurationsChanged = (durations: number[]) => {
   console.log('⏱️ Durations changed:', durations)
   console.log('🔍 Current appointment_type:', formData.value.appointment_type)
+  console.log('🔍 Current duration:', formData.value.duration_minutes)
   
   // ✅ FIX: Bei Prüfungen die exam_duration aus selectedCategory verwenden
   if (formData.value.appointment_type === 'exam') {
@@ -289,8 +290,28 @@ const handleDurationsChanged = (durations: number[]) => {
   } else {
     // Normale Fahrstunden-Logic
     availableDurations.value = durations
-    if (durations.length > 0 && !durations.includes(formData.value.duration_minutes)) {
-      formData.value.duration_minutes = durations[0]
+    
+    // ✅ INTELLIGENTE DAUER-AUSWAHL: Versuche die aktuelle Dauer zu behalten, wenn möglich
+    if (durations.length > 0) {
+      const currentDuration = formData.value.duration_minutes
+      
+      if (durations.includes(currentDuration)) {
+        console.log('✅ Keeping current duration:', currentDuration, 'as it\'s available in new category')
+      } else {
+        // Aktuelle Dauer nicht verfügbar - wähle intelligente Alternative
+        let newDuration = durations[0] // Fallback
+        
+        // Versuche eine ähnliche Dauer zu finden (±15min Toleranz)
+        const similarDuration = durations.find(d => Math.abs(d - currentDuration) <= 15)
+        if (similarDuration) {
+          newDuration = similarDuration
+          console.log('🎯 Found similar duration:', newDuration, 'instead of', currentDuration)
+        } else {
+          console.log('⚠️ No similar duration found, using first available:', newDuration)
+        }
+        
+        formData.value.duration_minutes = newDuration
+      }
     }
   }
   
@@ -461,17 +482,43 @@ const handleDurationsChanged = (durations: number[]) => {
     console.log('⏱️ Loading staff durations for category:', categoryCode, 'staff:', staffId)
     
     try {
-      // ✅ NEU: Lade Dauer direkt aus der categories Tabelle
+      // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Nicht angemeldet')
+
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+      if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+      // ✅ TENANT-GEFILTERTE Kategorie-Dauern laden
       const { data, error } = await supabase
         .from('categories')
         .select('lesson_duration_minutes')
         .eq('code', categoryCode)
+        .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
         .eq('is_active', true)
         .maybeSingle()
 
       if (error) throw error
       
-      const durations = data?.lesson_duration_minutes || [45]
+      let durations = data?.lesson_duration_minutes || [45]
+      
+      // ✅ CONVERT STRING ARRAYS TO NUMBER ARRAYS
+      if (Array.isArray(durations)) {
+        durations = durations.map((d: any) => {
+          const num = parseInt(d.toString(), 10)
+          return isNaN(num) ? 45 : num
+        })
+      } else {
+        const num = parseInt(durations.toString(), 10)
+        durations = [isNaN(num) ? 45 : num]
+      }
+      
       console.log('📊 Category durations loaded:', durations)
       return durations
 

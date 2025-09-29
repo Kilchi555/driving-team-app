@@ -1086,8 +1086,8 @@ import { useAccounto } from '~/composables/useAccounto'
 import { useInvoices } from '~/composables/useInvoices'
 import Toast from '~/components/Toast.vue'
 
-// Einfaches, funktionierendes Logo für Driving Team
-const DRIVING_TEAM_LOGO_BASE64 = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiByeD0iMTIiIGZpbGw9IiM2NDlFRkYiLz4KPHRleHQgeD0iNTAiIHk9IjYwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXdlaWdodD0iYm9sZCI+RFQ8L3RleHQ+Cjwvc3ZnPgo='
+// Generisches Logo für PDFs - wird durch Tenant-Logo ersetzt
+const GENERIC_LOGO_BASE64 = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiByeD0iMTIiIGZpbGw9IiM2NDlFRkYiLz4KPHRleHQgeD0iNTAiIHk9IjYwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXdlaWdodD0iYm9sZCI+TG9nbzwvdGV4dD4KPC9zdmc+Cg=='
 
 // Types
 interface UserDetails {
@@ -2837,7 +2837,7 @@ const prepareForPrint = async () => {
     const darkColor: [number, number, number] = [33, 37, 41]      // Dunkelgrau
     const lightGray: [number, number, number] = [248, 249, 250]   // Hellgrau
     
-    // Logo und Fahrschule Driving Team Text oben
+    // Logo und Firmen Text oben
     const centerX = pageWidth / 2
     const logoY = 20
     const _textY = 50
@@ -2849,7 +2849,7 @@ const prepareForPrint = async () => {
       const logoX = centerX - 20 // Zentriert
       
       // SVG-Logo in jsPDF einbetten
-      doc.addImage(DRIVING_TEAM_LOGO_BASE64, 'SVG', logoX, logoY, logoWidth, logoHeight)
+      doc.addImage(GENERIC_LOGO_BASE64, 'SVG', logoX, logoY, logoWidth, logoHeight)
     } catch (error) {
       console.warn('Logo konnte nicht geladen werden:', error)
       // Fallback: Einfaches Rechteck als Logo-Ersatz
@@ -2858,7 +2858,7 @@ const prepareForPrint = async () => {
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(14)
       doc.setFont('helvetica', 'bold')
-      doc.text('Fahrschule Driving Team', centerX, logoY + 10, { align: 'center' })
+      doc.text('Firma', centerX, logoY + 10, { align: 'center' })
     }
     
     // TEXT ENTFERNT - nur noch Logo

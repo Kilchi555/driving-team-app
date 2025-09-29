@@ -13,10 +13,15 @@ interface PendingAppointment {
   status: string
   type: string // ✅ Kategorie des Termins (A, B, etc.)
   event_type_code: string
+  created_by?: string
   users: {
     first_name: string
     last_name: string
     category?: string // ✅ Kategorie des Schülers
+  }
+  created_by_user?: {
+    first_name: string
+    last_name: string
   }
   // Da wir nur Kriterien-Bewertungen wollen, passen wir den Typ an
   // Die notes Property sollte hier nur die Kriterien-spezifischen Notizen halten
@@ -128,6 +133,17 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
   try {
     const supabase = getSupabase()
     
+    // Get user's tenant_id for filtering
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    if (userError) throw userError
+    if (!userData?.tenant_id) throw new Error('User has no tenant assigned')
+    
     // Je nach User-Rolle unterschiedliche Abfragen
     let query = supabase
       .from('appointments')
@@ -140,10 +156,16 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
         status,
         event_type_code,
         type,
+        created_by,
+        tenant_id,
         users!appointments_user_id_fkey (
           first_name,
           last_name,
           category
+        ),
+        created_by_user:created_by (
+          first_name,
+          last_name
         ),
         notes (
           evaluation_criteria_id,
@@ -161,31 +183,54 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
           metadata
         )
       `)
+      .eq('tenant_id', userData.tenant_id) // ✅ Tenant Filter
     
-    // Für Staff/Admin: Nach staff_id filtern (ihre eigenen Termine)
     // Für Client: Nach user_id filtern (ihre eigenen Termine)
+    // Für Staff: Nach staff_id filtern (ihre eigenen Termine)
+    // Für Admin: Alle Termine (kein Filter)
     if (userRole === 'client') {
-      console.log('🔥 Client detected - filtering by user_id')
+      console.log('🔥 Client detected - filtering by user_id, tenant:', userData.tenant_id)
       query = query.eq('user_id', userId)
+    } else if (userRole === 'admin') {
+      console.log('🔥 Admin detected - loading ALL appointments for tenant:', userData.tenant_id)
+      // Admins sehen alle Termine des Tenants (kein zusätzlicher Filter)
     } else {
-      console.log('🔥 Staff/Admin detected - filtering by staff_id')
+      console.log('🔥 Staff detected - filtering by staff_id, tenant:', userData.tenant_id)
       query = query.eq('staff_id', userId)
     }
     
     // Debug: Zeige die aktuelle Query
-    console.log('🔥 Query filter:', userRole === 'client' ? 'user_id' : 'staff_id', '=', userId)
+    if (userRole === 'client') {
+      console.log('🔥 Query filter: user_id =', userId)
+    } else if (userRole === 'admin') {
+      console.log('🔥 Query filter: admin - no filter (all appointments)')
+    } else {
+      console.log('🔥 Query filter: staff_id =', userId)
+    }
     
     // Rest der Abfrage
     const { data, error: fetchError } = await query
       .lt('end_time', toLocalTimeString(new Date)) // ✅ Nur Termine in der Vergangenheit
       .in('status', ['completed', 'confirmed', 'scheduled']) // Alle relevanten Status für Pendenzen
       .is('deleted_at', null) // ✅ Soft Delete Filter - nur nicht gelöschte Termine
+      .in('event_type_code', ['lesson', 'exam']) // ✅ Nur lesson und exam Event Types
       .order('start_time', { ascending: true }) // Neueste zuerst
 
-    if (fetchError) throw fetchError
+    if (fetchError) {
+      console.error('❌ Supabase query error in usePendingTasks:', fetchError)
+      throw fetchError
+    }
 
     console.log('🔥 Fetched appointments (raw data):', data?.length)
     console.log('🔥 Raw appointments data:', data)
+    console.log('🔍 Query filter details:', {
+      userId,
+      userRole,
+      filterBy: userRole === 'client' ? 'user_id' : 'staff_id',
+      endTime: toLocalTimeString(new Date()),
+      status: ['completed', 'confirmed', 'scheduled'],
+      eventTypes: ['lesson', 'exam']
+    })
     console.log('🔥 Current time for comparison:', toLocalTimeString(new Date()))
     console.log('🔥 User ID being searched:', userId)
 
@@ -237,7 +282,9 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
       status: appointment.status,
       type: appointment.type, // ✅ Explizit type übertragen
       event_type_code: appointment.event_type_code || appointment.type || 'lesson',
+      created_by: appointment.created_by,
       users: appointment.users,
+      created_by_user: appointment.created_by_user,
       // Wichtig: Filtere hier die notes, damit nur relevante Kriterien-notes enthalten sind
       notes: appointment.notes.filter((note: any) => note.evaluation_criteria_id !== null),
       // Neue Zahlungsinformationen

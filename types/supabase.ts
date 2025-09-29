@@ -236,7 +236,6 @@ export type Database = {
           id: string
           is_active: boolean
           last_name: string
-          lernfahrausweis_url: string | null
           payment_provider_customer_id: string | null
           phone: string
           role: string
@@ -255,7 +254,6 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name: string
-          lernfahrausweis_url?: string | null
           payment_provider_customer_id?: string | null
           phone: string
           role?: string
@@ -274,7 +272,6 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string
-          lernfahrausweis_url?: string | null
           payment_provider_customer_id?: string | null
           phone?: string
           role?: string
@@ -290,6 +287,111 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      user_documents: {
+        Row: {
+          id: string
+          user_id: string
+          tenant_id: string
+          document_type: string
+          category_code: string | null
+          side: string
+          file_name: string
+          file_size: number | null
+          file_type: string
+          storage_path: string
+          title: string | null
+          description: string | null
+          is_verified: boolean | null
+          verification_date: string | null
+          verified_by: string | null
+          created_at: string | null
+          updated_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          tenant_id: string
+          document_type: string
+          category_code?: string | null
+          side?: string
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          storage_path: string
+          title?: string | null
+          description?: string | null
+          is_verified?: boolean | null
+          verification_date?: string | null
+          verified_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          tenant_id?: string
+          document_type?: string
+          category_code?: string | null
+          side?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          storage_path?: string
+          title?: string | null
+          description?: string | null
+          is_verified?: boolean | null
+          verification_date?: string | null
+          verified_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_documents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_documents_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_documents_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
         ]
       }
     }

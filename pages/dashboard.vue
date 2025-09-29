@@ -5,6 +5,7 @@ import StaffSettings from '~/components/StaffSettings.vue'
 import PendenzenModal from '~/components/PendenzenModal.vue'
 import ProfileSetup from '~/components/ProfileSetup.vue'
 import ProductSaleModal from '~/components/ProductSaleModal.vue'
+import AdminStaffSwitcher from '~/components/AdminStaffSwitcher.vue'
 import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { usePendingTasks } from '~/composables/usePendingTasks'
@@ -53,6 +54,7 @@ const showPendenzen = ref(false)
 const showProductSaleModal = ref(false)
 const isTodayActive = ref(false)
 const currentMonth = ref('')
+const selectedStaffId = ref<string | null>(null) // For admin staff filtering
 
 // NEU: Lokale computed für bessere Reaktivität
 const pendenzenButtonClasses = computed(() => {
@@ -66,11 +68,25 @@ const pendenzenButtonText = computed(() => {
 // Debug computed für bessere Nachverfolgung
 const debugInfo = computed(() => ({
   userEmail: currentUser.value?.email || 'NULL',
+  userRole: currentUser.value?.role || 'NULL',
+  isAdmin: currentUser.value?.role === 'admin',
   profileExists: profileExists.value,
   pendingCount: pendingCount.value,
   isPendingLoading: isPendingLoading.value,
   pendingError: pendingError.value
 }))
+
+// Computed für Staff Switcher Sichtbarkeit
+const shouldShowStaffSwitcher = computed(() => {
+  return currentUser.value && 
+         (currentUser.value.role === 'admin' || currentUser.value.role === 'staff')
+})
+
+// Debug: Log admin status
+watch(() => currentUser.value?.role, (newRole) => {
+  console.log('🔍 Dashboard - User role changed:', newRole)
+  console.log('🔍 Dashboard - Is admin:', newRole === 'admin')
+}, { immediate: true })
 
 // NEU: Funktion für nach Profilerstellung
 const handleProfileCreated = async () => {
@@ -196,6 +212,13 @@ const onAppointmentChanged = async (event: { type: string, data: any }) => {
   await refreshPendingData()
 }
 
+// Admin Staff Switcher Handler
+const onStaffChanged = (staffId: string | null) => {
+  console.log('🔄 Admin staff filter changed:', staffId)
+  selectedStaffId.value = staffId
+  // The CalendarComponent will react to this change via props
+}
+
 // NEU: Watch für pendingCount um Debugging zu verbessern
 watch(pendingCount, (newCount, oldCount) => {
   console.log(`🔄 Pending count changed: ${oldCount} → ${newCount}`)
@@ -265,7 +288,10 @@ onUnmounted(() => {
 
   <!-- Loading State -->
   <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
-    <LoadingLogo size="2xl" />
+    <LoadingLogo 
+      size="2xl" 
+      loading-text="Dashboard wird geladen..."
+    />
   </div>
 
   <!-- Auth Error State (nur bei echten Auth-Fehlern) -->
@@ -301,9 +327,19 @@ onUnmounted(() => {
 
     <!-- Main Content -->
     <div class="flex-1 overflow-hidden">
+      
+      <!-- Admin Staff Switcher - nur wenn Benutzer geladen ist und Staff/Admin -->
+      <AdminStaffSwitcher
+        v-if="shouldShowStaffSwitcher"
+        :current-user="currentUser"
+        :current-staff-id="selectedStaffId || undefined"
+        @staff-changed="onStaffChanged"
+      />
+      
       <CalendarComponent 
         ref="calendarRef" 
         :current-user="currentUser"
+        :admin-staff-filter="selectedStaffId"
         @view-updated="onViewUpdate" 
         @appointment-changed="onAppointmentChanged"
       />
@@ -315,7 +351,7 @@ onUnmounted(() => {
         @click="goToCustomers" 
         class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200 min-w-[80px] h-[36px] flex items-center justify-center text-sm"
       >
-        📋 Schüler
+        Schüler
       </button>   
       
       <!-- Pendenzen Button - VERBESSERT -->
@@ -345,7 +381,7 @@ onUnmounted(() => {
         @click="showStaffSettings = true" 
         class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200 min-w-[80px] h-[36px] flex items-center justify-center text-sm"
       >
-        ⚙️ Profil
+        Profil
       </button>
     </div>
   </div>

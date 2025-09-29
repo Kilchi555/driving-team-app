@@ -2,7 +2,7 @@
 <template>
   <!-- Modal Wrapper -->
   <div v-if="show" class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+    <div class="admin-modal bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
       
       <!-- Header -->
       <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
