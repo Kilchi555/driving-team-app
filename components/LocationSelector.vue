@@ -553,17 +553,17 @@ const savePickupLocation = async (locationData: any, studentId: string) => {
     
     const locationToSave = {
       location_type: 'pickup',
-      // user_id: studentId,  // ← REMOVED: Column doesn't exist in DB schema
-      staff_id: props.currentStaffId || null,  // Use existing staff_id column
-      // tenant_id: userProfile.tenant_id,  // ← REMOVED: Column doesn't exist in DB schema
+      user_id: studentId,
+      staff_id: null,
+      tenant_id: userProfile.tenant_id,  // ✅ TENANT ID
       name: locationName,
       address: locationData.address,
       latitude: locationData.latitude || null,
       longitude: locationData.longitude || null,
-      // google_place_id: locationData.place_id || null,  // ← REMOVED: Column doesn't exist in DB schema
+      google_place_id: locationData.place_id || null,
       is_active: true,
-      // created_by_user_id: user.id,  // ← REMOVED: Column doesn't exist in DB schema
-      // created_for_staff_id: props.currentStaffId || null  // ← REMOVED: Column doesn't exist in DB schema
+      created_by_user_id: user.id,
+      created_for_staff_id: props.currentStaffId || null
     }
     
     console.log('📤 Saving pickup location:', locationToSave)
@@ -775,17 +775,17 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
         
         const locationToSave = {
           location_type: 'standard',
-          // user_id: null,  // ← REMOVED: Column doesn't exist in DB schema
+          user_id: null,
           staff_id: props.currentStaffId,
-          // tenant_id: userProfile.tenant_id,  // ← REMOVED: Column doesn't exist in DB schema
+          tenant_id: userProfile.tenant_id,  // ✅ TENANT ID
           name: locationData.name,
           address: locationData.address,
           latitude: locationData.latitude || null,
           longitude: locationData.longitude || null,
-          // google_place_id: locationData.place_id || null,  // ← REMOVED: Column doesn't exist in DB schema
+          google_place_id: locationData.place_id || null,
           is_active: true,
-          // created_by_user_id: user.id,  // ← REMOVED: Column doesn't exist in DB schema
-          // created_for_staff_id: props.currentStaffId || null  // ← REMOVED: Column doesn't exist in DB schema
+          created_by_user_id: user.id,
+          created_for_staff_id: props.currentStaffId || null
         }
         
         console.log('📤 Saving standard location for staff:', locationToSave)

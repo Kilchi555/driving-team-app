@@ -423,7 +423,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
           )
         `)
         .eq('staff_id', props.currentUser?.id as string)
-        // .eq('tenant_id', tenantId)  // ← DISABLED: Column doesn't exist in schema 
+        .eq('tenant_id', tenantId)
         .not('users.id', 'is', null)
 
       if (appointmentError) throw appointmentError
@@ -513,15 +513,25 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         staffId: staffId
       })
       
-      // ✅ TESTING MODE: Skip tenant validation temporarily  
-      console.log('🔍 StudentSelector (Admin Mode) - TESTING MODE: Loading all students without tenant filter')
+      // Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
       
       let query = supabase
         .from('users')
         .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
         .eq('role', 'client')
         .eq('is_active', true)
-        // .eq('tenant_id', tenantId)  // ← DISABLED: Column doesn't exist in schema
+        .eq('tenant_id', tenantId)
         .order('first_name')
 
       if (props.currentUser?.role === 'staff') {
