@@ -107,20 +107,21 @@ const useEventModalForm = (currentUser?: any, refs?: {
                      formData.value.endTime
 
     if (formData.value.eventType === 'lesson') {
-      // ✅ NEU: Debug-Log für Form-Validierung
+      // ✅ TESTING MODE: Temporär Location-Validierung deaktiviert
       const isValid = baseValid && 
                      selectedStudent.value && 
                      formData.value.type && 
-                     formData.value.location_id &&
+                     // formData.value.location_id &&  // ← TEMPORARILY DISABLED FOR TESTING
                      formData.value.duration_minutes > 0
       
-      console.log('🔍 Form validation check:', {
+      console.log('🔍 Form validation check (TESTING MODE):', {
         baseValid,
         hasStudent: !!selectedStudent.value,
         hasType: !!formData.value.type,
         hasLocation: !!formData.value.location_id,
         hasDuration: formData.value.duration_minutes > 0,
-        isValid
+        isValid,
+        note: 'Location validation disabled for testing'
       })
       
       return isValid

@@ -1,0 +1,15 @@
+{
+  "name": "Test Fahrschule",
+  "slug": "test-fahrschule",
+  "contact_person_first_name": "Max",
+  "contact_person_last_name": "Mustermann",
+  "contact_email": "test@example.com",
+  "contact_phone": "+41 78 123 45 67",
+  "street": "Teststrasse",
+  "streetNr": "123",
+  "zip": "8000",
+  "city": "Zürich",
+  "business_type": "driving_school",
+  "primary_color": "#3B82F6",
+  "secondary_color": "#10B981"
+}
