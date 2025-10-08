@@ -289,11 +289,22 @@ const loadStaff = async () => {
 
     let query = supabase
       .from('users')
-      .select('id, first_name, last_name, email, role, is_active')
+      .select('id, first_name, last_name, email, role, is_active, tenant_id') // ← Added tenant_id to SELECT
       .eq('role', 'staff')  // Nur Staff, keine Admins
       .eq('is_active', true)
       .eq('tenant_id', tenantId) // Filter by current tenant
       .order('first_name')
+
+    // ✅ DEBUG: Query Details vor Ausführung
+    console.log('🔍 StaffSelector Query Details:', {
+      table: 'users',
+      filters: {
+        role: 'staff',
+        is_active: true,
+        tenant_id: tenantId
+      },
+      expectedTenant: tenantId
+    })
 
     // Aktuellen User ausschließen falls gewünscht
     if (props.excludeCurrentUser && props.currentUser?.id) {
@@ -303,6 +314,20 @@ const loadStaff = async () => {
     const { data, error: fetchError } = await query
 
     if (fetchError) throw fetchError
+
+    // ✅ DEBUG: Detaillierte Analyse der Query-Ergebnisse
+    console.log('🔍 StaffSelector Debug:', {
+      expectedTenantId: tenantId,
+      queryResult: data,
+      staffFound: data?.map(s => ({
+        name: `${s.first_name} ${s.last_name}`,
+        email: s.email,
+        tenant_id: s.tenant_id,
+        matches: s.tenant_id === tenantId,
+        role: s.role,
+        is_active: s.is_active
+      }))
+    })
     
     const typedStaff: Staff[] = (data || []).map((user: UserFromDB) => ({
       id: user.id,
