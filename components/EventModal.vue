@@ -1082,7 +1082,7 @@ const isLoadingAdminFee = ref<boolean>(false)
 
 // Staff management
 const availableStaff = ref<StaffAvailability[]>([])
-const { loadStaffWithAvailability, isLoading: isLoadingStaff } = useStaffAvailability()
+const { loadStaffWithAvailability, checkStaffAvailability, isLoading: isLoadingStaff } = useStaffAvailability()
 const isEditingStaff = ref(false)
 
 // ✅ Staff Category Durations - use database instead of hardcoded values
@@ -1454,25 +1454,48 @@ const loadAvailableStaff = async () => {
     
     console.log('👥 Found staff members in database:', allStaff.length)
     
-    // ✅ Check availability if we have time data
+    // ✅ Check availability using already filtered staff (tenant-correct)
     let staffWithAvailability = []
     if (formData.value.startDate && formData.value.startTime && formData.value.endTime) {
       console.log('⏰ Checking staff availability for time slot...')
       try {
-        staffWithAvailability = await loadStaffWithAvailability(
-          formData.value.startDate,
-          formData.value.startTime,
-          formData.value.endTime,
-          props.eventData?.id
+        // ✅ Use manual availability check on already filtered staff
+        staffWithAvailability = await Promise.all(
+          allStaff.map(async (staff) => {
+            const isAvailable = await checkStaffAvailability(
+              staff.id,
+              formData.value.startDate,
+              formData.value.startTime,
+              formData.value.endTime,
+              props.eventData?.id
+            )
+            
+            return {
+              ...staff,
+              isAvailable,
+              availabilityStatus: isAvailable ? 'available' : 'busy'
+            }
+          })
         )
+        
+        console.log('✅ EventModal Availability Check completed:', {
+          totalStaff: allStaff.length,
+          availableStaff: staffWithAvailability.filter(s => s.isAvailable).length,
+          staffList: staffWithAvailability.map(s => ({
+            name: `${s.first_name} ${s.last_name}`,
+            tenant_id: s.tenant_id,
+            isAvailable: s.isAvailable
+          }))
+        })
+        
       } catch (availabilityError) {
         console.log('⚠️ Could not check availability, using all staff:', availabilityError)
-              // Fallback: Alle Staff als verfügbar markieren
-      staffWithAvailability = allStaff.map(staff => ({
-        ...staff,
-        isAvailable: true,
-        availabilityStatus: 'available' as const
-      }))
+        // Fallback: Alle Staff als verfügbar markieren
+        staffWithAvailability = allStaff.map(staff => ({
+          ...staff,
+          isAvailable: true,
+          availabilityStatus: 'available' as const
+        }))
       }
     } else {
       // Keine Zeitdaten vorhanden, alle Staff als verfügbar markieren
