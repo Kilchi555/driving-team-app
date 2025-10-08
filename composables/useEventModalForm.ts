@@ -881,21 +881,22 @@ const useEventModalForm = (currentUser?: any, refs?: {
         description: formData.value.description,
         user_id: userId,
         staff_id: formData.value.staff_id || dbUser.id,
-        location_id: formData.value.location_id,
+        location_id: formData.value.location_id || '',  // Allow empty for testing
         start_time: `${formData.value.startDate}T${formData.value.startTime}:00`,
         end_time: `${formData.value.startDate}T${formData.value.endTime}:00`,
         duration_minutes: formData.value.duration_minutes,
         type: formData.value.type,
         status: formData.value.status,
-        // ✅ Missing fields added
-        event_type_code: formData.value.appointment_type || 'lesson',
-        custom_location_address: formData.value.custom_location_address || undefined,
-        custom_location_name: formData.value.custom_location_name || undefined,
-        google_place_id: formData.value.google_place_id || undefined,
-        // ✅ Add tenant_id and category_code for availability checking
-        tenant_id: dbUser.tenant_id,
-        category_code: formData.value.category_code || dbUser.category
-        // ✅ price_per_minute and is_paid removed - not in appointments table
+        // ✅ Only use existing DB columns
+        custom_location_address: formData.value.custom_location_address || null,
+        // event_type_code: formData.value.appointment_type || 'lesson',  // ← REMOVED: Column doesn't exist
+        // custom_location_name: formData.value.custom_location_name || undefined,  // ← REMOVED: Column doesn't exist
+        // google_place_id: formData.value.google_place_id || undefined,  // ← REMOVED: Column doesn't exist
+        // tenant_id: dbUser.tenant_id,  // ← REMOVED: Column doesn't exist
+        // category_code: formData.value.category_code || dbUser.category  // ← REMOVED: Column doesn't exist
+        // ✅ Required fields from schema:
+        is_paid: false,  // Default false, managed separately in payments
+        price_per_minute: 0  // Default 0, managed separately in pricing
       }
       
       console.log('💾 Saving appointment data:', appointmentData)
