@@ -384,8 +384,18 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
     if (condition) {
       console.log('👨‍🏫 Loading students for staff member:', props.currentUser?.id)
       
-      // ✅ TESTING MODE: Skip tenant validation temporarily
-      console.log('🔍 StudentSelector - TESTING MODE: Loading students without tenant filter')
+      // Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
       
       // 1. Direkt zugewiesene Schüler laden - FILTERED BY TENANT
       console.log('🔍 Loading assigned students for staff:', staffId)
@@ -395,7 +405,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         .eq('role', 'client')
         .eq('is_active', true)
         .eq('assigned_staff_id', staffId)
-        // .eq('tenant_id', tenantId)  // ← DISABLED: Column doesn't exist in schema
+        .eq('tenant_id', tenantId)
         .order('first_name')
 
       if (assignedError) throw assignedError
