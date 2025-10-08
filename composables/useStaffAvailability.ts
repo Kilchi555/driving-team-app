@@ -8,6 +8,7 @@ export interface StaffAvailability {
   last_name: string
   email: string
   role: string
+  tenant_id: string  // ✅ Added for debugging
   isAvailable: boolean
   availabilityStatus: 'available' | 'busy' | 'unknown'
 }
@@ -91,14 +92,39 @@ export const useStaffAvailability = () => {
     
     try {
       console.log('👥 Loading staff members with availability...')
+
+      // ✅ Get current user's tenant_id first
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
       
-      // Load basic staff information
+      const tenantId = userProfile?.tenant_id
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+
+      console.log('🔍 useStaffAvailability - Current tenant_id:', tenantId)
+      
+      // Load basic staff information - FILTERED BY TENANT
       const { data: allStaff, error: staffError } = await supabase
         .from('users')
-        .select('id, first_name, last_name, email, role')
+        .select('id, first_name, last_name, email, role, tenant_id')  // Added tenant_id to select
         .eq('role', 'staff')
         .eq('is_active', true)
+        .eq('tenant_id', tenantId)  // ✅ TENANT FILTER ADDED
         .order('first_name')
+
+      console.log('🔍 useStaffAvailability Debug:', {
+        expectedTenantId: tenantId,
+        staffFound: allStaff?.map(s => ({
+          name: `${s.first_name} ${s.last_name}`,
+          tenant_id: s.tenant_id,
+          matches: s.tenant_id === tenantId
+        }))
+      })
       
       if (staffError) throw staffError
       
