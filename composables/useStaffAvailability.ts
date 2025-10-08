@@ -93,36 +93,58 @@ export const useStaffAvailability = () => {
     try {
       console.log('👥 Loading staff members with availability...')
 
-      // ✅ Get current user's tenant_id first
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
+      let tenantId = null
       
-      const tenantId = userProfile?.tenant_id
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+      try {
+        // ✅ Get current user's tenant_id first
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        console.log('🔍 useStaffAvailability - Auth user loaded:', currentUser?.id)
+        
+        const { data: userProfile, error: profileError } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('auth_user_id', currentUser?.id)
+          .single()
+        
+        console.log('🔍 useStaffAvailability - Profile lookup result:', { userProfile, profileError })
+        
+        tenantId = userProfile?.tenant_id
+        
+        if (!tenantId) {
+          console.warn('⚠️ No tenant_id found, falling back to loading all staff')
+        }
+        
+      } catch (tenantError) {
+        console.warn('⚠️ Error getting tenant_id, falling back to all staff:', tenantError)
       }
 
-      console.log('🔍 useStaffAvailability - Current tenant_id:', tenantId)
+      console.log('🔍 useStaffAvailability - Final tenant_id:', tenantId)
       
-      // Load basic staff information - FILTERED BY TENANT
-      const { data: allStaff, error: staffError } = await supabase
+      // Load basic staff information - WITH OPTIONAL TENANT FILTER
+      let query = supabase
         .from('users')
-        .select('id, first_name, last_name, email, role, tenant_id')  // Added tenant_id to select
+        .select('id, first_name, last_name, email, role, tenant_id')
         .eq('role', 'staff')
         .eq('is_active', true)
-        .eq('tenant_id', tenantId)  // ✅ TENANT FILTER ADDED
         .order('first_name')
+      
+      // Apply tenant filter if available
+      if (tenantId) {
+        query = query.eq('tenant_id', tenantId)
+        console.log('✅ Applied tenant filter:', tenantId)
+      } else {
+        console.log('⚠️ No tenant filter applied - loading ALL staff')
+      }
+        
+      const { data: allStaff, error: staffError } = await query
 
       console.log('🔍 useStaffAvailability Debug:', {
         expectedTenantId: tenantId,
+        totalStaffFound: allStaff?.length || 0,
         staffFound: allStaff?.map(s => ({
           name: `${s.first_name} ${s.last_name}`,
           tenant_id: s.tenant_id,
-          matches: s.tenant_id === tenantId
+          matches: tenantId ? s.tenant_id === tenantId : 'N/A'
         }))
       })
       
