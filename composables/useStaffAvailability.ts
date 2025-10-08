@@ -120,23 +120,22 @@ export const useStaffAvailability = () => {
 
       console.log('🔍 useStaffAvailability - Final tenant_id:', tenantId)
       
-      // Load basic staff information - WITH OPTIONAL TENANT FILTER
-      let query = supabase
+      // ✅ FORCE TENANT FILTER - NO FALLBACK
+      if (!tenantId) {
+        console.error('❌ CRITICAL: No tenant_id - BLOCKING all staff load to prevent cross-tenant data leak!')
+        return []  // Return empty array instead of loading all staff
+      }
+
+      console.log('✅ FORCING tenant filter:', tenantId)
+      
+      // Load basic staff information - MANDATORY TENANT FILTER
+      const { data: allStaff, error: staffError } = await supabase
         .from('users')
         .select('id, first_name, last_name, email, role, tenant_id')
         .eq('role', 'staff')
         .eq('is_active', true)
+        .eq('tenant_id', tenantId)  // ✅ MANDATORY TENANT FILTER
         .order('first_name')
-      
-      // Apply tenant filter if available
-      if (tenantId) {
-        query = query.eq('tenant_id', tenantId)
-        console.log('✅ Applied tenant filter:', tenantId)
-      } else {
-        console.log('⚠️ No tenant filter applied - loading ALL staff')
-      }
-        
-      const { data: allStaff, error: staffError } = await query
 
       console.log('🔍 useStaffAvailability Debug:', {
         expectedTenantId: tenantId,
