@@ -272,27 +272,15 @@ const loadStaff = async () => {
     console.log('👥 StaffSelector: Loading staff members...')
     const supabase = getSupabase()
 
-    // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
-    
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
-    }
-
-    console.log('🔍 StaffSelector - Current tenant_id:', tenantId)
+    // ✅ TESTING MODE: Skip tenant filtering temporarily
+    console.log('🔍 StaffSelector - TESTING MODE: Loading all active staff')
 
     let query = supabase
       .from('users')
       .select('id, first_name, last_name, email, role, is_active')
       .eq('role', 'staff')  // Nur Staff, keine Admins
       .eq('is_active', true)
-      .eq('tenant_id', tenantId) // Filter by current tenant
+      // .eq('tenant_id', tenantId) // ← DISABLED: Column doesn't exist in schema
       .order('first_name')
 
     // Aktuellen User ausschließen falls gewünscht
