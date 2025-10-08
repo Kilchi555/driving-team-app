@@ -1454,7 +1454,7 @@ const loadAvailableStaff = async () => {
     
     console.log('👥 Found staff members in database:', allStaff.length)
     
-    // ✅ Check availability using already filtered staff (tenant-correct)
+    // ✅ Use already tenant-filtered staff directly (no external composable)
     let staffWithAvailability = []
     if (formData.value.startDate && formData.value.startTime && formData.value.endTime) {
       console.log('⏰ Checking staff availability for time slot...')
