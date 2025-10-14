@@ -188,9 +188,31 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 
+// Reserved routes that should not be caught by the slug route
+const reservedRoutes = [
+  'admin', 'dashboard', 'customer-dashboard', 'login', 'register', 
+  'tenant-register', 'auswahl', 'customer', 'courses', 'booking', 
+  'payment', 'shop', 'upgrade', 'staff', 'tenant-admin', 'anonymous-sale',
+  'reset-password', 'register-staff', 'mock-payment-page', 'pricing-test',
+  'simple-test', 'sms-test', 'sms-direct-test', 'wallee-test', 'debug-pricing',
+  'debug-other-events', 'optimized-workflow-test', 'accounto-test', 
+  'tenant-test', 'tenant-demo', 'tenant-debug', 'tenant-start', 'customers',
+  'AdminEventTypes', 'wallee-corrected-test'
+]
+
 // Meta
 definePageMeta({
-  layout: false
+  layout: false,
+  validate: async (route) => {
+    const slug = route.params.slug as string
+    
+    // If it's a reserved route, let Nuxt's normal routing handle it
+    if (reservedRoutes.includes(slug)) {
+      return false
+    }
+    
+    return true
+  }
 })
 
 // Composables
@@ -229,18 +251,6 @@ const loginForm = ref({
 const tenantSlug = computed(() => route.params.slug as string)
 const currentBranding = computed(() => currentTenantBranding.value)
 const headerLogo = computed(() => getLogo('header'))
-
-// Check if the slug is a reserved route (to avoid conflicts)
-const reservedRoutes = [
-  'admin', 'dashboard', 'customer-dashboard', 'login', 'register', 
-  'tenant-register', 'auswahl', 'customer', 'courses', 'booking', 
-  'payment', 'shop', 'upgrade', 'staff', 'tenant-admin', 'anonymous-sale',
-  'reset-password', 'register-staff', 'mock-payment-page', 'pricing-test',
-  'simple-test', 'sms-test', 'sms-direct-test', 'wallee-test', 'debug-pricing',
-  'debug-other-events', 'optimized-workflow-test', 'accounto-test', 
-  'tenant-test', 'tenant-demo', 'tenant-debug', 'tenant-start', 'customers',
-  'AdminEventTypes', 'wallee-corrected-test'
-]
 
 // Methods
 const handleLogin = async () => {
@@ -343,13 +353,6 @@ const handleLogout = async () => {
 
 // Lifecycle
 onMounted(async () => {
-  // Check if this is a reserved route
-  if (reservedRoutes.includes(tenantSlug.value)) {
-    console.log('⚠️ Reserved route detected:', tenantSlug.value)
-    // This shouldn't happen, but if it does, let the normal routing handle it
-    return
-  }
-
   // Lade Tenant-Branding
   try {
     await loadTenantBranding(tenantSlug.value)
