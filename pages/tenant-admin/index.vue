@@ -284,9 +284,11 @@ const recentActivities = ref([])
 const loadStats = async () => {
   try {
     // Load tenant stats - simplified approach
-    const { data: tenants, error: tenantsError } = await supabase
+    const { data: tenantsData, error: tenantsError } = await supabase
       .from('tenants')
       .select('id, is_active, is_trial')
+
+    const tenants = tenantsError ? [] : (tenantsData || [])
 
     console.log('🔍 TENANT LOADING DEBUG:')
     console.log('- Tenants data:', tenants)
@@ -295,8 +297,6 @@ const loadStats = async () => {
 
     if (tenantsError) {
       console.error('❌ Tenants loading failed:', tenantsError)
-      // Don't throw error, just use empty array
-      tenants = []
     }
 
     // Load user stats

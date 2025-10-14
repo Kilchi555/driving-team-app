@@ -266,7 +266,7 @@ const sendTestReminder = async () => {
 
     console.log('✅ Payment gefunden:', payment)
 
-    const { useReminderService } = await import('~/composables/useReminderService')
+    const { useReminderService } = await import('~/composables/useReminderService.ts')
     const { sendPaymentReminder } = useReminderService()
 
     const result = await sendPaymentReminder(
