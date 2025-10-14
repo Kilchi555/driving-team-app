@@ -47,22 +47,49 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       icsData = ics_content
     } else {
       try {
-        const icsResponse = await fetch(ics_url as string, {
+        // Convert webcal:// to https://
+        let fetchUrl = ics_url as string
+        if (fetchUrl.startsWith('webcal://')) {
+          fetchUrl = fetchUrl.replace('webcal://', 'https://')
+          console.log('Converted webcal:// to https://', fetchUrl)
+        }
+        
+        console.log('Fetching ICS from:', fetchUrl)
+        
+        const icsResponse = await fetch(fetchUrl, {
           headers: {
             'User-Agent': 'DrivingTeamApp-ICS-Sync/1.0',
             'Accept': 'text/calendar, text/plain, */*'
           },
           redirect: 'follow'
         })
+        
+        console.log('ICS fetch response:', icsResponse.status, icsResponse.statusText)
+        
         if (!icsResponse.ok) {
           throw createError({
             statusCode: 400,
-            statusMessage: `Failed to fetch ICS data: ${icsResponse.status} ${icsResponse.statusText}`
+            statusMessage: `ICS-URL nicht erreichbar: ${icsResponse.status} ${icsResponse.statusText}. Prüfen Sie, ob die URL öffentlich zugänglich ist.`
           })
         }
+        
         icsData = await icsResponse.text()
+        console.log('ICS data length:', icsData.length)
+        
+        if (!icsData || icsData.length < 50) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'ICS-URL liefert keine gültigen Daten. Prüfen Sie die URL.'
+          })
+        }
+        
       } catch (fetchErr: any) {
-        throw createError({ statusCode: 400, statusMessage: `Failed to fetch ICS data: ${fetchErr?.message || 'fetch failed'}` })
+        console.error('ICS fetch error:', fetchErr)
+        const errorMsg = fetchErr.statusMessage || fetchErr.message || 'URL nicht erreichbar'
+        throw createError({ 
+          statusCode: 400, 
+          statusMessage: `Fehler beim Abrufen der ICS-URL: ${errorMsg}. Stellen Sie sicher, dass die URL öffentlich zugänglich ist.`
+        })
       }
     }
     
@@ -77,10 +104,10 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       }
     }
 
-    // Only sync relevant time window: now .. now + 60 days
+    // Only sync relevant time window: now .. now + 1 year
     const now = new Date()
     const horizon = new Date(now)
-    horizon.setDate(horizon.getDate() + 60)
+    horizon.setFullYear(horizon.getFullYear() + 1)
 
     // Filter events to window (keep any event that overlaps the window)
     const windowEvents = events.filter(ev => {
@@ -92,7 +119,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     if (windowEvents.length === 0) {
       return {
         success: true,
-        message: 'No events in the next 60 days',
+        message: 'No events in the next year',
         imported_events: 0
       }
     }
@@ -108,13 +135,13 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       throw createError({ statusCode: 500, statusMessage: `Failed to clear busy times: ${clearError.message}` })
     }
 
-    // Insert new busy times
+    // Insert new busy times - alle Titel als "Privat" speichern
     const busyTimes = windowEvents.map(event => ({
       tenant_id: calendar.tenant_id,
       staff_id: calendar.staff_id,
       external_calendar_id: calendar_id,
       external_event_id: ((event.uid || `event_${Date.now()}_${Math.random()}`) + '').slice(0, 255),
-      event_title: 'Privat',
+      event_title: 'Privat', // Anonymisiert für Datenschutz
       start_time: event.start,
       end_time: event.end,
       sync_source: 'ics'
@@ -259,16 +286,16 @@ function parseICSData(icsData: string): Array<{
 
 function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?: boolean }): string {
   const clean = timestamp.trim()
+  
   // Date only: 20231215
   if (opts?.dateOnly || (/^\d{8}$/.test(clean) && !clean.includes('T'))) {
     const year = clean.substring(0, 4)
     const month = clean.substring(4, 6)
     const day = clean.substring(6, 8)
-    // Represent all-day start at 00:00 local
     return `${year}-${month}-${day}T00:00:00`
   }
 
-  // UTC format: 20231215T120000Z
+  // UTC format: 20231215T120000Z - KEINE Umrechnung mehr
   if (/^\d{8}T\d{6}Z$/.test(clean)) {
     const year = clean.substring(0, 4)
     const month = clean.substring(4, 6)
@@ -276,16 +303,8 @@ function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?:
     const hour = clean.substring(9, 11)
     const minute = clean.substring(11, 13)
     const second = clean.substring(13, 15)
-    const isoUtc = `${year}-${month}-${day}T${hour}:${minute}:${second}Z`
-    // Convert UTC to local (store local time per project policy)
-    const d = new Date(isoUtc)
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    const hh = String(d.getHours()).padStart(2, '0')
-    const mi = String(d.getMinutes()).padStart(2, '0')
-    const ss = String(d.getSeconds()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}`
+    // Speichere UTC-Zeit direkt ohne Umrechnung
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}`
   }
 
   // Local format without Z: 20231215T120000
@@ -299,19 +318,7 @@ function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?:
     return `${year}-${month}-${day}T${hour}:${minute}:${second}`
   }
 
-  // Fallback: try Date parse, return as local ISO without Z
-  const parsed = new Date(clean)
-  if (!isNaN(parsed.getTime())) {
-    const yyyy = parsed.getFullYear()
-    const mm = String(parsed.getMonth() + 1).padStart(2, '0')
-    const dd = String(parsed.getDate()).padStart(2, '0')
-    const hh = String(parsed.getHours()).padStart(2, '0')
-    const mi = String(parsed.getMinutes()).padStart(2, '0')
-    const ss = String(parsed.getSeconds()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}`
-  }
-
-  // As a last resort, return current time to avoid crashing
+  // Fallback: return as-is
   const now = new Date()
   const yyyy = now.getFullYear()
   const mm = String(now.getMonth() + 1).padStart(2, '0')

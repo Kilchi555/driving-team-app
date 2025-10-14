@@ -6,6 +6,7 @@ import interactionPlugin from '@fullcalendar/interaction'
 import type { CalendarOptions } from '@fullcalendar/core'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import EventModal from './EventModal.vue'
+import EnhancedStudentModal from './EnhancedStudentModal.vue'
 import { getSupabase } from '~/utils/supabase'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import ConfirmationDialog from './ConfirmationDialog.vue'
@@ -13,6 +14,7 @@ import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
 import MoveAppointmentModal from './MoveAppointmentModal.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useStaffWorkingHours } from '~/composables/useStaffWorkingHours'
+import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 
 // ✅ GLOBALE FEHLERBEHANDLUNG
 onErrorCaptured((error, instance, info) => {
@@ -132,6 +134,35 @@ const openMoveModal = (appointment: CalendarAppointment) => {
 const { updateOverdueAppointments } = useAppointmentStatus()
 
 // View switcher method
+// Update year in custom title button
+const updateCustomTitle = () => {
+  if (!calendar.value) return
+  const api = calendar.value.getApi()
+  const currentDate = api.getDate()
+  currentYear.value = currentDate.getFullYear()
+  
+  // Update button text mit Jahr + Pfeil
+  api.setOption('customButtons', {
+    ...api.getOption('customButtons'),
+    customTitle: {
+      text: `${currentYear.value} ▼`,
+      click: () => {
+        showDatePicker.value = !showDatePicker.value
+      }
+    }
+  })
+}
+
+// Jump to specific date
+const jumpToDate = (year: number, month: number) => {
+  if (!calendar.value) return
+  const api = calendar.value.getApi()
+  const targetDate = new Date(year, month, 1)
+  api.gotoDate(targetDate)
+  showDatePicker.value = false
+  updateCustomTitle()
+}
+
 const switchView = () => {
   if (!calendar.value) return
   
@@ -142,6 +173,7 @@ const switchView = () => {
     api.setOption('titleFormat', { year: 'numeric', month: 'short', day: 'numeric' })
     // Update button text
     api.setOption('customButtons', {
+      ...api.getOption('customButtons'),
       viewSwitcher: {
         text: 'Woche',
         click: switchView
@@ -152,6 +184,7 @@ const switchView = () => {
     currentView.value = 'timeGridWeek'
     // Update button text
     api.setOption('customButtons', {
+      ...api.getOption('customButtons'),
       viewSwitcher: {
         text: 'Tag',
         click: switchView
@@ -160,6 +193,7 @@ const switchView = () => {
     // Reset to default format for week view (no changes needed)
     api.changeView('timeGridWeek')
   }
+  updateCustomTitle()
 }
 
 
@@ -179,6 +213,11 @@ const props = defineProps<Props>()
 const isModalVisible = ref(false)
 const modalEventData = ref<any>(null)
 const modalMode = ref<'view' | 'edit' | 'create'>('create')
+
+// EnhancedStudentModal State
+const showEnhancedStudentModal = ref(false)
+const selectedStudentForProgress = ref<any>(null)
+const studentProgressActiveTab = ref<'details' | 'progress' | 'payments' | 'documents'>('progress')
 
 const handleAppointmentMoved = async (moveData: MoveData) => {
   console.log('✅ Appointment moved:', moveData)
@@ -252,6 +291,10 @@ interface CalendarAppointment {
 
 const calendarEvents = ref<CalendarEvent[]>([])
 const isLoadingEvents = ref(false)
+const isInitialLoad = ref(true) // Flag für ersten Load
+const showDatePicker = ref(false) // Für Monatskalender-Dropdown
+const currentYear = ref(new Date().getFullYear())
+let syncInterval: NodeJS.Timeout | null = null // Interval für Auto-Sync
 
 // Working Hours Management
 const { 
@@ -263,7 +306,82 @@ const {
 
 const emit = defineEmits(['view-updated', 'appointment-changed'])
 
-// Arbeitszeiten als Kalender-Events generieren (wiederkehrend)
+// NEUE FUNKTION: Nicht-Arbeitszeiten aus DB laden und als wiederkehrende Events anzeigen
+const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
+  try {
+    console.log('🔒 Loading non-working hours blocks from DB...')
+    
+    // Working hours für diesen Staff laden
+    const { data: workingHours, error } = await supabase
+      .from('staff_working_hours')
+      .select('*')
+      .eq('staff_id', staffId)
+      .eq('is_active', false) // Nur Nicht-Arbeitszeiten
+      .order('day_of_week')
+    
+    if (error) {
+      console.error('Error loading non-working hours:', error)
+      return []
+    }
+    
+    if (!workingHours || workingHours.length === 0) {
+      console.log('📅 No non-working hours found')
+      return []
+    }
+    
+    console.log('✅ Loaded non-working hours blocks:', workingHours.length)
+    
+    const events: CalendarEvent[] = []
+    
+    // Für jeden Tag im sichtbaren Bereich (nur aktuelle Woche)
+    const currentDate = new Date(startDate)
+    while (currentDate <= endDate) {
+      const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // Sonntag = 7
+      
+      // Finde alle Nicht-Arbeitszeiten für diesen Wochentag
+      const dayBlocks = workingHours.filter(wh => wh.day_of_week === dayOfWeek)
+      
+      dayBlocks.forEach((block, index) => {
+        // Verwende lokales Datum-Format ohne UTC-Konvertierung
+        const year = currentDate.getFullYear()
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0')
+        const day = String(currentDate.getDate()).padStart(2, '0')
+        const dateStr = `${year}-${month}-${day}`
+        
+        // Kombiniere Datum mit Zeit direkt (ohne Date-Objekt das UTC konvertiert)
+        const startTime = `${dateStr}T${block.start_time}`
+        const endTime = `${dateStr}T${block.end_time}`
+        
+        events.push({
+          id: `non-working-${dayOfWeek}-${index}-${dateStr}`,
+          title: '',
+          start: startTime,
+          end: endTime,
+          backgroundColor: '#9ca3af', // Grau für Nicht-Arbeitszeit
+          borderColor: 'transparent',
+          textColor: 'transparent',
+          display: 'background',
+          classNames: ['non-working-hours-block'],
+          extendedProps: {
+            type: 'non_working_hours',
+            isNonWorkingHours: true
+          }
+        })
+      })
+      
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    
+    console.log('✅ Generated non-working hours events:', events.length)
+    return events
+    
+  } catch (error) {
+    console.error('Error loading non-working hours blocks:', error)
+    return []
+  }
+}
+
+// LEGACY: Arbeitszeiten als Kalender-Events generieren (wiederkehrend)
 const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: Date) => {
   const workingHoursEvents: CalendarEvent[] = []
   const activeHours = getActiveWorkingHours()
@@ -273,20 +391,22 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
     activeHours: activeHours.length,
-    workingHoursByDay: workingHoursByDay.value
+    workingHoursByDay: workingHoursByDay.value,
+    allWorkingHoursDays: Object.keys(workingHoursByDay.value)
   })
   
+  // WICHTIG: Auch wenn keine aktiven Stunden, trotzdem alle Tage grau machen
   if (!activeHours.length) {
-    console.log('⚠️ No active working hours found')
-    return workingHoursEvents
+    console.log('⚠️ No active working hours - will gray out all days')
+    // Nicht returnen, sondern durchlaufen und alle Tage als inaktiv behandeln
   }
   
-  // Erweitere den Zeitraum um 3 Monate vor und nach dem sichtbaren Bereich
+  // Erweitere den Zeitraum um 2 Wochen vor und nach dem sichtbaren Bereich (reduziert von 3 Monaten)
   const extendedStart = new Date(startDate)
-  extendedStart.setMonth(extendedStart.getMonth() - 3)
+  extendedStart.setDate(extendedStart.getDate() - 14)
   
   const extendedEnd = new Date(endDate)
-  extendedEnd.setMonth(extendedEnd.getMonth() + 3)
+  extendedEnd.setDate(extendedEnd.getDate() + 14)
   
   // Für jeden Tag im erweiterten Bereich
   const currentDate = new Date(extendedStart)
@@ -294,8 +414,11 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
     const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // Sonntag = 7
     const workingHour = workingHoursByDay.value[dayOfWeek]
     
-    if (workingHour && workingHour.is_active) {
-      // Arbeitszeit-Block vor der Arbeitszeit (grau)
+    console.log('🔍 Processing date:', currentDate.toDateString(), 'dayOfWeek:', dayOfWeek, 'workingHour:', workingHour)
+    
+    // Prüfe ob dieser Tag aktive Arbeitszeiten hat
+    if (workingHour?.is_active) {
+      // Tag hat aktive Arbeitszeiten -> nur Zeiten außerhalb blockieren
       const workStart = new Date(currentDate)
       const [startHour, startMinute] = workingHour.start_time.split(':').map(Number)
       workStart.setHours(startHour, startMinute, 0, 0)
@@ -304,37 +427,43 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
       const [endHour, endMinute] = workingHour.end_time.split(':').map(Number)
       workEnd.setHours(endHour, endMinute, 0, 0)
       
-      // Block vor Arbeitsbeginn (00:00 bis Arbeitsbeginn) - GRAU
-      if (workStart.getHours() > 0) {
-        const beforeEvent = {
-          id: `working-hours-before-${dayOfWeek}-${currentDate.toISOString().split('T')[0]}`,
-          title: '', // Leerer Titel für besseres Aussehen
-          start: new Date(currentDate).toISOString().split('T')[0] + 'T00:00:00',
-          end: workStart.toISOString(),
-          backgroundColor: '#e5e7eb',
-          borderColor: 'transparent',
-          textColor: 'transparent',
-          display: 'background',
-          classNames: ['non-working-hours-block'],
-          extendedProps: {
-            type: 'non_working_hours',
-            isNonWorkingHours: true
-          }
-        }
-        workingHoursEvents.push(beforeEvent)
-      }
+      // Block vor Arbeitsbeginn (00:00 bis Arbeitsbeginn) - DUNKELGRAU
+      console.log('🔍 Debug workStart:', workStart.getHours(), workStart.getMinutes(), 'for day', dayOfWeek)
       
-      // Block nach Arbeitsende (Arbeitsende bis 23:59) - GRAU
-      if (workEnd.getHours() < 23) {
+      // IMMER Events erstellen für Debugging - entferne if-Bedingung
+      console.log('🔍 Creating before-work event for', currentDate.toDateString())
+      const beforeEvent = {
+        id: `working-hours-before-${dayOfWeek}-${currentDate.toISOString().split('T')[0]}`,
+        title: '',
+        start: new Date(currentDate).toISOString().split('T')[0] + 'T00:00:00',
+        end: workStart.toISOString().replace('Z', ''), // Entferne Z für lokale Zeit
+        backgroundColor: '#9ca3af', // Dunkelgrau für Nicht-Arbeitszeit
+        borderColor: 'transparent',
+        textColor: 'transparent',
+        display: 'background',
+        classNames: ['non-working-hours-block'],
+        extendedProps: {
+          type: 'non_working_hours',
+          isNonWorkingHours: true
+        }
+      }
+      workingHoursEvents.push(beforeEvent)
+      console.log('🔍 Added before-work event:', beforeEvent.start, 'to', beforeEvent.end, 'for', currentDate.toDateString())
+      
+      // KEIN weisser Event nötig - Kalender-Hintergrund ist bereits weiß
+      // Nur graue Events für Nicht-Arbeitszeiten erstellen
+      
+      // Block nach Arbeitsende (Arbeitsende bis 23:59) - DUNKELGRAU
+      if (workEnd.getHours() < 23 || (workEnd.getHours() === 23 && workEnd.getMinutes() < 59)) {
         const dayEnd = new Date(currentDate)
         dayEnd.setHours(23, 59, 59, 999)
         
         const afterEvent = {
           id: `working-hours-after-${dayOfWeek}-${currentDate.toISOString().split('T')[0]}`,
-          title: '', // Leerer Titel für besseres Aussehen
-          start: workEnd.toISOString(),
-          end: dayEnd.toISOString(),
-          backgroundColor: '#e5e7eb',
+          title: '',
+          start: workEnd.toISOString().replace('Z', ''), // Entferne Z für lokale Zeit
+          end: dayEnd.toISOString().replace('Z', ''), // Entferne Z für lokale Zeit
+          backgroundColor: '#9ca3af', // Dunkelgrau für Nicht-Arbeitszeit
           borderColor: 'transparent',
           textColor: 'transparent',
           display: 'background',
@@ -345,15 +474,19 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
           }
         }
         workingHoursEvents.push(afterEvent)
+        console.log('🔍 Added after-work event:', afterEvent.start, 'to', afterEvent.end, 'for', currentDate.toDateString())
       }
+      
+      // KEINE grauen Blöcke für die Arbeitszeit selbst (08:00-18:00 bleibt weiß)
+      
     } else {
-      // Ganzer Tag blockiert wenn keine Arbeitszeiten definiert
-      workingHoursEvents.push({
+      // Tag hat KEINE aktiven Arbeitszeiten -> ganzer Tag hellgrau (Default 00:00-24:00)
+      const fullDayEvent = {
         id: `working-hours-full-${dayOfWeek}-${currentDate.toISOString().split('T')[0]}`,
-        title: '', // Leerer Titel für besseres Aussehen
+        title: '',
         start: new Date(currentDate).toISOString().split('T')[0] + 'T00:00:00',
         end: new Date(currentDate).toISOString().split('T')[0] + 'T23:59:59',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#e5e7eb', // Hellgrau für inaktive Tage
         borderColor: 'transparent',
         textColor: 'transparent',
         display: 'background',
@@ -362,7 +495,9 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
           type: 'non_working_hours',
           isNonWorkingHours: true
         }
-      })
+      }
+      workingHoursEvents.push(fullDayEvent)
+      console.log('🔍 Added full-day event (default 00:00-24:00):', fullDayEvent.start, 'to', fullDayEvent.end, 'for', currentDate.toDateString())
     }
     
     currentDate.setDate(currentDate.getDate() + 1)
@@ -435,6 +570,86 @@ const loadStaffMeetings = async () => {
 // Ersetzen Sie BEIDE Funktionen in CalendarComponent.vue:
 
 // 1. Die verbesserte loadRegularAppointments Funktion:
+const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
+  try {
+    console.log('📅 Loading external busy times...')
+    
+    const { currentUser: composableCurrentUser } = useCurrentUser()
+    const actualUserId = props.currentUser?.id || composableCurrentUser.value?.id
+    
+    if (!actualUserId) {
+      console.log('⚠️ No user ID for external busy times')
+      return []
+    }
+    
+    // Get user's tenant_id and internal ID
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('id', actualUserId)
+      .single()
+    
+    if (userError || !userData) {
+      console.log('⚠️ Could not load user data for external busy times')
+      return []
+    }
+    
+    // Load external busy times für einen erweiterten Zeitraum (1 Jahr voraus)
+    const oneYearFromNow = new Date()
+    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1)
+    
+    const { data: busyTimes, error } = await supabase
+      .from('external_busy_times')
+      .select('*')
+      .eq('staff_id', userData.id)
+      .eq('tenant_id', userData.tenant_id)
+      .gte('end_time', new Date().toISOString()) // Ab jetzt
+      .lte('start_time', oneYearFromNow.toISOString()) // Bis 1 Jahr voraus
+      .order('start_time')
+    
+    if (error) {
+      console.error('Error loading external busy times:', error)
+      return []
+    }
+    
+    if (!busyTimes || busyTimes.length === 0) {
+      console.log('📅 No external busy times found')
+      return []
+    }
+    
+    console.log('✅ Loaded external busy times:', busyTimes.length)
+    
+    // Convert to calendar events
+    const events: CalendarEvent[] = busyTimes.map(busy => {
+      // Entferne Z-Suffix falls vorhanden, damit FullCalendar die Zeit als lokal interpretiert
+      const startTime = busy.start_time.replace('Z', '').replace(/\+\d{2}:\d{2}$/, '')
+      const endTime = busy.end_time.replace('Z', '').replace(/\+\d{2}:\d{2}$/, '')
+      
+      return {
+        id: `external-busy-${busy.id}`,
+        title: busy.event_title || 'Privat',
+        start: startTime,
+        end: endTime,
+        backgroundColor: '#9333ea', // Purple color for external events
+        borderColor: '#7e22ce',
+        textColor: '#ffffff',
+        display: 'block', // Explizit als Block anzeigen (nicht background)
+        extendedProps: {
+          type: 'external_busy',
+          external_event_id: busy.external_event_id,
+          sync_source: busy.sync_source
+        }
+      }
+    })
+    
+    return events
+    
+  } catch (error) {
+    console.error('Error loading external busy times:', error)
+    return []
+  }
+}
+
 const loadRegularAppointments = async () => {
   console.log('🔥 NEW loadRegularAppointments function is running!')
   isLoadingEvents.value = true
@@ -588,9 +803,9 @@ const loadRegularAppointments = async () => {
       let eventTitle = ''
       if (apt.type === 'lesson' || !apt.type) {
         // ✅ Location für den Titel bestimmen - Priorität: address > name (da address sauberer ist)
-        const locationText = apt.location_address || 
+        const locationText = (apt as any).location_address || 
             (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
-            apt.location_name || 
+            (apt as any).location_name || 
             (apt.location_id ? locationsMap[apt.location_id]?.name : '') || ''
         
         const studentName = `${apt.user?.[0]?.first_name || ''} ${apt.user?.[0]?.last_name || ''}`.trim() || 'Fahrlektion'
@@ -598,8 +813,8 @@ const loadRegularAppointments = async () => {
         // ✅ Debug: Location-Daten loggen
         console.log('🔍 Location debug for appointment:', apt.id, {
           location_id: apt.location_id,
-          location_name: apt.location_name,
-          location_address: apt.location_address,
+          location_name: (apt as any).location_name,
+          location_address: (apt as any).location_address,
           locationsMap_data: apt.location_id ? locationsMap[apt.location_id] : 'no location_id',
           final_locationText: locationText
         })
@@ -656,10 +871,10 @@ const loadRegularAppointments = async () => {
           has_products: false, // Wird später gesetzt
           staff_note: apt.description || '',
           client_note: '',
-          category: apt.user?.category || apt.type || 'B',
-          instructor: `${apt.staff?.first_name || ''} ${apt.staff?.last_name || ''}`.trim(),
-          student: `${apt.user?.first_name || ''} ${apt.user?.last_name || ''}`.trim(),
-          created_by: `${apt.created_by_user?.first_name || ''} ${apt.created_by_user?.last_name || ''}`.trim() || 'Unbekannt',
+          category: (apt as any).user?.category || apt.type || 'B',
+          instructor: `${(apt as any).staff?.first_name || ''} ${(apt as any).staff?.last_name || ''}`.trim(),
+          student: `${(apt as any).user?.first_name || ''} ${(apt as any).user?.last_name || ''}`.trim(),
+          created_by: `${(apt as any).created_by_user?.first_name || ''} ${(apt as any).created_by_user?.last_name || ''}`.trim() || 'Unbekannt',
           price: 0, // Preis wird nicht mehr in appointments gespeichert
           user_id: apt.user_id,
           staff_id: apt.staff_id,
@@ -668,7 +883,7 @@ const loadRegularAppointments = async () => {
           status: apt.status,
           appointment_type: apt.event_type_code || 'lesson', // ✅ KORRIGIERT: event_type_code verwenden
           is_team_invite: isTeamInvite,
-          original_type: apt.user?.category || apt.type || 'B',
+          original_type: (apt as any).user?.category || apt.type || 'B',
           eventType: (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson') // ✅ KORRIGIERT: event_type_code für eventType verwenden
         }
       }
@@ -725,9 +940,25 @@ const loadAppointments = async (forceReload = false) => {
   try {
     console.log('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '(cached check)')
     
-    // Parallel laden
-    const [appointments] = await Promise.all([
+    // Auto-Sync externe Kalender (mit Cooldown)
+    const { autoSyncCalendars } = useExternalCalendarSync()
+    autoSyncCalendars(props.currentUser?.id).catch(err => {
+      console.warn('Auto-sync failed (non-fatal):', err)
+    })
+    
+    // Get current calendar view for date range (immer aktuell bei jedem Aufruf)
+    const calendarApi = calendar.value?.getApi()
+    const currentView = calendarApi?.view
+    const viewStart = currentView?.activeStart || new Date()
+    const viewEnd = currentView?.activeEnd || new Date()
+    
+    console.log('📅 Loading events for view range:', viewStart, 'to', viewEnd)
+    
+    // Parallel laden (mit aktuellen View-Daten)
+    const [appointments, externalBusyEvents, nonWorkingHoursEvents] = await Promise.all([
       loadRegularAppointments(),
+      loadExternalBusyTimes(),
+      loadNonWorkingHoursBlocks(props.currentUser?.id || '', viewStart, viewEnd),
     ])
     
     // ✅ Sicherheitsprüfung: Ist die Komponente noch mounted?
@@ -736,45 +967,19 @@ const loadAppointments = async (forceReload = false) => {
       return
     }
     
-    // Arbeitszeiten laden und als Events generieren
-    let workingHoursEvents: CalendarEvent[] = []
-    if (props.currentUser?.id) {
-      try {
-        console.log('🔄 Loading working hours for staff:', props.currentUser.id)
-        await loadWorkingHours(props.currentUser.id)
-        
-        // Kalender-View-Bereich ermitteln
-        const calendarApi = calendar.value?.getApi()
-        if (calendarApi) {
-          const view = calendarApi.view
-          const startDate = view.currentStart
-          const endDate = view.currentEnd
-          
-          console.log('📅 Calendar view range:', { startDate, endDate })
-          workingHoursEvents = generateWorkingHoursEvents(props.currentUser.id, startDate, endDate)
-          console.log('✅ Working hours events generated:', workingHoursEvents.length, workingHoursEvents)
-        } else {
-          console.log('⚠️ Calendar API not available for working hours generation')
-        }
-      } catch (error) {
-        console.error('❌ Error loading working hours:', error)
-        // Fehler nicht weiterwerfen, nur loggen
-      }
-    } else {
-      console.log('⚠️ No current user ID available for working hours')
-    }
+    console.log('🕐 Non-working hours blocks loaded:', nonWorkingHoursEvents.length)
     
     // Kombinieren
-    const allEvents = [...appointments, ...workingHoursEvents]
+    const allEvents = [...appointments, ...nonWorkingHoursEvents, ...externalBusyEvents]
     calendarEvents.value = allEvents
     lastLoadTime.value = now // ✅ Cache-Zeit aktualisieren
     
     console.log('✅ Final calendar summary:', {
       appointments: appointments.length,
-      workingHours: workingHoursEvents.length,
+      nonWorkingHours: nonWorkingHoursEvents.length,
+      externalBusy: externalBusyEvents.length,
       total: allEvents.length,
-      cacheTime: new Date(lastLoadTime.value).toLocaleTimeString(),
-      workingHoursEvents: workingHoursEvents
+      cacheTime: new Date(lastLoadTime.value).toLocaleTimeString()
     })
     
     // ✅ DEBUG: Zeige alle Events
@@ -794,16 +999,11 @@ const loadAppointments = async (forceReload = false) => {
           return
         }
         
-        // ✅ Events nur neu laden wenn nötig
-        const currentEvents = calendarApi.getEvents()
-        if (currentEvents.length !== calendarEvents.value.length) {
-          console.log('🔄 Updating calendar events...')
-          calendarApi.removeAllEvents()
-          calendarApi.addEventSource(calendarEvents.value)
-          console.log('✅ Calendar events updated successfully')
-        } else {
-          console.log('⚡ Calendar events unchanged, skipping update')
-        }
+        // ✅ Events immer neu laden (verschiedene Wochen haben gleiche Anzahl)
+        console.log('🔄 Updating calendar events...')
+        calendarApi.removeAllEvents()
+        calendarApi.addEventSource(calendarEvents.value)
+        console.log('✅ Calendar events updated successfully')
       } catch (error) {
         console.error('❌ Error updating calendar events:', error)
         // ✅ Fehler nicht weiterwerfen, nur loggen
@@ -1197,11 +1397,17 @@ showConfirmDialog({
       hour12: false
     },
     headerToolbar: {
-      left: 'title',
+      left: 'customTitle',
       center: 'viewSwitcher',
       right: 'prev,next today'
     },
     customButtons: {
+      customTitle: {
+        text: '',
+        click: () => {
+          showDatePicker.value = !showDatePicker.value
+        }
+      },
       viewSwitcher: {
         text: 'Tag',
         click: switchView
@@ -1210,6 +1416,19 @@ showConfirmDialog({
     events: calendarEvents.value,
     eventDrop: handleEventDrop,
     eventResize: handleEventResize,
+    // Bei Wochenwechsel Cache invalidieren und neu laden
+    datesSet: () => {
+      updateCustomTitle() // Update Jahr im Header
+      
+      if (isInitialLoad.value) {
+        isInitialLoad.value = false
+        console.log('📅 Initial load, skipping datesSet reload')
+        return
+      }
+      console.log('📅 Week changed, reloading events (auto-sync every 5min)')
+      invalidateCache()
+      refreshCalendar()
+    },
   // Klick auf leeren Zeitslot
 
 // In der dateClick Funktion im calendarOptions:
@@ -1354,7 +1573,9 @@ select: (arg) => {
 },
   eventClassNames: (arg) => {
   const category = arg.event.extendedProps?.category || 'default'
-  return [`category-${category.toLowerCase()}`]
+  // ✅ Sicherheitsprüfung: category muss ein String sein
+  const categoryString = typeof category === 'string' ? category : 'default'
+  return [`category-${categoryString.toLowerCase()}`]
 },
 })
 
@@ -1377,12 +1598,16 @@ const refreshCalendar = async () => {
       return
     }
     
+    // 0. Cache invalidieren
+    invalidateCache()
+    console.log('🔄 Cache invalidated for refresh')
+    
     // 1. Aktuelle View-Position speichern
     const currentDate = calendar.value?.getApi()?.getDate()
     
-    // 2. Daten neu laden
+    // 2. Daten neu laden mit forceReload = true (Cache umgehen)
     await Promise.all([
-      loadAppointments(),
+      loadAppointments(true),
     ])
     
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted nach dem Laden?
@@ -1605,6 +1830,18 @@ const startClipboardTimeout = () => {
 }
 
 // Copy Handler anpassen:
+const handleOpenStudentProgress = async (student: any) => {
+  console.log('👤 Opening student progress for:', student)
+  
+  // Schließe EventModal
+  isModalVisible.value = false
+  
+  // Öffne EnhancedStudentModal mit Fortschritt-Tab
+  selectedStudentForProgress.value = student
+  studentProgressActiveTab.value = 'progress'
+  showEnhancedStudentModal.value = true
+}
+
 const handleCopyAppointment = (copyData: any) => {
   console.log('📋 CALENDAR: Copy event received:', copyData)
   
@@ -1655,6 +1892,13 @@ onUnmounted(() => {
     clipboardTimeout.value = null
     console.log('🧹 Clipboard timeout cleared on unmount')
   }
+  
+  // Clear sync interval
+  if (syncInterval) {
+    clearInterval(syncInterval)
+    syncInterval = null
+    console.log('🧹 Sync interval cleared on unmount')
+  }
 })
 
 onMounted(async () => {
@@ -1678,6 +1922,23 @@ onMounted(async () => {
     if (calendarApi && typeof calendarApi.view?.currentStart !== 'undefined') {
       emit('view-updated', calendarApi.view.currentStart)
     }
+    
+    // ✅ Auto-Sync alle 5 Minuten starten
+    const { autoSyncCalendars } = useExternalCalendarSync()
+    syncInterval = setInterval(async () => {
+      console.log('⏰ Auto-sync interval triggered (every 5 min)')
+      try {
+        const result = await autoSyncCalendars(props.currentUser?.id)
+        if (result.success && !result.skipped) {
+          console.log('✅ Auto-sync completed, reloading events')
+          invalidateCache()
+          await loadAppointments(true) // Force reload nach Sync
+        }
+      } catch (err) {
+        console.warn('Auto-sync interval failed (non-fatal):', err)
+      }
+    }, 5 * 60 * 1000) // 5 Minuten
+    console.log('✅ Auto-sync interval started (every 5 min)')
     
     console.log('🔄 Initial appointment loading...')
     await loadAppointments()
@@ -1765,19 +2026,46 @@ defineExpose({
 </script>
 
 <template>
-  <div v-if="isLoadingEvents" class="text-center py-8">
-    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
-    <p class="text-gray-600">Termine werden geladen...</p>
-  </div>
-  
-  <FullCalendar
-    v-if="isCalendarReady"
-    ref="calendar"
-    :options="calendarOptions"
-  />
-  
-  <div v-else>
-    Kalender wird geladen...
+  <div class="relative">
+    <!-- Loading Overlay -->
+    <div v-if="isLoadingEvents" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
+        <p class="text-gray-600">Termine werden geladen...</p>
+      </div>
+    </div>
+    
+    <!-- Date Picker Backdrop -->
+    <div v-if="showDatePicker" @click="showDatePicker = false" class="fixed inset-0 z-40"></div>
+    
+    <!-- Date Picker Dropdown -->
+    <div v-if="showDatePicker" class="absolute top-16 left-4 bg-white shadow-xl rounded-lg p-4 z-50 border border-gray-200 w-64">
+      <div class="grid grid-cols-3 gap-2">
+        <button
+          v-for="(monthName, index) in ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']"
+          :key="index"
+          @click="jumpToDate(currentYear, index)"
+          class="px-3 py-2 text-sm hover:bg-blue-100 rounded transition-colors font-medium text-gray-700"
+        >
+          {{ monthName }}
+        </button>
+      </div>
+      <div class="mt-3 pt-3 border-t flex items-center justify-between">
+        <button @click="currentYear--" class="px-3 py-1 hover:bg-gray-100 rounded font-bold text-gray-700">◀</button>
+        <span class="font-bold text-lg text-gray-800">{{ currentYear }}</span>
+        <button @click="currentYear++" class="px-3 py-1 hover:bg-gray-100 rounded font-bold text-gray-700">▶</button>
+      </div>
+    </div>
+    
+    <FullCalendar
+      v-if="isCalendarReady"
+      ref="calendar"
+      :options="calendarOptions"
+    />
+    
+    <div v-else>
+      Kalender wird geladen...
+    </div>
   </div>
 
  <EventModal
@@ -1791,7 +2079,8 @@ defineExpose({
   @save-event="handleSaveEvent"       
   @delete-event="handleEventDeleted"
   @copy-appointment="handleCopyAppointment"
-  @refresh-calendar="loadAppointments"
+  @open-student-progress="handleOpenStudentProgress"
+  @refresh-calendar="() => { invalidateCache(); loadAppointments(true); }"
   @appointment-saved="refreshCalendar"    
   @appointment-updated="refreshCalendar"   
   @appointment-deleted="refreshCalendar"
@@ -1867,6 +2156,14 @@ defineExpose({
     </div>
   </div>
 
+  <!-- EnhancedStudentModal für Schüler-Fortschritt -->
+  <EnhancedStudentModal
+    v-if="showEnhancedStudentModal"
+    :selected-student="selectedStudentForProgress"
+    :initial-tab="studentProgressActiveTab"
+    @close="() => { showEnhancedStudentModal = false; selectedStudentForProgress = null }"
+  />
+
 </template>
 
 <style>
@@ -1881,24 +2178,29 @@ defineExpose({
 }
 
 /* === NICHT-ARBEITSZEITEN BLÖCKE (grau für blockierte Zeit) === */
+/* Nicht-Arbeitszeit-Blöcke (dunkel/hellgrau hinterlegt) */
 .non-working-hours-block {
-  opacity: 0.2 !important;
+  opacity: 1.0 !important; /* Volle Deckkraft für klare Farben */
   pointer-events: none !important;
   z-index: 0 !important; /* Niedrigere z-index damit Termine darüber erscheinen */
   border: none !important;
   box-shadow: none !important;
-  background-color: #e5e7eb !important;
 }
 
-/* Stelle sicher, dass Nicht-Arbeitszeit-Blöcke grau bleiben */
-.non-working-hours-block * {
-  background-color: inherit !important;
+/* Kalender-Hintergrund auf weiß setzen */
+.fc-timegrid-slot {
+  background-color: #ffffff !important;
 }
 
-.non-working-hours-block .fc-event {
-  background-color: #e5e7eb !important;
+.fc-timegrid-body {
+  background-color: #ffffff !important;
 }
 
+.fc-timegrid {
+  background-color: #ffffff !important;
+}
+
+/* CSS überschreibt nicht die backgroundColor - kommt aus dem Code */
 .non-working-hours-block .fc-event-title {
   display: none !important;
 }
@@ -1909,32 +2211,22 @@ defineExpose({
 
 /* Nicht-Arbeitszeit-Block Hover-Effekt deaktivieren */
 .non-working-hours-block:hover {
-  opacity: 0.2 !important;
+  opacity: 1.0 !important;
   transform: none !important;
   box-shadow: none !important;
-  background-color: #e5e7eb !important;
-}
-
-/* Schraffierung für Nicht-Arbeitszeit-Blöcke */
-.non-working-hours-block::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 3px,
-    rgba(0, 0, 0, 0.05) 3px,
-    rgba(0, 0, 0, 0.05) 6px
-  );
-  pointer-events: none;
 }
 
 /* Freie Slots sollen weiß bleiben */
 .fc-timegrid-slot {
+  background-color: white !important;
+}
+
+/* Kalender-Hintergrund ist immer weiß */
+.fc-timegrid-body,
+.fc-scrollgrid-sync-table,
+.fc-col-header,
+.fc-timegrid-axis,
+.fc-timegrid-slots table {
   background-color: white !important;
 }
 

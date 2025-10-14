@@ -20,6 +20,19 @@ export interface WorkingHourForm {
   is_active: boolean
 }
 
+export interface WorkingHourBlock {
+  id?: string
+  start_time: string
+  end_time: string
+  is_active: boolean
+}
+
+export interface WorkingDayForm {
+  day_of_week: number
+  is_active: boolean
+  blocks: WorkingHourBlock[]
+}
+
 const workingHours = ref<WorkingHour[]>([])
 const isLoading = ref(false)
 const error = ref<string | null>(null)
@@ -97,44 +110,212 @@ export const useStaffWorkingHours = () => {
     }
   }
 
-  // Arbeitszeit speichern/aktualisieren
+  // Arbeitszeit speichern/aktualisieren - erstellt automatisch Nicht-Arbeitszeiten
   const saveWorkingHour = async (staffId: string, workingHour: WorkingHourForm) => {
     try {
       console.log('💾 Saving working hour:', { staffId, workingHour })
       
-      const { data, error: saveError } = await supabase
+      // Get tenant_id for this staff
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', staffId)
+        .single()
+      
+      if (userError || !userData?.tenant_id) {
+        console.error('❌ Could not get tenant_id:', userError)
+        throw new Error('Tenant-ID nicht gefunden')
+      }
+      
+      // Erst alle bestehenden Einträge für diesen Tag löschen
+      const { error: deleteError } = await supabase
         .from('staff_working_hours')
-        .upsert({
+        .delete()
+        .eq('staff_id', staffId)
+        .eq('day_of_week', workingHour.day_of_week)
+      
+      if (deleteError) {
+        console.error('❌ Error deleting existing hours:', deleteError)
+        throw deleteError
+      }
+      
+      const entries = []
+      
+      if (workingHour.is_active) {
+        // 1. Arbeitszeit-Eintrag (für Verfügbarkeitsprüfung)
+        entries.push({
           staff_id: staffId,
+          tenant_id: userData.tenant_id,
           day_of_week: workingHour.day_of_week,
           start_time: workingHour.start_time,
           end_time: workingHour.end_time,
-          is_active: workingHour.is_active
+          is_active: true
         })
-        .select()
-        .single()
-
-      if (saveError) {
-        console.error('❌ Save error details:', saveError)
-        throw saveError
+        
+        // 2. Nicht-Arbeitszeit: 00:00 bis Arbeitsbeginn
+        if (workingHour.start_time !== '00:00') {
+          entries.push({
+            staff_id: staffId,
+            tenant_id: userData.tenant_id,
+            day_of_week: workingHour.day_of_week,
+            start_time: '00:00',
+            end_time: workingHour.start_time,
+            is_active: false
+          })
+        }
+        
+        // 3. Nicht-Arbeitszeit: Arbeitsende bis 23:59
+        if (workingHour.end_time !== '23:59') {
+          entries.push({
+            staff_id: staffId,
+            tenant_id: userData.tenant_id,
+            day_of_week: workingHour.day_of_week,
+            start_time: workingHour.end_time,
+            end_time: '23:59',
+            is_active: false
+          })
+        }
+      } else {
+        // Ganzer Tag als Nicht-Arbeitszeit
+        entries.push({
+          staff_id: staffId,
+          tenant_id: userData.tenant_id,
+          day_of_week: workingHour.day_of_week,
+          start_time: '00:00',
+          end_time: '23:59',
+          is_active: false
+        })
       }
+      
+      // Alle Einträge einfügen
+      const { data: insertData, error: insertError } = await supabase
+        .from('staff_working_hours')
+        .insert(entries)
+        .select()
+      
+      if (insertError) throw insertError
       
       // Lokale Liste aktualisieren
-      const existingIndex = workingHours.value.findIndex(
-        h => h.day_of_week === workingHour.day_of_week
+      workingHours.value = workingHours.value.filter(
+        h => h.day_of_week !== workingHour.day_of_week
       )
+      workingHours.value.push(...insertData)
       
-      if (existingIndex >= 0) {
-        workingHours.value[existingIndex] = data
-      } else {
-        workingHours.value.push(data)
-      }
-      
-      console.log('✅ Working hour saved:', data)
-      return data
+      console.log('✅ Working hours saved:', insertData.length, 'entries')
+      return insertData
       
     } catch (err: any) {
       console.error('❌ Error saving working hour:', err)
+      throw err
+    }
+  }
+
+  // Mehrere Arbeitszeit-Blöcke speichern (für erweiterte UI)
+  const saveWorkingDay = async (staffId: string, workingDay: WorkingDayForm) => {
+    try {
+      console.log('💾 Saving working day with multiple blocks:', { staffId, workingDay })
+      
+      // Get tenant_id for this staff
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', staffId)
+        .single()
+      
+      if (userError || !userData?.tenant_id) {
+        console.error('❌ Could not get tenant_id:', userError)
+        throw new Error('Tenant-ID nicht gefunden')
+      }
+      
+      // Erst alle bestehenden Einträge für diesen Tag löschen
+      const { error: deleteError } = await supabase
+        .from('staff_working_hours')
+        .delete()
+        .eq('staff_id', staffId)
+        .eq('day_of_week', workingDay.day_of_week)
+      
+      if (deleteError) {
+        console.error('❌ Error deleting existing hours:', deleteError)
+        throw deleteError
+      }
+      
+      const entries = []
+      
+      if (workingDay.is_active && workingDay.blocks.length > 0) {
+        // Sortiere Blöcke nach Startzeit
+        const sortedBlocks = workingDay.blocks.sort((a, b) => a.start_time.localeCompare(b.start_time))
+        
+        // Arbeitszeit-Blöcke hinzufügen
+        sortedBlocks.forEach(block => {
+          entries.push({
+            staff_id: staffId,
+            tenant_id: userData.tenant_id,
+            day_of_week: workingDay.day_of_week,
+            start_time: block.start_time,
+            end_time: block.end_time,
+            is_active: true
+          })
+        })
+        
+        // Nicht-Arbeitszeiten zwischen den Blöcken und am Anfang/Ende hinzufügen
+        let currentTime = '00:00'
+        
+        sortedBlocks.forEach(block => {
+          if (currentTime < block.start_time) {
+            entries.push({
+              staff_id: staffId,
+              tenant_id: userData.tenant_id,
+              day_of_week: workingDay.day_of_week,
+              start_time: currentTime,
+              end_time: block.start_time,
+              is_active: false
+            })
+          }
+          currentTime = block.end_time
+        })
+        
+        // Nach dem letzten Block bis 23:59
+        if (currentTime < '23:59') {
+          entries.push({
+            staff_id: staffId,
+            tenant_id: userData.tenant_id,
+            day_of_week: workingDay.day_of_week,
+            start_time: currentTime,
+            end_time: '23:59',
+            is_active: false
+          })
+        }
+      } else {
+        // Ganzer Tag als Nicht-Arbeitszeit
+        entries.push({
+          staff_id: staffId,
+          tenant_id: userData.tenant_id,
+          day_of_week: workingDay.day_of_week,
+          start_time: '00:00',
+          end_time: '23:59',
+          is_active: false
+        })
+      }
+      
+      // Alle Einträge einfügen
+      const { data: insertData, error: insertError } = await supabase
+        .from('staff_working_hours')
+        .insert(entries)
+        .select()
+      
+      if (insertError) throw insertError
+      
+      // Lokale Liste aktualisieren
+      workingHours.value = workingHours.value.filter(
+        h => h.day_of_week !== workingDay.day_of_week
+      )
+      workingHours.value.push(...insertData)
+      
+      console.log('✅ Working day saved:', insertData.length, 'entries')
+      return insertData
+      
+    } catch (err: any) {
+      console.error('❌ Error saving working day:', err)
       throw err
     }
   }
@@ -249,6 +430,7 @@ export const useStaffWorkingHours = () => {
     // Methods
     loadWorkingHours,
     saveWorkingHour,
+    saveWorkingDay, // Neue Funktion für mehrere Blöcke
     deleteWorkingHour,
     toggleWorkingHour,
     isTimeAvailable,

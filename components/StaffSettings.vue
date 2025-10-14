@@ -53,13 +53,11 @@
             <div class="flex items-center space-x-3">
               <span class="text-xl">📅</span>
               <div>
-                <h3 class="font-semibold text-gray-900">Externe Kalender</h3>
-                <p class="text-sm text-gray-600">Private Kalender verbinden (Google, Microsoft, Apple)</p>
+                <h3 class="font-medium text-gray-900">Externe Kalender</h3>
               </div>
             </div>
-            <span class="text-gray-400 transform transition-transform" :class="{ 'rotate-180': openSections.externalCalendars }">
-              ▼
-            </span>
+            <span class="text-gray-600 font-bold">{{ openSections.externalCalendars ? '−' : '+' }}</span>
+
           </button>
           
           <div v-if="openSections.externalCalendars" class="px-4 pb-4 border-t">
@@ -73,7 +71,7 @@
             @click="toggleSection('workingStats')" 
             class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
           >
-            <span class="font-medium text-gray-900">⏰ Arbeitszeit-Übersicht</span>
+            <span class="font-medium text-gray-900">⏰ Arbeitsstunden</span>
             <span class="text-gray-600 font-bold">{{ openSections.workingStats ? '−' : '+' }}</span>
           </button>
           
@@ -252,101 +250,97 @@
                 <!-- Info Text -->
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p class="text-sm text-blue-800">
-                    💡 <strong>Arbeitszeiten:</strong> Diese Zeiten werden automatisch als "gesperrt" im Kalender angezeigt und verhindern Terminbuchungen außerhalb Ihrer Arbeitszeiten.
+                    💡 <strong>Arbeitszeiten:</strong> Sie können mehrere Arbeitszeit-Blöcke pro Tag erstellen (z.B. Vormittag und Nachmittag mit Mittagspause). Nicht-Arbeitszeiten werden automatisch als "gesperrt" im Kalender angezeigt.
                   </p>
                 </div>
 
                 <!-- Arbeitszeiten pro Wochentag -->
-                <div class="space-y-3">
+                <div class="space-y-4">
                   <div
                     v-for="day in weekdays"
                     :key="day.value"
-                    class="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 p-3 border border-gray-200 rounded-lg"
+                    class="border border-gray-200 rounded-lg p-4"
                   >
-                    <!-- Wochentag -->
-                    <div class="w-full sm:w-20 text-sm font-medium text-gray-700">
-                      {{ day.label }}
-                    </div>
-                    
-                    <!-- Aktiv/Inaktiv Toggle -->
-                    <div class="flex items-center space-x-2">
-                      <input
-                        :id="`active-${day.value}`"
-                        v-model="workingHoursForm[day.value].is_active"
-                        type="checkbox"
-                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      >
-                      <label :for="`active-${day.value}`" class="text-sm text-gray-700">
-                        Aktiv
+                    <!-- Wochentag Header -->
+                    <div class="flex items-center justify-between mb-3">
+                      <h4 class="text-sm font-medium text-gray-700">{{ day.label }}</h4>
+                      
+                      <!-- Aktiv/Inaktiv Toggle Switch -->
+                      <label class="relative inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          v-model="workingDayForm[day.value].is_active"
+                          @change="autoSaveWorkingDay(day.value)"
+                          class="sr-only peer"
+                        />
+                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
                     
-                    <!-- Zeiten Container -->
-                    <div class="flex flex-col sm:flex-row sm:flex-1 sm:space-x-3 space-y-3 sm:space-y-0">
-                      <!-- Start Zeit -->
-                      <div class="flex-1">
-                        <label class="block text-xs text-gray-500 mb-1">Von</label>
-                        <input
-                          v-model="workingHoursForm[day.value].start_time"
-                          type="time"
-                          :disabled="!workingHoursForm[day.value].is_active"
-                          class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                        >
+                    <!-- Arbeitszeit-Blöcke -->
+                    <div v-if="workingDayForm[day.value].is_active" class="space-y-3">
+                      <div
+                        v-for="(block, blockIndex) in workingDayForm[day.value].blocks"
+                        :key="blockIndex"
+                        class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
+                      >
+                        <!-- Start Zeit -->
+                        <div class="flex-1">
+                          <label class="block text-xs text-gray-500 mb-1">Von</label>
+                          <input
+                            v-model="block.start_time"
+                            type="time"
+                            @change="autoSaveWorkingDay(day.value)"
+                            class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                        </div>
+                        
+                        <!-- End Zeit -->
+                        <div class="flex-1">
+                          <label class="block text-xs text-gray-500 mb-1">Bis</label>
+                          <input
+                            v-model="block.end_time"
+                            type="time"
+                            @change="autoSaveWorkingDay(day.value)"
+                            class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                        </div>
+                        
+                        <!-- Block löschen Button -->
+                        <div class="flex-shrink-0 pt-5">
+                          <button
+                            @click="removeWorkingBlock(day.value, blockIndex)"
+                            class="text-red-600 hover:text-red-800 text-sm font-medium"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                       
-                      <!-- End Zeit -->
-                      <div class="flex-1">
-                        <label class="block text-xs text-gray-500 mb-1">Bis</label>
-                        <input
-                          v-model="workingHoursForm[day.value].end_time"
-                          type="time"
-                          :disabled="!workingHoursForm[day.value].is_active"
-                          class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                        >
-                      </div>
+                      <!-- Block hinzufügen Button -->
+                      <button
+                        @click="addWorkingBlock(day.value)"
+                        class="w-full py-2 px-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 text-sm font-medium"
+                      >
+                        + Arbeitszeit-Block hinzufügen
+                      </button>
+                    </div>
+                    
+                    <!-- Inaktiv Zustand -->
+                    <div v-else class="text-sm text-gray-500 text-center py-4">
+                      Tag ist inaktiv
                     </div>
                   </div>
                 </div>
 
-                <!-- Aktionen -->
-                <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
-                  <button
-                    @click="saveWorkingHours"
-                    :disabled="isSavingWorkingHours"
-                    class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                  >
-                    {{ isSavingWorkingHours ? 'Speichern...' : 'Arbeitszeiten speichern' }}
-                  </button>
-                  
-                  <button
-                    @click="clearWorkingHours"
-                    :disabled="isSavingWorkingHours"
-                    class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
-                  >
-                    Alle löschen
-                  </button>
+                <!-- Auto-Save Indicator -->
+                <div v-if="isSavingWorkingHours" class="text-sm text-blue-600 pt-2">
+                  💾 Speichere...
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Modal Footer -->
-      <div class="sticky bottom-0 bg-gray-50 px-6 py-4 border-t flex justify-between">
-        <button
-          @click="$emit('close')"
-          class="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors font-medium"
-        >
-          Abbrechen
-        </button>
-        <button
-          @click="saveAllSettings"
-          :disabled="isSaving"
-          class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-        >
-          {{ isSaving ? 'Speichern...' : 'Speichern' }}
-        </button>
       </div>
     </div>
   </div>
@@ -358,7 +352,7 @@ import { navigateTo } from '#app/composables/router'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import ExamLocationSearchDropdown from './ExamLocationSearchDropdown.vue'
-import { useStaffWorkingHours, WEEKDAYS } from '~/composables/useStaffWorkingHours'
+import { useStaffWorkingHours, WEEKDAYS, type WorkingDayForm, type WorkingHourBlock } from '~/composables/useStaffWorkingHours'
 
 interface Props {
   currentUser: any
@@ -450,11 +444,15 @@ const {
   isLoading: isLoadingWorkingHours,
   loadWorkingHours,
   saveWorkingHour,
+  saveWorkingDay,
   workingHoursByDay
 } = useStaffWorkingHours()
 
-// Working Hours Form (per day)
+// Working Hours Form (per day) - Legacy für Kompatibilität
 const workingHoursForm = ref<Record<number, { start_time: string; end_time: string; is_active: boolean }>>({})
+
+// Neue Working Day Form (mehrere Blöcke pro Tag)
+const workingDayForm = ref<Record<number, WorkingDayForm>>({})
 const weekdays = WEEKDAYS
 const isSavingWorkingHours = ref(false)
 
@@ -511,6 +509,27 @@ const nextMonthName = computed(() => {
   date.setMonth(date.getMonth() + 1)
   return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
 })
+
+// Helper function für lokale Zeit-Parsing
+const parseLocalDateTime = (dateTimeStr: string): Date => {
+  // Entferne Timezone-Indikatoren (Z, +00:00, +00)
+  const cleanStr = dateTimeStr.replace('+00:00', '').replace('+00', '').replace('Z', '').trim()
+  
+  // Parse als lokale Zeit - unterstützt beide Formate (mit T oder Leerzeichen)
+  const parts = cleanStr.includes('T') ? cleanStr.split('T') : cleanStr.split(' ')
+  
+  if (parts.length < 2) {
+    console.warn('Invalid datetime format:', dateTimeStr)
+    return new Date()
+  }
+  
+  const [datePart, timePart] = parts
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour, minute, second] = timePart.split(':').map(Number)
+  
+  // Erstelle Date-Objekt in lokaler Zeitzone
+  return new Date(year, month - 1, day, hour, minute, second || 0)
+}
 
 // Methods
 // In StaffSettings.vue - ersetzen Sie die Funktion mit dieser typisierten Version:
@@ -989,42 +1008,31 @@ const loadWorkingHoursData = async () => {
       return
     }
     
-    // Filter completed/confirmed Termine für gearbeitete Stunden
+    // Filter nicht-gelöschte Termine
     const validAppointments = appointments.filter(apt => 
-      ['completed', 'confirmed'].includes(apt.status)
+      !apt.deleted_at // Nur nicht gelöschte Termine
     )
     
-    // Filter alle Termine im aktuellen Monat für geplante Stunden
+    // Aktuelle Zeit
     const now = new Date()
+    
+    // Filter Termine nach Zeitpunkt (in der Vergangenheit = gearbeitet, in der Zukunft = geplant)
+    const workedAppointments = validAppointments.filter(apt => {
+      const appointmentDate = parseLocalDateTime(apt.appointment_datetime || apt.start_time)
+      return appointmentDate < now // Start-Zeit in der Vergangenheit = gearbeitet
+    })
+    
+    const plannedAppointments = validAppointments.filter(apt => {
+      const appointmentDate = parseLocalDateTime(apt.appointment_datetime || apt.start_time)
+      return appointmentDate >= now // Start-Zeit in der Zukunft = geplant
+    })
+    
+    console.log('🔍 DEBUG: Worked appointments (in past):', workedAppointments.length)
+    console.log('🔍 DEBUG: Planned appointments (in future):', plannedAppointments.length)
+    
+    // Monatsgrenzen definieren
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
-    
-    // Filter alle Termine im kommenden Monat für geplante Stunden
-    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-    const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59)
-    
-    const plannedAppointments = appointments.filter(apt => {
-      const appointmentDate = new Date(apt.appointment_datetime || apt.start_time)
-      return appointmentDate >= currentMonthStart && appointmentDate <= currentMonthEnd
-    })
-    
-    const nextMonthPlannedAppointments = appointments.filter(apt => {
-      const appointmentDate = new Date(apt.appointment_datetime || apt.start_time)
-      return appointmentDate >= nextMonthStart && appointmentDate <= nextMonthEnd
-    })
-    
-    console.log('🔍 DEBUG: Valid appointments (worked):', validAppointments.length)
-    console.log('🔍 DEBUG: Planned appointments (current month):', plannedAppointments.length)
-    
-    if (validAppointments.length === 0 && plannedAppointments.length === 0) {
-      console.log('⚠️ DEBUG: No valid appointments found')
-      return
-    }
-    
-    // Berechne Stunden für jeden Monat
-    console.log('🔍 DEBUG: Current date:', now)
-    
-    // Alle 4 Monate definieren (currentMonthStart und currentMonthEnd bereits oben definiert)
     
     const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
@@ -1035,62 +1043,66 @@ const loadWorkingHoursData = async () => {
     const threeMonthsAgoStart = new Date(now.getFullYear(), now.getMonth() - 3, 1)
     const threeMonthsAgoEnd = new Date(now.getFullYear(), now.getMonth() - 2, 0, 23, 59, 59)
     
-    // Hilfsfunktion zum Filtern und Berechnen
-    const calculateHoursForPeriod = (startDate: Date, endDate: Date, periodName: string) => {
-      console.log(`🔍 DEBUG: Calculating for ${periodName}:`, {
-        startDate: startDate,
-        endDate: endDate
-      })
-      
-      const filteredAppointments = validAppointments.filter(apt => {
-        const appointmentDate = new Date(apt.appointment_datetime || apt.start_time)
-        const isInRange = appointmentDate >= startDate && appointmentDate <= endDate
-        return isInRange
-      })
-      
-      console.log(`🔍 DEBUG: ${periodName} filtered appointments:`, filteredAppointments.length)
-      
-      const totalMinutes = filteredAppointments.reduce((sum, apt) => {
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59)
+    
+    // Hilfsfunktion zum Berechnen
+    const calculateHoursFromAppointments = (appointments: any[]) => {
+      const totalMinutes = appointments.reduce((sum, apt) => {
         const minutes = apt.duration_minutes || 45
         return sum + minutes
       }, 0)
       
-      const hours = Math.round((totalMinutes / 60) * 10) / 10
-      console.log(`🔍 DEBUG: ${periodName} total: ${totalMinutes} minutes = ${hours} hours`)
-      
-      return hours
+      // Runde auf 0.05 genau (3 Minuten)
+      return Math.round((totalMinutes / 60) * 20) / 20
     }
     
-    // Berechne für alle 4 Monate
-    const currentHours = calculateHoursForPeriod(currentMonthStart, currentMonthEnd, 'Current Month')
-    const previousHours = calculateHoursForPeriod(previousMonthStart, previousMonthEnd, 'Previous Month')
-    const twoMonthsAgoHours = calculateHoursForPeriod(twoMonthsAgoStart, twoMonthsAgoEnd, 'Two Months Ago')
-    const threeMonthsAgoHours = calculateHoursForPeriod(threeMonthsAgoStart, threeMonthsAgoEnd, 'Three Months Ago')
+    // Hilfsfunktion zum Filtern nach Zeitraum
+    const filterByPeriod = (appointments: any[], startDate: Date, endDate: Date) => {
+      return appointments.filter(apt => {
+        const appointmentDate = parseLocalDateTime(apt.appointment_datetime || apt.start_time)
+        return appointmentDate >= startDate && appointmentDate <= endDate
+      })
+    }
     
-    // Berechne geplante Stunden für aktuellen Monat
-    const plannedHours = plannedAppointments.reduce((sum, apt) => {
-      const minutes = apt.duration_minutes || 45
-      return sum + minutes
-    }, 0)
-    const plannedHoursFormatted = plannedHours / 60
+    // Berechne GEARBEITETE Stunden (Vergangenheit) für alle Monate
+    const currentMonthWorked = calculateHoursFromAppointments(
+      filterByPeriod(workedAppointments, currentMonthStart, currentMonthEnd)
+    )
+    const previousMonthWorked = calculateHoursFromAppointments(
+      filterByPeriod(workedAppointments, previousMonthStart, previousMonthEnd)
+    )
+    const twoMonthsAgoWorked = calculateHoursFromAppointments(
+      filterByPeriod(workedAppointments, twoMonthsAgoStart, twoMonthsAgoEnd)
+    )
+    const threeMonthsAgoWorked = calculateHoursFromAppointments(
+      filterByPeriod(workedAppointments, threeMonthsAgoStart, threeMonthsAgoEnd)
+    )
     
-    // Berechne geplante Stunden für kommenden Monat
-    const nextMonthPlannedHours = nextMonthPlannedAppointments.reduce((sum, apt) => {
-      const minutes = apt.duration_minutes || 45
-      return sum + minutes
-    }, 0)
-    const nextMonthPlannedHoursFormatted = nextMonthPlannedHours / 60
+    // Berechne GEPLANTE Stunden (Zukunft)
+    const currentMonthPlanned = calculateHoursFromAppointments(
+      filterByPeriod(plannedAppointments, currentMonthStart, currentMonthEnd)
+    )
+    const nextMonthPlanned = calculateHoursFromAppointments(
+      filterByPeriod(plannedAppointments, nextMonthStart, nextMonthEnd)
+    )
     
-    console.log('🔍 DEBUG: Planned hours for current month:', plannedHoursFormatted)
-    console.log('🔍 DEBUG: Planned hours for next month:', nextMonthPlannedHoursFormatted)
+    console.log('🔍 DEBUG: Hours calculated:', {
+      currentMonthWorked,
+      currentMonthPlanned,
+      nextMonthPlanned,
+      previousMonthWorked,
+      twoMonthsAgoWorked,
+      threeMonthsAgoWorked
+    })
     
     // Setze alle Werte
-    monthlyStats.value.currentMonth.worked = currentHours
-    monthlyStats.value.currentMonth.planned = plannedHoursFormatted
-    monthlyStats.value.nextMonth.planned = nextMonthPlannedHoursFormatted
-    monthlyStats.value.previousMonth.worked = previousHours
-    monthlyStats.value.twoMonthsAgo.worked = twoMonthsAgoHours
-    monthlyStats.value.threeMonthsAgo.worked = threeMonthsAgoHours
+    monthlyStats.value.currentMonth.worked = currentMonthWorked
+    monthlyStats.value.currentMonth.planned = currentMonthPlanned
+    monthlyStats.value.nextMonth.planned = nextMonthPlanned
+    monthlyStats.value.previousMonth.worked = previousMonthWorked
+    monthlyStats.value.twoMonthsAgo.worked = twoMonthsAgoWorked
+    monthlyStats.value.threeMonthsAgo.worked = threeMonthsAgoWorked
     
   } catch (error) {
     console.error('❌ DEBUG: Unexpected error:', error)
@@ -1107,11 +1119,34 @@ const saveAllSettings = async () => {
   try {
     const supabase = getSupabase()
 
-    // 1. Staff-Kategorien speichern (temporär deaktiviert - Tabelle existiert nicht)
+    // 1. Arbeitszeiten speichern
+    console.log('💾 Saving working hours...')
+    try {
+      isSavingWorkingHours.value = true
+      for (const day of weekdays) {
+        const formData = workingHoursForm.value[day.value]
+        console.log(`💾 Saving day ${day.value}:`, formData)
+        
+        await saveWorkingHour(props.currentUser.id, {
+          day_of_week: day.value,
+          start_time: formData.start_time,
+          end_time: formData.end_time,
+          is_active: formData.is_active
+        })
+      }
+      console.log('✅ Working hours saved via saveAllSettings')
+      isSavingWorkingHours.value = false
+    } catch (whErr: any) {
+      isSavingWorkingHours.value = false
+      console.error('❌ Working hours save failed:', whErr)
+      throw whErr
+    }
+
+    // 2. Staff-Kategorien speichern (temporär deaktiviert - Tabelle existiert nicht)
     console.log('🔥 Staff categories saving disabled - table does not exist')
     // TODO: Implementiere staff_categories Tabelle oder alternative Lösung
 
-    // 2. Lektionsdauern speichern (temporär deaktiviert - Tabelle existiert nicht)
+    // 3. Lektionsdauern speichern (temporär deaktiviert - Tabelle existiert nicht)
     console.log('🔥 Lesson durations saving disabled - table does not exist')
     // TODO: Implementiere staff_category_durations Tabelle oder alternative Lösung
 
@@ -1149,7 +1184,7 @@ const openCashControl = () => {
 
 // Working Hours Methods
 const initializeWorkingHoursForm = () => {
-  // Initialize form for all weekdays
+  // Initialize form for all weekdays (Legacy)
   weekdays.forEach(day => {
     const existingHour = workingHoursByDay.value[day.value]
     workingHoursForm.value[day.value] = {
@@ -1158,6 +1193,142 @@ const initializeWorkingHoursForm = () => {
       is_active: existingHour?.is_active || false
     }
   })
+  
+  // Initialize new working day form for all weekdays
+  weekdays.forEach(day => {
+    // Hole ALLE Arbeitszeit-Einträge für diesen Tag (nicht nur einen)
+    const dayWorkingHours = staffWorkingHours.value.filter(
+      (wh: any) => wh.day_of_week === day.value && wh.is_active === true
+    )
+    
+    console.log(`🔍 Initializing day ${day.value}:`, dayWorkingHours)
+    
+    // Wenn aktive Arbeitszeiten vorhanden sind, lade alle Blöcke
+    if (dayWorkingHours.length > 0) {
+      workingDayForm.value[day.value] = {
+        day_of_week: day.value,
+        is_active: true,
+        blocks: dayWorkingHours.map((wh: any) => ({
+          id: wh.id,
+          start_time: wh.start_time,
+          end_time: wh.end_time,
+          is_active: true
+        }))
+      }
+    } else {
+      // Standard-Initialisierung (Tag inaktiv)
+      workingDayForm.value[day.value] = {
+        day_of_week: day.value,
+        is_active: false,
+        blocks: []
+      }
+    }
+  })
+  
+  console.log('✅ Working day form initialized:', workingDayForm.value)
+}
+
+// Auto-Save für einzelnen Arbeitstag (Legacy)
+const autoSaveWorkingHour = async (dayOfWeek: number) => {
+  if (!props.currentUser?.id) return
+  
+  isSavingWorkingHours.value = true
+  try {
+    const formData = workingHoursForm.value[dayOfWeek]
+    console.log(`💾 Auto-saving day ${dayOfWeek}:`, formData)
+    
+    await saveWorkingHour(props.currentUser.id, {
+      day_of_week: dayOfWeek,
+      start_time: formData.start_time,
+      end_time: formData.end_time,
+      is_active: formData.is_active
+    })
+    
+    console.log(`✅ Day ${dayOfWeek} auto-saved successfully`)
+    
+    // Reload working hours to update calendar
+    await loadWorkingHours(props.currentUser.id)
+    console.log('🔄 Working hours reloaded after save')
+    
+    // Emit event to notify parent (calendar needs to reload)
+    emit('settings-updated')
+    
+  } catch (err: any) {
+    console.error(`❌ Error auto-saving day ${dayOfWeek}:`, err)
+    error.value = `Fehler beim Speichern: ${err.message}`
+  } finally {
+    setTimeout(() => {
+      isSavingWorkingHours.value = false
+    }, 500) // Kurz anzeigen, dann ausblenden
+  }
+}
+
+// Auto-Save für Working Day mit mehreren Blöcken
+const autoSaveWorkingDay = async (dayOfWeek: number) => {
+  if (!props.currentUser?.id) return
+  
+  isSavingWorkingHours.value = true
+  try {
+    const dayData = workingDayForm.value[dayOfWeek]
+    console.log(`💾 Auto-saving working day ${dayOfWeek}:`, dayData)
+    
+    await saveWorkingDay(props.currentUser.id, dayData)
+    
+    console.log(`✅ Working day ${dayOfWeek} auto-saved successfully`)
+    
+    // Reload working hours to update calendar
+    await loadWorkingHours(props.currentUser.id)
+    console.log('🔄 Working hours reloaded after save')
+    
+    // Emit event to notify parent (calendar needs to reload)
+    emit('settings-updated')
+    
+  } catch (err: any) {
+    console.error(`❌ Error auto-saving working day ${dayOfWeek}:`, err)
+    error.value = `Fehler beim Speichern: ${err.message}`
+  } finally {
+    setTimeout(() => {
+      isSavingWorkingHours.value = false
+    }, 500) // Kurz anzeigen, dann ausblenden
+  }
+}
+
+// Arbeitszeit-Block hinzufügen
+const addWorkingBlock = (dayOfWeek: number) => {
+  if (!workingDayForm.value[dayOfWeek]) {
+    workingDayForm.value[dayOfWeek] = {
+      day_of_week: dayOfWeek,
+      is_active: true,
+      blocks: []
+    }
+  }
+  
+  // Neuen Block hinzufügen
+  const newBlock: WorkingHourBlock = {
+    start_time: '09:00',
+    end_time: '17:00',
+    is_active: true
+  }
+  
+  workingDayForm.value[dayOfWeek].blocks.push(newBlock)
+  
+  // Auto-save
+  autoSaveWorkingDay(dayOfWeek)
+}
+
+// Arbeitszeit-Block entfernen
+const removeWorkingBlock = (dayOfWeek: number, blockIndex: number) => {
+  if (workingDayForm.value[dayOfWeek]?.blocks) {
+    workingDayForm.value[dayOfWeek].blocks.splice(blockIndex, 1)
+    
+    // Wenn keine Blöcke mehr vorhanden, Tag deaktivieren
+    if (workingDayForm.value[dayOfWeek].blocks.length === 0) {
+      workingDayForm.value[dayOfWeek].is_active = false
+    }
+    
+    // Auto-save
+    autoSaveWorkingDay(dayOfWeek)
+  }
 }
 
 const saveWorkingHours = async () => {
@@ -1165,25 +1336,36 @@ const saveWorkingHours = async () => {
   
   isSavingWorkingHours.value = true
   try {
-    // Save each day's working hours
+    console.log('💾 Saving working hours for staff:', props.currentUser.id)
+    console.log('📊 Form data:', workingHoursForm.value)
+    
+    // Save each day's working hours (including inactive ones)
     for (const day of weekdays) {
       const formData = workingHoursForm.value[day.value]
-      if (formData.is_active) {
+      console.log(`💾 Saving day ${day.value}:`, formData)
+      
+      try {
         await saveWorkingHour(props.currentUser.id, {
           day_of_week: day.value,
           start_time: formData.start_time,
           end_time: formData.end_time,
           is_active: formData.is_active
         })
+        console.log(`✅ Day ${day.value} saved successfully`)
+      } catch (dayErr: any) {
+        console.error(`❌ Error saving day ${day.value}:`, dayErr)
+        throw dayErr
       }
     }
     
-    console.log('✅ Working hours saved successfully')
-    alert('✅ Arbeitszeiten erfolgreich gespeichert!')
+    console.log('✅ All working hours saved successfully')
+    
+    // Reload to confirm
+    await loadWorkingHours(props.currentUser.id)
     
   } catch (err: any) {
     console.error('❌ Error saving working hours:', err)
-    alert(`❌ Fehler beim Speichern: ${err.message}`)
+    error.value = `Fehler beim Speichern: ${err.message}`
   } finally {
     isSavingWorkingHours.value = false
   }

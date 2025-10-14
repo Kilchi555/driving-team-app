@@ -5,7 +5,7 @@
 
       <!-- ✅ FIXED HEADER -->
       <div class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-        <!-- Links: Staff Selector und Titel -->
+        <!-- Links: Staff Selector und Reload Button -->
         <div class="flex items-center space-x-4">
           <!-- Staff Selector -->
           <div class="flex items-center space-x-2">
@@ -14,34 +14,33 @@
               :key="`staff-select-${formData.staff_id || 'none'}-${availableStaff.length}`"
               :value="formData.staff_id"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              class="text-sm border border-gray-300 rounded px-2 py-1 bg-white text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+              class="text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+              style="background-color: white !important; color: #111827 !important;"
               @change="handleStaffChanged"
             >
-              <option v-if="!formData.staff_id" value="" class="text-white">Fahrlehrer wählen...</option>
+              <option v-if="!formData.staff_id" value="" style="background-color: white !important; color: #111827 !important;">Fahrlehrer wählen...</option>
               <option
                 v-for="staff in availableStaff"
                 :key="staff.id"
                 :value="staff.id"
                 :disabled="!staff.isAvailable"
-                :class="staff.isAvailable ? 'staff-available' : 'staff-busy'"
+                :style="staff.isAvailable ? 'background-color: white !important; color: #111827 !important;' : 'background-color: #f3f4f6 !important; color: #6b7280 !important;'"
               >
                 {{ staff.first_name }} {{ staff.last_name }}
               </option>
             </select>
-            
-
           </div>
           
 
         </div>
         
                   <!-- Action-Buttons (nur bei edit/view mode) -->
-          <div v-if="props.mode !== 'create' && props.eventData?.id" class="flex items-center space-x-4">
+          <div v-if="props.mode !== 'create' && props.eventData?.id" class="flex items-center space-x-2">
             
             <!-- Kopieren Button -->
             <button
               @click="handleCopy"
-              class="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm transition-colors"
+              class="ml-2 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm transition-colors"
               title="Termin kopieren"
             >
               Kopieren
@@ -289,13 +288,26 @@
       </div>
 
       <!-- ✅ FIXED FOOTER -->
-      <div class="bg-gray-50 px-4 py-2 border-t border-gray-200 flex justify-end space-x-3 flex-shrink-0">
+      <div class="bg-gray-50 px-4 py-2 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+        <!-- Links: Schüler Fortschritt Button -->
         <button
-          @click="$emit('close')"
-          class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          v-if="selectedStudent"
+          @click="$emit('open-student-progress', selectedStudent)"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          title="Schüler Fortschritt anzeigen"
         >
-          {{ props.mode === 'view' ? 'Schließen' : 'Abbrechen' }}
+          Fortschritt
         </button>
+        <div v-else></div>
+        
+        <!-- Rechts: Standard Buttons -->
+        <div class="flex space-x-3">
+          <button
+            @click="$emit('close')"
+            class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            {{ props.mode === 'view' ? 'Schließen' : 'Abbrechen' }}
+          </button>
 
         <!-- ✅ Payment Status Button für gelöschte Termine mit Stornierungs-Rechnung -->
         <button
@@ -319,8 +331,9 @@
         >
           <span v-if="isLoading">⏳</span>
 
-          <span v-else>{{ props.mode === 'create' ? 'Termin erstellen' : 'Speichern' }}</span>
+          <span v-else>Speichern</span>
         </button>
+        </div>
       </div>
 
     </div>
@@ -743,6 +756,7 @@ const emit = defineEmits<{
   'delete-event': [id: string]     
   'refresh-calendar': [] 
    'copy-appointment': [data: any]
+  'open-student-progress': [student: any]
 }>()
 
 // ============ REFS ============
@@ -1728,14 +1742,22 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
   console.log('🔄 Loading durations from categories table:', { staffId, categoryCode })
   
   try {
-          // Load durations directly from categories table
-      const supabase = getSupabase()
-      const { data: categoryData, error: categoryError } = await supabase
-        .from('categories')
-        .select('lesson_duration_minutes, theory_durations')
-        .eq('code', categoryCode)
-        .eq('is_active', true)
-        .single()
+    // Load durations directly from categories table
+    const supabase = getSupabase()
+    
+    // ✅ WICHTIG: Auch nach tenant_id filtern
+    let query = supabase
+      .from('categories')
+      .select('lesson_duration_minutes, theory_durations')
+      .eq('code', categoryCode)
+      .eq('is_active', true)
+    
+    // Add tenant_id filter if available
+    if (currentUser.value?.tenant_id) {
+      query = query.eq('tenant_id', currentUser.value.tenant_id)
+    }
+    
+    const { data: categoryData, error: categoryError } = await query.maybeSingle()
     
     if (categoryError) {
       console.error('❌ Error loading category durations:', categoryError)
@@ -2180,6 +2202,56 @@ const handleStudentSelected = async (student: Student | null) => {
     console.log('✅ staff_id gesetzt bei Student-Auswahl:', currentUser.value.id)
   }
   
+  // ✅ NEU: Load default event type if not already set (create mode only)
+  if (props.mode === 'create' && !formData.value.selectedSpecialType && currentUser.value?.tenant_id) {
+    try {
+      const { data: defaultEventType, error } = await supabase
+        .from('event_types')
+        .select('code, name, default_duration_minutes')
+        .eq('tenant_id', currentUser.value.tenant_id)
+        .eq('is_default', true)
+        .eq('is_active', true)
+        .maybeSingle()
+      
+      if (!error && defaultEventType) {
+        // Check if it's a lesson type or other type
+        if (defaultEventType.code === 'lesson') {
+          // Keep as lesson, don't show EventTypeSelector
+          formData.value.eventType = 'lesson'
+          formData.value.appointment_type = 'lesson'
+          selectedLessonType.value = 'lesson'
+          formData.value.duration_minutes = defaultEventType.default_duration_minutes || 45
+          calculateEndTime()
+          
+          console.log('✅ Default lesson type set:', {
+            eventType: formData.value.eventType,
+            appointmentType: formData.value.appointment_type,
+            selectedLessonType: selectedLessonType.value
+          })
+        } else {
+          // It's a special event type (nothelfer, vku, etc.)
+          formData.value.eventType = 'other'
+          formData.value.selectedSpecialType = defaultEventType.code
+          formData.value.appointment_type = defaultEventType.code
+          formData.value.title = defaultEventType.name
+          formData.value.type = defaultEventType.code
+          formData.value.duration_minutes = defaultEventType.default_duration_minutes || 60
+          calculateEndTime()
+          
+          console.log('✅ Default event type set:', {
+            name: defaultEventType.name,
+            code: defaultEventType.code,
+            duration: defaultEventType.default_duration_minutes
+          })
+        }
+      } else {
+        console.log('ℹ️ No default event type found')
+      }
+    } catch (err) {
+      console.log('⚠️ Could not load default event type:', err)
+    }
+  }
+  
   // ✅ ZEIT NACH STUDENT-AUSWAHL SETZEN:
   if (props.mode === 'create' && props.eventData?.start && !formData.value.startTime) {
     const startTimeString = props.eventData.start
@@ -2222,12 +2294,18 @@ const handleStudentSelected = async (student: Student | null) => {
         
         // ✅ Kategorie-Daten aus DB laden für Dauer-Berechnung
         try {
-          const { data: categoryData, error: categoryError } = await supabase
+          let categoryQuery = supabase
             .from('categories')
             .select('code, lesson_duration_minutes, exam_duration_minutes')
             .eq('code', lastAppointment.type)
             .eq('is_active', true)
-            .single()
+          
+          // ✅ WICHTIG: Auch nach tenant_id filtern
+          if (currentUser.value?.tenant_id) {
+            categoryQuery = categoryQuery.eq('tenant_id', currentUser.value.tenant_id)
+          }
+          
+          const { data: categoryData, error: categoryError } = await categoryQuery.maybeSingle()
           
           if (categoryError) throw categoryError
           
@@ -2642,7 +2720,7 @@ const handleLessonTypeSelected = async (lessonType: any) => {
               console.log('✅ Keeping current duration:', currentDuration)
             } else {
               // Versuche eine ähnliche Dauer zu finden
-              const similarDuration = lessonDurations.find(d => Math.abs(d - currentDuration) <= 15)
+              const similarDuration = lessonDurations.find((d: number) => Math.abs(d - currentDuration) <= 15)
               if (similarDuration) {
                 formData.value.duration_minutes = similarDuration
                 console.log('🎯 Found similar duration:', similarDuration, 'instead of', currentDuration)
@@ -5207,11 +5285,18 @@ onMounted(async () => {
   // ✅ NEU: Lade auch verfügbare Produkte für den productSale
   if (availableProducts.value.length === 0) {
     try {
-      const { data, error } = await supabase
+      let productQuery = supabase
         .from('products')
         .select('*')
         .eq('is_active', true)
-        .order('display_order')
+      
+      // ✅ WICHTIG: Nach tenant_id filtern, falls verfügbar
+      if (currentUser.value?.tenant_id) {
+        productQuery = productQuery.eq('tenant_id', currentUser.value.tenant_id)
+        console.log('🏢 Filtering products by tenant_id:', currentUser.value.tenant_id)
+      }
+      
+      const { data, error } = await productQuery.order('display_order')
       
       if (!error && data) {
         // Setze verfügbare Produkte direkt in den productSale
