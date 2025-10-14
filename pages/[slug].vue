@@ -147,11 +147,8 @@
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full py-2.5 px-4 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            :style="{ 
-              backgroundColor: primaryColor,
-              ':hover': { backgroundColor: `${primaryColor}dd` }
-            }"
+            class="w-full py-2.5 px-4 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+            :style="{ backgroundColor: primaryColor }"
           >
             <span v-if="isLoading">Wird angemeldet...</span>
             <span v-else>Anmelden</span>
@@ -189,6 +186,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+
 // Meta
 definePageMeta({
   layout: false
