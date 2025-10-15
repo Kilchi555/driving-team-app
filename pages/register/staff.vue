@@ -879,32 +879,46 @@ const capturePhoto = async () => {
     const canvas = canvasElement.value
     const video = videoElement.value
     
-    // Get video element dimensions and position
-    const videoRect = video.getBoundingClientRect()
     const videoWidth = video.videoWidth
     const videoHeight = video.videoHeight
     
-    // Calculate frame dimensions dynamically (responsive: min(85vw, 400px))
-    const viewportWidth = window.innerWidth
-    const frameWidth = Math.min(viewportWidth * 0.85, 400)
-    const frameHeight = frameWidth / 1.586  // Credit card aspect ratio
+    console.log('📹 Video dimensions:', videoWidth, 'x', videoHeight)
     
-    // Calculate the frame position relative to the video element
-    const frameLeft = (videoRect.width - frameWidth) / 2
-    const frameTop = (videoRect.height - frameHeight) / 2
+    // Credit card aspect ratio (85.6mm x 53.98mm)
+    const targetAspectRatio = 1.586
     
-    // Calculate the actual crop area in video coordinates
-    const scaleX = videoWidth / videoRect.width
-    const scaleY = videoHeight / videoRect.height
+    // Calculate crop area to maintain credit card aspect ratio
+    // We want to crop the center portion of the video
+    let cropWidth, cropHeight, cropX, cropY
     
-    const cropX = frameLeft * scaleX
-    const cropY = frameTop * scaleY
-    const cropWidth = frameWidth * scaleX
-    const cropHeight = frameHeight * scaleY
+    const videoAspectRatio = videoWidth / videoHeight
+    
+    if (videoAspectRatio > targetAspectRatio) {
+      // Video is wider than credit card - crop width
+      cropHeight = videoHeight
+      cropWidth = cropHeight * targetAspectRatio
+      cropX = (videoWidth - cropWidth) / 2
+      cropY = 0
+    } else {
+      // Video is taller than credit card - crop height  
+      cropWidth = videoWidth
+      cropHeight = cropWidth / targetAspectRatio
+      cropX = 0
+      cropY = (videoHeight - cropHeight) / 2
+    }
+    
+    console.log('✂️ Crop area:', {
+      x: cropX,
+      y: cropY,
+      width: cropWidth,
+      height: cropHeight,
+      videoAspect: videoAspectRatio.toFixed(2),
+      targetAspect: targetAspectRatio.toFixed(2)
+    })
     
     // Set canvas to high resolution output (1200px wide for excellent quality)
     const outputWidth = 1200
-    const outputHeight = Math.round(outputWidth / 1.586)  // Maintain aspect ratio
+    const outputHeight = Math.round(outputWidth / targetAspectRatio)
     
     canvas.width = outputWidth
     canvas.height = outputHeight
@@ -912,11 +926,11 @@ const capturePhoto = async () => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     
-    // Draw the exact frame area to the canvas with high quality
+    // Draw the cropped area to the canvas without distortion
     ctx.drawImage(
       video,
-      cropX, cropY, cropWidth, cropHeight,  // Source rectangle (exact frame area)
-      0, 0, outputWidth, outputHeight       // Destination rectangle
+      cropX, cropY, cropWidth, cropHeight,  // Source: center crop from video
+      0, 0, outputWidth, outputHeight       // Destination: full canvas
     )
     
     // Convert to data URL with high quality
