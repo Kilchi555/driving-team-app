@@ -1020,36 +1020,48 @@ const loadUsers = async () => {
       .from('appointments')
       .select(`
         user_id,
-        is_paid,
-        status,
-        price_per_minute,
-        duration_minutes,
-        discount
+        status
       `)
       .eq('tenant_id', tenantId) // Filter by current tenant
+      .is('deleted_at', null) // Exclude deleted appointments
 
     if (appointmentsError) {
       console.warn('Warning loading appointments:', appointmentsError)
+    }
+
+    // Load payment statistics for each user (filtered by tenant_id)
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from('payments')
+      .select(`
+        user_id,
+        payment_status,
+        total_amount_rappen
+      `)
+      .eq('tenant_id', tenantId) // Filter by current tenant
+
+    if (paymentsError) {
+      console.warn('Warning loading payments:', paymentsError)
     }
 
     // Process users with statistics
     const processedUsers = (usersData || []).map(user => {
       const userAppointments = (appointmentsData || []).filter(apt => apt.user_id === user.id)
       const completedAppointments = userAppointments.filter(apt => apt.status === 'completed')
-      const unpaidAppointments = userAppointments.filter(apt => !apt.is_paid)
       
-      // Calculate unpaid amount
-      const unpaidAmount = unpaidAppointments.reduce((sum, apt) => {
-        const basePrice = (apt.price_per_minute || 0) * (apt.duration_minutes || 0)
-        return sum + (basePrice - (apt.discount || 0))
+      const userPayments = (paymentsData || []).filter(p => p.user_id === user.id)
+      const pendingPayments = userPayments.filter(p => p.payment_status === 'pending')
+      
+      // Calculate unpaid amount from pending payments
+      const unpaidAmount = pendingPayments.reduce((sum, payment) => {
+        return sum + (payment.total_amount_rappen || 0)
       }, 0)
 
       return {
         ...user,
         appointment_count: userAppointments.length,
         completed_appointments: completedAppointments.length,
-        unpaid_count: unpaidAppointments.length,
-        unpaid_amount: Math.round(unpaidAmount * 100) // Convert to Rappen
+        unpaid_count: pendingPayments.length,
+        unpaid_amount: unpaidAmount // Already in Rappen
       }
     })
 
