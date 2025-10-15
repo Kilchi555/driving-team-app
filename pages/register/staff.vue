@@ -187,7 +187,7 @@
                 <input
                   ref="licenseFrontInput"
                   type="file"
-                  accept="image/*,.pdf"
+                  accept="image/jpeg,image/png,image/heic,image/heif,image/webp,.pdf"
                   @change="onFrontChange"
                   class="hidden"
                 />
@@ -245,7 +245,7 @@
                 <input
                   ref="licenseBackInput"
                   type="file"
-                  accept="image/*,.pdf"
+                  accept="image/jpeg,image/png,image/heic,image/heif,image/webp,.pdf"
                   @change="onBackChange"
                   class="hidden"
                 />
@@ -360,27 +360,28 @@
     <div v-if="showUploadChoiceFront" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="showUploadChoiceFront = false">
       <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4" @click.stop>
         <h3 class="text-lg font-semibold mb-4">Vorderseite hochladen</h3>
+        <p class="text-xs text-gray-600 mb-3">Empfohlen: Nutzen Sie die Kamera-Funktion mit Rahmen für beste Qualität</p>
         <div class="space-y-3">
           <button
             type="button"
-            @click="selectFileFront"
-            class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-          >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
-            Datei auswählen
-          </button>
-          <button
-            type="button"
             @click="openCameraFront"
-            class="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+            class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
           >
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Kamera
+            📸 Kamera mit Rahmen
+          </button>
+          <button
+            type="button"
+            @click="selectFileFront"
+            class="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+            Aus Galerie wählen
           </button>
           <button
             type="button"
@@ -397,27 +398,28 @@
     <div v-if="showUploadChoiceBack" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="showUploadChoiceBack = false">
       <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4" @click.stop>
         <h3 class="text-lg font-semibold mb-4">Rückseite hochladen</h3>
+        <p class="text-xs text-gray-600 mb-3">Empfohlen: Nutzen Sie die Kamera-Funktion mit Rahmen für beste Qualität</p>
         <div class="space-y-3">
           <button
             type="button"
-            @click="selectFileBack"
-            class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-          >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
-            Datei auswählen
-          </button>
-          <button
-            type="button"
             @click="openCameraBack"
-            class="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+            class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
           >
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Kamera
+            📸 Kamera mit Rahmen
+          </button>
+          <button
+            type="button"
+            @click="selectFileBack"
+            class="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+            Aus Galerie wählen
           </button>
           <button
             type="button"
@@ -432,23 +434,6 @@
 
     <!-- Camera Modal -->
     <div v-if="showCamera" class="fixed inset-0 bg-black z-50 flex flex-col">
-      <!-- Header -->
-      <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4 safe-area-top">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-lg font-bold">📸 {{ cameraTarget === 'front' ? 'Führerausweis Vorderseite' : 'Führerausweis Rückseite' }}</h3>
-            <p class="text-sm text-purple-100">Positionieren Sie den Ausweis im Rahmen</p>
-          </div>
-          <button
-            @click="closeCamera"
-            class="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
 
       <!-- Camera View -->
       <div class="flex-1 relative overflow-hidden">
@@ -490,14 +475,6 @@
             </div>
           </div>
 
-          <!-- Tip at bottom -->
-          <div class="absolute bottom-32 left-0 right-0 text-center px-4">
-            <div class="bg-black bg-opacity-60 text-white px-4 py-2 rounded-lg inline-block backdrop-blur-sm">
-              <p class="text-xs">
-                💡 <strong>Tipp:</strong> Legen Sie den Ausweis auf einen dunklen Untergrund
-              </p>
-            </div>
-          </div>
         </div>
 
         <canvas ref="canvasElement" class="hidden"></canvas>
