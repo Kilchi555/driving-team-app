@@ -120,24 +120,69 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Update user record with file paths
-    if (uploadResults.frontPath || uploadResults.backPath) {
-      const updateData: any = {}
-      if (uploadResults.frontPath) updateData.lernfahrausweis_url = uploadResults.frontPath
-      if (uploadResults.backPath) updateData.lernfahrausweis_back_url = uploadResults.backPath
+    // Store documents in user_documents table (modern system)
+    const documentsToInsert = []
+    
+    // Get user's tenant_id
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('tenant_id')
+      .eq('id', userId)
+      .single()
+    
+    const tenantId = userData?.tenant_id
+    if (!tenantId) {
+      console.error('❌ User has no tenant_id')
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'User has no tenant_id'
+      })
+    }
+    
+    if (uploadResults.frontPath && frontFile) {
+      documentsToInsert.push({
+        user_id: userId,
+        tenant_id: tenantId,
+        document_type: 'fuehrerschein',
+        side: 'front',
+        file_name: frontFile.filename || 'license_front.jpg',
+        file_size: frontFile.data.length,
+        file_type: frontFile.type || 'image/jpeg',
+        storage_path: uploadResults.frontPath,
+        title: 'Führerausweis Vorderseite',
+        is_verified: false
+      })
+    }
+    
+    if (uploadResults.backPath && backFile) {
+      documentsToInsert.push({
+        user_id: userId,
+        tenant_id: tenantId,
+        document_type: 'fuehrerschein',
+        side: 'back',
+        file_name: backFile.filename || 'license_back.jpg',
+        file_size: backFile.data.length,
+        file_type: backFile.type || 'image/jpeg',
+        storage_path: uploadResults.backPath,
+        title: 'Führerausweis Rückseite',
+        is_verified: false
+      })
+    }
+    
+    if (documentsToInsert.length > 0) {
+      const { error: insertError } = await supabaseAdmin
+        .from('user_documents')
+        .insert(documentsToInsert)
 
-      const { error: updateError } = await supabaseAdmin
-        .from('users')
-        .update(updateData)
-        .eq('id', userId)
-
-      if (updateError) {
-        console.error('❌ User update error:', updateError)
+      if (insertError) {
+        console.error('❌ Document insert error:', insertError)
         throw createError({
           statusCode: 400,
-          statusMessage: `Failed to update user with file paths: ${updateError.message}`
+          statusMessage: `Fehler beim Speichern der Dokumentinformationen: ${insertError.message}`
         })
       }
+      
+      console.log('✅ Documents stored in user_documents table:', documentsToInsert.length)
     }
 
     return {
