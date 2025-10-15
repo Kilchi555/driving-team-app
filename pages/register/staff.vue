@@ -329,8 +329,16 @@
           </div>
 
           <!-- Error Message -->
-          <div v-if="registrationError" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            {{ registrationError }}
+          <div v-if="registrationError" class="bg-red-50 border-l-4 border-red-500 text-red-800 px-4 py-3 rounded-r shadow-sm">
+            <div class="flex items-start">
+              <svg class="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <div class="flex-1">
+                <p class="font-medium">Registrierung fehlgeschlagen</p>
+                <p class="text-sm mt-1">{{ registrationError }}</p>
+              </div>
+            </div>
           </div>
 
           <!-- Submit Button -->
@@ -540,7 +548,8 @@ const register = async () => {
 
   } catch (err: any) {
     console.error('Registration error:', err)
-    registrationError.value = err.message || 'Ein Fehler ist aufgetreten'
+    // Extract the detailed error message from the response
+    registrationError.value = err.data?.statusMessage || err.statusMessage || err.message || 'Ein Fehler ist aufgetreten bei der Registrierung'
   } finally {
     isRegistering.value = false
   }

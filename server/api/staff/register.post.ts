@@ -83,9 +83,20 @@ export default defineEventHandler(async (event) => {
 
     if (authError) {
       console.error('❌ Auth creation error:', authError)
+      
+      // Translate common Supabase auth errors to German
+      let errorMessage = 'Fehler beim Erstellen des Accounts'
+      if (authError.message.includes('already been registered') || authError.message.includes('User already registered')) {
+        errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwenden Sie eine andere E-Mail oder kontaktieren Sie Ihren Administrator.'
+      } else if (authError.message.includes('Invalid email')) {
+        errorMessage = 'Ungültige E-Mail-Adresse'
+      } else if (authError.message.includes('Password')) {
+        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen'
+      }
+      
       throw createError({
         statusCode: 400,
-        statusMessage: authError.message || 'Fehler beim Erstellen des Auth-Users'
+        statusMessage: errorMessage
       })
     }
 
