@@ -527,10 +527,13 @@ const register = async () => {
         formData.append('userId', userId)
         if (licenseFrontFile.value) formData.append('frontFile', licenseFrontFile.value)
         if (licenseBackFile.value) formData.append('backFile', licenseBackFile.value)
-        await $fetch('/api/admin/upload-license', { method: 'POST', body: formData })
-        console.log('✅ License files uploaded')
-      } catch (uploadErr) {
-        console.warn('License upload failed (non-fatal):', uploadErr)
+        
+        const uploadResult = await $fetch('/api/admin/upload-license', { method: 'POST', body: formData })
+        console.log('✅ License files uploaded successfully:', uploadResult)
+      } catch (uploadErr: any) {
+        console.warn('⚠️ License upload failed (non-fatal):', uploadErr)
+        // Note: Registration was successful, only file upload failed
+        // User can upload documents later via profile settings
       }
     }
 
@@ -593,13 +596,11 @@ const onFrontChange = async (e: Event) => {
     const error = validateFile(file)
     if (error) {
       registrationError.value = error
-      showUploadChoiceFront.value = false
       return
     }
     licenseFrontFile.value = file
     licenseFrontPreview.value = await createPreview(file)
     isDraggingFront.value = false
-    showUploadChoiceFront.value = false
   }
 }
 
@@ -610,13 +611,11 @@ const onBackChange = async (e: Event) => {
     const error = validateFile(file)
     if (error) {
       registrationError.value = error
-      showUploadChoiceBack.value = false
       return
     }
     licenseBackFile.value = file
     licenseBackPreview.value = await createPreview(file)
     isDraggingBack.value = false
-    showUploadChoiceBack.value = false
   }
 }
 
