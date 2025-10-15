@@ -126,7 +126,7 @@ export default defineEventHandler(async (event) => {
     const envBase = process.env.NUXT_PUBLIC_BASE_URL || process.env.BASE_URL
     const baseUrl = envBase || (host ? `${proto}://${host}` : 'https://www.simy.ch')
     // Use canonical register route
-    const inviteLink = `${baseUrl}/register/staff?token=${token}`
+    const inviteLink = `${baseUrl}/register-staff?token=${token}`
 
     // Get tenant info for branding using service role
     const { data: tenant } = await serviceSupabase
