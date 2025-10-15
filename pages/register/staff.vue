@@ -179,7 +179,7 @@
               <div 
                 class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-purple-400 transition-colors cursor-pointer"
                 :class="{ 'border-purple-400 bg-purple-50': isDraggingFront }"
-                @click="showUploadChoiceFront = true"
+                @click="licenseFrontInput?.click()"
                 @dragover.prevent="isDraggingFront = true"
                 @dragleave.prevent="isDraggingFront = false"
                 @drop.prevent="handleDropFront"
@@ -187,7 +187,7 @@
                 <input
                   ref="licenseFrontInput"
                   type="file"
-                  accept="image/jpeg,image/png,image/heic,image/heif,image/webp,.pdf"
+                  accept="image/*,.pdf"
                   @change="onFrontChange"
                   class="hidden"
                 />
@@ -237,7 +237,7 @@
               <div 
                 class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-purple-400 transition-colors cursor-pointer"
                 :class="{ 'border-purple-400 bg-purple-50': isDraggingBack }"
-                @click="showUploadChoiceBack = true"
+                @click="licenseBackInput?.click()"
                 @dragover.prevent="isDraggingBack = true"
                 @dragleave.prevent="isDraggingBack = false"
                 @drop.prevent="handleDropBack"
@@ -245,7 +245,7 @@
                 <input
                   ref="licenseBackInput"
                   type="file"
-                  accept="image/jpeg,image/png,image/heic,image/heif,image/webp,.pdf"
+                  accept="image/*,.pdf"
                   @change="onBackChange"
                   class="hidden"
                 />
@@ -355,167 +355,11 @@
         </div>
       </div>
     </div>
-
-    <!-- Upload Choice Modal - Front -->
-    <div v-if="showUploadChoiceFront" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="showUploadChoiceFront = false">
-      <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4" @click.stop>
-        <h3 class="text-lg font-semibold mb-4">Vorderseite hochladen</h3>
-        <p class="text-xs text-gray-600 mb-3">Empfohlen: Nutzen Sie die Kamera-Funktion mit Rahmen für beste Qualität</p>
-        <div class="space-y-3">
-          <button
-            type="button"
-            @click="openCameraFront"
-            class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-          >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            📸 Kamera mit Rahmen
-          </button>
-          <button
-            type="button"
-            @click="selectFileFront"
-            class="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-          >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
-            Aus Galerie wählen
-          </button>
-          <button
-            type="button"
-            @click="showUploadChoiceFront = false"
-            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-colors"
-          >
-            Abbrechen
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Upload Choice Modal - Back -->
-    <div v-if="showUploadChoiceBack" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="showUploadChoiceBack = false">
-      <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4" @click.stop>
-        <h3 class="text-lg font-semibold mb-4">Rückseite hochladen</h3>
-        <p class="text-xs text-gray-600 mb-3">Empfohlen: Nutzen Sie die Kamera-Funktion mit Rahmen für beste Qualität</p>
-        <div class="space-y-3">
-          <button
-            type="button"
-            @click="openCameraBack"
-            class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-          >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            📸 Kamera mit Rahmen
-          </button>
-          <button
-            type="button"
-            @click="selectFileBack"
-            class="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-          >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
-            Aus Galerie wählen
-          </button>
-          <button
-            type="button"
-            @click="showUploadChoiceBack = false"
-            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-colors"
-          >
-            Abbrechen
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Camera Modal -->
-    <div v-if="showCamera" class="fixed inset-0 bg-black z-50 flex flex-col">
-
-      <!-- Camera View -->
-      <div class="flex-1 relative overflow-hidden">
-        <video ref="videoElement" autoplay playsinline class="absolute inset-0 w-full h-full object-cover"></video>
-        
-        <!-- Overlay with Card Frame -->
-        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <!-- Instructions at top -->
-          <div class="absolute top-8 left-0 right-0 text-center px-4">
-            <div class="bg-black bg-opacity-60 text-white px-4 py-3 rounded-lg inline-block backdrop-blur-sm">
-              <p class="text-sm font-medium">Ausweis im Rahmen zentrieren</p>
-              <p class="text-xs text-gray-300 mt-1">Achten Sie auf gute Beleuchtung</p>
-            </div>
-          </div>
-
-          <!-- Credit Card Frame -->
-          <div class="relative">
-            <!-- Dark overlay outside frame -->
-            <div class="absolute inset-0" style="box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);"></div>
-            
-            <!-- Main Frame (Credit card aspect ratio: 85.6mm x 53.98mm ≈ 1.586:1) -->
-            <div class="relative border-4 border-white rounded-lg" 
-                 style="width: min(85vw, 400px); height: min(53.6vw, 252px);">
-              <!-- Animated scanning line -->
-              <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-scan"></div>
-              
-              <!-- Corner Markers -->
-              <div class="absolute -top-2 -left-2 w-6 h-6 border-l-4 border-t-4 border-green-400 rounded-tl-md"></div>
-              <div class="absolute -top-2 -right-2 w-6 h-6 border-r-4 border-t-4 border-green-400 rounded-tr-md"></div>
-              <div class="absolute -bottom-2 -left-2 w-6 h-6 border-l-4 border-b-4 border-green-400 rounded-bl-md"></div>
-              <div class="absolute -bottom-2 -right-2 w-6 h-6 border-r-4 border-b-4 border-green-400 rounded-br-md"></div>
-              
-              <!-- Helper Text Inside Frame -->
-              <div class="absolute inset-0 flex items-center justify-center">
-                <div class="text-white text-xs bg-black bg-opacity-40 px-2 py-1 rounded">
-                  Ausweis hier positionieren
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <canvas ref="canvasElement" class="hidden"></canvas>
-      </div>
-
-      <!-- Bottom Controls -->
-      <div class="bg-gradient-to-r from-gray-900 to-gray-800 p-6 safe-area-bottom">
-        <div class="flex items-center justify-center gap-4">
-          <button
-            @click="closeCamera"
-            class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-medium transition-all flex items-center gap-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-            Abbrechen
-          </button>
-          
-          <!-- Large Capture Button -->
-          <button
-            @click="capturePhoto"
-            class="w-20 h-20 bg-white hover:bg-gray-100 rounded-full flex items-center justify-center shadow-lg transition-all transform hover:scale-105 relative"
-          >
-            <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
-              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              </svg>
-            </div>
-            <!-- Outer ring animation -->
-            <div class="absolute inset-0 rounded-full border-4 border-purple-400 animate-ping opacity-20"></div>
-          </button>
-        </div>
-        
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'
 import { getSupabase } from '~/utils/supabase'
 
@@ -552,12 +396,6 @@ const isDraggingFront = ref(false)
 const isDraggingBack = ref(false)
 const licenseFrontInput = ref<HTMLInputElement>()
 const licenseBackInput = ref<HTMLInputElement>()
-const showUploadChoiceFront = ref(false)
-const showUploadChoiceBack = ref(false)
-const showCamera = ref(false)
-const cameraTarget = ref<'front' | 'back' | null>(null)
-const videoElement = ref<HTMLVideoElement>()
-const canvasElement = ref<HTMLCanvasElement>()
 const showSuccessToast = ref(false)
 
 // Computed
@@ -819,166 +657,4 @@ const formatFileSize = (bytes: number) => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
 
-// File selection functions
-const selectFileFront = () => {
-  showUploadChoiceFront.value = false
-  licenseFrontInput.value?.click()
-}
-
-const selectFileBack = () => {
-  showUploadChoiceBack.value = false
-  licenseBackInput.value?.click()
-}
-
-// Camera functions
-const openCameraFront = async () => {
-  showUploadChoiceFront.value = false
-  cameraTarget.value = 'front'
-  await openCamera()
-}
-
-const openCameraBack = async () => {
-  showUploadChoiceBack.value = false
-  cameraTarget.value = 'back'
-  await openCamera()
-}
-
-const openCamera = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-      video: { 
-        facingMode: 'environment',
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      }
-    })
-    showCamera.value = true
-    
-    await nextTick()
-    if (videoElement.value) {
-      videoElement.value.srcObject = stream
-      console.log('📹 Camera opened with resolution:', videoElement.value.videoWidth, 'x', videoElement.value.videoHeight)
-    }
-  } catch (error) {
-    console.error('Camera access denied:', error)
-    alert('Kamera-Zugriff verweigert. Bitte laden Sie eine Datei hoch.')
-  }
-}
-
-const closeCamera = () => {
-  if (videoElement.value?.srcObject) {
-    const stream = videoElement.value.srcObject as MediaStream
-    stream.getTracks().forEach(track => track.stop())
-  }
-  showCamera.value = false
-  cameraTarget.value = null
-}
-
-const capturePhoto = async () => {
-  if (videoElement.value && canvasElement.value) {
-    const canvas = canvasElement.value
-    const video = videoElement.value
-    
-    const videoWidth = video.videoWidth
-    const videoHeight = video.videoHeight
-    
-    console.log('📹 Video dimensions:', videoWidth, 'x', videoHeight)
-    
-    // Credit card aspect ratio (85.6mm x 53.98mm)
-    const targetAspectRatio = 1.586
-    
-    // Calculate crop area to maintain credit card aspect ratio
-    // We want to crop the center portion of the video
-    let cropWidth, cropHeight, cropX, cropY
-    
-    const videoAspectRatio = videoWidth / videoHeight
-    
-    if (videoAspectRatio > targetAspectRatio) {
-      // Video is wider than credit card - crop width
-      cropHeight = videoHeight
-      cropWidth = cropHeight * targetAspectRatio
-      cropX = (videoWidth - cropWidth) / 2
-      cropY = 0
-    } else {
-      // Video is taller than credit card - crop height  
-      cropWidth = videoWidth
-      cropHeight = cropWidth / targetAspectRatio
-      cropX = 0
-      cropY = (videoHeight - cropHeight) / 2
-    }
-    
-    console.log('✂️ Crop area:', {
-      x: cropX,
-      y: cropY,
-      width: cropWidth,
-      height: cropHeight,
-      videoAspect: videoAspectRatio.toFixed(2),
-      targetAspect: targetAspectRatio.toFixed(2)
-    })
-    
-    // Set canvas to high resolution output (1200px wide for excellent quality)
-    const outputWidth = 1200
-    const outputHeight = Math.round(outputWidth / targetAspectRatio)
-    
-    canvas.width = outputWidth
-    canvas.height = outputHeight
-    
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    
-    // Draw the cropped area to the canvas without distortion
-    ctx.drawImage(
-      video,
-      cropX, cropY, cropWidth, cropHeight,  // Source: center crop from video
-      0, 0, outputWidth, outputHeight       // Destination: full canvas
-    )
-    
-    // Convert to data URL with high quality
-    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95)
-    
-    // Convert to File object
-    const blob = await (await fetch(imageDataUrl)).blob()
-    const file = new File([blob], `license_${cameraTarget.value}_${Date.now()}.jpg`, { type: 'image/jpeg' })
-    
-    if (cameraTarget.value === 'front') {
-      licenseFrontFile.value = file
-      licenseFrontPreview.value = imageDataUrl
-    } else if (cameraTarget.value === 'back') {
-      licenseBackFile.value = file
-      licenseBackPreview.value = imageDataUrl
-    }
-    
-    closeCamera()
-  }
-}
 </script>
-
-<style scoped>
-/* Scanning animation for camera overlay */
-@keyframes scan {
-  0% {
-    transform: translateY(0);
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(250px);
-    opacity: 0;
-  }
-}
-
-.animate-scan {
-  animation: scan 3s ease-in-out infinite;
-}
-
-/* Safe area support for mobile devices */
-.safe-area-top {
-  padding-top: env(safe-area-inset-top);
-}
-
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-</style>
