@@ -172,6 +172,30 @@ export const calculateOfflinePrice = (categoryCode: string, durationMinutes: num
   }
 }
 
+// ===== HELPER FUNCTIONS =====
+const getEventTypeByCode = async (code: string, tenantId: string) => {
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('event_types')
+      .select('code, name, default_price_rappen, default_fee_rappen, require_payment')
+      .eq('code', code)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .single()
+    
+    if (error) {
+      console.error('Error loading event type:', error)
+      return null
+    }
+    
+    return data
+  } catch (err) {
+    console.error('Error in getEventTypeByCode:', err)
+    return null
+  }
+}
+
 // ===== HAUPT-COMPOSABLE =====
 export const usePricing = (options: UsePricingOptions = {}) => {
   const supabase = getSupabase()
@@ -265,9 +289,48 @@ export const usePricing = (options: UsePricingOptions = {}) => {
 
     try {
       console.log('🔄 Loading pricing rules from Supabase...')
+      
+      // Get current user's tenant_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) {
+        throw new Error('User not authenticated')
+      }
+      
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser.id)
+        .single()
+      
+      if (userError) throw userError
+      if (!userData?.tenant_id) {
+        console.warn('⚠️ User has no tenant_id, using fallback pricing')
+        await createFallbackPricingRules()
+        return
+      }
+      
+      // Get tenant business_type
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('business_type')
+        .eq('id', userData.tenant_id)
+        .single()
+
+      if (tenantError) throw tenantError
+      
+      // Only load pricing rules if business_type is driving_school
+      if (tenantData?.business_type !== 'driving_school') {
+        console.log('🚫 Pricing rules not available for business_type:', tenantData?.business_type)
+        await createFallbackPricingRules()
+        return
+      }
+      
+      console.log('🔍 Loading pricing rules for tenant:', userData.tenant_id)
+      
       const { data, error } = await supabase
         .from('pricing_rules')
         .select('*')
+        .eq('tenant_id', userData.tenant_id)
         .eq('is_active', true)
         .order('category_code')
 
@@ -276,16 +339,17 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         throw new Error(`Database error: ${error.message}`)
       }
 
-      console.log('📊 Raw pricing rules from DB:', data.length, 'rules')
-      console.log('📊 Raw pricing rules from DB:', data.map(r => ({
+      console.log('📊 Raw pricing rules from DB:', data?.length || 0, 'rules for tenant', userData.tenant_id)
+      console.log('📊 Pricing rules details:', data?.map(r => ({
         id: r.id,
         category: r.category_code,
         rule_type: r.rule_type,
-        updated_at: r.updated_at
+        price: r.price_per_minute_rappen,
+        tenant_id: r.tenant_id
       })))
 
       if (!data || data.length === 0) {
-        console.warn('⚠️ No pricing rules found, using fallback')
+        console.warn('⚠️ No pricing rules found for tenant, using fallback')
         await createFallbackPricingRules()
         return
       }
@@ -532,7 +596,8 @@ const roundToNearestFranken = (rappen: number): number => {
     userId?: string,
     appointmentType?: string, // ✅ NEU: appointment_type Parameter hinzugefügt
     isEditMode?: boolean, // ✅ NEU: Edit-Mode flag
-    appointmentId?: string // ✅ NEU: Appointment ID für Edit-Mode
+    appointmentId?: string, // ✅ NEU: Appointment ID für Edit-Mode
+    tenantId?: string // ✅ NEU: Tenant ID für Event-Type lookup
   ): Promise<CalculatedPrice> => {
     
     // ✅ NEU: Bei vergangenen Terminen (Edit-Mode) direkt aus der Datenbank laden
@@ -611,17 +676,54 @@ const roundToNearestFranken = (rappen: number): number => {
     return result
   }
   
-  // ✅ Nicht-Fahrkategorien: Keine Preisberechnung
+  // ✅ Nicht-Fahrkategorien: Event-Type-basierte Preisberechnung
   if (!validDrivingCategories.includes(categoryCode)) {
-    console.log(`🚫 Skipping price calculation for non-driving category: ${categoryCode}`)
-    // Fallback für andere Terminarten
+    console.log(`🔄 Using event-type-based pricing for: ${categoryCode}`)
+    
+    // Tenant-ID ermitteln falls nicht übergeben
+    let actualTenantId = tenantId
+    if (!actualTenantId && userId) {
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', userId)
+        .single()
+      actualTenantId = userProfile?.tenant_id
+    }
+    
+    // Lade Event-Type für Preisberechnung
+    const eventType = await getEventTypeByCode(categoryCode, actualTenantId)
+    if (!eventType || !eventType.require_payment) {
+      console.log(`🚫 Event type ${categoryCode} does not require payment`)
+      return {
+        base_price_rappen: 0,
+        admin_fee_rappen: 0,
+        total_rappen: 0,
+        base_price_chf: '0.00',
+        admin_fee_chf: '0.00',
+        total_chf: '0.00',
+        category_code: categoryCode,
+        duration_minutes: durationMinutes,
+        appointment_number: 1
+      }
+    }
+    
+    // Berechne Preis: Grundpreis für Grunddauer × Skalierung + Gebühr pro Termin
+    const priceForBaseDurationRappen = eventType.default_price_rappen || 0
+    const feePerAppointmentRappen = eventType.default_fee_rappen || 0
+    const baseDurationMinutes = eventType.default_duration_minutes || 45
+    
+    // Grundpreis = Preis für Grunddauer × (tatsächliche Dauer / Grunddauer)
+    const basePriceRappen = Math.round(priceForBaseDurationRappen * (durationMinutes / baseDurationMinutes))
+    const totalRappen = basePriceRappen + feePerAppointmentRappen
+    
     return {
-      base_price_rappen: 0,
-      admin_fee_rappen: 0,
-      total_rappen: 0,
-      base_price_chf: '0.00',
-      admin_fee_chf: '0.00',
-      total_chf: '0.00',
+      base_price_rappen: basePriceRappen,
+      admin_fee_rappen: feePerAppointmentRappen,
+      total_rappen: totalRappen,
+      base_price_chf: (basePriceRappen / 100).toFixed(2),
+      admin_fee_chf: (feePerAppointmentRappen / 100).toFixed(2),
+      total_chf: (totalRappen / 100).toFixed(2),
       category_code: categoryCode,
       duration_minutes: durationMinutes,
       appointment_number: 1

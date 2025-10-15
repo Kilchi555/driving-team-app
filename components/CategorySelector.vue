@@ -208,6 +208,24 @@ const loadCategories = async () => {
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
     console.log('🔍 Loading categories for tenant:', userProfile.tenant_id)
+
+    // Get tenant business_type
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', userProfile.tenant_id)
+      .single()
+
+    if (tenantError) throw tenantError
+    
+    // Only load categories if business_type is driving_school
+    if (tenantData?.business_type !== 'driving_school') {
+      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      categories.value = []
+      isLoading.value = false
+      isInitializing.value = false
+      return
+    }
     
     // ✅ KORREKTE REIHENFOLGE: Query zuerst definieren (with tenant filter)
     const queryPromise = supabase

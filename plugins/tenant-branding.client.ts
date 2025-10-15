@@ -95,12 +95,16 @@ export default defineNuxtPlugin(async () => {
     }
   }
 
-  // Router-Hooks registrieren
-  if ($router) {
-    $router.beforeEach(async (to, from, next) => {
-      await handleRouteChange(to)
-      next()
-    })
+  // Router-Hooks registrieren - wrapped in try/catch
+  try {
+    if ($router && typeof $router.beforeEach === 'function') {
+      $router.beforeEach(async (to, from, next) => {
+        await handleRouteChange(to)
+        next()
+      })
+    }
+  } catch (err) {
+    console.log('⚠️ Router not ready yet for tenant branding hooks')
   }
 
   // DEAKTIVIERT: Automatisches Laden wird von den Layouts gesteuert

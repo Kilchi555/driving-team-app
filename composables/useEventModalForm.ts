@@ -891,9 +891,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
         custom_location_address: formData.value.custom_location_address || undefined,
         custom_location_name: formData.value.custom_location_name || undefined,
         google_place_id: formData.value.google_place_id || undefined,
-        // ✅ Add tenant_id and category_code for availability checking
+        // ✅ Add tenant_id and type for availability checking
         tenant_id: dbUser.tenant_id,
-        category_code: formData.value.category_code || dbUser.category
+        type: formData.value.type || dbUser.category
         // ✅ price_per_minute and is_paid removed - not in appointments table
       }
       
@@ -1057,11 +1057,29 @@ const useEventModalForm = (currentUser?: any, refs?: {
         lessonPriceRappen = 8500 // 85.00 CHF in Rappen
         console.log('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
       } else {
-        // ✅ Für andere Lektionen: Verwende die dynamische Preisberechnung
-        const pricePerMinute = 2.11 // Default price per minute
-        const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
-        // Round to nearest 100 rappen (CHF 1.00)
-        lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+        // ✅ Für andere Lektionen: Verwende die dynamische Preisberechnung aus dynamicPricing
+        const dynamicPrice = refs?.dynamicPricing?.value
+        
+        if (dynamicPrice && dynamicPrice.totalPriceChf) {
+          // Verwende den berechneten Preis aus dem PriceDisplay (OHNE Admin Fee)
+          const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
+          const adminFeeChf = dynamicPrice.adminFeeChf || 0
+          const basePriceChf = totalChf - adminFeeChf
+          lessonPriceRappen = Math.round(basePriceChf * 100)
+          console.log('💰 Verwende dynamischen Preis:', {
+            totalChf,
+            adminFeeChf,
+            basePriceChf,
+            basePriceRappen: lessonPriceRappen,
+            pricePerMinute: dynamicPrice.pricePerMinute
+          })
+        } else {
+          // Fallback: Default price per minute (sollte nicht passieren)
+          console.warn('⚠️ No dynamic pricing available, using fallback')
+          const pricePerMinute = 2.11
+          const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
+          lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+        }
       }
       
       // Calculate products total
@@ -1158,6 +1176,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
         }
       }
 
+      // ✅ WICHTIG: tenant_id für Payments hinzufügen
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
       const paymentData = {
         appointment_id: appointmentId,
         user_id: formData.value.user_id || null,
@@ -1174,7 +1200,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         created_by: formData.value.staff_id || null,
         notes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
         company_billing_address_id: companyBillingAddressId || null, // ✅ NEU: Referenz zu company_billing_addresses
-        invoice_address: invoiceAddress // ✅ Fallback: Rechnungsadresse als JSONB
+        invoice_address: invoiceAddress, // ✅ Fallback: Rechnungsadresse als JSONB
+        tenant_id: userData?.tenant_id || null // ✅ WICHTIG: tenant_id hinzufügen
       }
       
       console.log('💳 Creating payment entry:', paymentData)

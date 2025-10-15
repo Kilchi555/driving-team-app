@@ -61,6 +61,23 @@ export const useCategoryData = () => {
       if (!tenantId) {
         throw new Error('User has no tenant assigned')
       }
+
+      // Get tenant business_type
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('business_type')
+        .eq('id', tenantId)
+        .single()
+
+      if (tenantError) throw tenantError
+      
+      // Only load categories if business_type is driving_school
+      if (tenantData?.business_type !== 'driving_school') {
+        console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+        allCategories.value = []
+        isLoaded.value = true
+        return
+      }
       
       const { data, error } = await supabase
         .from('categories')

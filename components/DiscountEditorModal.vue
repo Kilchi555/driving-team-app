@@ -39,13 +39,23 @@
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 Gutscheincode (optional)
               </label>
-              <input
-                v-model="form.code"
-                type="text"
-                placeholder="z.B. STUDENT10"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p class="text-xs text-gray-500 mt-1">Leer lassen für automatische Generierung</p>
+              <div class="flex space-x-2">
+                <input
+                  v-model="form.code"
+                  type="text"
+                  placeholder="z.B. STUDENT10"
+                  class="w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  @click="generateCode"
+                  class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors whitespace-nowrap"
+                  title="Eindeutigen Code generieren"
+                >
+                  Generieren
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Leer lassen oder Code generieren</p>
             </div>
           </div>
 
@@ -105,7 +115,6 @@
                 min="0"
                 placeholder="0.00"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                @input="updateMinAmount"
               />
               <p class="text-xs text-gray-500 mt-1">Rabatt gilt nur ab diesem Betrag</p>
             </div>
@@ -121,7 +130,6 @@
                 min="0"
                 placeholder="Unbegrenzt"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                @input="updateMaxDiscount"
               />
               <p class="text-xs text-gray-500 mt-1">Maximaler Rabattbetrag (optional)</p>
             </div>
@@ -158,7 +166,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Verwendungslimit (optional)
+                Maximale Verwendungen (gesamt)
               </label>
               <input
                 v-model="form.usage_limit"
@@ -167,28 +175,43 @@
                 placeholder="Unbegrenzt"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <p class="text-xs text-gray-500 mt-1">Maximale Anzahl Verwendungen</p>
+              <p class="text-xs text-gray-500 mt-1">Gesamtanzahl Verwendungen für diesen Code</p>
             </div>
             
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Gilt für *
+                Verwendungen pro Kunde
               </label>
-              <select
-                v-model="form.applies_to"
-                required
+              <input
+                v-model="form.max_per_user"
+                type="number"
+                min="1"
+                placeholder="Unbegrenzt"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">Alle (Termine + Produkte)</option>
-                <option value="appointments">Nur Termine</option>
-                <option value="products">Nur Produkte</option>
-                <option value="services">Nur Services</option>
-              </select>
+              />
+              <p class="text-xs text-gray-500 mt-1">Maximale Verwendungen pro Kunde</p>
             </div>
           </div>
 
-          <!-- Category Filter -->
+          <!-- Applies To -->
           <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Gilt für *
+            </label>
+            <select
+              v-model="form.applies_to"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Alle (Termine + Produkte)</option>
+              <option value="appointments">Nur Termine</option>
+              <option value="products">Nur Produkte</option>
+              <option value="services">Nur Services</option>
+            </select>
+          </div>
+
+          <!-- Category Filter - nur für Fahrschulen -->
+          <div v-if="isDrivingSchool">
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Kategorie-Filter (optional)
             </label>
@@ -223,35 +246,31 @@
 
           <!-- Status -->
           <div class="flex items-center space-x-3">
-            <input
-              v-model="form.is_active"
-              type="checkbox"
-              id="is_active"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
             <label for="is_active" class="text-sm font-medium text-gray-700">
               Rabatt ist aktiv
             </label>
-          </div>
-
-          <!-- Auto-generate Code -->
-          <div v-if="!form.code" class="flex items-center space-x-3">
-            <button
-              type="button"
-              @click="generateCode"
-              class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-            >
-              🔑 Code generieren
-            </button>
-            <p class="text-sm text-gray-500">Generiert automatisch einen eindeutigen Gutscheincode</p>
-          </div>
-
-          <!-- Generated Code Display -->
-          <div v-if="form.code" class="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div class="flex items-center space-x-2">
-              <span class="text-green-600">✅</span>
-              <span class="text-sm font-medium text-green-800">Gutscheincode generiert:</span>
-              <span class="font-mono bg-green-100 px-3 py-1 rounded text-green-800">{{ form.code }}</span>
+            <div class="relative">
+              <input
+                v-model="form.is_active"
+                type="checkbox"
+                id="is_active"
+                class="sr-only"
+              />
+              <button
+                @click="form.is_active = !form.is_active"
+                type="button"
+                :class="[
+                  'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                  form.is_active ? 'bg-blue-600' : 'bg-gray-200'
+                ]"
+              >
+                <span
+                  :class="[
+                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                    form.is_active ? 'translate-x-5' : 'translate-x-0'
+                  ]"
+                />
+              </button>
             </div>
           </div>
 
@@ -283,6 +302,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useDiscounts } from '~/composables/useDiscounts'
+import { useCurrentUser } from '~/composables/useCurrentUser'
 import type { Discount, CreateDiscountRequest } from '~/types/payment'
 
 interface Props {
@@ -302,6 +322,7 @@ const emit = defineEmits<{
 
 // Composables
 const { createDiscount, updateDiscount } = useDiscounts()
+const { currentUser } = useCurrentUser()
 
 // State
 const isLoading = ref(false)
@@ -315,8 +336,10 @@ const form = ref<CreateDiscountRequest>({
   valid_from: new Date().toISOString().slice(0, 16),
   valid_until: undefined,
   usage_limit: undefined,
+  max_per_user: undefined,
   applies_to: 'all',
-  category_filter: undefined
+  category_filter: undefined,
+  is_active: true
 })
 
 // Computed
@@ -328,6 +351,15 @@ const isFormValid = computed(() => {
          form.value.applies_to
 })
 
+// Tenant business type check
+const tenantBusinessType = computed(() => {
+  return currentUser.value?.tenant?.business_type || null
+})
+
+const isDrivingSchool = computed(() => {
+  return tenantBusinessType.value === 'driving_school'
+})
+
 // Methods
 const initializeForm = () => {
   if (props.discount && props.isEdit) {
@@ -336,13 +368,15 @@ const initializeForm = () => {
       code: props.discount.code || '',
       discount_type: props.discount.discount_type,
       discount_value: props.discount.discount_value,
-      min_amount_rappen: props.discount.min_amount_rappen / 100,
+      min_amount_rappen: props.discount.min_amount_rappen ? props.discount.min_amount_rappen / 100 : 0,
       max_discount_rappen: props.discount.max_discount_rappen ? props.discount.max_discount_rappen / 100 : undefined,
       valid_from: props.discount.valid_from.slice(0, 16),
       valid_until: props.discount.valid_until ? props.discount.valid_until.slice(0, 16) : undefined,
       usage_limit: props.discount.usage_limit,
+      max_per_user: props.discount.max_per_user,
       applies_to: props.discount.applies_to,
-      category_filter: props.discount.category_filter
+      category_filter: props.discount.category_filter,
+      is_active: props.discount.is_active !== undefined ? props.discount.is_active : true
     }
   } else {
     // Reset form for new discount
@@ -356,23 +390,14 @@ const initializeForm = () => {
       valid_from: new Date().toISOString().slice(0, 16),
       valid_until: undefined,
       usage_limit: undefined,
+      max_per_user: undefined,
       applies_to: 'all',
-      category_filter: undefined
+      category_filter: undefined,
+      is_active: true
     }
   }
 }
 
-const updateMinAmount = () => {
-  if (form.value.min_amount_rappen) {
-    form.value.min_amount_rappen = Math.round(form.value.min_amount_rappen * 100)
-  }
-}
-
-const updateMaxDiscount = () => {
-  if (form.value.max_discount_rappen) {
-    form.value.max_discount_rappen = Math.round(form.value.max_discount_rappen * 100)
-  }
-}
 
 const generateCode = () => {
   const prefix = form.value.name.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 6)
@@ -386,11 +411,31 @@ const saveDiscount = async () => {
   try {
     isLoading.value = true
     
-    // Convert amounts to rappen
+    // Convert amounts to rappen and clean up data
     const discountData = {
       ...form.value,
-      min_amount_rappen: Math.round((form.value.min_amount_rappen || 0) * 100),
-      max_discount_rappen: form.value.max_discount_rappen ? Math.round(form.value.max_discount_rappen * 100) : undefined
+      min_amount_rappen: Math.round((parseFloat(form.value.min_amount_rappen) || 0) * 100),
+      max_discount_rappen: form.value.max_discount_rappen ? Math.round(parseFloat(form.value.max_discount_rappen) * 100) : null,
+      discount_value: parseFloat(form.value.discount_value) || 0,
+      usage_limit: form.value.usage_limit ? parseInt(form.value.usage_limit) : null,
+      max_per_user: form.value.max_per_user ? parseInt(form.value.max_per_user) : null,
+      usage_count: form.value.usage_count ? parseInt(form.value.usage_count) : 0
+    }
+
+    // Remove any empty strings or undefined values that could cause SQL errors
+    Object.keys(discountData).forEach(key => {
+      if (discountData[key] === '' || discountData[key] === undefined) {
+        if (typeof discountData[key] === 'number') {
+          discountData[key] = 0
+        } else {
+          discountData[key] = null
+        }
+      }
+    })
+
+    // For non-driving schools, always set category_filter to null
+    if (!isDrivingSchool.value) {
+      discountData.category_filter = null
     }
 
     if (props.isEdit && props.discount) {

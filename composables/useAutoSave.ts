@@ -160,6 +160,11 @@ export const useAutoSave = <T>(
       finalConfig.onSave?.(data)
       console.log(`💾 LocalStorage saved: ${config.formId}`)
       
+      // Dispatch event for other components to react to save
+      window.dispatchEvent(new CustomEvent('autosave-success', {
+        detail: { formId: config.formId, data }
+      }))
+      
     } catch (error) {
       saveStatus.value = 'error'
       finalConfig.onError?.(error)
@@ -170,28 +175,28 @@ export const useAutoSave = <T>(
   const saveDraftToDatabase = async () => {
     if (!canSaveToDatabase.value || isAutoSaving.value) return
     
+    // Transform data for database - moved outside try block for catch access
+    const transformedData = finalConfig.transformForSave 
+      ? finalConfig.transformForSave(formData.value)
+      : formData.value
+    
+    const draftData = {
+      ...transformedData,
+      status: 'draft',
+      expires_at: new Date(Date.now() + finalConfig.draftExpiry * 24 * 60 * 60 * 1000).toISOString(),
+      metadata: {
+        ...transformedData.metadata,
+        form_id: config.formId,
+        last_saved: new Date().toISOString(),
+        auto_save_version: '1.0'
+      }
+    }
+    
     try {
       isAutoSaving.value = true
       saveStatus.value = 'saving'
       
       const supabase = getSupabase()
-      
-      // Transform data for database
-      const transformedData = finalConfig.transformForSave 
-        ? finalConfig.transformForSave(formData.value)
-        : formData.value
-      
-      const draftData = {
-        ...transformedData,
-        status: 'draft',
-        expires_at: new Date(Date.now() + finalConfig.draftExpiry * 24 * 60 * 60 * 1000).toISOString(),
-        metadata: {
-          ...transformedData.metadata,
-          form_id: config.formId,
-          last_saved: new Date().toISOString(),
-          auto_save_version: '1.0'
-        }
-      }
       
       let result
       if (draftId.value) {
@@ -203,12 +208,42 @@ export const useAutoSave = <T>(
           .select()
           .single()
       } else {
-        // Create new draft
-        result = await supabase
-          .from(config.tableName)
-          .insert(draftData)
-          .select()
-          .single()
+        // Check if record with same phone and tenant_id already exists (for shop orders)
+        if (config.formId === 'shop-order' && draftData.phone && draftData.tenant_id) {
+          const existingResult = await supabase
+            .from(config.tableName)
+            .select('id')
+            .eq('phone', draftData.phone)
+            .eq('tenant_id', draftData.tenant_id)
+            .eq('status', 'draft')
+            .single()
+          
+          if (existingResult.data) {
+            // Update existing record
+            console.log(`🔄 Found existing draft with phone ${draftData.phone}, updating...`)
+            draftId.value = existingResult.data.id
+            result = await supabase
+              .from(config.tableName)
+              .update(draftData)
+              .eq('id', existingResult.data.id)
+              .select()
+              .single()
+          } else {
+            // Create new draft
+            result = await supabase
+              .from(config.tableName)
+              .insert(draftData)
+              .select()
+              .single()
+          }
+        } else {
+          // Create new draft (non-shop orders or no phone)
+          result = await supabase
+            .from(config.tableName)
+            .insert(draftData)
+            .select()
+            .single()
+        }
       }
       
       if (result.error) throw result.error
@@ -223,7 +258,46 @@ export const useAutoSave = <T>(
       finalConfig.onSave?.(result.data)
       console.log(`✅ Database draft saved: ${config.formId} -> ${draftId.value}`)
       
-    } catch (error) {
+    } catch (error: any) {
+      // Handle duplicate key error by finding and updating existing record
+      if (error.code === '23505' && config.formId === 'shop-order' && draftData.phone && draftData.tenant_id) {
+        console.log(`🔄 Duplicate phone ${draftData.phone} for tenant ${draftData.tenant_id}, finding existing record...`)
+        
+        try {
+          const supabase = getSupabase()
+          const { data: existingData, error: findError } = await supabase
+            .from(config.tableName)
+            .select('id')
+            .eq('phone', draftData.phone)
+            .eq('tenant_id', draftData.tenant_id)
+            .eq('status', 'draft')
+            .single()
+          
+          if (existingData && !findError) {
+            console.log(`✅ Found existing record ${existingData.id}, updating...`)
+            draftId.value = existingData.id
+            
+            const updateResult = await supabase
+              .from(config.tableName)
+              .update(draftData)
+              .eq('id', existingData.id)
+              .select()
+              .single()
+            
+            if (updateResult.error) throw updateResult.error
+            
+            lastSaved.value = new Date()
+            saveStatus.value = 'saved'
+            saveToLocalStorage()
+            finalConfig.onSave?.(updateResult.data)
+            console.log(`✅ Database draft updated: ${config.formId} -> ${draftId.value}`)
+            return
+          }
+        } catch (retryError) {
+          console.error('❌ Retry failed:', retryError)
+        }
+      }
+      
       saveStatus.value = 'error'
       finalConfig.onError?.(error)
       console.error('❌ Database save failed:', error)
@@ -314,6 +388,36 @@ export const useAutoSave = <T>(
         localData,
         source: 'localStorage',
         timestamp: localData.timestamp
+      }
+    }
+    
+    // 3. Check for existing draft by phone and tenant_id (for shop orders)
+    if (config.formId === 'shop-order' && formData.value?.phone && formData.value?.tenant_id) {
+      try {
+        const supabase = getSupabase()
+        const { data, error } = await supabase
+          .from(config.tableName)
+          .select('*')
+          .eq('phone', formData.value.phone)
+          .eq('tenant_id', formData.value.tenant_id)
+          .eq('status', 'draft')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single()
+        
+        if (data && !error) {
+          const transformedData = finalConfig.transformForRestore 
+            ? finalConfig.transformForRestore(data)
+            : data
+          
+          return {
+            databaseData: transformedData,
+            source: 'database',
+            timestamp: data.metadata?.last_saved || data.updated_at || new Date().toISOString()
+          }
+        }
+      } catch (error) {
+        console.log('No existing draft found by phone:', error)
       }
     }
     

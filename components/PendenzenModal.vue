@@ -99,7 +99,7 @@
           >
             <!-- Vereinfachtes Layout -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <!-- Links: Name & Kategorie -->
+              <!-- Links: Name & Info -->
               <div class="flex-1">
                 <h3 class="font-semibold text-gray-900">
                   {{ appointment.studentName }}
@@ -115,39 +115,45 @@
                   </p>
                 </div>
                 
-                <!-- Alle Badges in einer Reihe -->
-                <div class="mt-2 flex items-center gap-2 flex-wrap">
-                  <!-- Kategorie Badge -->
-                  <span :class="[
-                    'text-xs px-2 py-1 rounded-full font-medium',
-                    getCategoryClass(appointment.type)
-                  ]">
-                    {{ getCategoryText(appointment.type) }}
-                  </span>
+                <!-- Zwei Spalten: Terminart (40%) & Zahlung (60%) -->
+                <div class="mt-2 grid grid-cols-5 gap-4">
+                  <!-- Linke Spalte: Terminart (40% = 2/5) -->
+                  <div class="col-span-2">
+                    <p class="text-xs text-gray-500 mb-1">Terminart</p>
+                    <div class="flex items-center gap-1 flex-wrap">
+                      <span 
+                        :class="['text-xs px-2 py-1 rounded-full font-medium', getCategoryClass(appointment.type)]"
+                        :style="getCategoryStyle(appointment.type)"
+                      >
+                        {{ getCategoryText(appointment.type) }}
+                      </span>
+                      <span :class="[
+                        'text-xs px-2 py-1 rounded-full font-medium',
+                        getEventTypeClass(appointment.event_type_code)
+                      ]">
+                        {{ getEventTypeText(appointment.event_type_code) }}
+                      </span>
+                    </div>
+                  </div>
                   
-                  <!-- Event Type Badge -->
-                  <span :class="[
-                    'text-xs px-2 py-1 rounded-full font-medium',
-                    getEventTypeClass(appointment.event_type_code)
-                  ]">
-                    {{ getEventTypeText(appointment.event_type_code) }}
-                  </span>
-                  
-                  <!-- Zahlungsmethode Badge -->
-                  <span :class="[
-                    'text-xs px-2 py-1 rounded-full font-medium',
-                    getPaymentMethodClass(appointment.paymentMethod)
-                  ]">
-                    {{ getPaymentMethodText(appointment.paymentMethod) }}
-                  </span>
-                  
-                  <!-- Zahlungsstatus Badge -->
-                  <span v-if="appointment.hasPayment" :class="[
-                    'text-xs px-2 py-1 rounded-full font-medium',
-                    getPaymentStatusClass(appointment.paymentStatus)
-                  ]">
-                    {{ getPaymentStatusText(appointment.paymentStatus) }}
-                  </span>
+                  <!-- Rechte Spalte: Zahlung (60% = 3/5) -->
+                  <div class="col-span-3">
+                    <p class="text-xs text-gray-500 mb-1">Zahlung</p>
+                    <div class="flex items-center gap-1 flex-wrap">
+                      <span :class="[
+                        'text-xs px-2 py-1 rounded-full font-medium',
+                        getPaymentMethodClass(appointment.paymentMethod)
+                      ]">
+                        {{ getPaymentMethodText(appointment.paymentMethod) }}
+                      </span>
+                      <span v-if="appointment.hasPayment" :class="[
+                        'text-xs px-2 py-1 rounded-full font-medium',
+                        getPaymentStatusClass(appointment.paymentStatus)
+                      ]">
+                        {{ getPaymentStatusText(appointment.paymentStatus) }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -215,6 +221,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { usePendingTasks } from '~/composables/usePendingTasks'
+import { useCategoryData } from '~/composables/useCategoryData'
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import CashPaymentConfirmation from '~/components/CashPaymentConfirmation.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
@@ -245,6 +252,9 @@ const {
   fetchPendingTasks,
   clearError
 } = usePendingTasks()
+
+// Category Data Composable
+const { allCategories, loadCategories } = useCategoryData()
 
 // Modal state
 const showEvaluationModal = ref(false)
@@ -323,10 +333,8 @@ const closeExamResultModal = () => {
 const onExamResultSaved = async (appointmentId: string) => {
   console.log('🎉 PendenzenModal - exam result saved for:', appointmentId)
   
-  // Pendenzen-Liste aktualisieren
-  await fetchPendingTasks(props.currentUser.id)
-  
-  // Das Composable wird automatisch aktualisiert
+  // Lade Pendenzen neu um die aktualisierten Daten zu sehen
+  await refreshData()
   console.log('✅ New pending count after exam result:', pendingCount.value)
   
   // Prüfe ob es eine Barzahlung gibt, die bestätigt werden muss
@@ -350,9 +358,9 @@ const getPaymentMethodClass = (method: string) => {
 const getPaymentMethodText = (method: string) => {
   const texts: Record<string, string> = {
     'cash': 'Bar',
-    'invoice': 'Rechnung',
+    'invoice': 'Rechn.',
     'wallee': 'Online',
-    'keine': 'Keine'
+    'keine': '-'
   }
   return texts[method] || method
 }
@@ -369,16 +377,24 @@ const getPaymentStatusClass = (status: string) => {
 
 const getPaymentStatusText = (status: string) => {
   const texts: Record<string, string> = {
-    'pending': 'Ausstehend',
+    'pending': 'Offen',
     'completed': 'Bezahlt',
-    'failed': 'Fehlgeschlagen',
-    'keine': 'Keine'
+    'failed': 'Fehler',
+    'keine': '-'
   }
   return texts[status] || status
 }
 
-// ✅ KATEGORIE FUNKTIONEN
-const getCategoryClass = (category: string) => {
+// ✅ KATEGORIE FUNKTIONEN - Dynamisch aus DB
+const getCategoryClass = (categoryCode: string) => {
+  const category = allCategories.value.find(cat => cat.code === categoryCode)
+  
+  // Wenn Farbe aus DB vorhanden, keine Tailwind-Klasse verwenden
+  if (category?.color) {
+    return 'text-gray-800'
+  }
+  
+  // Fallback colors
   const classes: Record<string, string> = {
     'A': 'bg-blue-100 text-blue-800',
     'B': 'bg-green-100 text-green-800',
@@ -388,20 +404,26 @@ const getCategoryClass = (category: string) => {
     'C': 'bg-orange-100 text-orange-800',
     'D': 'bg-red-100 text-red-800'
   }
-  return classes[category] || 'bg-gray-100 text-gray-800'
+  return classes[categoryCode] || 'bg-gray-100 text-gray-800'
 }
 
-const getCategoryText = (category: string) => {
-  const texts: Record<string, string> = {
-    'A': 'Auto',
-    'B': 'Motorrad',
-    'A1': 'Motorrad A1',
-    'A2': 'Motorrad A2',
-    'B1': 'Motorrad B1',
-    'C': 'LKW',
-    'D': 'Bus'
+const getCategoryStyle = (categoryCode: string) => {
+  const category = allCategories.value.find(cat => cat.code === categoryCode)
+  
+  if (category?.color) {
+    // Verwende die Farbe aus der DB mit leichter Transparenz für den Hintergrund
+    return {
+      backgroundColor: `${category.color}40`, // 40 = 25% opacity in hex
+      color: '#1f2937' // gray-800
+    }
   }
-  return texts[category] || category || 'Unbekannt'
+  
+  return {}
+}
+
+const getCategoryText = (categoryCode: string) => {
+  // Zeige nur den Code, nicht die Beschreibung
+  return categoryCode || 'Unbekannt'
 }
 
 // ✅ EVENT TYPE FUNKTIONEN
@@ -420,25 +442,26 @@ const getEventTypeClass = (eventType: string) => {
 const getEventTypeText = (eventType: string) => {
   const texts: Record<string, string> = {
     'exam': 'Prüfung',
-    'lesson': 'Fahrlektion',
+    'lesson': 'Fahren',
     'theory': 'Theorie',
-    'practical': 'Praxis',
+    'practical': 'Fahren',
     'meeting': 'Meeting',
-    'other': 'Sonstiges'
+    'other': 'Andere'
   }
   
   // Fallback: Wenn eventType null/undefined ist, versuche es aus dem type Feld
   if (!eventType) {
-    return 'Unbekannt'
+    return '?'
   }
   
-  return texts[eventType] || eventType || 'Unbekannt'
+  return texts[eventType] || eventType || '?'
 }
 
 const onEvaluationSaved = async (appointmentId: string) => {
   console.log('🎉 PendenzenModal - evaluation saved for:', appointmentId)
   
-  // Das Composable wird automatisch aktualisiert durch markAsCompleted
+  // Lade Pendenzen neu um die aktualisierten Daten zu sehen
+  await refreshData()
   console.log('✅ New pending count after evaluation:', pendingCount.value)
   
   // Prüfe ob es eine Barzahlung gibt, die bestätigt werden muss
@@ -456,6 +479,10 @@ const refreshData = async () => {
   
   console.log('🔄 PendenzenModal - refreshing data...')
   clearError()
+  
+  // Lade Kategorien aus der DB
+  await loadCategories()
+  
   await fetchPendingTasks(props.currentUser.id, props.currentUser.role)
   console.log('✅ PendenzenModal - data refreshed, count:', pendingCount.value)
 }
@@ -524,8 +551,8 @@ const onCashPaymentConfirmed = async (payment: any) => {
     showCashPaymentModal.value = false
     currentPayment.value = null
     
-    // Optional: Zeige eine Bestätigungsnachricht
-    // Hier könnte man ein Toast oder eine andere Benachrichtigung anzeigen
+    // Lade Pendenzen neu um die aktualisierten Zahlungsinformationen zu sehen
+    await refreshData()
     
   } catch (err: any) {
     console.error('❌ Error handling cash payment confirmation:', err)

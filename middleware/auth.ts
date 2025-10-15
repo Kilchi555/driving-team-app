@@ -6,35 +6,48 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Skip auf Server
   if (process.server) return
   
+  // Warte auf Router-Initialisierung
+  if (!process.client) return
+  
   const authStore = useAuthStore()
   
-  // Warte kurz auf Store-Initialisierung oder bis Auth-Daten vorhanden sind
+  // Initialisiere sofort wenn nicht initialisiert
+  if (!authStore.isInitialized) {
+    console.log('🚀 Auth middleware: Initializing auth store immediately')
+    await authStore.initializeAuthStore()
+  }
+  
+  // Kurze Wartezeit für Store-Updates (nur 500ms)
   let attempts = 0
-  while (!authStore.isInitialized && !authStore.isLoggedIn && attempts < 50) {
+  while (!authStore.isInitialized && attempts < 5) {
     await new Promise(resolve => setTimeout(resolve, 100))
     attempts++
   }
   
-  // Wenn Auth-Daten vorhanden sind, aber isInitialized fehlt, setze es manuell
-  if (authStore.isLoggedIn && !authStore.isInitialized) {
-    authStore.isInitialized = true
+  // Falls immer noch nicht initialisiert, erzwinge es
+  if (!authStore.isInitialized) {
+    console.warn('Auth store not initialized after 500ms, forcing initialization')
+    await authStore.initializeAuthStore()
   }
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
+    console.log('Auth middleware: User not logged in, isInitialized:', authStore.isInitialized)
+    console.log('Auth middleware: AuthStore state:', {
+      isLoggedIn: authStore.isLoggedIn,
+      isInitialized: authStore.isInitialized,
+      hasProfile: authStore.hasProfile
+    })
+    
+    // Für Admin-Seiten, leite zur Dashboard weiter statt zur Hauptseite
+    if (to.path.startsWith('/admin/')) {
+      console.log('Auth middleware: Redirecting admin page to dashboard')
+      return navigateTo('/dashboard')
+    }
+    
     if (to.path !== '/') {
       return navigateTo('/')
     }
     return
-  }
-  
-  // Prüfe ob User ein Profil hat
-  if (!authStore.hasProfile && to.path !== '/profile-setup') {
-    return navigateTo('/profile-setup')
-  }
-  
-  // Wenn User Profil hat aber auf Setup-Seite ist
-  if (authStore.hasProfile && to.path === '/profile-setup') {
-    return navigateTo('/dashboard')
   }
 })

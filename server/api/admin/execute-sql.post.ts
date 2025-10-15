@@ -1,10 +1,31 @@
 // server/api/admin/execute-sql.post.ts
 import { createClient } from '@supabase/supabase-js'
+import { routeRequiresFeatureFlag, validateFeatureAccess } from '~/utils/featureFlags'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   
   try {
+    // Check feature flag for admin operations
+    const url = event.node.req.url || ''
+    if (routeRequiresFeatureFlag(url)) {
+      const tenantId = getHeader(event, 'x-tenant-id') || getQuery(event).tenantId as string
+      if (!tenantId) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Tenant ID required for feature-protected route'
+        })
+      }
+      
+      const featureCheck = await validateFeatureAccess(tenantId, url)
+      if (!featureCheck.enabled) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: `Feature access denied: ${featureCheck.message}`
+        })
+      }
+    }
+
     // Only allow admins to execute SQL
     const body = await readBody(event)
     const { sql, description } = body

@@ -474,9 +474,40 @@ const loadCategories = async () => {
     console.log('🔄 Loading categories from database...')
     const supabase = getSupabase()
     
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+    // Get tenant business_type
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', userProfile.tenant_id)
+      .single()
+
+    if (tenantError) throw tenantError
+    
+    // Only load categories if business_type is driving_school
+    if (tenantData?.business_type !== 'driving_school') {
+      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      categories.value = []
+      isLoadingCategories.value = false
+      return
+    }
+    
     const { data, error } = await supabase
       .from('categories')
       .select('code, name, is_active')
+      .eq('tenant_id', userProfile.tenant_id)
       .eq('is_active', true)
       .order('code')
     

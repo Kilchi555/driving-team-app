@@ -13,6 +13,7 @@ export interface DiscountCode {
   valid_from: string
   valid_until?: string
   usage_limit?: number
+  max_per_user?: number
   usage_count: number
   is_active: boolean
   applies_to: 'all' | 'appointments' | 'products' | 'services'
@@ -74,13 +75,22 @@ export const useDiscounts = () => {
         .from('discounts')
         .select('*')
         .eq('tenant_id', userProfile.tenant_id)
+        .is('deleted_at', null) // Only load non-deleted discounts
         .order('created_at', { ascending: false })
       
       if (dbError) throw dbError
       
       discounts.value = data || []
       console.log('✅ Discounts loaded for tenant:', discounts.value.length, userProfile.tenant_id)
-      console.log('📋 Loaded discount IDs:', discounts.value.map(d => ({ id: d.id, name: d.name, code: d.code })))
+      console.log('📋 Loaded discount IDs:', discounts.value.map(d => ({ 
+        id: d.id, 
+        name: d.name, 
+        code: d.code, 
+        is_active: d.is_active,
+        usage_limit: d.usage_limit,
+        max_per_user: d.max_per_user,
+        usage_count: d.usage_count
+      })))
       
     } catch (err: any) {
       console.error('❌ Error loading discounts:', err)
@@ -109,6 +119,7 @@ export const useDiscounts = () => {
         .select('*')
         .eq('tenant_id', userProfile.tenant_id)
         .eq('is_active', true)
+        .is('deleted_at', null) // Only load non-deleted discounts
         .or(`category_filter.eq.${categoryCode},category_filter.eq.all`)
         .order('created_at', { ascending: false })
       
@@ -127,10 +138,23 @@ export const useDiscounts = () => {
     categoryCode?: string
   ): Promise<DiscountValidationResult> => {
     try {
+      // Get current user's tenant_id
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (!userProfile?.tenant_id) throw new Error('No tenant_id found for user')
+
       const { data, error: dbError } = await supabase
         .from('discounts')
         .select('*')
-        .eq('code', code)
+        .ilike('code', code) // Case-insensitive comparison
+        .eq('tenant_id', userProfile.tenant_id) // Filter by tenant
         .eq('is_active', true)
         .single()
       
@@ -266,11 +290,32 @@ export const useDiscounts = () => {
 
       if (!userProfile?.tenant_id) throw new Error('No tenant_id found for user')
 
-      // Add tenant_id to discount data
+      // Check if discount code already exists for this tenant
+      if (discountData.code) {
+        const { data: existingDiscount, error: checkError } = await supabase
+          .from('discounts')
+          .select('id, code, name')
+          .eq('code', discountData.code)
+          .eq('tenant_id', userProfile.tenant_id)
+          .single()
+
+        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+          throw checkError
+        }
+
+        if (existingDiscount) {
+          throw new Error(`Der Gutscheincode "${discountData.code}" existiert bereits für Ihren Tenant. Bitte wählen Sie einen anderen Code.`)
+        }
+      }
+
+      // Add tenant_id to discount data and ensure is_active has a default value
       const discountWithTenant = {
         ...discountData,
-        tenant_id: userProfile.tenant_id
+        tenant_id: userProfile.tenant_id,
+        is_active: discountData.is_active !== undefined ? discountData.is_active : true
       }
+      
+      console.log('🔍 Creating discount with data:', discountWithTenant)
 
       const { data, error: dbError } = await supabase
         .from('discounts')
@@ -278,10 +323,17 @@ export const useDiscounts = () => {
         .select()
         .single()
       
-      if (dbError) throw dbError
+      if (dbError) {
+        // Handle duplicate key error specifically
+        if (dbError.code === '23505' && dbError.message.includes('discounts_code_key')) {
+          throw new Error(`Der Gutscheincode "${discountData.code}" existiert bereits. Bitte wählen Sie einen anderen Code.`)
+        }
+        throw dbError
+      }
       
       discounts.value.unshift(data)
       console.log('✅ Discount created with tenant_id:', data.id, userProfile.tenant_id)
+      console.log('🔍 Created discount data:', { id: data.id, name: data.name, is_active: data.is_active })
       
       return data
     } catch (err: any) {

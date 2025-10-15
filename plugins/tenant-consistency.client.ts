@@ -1,6 +1,10 @@
 // plugins/tenant-consistency.client.ts
 // Überwacht Tenant-Konsistenz und verhindert ungewollte Tenant-Wechsel
 
+import { defineNuxtPlugin } from '#app'
+import { useRouter } from 'vue-router'
+import { useTenantConsistency } from "~/composables/useTenantConsistency"
+
 export default defineNuxtPlugin(() => {
   // Only run on client side
   if (!process.client) return
@@ -24,18 +28,24 @@ export default defineNuxtPlugin(() => {
     await validateTenantConsistency()
   })
   
-  // Validate before navigation
-  const router = useRouter()
-  router.beforeEach(async (to, from) => {
-    if (to.path.startsWith('/admin')) {
-      const isConsistent = await validateTenantConsistency()
-      if (!isConsistent) {
-        console.error('🚨 Blocking admin navigation due to tenant inconsistency')
-        // Could redirect to login or show error
-        return false
-      }
+  // Validate before navigation - wrapped in try/catch to handle router initialization
+  try {
+    const router = useRouter()
+    if (router) {
+      router.beforeEach(async (to: any, from: any) => {
+        if (to.path.startsWith('/admin')) {
+          const isConsistent = await validateTenantConsistency()
+          if (!isConsistent) {
+            console.error('🚨 Blocking admin navigation due to tenant inconsistency')
+            // Could redirect to login or show error
+            return false
+          }
+        }
+      })
     }
-  })
+  } catch (err) {
+    console.log('⚠️ Router not ready yet for tenant consistency checks')
+  }
   
   console.log('✅ Tenant consistency monitoring initialized')
 })

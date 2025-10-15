@@ -55,7 +55,8 @@ export default defineEventHandler(async (event) => {
           booking_public_enabled: 'true',
           invoices_enabled: 'true',
           packages_enabled: 'false',
-          product_sales_enabled: 'false'
+          product_sales_enabled: 'false',
+          courses_enabled: 'true'
         }
       },
       mental_coach: {
@@ -79,7 +80,8 @@ export default defineEventHandler(async (event) => {
           booking_public_enabled: 'true',
           invoices_enabled: 'true',
           packages_enabled: 'true',
-          product_sales_enabled: 'false'
+          product_sales_enabled: 'false',
+          courses_enabled: 'true'
         }
       }
     }

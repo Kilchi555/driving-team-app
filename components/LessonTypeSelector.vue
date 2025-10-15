@@ -94,7 +94,9 @@ watch(() => props.selectedType, (newType, oldType) => {
   })
   if (newType) {
     selectedType.value = newType
-    console.log('✅ LessonTypeSelector: internal selectedType updated to:', selectedType.value)
+    // ✅ WICHTIG: Auch selectedPaidCode synchronisieren für das Select-Element
+    selectedPaidCode.value = newType
+    console.log('✅ LessonTypeSelector: internal selectedType updated to:', selectedType.value, 'selectedPaidCode:', selectedPaidCode.value)
   }
 }, { immediate: true })
 

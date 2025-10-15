@@ -66,8 +66,8 @@ export default defineEventHandler(async (event) => {
     
     console.log(`🔄 Mapping Wallee state "${walleeState}" to payment status "${paymentStatus}"`)
     
-    // Find payment by Wallee transaction ID
-    const { data: payment, error: findError } = await supabase
+    // Find ALL payments by Wallee transaction ID (there might be multiple)
+    const { data: payments, error: findError } = await supabase
       .from('payments')
       .select(`
         id,
@@ -75,6 +75,8 @@ export default defineEventHandler(async (event) => {
         appointment_id,
         user_id,
         total_amount_rappen,
+        metadata,
+        wallee_transaction_id,
         appointments (
           id,
           title,
@@ -82,9 +84,8 @@ export default defineEventHandler(async (event) => {
         )
       `)
       .eq('wallee_transaction_id', transactionId)
-      .single()
     
-    if (findError || !payment) {
+    if (findError || !payments || payments.length === 0) {
       // Try to find anonymous sale instead
       console.log('🔍 Payment not found, checking for anonymous sale...')
       
@@ -166,19 +167,14 @@ export default defineEventHandler(async (event) => {
       return { success: true, message: 'Anonymous sale updated' }
     }
     
-    console.log('✅ Payment found:', {
-      paymentId: payment.id,
-      currentStatus: payment.payment_status,
+    console.log('✅ Payments found:', {
+      count: payments.length,
+      paymentIds: payments.map(p => p.id),
+      currentStatus: payments[0]?.payment_status,
       newStatus: paymentStatus
     })
     
-    // Skip if status hasn't changed
-    if (payment.payment_status === paymentStatus) {
-      console.log('ℹ️ Payment status unchanged, skipping update')
-      return { success: true, message: 'Status unchanged' }
-    }
-    
-    // Update payment status
+    // Update ALL payments with this transaction ID
     const updateData: any = {
       payment_status: paymentStatus,
       wallee_transaction_state: walleeState,
@@ -193,66 +189,59 @@ export default defineEventHandler(async (event) => {
     const { error: updateError } = await supabase
       .from('payments')
       .update(updateData)
-      .eq('id', payment.id)
+      .eq('wallee_transaction_id', transactionId)
     
     if (updateError) {
-      console.error('❌ Error updating payment:', updateError)
+      console.error('❌ Error updating payments:', updateError)
       throw createError({
         statusCode: 500,
-        statusMessage: 'Failed to update payment'
+        statusMessage: 'Failed to update payments'
       })
     }
     
-    console.log('✅ Payment status updated successfully')
+    console.log('✅ All payment statuses updated successfully')
     
-    // Update appointment if payment completed
-    if (paymentStatus === 'completed' && payment.appointment_id) {
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .update({
-          is_paid: true,
-          payment_status: 'paid',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payment.appointment_id)
-      
-      if (appointmentError) {
-        console.error('❌ Error updating appointment:', appointmentError)
-      } else {
-        console.log('✅ Appointment marked as paid')
-      }
-    }
-    
-    // Create status history entry (optional - table may not exist yet)
-    try {
-      const { error: historyError } = await supabase
-        .from('payment_status_history')
-        .insert({
-          payment_id: payment.id,
-          status: paymentStatus,
-          wallee_transaction_state: walleeState,
-          metadata: {
-            webhook_timestamp: body.timestamp,
-            space_id: body.spaceId,
-            listener_entity: body.listenerEntityTechnicalName
-          },
-          created_at: new Date().toISOString()
-        })
-      
-      if (historyError) {
-        console.warn('⚠️ Could not create status history (table may not exist):', historyError)
-      }
-    } catch (historyErr) {
-      console.warn('⚠️ Status history table may not exist yet:', historyErr)
-      // Continue - main webhook processing was successful
-    }
-    
-    // Send notification email if payment completed
+    // Update ALL appointments if payment completed
     if (paymentStatus === 'completed') {
+      const appointmentIds = payments
+        .filter(p => p.appointment_id)
+        .map(p => p.appointment_id)
+      
+      if (appointmentIds.length > 0) {
+        const { error: appointmentError } = await supabase
+          .from('appointments')
+          .update({
+            is_paid: true,
+            payment_status: 'paid',
+            updated_at: new Date().toISOString()
+          })
+          .in('id', appointmentIds)
+        
+        if (appointmentError) {
+          console.error('❌ Error updating appointments:', appointmentError)
+        } else {
+          console.log('✅ All appointments marked as paid:', appointmentIds.length)
+        }
+      }
+    }
+    
+    // Create vouchers if payment completed and products are vouchers
+    if (paymentStatus === 'completed') {
+      for (const payment of payments) {
+        try {
+          await createVouchersAfterPayment(payment.id, payment.metadata)
+        } catch (voucherErr) {
+          console.warn('⚠️ Could not create vouchers for payment:', payment.id, voucherErr)
+        }
+      }
+    }
+
+    // Send notification email if payment completed (use first payment)
+    if (paymentStatus === 'completed' && payments.length > 0) {
       try {
         await sendPaymentConfirmationEmail({
-          payment,
-          amount: payment.total_amount_rappen / 100,
+          payment: payments[0],
+          amount: payments.reduce((sum, p) => sum + p.total_amount_rappen, 0) / 100,
           transactionId
         })
       } catch (emailErr) {
@@ -261,10 +250,10 @@ export default defineEventHandler(async (event) => {
     }
     
     // Send notification email if payment failed
-    if (paymentStatus === 'failed') {
+    if (paymentStatus === 'failed' && payments.length > 0) {
       try {
         await sendPaymentFailedEmail({
-          payment,
+          payment: payments[0],
           transactionId,
           reason: walleeState
         })
@@ -278,8 +267,9 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       message: 'Webhook processed',
-      payment_id: payment.id,
-      old_status: payment.payment_status,
+      payment_ids: payments.map(p => p.id),
+      payments_count: payments.length,
+      old_status: payments[0]?.payment_status,
       new_status: paymentStatus
     }
     
@@ -313,4 +303,57 @@ async function sendPaymentFailedEmail(data: any) {
 async function sendAnonymousSaleConfirmationEmail(data: any) {
   console.log('📧 Sending anonymous sale confirmation email for sale:', data.saleId)
   // TODO: Implement email service
+}
+
+// Helper function to create vouchers after successful payment
+async function createVouchersAfterPayment(paymentId: string, metadata: any) {
+  console.log('🎁 Creating vouchers for payment:', paymentId)
+  
+  if (!metadata?.products) {
+    console.log('ℹ️ No products in metadata, skipping voucher creation')
+    return
+  }
+
+  const supabase = getSupabase()
+  
+  for (const product of metadata.products) {
+    // Check if this product is a voucher
+    const { data: productData, error: productError } = await supabase
+      .from('products')
+      .select('is_voucher')
+      .eq('id', product.id)
+      .single()
+    
+    if (productError || !productData?.is_voucher) {
+      console.log('ℹ️ Product is not a voucher, skipping:', product.id)
+      continue
+    }
+
+    // Create voucher in discounts table
+    const voucherData = {
+      name: product.name,
+      description: product.description || '',
+      discount_value: product.price_rappen / 100, // Convert to CHF
+      discount_type: 'fixed',
+      is_voucher: true,
+      voucher_recipient_name: metadata.customer_name || 'Inhaber',
+      voucher_recipient_email: metadata.customer_email,
+      valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
+      payment_id: paymentId,
+      is_active: true,
+      created_at: new Date().toISOString()
+    }
+
+    const { data: voucher, error: voucherError } = await supabase
+      .from('discounts')
+      .insert(voucherData)
+      .select()
+      .single()
+
+    if (voucherError) {
+      console.error('❌ Error creating voucher:', voucherError)
+    } else {
+      console.log('✅ Voucher created:', voucher.id)
+    }
+  }
 }

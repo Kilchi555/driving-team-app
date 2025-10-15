@@ -281,6 +281,34 @@
   color: #4B5563 !important; /* Ensure secondary text is readable */
 }
 
+/* Label-specific styling for better readability - NUCLEAR OPTION */
+html body label,
+html body .fixed.inset-0 label,
+html body [class*="modal"] label,
+html body div label,
+html body label[style*="color"],
+html body label[class*="text-gray"],
+html body label[class*="block"],
+html body label[class*="font-medium"],
+html body label[class*="mb-2"],
+html body .admin-layout label,
+html body .admin-modal label {
+  color: #9CA3AF !important; /* Lighter gray for labels */
+}
+
+/* ULTIMATE OVERRIDE - überschreibt sogar inline styles */
+html body label[style*="color: #9CA3AF"],
+html body label[style*="color:#9CA3AF"],
+html body label[style*="9CA3AF"] {
+  color: #9CA3AF !important; /* Force lighter gray */
+}
+
+/* Specific override for Create Course Modal */
+html body .fixed.inset-0 label,
+html body div[class*="fixed"][class*="inset-0"] label {
+  color: #9CA3AF !important; /* Lighter gray for all labels in modals */
+}
+
 /* === ADMIN MODAL OVERRIDES === */
 /* Admin modals should always have white text on dark inputs */
 /* MAXIMUM SPECIFICITY - überschreibt alles andere */

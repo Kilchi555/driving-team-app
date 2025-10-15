@@ -71,8 +71,9 @@ export const useTenant = () => {
     }
     
     if (!identifier) {
-      // Fallback auf Default-Tenant
-      identifier = 'driving-team'
+      // Kein Fallback - Tenant muss explizit angegeben werden
+      console.log('🏢 No tenant identifier provided, cannot load tenant')
+      throw new Error('Kein Tenant-Identifier angegeben')
     }
     
     isLoading.value = true
@@ -97,22 +98,9 @@ export const useTenant = () => {
       const { data, error: fetchError } = await query.single()
       
       if (fetchError) {
-        // Fallback: Versuche Default-Tenant zu laden
-        console.warn('🏢 Tenant not found, trying default:', fetchError.message)
-        const { data: defaultData, error: defaultError } = await supabase
-          .from('tenants')
-          .select('*')
-          .eq('slug', 'driving-team')
-          .eq('is_active', true)
-          .single()
-          
-        if (defaultError) {
-          throw new Error(`Kein Tenant gefunden: ${defaultError.message}`)
-        }
-        
-        currentTenant.value = defaultData
-        console.log('🏢 Loaded default tenant:', defaultData.name)
-        return defaultData
+        // Kein Fallback - Tenant muss existieren
+        console.error('🏢 Tenant not found:', fetchError.message)
+        throw new Error(`Tenant '${identifier}' nicht gefunden: ${fetchError.message}`)
       }
       
       currentTenant.value = data

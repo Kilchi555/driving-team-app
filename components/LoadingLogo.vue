@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useLoadingLogo } from '~/composables/useLoadingLogo'
 
 // Loading logo system
@@ -77,26 +77,26 @@ const handleImageLoad = () => {
   imageError.value = false
 }
 
-// Load tenant logo on mount with immediate cache check
-onMounted(async () => {
+// Function to load logo for a specific tenant
+const loadLogoForTenant = async (tenantId: string | null) => {
   try {
-    if (props.tenantId) {
-      console.log('🎯 LoadingLogo: Using explicit tenantId:', props.tenantId)
+    if (tenantId) {
+      console.log('🎯 LoadingLogo: Using explicit tenantId:', tenantId)
       
       // Check cache immediately for instant loading
-      const cached = logoCache.value.get(props.tenantId)
+      const cached = logoCache.value.get(tenantId)
       
       if (cached && (Date.now() - cached.timestamp) < 5 * 60 * 1000) {
         console.log('⚡ LoadingLogo: Instant cache hit!', cached.url)
         tenantLogo.value = cached.url
         // Still load in background to refresh cache
-        getTenantLogo(props.tenantId).then((url: string | null) => {
+        getTenantLogo(tenantId).then((url: string | null) => {
           if (url !== tenantLogo.value) {
             tenantLogo.value = url
           }
         })
       } else {
-        tenantLogo.value = await getTenantLogo(props.tenantId)
+        tenantLogo.value = await getTenantLogo(tenantId)
       }
     } else {
       console.log('🔄 LoadingLogo: Auto-detecting tenant from current user')
@@ -106,6 +106,19 @@ onMounted(async () => {
   } catch (err) {
     console.error('❌ Error loading tenant logo in LoadingLogo:', err)
     handleImageError()
+  }
+}
+
+// Load tenant logo on mount with immediate cache check
+onMounted(async () => {
+  await loadLogoForTenant(props.tenantId)
+})
+
+// Watch for changes in tenantId prop
+watch(() => props.tenantId, async (newTenantId, oldTenantId) => {
+  if (newTenantId !== oldTenantId) {
+    console.log('🔄 LoadingLogo: tenantId prop changed:', { from: oldTenantId, to: newTenantId })
+    await loadLogoForTenant(newTenantId)
   }
 })
 </script>

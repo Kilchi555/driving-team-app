@@ -39,11 +39,33 @@ export const useStaffDurations = () => {
         console.log('⚠️ No staff settings found, will use category defaults')
       }
 
+      // Get user's tenant_id first
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', staffId)
+        .single()
+
+      if (!userProfile?.tenant_id) return null
+
+      // Get tenant business_type first
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('business_type')
+        .eq('id', userProfile.tenant_id)
+        .single()
+
+      if (tenantError || tenantData?.business_type !== 'driving_school') {
+        console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+        return null
+      }
+
       // 2. Kategorie aus DB laden (für Fallback-Dauer)
       const { data: category, error: categoryError } = await supabase
         .from('categories')
         .select('lesson_duration, code')
         .eq('code', categoryCode)
+        .eq('tenant_id', userProfile.tenant_id)
         .eq('is_active', true)
         .maybeSingle()
 
@@ -123,6 +145,30 @@ export const useStaffDurations = () => {
     try {
       const supabase = getSupabase()
       
+      // Get user's tenant_id first
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', userId)
+        .single()
+
+      if (!userProfile?.tenant_id) return []
+
+      // Get tenant business_type first
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('business_type')
+        .eq('id', userProfile.tenant_id)
+        .single()
+
+      if (tenantError) throw tenantError
+      
+      // Only load categories if business_type is driving_school
+      if (tenantData?.business_type !== 'driving_school') {
+        console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+        return []
+      }
+
       // Alle aktiven Kategorien laden
       const { data: categories, error } = await supabase
         .from('categories')

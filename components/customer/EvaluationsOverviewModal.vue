@@ -139,9 +139,9 @@
                     </h4>
                     <span 
                       v-if="lessonGroup.driving_category" 
-                      class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                      class="inline-flex items-center px-2 py-1 text-md font-medium bg-blue-100 text-blue-800 rounded-full"
                     >
-                      Kategorie {{ lessonGroup.driving_category }}
+                      {{ lessonGroup.driving_category }}
                     </span>
                   </div>
                   <div class="flex items-center gap-4 text-sm text-gray-600 mt-1">

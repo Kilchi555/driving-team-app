@@ -2,6 +2,7 @@
 // ✅ Einheitlicher Payment-API-Endpunkt für alle Payment-Operationen
 
 import { getSupabase } from '~/utils/supabase'
+import { routeRequiresFeatureFlag, validateFeatureAccess } from '~/utils/featureFlags'
 
 interface PaymentRequest {
   appointmentId?: string
@@ -40,6 +41,26 @@ interface PaymentResponse {
 export default defineEventHandler(async (event): Promise<PaymentResponse> => {
   try {
     console.log('💳 Payment API called')
+    
+    // Check feature flag
+    const url = event.node.req.url || ''
+    if (routeRequiresFeatureFlag(url)) {
+      const tenantId = getHeader(event, 'x-tenant-id') || getQuery(event).tenantId as string
+      if (!tenantId) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Tenant ID required for feature-protected route'
+        })
+      }
+      
+      const featureCheck = await validateFeatureAccess(tenantId, url)
+      if (!featureCheck.enabled) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: `Feature access denied: ${featureCheck.message}`
+        })
+      }
+    }
     
     const body = await readBody(event) as PaymentRequest
     console.log('📨 Payment request:', JSON.stringify(body, null, 2))

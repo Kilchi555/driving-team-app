@@ -54,6 +54,29 @@
           />
         </div>
 
+        <!-- Vorschau des Gutschein-Textes -->
+        <div v-if="voucherAmount" class="bg-white border border-blue-200 rounded-lg p-4">
+          <h5 class="text-sm font-medium text-blue-800 mb-2 flex items-center">
+            👁️ Vorschau des Gutscheins:
+          </h5>
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-100">
+            <div class="text-center">
+              <div class="text-lg font-bold text-gray-800 mb-1">
+                {{ generateVoucherName() }}
+              </div>
+              <div class="text-sm text-gray-600 mb-2">
+                {{ generateVoucherDescription() }}
+              </div>
+              <div class="text-2xl font-bold text-blue-600">
+                CHF {{ voucherAmount.toFixed(2) }}
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-2 text-center">
+            So wird der Gutschein in der Bestellung angezeigt
+          </p>
+        </div>
+
         <!-- Empfänger (optional) -->
         <div>
           <label class="block text-sm font-medium text-blue-800 mb-2">
@@ -210,6 +233,19 @@ const createVoucher = () => {
 const addExistingVoucher = (voucher: any) => {
   console.log('🎁 Adding existing voucher:', voucher)
   emit('voucher-selected', voucher)
+}
+
+// Vorschau-Methoden
+const generateVoucherName = () => {
+  if (!voucherAmount.value) return ''
+  const recipient = voucherRecipient.value.trim()
+  return recipient 
+    ? `Gutschein für ${recipient} - CHF ${voucherAmount.value.toFixed(2)}`
+    : `Gutschein CHF ${voucherAmount.value.toFixed(2)}`
+}
+
+const generateVoucherDescription = () => {
+  return voucherDescription.value.trim() || `Gutschein über CHF ${voucherAmount.value?.toFixed(2) || '0.00'}`
 }
 </script>
 

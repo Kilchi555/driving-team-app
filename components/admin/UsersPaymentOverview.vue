@@ -501,7 +501,8 @@ const fetchUsersSummary = async () => {
 
 
 const navigateToUser = (userId: string) => {
-  navigateTo(`/admin/users/${userId}`)
+  // Navigiere zur Zahlungsdetails-Seite des Benutzers
+  navigateTo(`/admin/payments/${userId}`)
 }
 
 // Utility functions

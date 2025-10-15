@@ -355,6 +355,246 @@ export const usePayments = () => {
     }
   }
 
+  // Handle Wallee online payment
+  const processWalleePayment = async (
+    appointmentId: string,
+    userId: string,
+    staffId: string,
+    price: any,
+    products?: Product[],
+    discounts?: Discount[]
+  ) => {
+    isProcessing.value = true
+
+    try {
+      // ✅ Berechne Produkte und Rabatte Gesamtbeträge
+      const productsTotalRappen = products?.reduce((sum, product) => 
+        sum + (product.price_rappen || 0), 0) || 0
+      const discountsTotalRappen = discounts?.reduce((sum, discount) => 
+        sum + (discount.discount_value || 0), 0) || 0
+      const subtotalRappen = price.total_rappen + productsTotalRappen
+      const finalTotalRappen = subtotalRappen - discountsTotalRappen
+
+      // ✅ RUNDUNG: Alle Preise auf nächsten Franken runden
+      const roundedLessonPriceRappen = roundToNearestFranken(price.total_rappen)
+      const roundedProductsTotalRappen = roundToNearestFranken(productsTotalRappen)
+      const roundedDiscountsTotalRappen = roundToNearestFranken(discountsTotalRappen)
+      const roundedSubtotalRappen = roundToNearestFranken(subtotalRappen)
+      const roundedFinalTotalRappen = roundToNearestFranken(finalTotalRappen)
+
+      // Create payment record
+      const paymentData: any = {
+        appointment_id: appointmentId,
+        user_id: userId,
+        staff_id: staffId,
+        lesson_price_rappen: roundedLessonPriceRappen,
+        products_price_rappen: roundedProductsTotalRappen,
+        discount_amount_rappen: roundedDiscountsTotalRappen,
+        subtotal_rappen: roundedSubtotalRappen,
+        total_amount_rappen: roundedFinalTotalRappen,
+        // amount_rappen: roundedLessonPriceRappen, // Spalte existiert nicht in der Tabelle
+        admin_fee_rappen: 0,
+        payment_method: 'wallee',
+        payment_status: 'pending',
+        currency: 'CHF',
+        description: `Fahrstunde ${price.category_code} (${price.duration_minutes} Min)`,
+        is_standalone: false,
+        metadata: {
+          products: products || [],
+          discounts: discounts || [],
+          category_code: price.category_code,
+          duration_minutes: price.duration_minutes
+        }
+      }
+
+      // Create payment record
+      const payment = await createPaymentRecord(paymentData)
+
+      // Create payment items
+      await createPaymentItems(payment.id, appointmentId, products, discounts)
+
+      // Create Wallee transaction
+      const walleeResponse = await $fetch('/api/wallee/create-transaction', {
+        method: 'POST',
+        body: {
+          orderId: payment.id,
+          amount: roundedFinalTotalRappen / 100, // Convert to CHF
+          currency: 'CHF',
+          customerEmail: '', // Will be filled in shop
+          customerName: '', // Will be filled in shop
+          description: paymentData.description,
+          successUrl: `${window.location.origin}/payment/success?transaction_id=${payment.id}`,
+          failedUrl: `${window.location.origin}/payment/failed?transaction_id=${payment.id}`
+        }
+      })
+
+      if (!walleeResponse.success) {
+        throw new Error(walleeResponse.error || 'Wallee transaction failed')
+      }
+
+      // Update payment with Wallee transaction ID
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update({
+          metadata: {
+            ...paymentData.metadata,
+            wallee_transaction_id: walleeResponse.transactionId
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payment.id)
+
+      if (updateError) {
+        console.warn('⚠️ Could not update payment with Wallee transaction ID:', updateError)
+      }
+
+      // Return payment with Wallee URL
+      return {
+        ...payment,
+        payment_url: walleeResponse.paymentUrl
+      }
+
+    } finally {
+      isProcessing.value = false
+    }
+  }
+
+  // Create standalone Wallee payment (without appointment)
+  const createStandaloneWalleePayment = async (
+    userId: string | null,
+    staffId: string | null,
+    products: Product[],
+    discounts: Discount[],
+    customerEmail: string,
+    customerName: string
+  ): Promise<Payment & { payment_url: string }> => {
+    isProcessing.value = true
+
+    try {
+      // Calculate total
+      const subtotal = products.reduce((sum, product) => 
+        sum + (product.price_rappen), 0
+      )
+      
+      const totalDiscount = discounts.reduce((sum, discount) => 
+        sum + (discount.discount_value || 0), 0
+      )
+      
+      const total = subtotal - totalDiscount
+
+      // ✅ RUNDUNG: Alle Preise auf nächsten Franken runden
+      const roundedSubtotalRappen = roundToNearestFranken(subtotal)
+      const roundedTotalDiscountRappen = roundToNearestFranken(totalDiscount)
+      const roundedTotalRappen = roundToNearestFranken(total)
+
+      // Create payment record
+      const paymentData: Partial<Payment> = {
+        user_id: userId,
+        staff_id: staffId,
+        appointment_id: null,
+        lesson_price_rappen: 0,
+        products_price_rappen: roundedSubtotalRappen,
+        discount_amount_rappen: roundedTotalDiscountRappen,
+        subtotal_rappen: roundedSubtotalRappen,
+        total_amount_rappen: roundedTotalRappen,
+        amount_rappen: 0,
+        admin_fee_rappen: 0,
+        payment_method: 'wallee',
+        payment_status: 'pending',
+        currency: 'CHF',
+        description: 'Produktkauf',
+        is_standalone: true,
+        metadata: {
+          products_count: products.length,
+          discounts_count: discounts.length,
+          price_breakdown: {
+            lesson_price_rappen: 0,
+            products_price_rappen: roundedSubtotalRappen,
+            discount_amount_rappen: roundedTotalDiscountRappen,
+            subtotal_rappen: roundedSubtotalRappen,
+            total_amount_rappen: roundedTotalRappen
+          },
+          products: products,
+          discounts: discounts,
+          customer_email: customerEmail,
+          customer_name: customerName
+        }
+      }
+
+      // Create payment record directly with only columns that exist
+      const { data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          user_id: userId || null,
+          staff_id: staffId || null,
+          appointment_id: null,
+          lesson_price_rappen: 0,
+          products_price_rappen: roundedSubtotalRappen,
+          discount_amount_rappen: roundedTotalDiscountRappen,
+          total_amount_rappen: roundedTotalRappen,
+          admin_fee_rappen: 0,
+          payment_method: 'wallee',
+          payment_status: 'pending',
+          currency: 'CHF',
+          description: 'Produktkauf',
+          metadata: paymentData.metadata
+        })
+        .select()
+        .single()
+
+      if (paymentError) {
+        console.error('❌ Error creating payment record:', paymentError)
+        throw paymentError
+      }
+
+      console.log('✅ Payment record created:', payment.id)
+
+      // Create Wallee transaction
+      const walleeResponse = await $fetch('/api/wallee/create-transaction', {
+        method: 'POST',
+        body: {
+          orderId: payment.id,
+          amount: roundedTotalRappen / 100, // Convert to CHF
+          currency: 'CHF',
+          customerEmail: customerEmail,
+          customerName: customerName,
+          description: 'Produktkauf',
+          successUrl: `${window.location.origin}/payment/success?transaction_id=${payment.id}`,
+          failedUrl: `${window.location.origin}/payment/failed?transaction_id=${payment.id}`
+        }
+      })
+
+      if (!walleeResponse.success) {
+        throw new Error(walleeResponse.error || 'Wallee transaction failed')
+      }
+
+      // Update payment with Wallee transaction ID
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update({
+          metadata: {
+            ...paymentData.metadata,
+            wallee_transaction_id: walleeResponse.transactionId
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payment.id)
+
+      if (updateError) {
+        console.warn('⚠️ Could not update payment with Wallee transaction ID:', updateError)
+      }
+
+      // Return payment with Wallee URL
+      return {
+        ...payment,
+        payment_url: walleeResponse.paymentUrl
+      }
+
+    } finally {
+      isProcessing.value = false
+    }
+  }
+
   // Create standalone payment (without appointment)
   const createStandalonePayment = async (
     userId: string,
@@ -386,7 +626,7 @@ export const usePayments = () => {
       const paymentData: Partial<Payment> = {
         user_id: userId,
         staff_id: staffId,
-        appointment_id: undefined,
+        appointment_id: null,
         // ✅ Neue Spalten verwenden (mit gerundeten Preisen)
         lesson_price_rappen: 0, // Keine Fahrstunde
         products_price_rappen: roundedSubtotalRappen,
@@ -574,6 +814,8 @@ export const usePayments = () => {
     createPaymentItems,
     processCashPayment,
     processInvoicePayment,
+    processWalleePayment,
+    createStandaloneWalleePayment,
     createStandalonePayment,
     getPaymentDetails,
     updateAppointmentPaymentStatus,

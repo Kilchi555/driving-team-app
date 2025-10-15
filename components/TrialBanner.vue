@@ -1,5 +1,5 @@
 <template>
-  <div v-if="showBanner" class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-4 mb-4">
+  <div v-if="showBanner" class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-2">
     <div class="flex items-center justify-between">
       <div class="flex items-center">
         <div class="flex-shrink-0">
@@ -19,15 +19,12 @@
               🆓 Trial läuft noch {{ trialStatus.daysLeft }} {{ trialStatus.daysLeft === 1 ? 'Tag' : 'Tage' }}
             </span>
           </p>
-          <p class="text-xs text-yellow-700 mt-1">
-            {{ trialStatus.message }}
-          </p>
         </div>
       </div>
       <div class="flex-shrink-0">
         <NuxtLink 
           to="/upgrade" 
-          class="inline-flex items-center px-3 py-2 border border-transparent text-xs font-medium rounded-md text-yellow-800 bg-yellow-100 hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
+          class="inline-flex items-center px-3 py-2 border border-transparent text-xs font-medium rounded-md text-green-800 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
         >
           {{ trialStatus.status === 'expired' ? 'Jetzt upgraden' : 'Upgrade ansehen' }}
           <svg class="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

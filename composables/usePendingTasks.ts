@@ -107,11 +107,18 @@ const getFormattedAppointment = (appointment: PendingAppointment) => {
 
 // ✅ Hilfsfunktion: Parse DateTime-String als lokale Zeit
 const parseLocalDateTime = (dateTimeStr: string): Date => {
-  // Entferne 'Z' falls vorhanden (UTC-Indikator)
-  const cleanStr = dateTimeStr.replace('Z', '')
+  // Entferne Timezone-Indikatoren (Z, +00:00, +00)
+  const cleanStr = dateTimeStr.replace('+00:00', '').replace('+00', '').replace('Z', '').trim()
   
-  // Parse als lokale Zeit
-  const [datePart, timePart] = cleanStr.split('T')
+  // Parse als lokale Zeit - unterstützt beide Formate (mit T oder Leerzeichen)
+  const parts = cleanStr.includes('T') ? cleanStr.split('T') : cleanStr.split(' ')
+  
+  if (parts.length < 2) {
+    console.warn('Invalid datetime format:', dateTimeStr)
+    return new Date()
+  }
+  
+  const [datePart, timePart] = parts
   const [year, month, day] = datePart.split('-').map(Number)
   const [hour, minute, second] = timePart.split(':').map(Number)
   
@@ -210,11 +217,11 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     
     // Rest der Abfrage
     const { data, error: fetchError } = await query
-      .lt('end_time', toLocalTimeString(new Date)) // ✅ Nur Termine in der Vergangenheit
+      .lt('start_time', toLocalTimeString(new Date)) // ✅ Termine die bereits gestartet haben
       .in('status', ['completed', 'confirmed', 'scheduled']) // Alle relevanten Status für Pendenzen
       .is('deleted_at', null) // ✅ Soft Delete Filter - nur nicht gelöschte Termine
       .in('event_type_code', ['lesson', 'exam']) // ✅ Nur lesson und exam Event Types
-      .order('start_time', { ascending: true }) // Neueste zuerst
+      .order('start_time', { ascending: true }) // Älteste zuerst (überfällige zuerst)
 
     if (fetchError) {
       console.error('❌ Supabase query error in usePendingTasks:', fetchError)

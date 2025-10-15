@@ -786,12 +786,19 @@ const loadAvailableDiscounts = async () => {
     console.log('🔍 Querying discounts table for fixed discounts...')
     
     // ✅ Lade nur Gutscheine mit discount_type = 'fixed'
-    const { data, error } = await supabase
+    let query = supabase
       .from('discounts')
       .select('*')
       .eq('is_active', true)
       .eq('discount_type', 'fixed')
-      .order('discount_value', { ascending: true })
+    
+    // ✅ WICHTIG: Nach tenant_id filtern, falls verfügbar
+    if (props.currentUser?.tenant_id) {
+      query = query.eq('tenant_id', props.currentUser.tenant_id)
+      console.log('🏢 Filtering discounts by tenant_id:', props.currentUser.tenant_id)
+    }
+    
+    const { data, error } = await query.order('discount_value', { ascending: true })
     
     if (error) {
       console.error('❌ Error loading discounts:', error)

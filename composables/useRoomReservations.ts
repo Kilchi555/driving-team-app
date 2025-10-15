@@ -53,15 +53,28 @@ export const useRoomReservations = () => {
     error.value = null
 
     try {
+      // Get current user's tenant_id
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Nicht angemeldet')
+
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (!userProfile?.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
       const { data, error: roomsError } = await supabase
         .from('rooms')
         .select('*')
         .eq('is_active', true)
+        .eq('tenant_id', userProfile.tenant_id)
         .order('location', { ascending: true })
 
       if (roomsError) throw roomsError
       
-      console.log('✅ Rooms loaded:', data?.length || 0, 'items')
+      console.log('✅ Rooms loaded for tenant:', userProfile.tenant_id, 'count:', data?.length || 0)
       console.log('🏢 Rooms data:', data)
       
       rooms.value = data || []
@@ -249,11 +262,13 @@ export const useRoomReservations = () => {
     rooms.value.filter(room => room.tenant_id === currentUser.value?.tenant_id)
   )
 
-  const availableRooms = computed(() => 
-    rooms.value.filter(room => 
-      room.is_public || room.tenant_id === currentUser.value?.tenant_id
-    )
-  )
+  const availableRooms = computed(() => {
+    // Fallback: Wenn currentUser nicht verfügbar ist, zeige alle geladenen Räume
+    // (da loadRooms bereits nach tenant_id gefiltert hat)
+    return currentUser.value?.tenant_id 
+      ? rooms.value.filter(room => room.tenant_id === currentUser.value?.tenant_id)
+      : rooms.value // Alle Räume, da bereits gefiltert
+  })
 
   return {
     rooms,

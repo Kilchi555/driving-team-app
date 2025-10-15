@@ -1,11 +1,5 @@
 <template>
-  <div class="bg-white rounded-lg shadow p-3 sm:p-4">
-    <h3 class="text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-      📅 Externe Kalender verbinden
-    </h3>
-    <p class="text-sm text-gray-600 mb-3 sm:mb-4">
-      Verbinden Sie Ihre privaten Kalender (Google, Microsoft, Apple), damit diese Zeiten bei der Verfügbarkeitsprüfung berücksichtigt werden.
-    </p>
+  <div class="bg-white rounded-lg mt-2">
 
     <!-- Aktuelle Verbindungen -->
     <div v-if="externalCalendars.length > 0" class="mb-3 sm:mb-4">
@@ -26,7 +20,7 @@
                 {{ getProviderName(calendar.provider) }} - {{ calendar.calendar_name || calendar.account_identifier }}
               </div>
               <div class="text-sm text-gray-500 truncate">
-                Letzte Synchronisation: {{ formatLastSync(calendar.last_sync_at) }}
+                Letzte Synch.: {{ formatLastSync(calendar.last_sync_at) }}
               </div>
             </div>
           </div>
@@ -72,71 +66,28 @@
           </select>
         </div>
 
-        <!-- Google Calendar -->
-        <div v-if="newCalendar.provider === 'google'" class="space-y-4">
+        <!-- Account Identifier (für alle außer ICS) -->
+        <div v-if="newCalendar.provider && newCalendar.provider !== 'ics'" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Google Account Email
+              {{ newCalendar.provider === 'google' ? 'Google Account Email' : 
+                 newCalendar.provider === 'microsoft' ? 'Microsoft Account Email' : 
+                 'Apple ID Email' }}
             </label>
             <input
               v-model="newCalendar.account_identifier"
               type="email"
-              placeholder="ihre.email@gmail.com"
+              :placeholder="newCalendar.provider === 'google' ? 'ihre.email@gmail.com' : 
+                            newCalendar.provider === 'microsoft' ? 'ihre.email@outlook.com' : 
+                            'ihre.email@icloud.com'"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               required
             />
-          </div>
-          <div class="bg-blue-50 p-3 rounded-lg">
-            <p class="text-sm text-blue-800">
-              <strong>Anleitung:</strong> Geben Sie unten eine ICS-URL ein, um Ihren Google-Kalender zu verbinden.
-            </p>
-          </div>
-        </div>
-
-        <!-- Microsoft Outlook -->
-        <div v-if="newCalendar.provider === 'microsoft'" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Microsoft Account Email
-            </label>
-            <input
-              v-model="newCalendar.account_identifier"
-              type="email"
-              placeholder="ihre.email@outlook.com"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-          <div class="bg-blue-50 p-3 rounded-lg">
-            <p class="text-sm text-blue-800">
-              <strong>Anleitung:</strong> Geben Sie unten eine ICS-URL ein, um Ihren Outlook-Kalender zu verbinden.
-            </p>
-          </div>
-        </div>
-
-        <!-- Apple Calendar -->
-        <div v-if="newCalendar.provider === 'apple'" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Apple ID Email
-            </label>
-            <input
-              v-model="newCalendar.account_identifier"
-              type="email"
-              placeholder="ihre.email@icloud.com"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-          <div class="bg-yellow-50 p-3 rounded-lg">
-            <p class="text-sm text-yellow-800">
-              <strong>Hinweis:</strong> Geben Sie unten eine ICS-URL ein, um Ihren Apple-Kalender zu verbinden.
-            </p>
           </div>
         </div>
 
         <!-- ICS-URL (für alle Provider) -->
-        <div class="space-y-4">
+        <div v-if="newCalendar.provider" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
               ICS-URL
@@ -144,17 +95,54 @@
             <input
               v-model="newCalendar.ics_url"
               type="url"
-              placeholder="https://calendar.google.com/calendar/ical/..."
+              :placeholder="getIcsPlaceholder()"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
-          <div class="bg-green-50 p-3 rounded-lg">
+          
+          <!-- Google Anleitung -->
+          <div v-if="newCalendar.provider === 'google'" class="bg-blue-50 p-3 rounded-lg">
+            <p class="text-sm text-blue-800">
+              <strong>Anleitung Google Calendar:</strong>
+              <br>1. Öffnen Sie Google Calendar
+              <br>2. Gehen Sie zu Einstellungen
+              <br>3. Wählen Sie Ihren Kalender aus
+              <br>4. Scrollen Sie zu "Kalender integrieren"
+              <br>5. Kopieren Sie die "Geheime Adresse im iCal-Format"
+            </p>
+          </div>
+          
+          <!-- Microsoft Anleitung -->
+          <div v-if="newCalendar.provider === 'microsoft'" class="bg-blue-50 p-3 rounded-lg">
+            <p class="text-sm text-blue-800">
+              <strong>Anleitung Microsoft Outlook:</strong>
+              <br>1. Öffnen Sie Outlook Calendar
+              <br>2. Klicken Sie auf "Freigeben"
+              <br>3. Wählen Sie "Kalender veröffentlichen"
+              <br>4. Wählen Sie den gewünschten Kalender
+              <br>5. Kopieren Sie die angezeigte ICS-URL
+            </p>
+          </div>
+          
+          <!-- Apple Anleitung -->
+          <div v-if="newCalendar.provider === 'apple'" class="bg-green-50 p-3 rounded-lg">
             <p class="text-sm text-green-800">
-              <strong>Anleitung:</strong> 
-              <br>• Google: Kalender → Einstellungen → Kalender → Öffentliche URL
-              <br>• Outlook: Kalender → Freigeben → Veröffentlichen
-              <br>• Apple: Kalender → Freigeben → Öffentliche URL
+              <strong>Anleitung Apple Calendar:</strong>
+              <br>1. Öffne den Kalender auf deinem iPhone.
+              <br>2. Drücke auf Kalender unten in der Mitte.
+              <br>3. Klicke auf das i von dem Kalender, welchen du teilen möchtest.
+              <br>4. Aktiviere ganz unten "Öffentlicher Kalender".
+              <br>5. Kopiere den Link von diesem Kalender und füge ihn im Simy App ein.
+            </p>
+          </div>
+          
+          <!-- ICS Anleitung -->
+          <div v-if="newCalendar.provider === 'ics'" class="bg-gray-50 p-3 rounded-lg">
+            <p class="text-sm text-gray-800">
+              <strong>ICS-URL Format:</strong>
+              <br>Geben Sie eine öffentliche ICS-URL ein, die Ihren Kalender im iCalendar-Format (.ics) bereitstellt.
+              <br>Die URL muss öffentlich zugänglich sein.
             </p>
           </div>
         </div>
@@ -229,14 +217,27 @@ const loadExternalCalendars = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    // Get internal user ID
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (userError || !userData?.id) {
+      console.error('Error loading user data:', userError)
+      return
+    }
+
     const { data: calendars, error } = await supabase
       .from('external_calendars')
       .select('*')
-      .eq('staff_id', user.id)
+      .eq('staff_id', userData.id)
       .order('created_at', { ascending: false })
 
     if (error) throw error
     externalCalendars.value = calendars || []
+    console.log('✅ Loaded calendars:', calendars?.length || 0)
   } catch (err: any) {
     console.error('Error loading external calendars:', err)
     error.value = 'Fehler beim Laden der Kalender-Verbindungen'
@@ -314,7 +315,7 @@ const syncCalendar = async (calendarId: string) => {
     // Fallback: Wenn eine ICS-URL vorhanden ist, immer darüber synchronisieren
     if (calendar.ics_url) {
       // Sync ICS calendar
-      const response = await $fetch('/api/external-calendars/sync-ics', {
+      const response = await $fetch<{ success: boolean, imported_events?: number, message?: string, error?: string }>('/api/external-calendars/sync-ics', {
         method: 'POST',
         body: {
           calendar_id: calendarId,
@@ -380,6 +381,16 @@ const getProviderName = (provider: string) => {
 const formatLastSync = (lastSync: string | null) => {
   if (!lastSync) return 'Nie synchronisiert'
   return new Date(lastSync).toLocaleString('de-DE')
+}
+
+const getIcsPlaceholder = () => {
+  const placeholders = {
+    google: 'https://calendar.google.com/calendar/ical/...',
+    microsoft: 'https://outlook.office365.com/owa/calendar/...',
+    apple: 'webcal://p01-caldav.icloud.com/...',
+    ics: 'https://example.com/calendar.ics'
+  }
+  return placeholders[newCalendar.value.provider as keyof typeof placeholders] || 'https://...'
 }
 
 // Lifecycle

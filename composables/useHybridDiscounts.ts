@@ -457,7 +457,7 @@ export const useHybridDiscounts = () => {
       const { data, error: dbError } = await supabase
         .from('discount_codes')
         .select('*')
-        .eq('code', code)
+        .ilike('code', code) // Case-insensitive comparison
         .eq('is_active', true)
         .single()
 

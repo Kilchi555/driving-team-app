@@ -58,7 +58,7 @@
                 @click="showDropdown = true"
                 @input="showDropdown = true"
                 type="text"
-                placeholder="Bewertungspunkt suchen und hinzufügen..."
+                placeholder="Thema suchen und hinzufügen..."
                 class="search-input w-full pl-10 pr-2 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               >
               <div class="absolute left-3 top-3.5 text-gray-400">
@@ -581,6 +581,55 @@ const saveEvaluation = async () => {
     isSaving.value = false
   }
 }
+// NEU: Lade Bewertungen für den AKTUELLEN Termin
+const loadCurrentAppointmentEvaluations = async () => {
+  console.log('🔍 Loading evaluations for current appointment:', props.appointment?.id)
+  
+  if (!props.appointment?.id) {
+    console.log('❌ No appointment ID')
+    return false // Zeigt an, dass keine aktuellen Bewertungen geladen wurden
+  }
+
+  try {
+    const { data: currentNotes, error } = await supabase
+      .from('notes')
+      .select(`
+        evaluation_criteria_id,
+        criteria_rating,
+        criteria_note
+      `)
+      .eq('appointment_id', props.appointment.id)
+      .not('evaluation_criteria_id', 'is', null)
+
+    if (error) {
+      console.error('❌ Error loading current appointment evaluations:', error)
+      return false
+    }
+
+    console.log('✅ Found', currentNotes?.length || 0, 'evaluations for current appointment')
+
+    if (currentNotes && currentNotes.length > 0) {
+      // Fülle die Ratings und Notes mit den vorhandenen Bewertungen
+      currentNotes.forEach(note => {
+        const criteriaId = note.evaluation_criteria_id
+        criteriaRatings.value[criteriaId] = note.criteria_rating || 0
+        criteriaNotes.value[criteriaId] = note.criteria_note || ''
+        
+        // Füge zur selectedCriteriaOrder hinzu, wenn noch nicht vorhanden
+        if (!selectedCriteriaOrder.value.includes(criteriaId)) {
+          selectedCriteriaOrder.value.push(criteriaId)
+        }
+      })
+      return true // Zeigt an, dass Bewertungen geladen wurden
+    }
+
+    return false
+  } catch (err) {
+    console.error('❌ Error in loadCurrentAppointmentEvaluations:', err)
+    return false
+  }
+}
+
 const loadStudentEvaluationHistory = async () => {
   console.log('🔍 DEBUG: Loading student evaluation history')
   console.log('🔍 DEBUG: student ID:', props.appointment?.user_id)
@@ -738,9 +787,19 @@ watch(() => props.isOpen, (isOpen) => {
   if (isOpen) {
     console.log('🔄 EvaluationModal - loading data...')
     // Kleine Verzögerung um sicherzustellen dass alle Props gesetzt sind
-    nextTick(() => {
-      loadAllCriteria()
-      loadStudentEvaluationHistory()
+    nextTick(async () => {
+      await loadAllCriteria()
+      
+      // Versuche zuerst die Bewertungen für den aktuellen Termin zu laden
+      const hasCurrentEvaluations = await loadCurrentAppointmentEvaluations()
+      
+      // Wenn keine aktuellen Bewertungen vorhanden sind, lade die Historie
+      if (!hasCurrentEvaluations) {
+        console.log('📚 No current evaluations found, loading history...')
+        await loadStudentEvaluationHistory()
+      } else {
+        console.log('✅ Current evaluations loaded, skipping history')
+      }
     })
   } else {
     console.log('🔥 EvaluationModal - resetting form...')

@@ -1,8 +1,8 @@
 <template>
-  <div v-if="selectedStudent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+  <div v-if="selectedStudent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 pb-16">
+    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[calc(100vh-120px)] overflow-hidden flex flex-col">
       <!-- Header -->
-      <div class="bg-green-600 text-white p-4">
+      <div class="text-white p-4" :style="{ backgroundColor: secondaryColor }">
         <div class="flex items-center justify-between">
           <div class="flex-1">
             <h3 class="text-lg font-bold">{{ selectedStudent.first_name }} {{ selectedStudent.last_name }}</h3>
@@ -16,7 +16,7 @@
             ]">
               {{ selectedStudent.is_active ? 'Aktiv' : 'Inaktiv' }}
             </span>
-            <button @click="closeModal" class="text-white hover:text-green-200">
+            <button @click="closeModal" class="text-white hover:opacity-80 transition-opacity">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -293,8 +293,156 @@
           </div>
 
           <div v-else class="space-y-4">
-            <h4 class="text-lg font-semibold text-gray-900">Lektionen & Bewertungen</h4>
-            <p class="text-gray-600">{{ lessons.length }} Lektionen gefunden</p>
+            
+            <!-- Filter und Sortierung auf separater Zeile -->
+            <div 
+              class="flex items-center justify-between gap-4 py-3 px-4 rounded-lg"
+              :style="{ backgroundColor: primaryColor + '20' }"
+            >
+              <!-- Kategorie Filter -->
+              <div class="flex items-center gap-2">
+                <select
+                  v-model="selectedCategoryFilter"
+                  class="text-sm border border-gray-300 rounded px-3 py-1 text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-1"
+                  :style="{ 
+                    backgroundColor: primaryColor,
+                    '--tw-ring-color': primaryColor
+                  }"
+                >
+                  <option v-for="category in availableCategories" :key="category" :value="category">
+                    {{ category === 'alle' ? 'Alle' : category }}
+                  </option>
+                </select>
+              </div>
+              
+              <!-- Sortier-Toggle -->
+              <div class="flex items-center gap-3">
+                <span 
+                  :class="['text-sm font-medium transition-colors']"
+                  :style="{ color: sortMode === 'newest' ? primaryColor : '#6B7280' }"
+                >
+                  Neueste
+                </span>
+                
+                <!-- Schieberegler -->
+                <button
+                  @click="sortMode = sortMode === 'newest' ? 'worst' : 'newest'"
+                  :class="[
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2'
+                  ]"
+                  :style="{ 
+                    backgroundColor: sortMode === 'worst' ? primaryColor : '#D1D5DB',
+                    '--tw-ring-color': primaryColor
+                  }"
+                >
+                  <span
+                    :class="[
+                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                      sortMode === 'worst' ? 'translate-x-6' : 'translate-x-1'
+                    ]"
+                  />
+                </button>
+                
+                <span 
+                  :class="['text-sm font-medium transition-colors']"
+                  :style="{ color: sortMode === 'worst' ? primaryColor : '#6B7280' }"
+                >
+                  Schlechteste
+                </span>
+              </div>
+            </div>
+            
+            <!-- Lektionen Liste -->
+            <div class="space-y-3">
+              <div 
+                v-for="lesson in sortedLessons" 
+                :key="lesson.id"
+                class="rounded-lg p-4 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                :style="{ backgroundColor: primaryColor + '15' }"
+                @click="openEvaluationModal(lesson)"
+              >
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <h5 class="font-semibold text-gray-900">
+                      {{ lesson.title ? lesson.title.split(' - ')[0] : 'Fahrstunde' }}
+                    </h5>
+                    <p class="text-sm text-gray-600">
+                      {{ formatLocalDate(lesson.start_time) }}
+                      um {{ formatLocalTime(lesson.start_time) }}
+                    </p>
+                  </div>
+                  <span :class="[
+                    'px-2 py-1 text-xs font-medium rounded-full',
+                    lesson.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    lesson.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                    lesson.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                    lesson.status === 'pending_confirmation' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  ]">
+                    {{ lesson.status === 'completed' ? 'Abgeschlossen' :
+                       lesson.status === 'confirmed' ? 'Bestätigt' :
+                       lesson.status === 'scheduled' ? 'Geplant' :
+                       lesson.status === 'pending_confirmation' ? 'Ausstehend' :
+                       lesson.status }}
+                  </span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span class="text-gray-500">Kategorie:</span>
+                    <span class="ml-1 font-medium">{{ lesson.type || '-' }}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-500">Dauer:</span>
+                    <span class="ml-1 font-medium">{{ lesson.duration_minutes || 0 }} Min.</span>
+                  </div>
+                </div>
+                
+                <div v-if="lesson.description" class="mt-2 text-sm text-gray-600">
+                  {{ lesson.description }}
+                </div>
+                
+                <!-- Evaluationen -->
+                <div v-if="lesson.evaluations && lesson.evaluations.length > 0" class="mt-3 pt-3 border-t border-gray-300">
+                  <h6 class="text-xs font-semibold text-gray-700 mb-2">Bewertungen:</h6>
+                  <div class="space-y-2">
+                    <div 
+                      v-for="evaluation in lesson.evaluations" 
+                      :key="evaluation.id"
+                      class="rounded p-2 text-sm"
+                      :style="{ backgroundColor: primaryColor + '10' }"
+                    >
+                      <div class="flex justify-between items-start">
+                        <span class="font-medium text-gray-700">
+                          {{ evaluation.evaluation_criteria?.name || 'Bewertung' }}
+                        </span>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">
+                          {{ evaluation.criteria_rating }}/5
+                        </span>
+                      </div>
+                      <p v-if="evaluation.criteria_note" class="text-xs text-gray-600 mt-1">
+                        {{ evaluation.criteria_note }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Allgemeine Notes (ohne Evaluation) -->
+                <div v-if="lesson.notes && lesson.notes.filter((n: any) => !n.evaluation_criteria_id && n.note_text).length > 0" class="mt-3 pt-3 border-t border-gray-300">
+                  <h6 class="text-xs font-semibold text-gray-700 mb-2">Notizen:</h6>
+                  <div class="space-y-1">
+                    <div 
+                      v-for="note in lesson.notes.filter((n: any) => !n.evaluation_criteria_id && n.note_text)" 
+                      :key="note.id"
+                      class="rounded p-2 text-sm text-gray-700"
+                      :style="{ backgroundColor: primaryColor + '08' }"
+                    >
+                      {{ note.note_text }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -321,8 +469,95 @@
           </div>
 
           <div v-else class="space-y-4">
-            <h4 class="text-lg font-semibold text-gray-900">Zahlungshistorie</h4>
-            <p class="text-gray-600">{{ payments.length }} Zahlungen gefunden</p>
+            
+            <!-- Filter auf separater Zeile -->
+            <div 
+              class="flex items-center justify-center gap-3 py-3 rounded-lg"
+              :style="{ backgroundColor: primaryColor + '20' }"
+            >
+              <span 
+                :class="['text-sm font-medium transition-colors']"
+                :style="{ color: paymentsFilterMode === 'alle' ? primaryColor : '#6B7280' }"
+              >
+                Alle
+              </span>
+              
+              <!-- Schieberegler -->
+              <button
+                @click="paymentsFilterMode = paymentsFilterMode === 'alle' ? 'ausstehend' : 'alle'"
+                :class="[
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2'
+                ]"
+                :style="{ 
+                  backgroundColor: paymentsFilterMode === 'ausstehend' ? primaryColor : '#D1D5DB',
+                  '--tw-ring-color': primaryColor
+                }"
+              >
+                <span
+                  :class="[
+                    'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                    paymentsFilterMode === 'ausstehend' ? 'translate-x-6' : 'translate-x-1'
+                  ]"
+                />
+              </button>
+              
+              <span 
+                :class="['text-sm font-medium transition-colors']"
+                :style="{ color: paymentsFilterMode === 'ausstehend' ? primaryColor : '#6B7280' }"
+              >
+                Ausstehend
+              </span>
+            </div>
+            
+            <!-- Zahlungen Liste -->
+            <div class="space-y-3">
+              <div 
+                v-for="payment in filteredPayments" 
+                :key="payment.id"
+                :class="[
+                  'rounded-lg p-4 border border-gray-200 transition-shadow',
+                  payment.payment_status !== 'completed' 
+                    ? 'cursor-pointer hover:shadow-md hover:border-blue-400' 
+                    : 'opacity-75'
+                ]"
+                :style="{ backgroundColor: primaryColor + '15' }"
+                @click="markPaymentAsCashPaid(payment)"
+              >
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <h5 class="font-semibold text-gray-900">
+                      {{ (payment.total_amount_rappen / 100).toFixed(2) }} CHF
+                    </h5>
+                    <p class="text-sm text-gray-600">
+                      {{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}
+                      um {{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }}
+                    </p>
+                  </div>
+                  <span :class="[
+                    'px-2 py-1 text-xs font-medium rounded-full',
+                    payment.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
+                    payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    payment.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  ]">
+                    {{ payment.payment_status === 'completed' ? 'Bezahlt' :
+                       payment.payment_status === 'pending' ? 'Ausstehend' :
+                       payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
+                       payment.payment_status }}
+                  </span>
+                </div>
+                
+                <div class="text-sm">
+                  <span class="text-gray-500">Zahlungsmethode:</span>
+                  <span class="ml-1 font-medium">
+                    {{ payment.payment_method === 'cash' ? 'Bar' :
+                       payment.payment_method === 'invoice' ? 'Rechnung' :
+                       payment.payment_method === 'wallee' ? 'Online' :
+                       payment.payment_method }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -486,6 +721,32 @@
         </div>
       </div>
     </div>
+    
+    <!-- Evaluation Modal -->
+    <EvaluationModal
+      v-if="showEvaluationModal && selectedAppointmentForEvaluation"
+      :is-open="showEvaluationModal"
+      :appointment="selectedAppointmentForEvaluation"
+      :student-category="selectedAppointmentForEvaluation.type || selectedStudent?.category?.[0] || 'B'"
+      :current-user="{ id: selectedStudent?.id }"
+      @close="closeEvaluationModal"
+      @saved="onEvaluationSaved"
+    />
+    
+    <!-- Confirmation Dialog -->
+    <ConfirmationDialog
+      :is-visible="showConfirmDialog"
+      :title="confirmDialogData.title"
+      :message="confirmDialogData.message"
+      :details="confirmDialogData.details"
+      :icon="confirmDialogData.icon"
+      :type="confirmDialogData.type"
+      :confirm-text="confirmDialogData.confirmText"
+      :cancel-text="confirmDialogData.cancelText"
+      @confirm="handleConfirmPayment"
+      @cancel="handleCancelPayment"
+      @close="handleCancelPayment"
+    />
   </div>
 </template>
 
@@ -493,6 +754,9 @@
 import { ref, computed, toRefs, watch } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+import EvaluationModal from '~/components/EvaluationModal.vue'
+import ConfirmationDialog from '~/components/ConfirmationDialog.vue'
 
 interface Student {
   id: string
@@ -518,6 +782,7 @@ interface Student {
 
 interface Props {
   selectedStudent: Student | null
+  initialTab?: 'details' | 'progress' | 'payments' | 'documents'
 }
 
 interface Emits {
@@ -534,8 +799,11 @@ const { selectedStudent } = toRefs(props)
 // Supabase client
 const supabase = getSupabase()
 
+// Tenant Branding
+const { primaryColor, secondaryColor } = useTenantBranding()
+
 // Reactive state
-const activeTab = ref<'details' | 'progress' | 'payments' | 'documents'>('details')
+const activeTab = ref<'details' | 'progress' | 'payments' | 'documents'>(props.initialTab || 'details')
 
 // Document requirements now loaded dynamically from database
 
@@ -726,9 +994,136 @@ const lessons = ref<any[]>([])
 const progressData = ref<any[]>([])
 const payments = ref<any[]>([])
 const isLoadingLessons = ref(false)
+const sortMode = ref<'newest' | 'worst'>('newest') // Toggle zwischen neueste und schlechteste Bewertungen
+const selectedCategoryFilter = ref<string>('alle') // Filter nach Kategorie
 const isLoadingPayments = ref(false)
+const paymentsFilterMode = ref<'alle' | 'ausstehend'>('alle') // Filter für Zahlungen
 const lessonsError = ref<string | null>(null)
 const paymentsError = ref<string | null>(null)
+
+// Evaluation Modal State
+const showEvaluationModal = ref(false)
+const selectedAppointmentForEvaluation = ref<any>(null)
+
+// Confirmation Dialog State
+const showConfirmDialog = ref(false)
+const confirmDialogData = ref({
+  title: '',
+  message: '',
+  details: '',
+  icon: '',
+  type: 'warning' as 'success' | 'warning' | 'danger',
+  confirmText: 'Bestätigen',
+  cancelText: 'Abbrechen'
+})
+const pendingPaymentAction = ref<(() => Promise<void>) | null>(null)
+
+// Verfügbare Kategorien aus den Lektionen
+const availableCategories = computed(() => {
+  const categories = new Set(lessons.value.map(lesson => lesson.type).filter(Boolean))
+  return ['alle', ...Array.from(categories).sort()]
+})
+
+// Gefilterte und sortierte Lektionen
+const sortedLessons = computed(() => {
+  // 1. Nach Kategorie filtern
+  let filtered = lessons.value
+  if (selectedCategoryFilter.value !== 'alle') {
+    filtered = lessons.value.filter(lesson => lesson.type === selectedCategoryFilter.value)
+  }
+  
+  // 2. Sortieren
+  if (sortMode.value === 'newest') {
+    // Standard: Neueste zuerst (bereits sortiert beim Laden)
+    return filtered
+  } else {
+    // Schlechteste Bewertungen zuerst
+    return [...filtered].sort((a, b) => {
+      // Berechne Durchschnittsbewertung für jede Lektion
+      const avgA = a.evaluations.length > 0 
+        ? a.evaluations.reduce((sum: number, e: any) => sum + e.criteria_rating, 0) / a.evaluations.length 
+        : 999 // Keine Bewertung = ans Ende
+      
+      const avgB = b.evaluations.length > 0 
+        ? b.evaluations.reduce((sum: number, e: any) => sum + e.criteria_rating, 0) / b.evaluations.length 
+        : 999
+      
+      return avgA - avgB // Niedrigste Bewertung zuerst
+    })
+  }
+})
+
+// Gefilterte Zahlungen
+const filteredPayments = computed(() => {
+  if (paymentsFilterMode.value === 'ausstehend') {
+    return payments.value.filter(payment => payment.payment_status === 'pending')
+  }
+  return payments.value
+})
+
+// Helper functions für lokale Zeit-Formatierung
+const formatLocalDate = (dateString: string) => {
+  if (!dateString) return '-'
+  
+  // Parse ohne Timezone-Konvertierung - unterstützt beide Formate
+  // Format 1: "2025-10-10 11:30:00+00"
+  // Format 2: "2025-10-10T11:30:00+00:00"
+  const dateStr = dateString.replace('+00:00', '').replace('+00', '').replace('Z', '').trim()
+  
+  // Split by 'T' or ' ' to get the date part
+  const datePart = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0]
+  
+  if (!datePart) {
+    console.warn('Invalid date format:', dateString)
+    return '-'
+  }
+  
+  const dateComponents = datePart.split('-')
+  if (dateComponents.length < 3) {
+    console.warn('Invalid date components:', datePart)
+    return '-'
+  }
+  
+  const [year, month, day] = dateComponents
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+  
+  return date.toLocaleDateString('de-CH', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
+
+const formatLocalTime = (dateString: string) => {
+  if (!dateString) return '00:00'
+  
+  // Parse ohne Timezone-Konvertierung - unterstützt beide Formate
+  // Format 1: "2025-10-10 11:30:00+00"
+  // Format 2: "2025-10-10T11:30:00+00:00"
+  const dateStr = dateString.replace('+00:00', '').replace('+00', '').replace('Z', '').trim()
+  
+  // Split by 'T' or ' '
+  const parts = dateStr.includes('T') ? dateStr.split('T') : dateStr.split(' ')
+  
+  if (parts.length < 2) {
+    console.warn('Invalid time format:', dateString)
+    return '00:00'
+  }
+  
+  const timePart = parts[1]
+  const timeComponents = timePart.split(':')
+  
+  if (timeComponents.length < 2) {
+    console.warn('Invalid time components:', timePart)
+    return '00:00'
+  }
+  
+  const hour = timeComponents[0]
+  const minute = timeComponents[1]
+  
+  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`
+}
 
 // Payment functionality
 const selectedPayments = ref<string[]>([])
@@ -777,6 +1172,105 @@ const currentUploadDescription = computed(() => {
 // Functions
 const closeModal = () => {
   emit('close')
+}
+
+// Evaluation Modal Functions
+const openEvaluationModal = (lesson: any) => {
+  console.log('📝 Opening evaluation modal for lesson:', lesson.id)
+  selectedAppointmentForEvaluation.value = lesson
+  showEvaluationModal.value = true
+}
+
+const closeEvaluationModal = () => {
+  console.log('📝 Closing evaluation modal')
+  showEvaluationModal.value = false
+  selectedAppointmentForEvaluation.value = null
+}
+
+const onEvaluationSaved = async () => {
+  console.log('✅ Evaluation saved, reloading lessons')
+  // Lade Lektionen neu um die aktualisierten Bewertungen zu sehen
+  await loadLessons()
+  closeEvaluationModal()
+}
+
+// Confirmation Dialog Handlers
+const handleConfirmPayment = async () => {
+  if (pendingPaymentAction.value) {
+    await pendingPaymentAction.value()
+  }
+  showConfirmDialog.value = false
+  pendingPaymentAction.value = null
+}
+
+const handleCancelPayment = () => {
+  showConfirmDialog.value = false
+  pendingPaymentAction.value = null
+}
+
+// Payment Functions
+const markPaymentAsCashPaid = async (payment: any) => {
+  try {
+    // Wenn bereits bezahlt, nichts tun
+    if (payment.payment_status === 'completed') {
+      console.log('💰 Payment already completed')
+      return
+    }
+    
+    const amount = (payment.total_amount_rappen / 100).toFixed(2)
+    const paymentDate = new Date(payment.created_at).toLocaleDateString('de-CH', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    })
+    
+    // Zeige Bestätigungsdialog
+    confirmDialogData.value = {
+      title: 'Zahlung bestätigen',
+      message: 'Möchten Sie diese Zahlung als bar bezahlt markieren?',
+      details: `
+        <strong>Betrag:</strong> ${amount} CHF<br>
+        <strong>Datum:</strong> ${paymentDate}<br>
+        <strong>Status:</strong> ${payment.payment_status === 'pending' ? 'Ausstehend' : payment.payment_status}
+      `,
+      icon: '💰',
+      type: 'success',
+      confirmText: 'Als Bar bezahlt markieren',
+      cancelText: 'Abbrechen'
+    }
+    
+    pendingPaymentAction.value = async () => {
+      console.log('💰 Marking payment as cash paid:', payment.id)
+      
+      const supabase = getSupabase()
+      
+      const { error } = await supabase
+        .from('payments')
+        .update({
+          payment_method: 'cash',
+          payment_status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payment.id)
+      
+      if (error) {
+        console.error('❌ Error updating payment:', error)
+        alert('Fehler beim Aktualisieren der Zahlung: ' + error.message)
+        return
+      }
+      
+      console.log('✅ Payment marked as cash paid')
+      
+      // Lade Zahlungen neu
+      await loadPayments()
+    }
+    
+    showConfirmDialog.value = true
+    
+  } catch (err: any) {
+    console.error('❌ Error in markPaymentAsCashPaid:', err)
+    alert('Fehler: ' + err.message)
+  }
 }
 
 const startCategoryUpload = (requirement: any, side: 'front' | 'back') => {
@@ -855,13 +1349,106 @@ const loadLessons = async () => {
   
   try {
     console.log('📚 Loading lessons for student:', props.selectedStudent.id)
-    // Simplified version - just load basic data
-    lessons.value = []
-    progressData.value = []
     
-  } catch (error) {
+    const supabase = getSupabase()
+    
+    // Lade Termine für diesen Schüler - RLS filtert automatisch nach tenant_id
+    const { data: appointmentsData, error: appointmentsError } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        user_id,
+        start_time,
+        end_time,
+        type,
+        status,
+        title,
+        description,
+        duration_minutes
+      `)
+      .eq('user_id', props.selectedStudent.id)
+      .order('start_time', { ascending: false })
+    
+    if (appointmentsError) {
+      console.error('❌ Error loading appointments:', appointmentsError)
+      throw appointmentsError
+    }
+    
+    // Lade Evaluationen und Notes für die Termine
+    const appointmentIds = (appointmentsData || []).map(apt => apt.id)
+    let evaluationsMap: Record<string, any[]> = {}
+    
+    if (appointmentIds.length > 0) {
+      console.log('🔍 Loading evaluations for', appointmentIds.length, 'appointments')
+      
+      // Lade Notes mit Evaluationen - vereinfachte Query ohne Join
+      const { data: notesData, error: notesError } = await supabase
+        .from('notes')
+        .select('*')
+        .in('appointment_id', appointmentIds)
+      
+      if (notesError) {
+        console.error('❌ Error loading notes:', notesError)
+      } else if (notesData) {
+        console.log('📝 Loaded', notesData.length, 'notes')
+        
+        // Hole Criteria-IDs für weitere Details
+        const criteriaIds = [...new Set(notesData
+          .filter(n => n.evaluation_criteria_id)
+          .map(n => n.evaluation_criteria_id))]
+        
+        let criteriaMap: Record<string, any> = {}
+        
+        if (criteriaIds.length > 0) {
+          const { data: criteriaData } = await supabase
+            .from('evaluation_criteria')
+            .select('id, name')
+            .in('id', criteriaIds)
+          
+          if (criteriaData) {
+            criteriaData.forEach(c => {
+              criteriaMap[c.id] = c
+            })
+          }
+        }
+        
+        // Gruppiere Notes nach appointment_id und füge Criteria-Details hinzu
+        notesData.forEach(note => {
+          if (!evaluationsMap[note.appointment_id]) {
+            evaluationsMap[note.appointment_id] = []
+          }
+          evaluationsMap[note.appointment_id].push({
+            ...note,
+            evaluation_criteria: note.evaluation_criteria_id ? criteriaMap[note.evaluation_criteria_id] : null
+          })
+        })
+      }
+    }
+    
+    // Füge Evaluationen zu Appointments hinzu
+    const lessonsWithEvaluations = (appointmentsData || []).map(apt => ({
+      ...apt,
+      notes: evaluationsMap[apt.id] || [],
+      evaluations: (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating)
+    }))
+    
+    lessons.value = lessonsWithEvaluations
+    
+    // Erstelle Progress-Daten aus Appointments
+    progressData.value = lessonsWithEvaluations.map(apt => ({
+      date: new Date(apt.start_time).toLocaleDateString('de-CH'),
+      type: apt.type,
+      status: apt.status,
+      title: apt.title,
+      duration: apt.duration_minutes,
+      evaluationsCount: apt.evaluations.length
+    }))
+    
+    console.log('✅ Loaded', lessons.value.length, 'lessons with evaluations')
+    
+  } catch (error: any) {
     console.error('Error loading lessons:', error)
-    lessonsError.value = 'Fehler beim Laden der Lektionen'
+    lessonsError.value = error.message || 'Fehler beim Laden der Lektionen'
   } finally {
     isLoadingLessons.value = false
   }
@@ -875,12 +1462,35 @@ const loadPayments = async () => {
   
   try {
     console.log('💰 Loading payments for student:', props.selectedStudent.id)
-    // Simplified version - just load basic data
-    payments.value = []
     
-  } catch (error) {
+    const supabase = getSupabase()
+    
+    // Lade Zahlungen über appointments - RLS filtert automatisch nach tenant_id
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from('payments')
+      .select(`
+        id,
+        created_at,
+        payment_method,
+        payment_status,
+        total_amount_rappen,
+        appointment_id,
+        appointments!inner(user_id, start_time, title)
+      `)
+      .eq('appointments.user_id', props.selectedStudent.id)
+      .order('created_at', { ascending: false })
+    
+    if (paymentsError) {
+      console.error('❌ Error loading payments:', paymentsError)
+      throw paymentsError
+    }
+    
+    payments.value = paymentsData || []
+    console.log('✅ Loaded', payments.value.length, 'payments')
+    
+  } catch (error: any) {
     console.error('Error loading payments:', error)
-    paymentsError.value = 'Fehler beim Laden der Zahlungen'
+    paymentsError.value = error.message || 'Fehler beim Laden der Zahlungen'
   } finally {
     isLoadingPayments.value = false
   }

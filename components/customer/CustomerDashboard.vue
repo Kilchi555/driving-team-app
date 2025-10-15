@@ -5,7 +5,7 @@
       <!-- Header -->
       <div class="bg-white shadow-lg border-b">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex justify-between items-center py-6">
+          <div class="flex justify-between items-center py-4">
             <div class="flex items-center space-x-4">
               <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
                 <span class="text-white font-bold text-lg">
@@ -13,7 +13,7 @@
                 </span>
               </div>
               <div>
-                <h1 class="text-2xl font-bold text-gray-900">
+                <h1 class="text-xl font-bold text-gray-900">
                   Hallo, {{ getFirstName() }}!
                 </h1>
               </div>
@@ -75,63 +75,11 @@
     </div>
 
     <!-- Main Content -->
-    <div v-if="showContent" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div v-if="showContent" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-6 py-6">
       
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         
-        <!-- Termin-Bestätigungen - NEU -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border" 
-             :class="pendingConfirmations.length > 0 ? 'border-orange-100' : 'border-green-100'">
-          <div class="p-6 h-full flex flex-col">
-            <div class="flex items-center mb-3">
-              <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
-                   :class="pendingConfirmations.length > 0 ? 'bg-orange-100' : 'bg-green-100'">
-                <svg v-if="pendingConfirmations.length > 0" class="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <svg v-else class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 class="text-sm font-medium text-gray-500">
-                {{ pendingConfirmations.length > 0 ? 'Termine bestätigen' : 'Alle Termine bestätigt' }}
-              </h3>
-            </div>
-            
-            <div class="flex-1">
-              <div v-if="pendingConfirmations.length > 0">
-                <p class="text-3xl font-bold text-orange-600">{{ pendingConfirmations.length }}</p>
-                <p class="text-xs text-orange-500 mt-1">
-                  Warten auf deine Bestätigung
-                </p>
-              </div>
-              <div v-else>
-                <p class="text-3xl font-bold text-green-600">✓ Bestätigt</p>
-                <p class="text-xs text-green-500 mt-1">
-                  Alle Termine bestätigt
-                </p>
-              </div>
-            </div>
-            
-            <div class="mt-4">
-              <button
-                @click="navigateToConfirmations"
-                :disabled="isLoading"
-                :class="[
-                  'w-full px-3 py-2 rounded-lg transition-colors text-sm font-medium',
-                  pendingConfirmations.length > 0 
-                    ? 'bg-orange-500 text-white hover:bg-orange-600' 
-                    : 'bg-green-500 text-white hover:bg-green-600',
-                  isLoading ? 'opacity-50 cursor-not-allowed' : ''
-                ]"
-              >
-                {{ pendingConfirmations.length > 0 ? 'Termine bestätigen' : 'Bestätigungen ansehen' }}
-              </button>
-            </div>
-          </div>
-        </div>
-
         <!-- Zahlungsübersicht -->
         <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border" 
              :class="unpaidAppointments.length > 0 ? 'border-yellow-100' : 'border-green-100'">
@@ -242,6 +190,60 @@
                 class="w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
               >
                 Bewertungen ansehen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Booking Sections -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        
+        <!-- Fahrstunden buchen -->
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-blue-100">
+          <div class="p-8 h-full flex flex-col">
+            <div class="flex items-center mb-6">
+              <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
+                <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Fahrstunden buchen</h2>
+              </div>
+            </div>
+            
+            <div class="flex space-x-3">
+              <button
+                @click="navigateToLessonBooking"
+                class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                🚗 Fahrstunde buchen
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kurs buchen -->
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-green-100">
+          <div class="p-8 h-full flex flex-col">
+            <div class="flex items-center mb-6">
+              <div class="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mr-4">
+                <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Kurse buchen</h2>
+              </div>
+            </div>
+            
+            <div class="flex space-x-3">
+              <button
+                @click="navigateToCourseBooking"
+                class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                📚 Kurse ansehen
               </button>
             </div>
           </div>
@@ -359,10 +361,6 @@ const completedAppointments = computed(() => {
   ).sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
 })
 
-const pendingConfirmations = computed(() => {
-  // Termine die auf Bestätigung warten
-  return appointments.value?.filter(apt => apt.status === 'pending_confirmation') || []
-})
 
 const unpaidAppointments = computed(() => {
   // Verwende pendingPayments anstatt appointments für offene Rechnungen
@@ -480,10 +478,6 @@ const getRatingColorPreview = (rating: number) => {
 }
 
 // Navigation methods
-const navigateToConfirmations = async () => {
-  // Navigiere zur Bestätigungsseite
-  await navigateTo('/customer/confirmations')
-}
 
 const navigateToPayments = async () => {
   // Wenn offene Zahlungen vorhanden sind, direkt zum Payment-Prozess
@@ -494,6 +488,21 @@ const navigateToPayments = async () => {
     // Sonst zum Zahlungsverlauf
     await navigateTo('/customer/payments')
   }
+}
+
+const navigateToLessonBooking = async () => {
+  // Navigiere zur Fahrstunden-Buchung (falls vorhanden) oder zur Hauptseite
+  await navigateTo('/')
+}
+
+const navigateToCourseBooking = async () => {
+  // Navigiere zur Kurs-Übersicht (alle Kategorien)
+  await navigateTo('/courses')
+}
+
+const navigateToMyCourses = async () => {
+  // Navigiere zu den eigenen Kursen (falls vorhanden) oder zur Kurs-Übersicht
+  await navigateTo('/courses')
 }
 
 const retryLoad = async () => {

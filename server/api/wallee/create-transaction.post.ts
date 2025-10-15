@@ -49,22 +49,52 @@ export default defineEventHandler(async (event) => {
     // ✅ TRANSACTION SERVICE mit SDK
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
     
+    // ✅ Debug: Log amount to check if it's in CHF or Rappen
+    console.log('💰 Amount received:', { 
+      amount: amount,
+      type: typeof amount,
+      inCHF: (amount / 100).toFixed(2) + ' CHF (if in Rappen)',
+      inRappen: (amount * 100) + ' Rappen (if in CHF)'
+    })
+    
+    // ✅ Generate short uniqueId (max 200 chars, Wallee requirement)
+    // Use timestamp + short hash instead of full orderId
+    const shortUniqueId = `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    console.log('🔑 UniqueId generated:', { 
+      orderId: orderId,
+      orderIdLength: orderId.length,
+      shortUniqueId: shortUniqueId,
+      shortUniqueIdLength: shortUniqueId.length
+    })
+    
     // ✅ LINE ITEM für echte Appointments
     const lineItem: Wallee.model.LineItemCreate = new Wallee.model.LineItemCreate()
     lineItem.name = description || 'Driving Team Bestellung'
-    lineItem.uniqueId = `appointment-${orderId}-${Date.now()}`
+    lineItem.uniqueId = shortUniqueId // Use short ID (under 200 chars)
     lineItem.sku = 'driving-lesson'
     lineItem.quantity = 1
-    lineItem.amountIncludingTax = amount
+    lineItem.amountIncludingTax = amount // Keep as is for now to see actual value
     lineItem.type = Wallee.model.LineItemType.PRODUCT
+    
+    // ✅ Generate short IDs for customer and merchant reference (max 100 chars)
+    const timestamp = Date.now()
+    const shortCustomerId = `cust-${timestamp}-${Math.random().toString(36).substr(2, 9)}`
+    const shortMerchantRef = `order-${timestamp}-${Math.random().toString(36).substr(2, 9)}`
+    
+    console.log('🔑 Transaction IDs generated:', { 
+      customerId: shortCustomerId,
+      customerIdLength: shortCustomerId.length,
+      merchantReference: shortMerchantRef,
+      merchantReferenceLength: shortMerchantRef.length
+    })
     
     // ✅ TRANSACTION (exakt wie Dokumentation)
     const transaction: Wallee.model.TransactionCreate = new Wallee.model.TransactionCreate()
     transaction.lineItems = [lineItem]
     transaction.autoConfirmationEnabled = true
     transaction.currency = currency
-    transaction.customerId = `customer-${orderId}`
-    transaction.merchantReference = `appointment-${orderId}`
+    transaction.customerId = shortCustomerId // Use short ID (under 100 chars)
+    transaction.merchantReference = shortMerchantRef // Use short ID (under 100 chars)
     transaction.language = 'de-CH'
     transaction.customerEmailAddress = customerEmail
     
@@ -92,7 +122,20 @@ export default defineEventHandler(async (event) => {
     console.log('📤 SDK Transaction Data:', JSON.stringify(transaction, null, 2))
     
     // ✅ SDK TRANSACTION CREATE
-    const response = await transactionService.create(spaceId, transaction)
+    let response
+    try {
+      response = await transactionService.create(spaceId, transaction)
+    } catch (createError: any) {
+      console.error('❌ Transaction Service create() failed:', {
+        error: createError,
+        errorType: typeof createError,
+        errorKeys: createError ? Object.keys(createError) : [],
+        errorString: String(createError),
+        errorJSON: JSON.stringify(createError, Object.getOwnPropertyNames(createError), 2)
+      })
+      throw createError
+    }
+    
     const transactionCreate: Wallee.model.Transaction = response.body
     
     console.log('✅ SDK Transaction SUCCESS:', {
@@ -124,12 +167,22 @@ export default defineEventHandler(async (event) => {
     console.error('❌ SDK Transaction FAILED:', {
       message: error.message,
       statusCode: error.statusCode,
-      data: error.data
+      errorType: error.errorType,
+      body: error.body,
+      // Don't try to stringify response (circular structure)
     })
+    
+    // Extract more detailed error message if available
+    let detailedMessage = 'SDK Transaction creation failed'
+    if (error.body?.message) {
+      detailedMessage = error.body.message
+    } else if (error.message) {
+      detailedMessage = error.message
+    }
     
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: 'SDK Transaction creation failed'
+      statusMessage: detailedMessage
     })
   }
 })

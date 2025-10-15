@@ -67,6 +67,7 @@ export interface Discount {
   valid_from: string
   valid_until?: string
   usage_limit?: number
+  max_per_user?: number
   usage_count: number
   is_active: boolean
   applies_to: AppliesTo
@@ -132,8 +133,11 @@ export interface CreateDiscountRequest {
   valid_from?: string
   valid_until?: string
   usage_limit?: number
+  max_per_user?: number
   applies_to?: AppliesTo
   category_filter?: string
+  is_active?: boolean
+  description?: string
 }
 
 // Enums

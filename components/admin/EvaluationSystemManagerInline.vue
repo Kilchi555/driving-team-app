@@ -29,13 +29,13 @@
         <div class="mb-4">
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-2"> Kategorie {{ drivingCat.code }}</h3>
-              <p class="text-sm text-gray-600">Bewertungskriterien für {{ drivingCat.name }}</p>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ drivingCat.name }}</h3>
+              <p class="text-sm text-gray-600">{{ drivingCat.description || `Bewertungskriterien für ${drivingCat.name}` }}</p>
             </div>
             <div class="flex space-x-2">
-              <!-- Load Standards Button (only show if no tenant-specific categories exist) -->
+              <!-- Load Standards Button (only show if no tenant-specific categories exist and for driving schools) -->
               <button
-                v-if="filteredEvaluationCategories.length === 0 && evaluationCategories.length === 0"
+                v-if="filteredEvaluationCategories.length === 0 && evaluationCategories.length === 0 && tenantBusinessType === 'driving_school'"
                 @click="loadStandardEvaluationCategories"
                 :disabled="isLoadingStandards"
                 class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -52,7 +52,7 @@
                 @click="showAddCategoryModal = true"
                 class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                + Bewertungskategorie
+                + {{ tenantBusinessType === 'driving_school' ? 'Bewertungskategorie' : 'Bewertungsbereich' }}
               </button>
               <button
                 @click="showAddCriteriaModal = true"
@@ -747,6 +747,7 @@ const isLoadingStandards = ref(false)
 const editingCategory = ref<EvaluationCategory | null>(null)
 const editingCriteria = ref<Criteria | null>(null)
 const editingScale = ref<Scale | null>(null)
+const tenantBusinessType = ref<string>('')
 
 // Inline criteria form
 const inlineCriteriaForm = ref({
@@ -782,10 +783,10 @@ const tabs = computed(() => {
     { id: 'scale', name: 'Bewertungsskala' }
   ]
   
-  // Dynamische Tabs für jede Fahrkategorie
+  // Dynamische Tabs für jede Fahrkategorie (oder allgemeine Kategorie für non-driving schools)
   const drivingCategoryTabs = drivingCategories.value.map(dc => ({
     id: `category-${dc.code}`,
-    name: dc.code,
+    name: dc.name || dc.code, // Use name if available, fallback to code
     drivingCategory: dc.code
   }))
   
@@ -877,16 +878,37 @@ const loadData = async () => {
       console.log('📊 Loaded evaluation categories:', evalCatData?.length || 0, evalCatData)
     }
 
-    console.log('🔍 Loading driving categories for tenant:', userProfile.tenant_id)
+    console.log('🔍 Getting tenant business_type for evaluation system...')
 
-    // Load driving categories (filtered by tenant)
-    const { data: drivingCatData } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('is_active', true)
-      .eq('tenant_id', userProfile.tenant_id)
-      .order('code')
-    drivingCategories.value = drivingCatData || []
+    // Get tenant business_type first
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', userProfile.tenant_id)
+      .single()
+
+    if (tenantError) throw tenantError
+
+    console.log('🔍 Tenant business_type:', tenantData?.business_type)
+    tenantBusinessType.value = tenantData?.business_type || ''
+
+    // For driving_school: Load driving categories (filtered by tenant)
+    if (tenantData?.business_type === 'driving_school') {
+      console.log('🔍 Loading driving categories for driving school tenant:', userProfile.tenant_id)
+      const { data: drivingCatData } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .eq('tenant_id', userProfile.tenant_id)
+        .order('code')
+      drivingCategories.value = drivingCatData || []
+    } else {
+      console.log('🔍 Creating generic categories for non-driving school tenant:', tenantData?.business_type)
+      // For other business types: Create generic categories
+      drivingCategories.value = [
+        { id: 1, code: 'ALL', name: 'Allgemein', description: 'Allgemeine Bewertungskriterien', is_active: true, tenant_id: userProfile.tenant_id }
+      ]
+    }
 
     // Load criteria with driving categories (filtered by tenant through categories)
     const { data: critData } = await supabase
