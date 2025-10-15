@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
     const transactionId = `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
     // Mock Payment Page URL
-    const host = getHeader(event, 'host') || 'localhost:3000'
+    const host = getHeader(event, 'host') || 'www.simy.ch'
     const protocol = 'http' // Development
     const paymentUrl = `${protocol}://${host}/mock-payment-page?txn=${transactionId}&amount=${amount}&email=${customerEmail}`
 

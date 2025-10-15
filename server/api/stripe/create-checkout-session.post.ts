@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
 
   const stripe = new Stripe(stripeSecret, { apiVersion: '2024-06-20' })
 
-  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',

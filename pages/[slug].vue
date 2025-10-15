@@ -187,6 +187,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter, definePageMeta, useHead } from '#imports'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useAuthStore } from '~/stores/auth'
+import { useUIStore } from '~/stores/ui'
+import { getSupabase } from '~/utils/supabase'
 
 // Reserved routes that should not be caught by the slug route
 const reservedRoutes = [
@@ -203,7 +208,7 @@ const reservedRoutes = [
 // Meta
 definePageMeta({
   layout: false,
-  validate: async (route) => {
+  validate: async (route: any) => {
     const slug = route.params.slug as string
     
     // If it's a reserved route, let Nuxt's normal routing handle it
@@ -233,8 +238,8 @@ const { showError, showSuccess } = useUIStore()
 const supabase = getSupabase()
 
 // Computed
-const isCheckingSession = computed(() => loading.value)
-const isAuthenticated = computed(() => isLoggedIn.value)
+const isCheckingSession = computed<boolean>(() => Boolean((loading as any).value ?? loading))
+const isAuthenticated = computed<boolean>(() => Boolean((isLoggedIn as any).value ?? isLoggedIn))
 
 // State
 const isLoading = ref(false)
@@ -300,7 +305,7 @@ const handleLogin = async () => {
     if (redirectUrl) {
       console.log('🔄 Redirecting to:', redirectUrl)
       // Remove base URL if present to make it relative
-      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
       let relativeUrl = decodeURIComponent(redirectUrl)
       
       // If it's an absolute URL, extract the path

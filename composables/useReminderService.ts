@@ -346,7 +346,7 @@ export const useReminderService = () => {
       const location = appointmentData.locations?.name || 'Nicht angegeben'
       const price = ((payment.total_amount_rappen || 0) / 100).toFixed(2)
       // Create login URL with redirect to dashboard (shows all open payments)
-      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
       const dashboardUrl = encodeURIComponent(`${baseUrl}/customer-dashboard`)
       // Use dynamically loaded tenant slug (with fallback)
       const finalTenantSlug = tenantSlug || 'driving-team'
