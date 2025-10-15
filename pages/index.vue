@@ -128,6 +128,8 @@
           <a href="tel:+41797157027">079 715 70 27</a>
           <span class="dot">•</span>
           <a href="mailto:info@simy.ch">info@simy.ch</a>
+          <span class="dot">•</span>
+          <a href="/login">Login</a>
         </div>
       </div>
       <!-- Footer decorative icons -->
