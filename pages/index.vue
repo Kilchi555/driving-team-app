@@ -173,25 +173,23 @@ useHead({
 </script>
 
 <style scoped>
-:root { --blue:#2563eb; --indigo:#4f46e5; --cyan:#06b6d4; --emerald:#10b981; --bg:#0b1020; --text:#0f172a; --muted:#475569; }
 * { box-sizing:border-box }
-body { margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--text); }
 .container { max-width:1120px; margin:0 auto; padding:0 16px; }
 .hero { padding:96px 0; background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%); position:relative; overflow:hidden }
-.title { font-size:40px; line-height:1.1; font-weight:800; letter-spacing:-0.02em; }
-.lead { margin-top:12px; font-size:18px; color:var(--muted); }
+.title { font-size:40px; line-height:1.1; font-weight:800; letter-spacing:-0.02em; color:#0f172a; }
+.lead { margin-top:12px; font-size:18px; color:#475569; }
 .cta { margin-top:24px; display:flex; gap:12px; flex-wrap:wrap }
 .btn { display:inline-flex; align-items:center; justify-content:center; padding:12px 20px; border-radius:10px; font-weight:600; text-decoration:none }
-.btn-primary { background:var(--blue); color:#fff }
-.btn-secondary { border:1px solid #e2e8f0; color:var(--blue); background:#fff }
+.btn-primary { background:#2563eb; color:#fff }
+.btn-secondary { border:1px solid #e2e8f0; color:#2563eb; background:#fff }
 .pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:#eef2ff; color:#3730a3; font-weight:600; font-size:12px }
 .hero-icons { position:absolute; inset:0; pointer-events:none }
 .icon { position:absolute; opacity:.18; filter:blur(.2px) }
 .icon svg { width:48px; height:48px }
-.i1{ top:10%; left:6%; color:var(--blue); animation:floatA 16s ease-in-out infinite }
-.i2{ top:22%; right:8%; color:var(--indigo); animation:floatB 15s ease-in-out infinite }
-.i3{ bottom:18%; left:12%; color:var(--emerald); animation:floatC 18s ease-in-out infinite }
-.i4{ bottom:10%; right:10%; color:var(--cyan); animation:floatB 14.5s ease-in-out infinite reverse }
+.i1{ top:10%; left:6%; color:#2563eb; animation:floatA 16s ease-in-out infinite }
+.i2{ top:22%; right:8%; color:#4f46e5; animation:floatB 15s ease-in-out infinite }
+.i3{ bottom:18%; left:12%; color:#10b981; animation:floatC 18s ease-in-out infinite }
+.i4{ bottom:10%; right:10%; color:#06b6d4; animation:floatB 14.5s ease-in-out infinite reverse }
 .i5{ top:46%; left:44%; color:#f59e0b; animation:floatA 19s ease-in-out infinite alternate }
 @keyframes floatA {
   0%   { transform:translate(0,0) rotate(0deg) }
@@ -224,12 +222,12 @@ body { margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,san
 .card { margin-bottom:60px; background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; transition:transform .25s ease, box-shadow .25s ease; display:flex; flex-direction:column; gap:14px }
 .card:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(15,23,42,0.08) }
 .card h3 { margin:0 0 6px 0; font-size:18px }
-.card p { margin:2px 0 0 0; color:var(--muted) }
+.card p { margin:2px 0 0 0; color:#475569 }
 .icon-inline { width:26px; height:26px; margin-right:10px; vertical-align:-5px; color:inherit }
 .card .mini { margin-top:12px; display:flex; gap:10px; flex-wrap:wrap }
 .chip { padding:4px 8px; border-radius:999px; background:#f1f5f9; color:#0f172a; font-size:12px; font-weight:600 }
 .pulse { position:relative; display:inline-flex; align-items:center; gap:6px }
-.pulse::before { content:""; width:8px; height:8px; border-radius:999px; background:var(--emerald); box-shadow:0 0 0 0 rgba(16,185,129,0.6); animation:pulse 2s infinite }
+.pulse::before { content:""; width:8px; height:8px; border-radius:999px; background:#10b981; box-shadow:0 0 0 0 rgba(16,185,129,0.6); animation:pulse 2s infinite }
 @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(16,185,129,0.6)} 70%{box-shadow:0 0 0 8px rgba(16,185,129,0)} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0)} }
 /* chip theme per card */
 .c1 .chip { background:#e0e7ff; color:#1d4ed8 }
