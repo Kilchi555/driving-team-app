@@ -71,6 +71,7 @@ import LoadingLogo from '~/components/LoadingLogo.vue'
 
 // Page metadata
 definePageMeta({
+  middleware: 'admin',
   layout: 'admin'
 })
 

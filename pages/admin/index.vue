@@ -551,6 +551,7 @@ import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
+  middleware: 'admin',
   layout: 'admin'
 })
 

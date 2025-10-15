@@ -377,8 +377,8 @@ import StudentCreditManager from '~/components/StudentCreditManager.vue'
 import type { StudentCredit, CreditTransactionWithDetails } from '~/types/studentCredits'
 
 definePageMeta({
+  middleware: 'admin',
   layout: 'admin'
-  // Temporär ohne Middleware für Debugging
 })
 
 // Composables

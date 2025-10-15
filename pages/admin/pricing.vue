@@ -4,7 +4,7 @@
 <script setup>
 import AdminPricingDashboard from '~/components/admin/AdminPricingDashboard.vue'
 definePageMeta({
-  // middleware: 'auth',
+  middleware: 'admin',
   layout: 'admin'
 })
 </script>

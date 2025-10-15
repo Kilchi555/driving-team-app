@@ -1173,8 +1173,8 @@ const PaymentIcon = markRaw({
 
 // Layout
 definePageMeta({
+  middleware: 'admin',
   layout: 'admin'
-  // Temporär ohne Middleware für Debugging
 })
 
 // Composables

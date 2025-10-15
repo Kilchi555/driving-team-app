@@ -80,8 +80,8 @@ import { useAuthStore } from '~/stores/auth'
 
 // Layout
 definePageMeta({
+  middleware: 'admin',
   layout: 'admin'
-  // Temporär ohne Middleware für Debugging
 })
 
 // Auth check

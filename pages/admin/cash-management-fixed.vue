@@ -192,8 +192,8 @@ import AdminCashBalanceManager from '~/components/admin/CashBalanceManager.vue'
 
 // Layout
 definePageMeta({
+  middleware: 'admin',
   layout: 'admin'
-  // Temporär ohne Middleware für Debugging
 })
 
 // Composables

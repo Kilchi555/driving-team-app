@@ -197,6 +197,7 @@ import { getSupabase } from '~/utils/supabase'
 // Einfache Page Meta ohne Feature-Checks
 // @ts-ignore - definePageMeta is auto-imported in Nuxt 3
 definePageMeta({
+  middleware: 'admin',
   layout: 'admin'
 })
 
@@ -266,7 +267,7 @@ const sendTestReminder = async () => {
 
     console.log('✅ Payment gefunden:', payment)
 
-    const { useReminderService } = await import('~/composables/useReminderService.ts')
+    const { useReminderService } = await import('~/composables/useReminderService')
     const { sendPaymentReminder } = useReminderService()
 
     const result = await sendPaymentReminder(

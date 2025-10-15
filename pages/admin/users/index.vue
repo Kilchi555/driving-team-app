@@ -779,8 +779,8 @@ import { createClient } from '@supabase/supabase-js'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
+  middleware: 'admin',
   layout: 'admin'
-  // Temporär ohne Middleware für Debugging
 })
 
 // Types

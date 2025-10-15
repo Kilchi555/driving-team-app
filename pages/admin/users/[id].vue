@@ -8,6 +8,7 @@ import { definePageMeta } from '#imports';
 
 // Page Meta für Admin-Layout
 definePageMeta({
+  middleware: 'admin',
   layout: 'admin'
 })
 </script>
