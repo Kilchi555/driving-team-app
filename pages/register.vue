@@ -240,6 +240,7 @@
         <div v-if="currentStep === 2 && requiresLernfahrausweis" class="space-y-6">
           <div class="text-center">
             <h2 class="text-xl font-semibold text-gray-900 mb-2">📄 Lernfahr- oder Führerausweis hochladen</h2>
+            <p class="text-gray-600 text-sm">Bitte laden Sie ein klares Foto Ihres Ausweises hoch</p>
           </div>
 
           <!-- Upload Area -->
@@ -248,52 +249,67 @@
             <div v-if="!uploadedImage" class="text-center space-y-4">
               <div class="text-6xl text-gray-400 mb-4">📄</div>
               
-              <!-- Camera Button -->
-              <button
-                @click="openCamera"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors mr-4"
-              >
-                📸 Foto aufnehmen
-              </button>
-              
-              <!-- File Upload -->
-              <div class="relative inline-block">
-                <input
-                  ref="fileInput"
-                  type="file"
-                  accept="image/*"
-                  @change="handleFileUpload"
-                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <button class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
-                  📁 Datei auswählen
+              <div class="space-y-3">
+                <!-- Camera Button -->
+                <button
+                  @click="openCamera"
+                  class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  📸 Mit Kamera fotografieren
                 </button>
+                
+                <!-- File Upload -->
+                <div class="relative">
+                  <input
+                    ref="fileInput"
+                    type="file"
+                    accept="image/*"
+                    @change="handleFileUpload"
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <button class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    📁 Aus Dateien wählen
+                  </button>
+                </div>
               </div>
               
-              <p class="text-sm text-gray-500 mt-4">
-                Unterstützte Formate: JPG, PNG<br>
-                Maximale Dateigröße: 5MB
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+                <p class="text-blue-800 text-sm font-medium">💡 Tipp für beste Ergebnisse:</p>
+                <p class="text-blue-700 text-sm mt-1">
+                  • Stellen Sie sicher, dass der Ausweis gut beleuchtet ist<br>
+                  • Der Text sollte scharf und lesbar sein<br>
+                  • Vermeiden Sie Reflexionen und Schatten
+                </p>
+              </div>
+              
+              <p class="text-xs text-gray-500">
+                Unterstützte Formate: JPG, PNG • Maximale Dateigröße: 5MB
               </p>
             </div>
 
             <!-- Uploaded Image Preview -->
             <div v-if="uploadedImage" class="space-y-4">
               <div class="text-center">
-                <img :src="uploadedImage" alt="Lernfahrausweis" class="max-w-full h-64 object-contain mx-auto rounded-lg shadow-md">
+                <img :src="uploadedImage" alt="Lernfahrausweis" class="max-w-full h-64 object-contain mx-auto rounded-lg shadow-md border border-gray-200">
               </div>
               
               <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p class="text-green-800 font-medium">✅ Lernfahrausweis erfolgreich hochgeladen!</p>
-                <p class="text-green-600 text-sm mt-1">Das Bild wird mit Ihrer Registrierung gespeichert.</p>
+                <div class="flex items-start gap-3">
+                  <div class="text-2xl">✅</div>
+                  <div>
+                    <p class="text-green-800 font-semibold">Perfekt! Ausweis erfolgreich hochgeladen</p>
+                    <p class="text-green-700 text-sm mt-1">Das Bild wird sicher mit Ihrer Registrierung gespeichert.</p>
+                  </div>
+                </div>
               </div>
               
               <!-- Buttons -->
-              <div class="flex justify-center space-x-4">
+              <div class="flex justify-center">
                 <button
                   @click="clearImage"
-                  class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors"
+                  class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
                 >
-                  🗑️ Neues Bild
+                  🔄 Anderes Bild wählen
                 </button>
               </div>
             </div>
@@ -302,25 +318,49 @@
           <!-- Camera Modal -->
           <div v-if="showCamera" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 class="text-lg font-semibold mb-4">📸 Foto aufnehmen</h3>
+              <h3 class="text-lg font-semibold mb-2">📸 Lernfahrausweis fotografieren</h3>
+              <p class="text-sm text-gray-600 mb-4">Positionieren Sie den Ausweis im weißen Rahmen für die beste Aufnahme</p>
               
-              <video ref="videoElement" autoplay class="w-full rounded-lg mb-4"></video>
+              <!-- Camera Container with Overlay -->
+              <div class="relative mb-4">
+                <video ref="videoElement" autoplay class="w-full rounded-lg"></video>
+                
+                <!-- Credit Card Frame Overlay -->
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div class="relative">
+                    <!-- Credit Card Frame (85.6mm x 53.98mm aspect ratio ≈ 1.586) -->
+                    <div class="border-2 border-white border-dashed rounded-lg bg-transparent" 
+                         style="width: 200px; height: 126px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);">
+                    </div>
+                    <!-- Corner guides -->
+                    <div class="absolute -top-1 -left-1 w-4 h-4 border-l-2 border-t-2 border-white"></div>
+                    <div class="absolute -top-1 -right-1 w-4 h-4 border-r-2 border-t-2 border-white"></div>
+                    <div class="absolute -bottom-1 -left-1 w-4 h-4 border-l-2 border-b-2 border-white"></div>
+                    <div class="absolute -bottom-1 -right-1 w-4 h-4 border-r-2 border-b-2 border-white"></div>
+                  </div>
+                </div>
+              </div>
+              
               <canvas ref="canvasElement" class="hidden"></canvas>
               
               <div class="flex justify-between space-x-4">
                 <button
                   @click="closeCamera"
-                  class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg"
+                  class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
                 >
                   Abbrechen
                 </button>
                 <button
                   @click="capturePhoto"
-                  class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
+                  class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                 >
-                  📸 Aufnehmen
+                  📸 Foto aufnehmen
                 </button>
               </div>
+              
+              <p class="text-xs text-gray-500 text-center mt-3">
+                Das Foto wird automatisch auf die optimale Größe zugeschnitten
+              </p>
             </div>
           </div>
                     <!-- Lernfahrausweis Number (Manual Entry) -->
@@ -336,7 +376,7 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="z.B. L123456789"
             />
-            <p class="text-xs text-gray-500 mt-1">Format: L + 6-10 Ziffern</p>
+            <p class="text-xs text-gray-500 mt-1">Beispiel: L123456789 (L gefolgt von 6-10 Ziffern)</p>
           </div>
         </div>
 
@@ -779,13 +819,47 @@ const capturePhoto = () => {
     const canvas = canvasElement.value
     const video = videoElement.value
     
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
+    // Get video element dimensions and position
+    const videoRect = video.getBoundingClientRect()
+    const videoWidth = video.videoWidth
+    const videoHeight = video.videoHeight
+    
+    // Frame dimensions (200px x 126px as defined in template)
+    const frameWidth = 200
+    const frameHeight = 126
+    
+    // Calculate the frame position relative to the video element
+    const frameLeft = (videoRect.width - frameWidth) / 2
+    const frameTop = (videoRect.height - frameHeight) / 2
+    
+    // Calculate the actual crop area in video coordinates
+    const scaleX = videoWidth / videoRect.width
+    const scaleY = videoHeight / videoRect.height
+    
+    const cropX = frameLeft * scaleX
+    const cropY = frameTop * scaleY
+    const cropWidth = frameWidth * scaleX
+    const cropHeight = frameHeight * scaleY
+    
+    // Set canvas to frame dimensions (high resolution)
+    const outputWidth = 800  // High resolution output
+    const outputHeight = Math.round(outputWidth * (frameHeight / frameWidth))
+    
+    canvas.width = outputWidth
+    canvas.height = outputHeight
     
     const ctx = canvas.getContext('2d')
-    ctx?.drawImage(video, 0, 0)
+    if (!ctx) return
     
-    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8)
+    // Draw the exact frame area to the canvas
+    ctx.drawImage(
+      video,
+      cropX, cropY, cropWidth, cropHeight,  // Source rectangle (exact frame area)
+      0, 0, outputWidth, outputHeight       // Destination rectangle
+    )
+    
+    // Convert to data URL with good quality
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9)
     uploadedImage.value = imageDataUrl
     
     closeCamera()
@@ -1104,18 +1178,36 @@ const loadCategories = async () => {
     let categories, categoriesError
     
     if (activeTenantId) {
-      // Load tenant-specific categories first
-      const { data: tenantCategories, error: tenantError } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('tenant_id', activeTenantId)
-        .eq('is_active', true)
-        .order('code')
+      // Get tenant business_type first
+      const { data: tenantData, error: tenantTypeError } = await supabase
+        .from('tenants')
+        .select('business_type')
+        .eq('id', activeTenantId)
+        .single()
+
+      if (tenantTypeError) {
+        console.warn('⚠️ Could not load tenant data:', tenantTypeError.message)
+      }
       
-      categories = tenantCategories
-      categoriesError = tenantError
-      
-      console.log('🏢 Loaded tenant-specific categories:', categories?.length || 0)
+      // Only load categories if business_type is driving_school
+      if (tenantData?.business_type !== 'driving_school') {
+        console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+        categories = []
+        categoriesError = null
+      } else {
+        // Load tenant-specific categories first
+        const { data: tenantCategories, error: tenantError } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('tenant_id', activeTenantId)
+          .eq('is_active', true)
+          .order('code')
+        
+        categories = tenantCategories
+        categoriesError = tenantError
+        
+        console.log('🏢 Loaded tenant-specific categories:', categories?.length || 0)
+      }
     } else {
       // Fallback: Load global categories (tenant_id = null)
       const { data: globalCategories, error: globalError } = await supabase
