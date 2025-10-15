@@ -151,6 +151,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { definePageMeta, useHead } from '#imports'
 
 definePageMeta({
   layout: false
