@@ -509,9 +509,6 @@
           </button>
         </div>
         
-        <p class="text-xs text-gray-400 text-center mt-4">
-          Das Foto wird automatisch zugeschnitten und optimiert
-        </p>
       </div>
     </div>
   </div>
