@@ -432,14 +432,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { definePageMeta, navigateTo } from '#imports'
 import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 
 // Layout
 definePageMeta({
-  layout: 'admin',
-  middleware: 'admin'
+  layout: 'admin'
+  // Temporär ohne Middleware für Debugging
 })
 
 // Composables
@@ -670,6 +671,23 @@ const loadData = async () => {
     if (examinerError) throw examinerError
     examinerList.value = examinerData || []
     
+    // Get tenant business_type first
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', tenantId)
+      .single()
+
+    if (tenantError) throw tenantError
+    
+    // Only load categories if business_type is driving_school
+    if (tenantData?.business_type !== 'driving_school') {
+      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      categories.value = []
+      isLoading.value = false
+      return
+    }
+
     // Load categories
     const { data: categoryData, error: categoryError } = await supabase
       .from('categories')
@@ -723,8 +741,42 @@ const getInitials = (firstName: string, lastName: string) => {
   return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase()
 }
 
+// Auth check
+const authStore = useAuthStore()
+
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
+  console.log('🔍 Exam statistics page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading exam statistics...')
+  
+  // Original onMounted logic
   loadData()
 })
 </script>

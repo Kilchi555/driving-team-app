@@ -1,5 +1,55 @@
 <template>
   <div class="p-6">
+    <!-- Invite Toast -->
+    <div v-if="showInviteToast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-xl">
+      <div class="bg-white border border-gray-200 shadow-lg rounded-lg p-4">
+        <div class="font-medium text-gray-900">Einladung erstellt – Versand nicht möglich</div>
+        <div class="text-sm text-gray-700 mt-1">Sende den Link manuell oder kopiere ihn in die Zwischenablage.</div>
+        <div class="mt-3">
+          <input
+            :value="inviteToastLink"
+            readonly
+            class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-50 text-gray-800"
+            @focus="$event.target.select()"
+          />
+        </div>
+        <div class="mt-2">
+          <button
+            type="button"
+            @click="copyInviteToastLink"
+            class="w-full px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            {{ inviteToastCopyStatus || 'Link kopieren' }}
+          </button>
+        </div>
+        <div class="mt-2">
+          <button
+            type="button"
+            @click="closeInviteToast"
+            class="w-full px-3 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200"
+          >
+            Schliessen
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success Toast -->
+    <div v-if="showInviteSuccessToast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-md">
+      <div class="bg-white border border-green-300 shadow-lg rounded-lg p-4">
+        <div class="font-medium text-green-700">✅ Einladung gesendet</div>
+        <div class="text-sm text-gray-800 mt-1">{{ inviteSuccessMessage }}</div>
+        <div class="mt-3">
+          <button
+            type="button"
+            @click="closeInviteSuccessToast"
+            class="w-full px-3 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200"
+          >
+            Schliessen
+          </button>
+        </div>
+      </div>
+    </div>
     <!-- Page Header -->
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-gray-900 mb-2">
@@ -109,6 +159,14 @@
               <option value="unpaid">Mit offenen Zahlungen</option>
             </select>
 
+            <!-- Invite Staff Button -->
+            <button
+              @click="showInviteStaffModal = true"
+              class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
+            >
+              📧 Fahrlehrer einladen
+            </button>
+
             <!-- New User Button -->
             <button
               @click="showCreateUserModal = true"
@@ -192,6 +250,139 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="flex justify-center items-center py-12">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+
+    <!-- Invite Staff Modal -->
+    <div v-if="showInviteStaffModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="admin-modal bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">
+            📧 Fahrlehrer einladen
+          </h3>
+        </div>
+        
+        <form @submit.prevent="sendStaffInvitation" class="px-6 py-4 space-y-4">
+          <!-- First Name -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Vorname *</label>
+            <input
+              v-model="inviteForm.firstName"
+              type="text"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              placeholder="Max"
+            />
+          </div>
+
+          <!-- Last Name -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nachname *</label>
+            <input
+              v-model="inviteForm.lastName"
+              type="text"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              placeholder="Mustermann"
+            />
+          </div>
+
+          <!-- Email -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
+            <input
+              v-model="inviteForm.email"
+              type="email"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              placeholder="max@example.com"
+            />
+          </div>
+
+          <!-- Phone -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Telefon {{ inviteForm.sendVia === 'sms' ? '*' : '(optional)' }}
+            </label>
+            <input
+              v-model="inviteForm.phone"
+              type="tel"
+              :required="inviteForm.sendVia === 'sms'"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              placeholder="+41 79 123 45 67"
+            />
+          </div>
+
+          <!-- Send Via -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Einladung senden via</label>
+            <div class="flex gap-4">
+              <label class="flex items-center">
+                <input
+                  v-model="inviteForm.sendVia"
+                  type="radio"
+                  value="email"
+                  class="mr-2"
+                />
+                <span class="text-sm">📧 E-Mail</span>
+              </label>
+              <label class="flex items-center">
+                <input
+                  v-model="inviteForm.sendVia"
+                  type="radio"
+                  value="sms"
+                  class="mr-2"
+                />
+                <span class="text-sm">📱 SMS</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Error Message -->
+          <div v-if="inviteStaffError" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            {{ inviteStaffError }}
+          </div>
+
+          <!-- Manual Link Panel (shown when email/sms sending fails) -->
+          <div v-if="showInviteManualLink" class="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-4 rounded space-y-3">
+            <div class="font-medium">Einladung erstellt – Versand nicht möglich</div>
+            <div class="text-sm">Bitte kopiere den folgenden Link und sende ihn manuell:</div>
+            <div class="flex gap-2 items-center">
+              <input
+                :value="inviteManualLink"
+                readonly
+                class="flex-1 px-3 py-2 border border-yellow-300 rounded bg-white text-gray-800"
+                @focus="$event.target.select()"
+              />
+              <button
+                type="button"
+                @click="copyInviteLink"
+                class="px-3 py-2 bg-gray-800 text-white rounded hover:bg-gray-900"
+              >
+                {{ copyInviteLinkStatus || 'Link kopieren' }}
+              </button>
+            </div>
+            <div class="text-xs text-yellow-700">Hinweis: Der Link ist 7 Tage gültig.</div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              @click="showInviteStaffModal = false; inviteStaffError = ''; showInviteManualLink = false; inviteManualLink = ''; copyInviteLinkStatus = ''"
+              class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="submit"
+              :disabled="isInvitingStaff"
+              class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+            >
+              {{ isInvitingStaff ? 'Wird gesendet...' : 'Einladung senden' }}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- Create User Modal -->
@@ -580,15 +771,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { definePageMeta, useRuntimeConfig } from '#imports'
+import { definePageMeta, useRuntimeConfig, navigateTo } from '#imports'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useRouter } from '#app'
 import { createClient } from '@supabase/supabase-js'
+import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
-  layout: 'admin',
-  middleware: ['auth']
+  layout: 'admin'
+  // Temporär ohne Middleware für Debugging
 })
 
 // Types
@@ -619,6 +811,78 @@ const selectedRole = ref('')
 const selectedStatus = ref('')
 const showCreateUserModal = ref(false)
 const currentTenant = ref<any>(null)
+
+// Staff Invitation State
+const showInviteStaffModal = ref(false)
+const isInvitingStaff = ref(false)
+const inviteStaffError = ref('')
+const inviteForm = ref({
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  sendVia: 'email' // 'email' or 'sms'
+})
+
+// Manual invite link UI state
+const showInviteManualLink = ref(false)
+const inviteManualLink = ref('')
+const copyInviteLinkStatus = ref('')
+
+const copyInviteLink = async () => {
+  try {
+    await navigator.clipboard.writeText(inviteManualLink.value)
+    copyInviteLinkStatus.value = 'Kopiert!'
+    setTimeout(() => { copyInviteLinkStatus.value = '' }, 2000)
+  } catch (e) {
+    copyInviteLinkStatus.value = 'Kopieren fehlgeschlagen'
+    setTimeout(() => { copyInviteLinkStatus.value = '' }, 2000)
+  }
+}
+
+// Toast state for fallback link
+const showInviteToast = ref(false)
+const inviteToastLink = ref('')
+const inviteToastCopyStatus = ref('')
+const inviteToastTimeout = ref<number | null>(null)
+
+const showInviteFallbackToast = (link: string) => {
+  inviteToastLink.value = link
+  showInviteToast.value = true
+  // Do not auto-close per user request
+  if (inviteToastTimeout.value) {
+    clearTimeout(inviteToastTimeout.value)
+    inviteToastTimeout.value = null
+  }
+}
+
+// Success toast state
+const showInviteSuccessToast = ref(false)
+const inviteSuccessMessage = ref('')
+const closeInviteSuccessToast = () => {
+  showInviteSuccessToast.value = false
+  inviteSuccessMessage.value = ''
+}
+
+const copyInviteToastLink = async () => {
+  try {
+    await navigator.clipboard.writeText(inviteToastLink.value)
+    inviteToastCopyStatus.value = 'Kopiert!'
+    setTimeout(() => { inviteToastCopyStatus.value = '' }, 2000)
+  } catch {
+    inviteToastCopyStatus.value = 'Kopieren fehlgeschlagen'
+    setTimeout(() => { inviteToastCopyStatus.value = '' }, 2000)
+  }
+}
+
+const closeInviteToast = () => {
+  showInviteToast.value = false
+  inviteToastCopyStatus.value = ''
+  if (inviteToastTimeout.value) {
+    clearTimeout(inviteToastTimeout.value)
+    inviteToastTimeout.value = null
+  }
+}
 
 // Create User State
 const isCreatingUser = ref(false)
@@ -812,6 +1076,23 @@ const loadCategories = async () => {
 
     const tenantId = userProfile?.tenant_id
     if (!tenantId) return
+
+    // Get tenant business_type first
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', tenantId)
+      .single()
+
+    if (tenantError) throw tenantError
+    
+    // Only load categories if business_type is driving_school
+    if (tenantData?.business_type !== 'driving_school') {
+      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      categories.value = []
+      isLoading.value = false
+      return
+    }
 
     const { data: categories, error } = await supabase
       .from('categories')
@@ -1028,6 +1309,85 @@ const getAdminSupabase = () => {
       persistSession: false
     }
   })
+}
+
+// Staff Invitation Functions
+const sendStaffInvitation = async () => {
+  inviteStaffError.value = ''
+  isInvitingStaff.value = true
+
+  try {
+    console.log('📧 Sending staff invitation to:', inviteForm.value.email)
+
+    // Get auth token from Supabase session
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('Keine gültige Session gefunden')
+    }
+
+    const response = await fetch('/api/staff/invite', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        firstName: inviteForm.value.firstName,
+        lastName: inviteForm.value.lastName,
+        email: inviteForm.value.email,
+        phone: inviteForm.value.phone,
+        sendVia: inviteForm.value.sendVia
+      })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Fehler beim Senden der Einladung')
+    }
+
+    console.log('✅ Invitation sent successfully:', data)
+    
+    // Show appropriate message based on result (UI panel for manual link)
+    if (data.sentVia === 'email_failed' || data.sentVia === 'sms_failed') {
+      // Show toast with copy button and keep modal scroll small
+      showInviteManualLink.value = false
+      showInviteFallbackToast(data.inviteLink)
+    } else if (data.inviteLink && !data.sentVia) {
+      // No sending configured: also show toast
+      showInviteManualLink.value = false
+      showInviteFallbackToast(data.inviteLink)
+    } else {
+      // Success via email or SMS -> show success toast
+      showInviteSuccessToast.value = true
+      inviteSuccessMessage.value = data.sentVia === 'email'
+        ? `Einladung per E-Mail an ${data.email} gesendet!`
+        : `Einladung per SMS an ${data.phone} gesendet!`
+    }
+    
+    // Reset form
+    inviteForm.value = {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      sendVia: 'email'
+    }
+    
+    // Close modal
+    if (!showInviteManualLink.value) {
+      showInviteStaffModal.value = false
+    }
+    
+    // Reload users to potentially show invitation status
+    await loadUsers()
+
+  } catch (error: any) {
+    console.error('❌ Error sending invitation:', error)
+    inviteStaffError.value = error.message || 'Ein Fehler ist aufgetreten'
+  } finally {
+    isInvitingStaff.value = false
+  }
 }
 
 // Create User Functions
@@ -1247,8 +1607,42 @@ const closeRoleDropdown = (event: Event) => {
   }
 }
 
-// Lifecycle
-onMounted(() => {
+// Auth check
+const authStore = useAuthStore()
+
+// Auth-Prüfung
+onMounted(async () => {
+  console.log('🔍 Users page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading users...')
+  
+  // Original onMounted logic
   loadUsers()
   loadCategories() // ✅ Kategorien für Staff-Zuordnung laden
   

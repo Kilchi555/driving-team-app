@@ -369,15 +369,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { definePageMeta } from '#imports'
+import { definePageMeta, navigateTo } from '#imports'
 import { useStudentCredits } from '~/composables/useStudentCredits'
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
 import StudentCreditManager from '~/components/StudentCreditManager.vue'
 import type { StudentCredit, CreditTransactionWithDetails } from '~/types/studentCredits'
 
 definePageMeta({
-  layout: 'admin',
-  middleware: ['auth']
+  layout: 'admin'
+  // Temporär ohne Middleware für Debugging
 })
 
 // Composables
@@ -572,8 +573,42 @@ const getPaymentMethodText = (method: string) => {
   return methodMap[method] || method
 }
 
+// Auth check
+const authStore = useAuthStore()
+
 // Lifecycle
 onMounted(async () => {
+  console.log('🔍 Student credits page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading student credits...')
+  
+  // Original onMounted logic
   await loadStudents()
   await loadStatistics()
 })

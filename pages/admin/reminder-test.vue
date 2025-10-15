@@ -1,382 +1,296 @@
 <template>
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Reminder-System Test</h1>
-      <p class="text-gray-600 mt-1">Teste die verschiedenen Komponenten des Reminder-Systems.</p>
+  <div class="max-w-4xl mx-auto p-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Erinnerungs-System Testen</h1>
+
+    <!-- Manual Cron Trigger -->
+    <div class="bg-white rounded-lg shadow-sm border p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Manueller Cron-Job Trigger</h2>
+      <p class="text-sm text-gray-600 mb-4">
+        Führe den Erinnerungs-Cron-Job manuell aus, um alle fälligen Zahlungserinnerungen zu versenden.
+      </p>
+      
+      <button
+        @click="triggerCronJob"
+        :disabled="isRunningCron"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <span v-if="isRunningCron">
+          <svg class="animate-spin inline-block h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Läuft...
+        </span>
+        <span v-else>Cron-Job ausführen</span>
+      </button>
+
+      <div v-if="cronResult" class="mt-4 p-4 rounded-lg" :class="cronResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'">
+        <h3 class="font-semibold mb-2" :class="cronResult.success ? 'text-green-800' : 'text-red-800'">
+          {{ cronResult.success ? '✅ Erfolgreich' : '❌ Fehler' }}
+        </h3>
+        <p class="text-sm" :class="cronResult.success ? 'text-green-700' : 'text-red-700'">
+          {{ cronResult.message }}
+        </p>
+        <div v-if="cronResult.total_reminders !== undefined" class="mt-2 text-sm text-gray-700">
+          <strong>Gesendete Erinnerungen:</strong> {{ cronResult.total_reminders }}
+        </div>
+        <div v-if="cronResult.results && cronResult.results.length > 0" class="mt-3">
+          <details class="text-sm">
+            <summary class="cursor-pointer font-medium text-gray-700 hover:text-gray-900">Details anzeigen</summary>
+            <pre class="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">{{ JSON.stringify(cronResult.results, null, 2) }}</pre>
+          </details>
+        </div>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-6">
-      <!-- Test 1: Template Rendering -->
-      <div class="bg-white rounded-xl shadow border p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">1. Template Rendering Test</h2>
-        
-        <div class="space-y-4">
-          <div class="flex gap-3 mb-4">
-            <button @click="seedTemplates" :disabled="isSeeding" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
-              Standard-Templates laden
-            </button>
-            <div v-if="seedResult" class="text-sm text-gray-600">{{ seedResult }}</div>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Template auswählen</label>
-            <USelect 
-              v-model="testTemplate" 
-              :options="templateOptions"
-              placeholder="Template auswählen..."
-            />
-          </div>
+    <!-- Test Single Reminder -->
+    <div class="bg-white rounded-lg shadow-sm border p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Einzelne Erinnerung testen</h2>
+      <p class="text-sm text-gray-600 mb-4">
+        Sende eine Test-Erinnerung für eine spezifische Zahlung.
+      </p>
 
-          <div v-if="testTemplate" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Test-Daten</label>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <UInput v-model="testData.student_name" placeholder="Schüler-Name" />
-                <UInput v-model="testData.appointment_date" placeholder="Termin-Datum" />
-                <UInput v-model="testData.appointment_time" placeholder="Termin-Zeit" />
-                <UInput v-model="testData.location" placeholder="Standort" />
-                <UInput v-model="testData.price" placeholder="Preis" />
-                <UInput v-model="testData.confirmation_link" placeholder="Bestätigungs-Link" />
-              </div>
-            </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Payment ID</label>
+          <input
+            v-model="testPaymentId"
+            type="text"
+            placeholder="UUID der Zahlung"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
 
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <h4 class="text-sm font-medium text-gray-700 mb-2">Gerenderte Nachricht:</h4>
-              <div class="bg-white p-3 rounded border text-sm text-gray-900">
-                <div class="font-medium mb-2 text-gray-900">{{ renderedSubject }}</div>
-                <div class="whitespace-pre-wrap text-gray-900">{{ renderedContent }}</div>
-              </div>
-            </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Erinnerungs-Stufe</label>
+          <select
+            v-model="testStage"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="first">1. Erinnerung</option>
+            <option value="second">2. Erinnerung</option>
+            <option value="final">Finale Warnung</option>
+          </select>
+        </div>
 
-            <button @click="renderTemplate" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              Template rendern
-            </button>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Kanäle</label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input v-model="testChannels.email" type="checkbox" class="mr-2" />
+              <span class="text-sm">Email</span>
+            </label>
+            <label class="flex items-center">
+              <input v-model="testChannels.sms" type="checkbox" class="mr-2" />
+              <span class="text-sm">SMS</span>
+            </label>
+            <label class="flex items-center">
+              <input v-model="testChannels.push" type="checkbox" class="mr-2" />
+              <span class="text-sm">Push</span>
+            </label>
           </div>
         </div>
+
+        <button
+          @click="sendTestReminder"
+          :disabled="!testPaymentId || isSendingTest"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <span v-if="isSendingTest">Sende...</span>
+          <span v-else>Test-Erinnerung senden</span>
+        </button>
       </div>
 
-      <!-- Test 2: Appointment Creation -->
-      <div class="bg-white rounded-xl shadow border p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">2. Test-Termin erstellen</h2>
-        
-        <div class="space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Schüler auswählen</label>
-              <USelect 
-                v-model="testAppointment.user_id" 
-                :options="studentOptions"
-                placeholder="Schüler auswählen..."
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Datum & Zeit</label>
-              <UInput 
-                type="datetime-local" 
-                v-model="testAppointment.start_time"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Standort</label>
-              <UInput v-model="testAppointment.location_id" placeholder="Location ID" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Typ</label>
-              <USelect 
-                v-model="testAppointment.type" 
-                :options="[{label: 'Fahrstunde', value: 'B'}, {label: 'Theorie', value: 'T'}]"
-              />
-            </div>
-          </div>
+      <div v-if="testResult" class="mt-4 p-4 rounded-lg" :class="testResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'">
+        <h3 class="font-semibold mb-2" :class="testResult.success ? 'text-green-800' : 'text-red-800'">
+          {{ testResult.success ? '✅ Erfolgreich' : '❌ Fehler' }}
+        </h3>
+        <p class="text-sm" :class="testResult.success ? 'text-green-700' : 'text-red-700'">
+          {{ testResult.error || 'Erinnerung wurde erfolgreich gesendet' }}
+        </p>
+      </div>
+    </div>
 
-          <button @click="createTestAppointment" :disabled="isCreating" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
-            Test-Termin erstellen (pending_confirmation)
-          </button>
-        </div>
+    <!-- Reminder Logs -->
+    <div class="bg-white rounded-lg shadow-sm border p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-900">Erinnerungs-Logs</h2>
+        <button
+          @click="loadReminderLogs"
+          class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+        >
+          Aktualisieren
+        </button>
       </div>
 
-      <!-- Test 3: Reminder Simulation -->
-      <div class="bg-white rounded-xl shadow border p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">3. Reminder Simulation</h2>
-        
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Termin auswählen</label>
-            <USelect 
-              v-model="selectedAppointment" 
-              :options="pendingAppointments"
-              placeholder="Termin auswählen..."
-            />
-          </div>
-
-          <div v-if="selectedAppointment" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button @click="simulateFirstReminder" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                1. Erinnerung senden
-              </button>
-              <button @click="simulateSecondReminder" class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">
-                2. Erinnerung senden
-              </button>
-              <button @click="simulateFinalWarning" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
-                Letzte Warnung senden
-              </button>
-            </div>
-
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <h4 class="text-sm font-medium text-gray-700 mb-2">Letzte Aktion:</h4>
-              <div class="text-sm">{{ lastAction }}</div>
-            </div>
-          </div>
-        </div>
+      <div v-if="isLoadingLogs" class="text-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
       </div>
 
-      <!-- Test 4: Provider Test -->
-      <div class="bg-white rounded-xl shadow border p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">4. Provider Test</h2>
-        
-        <div class="space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button @click="testEmailProvider" :disabled="isTesting" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-              E-Mail Provider testen
-            </button>
-            <button @click="testSmsProvider" :disabled="isTesting" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50">
-              SMS Provider testen
-            </button>
-          </div>
+      <div v-else-if="reminderLogs.length === 0" class="text-center py-8 text-gray-500">
+        Keine Erinnerungs-Logs gefunden
+      </div>
 
-          <div v-if="providerTestResult" class="bg-gray-50 p-4 rounded-lg">
-            <h4 class="text-sm font-medium text-gray-700 mb-2">Test-Ergebnis:</h4>
-            <div class="text-sm">{{ providerTestResult }}</div>
-          </div>
-        </div>
+      <div v-else class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zeitpunkt</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kanal</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empfänger</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nachricht</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="log in reminderLogs" :key="log.id">
+              <td class="px-4 py-3 text-sm text-gray-900">
+                {{ formatDate(log.sent_at) }}
+              </td>
+              <td class="px-4 py-3 text-sm">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                      :class="{
+                        'bg-blue-100 text-blue-800': log.channel === 'email',
+                        'bg-green-100 text-green-800': log.channel === 'sms',
+                        'bg-purple-100 text-purple-800': log.channel === 'push'
+                      }">
+                  {{ log.channel }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-900">
+                {{ log.recipient }}
+              </td>
+              <td class="px-4 py-3 text-sm">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                      :class="{
+                        'bg-green-100 text-green-800': log.status === 'sent',
+                        'bg-red-100 text-red-800': log.status === 'failed',
+                        'bg-yellow-100 text-yellow-800': log.status === 'simulated'
+                      }">
+                  {{ log.status }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+                {{ log.body }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'admin' })
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+
+definePageMeta({
+  layout: 'admin',
+  middleware: ['auth', 'admin'],
+  // Keine Feature-Flag Prüfung für Test-Seite
+})
 
 const supabase = getSupabase()
 
-// Test data
-const testTemplate = ref('')
-const testData = ref({
-  student_name: 'Max Mustermann',
-  appointment_date: '15.09.2025',
-  appointment_time: '14:00',
-  location: 'Zürich HB',
-  price: '120',
-  confirmation_link: 'https://app.driving-team.ch/confirm/123'
+// Cron Job State
+const isRunningCron = ref(false)
+const cronResult = ref<any>(null)
+
+// Test Reminder State
+const testPaymentId = ref('')
+const testStage = ref<'first' | 'second' | 'final'>('first')
+const testChannels = ref({
+  email: true,
+  sms: false,
+  push: false
 })
+const isSendingTest = ref(false)
+const testResult = ref<any>(null)
 
-const testAppointment = ref({
-  user_id: '',
-  start_time: '',
-  location_id: '',
-  type: 'B'
-})
+// Logs State
+const reminderLogs = ref<any[]>([])
+const isLoadingLogs = ref(false)
 
-const selectedAppointment = ref('')
-const lastAction = ref('')
-const providerTestResult = ref('')
+const triggerCronJob = async () => {
+  isRunningCron.value = true
+  cronResult.value = null
 
-const isCreating = ref(false)
-const isTesting = ref(false)
-const isSeeding = ref(false)
-const seedResult = ref('')
-
-// Template options
-const templateOptions = [
-  { label: '1. Erinnerung - E-Mail', value: 'first_email' },
-  { label: '1. Erinnerung - SMS', value: 'first_sms' },
-  { label: '2. Erinnerung - E-Mail', value: 'second_email' },
-  { label: 'Letzte Warnung - E-Mail', value: 'final_email' },
-  { label: 'Letzte Warnung - SMS', value: 'final_sms' }
-]
-
-// Student options
-const studentOptions = ref([])
-
-// Pending appointments
-const pendingAppointments = ref([])
-
-// Computed
-const renderedSubject = ref('')
-const renderedContent = ref('')
-
-// Functions
-const renderTemplate = async () => {
-  if (!testTemplate.value) return
-
-  // Map template key to channel and stage
-  const templateMap: Record<string, {channel: string, stage: string}> = {
-    'first_email': { channel: 'email', stage: 'first' },
-    'first_push': { channel: 'push', stage: 'first' },
-    'first_sms': { channel: 'sms', stage: 'first' },
-    'second_email': { channel: 'email', stage: 'second' },
-    'second_push': { channel: 'push', stage: 'second' },
-    'second_sms': { channel: 'sms', stage: 'second' },
-    'final_email': { channel: 'email', stage: 'final' },
-    'final_push': { channel: 'push', stage: 'final' },
-    'final_sms': { channel: 'sms', stage: 'final' }
-  }
-
-  const mapping = templateMap[testTemplate.value]
-  if (!mapping) return
-
-  const { data } = await supabase
-    .from('reminder_templates')
-    .select('*')
-    .eq('channel', mapping.channel)
-    .eq('stage', mapping.stage)
-    .eq('language', 'de')
-    .is('tenant_id', null)
-    .single()
-
-  if (data) {
-    let subject = data.subject || ''
-    let content = data.body || ''
-
-    // Replace variables
-    Object.entries(testData.value).forEach(([key, value]) => {
-      const placeholder = `{{${key}}}`
-      subject = subject.replace(new RegExp(placeholder, 'g'), value)
-      content = content.replace(new RegExp(placeholder, 'g'), value)
-    })
-
-    renderedSubject.value = subject
-    renderedContent.value = content
-  }
-}
-
-const createTestAppointment = async () => {
-  if (!testAppointment.value.user_id || !testAppointment.value.start_time) {
-    alert('Bitte füllen Sie alle Felder aus')
-    return
-  }
-
-  isCreating.value = true
   try {
-    const startTime = new Date(testAppointment.value.start_time)
-    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000) // +1 hour
-
-    const { data, error } = await supabase
-      .from('appointments')
-      .insert([{
-        user_id: testAppointment.value.user_id,
-        title: 'Test Fahrstunde',
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
-        duration_minutes: 60,
-        type: testAppointment.value.type,
-        location_id: testAppointment.value.location_id || '67e05350-574f-412b-981a-e6747d5cb8f2',
-        status: 'pending_confirmation',
-        event_type_code: 'lesson'
-      }])
-      .select('*')
-      .single()
-
-    if (error) throw error
-    
-    alert(`Test-Termin erstellt: ${data.id}`)
-    loadPendingAppointments()
-  } catch (error) {
-    alert(`Fehler: ${error.message}`)
-  } finally {
-    isCreating.value = false
-  }
-}
-
-const simulateFirstReminder = () => {
-  lastAction.value = `1. Erinnerung für Termin ${selectedAppointment.value} simuliert - ${new Date().toLocaleString()}`
-}
-
-const simulateSecondReminder = () => {
-  lastAction.value = `2. Erinnerung für Termin ${selectedAppointment.value} simuliert - ${new Date().toLocaleString()}`
-}
-
-const simulateFinalWarning = () => {
-  lastAction.value = `Letzte Warnung für Termin ${selectedAppointment.value} simuliert - ${new Date().toLocaleString()}`
-}
-
-const testEmailProvider = async () => {
-  isTesting.value = true
-  try {
-    // TODO: Implement actual email test
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-    providerTestResult.value = 'E-Mail Provider Test erfolgreich - Test-E-Mail wurde gesendet'
-  } catch (error) {
-    providerTestResult.value = `E-Mail Provider Test fehlgeschlagen: ${error.message}`
-  } finally {
-    isTesting.value = false
-  }
-}
-
-const testSmsProvider = async () => {
-  isTesting.value = true
-  try {
-    // TODO: Implement actual SMS test
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-    providerTestResult.value = 'SMS Provider Test erfolgreich - Test-SMS wurde gesendet'
-  } catch (error) {
-    providerTestResult.value = `SMS Provider Test fehlgeschlagen: ${error.message}`
-  } finally {
-    isTesting.value = false
-  }
-}
-
-const loadStudents = async () => {
-  const { data } = await supabase
-    .from('users')
-    .select('id, first_name, last_name')
-    .eq('role', 'student')
-    .limit(20)
-
-  if (data) {
-    studentOptions.value = data.map(user => ({
-      label: `${user.first_name} ${user.last_name}`,
-      value: user.id
-    }))
-  }
-}
-
-const seedTemplates = async () => {
-  isSeeding.value = true
-  try {
-    const response = await $fetch('/api/reminder/seed-templates', {
+    const response = await $fetch('/api/cron/send-payment-reminders', {
       method: 'POST'
     })
-    seedResult.value = `✅ ${response.count} Templates erfolgreich geladen`
-  } catch (error) {
-    seedResult.value = `❌ Fehler: ${error.message}`
+
+    cronResult.value = response
+    await loadReminderLogs() // Refresh logs
+  } catch (error: any) {
+    cronResult.value = {
+      success: false,
+      message: error.message || 'Fehler beim Ausführen des Cron-Jobs'
+    }
   } finally {
-    isSeeding.value = false
+    isRunningCron.value = false
   }
 }
 
-const loadPendingAppointments = async () => {
-  const { data } = await supabase
-    .from('appointments')
-    .select('id, title, start_time, user_id, status')
-    .eq('status', 'pending_confirmation')
-    .order('start_time', { ascending: true })
+const sendTestReminder = async () => {
+  if (!testPaymentId.value) return
 
-  if (data) {
-    pendingAppointments.value = data.map(apt => ({
-      label: `${apt.title} - ${new Date(apt.start_time).toLocaleString()}`,
-      value: apt.id
-    }))
+  isSendingTest.value = true
+  testResult.value = null
+
+  try {
+    const { useReminderService } = await import('~/composables/useReminderService')
+    const { sendPaymentReminder } = useReminderService()
+
+    const result = await sendPaymentReminder(
+      testPaymentId.value,
+      testStage.value,
+      testChannels.value
+    )
+
+    testResult.value = result
+    await loadReminderLogs() // Refresh logs
+  } catch (error: any) {
+    testResult.value = {
+      success: false,
+      error: error.message || 'Fehler beim Senden der Test-Erinnerung'
+    }
+  } finally {
+    isSendingTest.value = false
   }
+}
+
+const loadReminderLogs = async () => {
+  isLoadingLogs.value = true
+
+  try {
+    const { data, error } = await supabase
+      .from('reminder_logs')
+      .select('*')
+      .order('sent_at', { ascending: false })
+      .limit(50)
+
+    if (error) throw error
+    reminderLogs.value = data || []
+  } catch (error: any) {
+    console.error('Error loading reminder logs:', error)
+  } finally {
+    isLoadingLogs.value = false
+  }
+}
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleString('de-CH', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 onMounted(() => {
-  loadStudents()
-  loadPendingAppointments()
+  loadReminderLogs()
 })
 </script>
-
-<style scoped>
-</style>

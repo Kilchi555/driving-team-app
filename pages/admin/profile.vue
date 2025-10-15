@@ -1,5 +1,41 @@
 <template>
   <div class="tenant-profile-admin">
+    <!-- Auto-Save Indicator -->
+    <Transition
+      enter-active-class="transition-all duration-300 ease-out"
+      enter-from-class="opacity-0 transform translate-y-2"
+      enter-to-class="opacity-100 transform translate-y-0"
+      leave-active-class="transition-all duration-200 ease-in"
+      leave-from-class="opacity-100 transform translate-y-0"
+      leave-to-class="opacity-0 transform translate-y-2"
+    >
+      <div v-if="showAutoSaveIndicator" class="fixed top-4 right-4 z-50">
+        <div 
+          class="px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2"
+          :class="{
+            'bg-red-500 text-white': autoSaveMessage.includes('Fehler'),
+            'bg-blue-500 text-white': autoSaveMessage.includes('Speichern'),
+            'bg-green-500 text-white': !autoSaveMessage.includes('Fehler') && !autoSaveMessage.includes('Speichern')
+          }"
+        >
+          <!-- Loading spinner while saving -->
+          <svg v-if="autoSaveMessage.includes('Speichern')" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <!-- Checkmark on success -->
+          <svg v-else-if="!autoSaveMessage.includes('Fehler')" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          <!-- Error icon -->
+          <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+          </svg>
+          <span class="text-sm font-medium">{{ autoSaveMessage }}</span>
+        </div>
+      </div>
+    </Transition>
+
     <!-- Header -->
     <div class="mb-6">
       <h1 class="text-3xl font-bold text-gray-900 mb-2">Profil</h1>
@@ -193,11 +229,13 @@
                     <div class="flex items-center space-x-2">
                       <input 
                         v-model="brandingForm.colors.primary"
+                        @change="saveBranding"
                         type="color"
                         class="w-8 h-8 border border-gray-300 rounded"
                       >
                       <input 
                         v-model="brandingForm.colors.primary"
+                        @blur="saveBranding"
                         type="text"
                         class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
                         placeholder="#1E40AF"
@@ -210,11 +248,13 @@
                     <div class="flex items-center space-x-2">
                       <input 
                         v-model="brandingForm.colors.secondary"
+                        @change="saveBranding"
                         type="color"
                         class="w-8 h-8 border border-gray-300 rounded"
                       >
                       <input 
                         v-model="brandingForm.colors.secondary"
+                        @blur="saveBranding"
                         type="text"
                         class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
                         placeholder="#64748B"
@@ -366,6 +406,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Hauptschrift</label>
                 <input 
                   v-model="brandingForm.typography.fontFamily"
+                  @blur="autoSaveBranding"
                   type="text"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Inter, system-ui, sans-serif"
@@ -376,6 +417,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Überschrift-Schrift</label>
                 <input 
                   v-model="brandingForm.typography.headingFontFamily"
+                  @blur="autoSaveBranding"
                   type="text"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Inter, system-ui, sans-serif"
@@ -401,86 +443,47 @@
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <h2 class="text-xl font-semibold text-gray-900 mb-4">Funktionen</h2>
 
-            <div class="space-y-4">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="font-medium text-gray-900">Öffentliche Buchung</div>
-                  <div class="text-sm text-gray-600">Erlaube Buchungen ohne Login über die öffentliche Seite.</div>
-                </div>
-                <label class="inline-flex items-center cursor-pointer select-none" @click.stop @mousedown.stop>
-                  <input type="checkbox" class="sr-only" :checked="isFeatureEnabled('booking_public_enabled')" @change="toggleFeature('booking_public_enabled', ($event.target as HTMLInputElement).checked)" />
-                  <div :class="['relative w-10 h-6 rounded-full transition-colors', isFeatureEnabled('booking_public_enabled') ? 'bg-green-600' : 'bg-gray-300']">
-                    <span :class="['absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform', isFeatureEnabled('booking_public_enabled') ? 'translate-x-4' : 'translate-x-0']"></span>
-                  </div>
-                </label>
+            <!-- Features Grid Container -->
+            <div>
+              <div v-if="isLoadingFeatures" class="flex justify-center items-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span class="ml-2 text-gray-600">Lade Funktionen...</span>
               </div>
-
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="font-medium text-gray-900">Rechnungen</div>
-                  <div class="text-sm text-gray-600">Aktiviere die Rechnungs-/Zahlungsfunktionen.</div>
+              
+              <div v-if="!isLoadingFeatures" class="grid grid-cols-4 xl:grid-cols-4 lg:grid-cols-4 md:grid-cols-4 sm:grid-cols-2 gap-4 p-1">
+                <!-- Debug Info -->
+                <div class="col-span-full bg-blue-50 p-2 rounded text-xs">
+                  Debug: {{ featureDefinitions.length }} features loaded
                 </div>
-                <label class="inline-flex items-center cursor-pointer select-none" @click.stop @mousedown.stop>
-                  <input type="checkbox" class="sr-only" :checked="isFeatureEnabled('invoices_enabled')" @change="toggleFeature('invoices_enabled', ($event.target as HTMLInputElement).checked)" />
-                  <div :class="['relative w-10 h-6 rounded-full transition-colors', isFeatureEnabled('invoices_enabled') ? 'bg-green-600' : 'bg-gray-300']">
-                    <span :class="['absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform', isFeatureEnabled('invoices_enabled') ? 'translate-x-4' : 'translate-x-0']"></span>
+                <!-- Dynamic Features -->
+                <div 
+                  v-for="feature in featureDefinitions" 
+                  :key="feature.key"
+                  class="bg-gray-50 rounded-lg border p-4 hover:shadow-md transition-shadow"
+                >
+                  <div class="flex flex-col h-full">
+                    <div class="flex-1 mb-3">
+                      <h3 class="font-semibold text-gray-900 text-sm mb-2 flex items-center">
+                        <span class="text-lg mr-2">{{ feature.icon }}</span>
+                        {{ feature.displayName }}
+                      </h3>
+                      <p class="text-xs text-gray-600 leading-relaxed">{{ feature.description }}</p>
+                    </div>
+                    <div class="flex justify-end">
+                      <label class="inline-flex items-center cursor-pointer select-none" @click.stop @mousedown.stop>
+                        <input type="checkbox" class="sr-only" :checked="feature.isEnabled" @change="toggleFeature(feature.key, ($event.target as HTMLInputElement).checked)" />
+                        <div :class="['relative w-10 h-6 rounded-full transition-colors', feature.isEnabled ? 'bg-green-600' : 'bg-gray-300']">
+                          <span :class="['absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform', feature.isEnabled ? 'translate-x-4' : 'translate-x-0']"></span>
+                        </div>
+                      </label>
+                    </div>
                   </div>
-                </label>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="font-medium text-gray-900">Pakete</div>
-                  <div class="text-sm text-gray-600">Verkaufe Sitzungs-/Fahrstunden-Pakete (benötigt Rechnungen).</div>
                 </div>
-                <label class="inline-flex items-center cursor-pointer select-none" @click.stop @mousedown.stop>
-                  <input type="checkbox" class="sr-only" :checked="isFeatureEnabled('packages_enabled')" @change="toggleFeature('packages_enabled', ($event.target as HTMLInputElement).checked)" />
-                  <div :class="['relative w-10 h-6 rounded-full transition-colors', isFeatureEnabled('packages_enabled') ? 'bg-green-600' : 'bg-gray-300']">
-                    <span :class="['absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform', isFeatureEnabled('packages_enabled') ? 'translate-x-4' : 'translate-x-0']"></span>
-                  </div>
-                </label>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="font-medium text-gray-900">Kalender-Sync</div>
-                  <div class="text-sm text-gray-600">Synchronisiere Termine mit externen Kalendern.</div>
-                </div>
-                <label class="inline-flex items-center cursor-pointer select-none" @click.stop @mousedown.stop>
-                  <input type="checkbox" class="sr-only" :checked="isFeatureEnabled('calendar_sync_enabled')" @change="toggleFeature('calendar_sync_enabled', ($event.target as HTMLInputElement).checked)" />
-                  <div :class="['relative w-10 h-6 rounded-full transition-colors', isFeatureEnabled('calendar_sync_enabled') ? 'bg-green-600' : 'bg-gray-300']">
-                    <span :class="['absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform', isFeatureEnabled('calendar_sync_enabled') ? 'translate-x-4' : 'translate-x-0']"></span>
-                  </div>
-                </label>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="font-medium text-gray-900">Produktverkauf</div>
-                  <div class="text-sm text-gray-600">Verkauf von Produkten/Material (Shop, Barverkauf).</div>
-                </div>
-                <label class="inline-flex items-center cursor-pointer select-none" @click.stop @mousedown.stop>
-                  <input type="checkbox" class="sr-only" :checked="isFeatureEnabled('product_sales_enabled')" @change="toggleFeature('product_sales_enabled', ($event.target as HTMLInputElement).checked)" />
-                  <div :class="['relative w-10 h-6 rounded-full transition-colors', isFeatureEnabled('product_sales_enabled') ? 'bg-green-600' : 'bg-gray-300']">
-                    <span :class="['absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform', isFeatureEnabled('product_sales_enabled') ? 'translate-x-4' : 'translate-x-0']"></span>
-                  </div>
-                </label>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="font-medium text-gray-900">Dokumente erforderlich</div>
-                  <div class="text-sm text-gray-600">Aktiviere Dokumentanforderungen im Buchungsprozess.</div>
-                </div>
-                <label class="inline-flex items-center cursor-pointer select-none" @click.stop @mousedown.stop>
-                  <input type="checkbox" class="sr-only" :checked="isFeatureEnabled('documents_required')" @change="toggleFeature('documents_required', ($event.target as HTMLInputElement).checked)" />
-                  <div :class="['relative w-10 h-6 rounded-full transition-colors', isFeatureEnabled('documents_required') ? 'bg-green-600' : 'bg-gray-300']">
-                    <span :class="['absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform', isFeatureEnabled('documents_required') ? 'translate-x-4' : 'translate-x-0']"></span>
-                  </div>
-                </label>
+                
               </div>
             </div>
           </div>
+
         </div>
         <!-- Kontakt Tab -->
         <div v-show="activeTab === 'contact'" class="space-y-6">
@@ -493,6 +496,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">E-Mail</label>
                 <input 
                   v-model="brandingForm.contact.email"
+                  @blur="autoSaveBranding"
                   type="email"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="info@ihre-firma.ch"
@@ -504,6 +508,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Telefon</label>
                 <input 
                   v-model="brandingForm.contact.phone"
+                  @blur="autoSaveBranding"
                   type="tel"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="+41 44 123 45 67"
@@ -515,6 +520,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Adresse</label>
                 <textarea 
                   v-model="brandingForm.contact.address"
+                  @blur="autoSaveBranding"
                   rows="3"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Musterstrasse 123, 8000 Zürich"
@@ -580,6 +586,7 @@
                 </label>
                 <select 
                   v-model="sessionSettings.inactivityTimeoutMinutes"
+                  @change="autoSaveSessionSettings"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option :value="0">Kein Timeout (Standard)</option>
@@ -599,6 +606,7 @@
               <div>
                 <ToggleSwitch
                   v-model="sessionSettings.forceDailyLogout"
+                  @change="autoSaveSessionSettings"
                   label="Täglicher Logout - Benutzer müssen sich täglich neu anmelden"
                   label-class="text-sm text-gray-700"
                 />
@@ -611,6 +619,7 @@
               <div>
                 <ToggleSwitch
                   v-model="sessionSettings.allowRememberMe"
+                  @change="autoSaveSessionSettings"
                   label="Angemeldet bleiben Option - Benutzer können angemeldet bleiben wählen"
                   label-class="text-sm text-gray-700"
                 />
@@ -626,6 +635,7 @@
                 </label>
                 <select 
                   v-model="sessionSettings.warningBeforeTimeoutMinutes"
+                  @change="autoSaveSessionSettings"
                   :disabled="sessionSettings.inactivityTimeoutMinutes === 0"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                 >
@@ -640,59 +650,479 @@
               </div>
             </div>
 
-            <!-- Current Settings Preview -->
-            <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 class="font-medium text-blue-900 mb-2">Aktuelle Einstellungen:</h4>
-              <div class="text-sm text-blue-800 space-y-1">
-                <div>
-                  <strong>Session-Timeout:</strong> 
-                  {{ sessionSettings.inactivityTimeoutMinutes === 0 ? 'Kein Timeout' : `${sessionSettings.inactivityTimeoutMinutes} Minuten` }}
-                </div>
-                <div>
-                  <strong>Täglicher Logout:</strong> 
-                  {{ sessionSettings.forceDailyLogout ? 'Aktiviert' : 'Deaktiviert' }}
-                </div>
-                <div>
-                  <strong>"Angemeldet bleiben":</strong> 
-                  {{ sessionSettings.allowRememberMe ? 'Erlaubt' : 'Nicht erlaubt' }}
-                </div>
-                <div v-if="sessionSettings.inactivityTimeoutMinutes > 0">
-                  <strong>Warnung:</strong> 
-                  {{ sessionSettings.warningBeforeTimeoutMinutes === 0 ? 'Keine Warnung' : `${sessionSettings.warningBeforeTimeoutMinutes} Min vorher` }}
-                </div>
-              </div>
-            </div>
+
           </div>
         </div>
 
         <!-- Eventtypen Tab -->
         <div v-show="activeTab === 'eventtypes'" class="space-y-6">
           <div class="bg-white rounded-lg shadow-sm border p-6">
-            <AdminEventTypesManager />
+            <EventTypesManager />
           </div>
         </div>
 
-        <!-- Save Button (always visible) -->
-        <div class="pt-6 border-t border-gray-200 bg-white rounded-lg shadow-sm p-6 sticky bottom-4">
-          <div class="flex gap-3">
-            <button 
-              @click="saveBranding"
-              :disabled="isSaving"
-              class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              <span v-if="isSaving">Wird gespeichert...</span>
-              <span v-else>Änderungen speichern</span>
-            </button>
+        <!-- Erinnerungen Tab -->
+        <div v-show="activeTab === 'reminders'" class="space-y-6">
+          
+          <!-- Allgemeine Einstellungen -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Allgemeine Einstellungen</h2>
+            <p class="text-sm text-gray-600 mb-4">
+              Konfigurieren Sie automatische Erinnerungen für Terminbestätigungen.
+            </p>
             
-            <button 
-              @click="resetForm"
+            <div class="space-y-4">
+              <!-- Enable Reminders -->
+              <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div class="flex-1">
+                  <h3 class="text-sm font-medium text-gray-900">Erinnerungen aktiv</h3>
+                  <p class="text-sm text-gray-600">Automatische Erinnerungen für ausstehende Terminbestätigungen</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    v-model="reminderSettings.is_enabled"
+                    class="sr-only peer"
+                  />
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <!-- Timing Settings -->
+              <div v-if="reminderSettings.is_enabled" class="border-l-4 border-blue-500 pl-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-3">Zeiteinstellungen</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label class="block text-sm text-gray-700 mb-2">1. Erinnerung (Stunden nach Erstellung)</label>
+                    <input
+                      type="number"
+                      v-model.number="reminderSettings.first_after_hours"
+                      min="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-gray-700 mb-2">2. Erinnerung (Stunden nach Erstellung)</label>
+                    <input
+                      type="number"
+                      v-model.number="reminderSettings.second_after_hours"
+                      min="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-gray-700 mb-2">Letzte Warnung (Stunden nach Erstellung)</label>
+                    <input
+                      type="number"
+                      v-model.number="reminderSettings.final_after_hours"
+                      min="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Communication Channels -->
+              <div v-if="reminderSettings.is_enabled" class="border-l-4 border-green-500 pl-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-3">Benachrichtigungskanäle</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <!-- First Reminder -->
+                  <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h4 class="font-medium text-gray-900 mb-4 text-center">1. Erinnerung</h4>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">E-Mail</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" v-model="reminderSettings.first_email" class="sr-only peer" />
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">Web Push</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" v-model="reminderSettings.first_push" class="sr-only peer" />
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">SMS</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" v-model="reminderSettings.first_sms" class="sr-only peer" />
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Second Reminder -->
+                  <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h4 class="font-medium text-gray-900 mb-4 text-center">2. Erinnerung</h4>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">E-Mail</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" v-model="reminderSettings.second_email" class="sr-only peer" />
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">Web Push</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" v-model="reminderSettings.second_push" class="sr-only peer" />
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">SMS</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" v-model="reminderSettings.second_sms" class="sr-only peer" />
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Final Warning -->
+                  <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h4 class="font-medium text-gray-900 mb-4 text-center">Letzte Warnung</h4>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">E-Mail</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" v-model="reminderSettings.final_email" class="sr-only peer" />
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">Web Push</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" v-model="reminderSettings.final_push" class="sr-only peer" />
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">SMS</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" v-model="reminderSettings.final_sms" class="sr-only peer" />
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Auto Delete Settings -->
+              <div v-if="reminderSettings.is_enabled" class="border-l-4 border-red-500 pl-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-3">Automatisches Löschen</h3>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex-1">
+                      <h4 class="text-sm font-medium text-gray-900">Termin nach letzter Warnung automatisch löschen</h4>
+                      <p class="text-sm text-gray-600">Nicht bestätigte Termine werden automatisch gelöscht</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        v-model="reminderSettings.auto_delete"
+                        class="sr-only peer"
+                      />
+                      <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                    </label>
+                  </div>
+                  
+                  <div v-if="reminderSettings.auto_delete">
+                    <label class="block text-sm text-gray-700 mb-2">Zeit bis Löschung (Stunden nach letzter Warnung)</label>
+                    <input
+                      type="number"
+                      v-model.number="reminderSettings.auto_delete_after_hours"
+                      min="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Templates Tab -->
+        <div v-show="activeTab === 'templates'" class="space-y-6">
+          
+          <!-- Template Editor -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Nachrichten-Vorlagen</h2>
+            <p class="text-sm text-gray-600 mb-4">
+              Passen Sie die automatischen Erinnerungsnachrichten an. Verwenden Sie Platzhalter für dynamische Inhalte.
+            </p>
+
+            <div class="space-y-4">
+              <!-- Template Selection -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Erinnerungs-Phase</label>
+                  <select
+                    v-model="selectedTemplateStage"
+                    @change="loadSelectedTemplate"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="first">1. Erinnerung</option>
+                    <option value="second">2. Erinnerung</option>
+                    <option value="final">Letzte Warnung</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Kanal</label>
+                  <select
+                    v-model="selectedTemplateChannel"
+                    @change="loadSelectedTemplate"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="email">E-Mail</option>
+                    <option value="sms">SMS</option>
+                    <option value="push">Web Push</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Subject (nur für E-Mail) -->
+              <div v-if="selectedTemplateChannel === 'email'">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Betreff</label>
+                <input
+                  v-model="currentTemplate.subject"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="z.B. Terminbestätigung erforderlich - {{tenant_name}}"
+                />
+              </div>
+
+              <!-- Body -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nachricht</label>
+                <textarea
+                  v-model="currentTemplate.body"
+                  rows="10"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  placeholder="Nachrichtentext mit Platzhaltern..."
+                ></textarea>
+                <p class="text-xs text-gray-500 mt-1">
+                  {{ selectedTemplateChannel === 'sms' ? 'SMS-Nachrichten sollten kurz und prägnant sein (max. 160 Zeichen empfohlen)' : 'Verwenden Sie Platzhalter für dynamische Inhalte' }}
+                </p>
+              </div>
+
+              <!-- Available Placeholders -->
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="text-sm font-medium text-blue-900 mb-3">Verfügbare Platzhalter:</h4>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3" v-pre>
+                  <div class="flex flex-col">
+                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{tenant_name}}</code>
+                    <span class="text-xs text-blue-700">Name der Fahrschule</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{student_name}}</code>
+                    <span class="text-xs text-blue-700">Voller Name</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{student_first_name}}</code>
+                    <span class="text-xs text-blue-700">Vorname</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{appointment_date}}</code>
+                    <span class="text-xs text-blue-700">Datum (15.10.2025)</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{appointment_time}}</code>
+                    <span class="text-xs text-blue-700">Zeit (14:00)</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{appointment_datetime}}</code>
+                    <span class="text-xs text-blue-700">Datum + Zeit</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{location}}</code>
+                    <span class="text-xs text-blue-700">Treffpunkt</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{price}}</code>
+                    <span class="text-xs text-blue-700">Preis (125.00)</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{confirmation_link}}</code>
+                    <span class="text-xs text-blue-700">Bestätigungs-Link</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Preview -->
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-3">Vorschau (mit Beispieldaten):</h4>
+                <div class="bg-white p-4 rounded border text-sm">
+                  <div v-if="selectedTemplateChannel === 'email' && currentTemplate.subject" class="font-medium text-gray-900 mb-3 pb-3 border-b">
+                    {{ previewTemplate(currentTemplate.subject) }}
+                  </div>
+                  <div class="whitespace-pre-wrap text-gray-700">
+                    {{ previewTemplate(currentTemplate.body) || 'Keine Nachricht eingegeben...' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reset Button -->
+          <div class="flex justify-end">
+            <button
+              @click="loadSelectedTemplate"
               :disabled="isSaving"
-              class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Zurücksetzen
             </button>
           </div>
         </div>
+
+        <!-- Payments Tab -->
+        <div v-show="activeTab === 'payments'" class="space-y-6">
+          
+          <!-- Online Payment Deadline Settings -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Online-Zahlungsfrist</h2>
+            <p class="text-sm text-gray-600 mb-4">
+              Legen Sie fest, bis wann Termine online bezahlt werden müssen.
+            </p>
+
+            <div class="space-y-4">
+              <!-- Payment Deadline Type -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Zahlungsfrist
+                </label>
+                <select
+                  v-model="paymentSettings.payment_deadline_type"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="immediate">Sofort (vor Buchung)</option>
+                  <option value="hours_before">X Stunden vor Termin</option>
+                  <option value="days_before">X Tage vor Termin</option>
+                  <option value="no_limit">Keine Frist (jederzeit)</option>
+                </select>
+              </div>
+
+              <!-- Custom Time Period -->
+              <div v-if="paymentSettings.payment_deadline_type === 'hours_before' || paymentSettings.payment_deadline_type === 'days_before'">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  {{ paymentSettings.payment_deadline_type === 'hours_before' ? 'Anzahl Stunden' : 'Anzahl Tage' }}
+                </label>
+                <input
+                  v-model.number="paymentSettings.payment_deadline_value"
+                  type="number"
+                  min="1"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  :placeholder="paymentSettings.payment_deadline_type === 'hours_before' ? 'z.B. 24' : 'z.B. 7'"
+                />
+                <p class="text-xs text-gray-500 mt-1">
+                  Termine müssen {{ paymentSettings.payment_deadline_value }} 
+                  {{ paymentSettings.payment_deadline_type === 'hours_before' ? 'Stunden' : 'Tage' }} 
+                  vor dem Termin bezahlt werden.
+                </p>
+              </div>
+
+              <!-- Preview -->
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="text-sm font-medium text-blue-900 mb-2">Vorschau</h4>
+                <p class="text-sm text-blue-800">
+                  <span v-if="paymentSettings.payment_deadline_type === 'immediate'">
+                    Kunden müssen sofort bei der Buchung bezahlen.
+                  </span>
+                  <span v-else-if="paymentSettings.payment_deadline_type === 'hours_before'">
+                    Kunden müssen {{ paymentSettings.payment_deadline_value }} Stunden vor dem Termin bezahlen.
+                  </span>
+                  <span v-else-if="paymentSettings.payment_deadline_type === 'days_before'">
+                    Kunden müssen {{ paymentSettings.payment_deadline_value }} Tage vor dem Termin bezahlen.
+                  </span>
+                  <span v-else-if="paymentSettings.payment_deadline_type === 'no_limit'">
+                    Kunden können jederzeit bezahlen, auch nach dem Termin.
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cash Payment Settings -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Barzahlungs-Einstellungen</h2>
+            
+            <div class="space-y-4">
+              <!-- Enable Cash Payments -->
+              <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div class="flex-1">
+                  <h3 class="text-sm font-medium text-gray-900">Barzahlungen erlauben</h3>
+                  <p class="text-sm text-gray-600">Aktivieren Sie Barzahlungen als Zahlungsoption</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    v-model="paymentSettings.cash_payments_enabled"
+                    class="sr-only peer"
+                  />
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <!-- Cash Payment Visibility -->
+              <div v-if="paymentSettings.cash_payments_enabled" class="border-l-4 border-blue-500 pl-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Sichtbarkeit der Barzahlungsoption
+                </label>
+                <div class="space-y-2">
+                  <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                         :class="paymentSettings.cash_payment_visibility === 'staff_only' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                    <input
+                      type="radio"
+                      v-model="paymentSettings.cash_payment_visibility"
+                      value="staff_only"
+                      class="mt-1 mr-3"
+                    />
+                    <div>
+                      <div class="font-medium text-gray-900">Nur für Mitarbeiter</div>
+                      <div class="text-sm text-gray-600">Nur Mitarbeiter können Barzahlungen erfassen</div>
+                    </div>
+                  </label>
+
+                  <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                         :class="paymentSettings.cash_payment_visibility === 'customers_and_staff' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                    <input
+                      type="radio"
+                      v-model="paymentSettings.cash_payment_visibility"
+                      value="customers_and_staff"
+                      class="mt-1 mr-3"
+                    />
+                    <div>
+                      <div class="font-medium text-gray-900">Für Mitarbeiter und Kunden</div>
+                      <div class="text-sm text-gray-600">Kunden können Barzahlung als Zahlungsoption wählen</div>
+                    </div>
+                  </label>
+                </div>
+
+                <!-- Warning -->
+                <div v-if="paymentSettings.cash_payment_visibility === 'customers_and_staff'" 
+                     class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3">
+                  <div class="flex">
+                    <svg class="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="text-sm text-yellow-800">
+                      <strong>Hinweis:</strong> Kunden können "Bar" auswählen, zahlen aber beim Termin. 
+                      Stellen Sie sicher, dass Ihre Mitarbeiter entsprechend informiert sind.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
 
       </div>
     </div>
@@ -700,44 +1130,51 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-// definePageMeta is auto-imported by Nuxt
+import { ref, onMounted, markRaw, watch } from 'vue'
+import { definePageMeta, navigateTo } from '#imports'
 import { getSupabase } from '~/utils/supabase'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useFeatures } from '~/composables/useFeatures'
+import EventTypesManager from '~/components/admin/EventTypesManager.vue'
 
 // Icons for tabs
-const PaletteIcon = {
+const PaletteIcon = markRaw({
   template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5H9m12 0v6m0-6l-3.5 3.5M21 11H9"></path>
   </svg>`
-}
+})
 
-const ContactIcon = {
+const ContactIcon = markRaw({
   template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
   </svg>`
-}
+})
 
-const ImageIcon = {
+const ImageIcon = markRaw({
   template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
   </svg>`
-}
+})
 
-const ShieldIcon = {
+const ShieldIcon = markRaw({
   template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
   </svg>`
-}
+})
+
+const PaymentIcon = markRaw({
+  template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+  </svg>`
+})
 
 // Layout
 definePageMeta({
-  layout: 'admin',
-  middleware: 'admin'
+  layout: 'admin'
+  // Temporär ohne Middleware für Debugging
 })
 
 // Composables
@@ -757,7 +1194,7 @@ const activeTab = ref('design')
 const selectedPreset = ref('')
 const selectedFont = ref('')
 // Features
-const { flags: featureFlags, isLoading: isLoadingFeatures, load: loadFeatures, isEnabled, setEnabled } = useFeatures()
+const { flags: featureFlags, definitions: featureDefinitions, isLoading: isLoadingFeatures, load: loadFeatures, isEnabled, setEnabled } = useFeatures()
 const authStore = useAuthStore()
 const isFeatureEnabled = (key: string) => isEnabled(key, false)
 const toggleFeature = async (key: string, value: boolean) => {
@@ -769,6 +1206,7 @@ const toggleFeature = async (key: string, value: boolean) => {
   }
 }
 
+
 // Tab configuration
 const tabs = ref([
   { id: 'design', name: 'Design', icon: PaletteIcon },
@@ -776,7 +1214,10 @@ const tabs = ref([
   { id: 'logos', name: 'Logos', icon: ImageIcon },
   { id: 'security', name: 'Sicherheit', icon: ShieldIcon },
   { id: 'features', name: 'Funktionen', icon: ShieldIcon },
-  { id: 'eventtypes', name: 'Eventtypen', icon: ShieldIcon }
+  { id: 'eventtypes', name: 'Eventtypen', icon: ShieldIcon },
+  { id: 'reminders', name: 'Erinnerungen', icon: ShieldIcon },
+  { id: 'templates', name: 'Nachrichten-Vorlagen', icon: ShieldIcon },
+  { id: 'payments', name: 'Zahlungen', icon: PaymentIcon }
 ])
 
 // Session Settings
@@ -786,6 +1227,48 @@ const sessionSettings = ref({
   allowRememberMe: true,
   warningBeforeTimeoutMinutes: 5
 })
+
+// Payment Settings
+const paymentSettings = ref({
+  payment_deadline_type: 'no_limit',
+  payment_deadline_value: 24,
+  cash_payments_enabled: true,
+  cash_payment_visibility: 'staff_only'
+})
+
+// Reminder Settings
+const reminderSettings = ref({
+  is_enabled: false,
+  first_after_hours: 24,
+  second_after_hours: 48,
+  final_after_hours: 72,
+  first_email: true,
+  first_push: true,
+  first_sms: false,
+  second_email: true,
+  second_push: true,
+  second_sms: false,
+  final_email: false,
+  final_push: false,
+  final_sms: true,
+  auto_delete: true,
+  auto_delete_after_hours: 3
+})
+
+// Template Settings
+const selectedTemplateStage = ref('first')
+const selectedTemplateChannel = ref('email')
+const currentTemplate = ref({
+  id: null as string | null,
+  subject: '',
+  body: ''
+})
+const allTemplates = ref<any[]>([])
+
+// Auto-Save Indicator
+const showAutoSaveIndicator = ref(false)
+const autoSaveMessage = ref('')
+const isInitialLoad = ref(true)
 
 // Font-Presets
 const fontPresets = ref({
@@ -862,7 +1345,6 @@ const brandingForm = ref({
 // Methods
 const loadData = async () => {
   try {
-    const authStore = useAuthStore()
     let tenantId = (authStore.userProfile as any)?.tenant_id
     
     if (!tenantId) {
@@ -889,7 +1371,10 @@ const loadData = async () => {
       }
       
       await loadSessionSettings(tenantId)
-      await loadFeatures(tenantId)
+      await loadPaymentSettings(tenantId)
+      await loadReminderSettings(tenantId)
+      await loadTemplates(tenantId)
+      await loadFeatures()
     }
   } catch (error) {
     console.error('Error loading data:', error)
@@ -905,6 +1390,30 @@ const updateFormFromBranding = () => {
   brandingForm.value.contact = { ...branding.contact }
   brandingForm.value.logos = { ...branding.logos }
   brandingForm.value.meta = { ...branding.meta }
+}
+
+// Auto-save function for branding changes
+const autoSaveBranding = async () => {
+  if (!currentTenantBranding.value) return
+  
+  try {
+    await updateTenantBranding(currentTenantBranding.value.id, brandingForm.value)
+    console.log('✅ Branding auto-saved')
+  } catch (error) {
+    console.error('❌ Auto-save failed:', error)
+  }
+}
+
+// Auto-save function for session settings
+const autoSaveSessionSettings = async () => {
+  if (!currentTenantBranding.value) return
+  
+  try {
+    await saveSessionSettings()
+    console.log('✅ Session settings auto-saved')
+  } catch (error) {
+    console.error('❌ Session settings auto-save failed:', error)
+  }
 }
 
 const loadSessionSettings = async (tenantId: string) => {
@@ -944,6 +1453,404 @@ const loadSessionSettings = async (tenantId: string) => {
   }
 }
 
+// Load Payment Settings
+const loadPaymentSettings = async (tenantId: string) => {
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenantId)
+      .eq('category', 'payment')
+      .eq('setting_key', 'payment_settings')
+      .maybeSingle()
+    
+    if (error && error.code !== 'PGRST116') {
+      console.warn('Warning loading payment settings:', error)
+      return
+    }
+    
+    if (data?.setting_value) {
+      const parsed = typeof data.setting_value === 'string' 
+        ? JSON.parse(data.setting_value)
+        : data.setting_value
+      
+      paymentSettings.value = {
+        ...paymentSettings.value,
+        ...parsed
+      }
+      console.log('✅ Payment settings loaded:', paymentSettings.value)
+    }
+  } catch (error) {
+    console.error('Error loading payment settings:', error)
+  }
+}
+
+// Save Payment Settings
+const savePaymentSettings = async () => {
+  try {
+    const tenantId = (authStore.userProfile as any)?.tenant_id
+    if (!tenantId) {
+      console.warn('No tenant_id for saving payment settings')
+      return
+    }
+
+    console.log('💾 Saving payment settings...')
+    showAutoSaving()
+
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('tenant_settings')
+      .upsert({
+        tenant_id: tenantId,
+        category: 'payment',
+        setting_key: 'payment_settings',
+        setting_value: JSON.stringify(paymentSettings.value),
+        setting_type: 'json',
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'tenant_id,category,setting_key'
+      })
+
+    if (error) throw error
+
+    console.log('✅ Payment settings saved')
+    showAutoSaveSuccess('Gespeichert')
+  } catch (error: any) {
+    console.error('Error saving payment settings:', error)
+    showAutoSaveError('Speicherfehler')
+  }
+}
+
+// Load Reminder Settings
+const loadReminderSettings = async (tenantId: string) => {
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('reminder_settings')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    
+    if (error && error.code !== 'PGRST116') {
+      console.warn('Warning loading reminder settings:', error)
+      return
+    }
+    
+    if (data) {
+      reminderSettings.value = {
+        ...reminderSettings.value,
+        ...data
+      }
+      console.log('✅ Reminder settings loaded:', reminderSettings.value)
+    }
+  } catch (error) {
+    console.error('Error loading reminder settings:', error)
+  }
+}
+
+// Save Reminder Settings
+const saveReminderSettings = async () => {
+  try {
+    const tenantId = (authStore.userProfile as any)?.tenant_id
+    if (!tenantId) {
+      console.warn('No tenant_id for saving reminder settings')
+      return
+    }
+
+    console.log('💾 Saving reminder settings...')
+    showAutoSaving()
+
+    const supabase = getSupabase()
+    
+    // Check if settings exist
+    const { data: existing } = await supabase
+      .from('reminder_settings')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    
+    if (existing?.id) {
+      // Update existing
+      const { error } = await supabase
+        .from('reminder_settings')
+        .update({
+          ...reminderSettings.value,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+      
+      if (error) throw error
+    } else {
+      // Insert new
+      const { error } = await supabase
+        .from('reminder_settings')
+        .insert({
+          tenant_id: tenantId,
+          ...reminderSettings.value,
+          created_at: new Date().toISOString()
+        })
+      
+      if (error) throw error
+    }
+
+    console.log('✅ Reminder settings saved')
+    showAutoSaveSuccess('Gespeichert')
+  } catch (error: any) {
+    console.error('Error saving reminder settings:', error)
+    showAutoSaveError('Speicherfehler')
+  }
+}
+
+// Load Templates
+const loadTemplates = async (tenantId: string) => {
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('reminder_templates')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('stage')
+    
+    if (error && error.code !== 'PGRST116') {
+      console.warn('Warning loading templates:', error)
+      return
+    }
+    
+    allTemplates.value = data || []
+    console.log('✅ Templates loaded:', allTemplates.value.length)
+    
+    // Load initial template
+    loadSelectedTemplate()
+  } catch (error) {
+    console.error('Error loading templates:', error)
+  }
+}
+
+// Load Selected Template
+const loadSelectedTemplate = () => {
+  // Find template in loaded templates
+  const template = allTemplates.value.find(t => 
+    t.stage === selectedTemplateStage.value && 
+    t.channel === selectedTemplateChannel.value
+  )
+  
+  if (template) {
+    currentTemplate.value = {
+      id: template.id,
+      subject: template.subject || '',
+      body: template.body || ''
+    }
+    console.log('✅ Template loaded:', selectedTemplateStage.value, selectedTemplateChannel.value)
+  } else {
+    // Load default template from utils
+    const defaultKey = `${selectedTemplateStage.value}_${selectedTemplateChannel.value}`
+    const defaultTemplate = getDefaultTemplate(defaultKey)
+    
+    currentTemplate.value = {
+      id: null,
+      subject: defaultTemplate.subject,
+      body: defaultTemplate.body
+    }
+    console.log('📝 Using default template for:', defaultKey)
+  }
+}
+
+// Get Default Template
+const getDefaultTemplate = (key: string) => {
+  const defaults: Record<string, { subject: string; body: string }> = {
+    'first_email': {
+      subject: 'Terminbestätigung erforderlich - {{tenant_name}}',
+      body: `Hallo {{student_first_name}},
+
+{{tenant_name}} hat Ihnen einen Termin vorgeschlagen:
+
+📅 Datum: {{appointment_datetime}}
+📍 Treffpunkt: {{location}}
+💰 Preis: CHF {{price}}
+
+Bitte bestätigen Sie den Termin unter folgendem Link:
+{{confirmation_link}}
+
+Falls Sie Fragen haben, antworten Sie einfach auf diese E-Mail.
+
+Freundliche Grüsse
+{{tenant_name}}`
+    },
+    'first_sms': {
+      subject: '',
+      body: '{{tenant_name}}: Bitte bestätigen Sie Ihren Termin am {{appointment_date}} um {{appointment_time}} Uhr. {{confirmation_link}}'
+    },
+    'first_push': {
+      subject: 'Terminbestätigung erforderlich',
+      body: '{{tenant_name}} bittet Sie, Ihren Termin am {{appointment_datetime}} zu bestätigen.'
+    },
+    'second_email': {
+      subject: 'Erinnerung: Terminbestätigung noch ausstehend - {{tenant_name}}',
+      body: `Hallo {{student_first_name}},
+
+dies ist eine freundliche Erinnerung von {{tenant_name}}, dass Ihr Termin noch nicht bestätigt wurde:
+
+📅 Datum: {{appointment_datetime}}
+📍 Treffpunkt: {{location}}
+💰 Preis: CHF {{price}}
+
+Bitte bestätigen Sie den Termin unter folgendem Link:
+{{confirmation_link}}
+
+Falls Sie den Termin nicht wahrnehmen können, lassen Sie es uns bitte wissen.
+
+Freundliche Grüsse
+{{tenant_name}}`
+    },
+    'second_sms': {
+      subject: '',
+      body: '{{tenant_name}}: 2. Erinnerung - Termin am {{appointment_date}} um {{appointment_time}} Uhr noch nicht bestätigt. {{confirmation_link}}'
+    },
+    'second_push': {
+      subject: '2. Erinnerung: Terminbestätigung',
+      body: '{{tenant_name}}: Ihr Termin am {{appointment_datetime}} wartet noch auf Bestätigung.'
+    },
+    'final_email': {
+      subject: 'LETZTE WARNUNG: Termin wird gelöscht - {{tenant_name}}',
+      body: `Hallo {{student_first_name}},
+
+dies ist die LETZTE WARNUNG von {{tenant_name}}!
+
+Ihr Termin wird in Kürze automatisch gelöscht, wenn Sie ihn nicht bestätigen:
+
+📅 Datum: {{appointment_datetime}}
+📍 Treffpunkt: {{location}}
+💰 Preis: CHF {{price}}
+
+⚠️ WICHTIG: Bestätigen Sie den Termin JETZT unter folgendem Link:
+{{confirmation_link}}
+
+Ohne Bestätigung wird der Termin automatisch gelöscht und ist nicht mehr verfügbar.
+
+Freundliche Grüsse
+{{tenant_name}}`
+    },
+    'final_sms': {
+      subject: '',
+      body: '{{tenant_name}} LETZTE WARNUNG: Termin am {{appointment_date}} {{appointment_time}} wird gelöscht! JETZT bestätigen: {{confirmation_link}}'
+    },
+    'final_push': {
+      subject: 'LETZTE WARNUNG: Termin wird gelöscht',
+      body: '{{tenant_name}}: Ihr Termin am {{appointment_datetime}} wird bald automatisch gelöscht!'
+    }
+  }
+  
+  return defaults[key] || { subject: '', body: '' }
+}
+
+// Preview Template with Example Data
+const previewTemplate = (template: string) => {
+  if (!template) return ''
+  
+  const exampleData: Record<string, string> = {
+    '{{tenant_name}}': 'Fahrschule Beispiel',
+    '{{student_name}}': 'Max Mustermann',
+    '{{student_first_name}}': 'Max',
+    '{{student_last_name}}': 'Mustermann',
+    '{{appointment_date}}': '15.10.2025',
+    '{{appointment_time}}': '14:00',
+    '{{appointment_datetime}}': '15.10.2025 um 14:00 Uhr',
+    '{{location}}': 'Bahnhof Zürich',
+    '{{price}}': '125.00',
+    '{{price_with_currency}}': 'CHF 125.00',
+    '{{confirmation_link}}': 'https://simy.ch/confirm/abc123'
+  }
+  
+  let result = template
+  for (const [key, value] of Object.entries(exampleData)) {
+    result = result.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value)
+  }
+  
+  return result
+}
+
+// Save Template
+const saveTemplate = async () => {
+  try {
+    const tenantId = (authStore.userProfile as any)?.tenant_id
+    if (!tenantId) {
+      console.warn('No tenant_id for saving template')
+      return
+    }
+
+    console.log('💾 Saving template...')
+    showAutoSaving()
+
+    const supabase = getSupabase()
+
+    const templateData = {
+      tenant_id: tenantId,
+      channel: selectedTemplateChannel.value,
+      stage: selectedTemplateStage.value,
+      language: 'de',
+      subject: selectedTemplateChannel.value === 'email' ? currentTemplate.value.subject : null,
+      body: currentTemplate.value.body,
+      updated_at: new Date().toISOString()
+    }
+
+    if (currentTemplate.value.id) {
+      // Update existing template
+      const { error } = await supabase
+        .from('reminder_templates')
+        .update(templateData)
+        .eq('id', currentTemplate.value.id)
+      
+      if (error) throw error
+    } else {
+      // Insert new template
+      const { data, error } = await supabase
+        .from('reminder_templates')
+        .insert({
+          ...templateData,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+      
+      if (error) throw error
+      
+      if (data) {
+        currentTemplate.value.id = data.id
+        allTemplates.value.push(data)
+      }
+    }
+
+    console.log('✅ Template saved')
+    showAutoSaveSuccess('Gespeichert')
+  } catch (error: any) {
+    console.error('Error saving template:', error)
+    showAutoSaveError('Speicherfehler')
+  }
+}
+
+// Auto-Save Indicator Functions
+const showAutoSaving = () => {
+  autoSaveMessage.value = 'Speichern...'
+  showAutoSaveIndicator.value = true
+}
+
+const showAutoSaveSuccess = (message: string) => {
+  autoSaveMessage.value = message
+  showAutoSaveIndicator.value = true
+  setTimeout(() => {
+    showAutoSaveIndicator.value = false
+  }, 2000)
+}
+
+const showAutoSaveError = (message: string) => {
+  autoSaveMessage.value = message
+  showAutoSaveIndicator.value = true
+  setTimeout(() => {
+    showAutoSaveIndicator.value = false
+  }, 3000)
+}
+
 const saveBranding = async () => {
   if (!currentTenantBranding.value) return
   
@@ -970,23 +1877,19 @@ const saveSessionSettings = async () => {
   const settingsToSave = [
     {
       setting_key: 'session_inactivity_timeout_minutes',
-      setting_value: sessionSettings.value.inactivityTimeoutMinutes.toString(),
-      description: 'Session-Timeout bei Inaktivität in Minuten'
+      setting_value: sessionSettings.value.inactivityTimeoutMinutes.toString()
     },
     {
       setting_key: 'session_force_daily_logout',
-      setting_value: sessionSettings.value.forceDailyLogout.toString(),
-      description: 'Benutzer müssen sich täglich neu anmelden'
+      setting_value: sessionSettings.value.forceDailyLogout.toString()
     },
     {
       setting_key: 'session_allow_remember_me',
-      setting_value: sessionSettings.value.allowRememberMe.toString(),
-      description: 'Benutzer können "Angemeldet bleiben" wählen'
+      setting_value: sessionSettings.value.allowRememberMe.toString()
     },
     {
       setting_key: 'session_warning_before_timeout_minutes',
-      setting_value: sessionSettings.value.warningBeforeTimeoutMinutes.toString(),
-      description: 'Warnung vor automatischem Logout in Minuten'
+      setting_value: sessionSettings.value.warningBeforeTimeoutMinutes.toString()
     }
   ]
   
@@ -998,8 +1901,7 @@ const saveSessionSettings = async () => {
         category: 'security',
         setting_key: setting.setting_key,
         setting_value: setting.setting_value,
-        setting_type: setting.setting_value === 'true' || setting.setting_value === 'false' ? 'boolean' : 'number',
-        description: setting.description
+        setting_type: setting.setting_value === 'true' || setting.setting_value === 'false' ? 'boolean' : 'number'
       }, {
         onConflict: 'tenant_id,category,setting_key'
       })
@@ -1059,10 +1961,80 @@ const resetForm = () => {
   }
 }
 
+// Auth check (authStore already declared above)
+
 // Lifecycle
 onMounted(async () => {
+  console.log('🔍 Profile page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading profile...')
+  
+  // Original onMounted logic
   await loadData()
+  
+  // Allow auto-save after initial load
+  setTimeout(() => {
+    isInitialLoad.value = false
+  }, 1000)
 })
+
+// Auto-Save Watches with Debounce
+let reminderSaveTimeout: NodeJS.Timeout | null = null
+let paymentSaveTimeout: NodeJS.Timeout | null = null
+let templateSaveTimeout: NodeJS.Timeout | null = null
+
+// Watch Reminder Settings (auto-save after 1 second)
+watch(reminderSettings, () => {
+  if (isInitialLoad.value) return
+  if (reminderSaveTimeout) clearTimeout(reminderSaveTimeout)
+  reminderSaveTimeout = setTimeout(() => {
+    saveReminderSettings()
+  }, 1000)
+}, { deep: true })
+
+// Watch Payment Settings (auto-save after 1 second)
+watch(paymentSettings, () => {
+  if (isInitialLoad.value) return
+  if (paymentSaveTimeout) clearTimeout(paymentSaveTimeout)
+  paymentSaveTimeout = setTimeout(() => {
+    savePaymentSettings()
+  }, 1000)
+}, { deep: true })
+
+// Watch Template (auto-save after 2 seconds for typing)
+watch(currentTemplate, () => {
+  if (isInitialLoad.value) return
+  if (templateSaveTimeout) clearTimeout(templateSaveTimeout)
+  templateSaveTimeout = setTimeout(() => {
+    saveTemplate()
+  }, 2000)
+}, { deep: true })
 </script>
 
 <style scoped>

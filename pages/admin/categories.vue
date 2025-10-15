@@ -292,7 +292,7 @@
                 @click="openCreateModal"
                 class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
               >
-                Neue Kategorie erstellen
+                Neue Kursart erstellen
               </button>
             </div>
           </div>
@@ -702,6 +702,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { navigateTo } from '#imports'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
@@ -710,7 +712,7 @@ import SkeletonLoader from '~/components/SkeletonLoader.vue'
 // @ts-ignore
 definePageMeta({
   layout: 'admin',
-  middleware: ['auth', 'admin']
+  middleware: 'features'
 })
 
 // Types
@@ -797,6 +799,23 @@ const loadCategories = async () => {
     }
 
     console.log('🔍 User tenant_id:', userProfile.tenant_id)
+
+    // Get tenant business_type first
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', userProfile.tenant_id)
+      .single()
+
+    if (tenantError) throw tenantError
+    
+    // Only load categories if business_type is driving_school
+    if (tenantData?.business_type !== 'driving_school') {
+      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      categories.value = []
+      isLoading.value = false
+      return
+    }
 
     // Load categories for the user's tenant
     let query = supabase.from('categories').select('*')
@@ -1713,8 +1732,42 @@ const loadPricingData = async () => {
   }
 }
 
+// Auth check
+const authStore = useAuthStore()
+
 // Lifecycle
 onMounted(async () => {
+  console.log('🔍 Categories page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading categories...')
+  
+  // Original onMounted logic
   await loadCategories()
   await loadPricingData()
 })

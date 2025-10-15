@@ -9,77 +9,56 @@
     </div>
 
     <!-- Main Dashboard Content -->
-    <div v-else class="space-y-8">
+    <div v-else class="space-y-6">
 
-      <!-- Charts Row -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Recent Invoices Overview -->
-        <div class="bg-white rounded-lg shadow-sm border">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900">
-              📄 Kürzlich erstellte Rechnungen
+      <!-- Alle Widgets in 4 Spalten -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Umsätze -->
+        <div class="bg-white rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow" @click="showRevenueModal = true">
+          <div class="px-4 py-3 border-b border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-900">
+              💰 Umsätze
             </h3>
           </div>
-          <div class="p-6">
-            <div v-if="isLoadingInvoices" class="h-64 flex items-center justify-center text-gray-500">
-              <div class="text-center">
-                <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
-                <div class="mt-2">Rechnungen werden geladen...</div>
+          <div class="p-4">
+            <div class="space-y-2 text-xs">
+              <div v-for="month in revenueMonths" :key="month.name" class="flex justify-between">
+                <span class="text-gray-600">{{ month.name }}:</span>
+                <span class="font-semibold text-green-600">CHF {{ (month.revenue / 100).toFixed(0) }}</span>
               </div>
             </div>
-            <div v-else-if="recentInvoices.length === 0" class="h-64 flex items-center justify-center text-gray-500">
+          </div>
+        </div>
+        <!-- Recent Invoices Overview -->
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-4 py-3 border-b border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-900">
+              📄 Rechnungen
+            </h3>
+          </div>
+          <div class="p-4">
+            <div v-if="isLoadingInvoices" class="h-40 flex items-center justify-center text-gray-500">
               <div class="text-center">
-                <div class="text-4xl mb-2">📄</div>
-                <div>Keine Rechnungen in den letzten 2 Wochen</div>
-                <div class="text-sm mt-1 text-gray-400">(diese Woche + letzte Woche)</div>
+                <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
+                <div class="mt-1 text-xs">Laden...</div>
               </div>
             </div>
-            <div v-else class="space-y-4">
-              <!-- This Week -->
-              <div class="border-b border-gray-100 pb-3">
-                <h4 class="text-sm font-medium text-gray-700 mb-2">📅 Diese Woche</h4>
-                <div class="space-y-2">
-                  <div v-for="invoice in thisWeekInvoices" :key="invoice.id" 
-                       class="flex items-center justify-between text-sm">
-                    <div class="flex items-center gap-2">
-                      <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                      <span class="font-medium text-green-600">{{ invoice.customer_name }}</span>
-                    </div>
-                    <div class="text-right">
-                      <div class="font-semibold text-green-600">CHF {{ (invoice.total_amount_rappen / 100).toFixed(2) }}</div>
-                      <div class="text-xs text-gray-500">{{ formatDate(invoice.created_at) }}</div>
-                    </div>
-                  </div>
-                </div>
+            <div v-else-if="recentInvoices.length === 0" class="h-40 flex items-center justify-center text-gray-500">
+              <div class="text-center">
+                <div class="text-2xl mb-1">📄</div>
+                <div class="text-xs">Keine Rechnungen</div>
               </div>
-              
-              <!-- Last Week -->
-              <div>
-                <h4 class="text-sm font-medium text-gray-700 mb-2">📅 Letzte Woche</h4>
-                <div class="space-y-2">
-                  <div v-for="invoice in lastWeekInvoices" :key="invoice.id" 
-                       class="flex items-center justify-between text-sm">
-                    <div class="flex items-center gap-2">
-                      <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      <span class="font-medium text-green-600">{{ invoice.customer_name }}</span>
-                    </div>
-                    <div class="text-right">
-                      <div class="font-semibold text-green-600">CHF {{ (invoice.total_amount_rappen / 100).toFixed(2) }}</div>
-                      <div class="text-xs text-gray-500">{{ formatDate(invoice.created_at) }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Summary -->
-              <div class="pt-3 border-t border-gray-100">
-                <div class="flex justify-between text-sm">
+            </div>
+            <div v-else class="space-y-2">
+              <!-- Summary kompakt -->
+              <div class="text-xs space-y-1">
+                <div class="flex justify-between">
                   <span class="text-gray-600">Diese Woche:</span>
-                  <span class="font-semibold text-green-600">CHF {{ (thisWeekTotal / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-green-600">CHF {{ (thisWeekTotal / 100).toFixed(0) }}</span>
                 </div>
-                <div class="flex justify-between text-sm">
+                <div class="flex justify-between">
                   <span class="text-gray-600">Letzte Woche:</span>
-                  <span class="font-semibold text-blue-600">CHF {{ (lastWeekTotal / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-blue-600">CHF {{ (lastWeekTotal / 100).toFixed(0) }}</span>
                 </div>
               </div>
             </div>
@@ -88,82 +67,196 @@
 
         <!-- Students with Most Pending Payments -->
         <div class="bg-white rounded-lg shadow-sm border">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold text-gray-900">
-                Meiste ausstehende Zahlungen
-              </h3>
+          <div class="px-4 py-3 border-b border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-900">
+              💰 Ausstehend
+            </h3>
+          </div>
+          <div class="p-4">
+            <div v-if="isLoadingPendingStudents" class="h-40 flex items-center justify-center text-gray-500">
+              <div class="text-center">
+                <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
+                <div class="mt-1 text-xs">Laden...</div>
+              </div>
+            </div>
+            <div v-else-if="pendingStudents.length === 0" class="h-40 flex items-center justify-center text-gray-500">
+              <div class="text-center">
+                <div class="text-2xl mb-1">✅</div>
+                <div class="text-xs">Keine ausstehenden Zahlungen</div>
+              </div>
+            </div>
+            <div v-else class="space-y-2">
+              <div v-for="student in pendingStudents.slice(0, 3)" :key="student.id" 
+                   class="flex items-center justify-between text-xs cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+                   @click="navigateToStudentPayments(student.id)">
+                <div class="font-medium text-gray-900 truncate">
+                  {{ student.first_name }} {{ student.last_name }}
+                </div>
+                <div class="text-right ml-2">
+                  <div class="font-semibold text-orange-600">{{ student.pending_payments_count }}</div>
+                </div>
+              </div>
               <button 
                 @click="showPendingStudentsModal = true"
-                class="px-3 py-1.5 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+                class="w-full text-xs text-blue-600 hover:text-blue-800 mt-2"
               >
-                Alle anzeigen
+                Alle anzeigen →
               </button>
             </div>
           </div>
-          <div class="p-6">
-            <div v-if="isLoadingPendingStudents" class="h-64 flex items-center justify-center text-gray-500">
+        </div>
+
+        <!-- Kurse -->
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-4 py-3 border-b border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-900">
+              📚 Kurse
+            </h3>
+          </div>
+          <div class="p-4">
+            <div v-if="isLoadingCourses" class="h-40 flex items-center justify-center text-gray-500">
               <div class="text-center">
-                <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
-                <div class="mt-2">Wird geladen...</div>
+                <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
+                <div class="mt-1 text-xs">Laden...</div>
               </div>
             </div>
-            <div v-else-if="pendingStudents.length === 0" class="h-64 flex items-center justify-center text-gray-500">
-              <div class="text-center">
-                <div class="text-4xl mb-2">✅</div>
-                <div>Keine ausstehenden Zahlungen!</div>
+            <div v-else class="space-y-2 text-xs">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Aktive Kurse:</span>
+                <span class="font-semibold text-blue-600">{{ coursesStats.active }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Teilnehmer:</span>
+                <span class="font-semibold text-green-600">{{ coursesStats.participants }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Dieser Monat:</span>
+                <span class="font-semibold text-purple-600">{{ coursesStats.thisMonth }}</span>
               </div>
             </div>
-            <div v-else class="space-y-4">
-              <div v-for="student in pendingStudents" :key="student.id" 
-                   class="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200 cursor-pointer hover:bg-orange-100 transition-colors"
-                   @click="navigateToStudentPayments(student.id)">
-                <div class="flex items-center gap-3">
-                  <div>
-                    <div class="font-medium text-gray-900">{{ student.first_name }} {{ student.last_name }}</div>
-                    
-                  </div>
-                </div>
-                <div>
-                  <div class="font-semibold text-orange-600">{{ student.pending_payments_count }}</div>
-                  <div class="text-xs text-gray-500">CHF {{ (student.total_pending_amount / 100).toFixed(2) }}</div>
-                </div>
+          </div>
+        </div>
+
+        <!-- Guthaben -->
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-4 py-3 border-b border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-900">
+              💳 Guthaben
+            </h3>
+          </div>
+          <div class="p-4">
+            <div v-if="isLoadingCredits" class="h-40 flex items-center justify-center text-gray-500">
+              <div class="text-center">
+                <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
+                <div class="mt-1 text-xs">Laden...</div>
+              </div>
+            </div>
+            <div v-else class="space-y-2 text-xs">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Schüler mit Guthaben:</span>
+                <span class="font-semibold text-green-600">{{ creditsStats.studentsWithCredit }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Gesamt Guthaben:</span>
+                <span class="font-semibold text-blue-600">CHF {{ (creditsStats.totalCredit / 100).toFixed(2) }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Ø pro Schüler:</span>
+                <span class="font-semibold text-purple-600">CHF {{ creditsStats.studentsWithCredit > 0 ? ((creditsStats.totalCredit / creditsStats.studentsWithCredit) / 100).toFixed(2) : '0.00' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Absagen -->
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-4 py-3 border-b border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-900">
+              ❌ Absagen
+            </h3>
+          </div>
+          <div class="p-4">
+            <div v-if="isLoadingCancellations" class="h-40 flex items-center justify-center text-gray-500">
+              <div class="text-center">
+                <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
+                <div class="mt-1 text-xs">Laden...</div>
+              </div>
+            </div>
+            <div v-else class="space-y-2 text-xs">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Diese Woche:</span>
+                <span class="font-semibold text-red-600">{{ cancellationsStats.thisWeek }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Dieser Monat:</span>
+                <span class="font-semibold text-orange-600">{{ cancellationsStats.thisMonth }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Letzter Monat:</span>
+                <span class="font-semibold text-gray-600">{{ cancellationsStats.lastMonth }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stunden -->
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="px-4 py-3 border-b border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-900">
+              ⏱️ Stunden
+            </h3>
+          </div>
+          <div class="p-4">
+            <div v-if="isLoadingHours" class="h-40 flex items-center justify-center text-gray-500">
+              <div class="text-center">
+                <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
+                <div class="mt-1 text-xs">Laden...</div>
+              </div>
+            </div>
+            <div v-else class="space-y-2 text-xs">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Heute:</span>
+                <span class="font-semibold text-blue-600">{{ hoursStats.today }}h</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Diese Woche:</span>
+                <span class="font-semibold text-green-600">{{ hoursStats.thisWeek }}h</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Dieser Monat:</span>
+                <span class="font-semibold text-purple-600">{{ hoursStats.thisMonth }}h</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Recent Activity -->
+      <!-- Recent Activity - Kompakt -->
       <div class="bg-white rounded-lg shadow-sm border">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <div class="flex justify-between items-center">
-            <h3 class="text-lg font-semibold text-gray-900">
-              🕒 Letzte Aktivitäten
-            </h3>
-            <NuxtLink to="/admin/payment-overview" 
-                      class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-              Alle anzeigen →
-            </NuxtLink>
-          </div>
+        <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+          <h3 class="text-sm font-semibold text-gray-900">
+            🕒 Aktivitäten
+          </h3>
+          <NuxtLink to="/admin/payment-overview" 
+                    class="text-xs text-blue-600 hover:text-blue-800">
+            Alle →
+          </NuxtLink>
         </div>
-        <div class="p-6">
-          <div class="space-y-4">
-            <div v-for="activity in recentActivities" :key="activity.id" 
-                 class="flex items-center gap-4 py-3 border-b border-gray-100 last:border-b-0">
-              <div class="w-10 h-10 rounded-full flex items-center justify-center"
+        <div class="p-4">
+          <div class="space-y-2">
+            <div v-for="activity in recentActivities.slice(0, 5)" :key="activity.id" 
+                 class="flex items-center gap-2 text-xs hover:bg-gray-50 p-2 rounded transition-colors">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                    :class="activity.type === 'payment' ? 'bg-green-100' : 
                           activity.type === 'pending_payment' ? 'bg-orange-100' :
                           activity.type === 'booking' ? 'bg-blue-100' : 'bg-gray-100'">
-                <span class="text-sm">{{ activity.icon }}</span>
+                <span class="text-xs">{{ activity.icon }}</span>
               </div>
-              <div class="flex-1">
-                <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
-                <p class="text-xs text-gray-500">{{ activity.description }}</p>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-medium text-gray-900 truncate">{{ activity.title }}</p>
               </div>
-              <div class="text-right">
-                <p class="text-sm font-medium text-gray-900">{{ activity.amount }}</p>
-                <p class="text-xs text-gray-500">{{ activity.time }}</p>
+              <div class="text-right flex-shrink-0">
+                <p class="text-xs font-medium text-gray-900">{{ activity.amount }}</p>
               </div>
             </div>
           </div>
@@ -274,15 +367,188 @@
       </div>
     </div>
   </div>
+
+  <!-- Month Detail Modal -->
+  <div v-if="showMonthDetailModal && selectedMonth" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-xl font-semibold text-gray-900">
+          Umsatz-Details: {{ selectedMonth.name }}
+        </h2>
+        <button 
+          @click="showMonthDetailModal = false"
+          class="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Content -->
+      <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <!-- Summary -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+            <div class="text-sm text-green-600 font-medium mb-1">Bezahlte Umsätze</div>
+            <div class="text-2xl font-bold text-green-700">CHF {{ (selectedMonth.revenue / 100).toFixed(2) }}</div>
+            <div class="text-xs text-gray-600 mt-1">{{ selectedMonth.paymentsCount }} Zahlungen</div>
+          </div>
+          <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <div class="text-sm text-orange-600 font-medium mb-1">Ausstehende Zahlungen</div>
+            <div class="text-2xl font-bold text-orange-700">{{ selectedMonth.pendingCount }}</div>
+            <div class="text-xs text-gray-600 mt-1">Noch offen</div>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <p class="text-sm text-blue-800">
+            <strong>Hinweis:</strong> Detaillierte Aufschlüsselung nach Zahlungsmethode, Kategorie und einzelnen Zahlungen folgt in einer kommenden Version.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue Modal -->
+  <div v-if="showRevenueModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-xl font-semibold text-gray-900">
+          Umsatz-Übersicht der letzten 12 Monate
+        </h2>
+        <button 
+          @click="showRevenueModal = false"
+          class="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Content -->
+      <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <!-- Filter Section -->
+        <div class="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <h3 class="text-sm font-semibold text-gray-900 mb-3">Filter (In Entwicklung)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Zahlungsmethode</label>
+              <select 
+                v-model="revenueFilter.paymentMethod"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                disabled
+              >
+                <option value="all">Alle</option>
+                <option value="cash">Bar</option>
+                <option value="invoice">Rechnung</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Kategorie</label>
+              <select 
+                v-model="revenueFilter.category"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                disabled
+              >
+                <option value="all">Alle</option>
+                <option value="B">Kategorie B</option>
+                <option value="A">Kategorie A</option>
+                <option value="C">Kategorie C</option>
+              </select>
+            </div>
+            <div class="flex items-end">
+              <button 
+                class="w-full px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm cursor-not-allowed"
+                disabled
+              >
+                Filter anwenden
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 12 Months Table -->
+        <div v-if="revenue12Months.length > 0" class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monat</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Umsatz</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Zahlungen</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ø pro Zahlung</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="(month, index) in revenue12Months" :key="month.monthKey" 
+                  :class="index === 0 ? 'bg-green-50' : 'hover:bg-gray-50'">
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <span v-if="index === 0" class="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    <span class="text-sm font-medium text-gray-900">{{ month.name }}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-right">
+                  <span class="text-sm font-bold text-green-600">
+                    CHF {{ (month.revenue / 100).toFixed(2) }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-center">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {{ month.paymentsCount }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-right text-sm text-gray-900">
+                  CHF {{ month.paymentsCount > 0 ? ((month.revenue / month.paymentsCount) / 100).toFixed(2) : '0.00' }}
+                </td>
+              </tr>
+            </tbody>
+            <tfoot class="bg-gray-50">
+              <tr class="font-semibold">
+                <td class="px-4 py-3 text-sm text-gray-900">Gesamt (12 Monate)</td>
+                <td class="px-4 py-3 text-right text-sm text-green-600">
+                  CHF {{ (revenue12Months.reduce((sum, m) => sum + m.revenue, 0) / 100).toFixed(2) }}
+                </td>
+                <td class="px-4 py-3 text-center text-sm text-gray-900">
+                  {{ revenue12Months.reduce((sum, m) => sum + m.paymentsCount, 0) }}
+                </td>
+                <td class="px-4 py-3 text-right text-sm text-gray-900">
+                  CHF {{ 
+                    revenue12Months.reduce((sum, m) => sum + m.paymentsCount, 0) > 0 
+                      ? ((revenue12Months.reduce((sum, m) => sum + m.revenue, 0) / revenue12Months.reduce((sum, m) => sum + m.paymentsCount, 0)) / 100).toFixed(2) 
+                      : '0.00' 
+                  }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Loading State -->
+        <div v-else class="flex items-center justify-center py-12">
+          <div class="text-center">
+            <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
+            <div class="mt-2 text-gray-500">Lade Umsatzdaten...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { definePageMeta, navigateTo } from '#imports'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString, formatDate } from '~/utils/dateUtils'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
   layout: 'admin'
@@ -290,6 +556,7 @@ definePageMeta({
 
 // Current User für Tenant-ID
 const { currentUser } = useCurrentUser()
+const authStore = useAuthStore()
 
 // Types
 interface DashboardStats {
@@ -356,6 +623,56 @@ const stats = ref<DashboardStats>({
 })
 
 const recentActivities = ref<Activity[]>([])
+
+// Revenue State
+interface RevenueMonth {
+  name: string
+  revenue: number
+  paymentsCount: number
+  pendingCount: number
+  monthKey: string
+}
+
+const revenueMonths = ref<RevenueMonth[]>([])
+const showRevenueModal = ref(false)
+const revenue12Months = ref<RevenueMonth[]>([])
+const revenueFilter = ref({
+  paymentMethod: 'all', // all, cash, invoice, online
+  category: 'all', // all, B, A, C, etc.
+  customRange: false,
+  startDate: '',
+  endDate: ''
+})
+const showMonthDetailModal = ref(false)
+const selectedMonth = ref<RevenueMonth | null>(null)
+
+// New stats
+const isLoadingCourses = ref(true)
+const coursesStats = ref({
+  active: 0,
+  participants: 0,
+  thisMonth: 0
+})
+
+const isLoadingCredits = ref(true)
+const creditsStats = ref({
+  studentsWithCredit: 0,
+  totalCredit: 0
+})
+
+const isLoadingCancellations = ref(true)
+const cancellationsStats = ref({
+  thisWeek: 0,
+  thisMonth: 0,
+  lastMonth: 0
+})
+
+const isLoadingHours = ref(true)
+const hoursStats = ref({
+  today: 0,
+  thisWeek: 0,
+  thisMonth: 0
+})
 
 // Function to load recent activities including pending payments
 const loadRecentActivities = async () => {
@@ -819,17 +1136,389 @@ const getCategoryColor = (categoryCode: string): string => {
   return colors[categoryCode] || '#6B7280'
 }
 
-const navigateToStudentPayments = (userId: string) => {
-  navigateTo(`/admin/users/${userId}`)
+// Load revenue data for the last 4 months
+const loadRevenueData = async () => {
+  try {
+    const tenantId = authStore.userProfile?.tenant_id || currentUser.value?.tenant_id
+    if (!tenantId) {
+      console.warn('No tenant ID found for revenue data')
+      return
+    }
+    console.log('💰 Loading revenue data for tenant:', tenantId)
+    
+    const now = new Date()
+    const months: RevenueMonth[] = []
+
+    // First, let's check what payments exist at all
+    const { data: allPayments, error: allError } = await supabase
+      .from('payments')
+      .select('id, payment_status, payment_method, total_amount_rappen, created_at')
+      .eq('tenant_id', tenantId)
+      .limit(10)
+
+    console.log('📊 Sample of all payments in DB:', {
+      total: allPayments?.length || 0,
+      samples: allPayments?.slice(0, 3),
+      statuses: [...new Set(allPayments?.map(p => p.payment_status))]
+    })
+
+    // Get current month and 3 previous months
+    for (let i = 0; i < 4; i++) {
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
+      const monthEnd = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999)
+
+      const monthStartStr = toLocalTimeString(monthStart)
+      const monthEndStr = toLocalTimeString(monthEnd)
+
+      // Load completed/paid payments
+      const { data: completedPayments } = await supabase
+        .from('payments')
+        .select('total_amount_rappen, payment_status')
+        .eq('tenant_id', tenantId)
+        .in('payment_status', ['completed', 'paid', 'cash'])
+        .gte('created_at', monthStartStr)
+        .lte('created_at', monthEndStr)
+
+      // Load pending payments
+      const { data: pendingPayments } = await supabase
+        .from('payments')
+        .select('total_amount_rappen, payment_status')
+        .eq('tenant_id', tenantId)
+        .eq('payment_status', 'pending')
+        .gte('created_at', monthStartStr)
+        .lte('created_at', monthEndStr)
+
+      const totalRevenue = completedPayments?.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0) || 0
+      const paymentsCount = completedPayments?.length || 0
+      const pendingCount = pendingPayments?.length || 0
+
+      // Format month name
+      const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
+                          'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+      const monthName = i === 0 ? 'Aktuell' : monthNames[targetDate.getMonth()]
+
+      months.push({
+        name: monthName,
+        revenue: totalRevenue,
+        paymentsCount,
+        pendingCount,
+        monthKey: `${targetDate.getFullYear()}-${targetDate.getMonth() + 1}`
+      })
+
+      if (i === 0) {
+        console.log('💰 Current month data:', {
+          completed: paymentsCount,
+          pending: pendingCount,
+          revenue: totalRevenue
+        })
+      }
+    }
+
+    revenueMonths.value = months
+    console.log('✅ Revenue data loaded for 4 months:', months)
+  } catch (error) {
+    console.error('❌ Error loading revenue data:', error)
+  }
 }
 
-// Lifecycle
-// Load data immediately when component is created (not waiting for mount)
-loadDashboardStats()
+// Load 12 months revenue data for modal
+const load12MonthsRevenue = async () => {
+  try {
+    if (!currentUser.value?.tenant_id) {
+      console.warn('No tenant ID found for 12 months revenue data')
+      return
+    }
+
+    const tenantId = currentUser.value.tenant_id
+    const now = new Date()
+    const months: RevenueMonth[] = []
+
+    // Get 12 months
+    for (let i = 0; i < 12; i++) {
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
+      const monthEnd = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999)
+
+      const monthStartStr = toLocalTimeString(monthStart)
+      const monthEndStr = toLocalTimeString(monthEnd)
+
+      // Load payments for this month
+      const { data: payments, error } = await supabase
+        .from('payments')
+        .select('total_amount_rappen, payment_status, payment_method')
+        .eq('tenant_id', tenantId)
+        .eq('payment_status', 'completed')
+        .gte('created_at', monthStartStr)
+        .lte('created_at', monthEndStr)
+
+      if (error) {
+        console.error(`Error loading payments for month ${i}:`, error)
+        continue
+      }
+
+      const totalRevenue = payments?.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0) || 0
+      const paymentsCount = payments?.length || 0
+
+      // Format month name
+      const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
+                          'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+      const monthName = `${monthNames[targetDate.getMonth()]} ${targetDate.getFullYear()}`
+
+      months.push({
+        name: monthName,
+        revenue: totalRevenue,
+        paymentsCount,
+        monthKey: `${targetDate.getFullYear()}-${targetDate.getMonth() + 1}`
+      })
+    }
+
+    revenue12Months.value = months
+    console.log('✅ 12 months revenue data loaded:', months)
+  } catch (error) {
+    console.error('❌ Error loading 12 months revenue data:', error)
+  }
+}
+
+// Load courses stats
+const loadCoursesStats = async () => {
+  try {
+    if (!currentUser.value?.tenant_id) return
+    const tenantId = currentUser.value.tenant_id
+
+    // Active courses
+    const { data: activeCourses } = await supabase
+      .from('course_sessions')
+      .select('id, course_id')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+
+    // Participants
+    const { data: registrations } = await supabase
+      .from('course_registrations')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+
+    // This month courses
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const monthStartStr = toLocalTimeString(monthStart)
+
+    const { data: thisMonthCourses } = await supabase
+      .from('course_sessions')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .gte('start_date', monthStartStr)
+
+    coursesStats.value = {
+      active: activeCourses?.length || 0,
+      participants: registrations?.length || 0,
+      thisMonth: thisMonthCourses?.length || 0
+    }
+  } catch (error) {
+    console.error('Error loading courses stats:', error)
+  } finally {
+    isLoadingCourses.value = false
+  }
+}
+
+// Load credits stats
+const loadCreditsStats = async () => {
+  try {
+    if (!currentUser.value?.tenant_id) return
+    const tenantId = currentUser.value.tenant_id
+
+    const { data: credits } = await supabase
+      .from('student_credits')
+      .select('user_id, balance_rappen')
+      .eq('tenant_id', tenantId)
+      .gt('balance_rappen', 0)
+
+    const totalCredit = credits?.reduce((sum, c) => sum + (c.balance_rappen || 0), 0) || 0
+
+    creditsStats.value = {
+      studentsWithCredit: credits?.length || 0,
+      totalCredit
+    }
+  } catch (error) {
+    console.error('Error loading credits stats:', error)
+  } finally {
+    isLoadingCredits.value = false
+  }
+}
+
+// Load cancellations stats
+const loadCancellationsStats = async () => {
+  try {
+    if (!currentUser.value?.tenant_id) return
+    const tenantId = currentUser.value.tenant_id
+
+    const now = new Date()
+    
+    // This week
+    const weekStart = new Date(now)
+    weekStart.setDate(now.getDate() - now.getDay())
+    weekStart.setHours(0, 0, 0, 0)
+    const weekStartStr = toLocalTimeString(weekStart)
+
+    const { data: thisWeekCancellations } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .not('deleted_at', 'is', null)
+      .gte('deleted_at', weekStartStr)
+
+    // This month
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const monthStartStr = toLocalTimeString(monthStart)
+
+    const { data: thisMonthCancellations } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .not('deleted_at', 'is', null)
+      .gte('deleted_at', monthStartStr)
+
+    // Last month
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+    const lastMonthStartStr = toLocalTimeString(lastMonthStart)
+    const lastMonthEndStr = toLocalTimeString(lastMonthEnd)
+
+    const { data: lastMonthCancellations } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .not('deleted_at', 'is', null)
+      .gte('deleted_at', lastMonthStartStr)
+      .lte('deleted_at', lastMonthEndStr)
+
+    cancellationsStats.value = {
+      thisWeek: thisWeekCancellations?.length || 0,
+      thisMonth: thisMonthCancellations?.length || 0,
+      lastMonth: lastMonthCancellations?.length || 0
+    }
+  } catch (error) {
+    console.error('Error loading cancellations stats:', error)
+  } finally {
+    isLoadingCancellations.value = false
+  }
+}
+
+// Load hours stats
+const loadHoursStats = async () => {
+  try {
+    if (!currentUser.value?.tenant_id) return
+    const tenantId = currentUser.value.tenant_id
+
+    const now = new Date()
+    
+    // Today
+    const todayStart = new Date(now.setHours(0, 0, 0, 0))
+    const todayEnd = new Date(now.setHours(23, 59, 59, 999))
+    const todayStartStr = toLocalTimeString(todayStart)
+    const todayEndStr = toLocalTimeString(todayEnd)
+
+    const { data: todayAppts } = await supabase
+      .from('appointments')
+      .select('duration_minutes')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .gte('start_time', todayStartStr)
+      .lte('start_time', todayEndStr)
+
+    // This week
+    const weekStart = new Date()
+    weekStart.setDate(now.getDate() - now.getDay())
+    weekStart.setHours(0, 0, 0, 0)
+    const weekStartStr = toLocalTimeString(weekStart)
+
+    const { data: weekAppts } = await supabase
+      .from('appointments')
+      .select('duration_minutes')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .gte('start_time', weekStartStr)
+
+    // This month
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const monthStartStr = toLocalTimeString(monthStart)
+
+    const { data: monthAppts } = await supabase
+      .from('appointments')
+      .select('duration_minutes')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .gte('start_time', monthStartStr)
+
+    const todayMinutes = todayAppts?.reduce((sum, a) => sum + (a.duration_minutes || 0), 0) || 0
+    const weekMinutes = weekAppts?.reduce((sum, a) => sum + (a.duration_minutes || 0), 0) || 0
+    const monthMinutes = monthAppts?.reduce((sum, a) => sum + (a.duration_minutes || 0), 0) || 0
+
+    hoursStats.value = {
+      today: Math.round((todayMinutes / 60) * 20) / 20,
+      thisWeek: Math.round((weekMinutes / 60) * 20) / 20,
+      thisMonth: Math.round((monthMinutes / 60) * 20) / 20
+    }
+  } catch (error) {
+    console.error('Error loading hours stats:', error)
+  } finally {
+    isLoadingHours.value = false
+  }
+}
+
+const navigateToStudentPayments = (userId: string) => {
+  navigateTo(`/admin/payments/${userId}`)
+}
+
+// Open month detail modal
+const openMonthDetail = (month: RevenueMonth) => {
+  selectedMonth.value = month
+  showMonthDetailModal.value = true
+}
+
+// Watch for modal opening
+watch(showRevenueModal, (isOpen) => {
+  if (isOpen) {
+    load12MonthsRevenue()
+  }
+})
+
+// Load all data function
+const loadAllDashboardData = () => {
+  const tenantId = authStore.userProfile?.tenant_id || currentUser.value?.tenant_id
+  console.log('🔄 Loading all dashboard data...', { 
+    tenantId, 
+    authStoreProfile: !!authStore.userProfile,
+    authStoreTenant: authStore.userProfile?.tenant_id, 
+    currentUserTenant: currentUser.value?.tenant_id 
+  })
+  
+  if (tenantId) {
+    console.log('✅ Tenant ID available, loading data:', tenantId)
+    loadDashboardStats()
+    loadRevenueData()
+    loadCoursesStats()
+    loadCreditsStats()
+    loadCancellationsStats()
+    loadHoursStats()
+  } else {
+    console.warn('⚠️ No tenant_id found, retrying in 500ms...')
+    setTimeout(loadAllDashboardData, 500)
+  }
+}
+
+// Watch for tenant to be available
+watch(() => authStore.userProfile?.tenant_id, (tenantId) => {
+  if (tenantId) {
+    console.log('✅ Tenant ID available in auth store, loading data:', tenantId)
+    loadAllDashboardData()
+  }
+}, { immediate: true })
 
 onMounted(() => {
-  // Page is already displayed, data loads in background
-  console.log('📊 Dashboard page mounted, data loading in background')
+  console.log('📊 Dashboard page mounted')
 })
 </script>
 

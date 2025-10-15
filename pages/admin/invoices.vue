@@ -462,17 +462,54 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-// definePageMeta is auto-imported by Nuxt
+import { definePageMeta, navigateTo } from '#imports'
 import { useInvoices } from '~/composables/useInvoices'
+import { useAuthStore } from '~/stores/auth'
 import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
 import InvoiceDetailModal from '~/components/admin/InvoiceDetailModal.vue'
 import type { InvoiceStatus, PaymentStatus, InvoiceFilters } from '~/types/invoice'
 
 // Page meta
-// definePageMeta({
-//   layout: 'admin',
-//   middleware: ['auth']
-// })
+definePageMeta({
+  layout: 'admin',
+  middleware: 'features'
+})
+
+// Auth check
+const authStore = useAuthStore()
+
+// Prüfe Authentifizierung direkt in der Komponente
+onMounted(async () => {
+  console.log('🔍 Invoices page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading invoices...')
+})
 
 // Simple debounce implementation
 const useDebounce = (callback: Function, delay: number) => {

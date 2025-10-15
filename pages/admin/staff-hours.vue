@@ -277,12 +277,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { navigateTo } from '#imports'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 
 // Meta
 definePageMeta({
   layout: 'admin',
-  middleware: 'admin'
+  middleware: 'features'
 })
 
 // Composables
@@ -411,6 +413,23 @@ const loadStaffHours = async () => {
     }
     
     console.log('🔍 Loading staff hours for tenant:', tenantId)
+
+    // Get tenant business_type first
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', userProfile.tenant_id)
+      .single()
+
+    if (tenantError) throw tenantError
+    
+    // Only load categories if business_type is driving_school
+    if (tenantData?.business_type !== 'driving_school') {
+      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      availableCategories.value = []
+      isLoading.value = false
+      return
+    }
 
     // Lade verfügbare Kategorien - FILTERED BY TENANT
     const { data: categories, error: categoriesError } = await supabase
@@ -665,8 +684,42 @@ const getGrandTotal = () => {
   return `${total.toFixed(1)}h`
 }
 
+// Auth check
+const authStore = useAuthStore()
+
 // Initialize
-onMounted(() => {
+onMounted(async () => {
+  console.log('🔍 Staff hours page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading staff hours...')
+  
+  // Original onMounted logic
   // Set default values
   const now = new Date()
   selectedYear.value = now.getFullYear()

@@ -407,6 +407,22 @@ const loadTenants = async () => {
 
 const loadCategories = async () => {
   try {
+    // Get tenant business_type first
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('slug', tenantSlug.value)
+      .single()
+
+    if (tenantError) throw tenantError
+    
+    // Only load categories if business_type is driving_school
+    if (tenantData?.business_type !== 'driving_school') {
+      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      categories.value = []
+      return
+    }
+
     const { data, error } = await supabase
       .from('categories')
       .select('id, code, name, description, lesson_duration_minutes, tenant_id')

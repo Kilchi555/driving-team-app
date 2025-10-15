@@ -256,13 +256,14 @@ const loadPaymentDetails = async () => {
           
           if (payment.appointments?.id) {
             // ✅ Load products via discount_sales -> product_sales chain
-            const { data: discountSales } = await supabase
+            const { data: discountSales, error: discountError } = await supabase
               .from('discount_sales')
               .select('id')
               .eq('appointment_id', payment.appointments.id)
-              .single()
+              .maybeSingle()
             
-            if (discountSales?.id) {
+            // Ignore 406 errors or missing data - discount_sales is optional
+            if (!discountError && discountSales?.id) {
               const { data: productsData } = await supabase
                 .from('product_sales')
                 .select(`
@@ -341,13 +342,14 @@ const loadPaymentDetails = async () => {
           for (const appointment of appointmentsData) {
             // ✅ Load products via discount_sales -> product_sales chain
             let appointmentProducts = []
-            const { data: discountSales } = await supabase
+            const { data: discountSales, error: discountError } = await supabase
               .from('discount_sales')
               .select('id')
               .eq('appointment_id', appointment.id)
-              .single()
+              .maybeSingle()
             
-            if (discountSales?.id) {
+            // Ignore 406 errors or missing data - discount_sales is optional
+            if (!discountError && discountSales?.id) {
               const { data: productsData } = await supabase
                 .from('product_sales')
                 .select(`
@@ -522,12 +524,35 @@ const processPayment = async (success: boolean) => {
         customerEmail: userData.email,
         customerName: `${userData.first_name} ${userData.last_name}`,
         description: `Zahlung für ${paymentDetails.value.length} Termin(e)`,
-        successUrl: `${window.location.origin}/payment/success`,
-        failedUrl: `${window.location.origin}/payment/failed`
+        successUrl: `${window.location.origin}/payment/success?payment_ids=${paymentIds.value.join(',')}`,
+        failedUrl: `${window.location.origin}/payment/failed?payment_ids=${paymentIds.value.join(',')}`
       }
     })
     
-    if (walleeResponse.success && walleeResponse.paymentUrl) {
+    if (walleeResponse.success && walleeResponse.paymentUrl && walleeResponse.transactionId) {
+      // Update all payments with Wallee transaction ID before redirect
+      console.log('💾 Saving Wallee transaction ID to payments:', walleeResponse.transactionId)
+      
+      for (const paymentId of paymentIds.value) {
+        const { error: updateError } = await supabase
+          .from('payments')
+          .update({
+            wallee_transaction_id: walleeResponse.transactionId.toString(),
+            metadata: {
+              ...paymentDetails.value.find(p => p.id === paymentId)?.metadata,
+              wallee_transaction_id: walleeResponse.transactionId
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', paymentId)
+        
+        if (updateError) {
+          console.error('❌ Error updating payment with transaction ID:', updateError)
+        }
+      }
+      
+      console.log('✅ All payments updated with transaction ID')
+      
       // Redirect to Wallee payment page
       window.location.href = walleeResponse.paymentUrl
     } else {

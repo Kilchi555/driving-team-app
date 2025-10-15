@@ -143,7 +143,7 @@
                 Gültigkeit
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Verwendung
+                Verwendung & Limits
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -193,8 +193,18 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 <div>{{ discount.usage_count }}x verwendet</div>
-                <div v-if="discount.usage_limit" class="text-gray-500">
-                  von {{ discount.usage_limit }}
+                <div v-if="discount.usage_limit || discount.max_per_user" class="text-gray-500 text-xs space-y-1">
+                  <div v-if="discount.usage_limit" class="flex items-center">
+                    <span class="text-blue-600 mr-1">🌐</span>
+                    Gesamt: {{ discount.usage_limit }}
+                  </div>
+                  <div v-if="discount.max_per_user" class="flex items-center">
+                    <span class="text-green-600 mr-1">👤</span>
+                    Pro Kunde: {{ discount.max_per_user }}
+                  </div>
+                </div>
+                <div v-else class="text-gray-400 text-xs">
+                  Unbegrenzt
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -250,10 +260,12 @@
 // Page meta
 definePageMeta({
   layout: 'admin',
-  middleware: ['auth']
+  middleware: 'features'
 })
 
 import { ref, computed, onMounted } from 'vue'
+import { navigateTo } from '#imports'
+import { useAuthStore } from '~/stores/auth'
 import { useDiscounts } from '~/composables/useDiscounts'
 import type { Discount } from '~/types/payment'
 
@@ -406,8 +418,42 @@ const formatDate = (dateString: string | null | undefined) => {
   }
 }
 
+// Auth check
+const authStore = useAuthStore()
+
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
+  console.log('🔍 Discounts page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading discounts...')
+  
+  // Original onMounted logic
   loadAllDiscounts()
 })
 </script>

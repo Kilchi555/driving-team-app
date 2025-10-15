@@ -3,7 +3,6 @@ import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import CalendarComponent from '../components/CalendarComponent.vue'
 import StaffSettings from '~/components/StaffSettings.vue'
 import PendenzenModal from '~/components/PendenzenModal.vue'
-import ProfileSetup from '~/components/ProfileSetup.vue'
 import ProductSaleModal from '~/components/ProductSaleModal.vue'
 import AdminStaffSwitcher from '~/components/AdminStaffSwitcher.vue'
 import { navigateTo } from '#app'
@@ -88,19 +87,6 @@ watch(() => currentUser.value?.role, (newRole) => {
   console.log('🔍 Dashboard - Is admin:', newRole === 'admin')
 }, { immediate: true })
 
-// NEU: Funktion für nach Profilerstellung
-const handleProfileCreated = async () => {
-  console.log('Profil wurde erstellt, lade Daten neu...')
-  await fetchCurrentUser()
-  
-  // Nach erfolgreicher Profilerstellung Pending Tasks laden
-  if (currentUser.value && ['staff', 'admin'].includes(currentUser.value.role)) {
-    console.log('🔄 Loading pending tasks after profile creation...')
-    await fetchPendingTasks(currentUser.value.id)
-    console.log('✅ Pending tasks loaded, count:', pendingCount.value)
-  }
-}
-
 // NEU: Zentrale Funktion zum Aktualisieren der Pendenzen
 const refreshPendingData = async () => {
   if (!currentUser.value || !['staff', 'admin'].includes(currentUser.value.role)) {
@@ -122,6 +108,27 @@ const refreshPendingData = async () => {
     
   } catch (err) {
     console.error('❌ Error refreshing pending data:', err)
+  }
+}
+
+// NEU: Zentrale Funktion zum kompletten Neu-Laden aller Dashboard-Daten
+const reloadDashboardData = async () => {
+  console.log('🔄 Reloading all dashboard data...')
+  
+  try {
+    // 1. Kalender neu laden
+    if (calendarRef.value?.refreshCalendar) {
+      await calendarRef.value.refreshCalendar()
+      console.log('✅ Calendar data reloaded')
+    }
+    
+    // 2. Pendenzen neu laden
+    await refreshPendingData()
+    console.log('✅ Pending data reloaded')
+    
+    console.log('✅ Dashboard reload complete')
+  } catch (err) {
+    console.error('❌ Error reloading dashboard:', err)
   }
 }
 
@@ -308,20 +315,26 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- NEU: Profile Setup State -->
-  <div v-else-if="!profileExists && !userError" class="min-h-screen">
-    <ProfileSetup @profile-created="handleProfileCreated" />
-  </div>
-
   <!-- Success State - Dashboard -->
-  <div v-else-if="currentUser && profileExists" class="h-screen flex flex-col">
+  <div v-else-if="currentUser" class="h-screen flex flex-col">
+    <!-- NEU: Reload Button oben rechts -->
+    <button
+      @click="reloadDashboardData"
+      class="fixed top-2 right-2 z-50 w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg transform active:scale-95 transition-all duration-200 flex items-center justify-center"
+      title="Dashboard neu laden"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+    </button>
+
     <!-- NEU: Status Update Indicator -->
-    <div v-if="isUpdatingStatus" class="fixed top-4 right-4 bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg z-50">
+    <div v-if="isUpdatingStatus" class="fixed top-4 right-20 bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg z-50">
       🔄 Updating appointment status...
     </div>
 
     <!-- Error Indicator -->
-    <div v-if="statusUpdateError" class="fixed top-4 right-4 bg-red-500 text-white px-3 py-2 rounded-lg shadow-lg z-50">
+    <div v-if="statusUpdateError" class="fixed top-4 right-20 bg-red-500 text-white px-3 py-2 rounded-lg shadow-lg z-50">
       ❌ {{ statusUpdateError }}
     </div>
 
@@ -411,6 +424,7 @@ onUnmounted(() => {
     v-if="showStaffSettings && currentUser" 
     :current-user="currentUser"
     @close="showStaffSettings = false"
+    @settings-updated="reloadDashboardData"
 />
 </template>
 

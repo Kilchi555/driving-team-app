@@ -261,13 +261,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { navigateTo } from '#imports'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
 
 // Configure page meta for admin layout
 definePageMeta({
   layout: 'admin',
-  middleware: ['admin']
+  middleware: 'features'
 })
 
 // State
@@ -487,7 +489,39 @@ const toggleExaminerStatus = async (examiner: any) => {
 // Load data immediately when component is created (not waiting for mount)
 loadExaminers()
 
-onMounted(() => {
+// Auth check
+const authStore = useAuthStore()
+
+onMounted(async () => {
+  console.log('🔍 Examiners page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading examiners...')
   // Page is already displayed, data loads in background
   console.log('👨‍🏫 Examiners page mounted, data loading in background')
 })

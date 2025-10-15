@@ -365,6 +365,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { navigateTo } from '#imports'
+import { useAuthStore } from '~/stores/auth'
 import { useCancellationStats } from '~/composables/useCancellationStats'
 import { useCancellationReasons } from '~/composables/useCancellationReasons'
 import { formatDateTime } from '~/utils/dateUtils'
@@ -373,7 +375,7 @@ import CancellationPoliciesManager from '~/components/admin/CancellationPolicies
 // Meta
 definePageMeta({
   layout: 'admin',
-  middleware: 'admin'
+  middleware: 'features'
 })
 
 // Composables
@@ -522,8 +524,42 @@ const deleteReason = async (reason) => {
   }
 }
 
+// Auth check
+const authStore = useAuthStore()
+
 // Lade Daten beim Mount
 onMounted(async () => {
+  console.log('🔍 Cancellation management page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading cancellation management...')
+  
+  // Original onMounted logic
   await Promise.all([
     loadStats(),
     fetchAllCancellationReasons()

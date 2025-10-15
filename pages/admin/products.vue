@@ -149,7 +149,7 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="product in filteredProducts" :key="product.id" class="hover:bg-gray-50">
+            <tr v-for="product in filteredProducts" :key="product.id" class="hover:bg-gray-50 cursor-pointer" @click="editProduct(product)">
               <td class="px-6 py-4">
                 <div class="flex items-center">
                   <div v-if="product.image_url" class="flex-shrink-0 h-12 w-12 mr-4">
@@ -199,13 +199,7 @@
               <td class="px-6 py-4">
                 <div class="flex space-x-2">
                   <button
-                    @click="editProduct(product)"
-                    class="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    ✏️ Bearbeiten
-                  </button>
-                  <button
-                    @click="toggleProductStatus(product)"
+                    @click.stop="toggleProductStatus(product)"
                     :class="product.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'"
                     class="text-sm font-medium"
                   >
@@ -478,15 +472,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { definePageMeta } from '#imports'
+import { definePageMeta, navigateTo } from '#imports'
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
 import ProductStatisticsModal from '~/components/admin/ProductStatisticsModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
 
 definePageMeta({
   layout: 'admin',
-  middleware: ['auth']
+  middleware: 'features'
 })
 
 // Types
@@ -840,7 +835,39 @@ const toggleProductStatus = async (product: Product) => {
 // Load data immediately when component is created (not waiting for mount)
 loadProducts()
 
-onMounted(() => {
+// Auth check
+const authStore = useAuthStore()
+
+onMounted(async () => {
+  console.log('🔍 Products page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, products page ready')
   // Page is already displayed, data loads in background
   console.log('🛍️ Products page mounted, data loading in background')
 })

@@ -29,7 +29,7 @@
             👤 Anonymer Verkauf
           </button>
           <NuxtLink
-            to="/shop"
+            :to="`/shop?tenant=${currentTenant?.slug || 'driving-team'}`"
             target="_blank"
             class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0"
           >
@@ -422,14 +422,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { definePageMeta } from '#imports'
+import { definePageMeta, navigateTo } from '#imports'
 import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'
+import { useAuthStore } from '~/stores/auth'
 import ProductSaleModal from '~/components/ProductSaleModal.vue'
 
 definePageMeta({
   layout: 'admin',
-  middleware: ['auth']
+  middleware: 'features'
 })
 
 // Types
@@ -563,54 +564,65 @@ const loadSales = async () => {
       console.log('🔍 Current tenant:', tenantData)
     }
 
-    // 1. Lade direkte Verkäufe (aus ProductSaleModal) - gefiltert nach tenant_id
+    // 1. Lade direkte Verkäufe (aus payments mit product items) - gefiltert nach tenant_id
     console.log('🔄 Lade direkte Verkäufe...')
     const { data: directSalesData, error: directSalesError } = await supabase
-      .from('product_sales')
-      .select('*')
-      .not('user_id', 'is', null) // Nur Verkäufe mit registrierten Benutzern
+      .from('payments')
+      .select(`
+        id,
+        user_id,
+        staff_id,
+        total_amount_rappen,
+        payment_status,
+        payment_method,
+        created_at,
+        updated_at,
+        description,
+        metadata
+      `)
       .eq('tenant_id', tenantId) // Filter by current tenant
       .order('created_at', { ascending: false })
 
     if (directSalesError) throw directSalesError
 
-    // Lade Kundeninformationen für direkte Verkäufe
-    const directUserIds = [...new Set(directSalesData?.map(sale => sale.user_id).filter(Boolean) || [])]
-    const { data: directUsersData, error: directUsersError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email, phone')
-      .in('id', directUserIds)
+    // Lade Kundeninformationen für direkte Verkäufe (nur die mit user_id)
+    const directSalesWithUsers = directSalesData?.filter(sale => sale.user_id) || []
+    const directUserIds = [...new Set(directSalesWithUsers.map(sale => sale.user_id).filter(Boolean) || [])]
+    
+    let directUsersData: any[] = []
+    if (directUserIds.length > 0) {
+      const { data, error: directUsersError } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, email, phone')
+        .in('id', directUserIds)
+      
+      if (directUsersError) throw directUsersError
+      directUsersData = data || []
+    }
 
-    if (directUsersError) throw directUsersError
-
-    // Lade Produktinformationen für direkte Verkäufe
+    // Lade Produktinformationen für direkte Verkäufe (aus payment_items)
+    const directPaymentIds = directSalesWithUsers.map(sale => sale.id)
     const { data: directItemsData, error: directItemsError } = await supabase
-      .from('product_sale_items')
-      .select(`
-        product_sale_id,
-        quantity,
-        product_id,
-        products (
-          id,
-          name
-        )
-      `)
+      .from('payment_items')
+      .select('payment_id, item_name, quantity, unit_price_rappen, total_price_rappen')
+      .in('payment_id', directPaymentIds)
+      .eq('item_type', 'product')
 
     if (directItemsError) throw directItemsError
 
     // Erstelle Lookup-Maps für direkte Verkäufe
-    const directUsersMap = new Map(directUsersData?.map(user => [user.id, user]) || [])
+    const directUsersMap = new Map(directUsersData.map(user => [user.id, user]))
     const directItemsMap = new Map()
 
     directItemsData?.forEach((item: any) => {
-      if (!directItemsMap.has(item.product_sale_id)) {
-        directItemsMap.set(item.product_sale_id, [])
+      if (!directItemsMap.has(item.payment_id)) {
+        directItemsMap.set(item.payment_id, [])
       }
-      directItemsMap.get(item.product_sale_id).push(item)
+      directItemsMap.get(item.payment_id).push(item)
     })
 
-    // Transformiere direkte Verkäufe
-    directSalesData?.forEach(sale => {
+    // Transformiere direkte Verkäufe (nur die mit user_id)
+    directSalesWithUsers.forEach(sale => {
       const user = directUsersMap.get(sale.user_id)
       const items = directItemsMap.get(sale.id) || []
 
@@ -620,49 +632,53 @@ const loadSales = async () => {
         customer_email: user?.email,
         customer_phone: user?.phone,
         product_count: items.length,
-        product_names: items.length > 0 ? items.map((item: any) => item.products?.name).filter(Boolean).join(', ') : 'Keine Produkte',
+        product_names: items.length > 0 ? items.map((item: any) => item.item_name).filter(Boolean).join(', ') : 'Keine Produkte',
         total_amount_rappen: sale.total_amount_rappen || 0,
-        status: sale.status || 'pending',
-        created_at: sale.created_at,
+        status: sale.payment_status || 'pending',
+        created_at: sale.created_at || new Date().toISOString(),
         sale_type: 'direct' as const
       })
     })
 
-    // 1b. Lade anonyme Verkäufe (aus ProductSaleModal ohne user_id) - gefiltert nach tenant_id
+    // 1b. Lade anonyme Verkäufe (aus payments ohne user_id) - gefiltert nach tenant_id
     console.log('🔄 Lade anonyme Verkäufe...')
     const { data: anonymousSalesData, error: anonymousSalesError } = await supabase
-      .from('product_sales')
-      .select('*')
+      .from('payments')
+      .select(`
+        id,
+        user_id,
+        staff_id,
+        total_amount_rappen,
+        payment_status,
+        payment_method,
+        created_at,
+        updated_at,
+        description,
+        metadata
+      `)
       .is('user_id', null) // Nur anonyme Verkäufe
       .eq('tenant_id', tenantId) // Filter by current tenant
       .order('created_at', { ascending: false })
 
     if (anonymousSalesError) throw anonymousSalesError
 
-    // Lade Produktinformationen für anonyme Verkäufe
-    const anonymousSaleIds = anonymousSalesData?.map(sale => sale.id) || []
+    // Lade Produktinformationen für anonyme Verkäufe (aus payment_items)
+    const anonymousPaymentIds = anonymousSalesData?.map(sale => sale.id) || []
     const { data: anonymousItemsData, error: anonymousItemsError } = await supabase
-      .from('product_sale_items')
-      .select(`
-        product_sale_id,
-        quantity,
-        product_id,
-        products (
-          id,
-          name
-        )
-      `)
-      .in('product_sale_id', anonymousSaleIds)
+      .from('payment_items')
+      .select('payment_id, item_name, quantity, unit_price_rappen, total_price_rappen')
+      .in('payment_id', anonymousPaymentIds)
+      .eq('item_type', 'product')
 
     if (anonymousItemsError) throw anonymousItemsError
 
     // Erstelle Lookup-Map für anonyme Verkäufe
     const anonymousItemsMap = new Map()
     anonymousItemsData?.forEach((item: any) => {
-      if (!anonymousItemsMap.has(item.product_sale_id)) {
-        anonymousItemsMap.set(item.product_sale_id, [])
+      if (!anonymousItemsMap.has(item.payment_id)) {
+        anonymousItemsMap.set(item.payment_id, [])
       }
-      anonymousItemsMap.get(item.product_sale_id).push(item)
+      anonymousItemsMap.get(item.payment_id).push(item)
     })
 
     // Transformiere anonyme Verkäufe
@@ -676,10 +692,10 @@ const loadSales = async () => {
         customer_email: metadata.customer_email || null,
         customer_phone: metadata.customer_phone || null,
         product_count: items.length,
-        product_names: items.length > 0 ? items.map((item: any) => item.products?.name).filter(Boolean).join(', ') : 'Keine Produkte',
+        product_names: items.length > 0 ? items.map((item: any) => item.item_name).filter(Boolean).join(', ') : 'Keine Produkte',
         total_amount_rappen: sale.total_amount_rappen || 0,
-        status: sale.status || 'completed',
-        created_at: sale.created_at,
+        status: sale.payment_status || 'completed',
+        created_at: sale.created_at || new Date().toISOString(),
         sale_type: 'anonymous' as const
       })
     })
@@ -902,8 +918,42 @@ const createAnonymousSale = async () => {
   }
 }
 
+// Auth check
+const authStore = useAuthStore()
+
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
+  console.log('🔍 Product sales page mounted, checking auth...')
+  
+  // Warte kurz auf Auth-Initialisierung
+  let attempts = 0
+  while (!authStore.isInitialized && attempts < 10) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    attempts++
+  }
+  
+  console.log('🔍 Auth state:', {
+    isInitialized: authStore.isInitialized,
+    isLoggedIn: authStore.isLoggedIn,
+    isAdmin: authStore.isAdmin,
+    hasProfile: authStore.hasProfile
+  })
+  
+  // Prüfe ob User eingeloggt ist
+  if (!authStore.isLoggedIn) {
+    console.log('❌ User not logged in, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  // Prüfe ob User Admin ist
+  if (!authStore.isAdmin) {
+    console.log('❌ User not admin, redirecting to dashboard')
+    return navigateTo('/dashboard')
+  }
+  
+  console.log('✅ Auth check passed, loading product sales...')
+  
+  // Original onMounted logic
   loadSales()
 })
 </script>
