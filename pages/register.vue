@@ -316,50 +316,109 @@
           </div>
 
           <!-- Camera Modal -->
-          <div v-if="showCamera" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 class="text-lg font-semibold mb-2">📸 Lernfahrausweis fotografieren</h3>
-              <p class="text-sm text-gray-600 mb-4">Positionieren Sie den Ausweis im weißen Rahmen für die beste Aufnahme</p>
+          <div v-if="showCamera" class="fixed inset-0 bg-black z-50 flex flex-col">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 safe-area-top">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-lg font-bold">📸 Ausweis fotografieren</h3>
+                  <p class="text-sm text-blue-100">Positionieren Sie Ihren Ausweis im Rahmen</p>
+                </div>
+                <button
+                  @click="closeCamera"
+                  class="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                >
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Camera View -->
+            <div class="flex-1 relative overflow-hidden">
+              <video ref="videoElement" autoplay playsinline class="absolute inset-0 w-full h-full object-cover"></video>
               
-              <!-- Camera Container with Overlay -->
-              <div class="relative mb-4">
-                <video ref="videoElement" autoplay class="w-full rounded-lg"></video>
-                
-                <!-- Credit Card Frame Overlay -->
-                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div class="relative">
-                    <!-- Credit Card Frame (85.6mm x 53.98mm aspect ratio ≈ 1.586) -->
-                    <div class="border-2 border-white border-dashed rounded-lg bg-transparent" 
-                         style="width: 200px; height: 126px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);">
+              <!-- Overlay with Card Frame -->
+              <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <!-- Instructions at top -->
+                <div class="absolute top-8 left-0 right-0 text-center px-4">
+                  <div class="bg-black bg-opacity-60 text-white px-4 py-3 rounded-lg inline-block backdrop-blur-sm">
+                    <p class="text-sm font-medium">Ausweis im Rahmen zentrieren</p>
+                    <p class="text-xs text-gray-300 mt-1">Achten Sie auf gute Beleuchtung</p>
+                  </div>
+                </div>
+
+                <!-- Credit Card Frame -->
+                <div class="relative">
+                  <!-- Dark overlay outside frame -->
+                  <div class="absolute inset-0" style="box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);"></div>
+                  
+                  <!-- Main Frame (Credit card aspect ratio: 85.6mm x 53.98mm ≈ 1.586:1) -->
+                  <div class="relative border-4 border-white rounded-lg" 
+                       style="width: min(85vw, 400px); height: min(53.6vw, 252px);">
+                    <!-- Animated scanning line -->
+                    <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-scan"></div>
+                    
+                    <!-- Corner Markers -->
+                    <div class="absolute -top-2 -left-2 w-6 h-6 border-l-4 border-t-4 border-green-400 rounded-tl-md"></div>
+                    <div class="absolute -top-2 -right-2 w-6 h-6 border-r-4 border-t-4 border-green-400 rounded-tr-md"></div>
+                    <div class="absolute -bottom-2 -left-2 w-6 h-6 border-l-4 border-b-4 border-green-400 rounded-bl-md"></div>
+                    <div class="absolute -bottom-2 -right-2 w-6 h-6 border-r-4 border-b-4 border-green-400 rounded-br-md"></div>
+                    
+                    <!-- Helper Text Inside Frame -->
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <div class="text-white text-xs bg-black bg-opacity-40 px-2 py-1 rounded">
+                        Ausweis hier positionieren
+                      </div>
                     </div>
-                    <!-- Corner guides -->
-                    <div class="absolute -top-1 -left-1 w-4 h-4 border-l-2 border-t-2 border-white"></div>
-                    <div class="absolute -top-1 -right-1 w-4 h-4 border-r-2 border-t-2 border-white"></div>
-                    <div class="absolute -bottom-1 -left-1 w-4 h-4 border-l-2 border-b-2 border-white"></div>
-                    <div class="absolute -bottom-1 -right-1 w-4 h-4 border-r-2 border-b-2 border-white"></div>
+                  </div>
+                </div>
+
+                <!-- Tip at bottom -->
+                <div class="absolute bottom-32 left-0 right-0 text-center px-4">
+                  <div class="bg-black bg-opacity-60 text-white px-4 py-2 rounded-lg inline-block backdrop-blur-sm">
+                    <p class="text-xs">
+                      💡 <strong>Tipp:</strong> Legen Sie den Ausweis auf einen dunklen Untergrund
+                    </p>
                   </div>
                 </div>
               </div>
-              
+
               <canvas ref="canvasElement" class="hidden"></canvas>
-              
-              <div class="flex justify-between space-x-4">
+            </div>
+
+            <!-- Bottom Controls -->
+            <div class="bg-gradient-to-r from-gray-900 to-gray-800 p-6 safe-area-bottom">
+              <div class="flex items-center justify-center gap-4">
                 <button
                   @click="closeCamera"
-                  class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                  class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-medium transition-all flex items-center gap-2"
                 >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
                   Abbrechen
                 </button>
+                
+                <!-- Large Capture Button -->
                 <button
                   @click="capturePhoto"
-                  class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  class="w-20 h-20 bg-white hover:bg-gray-100 rounded-full flex items-center justify-center shadow-lg transition-all transform hover:scale-105 relative"
                 >
-                  📸 Foto aufnehmen
+                  <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                  </div>
+                  <!-- Outer ring animation -->
+                  <div class="absolute inset-0 rounded-full border-4 border-blue-400 animate-ping opacity-20"></div>
                 </button>
               </div>
               
-              <p class="text-xs text-gray-500 text-center mt-3">
-                Das Foto wird automatisch auf die optimale Größe zugeschnitten
+              <p class="text-xs text-gray-400 text-center mt-4">
+                Das Foto wird automatisch zugeschnitten und optimiert
               </p>
             </div>
           </div>
@@ -792,13 +851,18 @@ const goBack = () => {
 const openCamera = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ 
-      video: { facingMode: 'environment' }
+      video: { 
+        facingMode: 'environment',
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
     })
     showCamera.value = true
     
     await nextTick()
     if (videoElement.value) {
       videoElement.value.srcObject = stream
+      console.log('📹 Camera opened with resolution:', videoElement.value.videoWidth, 'x', videoElement.value.videoHeight)
     }
   } catch (error) {
     console.error('Camera access denied:', error)
@@ -824,9 +888,10 @@ const capturePhoto = () => {
     const videoWidth = video.videoWidth
     const videoHeight = video.videoHeight
     
-    // Frame dimensions (200px x 126px as defined in template)
-    const frameWidth = 200
-    const frameHeight = 126
+    // Calculate frame dimensions dynamically (responsive: min(85vw, 400px))
+    const viewportWidth = window.innerWidth
+    const frameWidth = Math.min(viewportWidth * 0.85, 400)
+    const frameHeight = frameWidth / 1.586  // Credit card aspect ratio
     
     // Calculate the frame position relative to the video element
     const frameLeft = (videoRect.width - frameWidth) / 2
@@ -841,9 +906,9 @@ const capturePhoto = () => {
     const cropWidth = frameWidth * scaleX
     const cropHeight = frameHeight * scaleY
     
-    // Set canvas to frame dimensions (high resolution)
-    const outputWidth = 800  // High resolution output
-    const outputHeight = Math.round(outputWidth * (frameHeight / frameWidth))
+    // Set canvas to high resolution output (1200px wide for excellent quality)
+    const outputWidth = 1200
+    const outputHeight = Math.round(outputWidth / 1.586)  // Maintain aspect ratio
     
     canvas.width = outputWidth
     canvas.height = outputHeight
@@ -851,15 +916,15 @@ const capturePhoto = () => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     
-    // Draw the exact frame area to the canvas
+    // Draw the exact frame area to the canvas with high quality
     ctx.drawImage(
       video,
       cropX, cropY, cropWidth, cropHeight,  // Source rectangle (exact frame area)
       0, 0, outputWidth, outputHeight       // Destination rectangle
     )
     
-    // Convert to data URL with good quality
-    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9)
+    // Convert to data URL with high quality
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95)
     uploadedImage.value = imageDataUrl
     
     closeCamera()
@@ -1527,3 +1592,33 @@ watch(() => tenantParam.value, (newTenant, oldTenant) => {
   }
 })
 </script>
+
+<style scoped>
+/* Scanning animation for camera overlay */
+@keyframes scan {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(250px);
+    opacity: 0;
+  }
+}
+
+.animate-scan {
+  animation: scan 3s ease-in-out infinite;
+}
+
+/* Safe area support for mobile devices */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+</style>
