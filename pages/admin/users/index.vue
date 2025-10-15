@@ -10,7 +10,7 @@
             :value="inviteToastLink"
             readonly
             class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-50 text-gray-800"
-            @focus="$event.target.select()"
+            @focus="($event.target as HTMLInputElement)?.select()"
           />
         </div>
         <div class="mt-2">
@@ -351,7 +351,7 @@
                 :value="inviteManualLink"
                 readonly
                 class="flex-1 px-3 py-2 border border-yellow-300 rounded bg-white text-gray-800"
-                @focus="$event.target.select()"
+                @focus="($event.target as HTMLInputElement)?.select()"
               />
               <button
                 type="button"
@@ -1106,7 +1106,7 @@ const loadCategories = async () => {
       return
     }
 
-    const { data: categories, error } = await supabase
+    const { data: categoriesData, error } = await supabase
       .from('categories')
       .select('code, name, description')
       .eq('tenant_id', tenantId)
@@ -1115,7 +1115,7 @@ const loadCategories = async () => {
 
     if (error) throw error
 
-    availableCategories.value = categories || []
+    availableCategories.value = categoriesData || []
     console.log('✅ Categories loaded for staff assignment:', availableCategories.value.length)
 
   } catch (error) {
