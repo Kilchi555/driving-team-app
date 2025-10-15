@@ -537,17 +537,47 @@ const register = async () => {
       }
     }
 
-    // Show success toast and redirect after delay
+    // Show success toast
     showSuccessToast.value = true
-    setTimeout(() => {
-      // Redirect to tenant slug page if available via invitation, fallback to root
-      const slug = (invitation.value as any)?.tenant_slug
-      if (slug) {
-        router.push(`/${slug}`)
+    
+    // Auto-login after successful registration
+    try {
+      console.log('🔑 Auto-login after registration...')
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: email.value,
+        password: password.value
+      })
+      
+      if (loginError) {
+        console.error('❌ Auto-login failed:', loginError)
+        // Fallback: redirect to login page
+        const slug = (invitation.value as any)?.tenant_slug
+        setTimeout(() => {
+          if (slug) {
+            router.push(`/${slug}?registered=true`)
+          } else {
+            router.push('/login?registered=true')
+          }
+        }, 2000)
       } else {
-        router.push('/')
+        console.log('✅ Auto-login successful, redirecting to dashboard...')
+        // Redirect to staff dashboard after short delay
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 2000)
       }
-    }, 2000)
+    } catch (loginErr) {
+      console.error('❌ Auto-login exception:', loginErr)
+      // Fallback: redirect to login
+      const slug = (invitation.value as any)?.tenant_slug
+      setTimeout(() => {
+        if (slug) {
+          router.push(`/${slug}?registered=true`)
+        } else {
+          router.push('/login?registered=true')
+        }
+      }, 2000)
+    }
 
   } catch (err: any) {
     console.error('Registration error:', err)
