@@ -199,6 +199,56 @@ const switchView = () => {
 
 const calendar = ref()
 const supabase = getSupabase()
+const rootEl = ref<HTMLElement | null>(null)
+
+// Swipe navigation state
+let touchStartX = 0
+let touchStartY = 0
+let touchStartTime = 0
+const SWIPE_THRESHOLD = 50 // px
+const SWIPE_TIME_MS = 800 // ms
+
+const handleTouchStart = (e: TouchEvent) => {
+  const t = e.touches[0]
+  touchStartX = t.clientX
+  touchStartY = t.clientY
+  touchStartTime = Date.now()
+}
+
+const handleTouchEnd = (e: TouchEvent) => {
+  if (!touchStartTime) return
+  const t = e.changedTouches[0]
+  const dx = t.clientX - touchStartX
+  const dy = t.clientY - touchStartY
+  const dt = Date.now() - touchStartTime
+  touchStartTime = 0
+
+  // Ignore vertical scrolls or long gestures
+  if (Math.abs(dy) > Math.abs(dx) || Math.abs(dy) > 40 || dt > SWIPE_TIME_MS) return
+  if (Math.abs(dx) < SWIPE_THRESHOLD) return
+
+  const api = calendar.value?.getApi?.()
+  if (!api) return
+  if (dx < 0) {
+    // swipe left -> next period
+    api.next()
+  } else {
+    // swipe right -> previous period
+    api.prev()
+  }
+}
+
+const attachSwipe = () => {
+  if (!rootEl.value) return
+  rootEl.value.addEventListener('touchstart', handleTouchStart, { passive: true })
+  rootEl.value.addEventListener('touchend', handleTouchEnd, { passive: true })
+}
+
+const detachSwipe = () => {
+  if (!rootEl.value) return
+  rootEl.value.removeEventListener('touchstart', handleTouchStart)
+  rootEl.value.removeEventListener('touchend', handleTouchEnd)
+}
 
 // View switcher
 const currentView = ref<'timeGridWeek' | 'timeGridDay'>('timeGridWeek')
@@ -1899,12 +1949,14 @@ onUnmounted(() => {
     syncInterval = null
     console.log('🧹 Sync interval cleared on unmount')
   }
+  detachSwipe()
 })
 
 onMounted(async () => {
   try {
     console.log('📅 CalendarComponent mounted')
     isCalendarReady.value = true
+    attachSwipe()
     
     // 🔥 NEU: Calendar API Setup
     await nextTick()
@@ -2026,7 +2078,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="relative">
+  <div class="relative" ref="rootEl">
     <!-- Loading Overlay -->
     <div v-if="isLoadingEvents" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
       <div class="text-center">
