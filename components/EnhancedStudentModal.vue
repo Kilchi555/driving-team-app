@@ -751,6 +751,7 @@ interface Student {
 interface Props {
   selectedStudent: Student | null
   initialTab?: 'details' | 'progress' | 'payments' | 'documents'
+  currentUser?: any
 }
 
 interface Emits {
@@ -1508,10 +1509,11 @@ const uploadCurrentFile = async (file: File) => {
 
     console.log('✅ File uploaded to storage:', storagePath)
 
-    // Save document record to user_documents table
+    // Save document record to user_documents table (use current user's tenant to satisfy RLS)
+    const tenantIdForDoc = (props.currentUser as any)?.tenant_id || selectedStudent.value.tenant_id
     const documentData = {
       user_id: selectedStudent.value.id,
-      tenant_id: selectedStudent.value.tenant_id,
+      tenant_id: tenantIdForDoc,
       document_type: requirement.field_prefix,
       category_code: requirement.categoryCode,
       side: side,

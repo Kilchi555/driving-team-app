@@ -2213,6 +2213,7 @@ defineExpose({
     v-if="showEnhancedStudentModal"
     :selected-student="selectedStudentForProgress"
     :initial-tab="studentProgressActiveTab"
+    :current-user="props.currentUser"
     @close="() => { showEnhancedStudentModal = false; selectedStudentForProgress = null }"
   />
 

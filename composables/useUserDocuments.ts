@@ -127,15 +127,22 @@ export const useUserDocuments = () => {
 
     try {
       // Prüfe ob bereits ein Dokument dieses Typs existiert
-      const existing = await supabase
+      let query = supabase
         .from('user_documents')
         .select('id')
         .eq('user_id', documentData.user_id)
         .eq('document_type', documentData.document_type)
         .eq('side', documentData.side || 'front')
-        .eq('category_code', documentData.category_code || null)
         .is('deleted_at', null)
-        .single()
+
+      // category_code korrekt vergleichen (NULL mit .is, sonst .eq)
+      if (documentData.category_code) {
+        query = query.eq('category_code', documentData.category_code)
+      } else {
+        query = query.is('category_code', null)
+      }
+
+      const existing = await query.maybeSingle()
 
       let result
 
