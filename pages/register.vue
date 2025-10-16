@@ -1433,20 +1433,48 @@ onMounted(async () => {
   } else if (route.query.tenant) {
     console.log('🏢 Loading tenant from route query:', route.query.tenant)
     await loadTenant(route.query.tenant as string)
-  } else {
-    // Fallback: Derive tenant from domain
-    console.log('🏢 No tenant parameter, deriving from domain...')
+  } else if (!isAdminRegistration.value) {
+    // For customer registration: Try to derive tenant from domain
+    console.log('🏢 Customer registration - checking domain...')
     const hostname = window.location.hostname
-    const domainToSlug: Record<string, string> = {
-      'simy.ch': 'simy',
-      'www.simy.ch': 'simy',
-      'drivingteam.ch': 'driving-team',
-      'www.drivingteam.ch': 'driving-team',
-      'localhost': 'simy'
+    
+    // Check if we're on the platform domain (simy.ch) vs a tenant domain
+    const isPlatformDomain = hostname === 'simy.ch' || hostname === 'www.simy.ch' || hostname === 'localhost'
+    
+    if (isPlatformDomain) {
+      // On platform domain: Customer registration is NOT allowed
+      // Redirect to tenant registration instead
+      console.error('❌ Customer registration on platform domain not allowed')
+      alert('Kunden-Registrierung ist nur über Ihre Fahrschule möglich.\n\nMöchten Sie eine neue Fahrschule auf unserer Plattform registrieren?')
+      await navigateTo('/tenant-register')
+      return
     }
-    const derivedSlug = domainToSlug[hostname] || 'simy'
-    console.log('🏢 Derived tenant slug:', derivedSlug)
-    await loadTenant(derivedSlug)
+    
+    // On tenant-specific domain: derive tenant from domain
+    const domainToSlug: Record<string, string> = {
+      'drivingteam.ch': 'driving-team',
+      'www.drivingteam.ch': 'driving-team'
+      // Add more tenant domains here as needed
+    }
+    
+    const derivedSlug = domainToSlug[hostname]
+    if (derivedSlug) {
+      console.log('🏢 Derived tenant slug from domain:', derivedSlug)
+      await loadTenant(derivedSlug)
+    } else {
+      console.error('❌ Unknown domain, cannot derive tenant:', hostname)
+      alert('Bitte verwenden Sie den Registrierungs-Link Ihrer Fahrschule oder wählen Sie einen Anbieter aus.')
+      await navigateTo('/auswahl')
+      return
+    }
+  }
+  
+  // Verify tenant is loaded for customer registration
+  if (!isAdminRegistration.value && !activeTenantId.value) {
+    console.error('❌ No tenant loaded for customer registration, redirecting to tenant selection')
+    alert('Bitte wählen Sie zuerst einen Anbieter aus.')
+    await navigateTo('/auswahl')
+    return
   }
   
   loadCategories()
