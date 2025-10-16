@@ -1443,9 +1443,8 @@ onMounted(async () => {
     
     if (isPlatformDomain) {
       // On platform domain: Customer registration is NOT allowed
-      // Redirect to tenant registration instead
+      // Redirect to tenant registration instead (no blocking alert)
       console.error('❌ Customer registration on platform domain not allowed')
-      alert('Kunden-Registrierung ist nur über Ihre Fahrschule möglich.\n\nMöchten Sie eine neue Fahrschule auf unserer Plattform registrieren?')
       await navigateTo('/tenant-register')
       return
     }
