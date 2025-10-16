@@ -2348,6 +2348,19 @@ defineExpose({
   padding: 1px 2px !important;
 }
 
+/* === GRID BORDERS (restore vertical/day separators) === */
+.fc-theme-standard {
+  --fc-border-color: #e5e7eb; /* Tailwind gray-200 */
+}
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: #e5e7eb !important;
+}
+.fc-timegrid-slots td,
+.fc-timegrid-cols td {
+  border-right: 1px solid #e5e7eb !important;
+}
+
 
 .fc-timegrid-col.fc-day-today {
     color: #1d4ed8 !important;
