@@ -1101,7 +1101,7 @@ const loadCategories = async () => {
     // Only load categories if business_type is driving_school
     if (tenantData?.business_type !== 'driving_school') {
       console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
-      categories.value = []
+      availableCategories.value = []
       isLoading.value = false
       return
     }
