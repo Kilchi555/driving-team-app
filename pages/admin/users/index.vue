@@ -309,6 +309,7 @@
               :required="inviteForm.sendVia === 'sms'"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               placeholder="+41 79 123 45 67"
+              @blur="inviteForm.phone = normalizeSwissPhone(inviteForm.phone)"
             />
           </div>
 
@@ -839,6 +840,31 @@ const copyInviteLink = async () => {
     setTimeout(() => { copyInviteLinkStatus.value = '' }, 2000)
   }
 }
+
+// Normalize Swiss phone numbers to E.164 (+41...) format
+const normalizeSwissPhone = (raw: string) => {
+  if (!raw) return ''
+  let phone = String(raw).trim()
+  // Remove spaces, dashes, dots, parentheses
+  phone = phone.replace(/[\s\-\.\(\)]/g, '')
+  // Convert leading 00 to +
+  if (phone.startsWith('00')) phone = '+' + phone.slice(2)
+  // If starts with 0 (e.g., 079...), convert to +41 and drop the leading 0
+  if (phone.startsWith('0')) phone = '+41' + phone.slice(1)
+  // If it has no + and is all digits with length >=9, assume Swiss and prepend +41
+  if (!phone.startsWith('+') && /^\d{9,}$/.test(phone)) phone = '+41' + phone
+  // Ensure only + and digits
+  phone = phone.replace(/[^+\d]/g, '')
+  return phone
+}
+
+// When switching to SMS, normalize immediately to avoid Twilio errors
+import { watch } from 'vue'
+watch(() => inviteForm.value.sendVia, (newVal: string, oldVal: string) => {
+  if (newVal === 'sms') {
+    inviteForm.value.phone = normalizeSwissPhone(inviteForm.value.phone)
+  }
+})
 
 // Toast state for fallback link
 const showInviteToast = ref(false)
