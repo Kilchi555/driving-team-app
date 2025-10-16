@@ -1,7 +1,7 @@
 <template>
   <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 z-50">
     <!-- Modal Container - Ganzer verfügbarer Raum -->
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[calc(100vh-80px)] flex flex-col overflow-hidden absolute top-4 left-1/2 transform -translate-x-1/2" @click.stop>
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] flex flex-col overflow-hidden absolute top-4 left-1/2 transform -translate-x-1/2" @click.stop>
 
       <!-- ✅ FIXED HEADER -->
       <div class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
