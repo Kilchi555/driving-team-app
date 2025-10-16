@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="bg-gray-100 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <LoadingLogo size="lg" class="mx-auto mb-3" />
+          <LoadingLogo size="xl" class="mb-3" />
           <h1 class="text-2xl font-bold text-gray-700">
           {{ isAdminRegistration ? 'Admin-Account erstellen' :
              serviceType === 'fahrlektion' ? 'Registrierung für Fahrlektionen' : 
@@ -566,6 +566,9 @@ const showPassword = ref(false)
 // Refs
 const fileInput = ref<HTMLInputElement>()
 
+// LocalStorage key for form data
+const FORM_DATA_KEY = 'register_form_data'
+
 // Form data - initialize after computed properties are defined
 const formData = ref({
   // Personal data
@@ -979,15 +982,33 @@ const submitRegistration = async () => {
         } else {
           console.log('✅ Auto-login successful for admin')
           alert('🎉 Admin-Account erfolgreich erstellt!\n\nSie werden automatisch angemeldet...')
+          
+          // Clear saved form data
+          if (process.client) {
+            localStorage.removeItem(FORM_DATA_KEY)
+          }
+          
           await navigateTo('/admin')
         }
       } catch (autoLoginError) {
         console.warn('Auto-login failed:', autoLoginError)
         alert('🎉 Admin-Account erfolgreich erstellt!\n\nBitte loggen Sie sich mit Ihren Zugangsdaten ein.')
+        
+        // Clear saved form data
+        if (process.client) {
+          localStorage.removeItem(FORM_DATA_KEY)
+        }
+        
         await navigateTo('/login')
       }
     } else {
       alert('🎉 Registrierung erfolgreich!\n\nIhr Account wurde erstellt. Bitte prüfen Sie Ihre E-Mails zur Bestätigung und loggen Sie sich dann ein.')
+      
+      // Clear saved form data after successful registration
+      if (process.client) {
+        localStorage.removeItem(FORM_DATA_KEY)
+      }
+      
       await navigateTo('/')
     }
     
@@ -1339,7 +1360,24 @@ const loadCategories = async () => {
 
 // Load categories on mount and when service type changes
 onMounted(async () => {
-  // Pre-fill form data for admin registration
+  // Restore form data from localStorage if available
+  if (process.client) {
+    const savedData = localStorage.getItem(FORM_DATA_KEY)
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData)
+        console.log('📦 Restoring form data from cache')
+        Object.assign(formData.value, parsed)
+        if (parsed.uploadedImage) {
+          uploadedImage.value = parsed.uploadedImage
+        }
+      } catch (e) {
+        console.error('Error parsing saved form data:', e)
+      }
+    }
+  }
+  
+  // Pre-fill form data for admin registration (overrides saved data)
   if (roleParam.value === 'admin') {
     formData.value.firstName = prefilledData.value.first_name || ''
     formData.value.lastName = prefilledData.value.last_name || ''
@@ -1374,4 +1412,22 @@ watch(() => tenantParam.value, (newTenant, oldTenant) => {
     loadCategories()
   }
 })
+
+// Auto-save form data to localStorage
+watch(formData, (newData) => {
+  if (process.client) {
+    try {
+      // Save without password for security
+      const dataToSave = {
+        ...newData,
+        password: '',
+        confirmPassword: '',
+        uploadedImage: uploadedImage.value
+      }
+      localStorage.setItem(FORM_DATA_KEY, JSON.stringify(dataToSave))
+    } catch (e) {
+      console.error('Error saving form data:', e)
+    }
+  }
+}, { deep: true })
 </script>
