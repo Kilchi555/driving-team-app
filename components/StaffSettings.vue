@@ -1,7 +1,7 @@
 <template>
   <!-- Modal Wrapper -->
-  <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-screen overflow-y-auto">
+  <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 min-h-[100svh]">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] overflow-y-auto">
       
       <!-- Modal Header -->
       <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
