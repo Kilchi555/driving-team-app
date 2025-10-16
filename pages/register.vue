@@ -327,6 +327,7 @@
               <input
                 v-model="formData.email"
                 type="email"
+                autocomplete="email"
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 placeholder="ihre.email@beispiel.ch"
@@ -342,6 +343,7 @@
                 <input
                   v-model="formData.password"
                   :type="showPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
                   required
                   class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   placeholder="Sicheres Passwort wählen"
@@ -383,6 +385,7 @@
               <input
                 v-model="formData.confirmPassword"
                 type="password"
+                autocomplete="new-password"
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 placeholder="Passwort wiederholen"

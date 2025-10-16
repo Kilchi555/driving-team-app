@@ -39,6 +39,7 @@
               id="email"
               v-model="loginForm.email"
               type="email"
+              autocomplete="email"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="ihre@email.com"
@@ -56,6 +57,7 @@
                 id="password"
                 v-model="loginForm.password"
                 :type="showPassword ? 'text' : 'password'"
+                autocomplete="current-password"
                 required
                 class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Ihr Passwort"
