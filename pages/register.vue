@@ -766,26 +766,13 @@ const submitRegistration = async () => {
       throw new Error(`Fehler beim Prüfen der Telefonnummer: ${phoneCheckError.message}`)
     }
     
-    // Combine results
-    const existingAuthUsers = [existingByEmail, existingByPhone].filter(Boolean)
+    // Check for duplicates
+    if (existingByEmail) {
+      throw new Error(`Diese E-Mail-Adresse ist bereits registriert für ${existingByEmail.first_name} ${existingByEmail.last_name}. Bitte verwenden Sie eine andere E-Mail-Adresse oder loggen Sie sich ein.`)
+    }
     
-    // Prüfe auf Duplikate
-    if (existingAuthUsers && existingAuthUsers.length > 0) {
-      const emailDuplicate = existingAuthUsers.find(user => 
-        user.email === formData.value.email.trim().toLowerCase()
-      )
-      
-      if (emailDuplicate) {
-        throw new Error(`Diese E-Mail-Adresse ist bereits registriert für ${emailDuplicate.first_name} ${emailDuplicate.last_name}. Bitte verwenden Sie eine andere E-Mail-Adresse oder loggen Sie sich ein.`)
-      }
-      
-      const phoneDuplicate = existingAuthUsers.find(user => 
-        user.phone === formData.value.phone?.trim()
-      )
-      
-      if (phoneDuplicate) {
-        throw new Error(`Diese Telefonnummer ist bereits registriert für ${phoneDuplicate.first_name} ${phoneDuplicate.last_name}. Bitte verwenden Sie eine andere Telefonnummer.`)
-      }
+    if (existingByPhone) {
+      throw new Error(`Diese Telefonnummer ist bereits registriert für ${existingByPhone.first_name} ${existingByPhone.last_name}. Bitte verwenden Sie eine andere Telefonnummer.`)
     }
     
     // 2. ✅ Auth User erstellen - Trigger erstellt automatisch public.users
