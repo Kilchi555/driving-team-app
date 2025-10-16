@@ -1,6 +1,6 @@
 <template>
-  <div v-if="show" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click="$emit('close')">
-    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white admin-modal" @click.stop>
+  <div v-if="show" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto min-h-[100svh] w-full z-50 p-2 sm:p-4" @click="$emit('close')">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl max-h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] overflow-y-auto shadow-lg rounded-md bg-white admin-modal" @click.stop>
       <div class="mb-6">
         <div class="flex items-center justify-between">
           <h3 class="text-xl font-medium text-gray-900">👨‍🏫 Neuen Fahrlehrer hinzufügen</h3>
