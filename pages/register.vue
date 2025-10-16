@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="bg-gray-100 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <LoadingLogo size="xl" class="mb-3" />
+          <LoadingLogo size="xl" class="mb-3" :tenant-id="activeTenantId || undefined" />
           <h1 class="text-2xl font-bold text-gray-700">
           {{ isAdminRegistration ? 'Admin-Account erstellen' :
              serviceType === 'fahrlektion' ? 'Registrierung für Fahrlektionen' : 
@@ -477,7 +477,7 @@ const supabase = getSupabase()
 const route = useRoute()
 
 // Tenant Management
-const { loadTenant, tenantSlug } = useTenant()
+const { loadTenant, tenantSlug, tenantId, currentTenant } = useTenant()
 
 // Get service type from URL parameter
 const serviceType = ref(route.query.service as string || 'fahrlektion')
@@ -594,6 +594,10 @@ const availableCategories = ref([
 // Computed
 const isAdminRegistration = computed(() => {
   return roleParam.value === 'admin'
+})
+
+const activeTenantId = computed(() => {
+  return tenantId.value || currentTenant.value?.id || null
 })
 
 const requiresLernfahrausweis = computed(() => {
@@ -1429,6 +1433,20 @@ onMounted(async () => {
   } else if (route.query.tenant) {
     console.log('🏢 Loading tenant from route query:', route.query.tenant)
     await loadTenant(route.query.tenant as string)
+  } else {
+    // Fallback: Derive tenant from domain
+    console.log('🏢 No tenant parameter, deriving from domain...')
+    const hostname = window.location.hostname
+    const domainToSlug: Record<string, string> = {
+      'simy.ch': 'simy',
+      'www.simy.ch': 'simy',
+      'drivingteam.ch': 'driving-team',
+      'www.drivingteam.ch': 'driving-team',
+      'localhost': 'simy'
+    }
+    const derivedSlug = domainToSlug[hostname] || 'simy'
+    console.log('🏢 Derived tenant slug:', derivedSlug)
+    await loadTenant(derivedSlug)
   }
   
   loadCategories()
