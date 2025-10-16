@@ -229,7 +229,12 @@
                 >
                   <span class="text-lg font-bold">{{ category.code }}</span>
                   <span class="text-xs mt-1 text-center">{{ category.name }}</span>
-                  <span class="text-xs text-gray-500">CHF {{ category.price }}/45min</span>
+                  <span 
+                    class="text-xs mt-1"
+                    :class="formData.categories.includes(category.code) ? 'text-white opacity-90' : 'text-gray-500'"
+                  >
+                    CHF {{ category.price }}/45min
+                  </span>
                 </label>
               </div>
             </div>
