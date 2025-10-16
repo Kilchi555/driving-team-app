@@ -791,7 +791,46 @@ const submitRegistration = async () => {
     // 2. ✅ Auth User erstellen - Trigger erstellt automatisch public.users
     // Get current tenant ID for registration
     const { currentTenant, tenantId } = useTenant()
-    const activeTenantId = tenantId.value || currentTenant.value?.id
+    let activeTenantId = tenantId.value || currentTenant.value?.id
+    
+    // Fallback: If no tenant is loaded, derive from domain or use default
+    if (!activeTenantId) {
+      console.warn('⚠️ No tenant loaded, trying to derive from domain...')
+      const hostname = window.location.hostname
+      
+      // Map domains to tenant slugs
+      const domainToSlug: Record<string, string> = {
+        'simy.ch': 'simy',
+        'www.simy.ch': 'simy',
+        'drivingteam.ch': 'driving-team',
+        'www.drivingteam.ch': 'driving-team',
+        'localhost': 'simy' // Default for development
+      }
+      
+      const tenantSlug = domainToSlug[hostname] || 'simy'
+      console.log('🏢 Deriving tenant from domain:', hostname, '->', tenantSlug)
+      
+      // Load tenant by slug
+      try {
+        const { data: tenant, error } = await supabase
+          .from('tenants')
+          .select('id')
+          .eq('slug', tenantSlug)
+          .eq('is_active', true)
+          .single()
+        
+        if (!error && tenant) {
+          activeTenantId = tenant.id
+          console.log('✅ Loaded tenant by slug:', tenantSlug, '->', activeTenantId)
+        } else {
+          console.error('❌ Failed to load tenant by slug:', error)
+          throw new Error('Fehler beim Laden der Mandanten-Daten. Bitte kontaktieren Sie den Support.')
+        }
+      } catch (e) {
+        console.error('❌ Error loading tenant:', e)
+        throw new Error('Fehler beim Laden der Mandanten-Daten.')
+      }
+    }
     
     console.log('🏢 Registering user for tenant:', activeTenantId)
     
@@ -840,11 +879,16 @@ const submitRegistration = async () => {
     while (attempts < maxAttempts && !publicUser) {
       await new Promise(resolve => setTimeout(resolve, 500)) // 500ms warten
       
-      const { data: existingUser } = await supabase
+      const { data: existingUser, error: checkError } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authData.user.id)
-        .single()
+        .maybeSingle() // Use maybeSingle() to avoid 406 errors when user doesn't exist yet
+      
+      if (checkError && checkError.code !== 'PGRST116') {
+        // Only log non-"no rows" errors
+        console.warn('⚠️ Error checking for user:', checkError.message)
+      }
       
       if (existingUser) {
         publicUser = existingUser
