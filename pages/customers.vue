@@ -46,8 +46,8 @@
         <!-- Add Student Button (nur Desktop) -->
         <button 
           v-if="currentUser.role !== 'client'"
-            @click="navigateToAuswahl"
-          class="hidden sm:block bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          @click="addNewStudent"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
         >
           + Neu
         </button>
@@ -261,18 +261,6 @@
           </div>
         </div>
 
-        <!-- Mobile: Floating Action Button -->
-        <div class="sm:hidden fixed top-3 right-3 z-10">
-          <button 
-            v-if="currentUser.role !== 'client'"
-            @click="navigateToAuswahl"
-            class="bg-green-600 text-white p-2 rounded-full shadow-lg hover:bg-green-700 transition-colors"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-          </button>
-        </div>
       </div>
     </div>
 
@@ -422,9 +410,10 @@ const goBack = async () => {
   }
 }
 
-const navigateToAuswahl = () => {
-  console.log('🚀 Navigating to register page for new student')
-  navigateTo('/auswahl')
+const addNewStudent = () => {
+  console.log('🚀 Opening student registration')
+  // Navigate to the customer registration page
+  navigateTo('/register')
 }
 
 // Mobile optimization methods
