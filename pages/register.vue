@@ -413,16 +413,6 @@
                 </a>
               </label>
             </div>
-
-            <!-- Submit Button -->
-            <button
-              type="submit"
-              :disabled="!canSubmit || isSubmitting"
-              class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition-colors text-lg"
-            >
-              <span v-if="isSubmitting">⏳ Registriere...</span>
-              <span v-else>✨ Registrierung abschließen</span>
-            </button>
           </form>
         </div>
       </div>
@@ -871,8 +861,7 @@ const submitRegistration = async () => {
           category: formData.value.categories && formData.value.categories.length > 0 ? formData.value.categories : null,
           lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null,
           is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: new Date().toISOString()
         })
         .select()
         .single()
@@ -899,8 +888,7 @@ const submitRegistration = async () => {
           city: formData.value.city?.trim() || null,
           tenant_id: activeTenantId,
           category: isAdminRegistration.value ? null : (formData.value.categories && formData.value.categories.length > 0 ? formData.value.categories : null),
-          lernfahrausweis_nr: isAdminRegistration.value ? null : formData.value.lernfahrausweisNr?.trim() || null,
-          updated_at: new Date().toISOString()
+          lernfahrausweis_nr: isAdminRegistration.value ? null : formData.value.lernfahrausweisNr?.trim() || null
         })
         .eq('auth_user_id', authData.user.id)
         .select()
