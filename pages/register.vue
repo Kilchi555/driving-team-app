@@ -224,11 +224,21 @@
                 />
                 <label
                   :for="`cat-${category.code}`"
-                  :class="formData.categories.includes(category.code) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'"
                   class="flex flex-col items-center justify-center p-4 border-2 rounded-lg cursor-pointer hover:border-blue-400 transition-colors"
+                  :class="formData.categories.includes(category.code) ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300'"
                 >
-                  <span class="text-lg font-bold">{{ category.code }}</span>
-                  <span class="text-xs mt-1 text-center">{{ category.name }}</span>
+                  <span 
+                    class="text-lg font-bold"
+                    :class="formData.categories.includes(category.code) ? 'text-white' : 'text-gray-700'"
+                  >
+                    {{ category.code }}
+                  </span>
+                  <span 
+                    class="text-xs mt-1 text-center"
+                    :class="formData.categories.includes(category.code) ? 'text-white' : 'text-gray-700'"
+                  >
+                    {{ category.name }}
+                  </span>
                   <span 
                     class="text-xs mt-1"
                     :class="formData.categories.includes(category.code) ? 'text-white opacity-90' : 'text-gray-500'"
@@ -1020,7 +1030,7 @@ const submitRegistration = async () => {
           street_nr: formData.value.streetNr?.trim() || null,
           zip: formData.value.zip?.trim() || null,
           city: formData.value.city?.trim() || null,
-          category: formData.value.selectedCategory || null,
+          category: formData.value.categories || null,
           lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null
         }
       }
@@ -1086,7 +1096,7 @@ const submitRegistration = async () => {
           city: formData.value.city?.trim() || null,
           role: isAdminRegistration.value ? 'admin' : 'client',
           tenant_id: activeTenantId,
-          category: formData.value.selectedCategory ? [formData.value.selectedCategory] : null,
+          category: formData.value.categories && formData.value.categories.length > 0 ? formData.value.categories : null,
           lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null,
           is_active: true,
           created_at: new Date().toISOString(),
@@ -1116,7 +1126,7 @@ const submitRegistration = async () => {
           zip: formData.value.zip?.trim() || null,
           city: formData.value.city?.trim() || null,
           tenant_id: activeTenantId,
-          category: isAdminRegistration.value ? null : (formData.value.selectedCategory ? [formData.value.selectedCategory] : null),
+          category: isAdminRegistration.value ? null : (formData.value.categories && formData.value.categories.length > 0 ? formData.value.categories : null),
           lernfahrausweis_nr: isAdminRegistration.value ? null : formData.value.lernfahrausweisNr?.trim() || null,
           updated_at: new Date().toISOString()
         })
