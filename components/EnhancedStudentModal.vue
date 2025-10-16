@@ -83,6 +83,14 @@
         
         <!-- Documents Tab - CATEGORY BASED -->
         <div v-if="activeTab === 'documents'" class="p-4 space-y-6">
+          <!-- Hidden file input to trigger native picker directly on first click -->
+          <input
+            ref="currentFileInput"
+            type="file"
+            accept="image/*,.pdf"
+            @change="handleCurrentFileSelect"
+            class="hidden"
+          />
 
           <!-- Category-Based Document Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -133,7 +141,7 @@
                     </button>
                   </div>
                   <div v-else
-                    @click="startCategoryUpload(requirement, 'front')"
+                    @click="startCategoryUpload(requirement, 'front', true)"
                     class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors"
                   >
                     <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,7 +179,7 @@
                     </button>
                   </div>
                   <div v-else
-                    @click="startCategoryUpload(requirement, 'back')"
+                    @click="startCategoryUpload(requirement, 'back', true)"
                     class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors"
                   >
                     <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -659,13 +667,6 @@
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-gray-900">Lernfahrausweis Nr.</div>
-                    <div v-if="selectedStudent.lernfahrausweis_nr" class="mt-1 text-sm text-gray-700">
-                      {{ selectedStudent.lernfahrausweis_nr }}
-                    </div>
-                    <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
                   </div>
                 </div>
               </div>
@@ -1247,9 +1248,15 @@ const markPaymentAsCashPaid = async (payment: any) => {
   }
 }
 
-const startCategoryUpload = (requirement: any, side: 'front' | 'back') => {
+const startCategoryUpload = (requirement: any, side: 'front' | 'back', openNativeImmediately = false) => {
   currentUploadRequirement.value = requirement
   currentUploadSide.value = side
+
+  if (openNativeImmediately) {
+    // Directly trigger native picker without intermediate modal
+    currentFileInput.value?.click()
+    return
+  }
   showUploadInterface.value = true
 }
 
