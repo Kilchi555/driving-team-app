@@ -2225,7 +2225,8 @@ defineExpose({
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   overflow: hidden;
-  height: calc(100vh - 50px);
+  /* Use small viewport height to avoid iOS browser chrome overlay */
+  height: calc(100svh - 50px - env(safe-area-inset-bottom, 0px));
   margin: 0 !important;
 }
 
