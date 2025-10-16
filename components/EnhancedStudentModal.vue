@@ -151,8 +151,8 @@
                   </div>
                 </div>
 
-                <!-- Back Document (if required) -->
-                <div v-if="requirement.requiresBothSides">
+                <!-- Back Document disabled: one upload per category -->
+                <div v-if="false">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-sm font-medium text-gray-700">Rückseite</span>
                     <span v-if="getDocumentUrl(requirement, 'back')" class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
@@ -230,14 +230,7 @@
                 </div>
               </div>
               
-              <!-- Hidden file input -->
-              <input
-                ref="currentFileInput"
-                type="file"
-                accept="image/*"
-                @change="handleCurrentFileSelect"
-                class="hidden"
-              />
+              <!-- Hidden file input moved to documents tab for direct trigger -->
 
               <!-- Modal Actions -->
               <div class="mt-6 flex justify-end space-x-3">
