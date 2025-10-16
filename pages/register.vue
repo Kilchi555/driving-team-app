@@ -291,7 +291,7 @@
                 <div class="flex items-start gap-3">
                   <div class="text-2xl">✅</div>
                   <div>
-                    <p class="text-green-800 font-semibold">Perfekt! Ausweis erfolgreich hochgeladen</p>
+                    <p class="text-green-800 font-semibold">Ausweis hochgeladen</p>
                   </div>
                 </div>
               </div>
@@ -634,7 +634,8 @@ const canProceed = computed(() => {
            formData.value.categories.length > 0
   }
   if (currentStep.value === 2 && requiresLernfahrausweis.value) {
-    return formData.value.lernfahrausweisNr && uploadedImage.value
+    // Only uploaded image is required (license number field was removed)
+    return !!uploadedImage.value
   }
   return true
 })
