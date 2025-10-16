@@ -83,17 +83,6 @@
         
         <!-- Documents Tab - CATEGORY BASED -->
         <div v-if="activeTab === 'documents'" class="p-4 space-y-6">
-          
-          <!-- Header -->
-          <div class="text-center mb-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-2">Dokumente verwalten</h3>
-            <p class="text-sm text-gray-500">
-              Basierend auf den Kategorien: 
-              <span v-for="cat in selectedStudent?.category" :key="cat" class="inline-flex items-center px-2 py-1 mx-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {{ cat }}
-              </span>
-            </p>
-          </div>
 
           <!-- Category-Based Document Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -105,21 +94,6 @@
             >
               <!-- Document Header -->
               <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center">
-                  <div class="text-2xl mr-3">{{ requirement.icon }}</div>
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <h4 class="font-medium text-gray-900">{{ requirement.title }}</h4>
-                      <span v-if="requirement.isRequired" class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">
-                        Erforderlich
-                      </span>
-                      <span v-else class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                        Optional
-                      </span>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-1">{{ requirement.reason }}</p>
-                  </div>
-                </div>
                 <div class="flex items-center">
                   <span v-for="cat in requirement.categories" :key="cat" class="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                     {{ cat }}

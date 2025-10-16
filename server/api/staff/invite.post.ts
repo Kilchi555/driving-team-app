@@ -220,7 +220,7 @@ export default defineEventHandler(async (event) => {
               
               <p style="margin: 20px 0 0; color: #555555; font-size: 16px; line-height: 1.6;">
                 Freundliche Grüsse<br>
-                <strong>Ihr ${tenantName} Team</strong>
+                <strong>${tenantName}</strong>
               </p>
             </td>
           </tr>
@@ -257,7 +257,7 @@ Wichtig: Diese Einladung ist 7 Tage gültig. Bitte schliessen Sie Ihre Registrie
 Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 
 Freundliche Grüsse
-Ihr ${tenantName} Team`
+${tenantName}`
 
         // Use service role for edge function invocation
         const { data: emailResult, error: emailError } = await serviceSupabase.functions.invoke('send-email', {
