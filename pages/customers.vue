@@ -1,12 +1,12 @@
 <!-- pages/customers.vue - Mobile-Optimierte Version -->
 <template>
   <!-- Loading State -->
-  <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
+  <div v-if="isLoading" class="flex items-center justify-center min-h-[100svh]">
     <LoadingLogo size="2xl"  />
   </div>
 
   <!-- Error State -->
-  <div v-else-if="userError" class="min-h-screen flex items-center justify-center">
+  <div v-else-if="userError" class="min-h-[100svh] flex items-center justify-center">
     <div class="text-center max-w-md p-6 bg-red-50 rounded-lg">
       <h2 class="text-xl font-bold text-red-800 mb-4">Fehler</h2>
       <p class="text-red-600 mb-4">{{ userError }}</p>
@@ -20,7 +20,7 @@
   </div>
 
   <!-- Main Content -->
-  <div v-else-if="currentUser" class="h-screen flex flex-col bg-gray-50">
+  <div v-else-if="currentUser" class="h-[100svh] flex flex-col bg-gray-50">
     <!-- Header -->
     <div class="bg-white shadow-sm border-b p-4">
       <div class="flex items-center justify-between">

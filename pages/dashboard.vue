@@ -294,7 +294,7 @@ onUnmounted(() => {
 <template>
 
   <!-- Loading State -->
-  <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
+  <div v-if="isLoading" class="flex items-center justify-center min-h-[100svh]">
     <LoadingLogo 
       size="2xl" 
       loading-text="Dashboard wird geladen..."
@@ -302,7 +302,7 @@ onUnmounted(() => {
   </div>
 
   <!-- Auth Error State (nur bei echten Auth-Fehlern) -->
-  <div v-else-if="userError && userError === 'Nicht eingeloggt'" class="min-h-screen flex items-center justify-center">
+  <div v-else-if="userError && userError === 'Nicht eingeloggt'" class="min-h-[100svh] flex items-center justify-center">
     <div class="text-center max-w-md p-6 bg-red-50 rounded-lg">
       <h2 class="text-xl font-bold text-red-800 mb-4">Nicht angemeldet</h2>
       <p class="text-red-600 mb-4">Du musst dich anmelden, um das Dashboard zu verwenden.</p>
@@ -316,7 +316,7 @@ onUnmounted(() => {
   </div>
 
   <!-- Success State - Dashboard -->
-  <div v-else-if="currentUser" class="h-screen flex flex-col">
+  <div v-else-if="currentUser" class="h-[100svh] flex flex-col">
     <!-- NEU: Reload Button oben rechts -->
     <button
       @click="reloadDashboardData"
@@ -400,7 +400,7 @@ onUnmounted(() => {
   </div>
   
   <!-- Fallback für andere Fehlerzustände -->
-  <div v-else class="min-h-screen flex items-center justify-center">
+  <div v-else class="min-h-[100svh] flex items-center justify-center">
     <div class="text-center max-w-md p-6 bg-yellow-50 rounded-lg">
       <h2 class="text-xl font-bold text-yellow-800 mb-4">Unbekannter Zustand</h2>
       <p class="text-yellow-600 mb-4">{{ userError || 'Ein unerwarteter Fehler ist aufgetreten.' }}</p>
