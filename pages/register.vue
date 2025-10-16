@@ -741,16 +741,33 @@ const submitRegistration = async () => {
   try {
     console.log('🚀 Starting registration with trigger-based approach...')
     
-    // 1. ✅ VALIDIERUNG: Prüfe nur Auth-User (nicht public.users, da Trigger das macht)
-    const { data: existingAuthUsers, error: authCheckError } = await supabase
+    // 1. ✅ VALIDIERUNG: Prüfe Email-Duplikate (split queries to avoid RLS issues)
+    const { data: existingByEmail, error: emailCheckError } = await supabase
       .from('users')
-      .select('email, phone, first_name, last_name')
-      .or(`email.eq.${formData.value.email.trim().toLowerCase()},phone.eq.${formData.value.phone?.trim()}`)
+      .select('email, first_name, last_name')
+      .eq('email', formData.value.email.trim().toLowerCase())
       .eq('is_active', true)
+      .maybeSingle()
     
-    if (authCheckError) {
-      throw new Error('Fehler beim Prüfen der Daten')
+    if (emailCheckError) {
+      console.error('Email check error:', emailCheckError)
+      throw new Error(`Fehler beim Prüfen der E-Mail-Adresse: ${emailCheckError.message}`)
     }
+    
+    const { data: existingByPhone, error: phoneCheckError } = await supabase
+      .from('users')
+      .select('phone, first_name, last_name')
+      .eq('phone', formData.value.phone?.trim())
+      .eq('is_active', true)
+      .maybeSingle()
+    
+    if (phoneCheckError) {
+      console.error('Phone check error:', phoneCheckError)
+      throw new Error(`Fehler beim Prüfen der Telefonnummer: ${phoneCheckError.message}`)
+    }
+    
+    // Combine results
+    const existingAuthUsers = [existingByEmail, existingByPhone].filter(Boolean)
     
     // Prüfe auf Duplikate
     if (existingAuthUsers && existingAuthUsers.length > 0) {
