@@ -1511,6 +1511,7 @@ const uploadCurrentFile = async (file: File) => {
 
     // Save document record to user_documents table (use current user's tenant to satisfy RLS)
     const tenantIdForDoc = (props.currentUser as any)?.tenant_id || selectedStudent.value.tenant_id
+    
     const documentData = {
       user_id: selectedStudent.value.id,
       tenant_id: tenantIdForDoc,

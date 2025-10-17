@@ -1779,9 +1779,7 @@ const pasteAppointmentDirectly = async () => {
         
         // Pflichtfelder mit Defaults
         is_paid: clipboardAppointment.value.is_paid || false,
-        discount: clipboardAppointment.value.discount || 0,
-        discount_type: clipboardAppointment.value.discount_type || 'fixed',
-        discount_reason: clipboardAppointment.value.discount_reason || null,
+        // Note: Discounts/Products werden nicht mitkopiert (separate Tabellen)
       }
     
     // ✅ FINALE DEBUG-AUSGABE

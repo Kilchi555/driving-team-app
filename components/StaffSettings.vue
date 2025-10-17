@@ -818,6 +818,7 @@ const addLocation = async () => {
         name: newLocationName.value,
         address: newLocationAddress.value,
         staff_id: props.currentUser.id,
+        tenant_id: props.currentUser.tenant_id,
         location_type: 'standard' // Standard-Treffpunkte, nicht Exam Locations
       })
       .select()
@@ -847,6 +848,7 @@ const addExamLocation = async () => {
       .from('locations') // 👈 Tabelle auf 'locations' geändert
       .insert({
         staff_id: props.currentUser.id,
+        tenant_id: props.currentUser.tenant_id,
         name: newExamLocation.value.name,
         address: newExamLocation.value.address,
         available_categories: newExamLocation.value.categories, // 👈 Feldname korrigiert

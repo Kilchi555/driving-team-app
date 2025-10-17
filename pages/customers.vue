@@ -267,6 +267,7 @@
     <!-- Enhanced Student Detail Modal -->
      <EnhancedStudentModal
     :selected-student="selectedStudent"
+    :current-user="currentUser"
     @close="selectedStudent = null"
     @edit="editStudent"
     @create-appointment="handleCreateAppointment"
