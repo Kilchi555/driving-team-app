@@ -506,7 +506,7 @@ const submitForm = async () => {
     
     // Success feedback
     console.log('Schüler erfolgreich hinzugefügt:', newStudent)
-    alert(`Schüler erfolgreich hinzugefügt!\n\nE-Mail: ${newStudent.email}\n\nDer Schüler kann sich über die normale Registrierung anmelden.`)
+    alert(`Schüler erfolgreich hinzugefügt!\n\nE-Mail: ${newStudent.email}\nTemporäres Passwort: TempPassword123!\n\nDer Schüler kann sich jetzt anmelden und sollte das Passwort beim ersten Login ändern.`)
     
     // Reset form and close modal
     resetForm()

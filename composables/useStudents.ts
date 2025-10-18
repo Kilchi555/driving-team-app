@@ -197,14 +197,13 @@ export const useStudents = () => {
       // Generiere eine UUID für den neuen Benutzer
       const userId = crypto.randomUUID()
       
-      // Erstelle nur users Eintrag (ohne auth.users)
-      // Der Kunde kann sich später über normale Registrierung anmelden
+      // 1. Erstelle users Eintrag
       const { data, error: insertError } = await supabase
         .from('users')
         .insert([{
           ...studentData,
           id: userId,
-          auth_user_id: null, // Kein Auth-User, kann später erstellt werden
+          auth_user_id: null, // Wird später gesetzt
           role: 'client',
           is_active: true
         }])
@@ -212,6 +211,29 @@ export const useStudents = () => {
         .single()
 
       if (insertError) throw insertError
+
+      // 2. Erstelle Auth-User über Server-Endpoint
+      try {
+        const { $fetch } = useNuxtApp()
+        await $fetch('/api/admin/create-auth-user', {
+          method: 'POST',
+          body: {
+            userId: data.id,
+            email: data.email,
+            password: 'TempPassword123!',
+            firstName: data.first_name,
+            lastName: data.last_name
+          }
+        })
+        
+        // Update local data with auth_user_id
+        data.auth_user_id = userId // Der Server setzt die richtige auth_user_id
+        console.log('✅ Auth user created successfully')
+        
+      } catch (authError: any) {
+        console.warn('⚠️ Auth user creation failed, but student was created:', authError.message)
+        // Student wurde erstellt, aber Auth-User nicht - das ist OK, kann später gemacht werden
+      }
 
       // Zur lokalen Liste hinzufügen
       students.value.unshift(data)
