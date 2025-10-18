@@ -10,3 +10,4 @@ UPDATE public.users SET phone = '+41791234567', birthdate = '1985-03-15', street
 
 
 
+
