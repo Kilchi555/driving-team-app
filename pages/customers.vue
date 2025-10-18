@@ -274,6 +274,14 @@
     @evaluate-lesson="handleEvaluateLesson"
     @student-updated="handleStudentUpdated"
   />
+
+  <!-- Add Student Modal -->
+  <AddStudentModal
+    :show="showAddStudentModal"
+    :current-user="currentUser"
+    @close="showAddStudentModal = false"
+    @added="handleStudentAdded"
+  />
     </div>
 </template>
 
@@ -283,6 +291,7 @@ import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { getSupabase } from '~/utils/supabase'
 import EnhancedStudentModal from '~/components/EnhancedStudentModal.vue'
+import AddStudentModal from '~/components/AddStudentModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 
 
@@ -294,7 +303,7 @@ const { currentUser, fetchCurrentUser, isLoading: isUserLoading, userError } = u
 
 // Local state
 const selectedStudent = ref<any>(null)
-const showAddModal = ref(false)
+const showAddStudentModal = ref(false)
 const students = ref<any[]>([])
 const isLoading = ref(false)
 const isNavigating = ref(false)
@@ -412,9 +421,15 @@ const goBack = async () => {
 }
 
 const addNewStudent = () => {
-  console.log('🚀 Opening student registration')
-  // Navigate to the customer registration page
-  navigateTo('/register')
+  console.log('🚀 Opening add student modal')
+  showAddStudentModal.value = true
+}
+
+const handleStudentAdded = async (newStudent: any) => {
+  console.log('✅ New student added:', newStudent)
+  showAddStudentModal.value = false
+  // Reload students list
+  await loadStudents()
 }
 
 // Mobile optimization methods
