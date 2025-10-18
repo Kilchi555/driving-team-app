@@ -561,9 +561,7 @@ const savePickupLocation = async (locationData: any, studentId: string) => {
       latitude: locationData.latitude || null,
       longitude: locationData.longitude || null,
       google_place_id: locationData.place_id || null,
-      is_active: true,
-      created_by_user_id: user.id,
-      created_for_staff_id: props.currentStaffId || null
+      is_active: true
     }
     
     console.log('📤 Saving pickup location:', locationToSave)
@@ -783,9 +781,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
           latitude: locationData.latitude || null,
           longitude: locationData.longitude || null,
           google_place_id: locationData.place_id || null,
-          is_active: true,
-          created_by_user_id: user.id,
-          created_for_staff_id: props.currentStaffId || null
+          is_active: true
         }
         
         console.log('📤 Saving standard location for staff:', locationToSave)

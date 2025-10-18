@@ -1788,7 +1788,7 @@ const pasteAppointmentDirectly = async () => {
     console.log('💾 FINAL appointmentData before save:', appointmentData)
     
     // Direkt in Datenbank speichern
-    const { data, error } = await supabase
+    const { data: newAppointment, error } = await supabase
       .from('appointments')
       .insert(appointmentData)
       .select()
@@ -1796,7 +1796,46 @@ const pasteAppointmentDirectly = async () => {
     
     if (error) throw error
     
-    console.log('✅ Appointment pasted successfully:', data.id)
+    console.log('✅ Appointment pasted successfully:', newAppointment.id)
+    
+    // ✅ Payment erstellen (ohne Discounts/Products, status: pending)
+    const basePriceMapping: Record<string, number> = {
+      'B': 95, 'A': 95, 'A1': 95, 'BE': 120, 'C': 170, 
+      'C1': 150, 'D': 200, 'CE': 200, 'Motorboot': 120, 'BPT': 95
+    }
+    
+    const durationUnits = Math.ceil((newAppointment.duration_minutes || 45) / 45)
+    const basePriceChf = (basePriceMapping[category] || 95) * durationUnits
+    const lessonPriceRappen = Math.round(basePriceChf * 100)
+    
+    const paymentData = {
+      appointment_id: newAppointment.id,
+      user_id: newAppointment.user_id,
+      staff_id: newAppointment.staff_id,
+      tenant_id: newAppointment.tenant_id,
+      lesson_price_rappen: lessonPriceRappen,
+      admin_fee_rappen: 0,
+      products_price_rappen: 0,
+      discount_amount_rappen: 0,
+      total_amount_rappen: lessonPriceRappen,
+      payment_method: 'invoice',
+      payment_status: 'pending',
+      currency: 'CHF',
+      description: `Kopierter Termin: ${newAppointment.title}`,
+      created_by: props.currentUser?.id,
+      credit_used_rappen: 0
+    }
+    
+    const { error: paymentError } = await supabase
+      .from('payments')
+      .insert(paymentData)
+    
+    if (paymentError) {
+      console.error('⚠️ Error creating payment for copied appointment:', paymentError)
+      // Nicht kritisch, Termin wurde trotzdem erstellt
+    } else {
+      console.log('✅ Payment created for copied appointment')
+    }
     
     // Cleanup
     showClipboardChoice.value = false
