@@ -79,15 +79,18 @@
               <!-- Phone -->
               <div>
                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                  Telefonnummer
+                  Telefonnummer *
                 </label>
                 <input
                   id="phone"
                   v-model="form.phone"
                   type="tel"
+                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-300': errors.phone }"
                   placeholder="+41 79 123 45 67"
                 >
+                <p v-if="errors.phone" class="text-red-600 text-xs mt-1">{{ errors.phone }}</p>
               </div>
 
               <!-- Birthdate -->
@@ -106,12 +109,14 @@
               <!-- Category -->
               <div>
                 <label for="category" class="block text-sm font-medium text-gray-700 mb-1">
-                  Führerausweis-Kategorie
+                  Führerausweis-Kategorie *
                 </label>
                 <select
                   id="category"
                   v-model="form.category"
+                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-300': errors.category }"
                 >
                   <option value="">Kategorie wählen</option>
                   <option value="A1">A1 - Motorrad bis 125ccm</option>
@@ -124,6 +129,7 @@
                   <option value="D">D - Bus</option>
                   <option value="DE">DE - Bus mit Anhänger</option>
                 </select>
+                <p v-if="errors.category" class="text-red-600 text-xs mt-1">{{ errors.category }}</p>
               </div>
 
               <!-- Assigned Staff (nur für Admin) -->
@@ -147,121 +153,91 @@
 
           <!-- Address Information -->
           <div>
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Adresse (optional)</h3>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Adresse *</h3>
             
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <!-- Street -->
               <div class="md:col-span-2">
                 <label for="street" class="block text-sm font-medium text-gray-700 mb-1">
-                  Strasse
+                  Strasse *
                 </label>
                 <input
                   id="street"
                   v-model="form.street"
                   type="text"
+                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-300': errors.street }"
                   placeholder="Musterstrasse"
                 >
+                <p v-if="errors.street" class="text-red-600 text-xs mt-1">{{ errors.street }}</p>
               </div>
 
               <!-- Street Number -->
               <div>
                 <label for="streetNr" class="block text-sm font-medium text-gray-700 mb-1">
-                  Hausnummer
+                  Hausnummer *
                 </label>
                 <input
                   id="streetNr"
                   v-model="form.street_nr"
                   type="text"
+                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-300': errors.street_nr }"
                   placeholder="123"
                 >
+                <p v-if="errors.street_nr" class="text-red-600 text-xs mt-1">{{ errors.street_nr }}</p>
               </div>
 
               <!-- ZIP -->
               <div>
                 <label for="zip" class="block text-sm font-medium text-gray-700 mb-1">
-                  PLZ
+                  PLZ *
                 </label>
                 <input
                   id="zip"
                   v-model="form.zip"
                   type="text"
+                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-300': errors.zip }"
                   placeholder="8000"
                 >
+                <p v-if="errors.zip" class="text-red-600 text-xs mt-1">{{ errors.zip }}</p>
               </div>
 
               <!-- City -->
               <div class="md:col-span-2">
                 <label for="city" class="block text-sm font-medium text-gray-700 mb-1">
-                  Stadt
+                  Stadt *
                 </label>
                 <input
                   id="city"
                   v-model="form.city"
                   type="text"
+                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-300': errors.city }"
                   placeholder="Zürich"
                 >
+                <p v-if="errors.city" class="text-red-600 text-xs mt-1">{{ errors.city }}</p>
               </div>
             </div>
           </div>
 
-          <!-- Additional Information -->
-          <div>
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Zusätzliche Informationen</h3>
-            
-            <div class="space-y-4">
-              <!-- Lernfahrausweis Nummer -->
-              <div>
-                <label for="lernfahrausweis" class="block text-sm font-medium text-gray-700 mb-1">
-                  Lernfahrausweis-Nummer
-                </label>
-                <input
-                  id="lernfahrausweis"
-                  v-model="form.lernfahrausweis_nr"
-                  type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="z.B. L-123456789"
-                >
-                <p class="text-xs text-gray-500 mt-1">
-                  Die Nummer des Lernfahrausweises. Dokumente können später hochgeladen werden.
-                </p>
-              </div>
-
-              <!-- Payment Provider -->
-              <div>
-                <label for="paymentProvider" class="block text-sm font-medium text-gray-700 mb-1">
-                  Bevorzugte Zahlungsmethode
-                </label>
-                <select
-                  id="paymentProvider"
-                  v-model="form.payment_prov"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="">Zahlungsmethode wählen</option>
-                  <option value="online">Online (Karte/TWINT)</option>
-                  <option value="debit">Debitkarte</option>
-                  <option value="credit">Kreditkarte</option>
-                  <option value="invoice">Rechnung</option>
-                  <option value="cash">Bar</option>
-                </select>
-              </div>
-            </div>
-          </div>
         </div>
 
-        <!-- Footer -->
-        <div class="flex items-center justify-between p-6 border-t bg-gray-50">
+        <!-- Footer - Sticky -->
+        <div class="sticky bottom-0 flex items-center justify-between p-6 border-t bg-white shadow-lg">
           <p class="text-sm text-gray-600">
             * Pflichtfelder
           </p>
-          <div class="flex gap-3">
+          <div class="flex gap-4">
             <button
               type="button"
               @click="$emit('close')"
-              class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              class="px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
             >
               Abbrechen
             </button>
@@ -269,13 +245,22 @@
               type="submit"
               :disabled="isSubmitting || !isFormValid"
               :class="[
-                'px-4 py-2 rounded-md text-sm font-medium transition-colors',
+                'px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2',
                 isFormValid && !isSubmitting
-                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  ? 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-300 shadow-md hover:shadow-lg'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               ]"
             >
-              {{ isSubmitting ? 'Speichert...' : 'Schüler hinzufügen' }}
+              <span v-if="isSubmitting" class="flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Speichert...
+              </span>
+              <span v-else>
+                Speichern
+              </span>
             </button>
           </div>
         </div>
@@ -321,8 +306,6 @@ const form = ref({
   zip: '',
   city: '',
   category: '',
-  lernfahrausweis_nr: '',
-  payment_prov: '',
   assigned_staff_id: ''
 })
 
@@ -333,7 +316,13 @@ const isFormValid = computed(() => {
   return form.value.first_name.trim() && 
          form.value.last_name.trim() && 
          form.value.email.trim() && 
-         isValidEmail(form.value.email)
+         isValidEmail(form.value.email) &&
+         form.value.phone.trim() &&
+         form.value.category.trim() &&
+         form.value.street.trim() &&
+         form.value.street_nr.trim() &&
+         form.value.zip.trim() &&
+         form.value.city.trim()
 })
 
 // Methods
@@ -359,6 +348,30 @@ const validateForm = () => {
     errors.value.email = 'Ungültige E-Mail-Adresse'
   }
 
+  if (!form.value.phone.trim()) {
+    errors.value.phone = 'Telefonnummer ist erforderlich'
+  }
+
+  if (!form.value.category.trim()) {
+    errors.value.category = 'Kategorie ist erforderlich'
+  }
+
+  if (!form.value.street.trim()) {
+    errors.value.street = 'Strasse ist erforderlich'
+  }
+
+  if (!form.value.street_nr.trim()) {
+    errors.value.street_nr = 'Hausnummer ist erforderlich'
+  }
+
+  if (!form.value.zip.trim()) {
+    errors.value.zip = 'PLZ ist erforderlich'
+  }
+
+  if (!form.value.city.trim()) {
+    errors.value.city = 'Stadt ist erforderlich'
+  }
+
   return Object.keys(errors.value).length === 0
 }
 
@@ -374,8 +387,6 @@ const resetForm = () => {
     zip: '',
     city: '',
     category: '',
-    lernfahrausweis_nr: '',
-    payment_prov: '',
     assigned_staff_id: ''
   }
   errors.value = {}
@@ -472,6 +483,42 @@ watch(() => form.value.first_name, () => {
 watch(() => form.value.last_name, () => {
   if (errors.value.last_name && form.value.last_name.trim()) {
     delete errors.value.last_name
+  }
+})
+
+watch(() => form.value.phone, () => {
+  if (errors.value.phone && form.value.phone.trim()) {
+    delete errors.value.phone
+  }
+})
+
+watch(() => form.value.category, () => {
+  if (errors.value.category && form.value.category.trim()) {
+    delete errors.value.category
+  }
+})
+
+watch(() => form.value.street, () => {
+  if (errors.value.street && form.value.street.trim()) {
+    delete errors.value.street
+  }
+})
+
+watch(() => form.value.street_nr, () => {
+  if (errors.value.street_nr && form.value.street_nr.trim()) {
+    delete errors.value.street_nr
+  }
+})
+
+watch(() => form.value.zip, () => {
+  if (errors.value.zip && form.value.zip.trim()) {
+    delete errors.value.zip
+  }
+})
+
+watch(() => form.value.city, () => {
+  if (errors.value.city && form.value.city.trim()) {
+    delete errors.value.city
   }
 })
 </script>
