@@ -193,6 +193,29 @@ const handleCategorySelected = async (category: any) => {
       console.error('❌ Error loading category from DB:', err)
     }
     
+    // ✅ Load durations for this category and staff
+    try {
+      const staffId = formData.value.staff_id || currentUser?.id
+      if (staffId) {
+        console.log('⏱️ Loading durations for category:', category.code, 'staff:', staffId)
+        const durations = await loadStaffDurations(category.code, staffId)
+        
+        // Update available durations
+        availableDurations.value = durations
+        console.log('✅ Durations updated:', durations)
+        
+        // Auto-select first duration if current duration is not in the list
+        if (!durations.includes(formData.value.duration_minutes)) {
+          formData.value.duration_minutes = durations[0] || 45
+          console.log('🔄 Auto-selected duration:', formData.value.duration_minutes)
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error loading durations:', err)
+      // Fallback to default durations
+      availableDurations.value = [45]
+    }
+    
     calculateEndTime()
   }
 }
@@ -592,6 +615,7 @@ const handleDurationsChanged = (durations: number[]) => {
     // Duration Handlers
     handleDurationChanged,
     setDurationForLessonType,
+    loadStaffDurations,
 
     // Location Handlers
     handleLocationSelected,
