@@ -302,12 +302,6 @@ interface Props {
 
 const props = defineProps<Props>()
 
-// Emits
-defineEmits<{
-  close: []
-  added: [student: any]
-}>()
-
 // Composables
 const { addStudent } = useStudents()
 
