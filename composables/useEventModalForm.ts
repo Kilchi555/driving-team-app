@@ -931,13 +931,19 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ Save products if exists
       await saveProductsIfExists(result.id, discountSale?.id)
       
-      // ✅ Create payment entry nur für Lektionen (lesson, exam, theory)
+      // ✅ Create or update payment entry nur für Lektionen (lesson, exam, theory)
       const appointmentType = formData.value.appointment_type || 'lesson' // Fallback zu 'lesson' wenn undefined
       const isLessonType = ['lesson', 'exam', 'theory'].includes(appointmentType)
       if (isLessonType) {
-        console.log('🚀 Creating payment entry for lesson type:', appointmentType)
-        const paymentResult = await createPaymentEntry(result.id, discountSale?.id)
-        console.log('📊 Payment creation result:', paymentResult)
+        if (mode === 'create') {
+          console.log('🚀 Creating new payment entry for lesson type:', appointmentType)
+          const paymentResult = await createPaymentEntry(result.id, discountSale?.id)
+          console.log('📊 Payment creation result:', paymentResult)
+        } else {
+          console.log('🔄 Updating existing payment entry for lesson type:', appointmentType)
+          const paymentResult = await updatePaymentEntry(result.id, discountSale?.id)
+          console.log('📊 Payment update result:', paymentResult)
+        }
       } else {
         console.log('ℹ️ Skipping payment creation for other event type:', appointmentType)
       }
@@ -1228,6 +1234,147 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
   }
 
+  // ✅ Update payment entry for existing appointment
+  const updatePaymentEntry = async (appointmentId: string, discountSaleId?: string) => {
+    try {
+      const supabase = getSupabase()
+      
+      // Check if payment already exists
+      const { data: existingPayment, error: fetchError } = await supabase
+        .from('payments')
+        .select('id')
+        .eq('appointment_id', appointmentId)
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error('❌ Error checking existing payment:', fetchError)
+        return null
+      }
+
+      if (!existingPayment) {
+        console.log('ℹ️ No existing payment found, creating new one')
+        return await createPaymentEntry(appointmentId, discountSaleId)
+      }
+
+      console.log('🔄 Updating existing payment:', existingPayment.id)
+      
+      // Calculate new payment data (same logic as createPaymentEntry)
+      const durationMinutes = formData.value.duration_minutes || 45
+      const appointmentType = formData.value.appointment_type || 'lesson'
+      
+      let lessonPriceRappen: number
+      if (appointmentType === 'theory') {
+        lessonPriceRappen = 8500
+        console.log('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
+      } else {
+        const dynamicPrice = refs?.dynamicPricing?.value
+        
+        if (dynamicPrice && dynamicPrice.totalPriceChf) {
+          const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
+          const adminFeeChf = dynamicPrice.adminFeeChf || 0
+          const basePriceChf = totalChf - adminFeeChf
+          lessonPriceRappen = Math.round(basePriceChf * 100)
+        } else {
+          console.warn('⚠️ No dynamic pricing available, using fallback')
+          const pricePerMinute = 2.11
+          const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
+          lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+        }
+      }
+      
+      const selectedProducts = refs?.selectedProducts?.value || []
+      const productsPriceRappen = selectedProducts.reduce((total: number, item: any) => {
+        const price = item.product?.price || item.price || 0
+        const quantity = item.quantity || 1
+        return total + Math.round(price * quantity * 100)
+      }, 0)
+      
+      const discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
+      
+      let adminFeeRappen: number
+      if (appointmentType === 'theory') {
+        adminFeeRappen = 0
+      } else {
+        adminFeeRappen = Math.round((refs?.dynamicPricing?.value?.adminFeeRappen || 0))
+      }
+      
+      const rawPaymentMethod = refs?.selectedPaymentMethod?.value || 'wallee'
+      const paymentMethodMapping: Record<string, string> = {
+        'wallee': 'wallee',
+        'online': 'wallee',
+        'twint': 'wallee',
+        'card': 'wallee',
+        'credit-card': 'wallee',
+        'cash': 'cash',
+        'bar': 'cash',
+        'invoice': 'invoice',
+        'rechnung': 'invoice'
+      }
+      
+      const paymentMethod = paymentMethodMapping[rawPaymentMethod] || 'wallee'
+      const totalAmountRappen = lessonPriceRappen + productsPriceRappen + adminFeeRappen - discountAmountRappen
+      
+      // Get invoice address
+      let companyBillingAddressId = null
+      let invoiceAddress = null
+      
+      if (paymentMethod === 'invoice') {
+        const invoiceAddressData = refs?.companyBillingAddress?.value
+        if (invoiceAddressData) {
+          companyBillingAddressId = invoiceAddressData.id
+          invoiceAddress = {
+            company_name: invoiceAddressData.company_name,
+            address: invoiceAddressData.address,
+            city: invoiceAddressData.city,
+            postal_code: invoiceAddressData.postal_code,
+            country: invoiceAddressData.country
+          }
+        }
+      }
+      
+      // Get user data for tenant_id
+      const { data: userData } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', formData.value.staff_id)
+        .single()
+      
+      const updateData = {
+        lesson_price_rappen: lessonPriceRappen,
+        products_price_rappen: productsPriceRappen,
+        discount_amount_rappen: discountAmountRappen,
+        total_amount_rappen: Math.max(0, totalAmountRappen),
+        payment_method: paymentMethod,
+        description: `Payment for appointment: ${formData.value.title}`,
+        notes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
+        company_billing_address_id: companyBillingAddressId || null,
+        invoice_address: invoiceAddress,
+        updated_at: new Date().toISOString()
+      }
+      
+      console.log('💳 Updating payment entry:', updateData)
+      
+      const { data: payment, error } = await supabase
+        .from('payments')
+        .update(updateData)
+        .eq('id', existingPayment.id)
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('❌ Error updating payment:', error)
+        return null
+      }
+      
+      console.log('✅ Payment entry updated:', payment.id)
+      return payment
+      
+    } catch (err: any) {
+      console.error('❌ Error in updatePaymentEntry:', err)
+      return null
+    }
+  }
+
   // ✅ NEUE FUNKTION: Lade letzten Standort aus Cloud Supabase
   const loadLastAppointmentLocation = async (studentId?: string): Promise<{ location_id: string | null, custom_location_address: any | null }> => {
     try {
@@ -1314,6 +1461,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     loadExistingProducts,
     saveProductsIfExists,
     createPaymentEntry,
+    updatePaymentEntry,
 
     // Composables
     categoryData,
