@@ -130,6 +130,8 @@
           <a href="mailto:info@simy.ch">info@simy.ch</a>
           <span class="dot">•</span>
           <a href="/login">Login</a>
+          <span class="dot">•</span>
+          <a href="/tenant-register">Registrieren</a>
         </div>
       </div>
       <!-- Footer decorative icons -->

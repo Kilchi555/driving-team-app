@@ -361,53 +361,46 @@ const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDa
   try {
     console.log('🔒 Loading non-working hours blocks from DB...')
     
-    // Working hours für diesen Staff laden
-    const { data: workingHours, error } = await supabase
+    // ALLE Working hours für diesen Staff laden (aktive UND inaktive)
+    const { data: allWorkingHours, error } = await supabase
       .from('staff_working_hours')
       .select('*')
       .eq('staff_id', staffId)
-      .eq('is_active', false) // Nur Nicht-Arbeitszeiten
       .order('day_of_week')
     
     if (error) {
-      console.error('Error loading non-working hours:', error)
+      console.error('Error loading working hours:', error)
       return []
     }
     
-    if (!workingHours || workingHours.length === 0) {
-      console.log('📅 No non-working hours found')
-      return []
-    }
-    
-    console.log('✅ Loaded non-working hours blocks:', workingHours.length)
+    console.log('✅ Loaded all working hours:', allWorkingHours?.length || 0)
     
     const events: CalendarEvent[] = []
     
-    // Für jeden Tag im sichtbaren Bereich (nur aktuelle Woche)
+    // Für jeden Tag im sichtbaren Bereich
     const currentDate = new Date(startDate)
     while (currentDate <= endDate) {
       const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // Sonntag = 7
       
-      // Finde alle Nicht-Arbeitszeiten für diesen Wochentag
-      const dayBlocks = workingHours.filter(wh => wh.day_of_week === dayOfWeek)
+      // Finde alle Working Hours für diesen Wochentag
+      const dayWorkingHours = allWorkingHours?.filter(wh => wh.day_of_week === dayOfWeek) || []
       
-      dayBlocks.forEach((block, index) => {
-        // Verwende lokales Datum-Format ohne UTC-Konvertierung
-        const year = currentDate.getFullYear()
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0')
-        const day = String(currentDate.getDate()).padStart(2, '0')
-        const dateStr = `${year}-${month}-${day}`
-        
-        // Kombiniere Datum mit Zeit direkt (ohne Date-Objekt das UTC konvertiert)
-        const startTime = `${dateStr}T${block.start_time}`
-        const endTime = `${dateStr}T${block.end_time}`
-        
+      // Prüfe ob der Tag aktive Working Hours hat
+      const hasActiveWorkingHours = dayWorkingHours.some(wh => wh.is_active === true)
+      
+      const year = currentDate.getFullYear()
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0')
+      const day = String(currentDate.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
+      
+      // FALL 1: Tag hat KEINE aktiven Working Hours → ganzer Tag blockieren
+      if (!hasActiveWorkingHours) {
         events.push({
-          id: `non-working-${dayOfWeek}-${index}-${dateStr}`,
+          id: `non-working-day-${dayOfWeek}-${dateStr}`,
           title: '',
-          start: startTime,
-          end: endTime,
-          backgroundColor: '#9ca3af', // Grau für Nicht-Arbeitszeit
+          start: `${dateStr}T00:00`,
+          end: `${dateStr}T23:59`,
+          backgroundColor: '#9ca3af', // Grau für nicht verfügbare Tage
           borderColor: 'transparent',
           textColor: 'transparent',
           display: 'background',
@@ -417,7 +410,32 @@ const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDa
             isNonWorkingHours: true
           }
         })
-      })
+      } 
+      // FALL 2: Tag hat aktive Working Hours → nur die inaktiven Blöcke blockieren
+      else {
+        const inactiveBlocks = dayWorkingHours.filter(wh => wh.is_active === false)
+        
+        inactiveBlocks.forEach((block, index) => {
+          const startTime = `${dateStr}T${block.start_time}`
+          const endTime = `${dateStr}T${block.end_time}`
+          
+          events.push({
+            id: `non-working-${dayOfWeek}-${index}-${dateStr}`,
+            title: '',
+            start: startTime,
+            end: endTime,
+            backgroundColor: '#9ca3af', // Grau für Nicht-Arbeitszeit
+            borderColor: 'transparent',
+            textColor: 'transparent',
+            display: 'background',
+            classNames: ['non-working-hours-block'],
+            extendedProps: {
+              type: 'non_working_hours',
+              isNonWorkingHours: true
+            }
+          })
+        })
+      }
       
       currentDate.setDate(currentDate.getDate() + 1)
     }
@@ -1739,57 +1757,35 @@ const pasteAppointmentDirectly = async () => {
     
     // Bei mehreren Kategorien nur die erste nehmen
     const category = rawCategory ? rawCategory.split(',')[0].trim() : 'B'
-    console.log('🔍 Final category for pricing:', category)
+    console.log('🔍 Final category:', category)
     
-    // ✅ EXPLIZITE PREIS-BERECHNUNG
-    const fallbackPrices: Record<string, number> = {
-      'B': 95/45,           // 2.11
-      'A': 95/45,           // 2.11  
-      'A1': 95/45,          // 2.11
-      'BE': 120/45,         // 2.67
-      'C': 170/45,          // 3.78
-      'C1': 150/45,         // 3.33
-      'D': 200/45,          // 4.44
-      'CE': 200/45,         // 4.44
-      'Motorboot': 120/45,       // 2.67
-      'BPT': 95/45          // 2.11
+    // ✅ APPOINTMENTS-DATEN (alle Pflichtfelder basierend auf Schema)
+    const appointmentData = {
+      // Basis-Felder (NOT NULL)
+      title: clipboardAppointment.value.title || 'Kopierter Termin',
+      description: clipboardAppointment.value.description || '-',
+      user_id: clipboardAppointment.value.user_id,
+      staff_id: clipboardAppointment.value.staff_id || props.currentUser?.id,
+      location_id: clipboardAppointment.value.location_id,
+      
+      // Zeit-Felder (NOT NULL)
+      start_time: toLocalTimeString(clickedDate),
+      end_time: toLocalTimeString(endDate),
+      duration_minutes: clipboardAppointment.value.duration || 45,
+      
+      // Typ-Felder (NOT NULL)
+      type: category,
+      status: 'pending_confirmation',
+      
+      // Optional aber wichtig
+      event_type_code: clipboardAppointment.value.event_type_code || 'lesson',
+      tenant_id: props.currentUser?.tenant_id || clipboardAppointment.value.tenant_id,
+      
+      // Note: Pricing, payments, discounts, products werden über separates Payment-System verwaltet
     }
-    
-    const pricePerMinute = fallbackPrices[category] || 2.11
-    console.log('🔍 Calculated price_per_minute:', pricePerMinute, 'for category:', category)
-    
-    // ✅ APPOINTMENTS-DATEN MIT EXPLIZITEN WERTEN
-      const appointmentData = {
-        // Basis-Felder
-        title: clipboardAppointment.value.title || 'Kopierter Termin',
-        description: clipboardAppointment.value.description || '',
-        user_id: clipboardAppointment.value.user_id,
-        staff_id: clipboardAppointment.value.staff_id || props.currentUser?.id,
-        location_id: clipboardAppointment.value.location_id,
-        
-        // Zeit-Felder (neu)
-        start_time: toLocalTimeString(clickedDate),
-        end_time: toLocalTimeString(endDate),
-        duration_minutes: clipboardAppointment.value.duration || 45,
-        
-        // Kopierte Felder
-        type: category,
-        price_per_minute: Number(pricePerMinute),
-        status: 'pending_confirmation',
-        
-        // Pflichtfelder mit Defaults
-        is_paid: clipboardAppointment.value.is_paid || false,
-        // Note: Discounts/Products werden nicht mitkopiert (separate Tabellen)
-      }
     
     // ✅ FINALE DEBUG-AUSGABE
     console.log('💾 FINAL appointmentData before save:', appointmentData)
-    console.log('🔍 price_per_minute type and value:', typeof appointmentData.price_per_minute, appointmentData.price_per_minute)
-    
-    // Validierung vor dem Speichern
-    if (!appointmentData.price_per_minute || appointmentData.price_per_minute <= 0) {
-      throw new Error(`Invalid price_per_minute: ${appointmentData.price_per_minute}`)
-    }
     
     // Direkt in Datenbank speichern
     const { data, error } = await supabase
