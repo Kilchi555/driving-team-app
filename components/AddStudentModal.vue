@@ -115,19 +115,20 @@
                   id="category"
                   v-model="form.category"
                   required
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :disabled="isLoadingCategories"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                   :class="{ 'border-red-300': errors.category }"
                 >
-                  <option value="">Kategorie wählen</option>
-                  <option value="A1">A1 - Motorrad bis 125ccm</option>
-                  <option value="A35kW">A (35kW) - Motorrad bis 35kW</option>
-                  <option value="A">A - Motorrad unbeschränkt</option>
-                  <option value="B">B - Personenwagen</option>
-                  <option value="BE">BE - Personenwagen mit Anhänger</option>
-                  <option value="C">C - Lastwagen</option>
-                  <option value="CE">CE - Lastwagen mit Anhänger</option>
-                  <option value="D">D - Bus</option>
-                  <option value="DE">DE - Bus mit Anhänger</option>
+                  <option value="">
+                    {{ isLoadingCategories ? 'Lade Kategorien...' : 'Kategorie wählen' }}
+                  </option>
+                  <option 
+                    v-for="category in availableCategories" 
+                    :key="category.code" 
+                    :value="category.code"
+                  >
+                    {{ category.name }}
+                  </option>
                 </select>
                 <p v-if="errors.category" class="text-red-600 text-xs mt-1">{{ errors.category }}</p>
               </div>
@@ -223,6 +224,9 @@
                 >
                 <p v-if="errors.city" class="text-red-600 text-xs mt-1">{{ errors.city }}</p>
               </div>
+              <p class="text-sm text-gray-600">
+                * Pflichtfelder
+              </p>
             </div>
           </div>
 
@@ -230,9 +234,6 @@
 
         <!-- Footer - Sticky -->
         <div class="sticky bottom-0 flex items-center justify-between p-6 border-t bg-white shadow-lg">
-          <p class="text-sm text-gray-600">
-            * Pflichtfelder
-          </p>
           <div class="flex gap-4">
             <button
               type="button"
@@ -293,6 +294,8 @@ const { addStudent } = useStudents()
 // State
 const isSubmitting = ref(false)
 const staffMembers = ref<any[]>([])
+const availableCategories = ref<any[]>([])
+const isLoadingCategories = ref(false)
 
 // Form Data
 const form = ref({
@@ -329,6 +332,30 @@ const isFormValid = computed(() => {
 const isValidEmail = (email: string) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
+}
+
+const formatPhoneNumber = (phone: string) => {
+  if (!phone) return ''
+  
+  // Entferne alle nicht-numerischen Zeichen außer +
+  let cleaned = phone.replace(/[^\d+]/g, '')
+  
+  // Wenn mit 0 beginnt, ersetze durch +41
+  if (cleaned.startsWith('0')) {
+    cleaned = '+41' + cleaned.substring(1)
+  }
+  
+  // Wenn mit 41 beginnt, füge + hinzu
+  if (cleaned.startsWith('41') && !cleaned.startsWith('+41')) {
+    cleaned = '+' + cleaned
+  }
+  
+  // Wenn weder + noch 0 noch 41, füge +41 hinzu
+  if (!cleaned.startsWith('+') && !cleaned.startsWith('0') && !cleaned.startsWith('41')) {
+    cleaned = '+41' + cleaned
+  }
+  
+  return cleaned
 }
 
 const validateForm = () => {
@@ -412,6 +439,53 @@ const loadStaffMembers = async () => {
   }
 }
 
+const loadCategories = async () => {
+  if (!props.currentUser?.id) return
+
+  isLoadingCategories.value = true
+  try {
+    const supabase = getSupabase()
+    
+    // Get user's tenant_id
+    const { data: userProfile, error: userError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('id', props.currentUser.id)
+      .single()
+
+    if (userError || !userProfile?.tenant_id) {
+      console.error('Could not get tenant_id:', userError)
+      return
+    }
+
+    // Load categories for this tenant
+    const { data, error } = await supabase
+      .from('categories')
+      .select('code, name, is_active')
+      .eq('tenant_id', userProfile.tenant_id)
+      .eq('is_active', true)
+      .order('code')
+
+    if (error) throw error
+    availableCategories.value = data || []
+
+  } catch (error) {
+    console.error('Fehler beim Laden der Kategorien:', error)
+    // Fallback categories
+    availableCategories.value = [
+      { code: 'B', name: 'B - Auto' },
+      { code: 'A1', name: 'A1 - Motorrad 125cc' },
+      { code: 'A', name: 'A - Motorrad' },
+      { code: 'BE', name: 'BE - Anhänger' },
+      { code: 'C', name: 'C - LKW' },
+      { code: 'C1', name: 'C1 - LKW klein' },
+      { code: 'CE', name: 'CE - LKW mit Anhänger' }
+    ]
+  } finally {
+    isLoadingCategories.value = false
+  }
+}
+
 const submitForm = async () => {
   if (!validateForm()) return
 
@@ -430,9 +504,9 @@ const submitForm = async () => {
 
     const newStudent = await addStudent(studentData)
     
-    // Success feedback with temporary password info
+    // Success feedback
     console.log('Schüler erfolgreich hinzugefügt:', newStudent)
-    alert(`Schüler erfolgreich hinzugefügt!\n\nE-Mail: ${newStudent.email}\nTemporäres Passwort: TempPassword123!\n\nDer Schüler kann sich jetzt anmelden und sollte das Passwort beim ersten Login ändern.`)
+    alert(`Schüler erfolgreich hinzugefügt!\n\nE-Mail: ${newStudent.email}\n\nDer Schüler kann sich über die normale Registrierung anmelden.`)
     
     // Reset form and close modal
     resetForm()
@@ -457,6 +531,7 @@ const submitForm = async () => {
 // Lifecycle
 onMounted(() => {
   loadStaffMembers()
+  loadCategories()
 })
 
 // Watchers
@@ -464,6 +539,7 @@ watch(() => props.show, (newValue) => {
   if (newValue) {
     resetForm()
     loadStaffMembers()
+    loadCategories()
   }
 })
 
@@ -519,6 +595,16 @@ watch(() => form.value.zip, () => {
 watch(() => form.value.city, () => {
   if (errors.value.city && form.value.city.trim()) {
     delete errors.value.city
+  }
+})
+
+// Phone number formatting watcher
+watch(() => form.value.phone, (newPhone) => {
+  if (newPhone) {
+    const formatted = formatPhoneNumber(newPhone)
+    if (formatted !== newPhone) {
+      form.value.phone = formatted
+    }
   }
 })
 </script>

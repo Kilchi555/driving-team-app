@@ -194,26 +194,17 @@ export const useStudents = () => {
     try {
       const supabase = getSupabase()
       
-      // 1. Erstelle auth.users Eintrag (für Login-Fähigkeit)
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: studentData.email!,
-        password: 'TempPassword123!', // Temporäres Passwort
-        email_confirm: true, // E-Mail als bestätigt markieren
-        user_metadata: {
-          first_name: studentData.first_name,
-          last_name: studentData.last_name
-        }
-      })
-
-      if (authError) throw authError
-
-      // 2. Erstelle users Eintrag mit auth_user_id
+      // Generiere eine UUID für den neuen Benutzer
+      const userId = crypto.randomUUID()
+      
+      // Erstelle nur users Eintrag (ohne auth.users)
+      // Der Kunde kann sich später über normale Registrierung anmelden
       const { data, error: insertError } = await supabase
         .from('users')
         .insert([{
           ...studentData,
-          id: authData.user.id, // Verwende auth user ID
-          auth_user_id: authData.user.id,
+          id: userId,
+          auth_user_id: null, // Kein Auth-User, kann später erstellt werden
           role: 'client',
           is_active: true
         }])
