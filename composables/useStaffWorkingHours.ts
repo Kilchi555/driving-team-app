@@ -52,7 +52,10 @@ export const WEEKDAYS = [
 const workingHoursByDay = computed(() => {
   const grouped: Record<number, WorkingHour> = {}
   workingHours.value.forEach(hour => {
-    grouped[hour.day_of_week] = hour
+    // Nur aktive Arbeitszeiten für die Hauptanzeige verwenden
+    if (hour.is_active) {
+      grouped[hour.day_of_week] = hour
+    }
   })
   return grouped
 })
@@ -379,7 +382,11 @@ export const useStaffWorkingHours = () => {
 
   // Arbeitszeiten für einen bestimmten Tag abrufen
   const getWorkingHoursForDay = (dayOfWeek: number) => {
-    return workingHoursByDay.value[dayOfWeek] || null
+    // Suche nach aktiven Arbeitszeiten für diesen Tag
+    const activeHour = workingHours.value.find(hour => 
+      hour.day_of_week === dayOfWeek && hour.is_active
+    )
+    return activeHour || null
   }
 
   // Alle aktiven Arbeitszeiten als Array für Kalender
