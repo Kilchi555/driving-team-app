@@ -419,8 +419,9 @@ const submitForm = async () => {
 
     const newStudent = await addStudent(studentData)
     
-    // Success feedback (you can add a toast notification here)
+    // Success feedback with temporary password info
     console.log('Schüler erfolgreich hinzugefügt:', newStudent)
+    alert(`Schüler erfolgreich hinzugefügt!\n\nE-Mail: ${newStudent.email}\nTemporäres Passwort: TempPassword123!\n\nDer Schüler kann sich jetzt anmelden und sollte das Passwort beim ersten Login ändern.`)
     
     // Reset form and close modal
     resetForm()

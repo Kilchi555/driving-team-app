@@ -194,10 +194,26 @@ export const useStudents = () => {
     try {
       const supabase = getSupabase()
       
+      // 1. Erstelle auth.users Eintrag (für Login-Fähigkeit)
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: studentData.email!,
+        password: 'TempPassword123!', // Temporäres Passwort
+        email_confirm: true, // E-Mail als bestätigt markieren
+        user_metadata: {
+          first_name: studentData.first_name,
+          last_name: studentData.last_name
+        }
+      })
+
+      if (authError) throw authError
+
+      // 2. Erstelle users Eintrag mit auth_user_id
       const { data, error: insertError } = await supabase
         .from('users')
         .insert([{
           ...studentData,
+          id: authData.user.id, // Verwende auth user ID
+          auth_user_id: authData.user.id,
           role: 'client',
           is_active: true
         }])
