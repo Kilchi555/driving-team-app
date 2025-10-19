@@ -338,9 +338,6 @@
               >
                 <div class="flex justify-between items-start mb-2">
                   <div>
-                    <h5 class="font-semibold text-gray-900">
-                      {{ lesson.title ? lesson.title.split(' - ')[0] : 'Fahrstunde' }}
-                    </h5>
                     <p class="text-sm text-gray-600">
                       {{ formatLocalDate(lesson.start_time) }}
                       um {{ formatLocalTime(lesson.start_time) }}
@@ -392,7 +389,7 @@
                           {{ evaluation.evaluation_criteria?.name || 'Bewertung' }}
                         </span>
                         <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">
-                          {{ evaluation.criteria_rating }}/5
+                          {{ evaluation.criteria_rating }}/6
                         </span>
                       </div>
                       <p v-if="evaluation.criteria_note" class="text-xs text-gray-600 mt-1">
