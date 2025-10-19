@@ -1,4 +1,6 @@
 // server/api/students/send-onboarding-sms.post.ts
+import { serverSupabaseClient } from '#supabase/server'
+
 export default defineEventHandler(async (event) => {
   try {
     const { phone, firstName, token } = await readBody(event)
@@ -17,50 +19,62 @@ export default defineEventHandler(async (event) => {
     const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
     const onboardingLink = `${baseUrl}/onboarding/${token}`
     
-    // Shorten URL (optional - if using URL shortener)
-    // const shortLink = await shortenUrl(onboardingLink)
-    
     // SMS Message
     const message = `Hallo ${firstName}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
 
-    // Send SMS via your SMS provider
-    // Option 1: Twilio
-    // await sendViaTwilio(formattedPhone, message)
-    
-    // Option 2: SwissSign (Swiss provider)
-    // await sendViaSwissSign(formattedPhone, message)
-    
-    // Option 3: Nexmo/Vonage
-    // await sendViaNexmo(formattedPhone, message)
-    
-    // For now: Log to console (you'll implement your SMS provider)
-    console.log('📱 SMS to send:', {
+    console.log('📱 Sending onboarding SMS:', {
       to: formattedPhone,
-      message: message,
+      firstName,
       link: onboardingLink
     })
 
-    // TODO: Implement actual SMS sending
-    // Uncomment when SMS provider is configured:
-    /*
-    const smsResult = await sendSMS({
-      to: formattedPhone,
-      message: message
-    })
+    // ✅ Use existing Twilio integration via Supabase Edge Function
+    const supabase = await serverSupabaseClient(event)
     
-    if (!smsResult.success) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'SMS sending failed'
-      })
+    const { data: smsData, error: smsError } = await supabase.functions.invoke('send-twilio-sms', {
+      body: {
+        to: formattedPhone,
+        message: message
+      }
+    })
+
+    if (smsError) {
+      console.error('❌ SMS sending failed:', smsError)
+      // Don't throw - student was created, SMS can be resent manually
+      return {
+        success: false,
+        phone: formattedPhone,
+        message: 'SMS sending failed, but student was created',
+        error: smsError.message,
+        onboardingLink: onboardingLink
+      }
     }
-    */
+
+    console.log('✅ Onboarding SMS sent successfully:', smsData)
+
+    // Log SMS in database
+    try {
+      await supabase
+        .from('sms_logs')
+        .insert({
+          to_phone: formattedPhone,
+          message: message,
+          twilio_sid: smsData?.sid || `onboarding_${Date.now()}`,
+          status: smsData?.status || 'sent',
+          sent_at: new Date().toISOString(),
+          purpose: 'student_onboarding'
+        })
+    } catch (logError) {
+      console.warn('⚠️ Failed to log SMS:', logError)
+      // Continue even if logging fails
+    }
 
     return {
       success: true,
       phone: formattedPhone,
       message: 'SMS sent successfully',
-      onboardingLink: onboardingLink
+      onboardingLink: onboardingLink,
+      smsData
     }
 
   } catch (error: any) {
