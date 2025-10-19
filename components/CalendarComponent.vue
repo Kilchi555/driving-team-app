@@ -1104,32 +1104,37 @@ const getEventColor = (type: string, status?: string, category?: string): string
     'BPT': '#10b981'     // Grün für BPT
   }
   
-  // ✅ Typ-basierte Farben für andere Termine
+  // ✅ Typ-basierte Farben für andere Termine (dunklere Farben für bessere Sichtbarkeit)
   const typeColors = {
     'lesson': '#10b981',      // Grün für Fahrstunden
     'exam': '#f59e0b',        // Orange für Prüfungen  
     'theory': '#3b82f6',      // Blau für Theorie
-    'meeting': '#8b5cf6',     // Lila für Meetings
-    'break': '#6b7280',       // Grau für Pausen
-    'maintenance': '#ef4444', // Rot für Wartung
-    'team_invite': '#06b6d4', // Cyan für Team-Einladungen
-    'other': '#64748b'        // Grau für Sonstiges
+    'meeting': '#7c3aed',     // Dunkel-Lila für Meetings
+    'break': '#475569',       // Dunkelgrau für Pausen
+    'training': '#ea580c',    // Dunkel-Orange für Training
+    'maintenance': '#dc2626', // Dunkel-Rot für Wartung
+    'admin': '#0891b2',       // Dunkel-Cyan für Admin
+    'team_invite': '#0284c7', // Blau für Team-Einladungen
+    'vku': '#059669',         // Grün für VKU
+    'nothelfer': '#d97706',   // Bernstein für Nothelfer
+    'other': '#374151'        // Dunkelgrau für Sonstiges
   }
   
-  // ✅ Default-Farbe für alle Events ohne spezifische Kategorie
-  const defaultColor = '#6b7280' // Neutrales Grau
+  // ✅ Default-Farbe für alle Events ohne spezifische Kategorie/Typ
+  const defaultColor = '#4b5563' // Dunkles neutrales Grau
   
   let baseColor = defaultColor
   
-  // ✅ Für Events mit Kategorie: Kategorie-basierte Farbe verwenden
-  if (category && categoryColors[category as keyof typeof categoryColors]) {
+  // ✅ Priorität 1: Typ-basierte Farbe (für other event types)
+  if (type && typeColors[type as keyof typeof typeColors]) {
+    baseColor = typeColors[type as keyof typeof typeColors]
+  }
+  // ✅ Priorität 2: Kategorie-basierte Farbe (für Fahrstunden) - überschreibt Typ-Farbe
+  else if (category && categoryColors[category as keyof typeof categoryColors]) {
     baseColor = categoryColors[category as keyof typeof categoryColors]
-  } else {
-    // ✅ Für alle Events ohne Kategorie: Default-Farbe verwenden
-    baseColor = defaultColor
   }
   
-  // Status-basierte Anpassungen
+  // ✅ Status-basierte Anpassungen (überschreibt alles)
   if (status === 'completed') {
     baseColor = '#22c55e' // Helles Grün für abgeschlossene Termine
   }
