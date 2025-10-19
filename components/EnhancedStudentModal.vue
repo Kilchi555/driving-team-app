@@ -248,9 +248,9 @@
         <!-- Progress Tab -->
         <div v-if="activeTab === 'progress'" class="p-4">
           <!-- Loading State -->
-          <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
+          <div v-if="isLoadingLessons || isLoadingExamResults" class="flex items-center justify-center py-8">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span class="ml-3 text-gray-600">Lade Lektionen...</span>
+            <span class="ml-3 text-gray-600">Lade Daten...</span>
           </div>
 
           <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
@@ -261,13 +261,63 @@
             </button>
           </div>
 
-          <div v-else-if="lessons.length === 0" class="text-center py-12">
+          <div v-else-if="lessons.length === 0 && examResults.length === 0" class="text-center py-12">
             <div class="text-6xl mb-4">📚</div>
-            <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Lektionen gefunden</h4>
-            <p class="text-gray-600">Für diesen Schüler wurden noch keine Lektionen erfasst.</p>
+            <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Lektionen oder Prüfungsergebnisse gefunden</h4>
+            <p class="text-gray-600">Für diesen Schüler wurden noch keine Lektionen oder Prüfungen erfasst.</p>
           </div>
 
-          <div v-else class="space-y-4">
+          <div v-else class="space-y-6">
+            
+            <!-- Prüfungsergebnisse Section -->
+            <div v-if="examResults.length > 0" class="space-y-3">
+              <h4 class="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                <span class="text-2xl">🎓</span>
+                Prüfungsergebnisse
+              </h4>
+              
+              <div 
+                v-for="result in examResults" 
+                :key="result.id"
+                class="rounded-lg p-4 border-2"
+                :class="result.passed ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'"
+              >
+                <div class="flex justify-between items-start mb-3">
+                  <div>
+                    <h5 class="font-semibold text-gray-900 text-lg">
+                      {{ result.appointments?.title || result.appointments?.type || 'Prüfung' }}
+                    </h5>
+                    <p class="text-sm text-gray-600">
+                      {{ formatLocalDate(result.exam_date) }}
+                    </p>
+                  </div>
+                  <span :class="[
+                    'px-3 py-1 text-sm font-bold rounded-full',
+                    result.passed ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                  ]">
+                    {{ result.passed ? 'BESTANDEN ✓' : 'NICHT BESTANDEN ✗' }}
+                  </span>
+                </div>
+                
+                <div v-if="result.examiner_behavior_rating" class="mt-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-600">Verhalten des Prüfers:</span>
+                    <span class="font-medium">{{ result.examiner_behavior_rating }}/6</span>
+                  </div>
+                </div>
+                
+                <div v-if="result.examiner_behavior_notes" class="mt-2 text-sm text-gray-700 italic">
+                  {{ result.examiner_behavior_notes }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Lektionen Section -->
+            <div v-if="lessons.length > 0" class="space-y-4">
+              <h4 class="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                <span class="text-2xl">📚</span>
+                Lektionen
+              </h4>
             
             <!-- Filter und Sortierung auf separater Zeile -->
             <div 
@@ -338,6 +388,9 @@
               >
                 <div class="flex justify-between items-start mb-2">
                   <div>
+                    <h5 class="font-semibold text-gray-900">
+                      {{ lesson.type || 'Lektion' }}
+                    </h5>
                     <p class="text-sm text-gray-600">
                       {{ formatLocalDate(lesson.start_time) }}
                       um {{ formatLocalTime(lesson.start_time) }}
@@ -414,6 +467,7 @@
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -959,13 +1013,16 @@ const viewerTitle = ref('')
 const lessons = ref<any[]>([])
 const progressData = ref<any[]>([])
 const payments = ref<any[]>([])
+const examResults = ref<any[]>([])
 const isLoadingLessons = ref(false)
+const isLoadingExamResults = ref(false)
 const sortMode = ref<'newest' | 'worst'>('newest') // Toggle zwischen neueste und schlechteste Bewertungen
 const selectedCategoryFilter = ref<string>('alle') // Filter nach Kategorie
 const isLoadingPayments = ref(false)
 const paymentsFilterMode = ref<'alle' | 'ausstehend'>('alle') // Filter für Zahlungen
 const lessonsError = ref<string | null>(null)
 const paymentsError = ref<string | null>(null)
+const examResultsError = ref<string | null>(null)
 
 // Evaluation Modal State
 const showEvaluationModal = ref(false)
@@ -1426,6 +1483,66 @@ const loadLessons = async () => {
   }
 }
 
+const loadExamResults = async () => {
+  if (!props.selectedStudent) return
+  
+  isLoadingExamResults.value = true
+  examResultsError.value = null
+  
+  try {
+    console.log('🎓 Loading exam results for student:', props.selectedStudent.id)
+    
+    const supabase = getSupabase()
+    
+    // Zuerst alle appointments dieses Schülers laden
+    const { data: studentAppointments, error: aptError } = await supabase
+      .from('appointments')
+      .select('id, type, start_time, title, user_id')
+      .eq('user_id', props.selectedStudent.id)
+    
+    if (aptError) {
+      console.error('❌ Error loading student appointments:', aptError)
+      throw aptError
+    }
+    
+    const appointmentIds = (studentAppointments || []).map(apt => apt.id)
+    
+    if (appointmentIds.length === 0) {
+      examResults.value = []
+      console.log('✅ No appointments found for student')
+      return
+    }
+    
+    // Dann die exam_results für diese appointments laden
+    const { data: examResultsData, error: examError } = await supabase
+      .from('exam_results')
+      .select('*')
+      .in('appointment_id', appointmentIds)
+      .order('exam_date', { ascending: false })
+    
+    if (examError) {
+      console.error('❌ Error loading exam results:', examError)
+      throw examError
+    }
+    
+    // Verknüpfe exam_results mit appointment-Daten
+    const appointmentsMap = new Map(studentAppointments.map(apt => [apt.id, apt]))
+    
+    examResults.value = (examResultsData || []).map(result => ({
+      ...result,
+      appointments: appointmentsMap.get(result.appointment_id)
+    }))
+    
+    console.log('✅ Loaded', examResults.value.length, 'exam results')
+    
+  } catch (error: any) {
+    console.error('Error loading exam results:', error)
+    examResultsError.value = error.message || 'Fehler beim Laden der Prüfungsergebnisse'
+  } finally {
+    isLoadingExamResults.value = false
+  }
+}
+
 const loadPayments = async () => {
   if (!props.selectedStudent) return
   
@@ -1556,6 +1673,7 @@ const uploadCurrentFile = async (file: File) => {
 watch(() => props.selectedStudent, (newStudent) => {
   if (newStudent) {
     loadLessons()
+    loadExamResults()
     loadPayments()
     loadDocumentRequirements()
     loadDocuments(newStudent.id) // Load user documents from new table
@@ -1567,6 +1685,7 @@ watch(() => activeTab.value, (newTab) => {
   if ((newTab === 'progress' || newTab === 'payments') && props.selectedStudent) {
     if (newTab === 'progress') {
       loadLessons()
+      loadExamResults()
     } else if (newTab === 'payments') {
       loadPayments()
     }
