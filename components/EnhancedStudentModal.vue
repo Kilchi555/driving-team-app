@@ -247,77 +247,55 @@
         
         <!-- Progress Tab -->
         <div v-if="activeTab === 'progress'" class="p-4">
-          <!-- Loading State -->
-          <div v-if="isLoadingLessons || isLoadingExamResults" class="flex items-center justify-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span class="ml-3 text-gray-600">Lade Daten...</span>
-          </div>
-
-          <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
-            <h4 class="font-semibold text-red-900 mb-2">Fehler beim Laden</h4>
-            <p class="text-red-700 text-sm mb-4">{{ lessonsError }}</p>
-            <button @click="loadLessons" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
-              Erneut versuchen
+          <!-- Sub-Tab Navigation -->
+          <div class="flex gap-2 mb-4 border-b border-gray-200">
+            <button
+              @click="progressSubTab = 'lektionen'"
+              :class="[
+                'px-4 py-2 font-medium text-sm border-b-2 transition-colors',
+                progressSubTab === 'lektionen'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-800'
+              ]"
+            >
+              Lektionen
+            </button>
+            <button
+              @click="progressSubTab = 'prüfungen'"
+              :class="[
+                'px-4 py-2 font-medium text-sm border-b-2 transition-colors',
+                progressSubTab === 'prüfungen'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-800'
+              ]"
+            >
+              Prüfungen
             </button>
           </div>
 
-          <div v-else-if="lessons.length === 0 && examResults.length === 0" class="text-center py-12">
-            <div class="text-6xl mb-4">📚</div>
-            <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Lektionen oder Prüfungsergebnisse gefunden</h4>
-            <p class="text-gray-600">Für diesen Schüler wurden noch keine Lektionen oder Prüfungen erfasst.</p>
-          </div>
-
-          <div v-else class="space-y-6">
-            
-            <!-- Prüfungsergebnisse Section -->
-            <div v-if="examResults.length > 0" class="space-y-3">
-              <h4 class="font-semibold text-gray-900 text-lg flex items-center gap-2">
-                <span class="text-2xl">🎓</span>
-                Prüfungsergebnisse
-              </h4>
-              
-              <div 
-                v-for="result in examResults" 
-                :key="result.id"
-                class="rounded-lg p-4 border-2"
-                :class="result.passed ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'"
-              >
-                <div class="flex justify-between items-start mb-3">
-                  <div>
-                    <h5 class="font-semibold text-gray-900 text-lg">
-                      {{ result.appointments?.title || result.appointments?.type || 'Prüfung' }}
-                    </h5>
-                    <p class="text-sm text-gray-600">
-                      {{ formatLocalDate(result.exam_date) }}
-                    </p>
-                  </div>
-                  <span :class="[
-                    'px-3 py-1 text-sm font-bold rounded-full',
-                    result.passed ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                  ]">
-                    {{ result.passed ? 'BESTANDEN ✓' : 'NICHT BESTANDEN ✗' }}
-                  </span>
-                </div>
-                
-                <div v-if="result.examiner_behavior_rating" class="mt-2">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm text-gray-600">Verhalten des Prüfers:</span>
-                    <span class="font-medium">{{ result.examiner_behavior_rating }}/6</span>
-                  </div>
-                </div>
-                
-                <div v-if="result.examiner_behavior_notes" class="mt-2 text-sm text-gray-700 italic">
-                  {{ result.examiner_behavior_notes }}
-                </div>
-              </div>
+          <!-- Lektionen Sub-Tab -->
+          <div v-if="progressSubTab === 'lektionen'">
+            <!-- Loading State -->
+            <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span class="ml-3 text-gray-600">Lade Lektionen...</span>
             </div>
 
-            <!-- Lektionen Section -->
-            <div v-if="lessons.length > 0" class="space-y-4">
-              <h4 class="font-semibold text-gray-900 text-lg flex items-center gap-2">
-                <span class="text-2xl">📚</span>
-                Lektionen
-              </h4>
+            <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+              <h4 class="font-semibold text-red-900 mb-2">Fehler beim Laden</h4>
+              <p class="text-red-700 text-sm mb-4">{{ lessonsError }}</p>
+              <button @click="loadLessons" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                Erneut versuchen
+              </button>
+            </div>
+
+            <div v-else-if="lessons.length === 0" class="text-center py-12">
+              <div class="text-6xl mb-4">📚</div>
+              <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Lektionen gefunden</h4>
+              <p class="text-gray-600">Für diesen Schüler wurden noch keine Lektionen erfasst.</p>
+            </div>
+
+            <div v-else class="space-y-4">
             
             <!-- Filter und Sortierung auf separater Zeile -->
             <div 
@@ -389,7 +367,7 @@
                 <div class="flex justify-between items-start mb-2">
                   <div>
                     <h5 class="font-semibold text-gray-900">
-                      {{ lesson.type || 'Lektion' }}
+                      {{ lesson.event_type_code || lesson.type || 'Lektion' }}
                     </h5>
                     <p class="text-sm text-gray-600">
                       {{ formatLocalDate(lesson.start_time) }}
@@ -468,6 +446,66 @@
                 </div>
               </div>
             </div>
+            </div>
+          </div>
+
+          <!-- Prüfungen Sub-Tab -->
+          <div v-if="progressSubTab === 'prüfungen'">
+            <!-- Loading State -->
+            <div v-if="isLoadingExamResults" class="flex items-center justify-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span class="ml-3 text-gray-600">Lade Prüfungsergebnisse...</span>
+            </div>
+
+            <div v-else-if="examResultsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+              <h4 class="font-semibold text-red-900 mb-2">Fehler beim Laden</h4>
+              <p class="text-red-700 text-sm mb-4">{{ examResultsError }}</p>
+              <button @click="loadExamResults" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                Erneut versuchen
+              </button>
+            </div>
+
+            <div v-else-if="examResults.length === 0" class="text-center py-12">
+              <div class="text-6xl mb-4">🎓</div>
+              <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Prüfungsergebnisse gefunden</h4>
+              <p class="text-gray-600">Für diesen Schüler wurden noch keine Prüfungen erfasst.</p>
+            </div>
+
+            <div v-else class="space-y-3">
+              <div 
+                v-for="result in examResults" 
+                :key="result.id"
+                class="rounded-lg p-4 border-2"
+                :class="result.passed ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'"
+              >
+                <div class="flex justify-between items-start mb-3">
+                  <div>
+                    <h5 class="font-semibold text-gray-900 text-lg">
+                      {{ result.appointments?.title || result.appointments?.type || 'Prüfung' }}
+                    </h5>
+                    <p class="text-sm text-gray-600">
+                      {{ formatLocalDate(result.exam_date) }}
+                    </p>
+                  </div>
+                  <span :class="[
+                    'px-3 py-1 text-sm font-bold rounded-full',
+                    result.passed ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                  ]">
+                    {{ result.passed ? 'BESTANDEN ✓' : 'NICHT BESTANDEN ✗' }}
+                  </span>
+                </div>
+                
+                <div v-if="result.examiner_behavior_rating" class="mt-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-600">Verhalten des Prüfers:</span>
+                    <span class="font-medium">{{ result.examiner_behavior_rating }}/6</span>
+                  </div>
+                </div>
+                
+                <div v-if="result.examiner_behavior_notes" class="mt-2 text-sm text-gray-700 italic">
+                  {{ result.examiner_behavior_notes }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1018,6 +1056,7 @@ const isLoadingLessons = ref(false)
 const isLoadingExamResults = ref(false)
 const sortMode = ref<'newest' | 'worst'>('newest') // Toggle zwischen neueste und schlechteste Bewertungen
 const selectedCategoryFilter = ref<string>('alle') // Filter nach Kategorie
+const progressSubTab = ref<'lektionen' | 'prüfungen'>('lektionen') // Sub-Tab im Fortschritt
 const isLoadingPayments = ref(false)
 const paymentsFilterMode = ref<'alle' | 'ausstehend'>('alle') // Filter für Zahlungen
 const lessonsError = ref<string | null>(null)
@@ -1393,7 +1432,8 @@ const loadLessons = async () => {
         status,
         title,
         description,
-        duration_minutes
+        duration_minutes,
+        event_type_code
       `)
       .eq('user_id', props.selectedStudent.id)
       .order('start_time', { ascending: false })
