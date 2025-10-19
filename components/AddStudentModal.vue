@@ -59,16 +59,15 @@
                 <p v-if="errors.last_name" class="text-red-600 text-xs mt-1">{{ errors.last_name }}</p>
               </div>
 
-              <!-- Email -->
+              <!-- Email (Optional) -->
               <div class="md:col-span-2">
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                  E-Mail Adresse *
+                  E-Mail Adresse <span class="text-gray-400">(optional - kann vom Schüler ergänzt werden)</span>
                 </label>
                 <input
                   id="email"
                   v-model="form.email"
                   type="email"
-                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.email }"
                   placeholder="max.mustermann@example.com"
@@ -93,10 +92,10 @@
                 <p v-if="errors.phone" class="text-red-600 text-xs mt-1">{{ errors.phone }}</p>
               </div>
 
-              <!-- Birthdate -->
+              <!-- Birthdate (Optional) -->
               <div>
                 <label for="birthdate" class="block text-sm font-medium text-gray-700 mb-1">
-                  Geburtsdatum
+                  Geburtsdatum <span class="text-gray-400">(optional)</span>
                 </label>
                 <input
                   id="birthdate"
@@ -106,15 +105,14 @@
                 >
               </div>
 
-              <!-- Category -->
+              <!-- Category (Optional) -->
               <div>
                 <label for="category" class="block text-sm font-medium text-gray-700 mb-1">
-                  Führerausweis-Kategorie *
+                  Führerausweis-Kategorie <span class="text-gray-400">(optional)</span>
                 </label>
                 <select
                   id="category"
                   v-model="form.category"
-                  required
                   :disabled="isLoadingCategories"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                   :class="{ 'border-red-300': errors.category }"
@@ -152,15 +150,17 @@
             </div>
           </div>
 
-          <!-- Address Information -->
+          <!-- Address Information (Optional) -->
           <div>
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Adresse *</h3>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+              Adresse <span class="text-sm font-normal text-gray-500">(optional - Schüler kann später ergänzen)</span>
+            </h3>
             
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <!-- Street -->
+              <!-- Street (Optional) -->
               <div class="md:col-span-2">
                 <label for="street" class="block text-sm font-medium text-gray-700 mb-1">
-                  Strasse *
+                  Strasse <span class="text-gray-400">(optional)</span>
                 </label>
                 <input
                   id="street"
@@ -369,9 +369,8 @@ const validateForm = () => {
     errors.value.last_name = 'Nachname ist erforderlich'
   }
 
-  if (!form.value.email.trim()) {
-    errors.value.email = 'E-Mail ist erforderlich'
-  } else if (!isValidEmail(form.value.email)) {
+  // ✅ Email ist jetzt optional - wird vom Schüler ergänzt
+  if (form.value.email && !isValidEmail(form.value.email)) {
     errors.value.email = 'Ungültige E-Mail-Adresse'
   }
 
@@ -379,25 +378,7 @@ const validateForm = () => {
     errors.value.phone = 'Telefonnummer ist erforderlich'
   }
 
-  if (!form.value.category.trim()) {
-    errors.value.category = 'Kategorie ist erforderlich'
-  }
-
-  if (!form.value.street.trim()) {
-    errors.value.street = 'Strasse ist erforderlich'
-  }
-
-  if (!form.value.street_nr.trim()) {
-    errors.value.street_nr = 'Hausnummer ist erforderlich'
-  }
-
-  if (!form.value.zip.trim()) {
-    errors.value.zip = 'PLZ ist erforderlich'
-  }
-
-  if (!form.value.city.trim()) {
-    errors.value.city = 'Stadt ist erforderlich'
-  }
+  // ✅ Alle anderen Felder sind jetzt optional - Schüler ergänzt sie via Onboarding-Link
 
   return Object.keys(errors.value).length === 0
 }
@@ -506,7 +487,9 @@ const submitForm = async () => {
     
     // Success feedback
     console.log('Schüler erfolgreich hinzugefügt:', newStudent)
-    alert(`Schüler erfolgreich hinzugefügt!\n\nE-Mail: ${newStudent.email}\nTemporäres Passwort: TempPassword123!\n\nDer Schüler kann sich jetzt anmelden und sollte das Passwort beim ersten Login ändern.`)
+    
+    // ✅ NEUER WORKFLOW: SMS mit Onboarding-Link wird versendet
+    alert(`Schüler erfolgreich erstellt!\n\nEine SMS mit einem Onboarding-Link wurde an ${form.value.phone} gesendet.\n\nDer Schüler kann über diesen Link:\n- Sein Passwort setzen\n- Email-Adresse ergänzen\n- Adresse & weitere Daten ausfüllen\n- Ausweis hochladen`)
     
     // Reset form and close modal
     resetForm()

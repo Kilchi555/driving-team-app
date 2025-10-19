@@ -189,50 +189,52 @@ export const useStudents = () => {
     }
   }
 
-  // Neuen Schüler hinzufügen
+  // ✅ NEUER WORKFLOW: Schüler hinzufügen mit SMS-Token (OHNE Auth-User)
   const addStudent = async (studentData: Partial<User>) => {
     try {
       const supabase = getSupabase()
       
-      // Generiere eine UUID für den neuen Benutzer
+      // Generiere UUID und Token
       const userId = crypto.randomUUID()
+      const onboardingToken = crypto.randomUUID()
+      const tokenExpires = new Date()
+      tokenExpires.setDate(tokenExpires.getDate() + 7) // 7 Tage gültig
       
-      // 1. Erstelle users Eintrag
+      // 1. Erstelle nur users Eintrag (OHNE auth_user_id)
       const { data, error: insertError } = await supabase
         .from('users')
         .insert([{
           ...studentData,
           id: userId,
-          auth_user_id: null, // Wird später gesetzt
+          auth_user_id: null, // Erst nach Onboarding gesetzt
           role: 'client',
-          is_active: true
+          is_active: false, // Inaktiv bis Onboarding abgeschlossen
+          onboarding_status: 'pending',
+          onboarding_token: onboardingToken,
+          onboarding_token_expires: tokenExpires.toISOString()
         }])
         .select()
         .single()
 
       if (insertError) throw insertError
 
-      // 2. Erstelle Auth-User über Server-Endpoint
+      // 2. Sende SMS mit Onboarding-Link
       try {
         const { $fetch } = useNuxtApp()
-        await $fetch('/api/admin/create-auth-user', {
+        await $fetch('/api/students/send-onboarding-sms', {
           method: 'POST',
           body: {
-            userId: data.id,
-            email: data.email,
-            password: 'TempPassword123!',
+            phone: data.phone,
             firstName: data.first_name,
-            lastName: data.last_name
+            token: onboardingToken
           }
         })
         
-        // Update local data with auth_user_id
-        data.auth_user_id = userId // Der Server setzt die richtige auth_user_id
-        console.log('✅ Auth user created successfully')
+        console.log('✅ Onboarding SMS sent to:', data.phone)
         
-      } catch (authError: any) {
-        console.warn('⚠️ Auth user creation failed, but student was created:', authError.message)
-        // Student wurde erstellt, aber Auth-User nicht - das ist OK, kann später gemacht werden
+      } catch (smsError: any) {
+        console.warn('⚠️ SMS sending failed:', smsError.message)
+        // Student wurde erstellt, SMS-Versand hat gefehlt - kann manuell wiederholt werden
       }
 
       // Zur lokalen Liste hinzufügen
