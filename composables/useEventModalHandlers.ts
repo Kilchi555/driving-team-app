@@ -315,6 +315,17 @@ const handleDurationsChanged = (durations: number[]) => {
   console.log('🔍 Current appointment_type:', formData.value.appointment_type)
   console.log('🔍 Current duration:', formData.value.duration_minutes)
   
+  // ✅ WICHTIG: Flatten nested arrays (handle Proxy arrays)
+  let flatDurations: number[] = []
+  if (Array.isArray(durations)) {
+    flatDurations = durations.flat().filter(d => typeof d === 'number' && !isNaN(d))
+  } else {
+    console.warn('⚠️ durations is not an array:', durations)
+    flatDurations = [45] // Fallback
+  }
+  
+  console.log('📊 Flattened durations:', flatDurations)
+  
   // ✅ FIX: Bei Prüfungen die exam_duration aus selectedCategory verwenden
   if (formData.value.appointment_type === 'exam') {
     const examDuration = selectedCategory.value?.exam_duration_minutes || 135
@@ -323,20 +334,26 @@ const handleDurationsChanged = (durations: number[]) => {
     formData.value.duration_minutes = examDuration
   } else {
     // Normale Fahrstunden-Logic
-    availableDurations.value = durations
+    availableDurations.value = flatDurations
     
     // ✅ INTELLIGENTE DAUER-AUSWAHL: Versuche die aktuelle Dauer zu behalten, wenn möglich
-    if (durations.length > 0) {
+    if (flatDurations.length > 0) {
       const currentDuration = formData.value.duration_minutes
       
-      if (durations.includes(currentDuration)) {
+      if (flatDurations.includes(currentDuration)) {
         console.log('✅ Keeping current duration:', currentDuration, 'as it\'s available in new category')
       } else {
         // Aktuelle Dauer nicht verfügbar - wähle intelligente Alternative
-        let newDuration = durations[0] // Fallback
+        let newDuration = flatDurations[0] // Fallback
+        
+        // ✅ Ensure newDuration is a number, not an array
+        if (typeof newDuration !== 'number' || isNaN(newDuration)) {
+          console.error('❌ Invalid duration:', newDuration, 'using default 45')
+          newDuration = 45
+        }
         
         // Versuche eine ähnliche Dauer zu finden (±15min Toleranz)
-        const similarDuration = durations.find(d => Math.abs(d - currentDuration) <= 15)
+        const similarDuration = flatDurations.find(d => Math.abs(d - currentDuration) <= 15)
         if (similarDuration) {
           newDuration = similarDuration
           console.log('🎯 Found similar duration:', newDuration, 'instead of', currentDuration)

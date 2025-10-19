@@ -606,37 +606,36 @@ const roundToNearestFranken = (rappen: number): number => {
       console.log(`📝 Edit-Mode: Loading existing pricing from database for appointment: ${appointmentId}`)
       try {
         const supabase = getSupabase()
+        // ✅ Nur die essentiellen Spalten abfragen (credit Spalten optional)
         const { data: payment, error } = await supabase
           .from('payments')
-          .select('lesson_price_rappen, admin_fee_rappen, total_amount_rappen, credit_used_rappen, credit_transaction_id')
+          .select('lesson_price_rappen, admin_fee_rappen, total_amount_rappen')
           .eq('appointment_id', appointmentId)
-          .single()
+          .maybeSingle() // ✅ WICHTIG: maybeSingle statt single (kein Fehler wenn nicht gefunden)
         
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
           console.warn('⚠️ Error loading existing pricing from payments:', error)
+          // Fallback zur normalen Berechnung
         } else if (payment) {
           console.log('✅ Existing pricing loaded from database:', {
             lesson_price: (payment.lesson_price_rappen / 100).toFixed(2),
             admin_fee: (payment.admin_fee_rappen / 100).toFixed(2),
-            total: (payment.total_amount_rappen / 100).toFixed(2),
-            credit_used: (payment.credit_used_rappen / 100).toFixed(2),
-            credit_transaction_id: payment.credit_transaction_id
+            total: (payment.total_amount_rappen / 100).toFixed(2)
           })
           
           return {
             base_price_rappen: payment.lesson_price_rappen || 0,
             admin_fee_rappen: payment.admin_fee_rappen || 0,
             total_rappen: payment.total_amount_rappen || 0,
-            credit_used_rappen: payment.credit_used_rappen || 0,
-            credit_transaction_id: payment.credit_transaction_id,
             base_price_chf: ((payment.lesson_price_rappen || 0) / 100).toFixed(2),
             admin_fee_chf: ((payment.admin_fee_rappen || 0) / 100).toFixed(2),
             total_chf: ((payment.total_amount_rappen || 0) / 100).toFixed(2),
-            credit_used_chf: ((payment.credit_used_rappen || 0) / 100).toFixed(2),
             category_code: categoryCode, // Verwende den übergebenen categoryCode
             duration_minutes: durationMinutes, // Verwende die übergebene durationMinutes
             appointment_number: 1 // Nicht relevant für Edit-Mode
           }
+        } else {
+          console.log('ℹ️ No existing payment found, will calculate new price')
         }
       } catch (err: any) {
         console.error('❌ Error loading existing pricing from database:', err)
