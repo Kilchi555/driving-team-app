@@ -38,6 +38,7 @@ interface DynamicPricing {
   duration: number
   isLoading: boolean
   error: string
+  adminFeeRappen?: number // ✅ NEU: Für Verwendung in createPaymentEntry
 }
 
 interface UsePricingOptions {
@@ -824,7 +825,15 @@ const roundToNearestFranken = (rappen: number): number => {
   }
 
   // ===== DYNAMIC PRICING FUNCTIONS =====
-  const updateDynamicPricing = async (categoryCode: string, durationMinutes: number, userId?: string) => {
+  const updateDynamicPricing = async (
+    categoryCode: string, 
+    durationMinutes: number, 
+    userId?: string,
+    appointmentType?: string,
+    isEditMode?: boolean,
+    appointmentId?: string,
+    tenantId?: string
+  ) => {
     dynamicPricing.value.isLoading = true
     dynamicPricing.value.error = ''
 
@@ -832,7 +841,15 @@ const roundToNearestFranken = (rappen: number): number => {
       // ✅ NEU: Stelle sicher, dass durationMinutes eine Zahl ist
       const durationValue = Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes
       
-      const result = await calculatePrice(categoryCode, durationValue, userId)
+      const result = await calculatePrice(
+        categoryCode, 
+        durationValue, 
+        userId,
+        appointmentType,
+        isEditMode,
+        appointmentId,
+        tenantId
+      )
       
       dynamicPricing.value = {
         pricePerMinute: result.base_price_rappen / durationValue / 100,
@@ -843,7 +860,8 @@ const roundToNearestFranken = (rappen: number): number => {
         category: categoryCode,
         duration: durationValue,
         isLoading: false,
-        error: ''
+        error: '',
+        adminFeeRappen: result.admin_fee_rappen // ✅ NEU: Für Verwendung in createPaymentEntry
       }
 
     } catch (error: any) {
