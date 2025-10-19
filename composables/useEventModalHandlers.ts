@@ -204,8 +204,19 @@ const handleCategorySelected = async (category: any) => {
         availableDurations.value = durations
         console.log('✅ Durations updated:', durations)
         
-        // Auto-select first duration if current duration is not in the list
-        if (!durations.includes(formData.value.duration_minutes)) {
+        // ✅ Special handling for exams - use exam_duration_minutes from category
+        const appointmentType = formData.value.appointment_type || 'lesson'
+        if (appointmentType === 'exam' && selectedCategory.value?.exam_duration_minutes) {
+          const examDuration = selectedCategory.value.exam_duration_minutes
+          formData.value.duration_minutes = examDuration
+          // Add exam duration to available durations if not present
+          if (!availableDurations.value.includes(examDuration)) {
+            availableDurations.value = [examDuration, ...availableDurations.value].sort((a, b) => a - b)
+          }
+          console.log('🎯 Exam detected - using exam duration:', examDuration)
+        }
+        // ✅ Auto-select first duration if current duration is not in the list (only for non-exams)
+        else if (!durations.includes(formData.value.duration_minutes)) {
           formData.value.duration_minutes = durations[0] || 45
           console.log('🔄 Auto-selected duration:', formData.value.duration_minutes)
         }
