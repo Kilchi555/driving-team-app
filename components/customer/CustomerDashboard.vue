@@ -571,6 +571,13 @@ const loadAppointments = async () => {
           id,
           staff_rating,
           staff_note
+        ),
+        exam_results (
+          id,
+          passed,
+          exam_date,
+          examiner_behavior_rating,
+          examiner_behavior_notes
         )
       `)
       .eq('user_id', userData.id)

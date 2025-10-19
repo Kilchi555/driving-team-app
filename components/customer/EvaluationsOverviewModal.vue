@@ -135,7 +135,7 @@
                 <div>
                   <div class="flex items-center gap-2">
                     <h4 class="font-semibold text-gray-900">
-                      📅 {{ formatLessonDate(lessonGroup.lesson_date) }}
+                      {{ lessonGroup.is_exam ? '🎓 Prüfungsfahrt' : '📅 Fahrlektion' }} - {{ formatLessonDate(lessonGroup.lesson_date) }}
                     </h4>
                     <span 
                       v-if="lessonGroup.driving_category" 
@@ -157,33 +157,84 @@
 
             <!-- Bewertungen für diesen Termin -->
             <div class="p-4 space-y-3">
-              <div 
-                v-for="(evaluation, index) in lessonGroup.evaluations" 
-                :key="`${evaluation.criteria_id}-${index}`"
-                class="bg-gray-50 rounded-lg p-3 border border-gray-100"
-              >
-                <div class="flex items-start justify-between">
-                  <div class="flex-1">
-                    <h5 class="font-medium text-gray-900">
-                      {{ evaluation.criteria_name }}
+              <!-- Regular Evaluations -->
+              <template v-if="!lessonGroup.is_exam">
+                <div 
+                  v-for="(evaluation, index) in lessonGroup.evaluations" 
+                  :key="`${evaluation.criteria_id}-${index}`"
+                  class="bg-gray-50 rounded-lg p-3 border border-gray-100"
+                >
+                  <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                      <h5 class="font-medium text-gray-900">
+                        {{ evaluation.criteria_name }}
+                      </h5>
+                      <p v-if="evaluation.criteria_category_name" class="text-sm text-gray-600 mt-1">
+                        {{ evaluation.criteria_category_name }}
+                      </p>
+                    </div>
+
+                    <div :class="[
+                      'px-3 py-1 rounded-full text-sm font-medium border',
+                      getRatingColor(evaluation.criteria_rating)
+                    ]">
+                      {{ evaluation.criteria_rating }} - {{ getRatingText(evaluation.criteria_rating) }}
+                    </div>
+                  </div>
+
+                  <div v-if="evaluation.criteria_note" class="mt-3 p-2 bg-white rounded-md border border-gray-100">
+                    <p class="text-sm text-gray-700">{{ evaluation.criteria_note }}</p>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Exam Results -->
+              <template v-else>
+                <div 
+                  v-for="(evaluation, index) in lessonGroup.evaluations" 
+                  :key="`exam-${index}`"
+                  class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200"
+                >
+                  <!-- Exam Pass/Fail Status -->
+                  <div class="flex items-center justify-between mb-4">
+                    <h5 class="text-lg font-bold text-gray-900">
+                      Prüfungsergebnis
                     </h5>
-                    <p v-if="evaluation.criteria_category_name" class="text-sm text-gray-600 mt-1">
-                      {{ evaluation.criteria_category_name }}
-                    </p>
+                    <div :class="[
+                      'px-4 py-2 rounded-full text-sm font-bold border-2',
+                      evaluation.exam_passed 
+                        ? 'bg-green-100 text-green-800 border-green-300' 
+                        : 'bg-red-100 text-red-800 border-red-300'
+                    ]">
+                      {{ evaluation.exam_passed ? '✅ BESTANDEN' : '❌ NICHT BESTANDEN' }}
+                    </div>
                   </div>
 
-                  <div :class="[
-                    'px-3 py-1 rounded-full text-sm font-medium border',
-                    getRatingColor(evaluation.criteria_rating)
-                  ]">
-                    {{ evaluation.criteria_rating }} - {{ getRatingText(evaluation.criteria_rating) }}
+                  <!-- Examiner Behavior Rating -->
+                  <div v-if="evaluation.examiner_behavior_rating" class="bg-white rounded-md p-3 border border-blue-100 mb-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium text-gray-700">Verhalten während Prüfung:</span>
+                      <div :class="[
+                        'px-3 py-1 rounded-full text-sm font-medium border',
+                        getRatingColor(evaluation.examiner_behavior_rating)
+                      ]">
+                        {{ evaluation.examiner_behavior_rating }} - {{ getRatingText(evaluation.examiner_behavior_rating) }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Examiner Notes -->
+                  <div v-if="evaluation.examiner_behavior_notes" class="bg-white rounded-md p-3 border border-blue-100">
+                    <p class="text-sm font-medium text-gray-700 mb-2">Notizen vom Experten:</p>
+                    <p class="text-sm text-gray-600">{{ evaluation.examiner_behavior_notes }}</p>
+                  </div>
+
+                  <!-- No notes/rating -->
+                  <div v-if="!evaluation.examiner_behavior_rating && !evaluation.examiner_behavior_notes" class="bg-white rounded-md p-3 border border-blue-100">
+                    <p class="text-sm text-gray-600 italic">Keine zusätzlichen Notizen vom Experten</p>
                   </div>
                 </div>
-
-                <div v-if="evaluation.criteria_note" class="mt-3 p-2 bg-white rounded-md border border-gray-100">
-                  <p class="text-sm text-gray-700">{{ evaluation.criteria_note }}</p>
-                </div>
-              </div>
+              </template>
             </div>
           </div>
         </div>
@@ -316,7 +367,12 @@ const allEvaluations = computed(() => {
   const evaluations: any[] = []
   
   props.lessons?.forEach(lesson => {
-    if (lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0) {
+    // ✅ Check if lesson has criteria evaluations OR exam results
+    const hasEvaluations = lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0
+    const hasExamResults = lesson.exam_results && lesson.exam_results.length > 0
+    
+    if (hasEvaluations) {
+      // Regular lesson with criteria evaluations
       lesson.criteria_evaluations.forEach((evaluation: any) => {
         // Kategorie aus lesson.type oder als Fallback aus dem Titel
         const drivingCategory = lesson.type || extractCategoryFromTitle(lesson.title || '') || ''
@@ -328,7 +384,27 @@ const allEvaluations = computed(() => {
           lesson_title: lesson.title,
           location_name: lesson.location_name,
           driving_category: drivingCategory,
-          sort_date: new Date(lesson.start_time).getTime()
+          sort_date: new Date(lesson.start_time).getTime(),
+          is_exam: false
+        })
+      })
+    } else if (hasExamResults) {
+      // ✅ Exam with exam_results - add as special evaluation
+      lesson.exam_results.forEach((examResult: any) => {
+        const drivingCategory = lesson.type || extractCategoryFromTitle(lesson.title || '') || ''
+        
+        evaluations.push({
+          lesson_id: lesson.id,
+          lesson_date: lesson.start_time,
+          lesson_title: lesson.title,
+          location_name: lesson.location_name,
+          driving_category: drivingCategory,
+          sort_date: new Date(lesson.start_time).getTime(),
+          is_exam: true,
+          exam_passed: examResult.passed,
+          examiner_behavior_rating: examResult.examiner_behavior_rating,
+          examiner_behavior_notes: examResult.examiner_behavior_notes,
+          exam_date: examResult.exam_date
         })
       })
     }
@@ -379,6 +455,7 @@ const groupedByLesson = computed(() => {
     end_time?: string
     duration_minutes?: number
     sort_date: number
+    is_exam: boolean
     evaluations: any[]
   }> = {}
 
@@ -390,13 +467,14 @@ const groupedByLesson = computed(() => {
       grouped[lessonId] = {
         lesson_id: lessonId,
         lesson_date: evaluation.lesson_date,
-        lesson_title: evaluation.lesson_title || 'Fahrstunde',
+        lesson_title: evaluation.lesson_title || (evaluation.is_exam ? 'Prüfungsfahrt' : 'Fahrstunde'),
         location_name: evaluation.location_name || 'Treffpunkt nicht definiert',
         driving_category: evaluation.driving_category || lesson?.type || '',
         start_time: lesson?.start_time || evaluation.lesson_date,
         end_time: lesson?.end_time,
         duration_minutes: lesson?.duration_minutes,
         sort_date: evaluation.sort_date,
+        is_exam: evaluation.is_exam || false,
         evaluations: []
       }
     }
