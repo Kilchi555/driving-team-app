@@ -654,46 +654,49 @@
                   </div>
                 </div>
                 
-                <!-- Product Sales -->
-                <div v-if="payment.product_sales && payment.product_sales.length > 0" class="mt-3 pt-3 border-t border-gray-300">
-                  <h6 class="text-xs font-semibold text-gray-700 mb-2">Produkte:</h6>
-                  <div class="space-y-1">
-                    <div 
-                      v-for="productSale in payment.product_sales" 
-                      :key="productSale.id"
-                      class="flex justify-between items-center text-sm"
-                    >
-                      <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
-                        {{ productSale.products?.name || 'Produkt' }} ({{ productSale.quantity }}x)
-                      </span>
-                      <span :class="[
-                        'font-medium',
-                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
-                      ]">
-                        {{ ((productSale.products?.price_rappen || 0) * productSale.quantity / 100).toFixed(2) }} CHF
-                      </span>
+                <!-- Product Sales & Discounts Section -->
+                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || (payment.discount_sales && payment.discount_sales.length > 0)" class="mt-3 pt-3 border-t border-gray-300">
+                  <!-- Product Sales -->
+                  <div v-if="payment.product_sales && payment.product_sales.length > 0" class="mb-3">
+                    <h6 class="text-xs font-semibold text-gray-700 mb-2">Produkte:</h6>
+                    <div class="space-y-1">
+                      <div 
+                        v-for="productSale in payment.product_sales" 
+                        :key="productSale.id"
+                        class="flex justify-between items-center text-sm"
+                      >
+                        <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                          {{ productSale.products?.name || 'Produkt' }} ({{ productSale.quantity }}x)
+                        </span>
+                        <span :class="[
+                          'font-medium',
+                          payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
+                        ]">
+                          {{ ((productSale.products?.price_rappen || 0) * productSale.quantity / 100).toFixed(2) }} CHF
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <!-- Discount Sales -->
-                <div v-if="payment.discount_sales && payment.discount_sales.length > 0" class="mt-3 pt-3 border-t border-gray-300">
-                  <h6 class="text-xs font-semibold text-gray-700 mb-2">Rabatte:</h6>
-                  <div class="space-y-1">
-                    <div 
-                      v-for="discountSale in payment.discount_sales" 
-                      :key="discountSale.id"
-                      class="flex justify-between items-center text-sm"
-                    >
-                      <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
-                        {{ discountSale.discounts?.name || 'Rabatt' }}
-                      </span>
-                      <span :class="[
-                        'font-medium text-green-600',
-                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
-                      ]">
-                        -{{ ((discountSale.discounts?.discount_amount_rappen || 0) / 100).toFixed(2) }} CHF
-                      </span>
+                  
+                  <!-- Discount Sales -->
+                  <div v-if="payment.discount_sales && payment.discount_sales.length > 0">
+                    <h6 class="text-xs font-semibold text-gray-700 mb-2">Rabatte:</h6>
+                    <div class="space-y-1">
+                      <div 
+                        v-for="discountSale in payment.discount_sales" 
+                        :key="discountSale.id"
+                        class="flex justify-between items-center text-sm"
+                      >
+                        <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                          {{ discountSale.discounts?.name || 'Rabatt' }}
+                        </span>
+                        <span :class="[
+                          'font-medium',
+                          payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
+                        ]">
+                          -{{ ((discountSale.discounts?.discount_amount_rappen || 0) / 100).toFixed(2) }} CHF
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1967,6 +1970,9 @@ const loadPayments = async () => {
     }))
     
     console.log('✅ Loaded', payments.value.length, 'payments with product/discount sales')
+    console.log('📦 Product sales map:', productSalesMap)
+    console.log('🏷️ Discount sales map:', discountSalesMap)
+    console.log('💰 Sample payment:', payments.value[0])
     
   } catch (error: any) {
     console.error('Error loading payments:', error)
