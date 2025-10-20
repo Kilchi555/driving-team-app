@@ -360,48 +360,66 @@
               <div 
                 v-for="lesson in sortedLessons" 
                 :key="lesson.id"
-                class="rounded-lg p-4 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
-                :style="{ backgroundColor: primaryColor + '15' }"
-                @click="openEvaluationModal(lesson)"
+                :class="[
+                  'rounded-lg p-4 border transition-all',
+                  lesson.status === 'cancelled' 
+                    ? 'border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed' 
+                    : 'border-gray-200 cursor-pointer hover:shadow-md'
+                ]"
+                :style="lesson.status !== 'cancelled' ? { backgroundColor: primaryColor + '15' } : {}"
+                @click="lesson.status !== 'cancelled' ? openEvaluationModal(lesson) : null"
               >
                 <div class="flex justify-between items-start mb-2">
                   <div>
-                    <h5 class="font-semibold text-gray-900">
+                    <h5 :class="[
+                      'font-semibold',
+                      lesson.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-900'
+                    ]">
                       {{ lesson.event_type_code || lesson.type || 'Lektion' }}
                     </h5>
-                    <p class="text-sm text-gray-600">
+                    <p :class="[
+                      'text-sm',
+                      lesson.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'
+                    ]">
                       {{ formatLocalDate(lesson.start_time) }}
                       um {{ formatLocalTime(lesson.start_time) }}
                     </p>
                   </div>
                   <span :class="[
                     'px-2 py-1 text-xs font-medium rounded-full',
-                    lesson.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    lesson.status === 'completed' && lesson.evaluations && lesson.evaluations.length > 0 ? 'bg-green-100 text-green-800' :
+                    lesson.status === 'completed' && (!lesson.evaluations || lesson.evaluations.length === 0) ? 'bg-orange-100 text-orange-800' :
                     lesson.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
                     lesson.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
                     lesson.status === 'pending_confirmation' ? 'bg-yellow-100 text-yellow-800' :
+                    lesson.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                     'bg-gray-100 text-gray-800'
                   ]">
-                    {{ lesson.status === 'completed' ? 'Abgeschlossen' :
+                    {{ lesson.status === 'completed' && lesson.evaluations && lesson.evaluations.length > 0 ? 'Abgeschlossen' :
+                       lesson.status === 'completed' && (!lesson.evaluations || lesson.evaluations.length === 0) ? 'Unbewertet' :
                        lesson.status === 'confirmed' ? 'Bestätigt' :
                        lesson.status === 'scheduled' ? 'Geplant' :
                        lesson.status === 'pending_confirmation' ? 'Ausstehend' :
+                       lesson.status === 'cancelled' ? 'Abgesagt' :
                        lesson.status }}
                   </span>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span class="text-gray-500">Kategorie:</span>
-                    <span class="ml-1 font-medium">{{ lesson.type || '-' }}</span>
+                    <span :class="lesson.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'">Kategorie:</span>
+                    <span :class="['ml-1 font-medium', lesson.status === 'cancelled' ? 'text-gray-400' : '']">{{ lesson.type || '-' }}</span>
                   </div>
                   <div>
-                    <span class="text-gray-500">Dauer:</span>
-                    <span class="ml-1 font-medium">{{ lesson.duration_minutes || 0 }} Min.</span>
+                    <span :class="lesson.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'">Dauer:</span>
+                    <span :class="['ml-1 font-medium', lesson.status === 'cancelled' ? 'text-gray-400' : '']">{{ lesson.duration_minutes || 0 }} Min.</span>
                   </div>
                 </div>
                 
-                <div v-if="lesson.description" class="mt-2 text-sm text-gray-600">
+                <div v-if="lesson.description" :class="[
+                  'mt-2 text-sm',
+                  lesson.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'
+                ]">
                   {{ lesson.description }}
                 </div>
                 
@@ -481,7 +499,7 @@
                 <div class="flex justify-between items-start mb-3">
                   <div>
                     <h5 class="font-semibold text-gray-900 text-lg">
-                      {{ result.appointments?.title || result.appointments?.type || 'Prüfung' }}
+                      {{ result.appointments?.event_type_code || result.appointments?.type || 'Prüfung' }}
                     </h5>
                     <p class="text-sm text-gray-600">
                       {{ formatLocalDate(result.exam_date) }}
@@ -491,7 +509,7 @@
                     'px-3 py-1 text-sm font-bold rounded-full',
                     result.passed ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
                   ]">
-                    {{ result.passed ? 'BESTANDEN ✓' : 'NICHT BESTANDEN ✗' }}
+                    {{ result.passed ? 'BESTANDEN' : 'NICHT BESTANDEN' }}
                   </span>
                 </div>
                 
@@ -579,36 +597,143 @@
                 v-for="payment in filteredPayments" 
                 :key="payment.id"
                 :class="[
-                  'rounded-lg p-4 border border-gray-200 transition-shadow',
-                  payment.payment_status !== 'completed' 
-                    ? 'cursor-pointer hover:shadow-md hover:border-blue-400' 
-                    : 'opacity-75'
+                  'rounded-lg p-4 border transition-all',
+                  payment.appointments?.status === 'cancelled'
+                    ? 'border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed'
+                    : payment.payment_status !== 'completed' 
+                      ? 'border-gray-200 cursor-pointer hover:shadow-md hover:border-blue-400' 
+                      : 'border-gray-200 opacity-75'
                 ]"
-                :style="{ backgroundColor: primaryColor + '15' }"
-                @click="markPaymentAsCashPaid(payment)"
+                :style="payment.appointments?.status !== 'cancelled' ? { backgroundColor: primaryColor + '15' } : {}"
+                @click="payment.appointments?.status !== 'cancelled' ? markPaymentAsCashPaid(payment) : null"
               >
                 <div class="flex justify-between items-start mb-2">
                   <div>
-                    <h5 class="font-semibold text-gray-900">
+                    <h5 :class="[
+                      'font-semibold',
+                      payment.appointments?.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-900'
+                    ]">
                       {{ (payment.total_amount_rappen / 100).toFixed(2) }} CHF
                     </h5>
-                    <p class="text-sm text-gray-600">
+                    <p :class="[
+                      'text-sm',
+                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'
+                    ]">
                       {{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}
                       um {{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }}
                     </p>
+                    <p v-if="payment.appointments?.event_type_code" :class="[
+                      'text-xs mt-1',
+                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'
+                    ]">
+                      {{ payment.appointments.event_type_code }}
+                    </p>
                   </div>
-                  <span :class="[
-                    'px-2 py-1 text-xs font-medium rounded-full',
-                    payment.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
-                    payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    payment.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
-                  ]">
-                    {{ payment.payment_status === 'completed' ? 'Bezahlt' :
-                       payment.payment_status === 'pending' ? 'Ausstehend' :
-                       payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
-                       payment.payment_status }}
-                  </span>
+                  <div class="flex flex-col items-end gap-1">
+                    <span :class="[
+                      'px-2 py-1 text-xs font-medium rounded-full',
+                      payment.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
+                      payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      payment.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    ]">
+                      {{ payment.payment_status === 'completed' ? 'Bezahlt' :
+                         payment.payment_status === 'pending' ? 'Ausstehend' :
+                         payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
+                         payment.payment_status }}
+                    </span>
+                    <span v-if="payment.appointments?.status === 'cancelled'" class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                      Termin abgesagt
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Product Sales -->
+                <div v-if="payment.product_sales && payment.product_sales.length > 0" class="mt-3 pt-3 border-t border-gray-300">
+                  <h6 class="text-xs font-semibold text-gray-700 mb-2">Produkte:</h6>
+                  <div class="space-y-1">
+                    <div 
+                      v-for="productSale in payment.product_sales" 
+                      :key="productSale.id"
+                      class="flex justify-between items-center text-sm"
+                    >
+                      <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                        {{ productSale.products?.name || 'Produkt' }} ({{ productSale.quantity }}x)
+                      </span>
+                      <span :class="[
+                        'font-medium',
+                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
+                      ]">
+                        {{ ((productSale.products?.price_rappen || 0) * productSale.quantity / 100).toFixed(2) }} CHF
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Discount Sales -->
+                <div v-if="payment.discount_sales && payment.discount_sales.length > 0" class="mt-3 pt-3 border-t border-gray-300">
+                  <h6 class="text-xs font-semibold text-gray-700 mb-2">Rabatte:</h6>
+                  <div class="space-y-1">
+                    <div 
+                      v-for="discountSale in payment.discount_sales" 
+                      :key="discountSale.id"
+                      class="flex justify-between items-center text-sm"
+                    >
+                      <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                        {{ discountSale.discounts?.name || 'Rabatt' }}
+                      </span>
+                      <span :class="[
+                        'font-medium text-green-600',
+                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
+                      ]">
+                        -{{ ((discountSale.discounts?.discount_amount_rappen || 0) / 100).toFixed(2) }} CHF
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Stornierungs-Policy Info -->
+                <div v-if="payment.appointments?.status === 'cancelled'" class="mt-3 pt-3 border-t border-gray-300">
+                  <div v-if="getCancellationPolicy(payment.appointments)" class="text-sm space-y-2">
+                    <div>
+                      <span class="text-gray-600">Stornierungs-Policy:</span>
+                      <span class="ml-2 font-medium text-gray-700">
+                        {{ getCancellationPolicy(payment.appointments).refund_percentage }}% Rückerstattung
+                      </span>
+                      <span class="ml-2 text-xs text-gray-500">
+                        ({{ getCancellationPolicy(payment.appointments).hours_before_appointment }}h vor Termin)
+                      </span>
+                    </div>
+                    
+                    <!-- Detaillierte Berechnung -->
+                    <div v-if="calculateCancelledPayment(payment)" class="bg-gray-50 p-3 rounded text-xs space-y-1">
+                      <template v-if="calculateCancelledPayment(payment)">
+                        <div class="flex justify-between">
+                          <span>Termin-Kosten:</span>
+                          <span>{{ (calculateCancelledPayment(payment)!.appointmentCost / 100).toFixed(2) }} CHF</span>
+                        </div>
+                        <div class="flex justify-between text-red-600">
+                          <span>Rückerstattung ({{ calculateCancelledPayment(payment)!.policy.refund_percentage }}%):</span>
+                          <span>-{{ (calculateCancelledPayment(payment)!.appointmentRefund / 100).toFixed(2) }} CHF</span>
+                        </div>
+                        <div v-if="calculateCancelledPayment(payment)!.productCost > 0" class="flex justify-between">
+                          <span>Produkte (immer verrechnet):</span>
+                          <span>{{ (calculateCancelledPayment(payment)!.productCost / 100).toFixed(2) }} CHF</span>
+                        </div>
+                        <div v-if="calculateCancelledPayment(payment)!.discountRefund > 0" class="flex justify-between text-green-600">
+                          <span>Rabatt zurückgegeben:</span>
+                          <span>+{{ (calculateCancelledPayment(payment)!.discountRefund / 100).toFixed(2) }} CHF</span>
+                        </div>
+                        <div class="flex justify-between font-semibold border-t pt-1">
+                          <span>Endbetrag:</span>
+                          <span>{{ (calculateCancelledPayment(payment)!.totalCost / 100).toFixed(2) }} CHF</span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <div v-else class="text-sm text-gray-500">
+                    Keine Stornierungs-Policy gefunden
+                  </div>
                 </div>
                 
                 <div class="text-sm">
@@ -1052,6 +1177,7 @@ const lessons = ref<any[]>([])
 const progressData = ref<any[]>([])
 const payments = ref<any[]>([])
 const examResults = ref<any[]>([])
+const cancellationPolicies = ref<any[]>([])
 const isLoadingLessons = ref(false)
 const isLoadingExamResults = ref(false)
 const sortMode = ref<'newest' | 'worst'>('newest') // Toggle zwischen neueste und schlechteste Bewertungen
@@ -1080,18 +1206,98 @@ const confirmDialogData = ref({
 })
 const pendingPaymentAction = ref<(() => Promise<void>) | null>(null)
 
-// Verfügbare Kategorien aus den Lektionen
+// Hilfsfunktion: Prüft ob ein Termin eine Prüfung ist
+const isExam = (lesson: any) => {
+  const typeStr = (lesson.type || '').toLowerCase()
+  const eventTypeCode = (lesson.event_type_code || '').toLowerCase()
+  return typeStr.includes('prüfung') || 
+         typeStr.includes('exam') || 
+         typeStr.includes('test') ||
+         eventTypeCode.includes('prüfung') ||
+         eventTypeCode.includes('exam') ||
+         eventTypeCode.includes('test')
+}
+
+// Hilfsfunktion: Berechnet die Stornierungs-Policy für einen Termin
+const getCancellationPolicy = (appointment: any) => {
+  if (!appointment || appointment.status !== 'cancelled') return null
+  
+  const appointmentTime = new Date(appointment.start_time)
+  const now = new Date()
+  const hoursDifference = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+  
+  // Finde die passende Policy basierend auf der Zeit vor dem Termin
+  for (const policy of cancellationPolicies.value) {
+    if (hoursDifference >= policy.hours_before_appointment) {
+      return policy
+    }
+  }
+  
+  // Fallback: Letzte Policy (meist 100% Stornierung)
+  return cancellationPolicies.value[cancellationPolicies.value.length - 1] || null
+}
+
+// Hilfsfunktion: Berechnet die finale Abrechnung für abgesagte Termine
+const calculateCancelledPayment = (payment: any) => {
+  if (!payment.appointments || payment.appointments.status !== 'cancelled') {
+    return null
+  }
+  
+  const policy = getCancellationPolicy(payment.appointments)
+  if (!policy) return null
+  
+  // Termin-Kosten (wird nach Policy verrechnet)
+  const appointmentCost = payment.total_amount_rappen
+  
+  // Product-Kosten (werden IMMER verrechnet)
+  const productCost = (payment.product_sales || []).reduce((sum: number, ps: any) => {
+    return sum + (ps.products?.price_rappen || 0) * ps.quantity
+  }, 0)
+  
+  // Discount-Wert (wird nach Policy behandelt)
+  const discountValue = (payment.discount_sales || []).reduce((sum: number, ds: any) => {
+    return sum + (ds.discounts?.discount_amount_rappen || 0)
+  }, 0)
+  
+  // Berechnung
+  const appointmentRefund = Math.round(appointmentCost * (policy.refund_percentage / 100))
+  const finalAppointmentCost = appointmentCost - appointmentRefund
+  
+  // Discount wird nur zurückgegeben wenn 0% verrechnet wird
+  const discountRefund = policy.refund_percentage === 100 ? discountValue : 0
+  const finalDiscountValue = discountValue - discountRefund
+  
+  const totalCost = finalAppointmentCost + productCost - finalDiscountValue
+  
+  return {
+    appointmentCost,
+    appointmentRefund,
+    finalAppointmentCost,
+    productCost,
+    discountValue,
+    discountRefund,
+    finalDiscountValue,
+    totalCost,
+    policy
+  }
+}
+
+// Verfügbare Kategorien aus den Lektionen (nur von echten Lektionen, ohne Prüfungen)
 const availableCategories = computed(() => {
-  const categories = new Set(lessons.value.map(lesson => lesson.type).filter(Boolean))
+  const lessonsOnly = lessons.value.filter(lesson => !isExam(lesson))
+  const categories = new Set(lessonsOnly.map(lesson => lesson.type).filter(Boolean))
   return ['alle', ...Array.from(categories).sort()]
 })
 
 // Gefilterte und sortierte Lektionen
 const sortedLessons = computed(() => {
+  // 0. Filtere Prüfungen aus (nur normale Lektionen anzeigen)
+  const lessonsOnly = lessons.value.filter(lesson => !isExam(lesson))
+  
   // 1. Nach Kategorie filtern
-  let filtered = lessons.value
+  let filtered = lessonsOnly
   if (selectedCategoryFilter.value !== 'alle') {
-    filtered = lessons.value.filter(lesson => lesson.type === selectedCategoryFilter.value)
+    filtered = lessonsOnly.filter(lesson => lesson.type === selectedCategoryFilter.value)
   }
   
   // 2. Sortieren
@@ -1537,7 +1743,7 @@ const loadExamResults = async () => {
     // Zuerst alle appointments dieses Schülers laden
     const { data: studentAppointments, error: aptError } = await supabase
       .from('appointments')
-      .select('id, type, start_time, title, user_id')
+      .select('id, type, start_time, title, user_id, event_type_code')
       .eq('user_id', props.selectedStudent.id)
     
     if (aptError) {
@@ -1583,6 +1789,29 @@ const loadExamResults = async () => {
   }
 }
 
+const loadCancellationPolicies = async () => {
+  try {
+    const supabase = getSupabase()
+    
+    const { data: policiesData, error: policiesError } = await supabase
+      .from('cancellation_policies')
+      .select('*')
+      .eq('is_active', true)
+      .order('hours_before_appointment', { ascending: true })
+    
+    if (policiesError) {
+      console.error('❌ Error loading cancellation policies:', policiesError)
+      return
+    }
+    
+    cancellationPolicies.value = policiesData || []
+    console.log('✅ Loaded', cancellationPolicies.value.length, 'cancellation policies')
+    
+  } catch (error: any) {
+    console.error('Error loading cancellation policies:', error)
+  }
+}
+
 const loadPayments = async () => {
   if (!props.selectedStudent) return
   
@@ -1604,7 +1833,7 @@ const loadPayments = async () => {
         payment_status,
         total_amount_rappen,
         appointment_id,
-        appointments!inner(user_id, start_time, title)
+        appointments!inner(user_id, start_time, title, status, event_type_code)
       `)
       .eq('appointments.user_id', props.selectedStudent.id)
       .order('created_at', { ascending: false })
@@ -1614,8 +1843,61 @@ const loadPayments = async () => {
       throw paymentsError
     }
     
-    payments.value = paymentsData || []
-    console.log('✅ Loaded', payments.value.length, 'payments')
+    // Lade product_sales und discount_sales für die Zahlungen
+    const paymentIds = (paymentsData || []).map(p => p.id)
+    let productSalesMap: Record<string, any[]> = {}
+    let discountSalesMap: Record<string, any[]> = {}
+    
+    if (paymentIds.length > 0) {
+      // Lade product_sales
+      const { data: productSalesData, error: productSalesError } = await supabase
+        .from('product_sales')
+        .select(`
+          *,
+          products(name, price_rappen)
+        `)
+        .in('payment_id', paymentIds)
+      
+      if (productSalesError) {
+        console.error('❌ Error loading product sales:', productSalesError)
+      } else if (productSalesData) {
+        productSalesData.forEach(ps => {
+          if (!productSalesMap[ps.payment_id]) {
+            productSalesMap[ps.payment_id] = []
+          }
+          productSalesMap[ps.payment_id].push(ps)
+        })
+      }
+      
+      // Lade discount_sales
+      const { data: discountSalesData, error: discountSalesError } = await supabase
+        .from('discount_sales')
+        .select(`
+          *,
+          discounts(name, discount_percentage, discount_amount_rappen)
+        `)
+        .in('payment_id', paymentIds)
+      
+      if (discountSalesError) {
+        console.error('❌ Error loading discount sales:', discountSalesError)
+      } else if (discountSalesData) {
+        discountSalesData.forEach(ds => {
+          if (!discountSalesMap[ds.payment_id]) {
+            discountSalesMap[ds.payment_id] = []
+          }
+          discountSalesMap[ds.payment_id].push(ds)
+        })
+      }
+    }
+    
+    // Verknüpfe alle Daten
+    payments.value = (paymentsData || []).map(payment => ({
+      ...payment,
+      product_sales: productSalesMap[payment.id] || [],
+      discount_sales: discountSalesMap[payment.id] || []
+    }))
+    
+    console.log('✅ Loaded', payments.value.length, 'payments with product/discount sales')
     
   } catch (error: any) {
     console.error('Error loading payments:', error)
@@ -1715,6 +1997,7 @@ watch(() => props.selectedStudent, (newStudent) => {
     loadLessons()
     loadExamResults()
     loadPayments()
+    loadCancellationPolicies()
     loadDocumentRequirements()
     loadDocuments(newStudent.id) // Load user documents from new table
   }
