@@ -375,7 +375,10 @@
                       'font-semibold',
                       lesson.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-900'
                     ]">
-                      {{ lesson.event_type_code || lesson.type || 'Lektion' }}
+                      {{ lesson.event_types?.name || lesson.event_type_code || lesson.type || 'Lektion' }}
+                      <span v-if="lesson.instructor" class="font-normal text-gray-600">
+                        mit {{ lesson.instructor.first_name }}
+                      </span>
                     </h5>
                     <p :class="[
                       'text-sm',
@@ -499,7 +502,10 @@
                 <div class="flex justify-between items-start mb-3">
                   <div>
                     <h5 class="font-semibold text-gray-900 text-lg">
-                      {{ result.appointments?.event_type_code || result.appointments?.type || 'Prüfung' }}
+                      {{ result.appointments?.event_types?.name || result.appointments?.event_type_code || result.appointments?.type || 'Prüfung' }}
+                      <span v-if="result.appointments?.instructor" class="font-normal text-gray-600">
+                        mit {{ result.appointments.instructor.first_name }}
+                      </span>
                     </h5>
                     <p class="text-sm text-gray-600">
                       {{ formatLocalDate(result.exam_date) }}
@@ -1639,7 +1645,11 @@ const loadLessons = async () => {
         title,
         description,
         duration_minutes,
-        event_type_code
+        event_type_code,
+        instructor_id,
+        event_types (
+          name
+        )
       `)
       .eq('user_id', props.selectedStudent.id)
       .order('start_time', { ascending: false })
@@ -1700,11 +1710,34 @@ const loadLessons = async () => {
       }
     }
     
-    // Füge Evaluationen zu Appointments hinzu
+    // Lade Instructor-Namen
+    const instructorIds = [...new Set((appointmentsData || [])
+      .map(apt => apt.instructor_id)
+      .filter(Boolean))]
+    
+    let instructorsMap: Record<string, any> = {}
+    
+    if (instructorIds.length > 0) {
+      const { data: instructorsData, error: instructorsError } = await supabase
+        .from('users')
+        .select('id, first_name')
+        .in('id', instructorIds)
+      
+      if (instructorsError) {
+        console.error('❌ Error loading instructors:', instructorsError)
+      } else if (instructorsData) {
+        instructorsData.forEach(instructor => {
+          instructorsMap[instructor.id] = instructor
+        })
+      }
+    }
+    
+    // Füge Evaluationen und Instructor-Namen zu Appointments hinzu
     const lessonsWithEvaluations = (appointmentsData || []).map(apt => ({
       ...apt,
       notes: evaluationsMap[apt.id] || [],
-      evaluations: (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating)
+      evaluations: (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating),
+      instructor: apt.instructor_id ? instructorsMap[apt.instructor_id] : null
     }))
     
     lessons.value = lessonsWithEvaluations
@@ -1743,7 +1776,18 @@ const loadExamResults = async () => {
     // Zuerst alle appointments dieses Schülers laden
     const { data: studentAppointments, error: aptError } = await supabase
       .from('appointments')
-      .select('id, type, start_time, title, user_id, event_type_code')
+      .select(`
+        id, 
+        type, 
+        start_time, 
+        title, 
+        user_id, 
+        event_type_code,
+        instructor_id,
+        event_types (
+          name
+        )
+      `)
       .eq('user_id', props.selectedStudent.id)
     
     if (aptError) {
@@ -1771,8 +1815,33 @@ const loadExamResults = async () => {
       throw examError
     }
     
-    // Verknüpfe exam_results mit appointment-Daten
-    const appointmentsMap = new Map(studentAppointments.map(apt => [apt.id, apt]))
+    // Lade Instructor-Namen für Prüfungen
+    const instructorIds = [...new Set(studentAppointments
+      .map(apt => apt.instructor_id)
+      .filter(Boolean))]
+    
+    let instructorsMap: Record<string, any> = {}
+    
+    if (instructorIds.length > 0) {
+      const { data: instructorsData, error: instructorsError } = await supabase
+        .from('users')
+        .select('id, first_name')
+        .in('id', instructorIds)
+      
+      if (instructorsError) {
+        console.error('❌ Error loading instructors for exams:', instructorsError)
+      } else if (instructorsData) {
+        instructorsData.forEach(instructor => {
+          instructorsMap[instructor.id] = instructor
+        })
+      }
+    }
+    
+    // Verknüpfe exam_results mit appointment-Daten und Instructor-Namen
+    const appointmentsMap = new Map(studentAppointments.map(apt => [apt.id, {
+      ...apt,
+      instructor: apt.instructor_id ? instructorsMap[apt.instructor_id] : null
+    }]))
     
     examResults.value = (examResultsData || []).map(result => ({
       ...result,
