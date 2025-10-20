@@ -1970,9 +1970,6 @@ const loadPayments = async () => {
     }))
     
     console.log('✅ Loaded', payments.value.length, 'payments with product/discount sales')
-    console.log('📦 Product sales map:', productSalesMap)
-    console.log('🏷️ Discount sales map:', discountSalesMap)
-    console.log('💰 Sample payment:', payments.value[0])
     
   } catch (error: any) {
     console.error('Error loading payments:', error)
