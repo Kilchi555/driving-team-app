@@ -628,11 +628,14 @@
                       {{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}
                       um {{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }}
                     </p>
-                    <p v-if="payment.appointments?.event_type_code" :class="[
+                    <p v-if="payment.appointments?.event_types?.name || payment.appointments?.event_type_code" :class="[
                       'text-xs mt-1',
                       payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'
                     ]">
-                      {{ payment.appointments.event_type_code }}
+                      {{ payment.appointments.event_types?.name || payment.appointments.event_type_code }}
+                      <span v-if="payment.appointments.staff" class="font-normal">
+                        mit {{ payment.appointments.staff.first_name }}
+                      </span>
                     </p>
                   </div>
                   <div class="flex flex-col items-end gap-1">
@@ -1911,7 +1914,15 @@ const loadPayments = async () => {
         payment_status,
         total_amount_rappen,
         appointment_id,
-        appointments!inner(user_id, start_time, title, status, event_type_code)
+        appointments!inner(
+          user_id, 
+          start_time, 
+          title, 
+          status, 
+          event_type_code,
+          staff_id,
+          event_types(name)
+        )
       `)
       .eq('appointments.user_id', props.selectedStudent.id)
       .order('created_at', { ascending: false })
@@ -1966,12 +1977,47 @@ const loadPayments = async () => {
     // Warte kurz auf die product_sales Queries
     await new Promise(resolve => setTimeout(resolve, 300))
     
-    // Verknüpfe alle Daten über appointment_id
-    payments.value = (paymentsData || []).map(payment => ({
-      ...payment,
-      discount_sale: payment.appointment_id ? discountSalesMap[payment.appointment_id] : null,
-      product_sales: payment.appointment_id ? (productSalesMap[payment.appointment_id] || []) : []
-    }))
+    // Lade Fahrlehrer-Namen für Zahlungen
+    const staffIds = [...new Set((paymentsData || [])
+      .map(p => {
+        // appointments ist ein Array, nehme das erste Element
+        const apt = Array.isArray(p.appointments) ? p.appointments[0] : p.appointments
+        return apt?.staff_id
+      })
+      .filter(Boolean))]
+    
+    let staffMap: Record<string, any> = {}
+    
+    if (staffIds.length > 0) {
+      const { data: staffData, error: staffError } = await supabase
+        .from('users')
+        .select('id, first_name')
+        .in('id', staffIds)
+      
+      if (staffError) {
+        console.error('❌ Error loading staff for payments:', staffError)
+      } else if (staffData) {
+        staffData.forEach(staff => {
+          staffMap[staff.id] = staff
+        })
+      }
+    }
+    
+    // Verknüpfe alle Daten über appointment_id und füge staff hinzu
+    payments.value = (paymentsData || []).map(payment => {
+      // appointments ist ein Array, nehme das erste Element
+      const apt = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+      
+      return {
+        ...payment,
+        discount_sale: payment.appointment_id ? discountSalesMap[payment.appointment_id] : null,
+        product_sales: payment.appointment_id ? (productSalesMap[payment.appointment_id] || []) : [],
+        appointments: apt ? {
+          ...apt,
+          staff: apt.staff_id ? staffMap[apt.staff_id] : null
+        } : null
+      }
+    })
     
     console.log('✅ Loaded', payments.value.length, 'payments with product/discount sales')
     
