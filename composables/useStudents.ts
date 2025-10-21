@@ -201,7 +201,7 @@ export const useStudents = () => {
       tokenExpires.setDate(tokenExpires.getDate() + 7) // 7 Tage gültig
       
       // 1. Erstelle nur users Eintrag (OHNE auth_user_id)
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('users')
         .insert([{
           ...studentData,
@@ -213,10 +213,20 @@ export const useStudents = () => {
           onboarding_token: onboardingToken,
           onboarding_token_expires: tokenExpires.toISOString()
         }])
-        .select()
-        .single()
 
       if (insertError) throw insertError
+      
+      // Daten für Response konstruieren (ohne erneute DB-Abfrage)
+      const data = {
+        ...studentData,
+        id: userId,
+        auth_user_id: null,
+        role: 'client',
+        is_active: false,
+        onboarding_status: 'pending',
+        onboarding_token: onboardingToken,
+        onboarding_token_expires: tokenExpires.toISOString()
+      }
 
       // 2. Sende SMS mit Onboarding-Link
       try {
