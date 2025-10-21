@@ -160,16 +160,35 @@
             <div
               v-for="student in filteredStudents"
               :key="student.id"
-              @click="selectStudent(student)"
-              class="bg-white rounded-lg shadow-sm border p-3 cursor-pointer hover:shadow-md transition-all active:scale-98 hover:border-green-300"
+              @click="student.auth_user_id ? selectStudent(student) : showPendingActions(student)"
+              :class="[
+                'bg-white rounded-lg shadow-sm border p-3 transition-all',
+                student.auth_user_id 
+                  ? 'cursor-pointer hover:shadow-md active:scale-98 hover:border-green-300' 
+                  : 'cursor-pointer hover:shadow-md hover:border-orange-300 opacity-75'
+              ]"
             >
+              <!-- Pending User Hinweis -->
+              <div v-if="!student.auth_user_id" class="mb-3 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="text-orange-600">⏳</span>
+                  <div class="flex-1">
+                    <p class="font-medium text-orange-800">Benutzer muss noch Konto erstellen</p>
+                    <p class="text-orange-600 text-[10px] mt-0.5">Onboarding-Link wurde an {{ formatPhone(student.phone) }} gesendet</p>
+                  </div>
+                </div>
+              </div>
+
               <!-- Mobile-First Layout -->
               <div class="flex items-center justify-between">
                 <!-- Left: Main Info -->
                 <div class="flex-1 min-w-0"> <!-- min-w-0 für text truncation -->
                   <!-- Name & Category in one line -->
                   <div class="flex items-center gap-2 mb-1">
-                    <h3 class="font-semibold text-gray-900 truncate flex-1">
+                    <h3 :class="[
+                      'font-semibold truncate flex-1',
+                      student.auth_user_id ? 'text-gray-900' : 'text-gray-600'
+                    ]">
                       {{ student.first_name }} {{ student.last_name }}
                     </h3>
                     <!-- Category Badges - compact -->
@@ -200,20 +219,29 @@
                   <!-- Status Badge -->
                   <span :class="[
                     'text-xs px-2 py-1 rounded-full font-medium',
-                    student.is_active 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-red-100 text-red-700'
+                    !student.auth_user_id 
+                      ? 'bg-orange-100 text-orange-700'
+                      : student.is_active 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-red-100 text-red-700'
                   ]">
-                    {{ student.is_active ? 'Aktiv' : 'Inaktiv' }}
+                    {{ !student.auth_user_id ? 'Pending' : student.is_active ? 'Aktiv' : 'Inaktiv' }}
                   </span>
                   
                   <!-- Quick Action Button -->
                   <button 
+                    v-if="student.auth_user_id"
                     @click.stop="quickAction(student)"
                     class="text-xs text-green-600 hover:text-green-800 font-medium py-1 px-2 rounded hover:bg-green-50 transition-colors"
                   >
                     Details →
                   </button>
+                  <span 
+                    v-else
+                    class="text-xs text-gray-400 font-medium py-1 px-2"
+                  >
+                    Warte auf Aktivierung
+                  </span>
                 </div>
               </div>
 
@@ -282,6 +310,67 @@
     @close="showAddStudentModal = false"
     @added="handleStudentAdded"
   />
+
+  <!-- Pending Student Actions Modal -->
+  <div v-if="showPendingModal" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div class="absolute inset-0 bg-black bg-opacity-50" @click="showPendingModal = false"></div>
+    
+    <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+      <div class="p-6">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 text-3xl">⏳</div>
+          <div class="flex-1">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">
+              {{ pendingStudent?.first_name }} {{ pendingStudent?.last_name }}
+            </h3>
+            <p class="text-sm text-gray-600 mb-4">
+              Dieser Schüler hat sein Konto noch nicht aktiviert.
+            </p>
+            
+            <div class="space-y-3">
+              <!-- SMS erneut senden -->
+              <button
+                @click="resendOnboardingSms"
+                :disabled="isResendingSms"
+                class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                <span v-if="!isResendingSms">📱 SMS erneut senden</span>
+                <span v-else class="flex items-center gap-2">
+                  <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Sendet...
+                </span>
+              </button>
+              
+              <!-- Link kopieren -->
+              <button
+                @click="copyOnboardingLink"
+                class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                📋 Link kopieren
+              </button>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t text-xs text-gray-500">
+              <p>Telefon: {{ formatPhone(pendingStudent?.phone) }}</p>
+              <p v-if="pendingStudent?.onboarding_token_expires" class="mt-1">
+                Link gültig bis: {{ formatDate(pendingStudent.onboarding_token_expires) }}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <button
+          @click="showPendingModal = false"
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  </div>
     </div>
 </template>
 
@@ -290,6 +379,8 @@ import { ref, onMounted, computed } from 'vue'
 import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { getSupabase } from '~/utils/supabase'
+import { useSmsService } from '~/composables/useSmsService'
+import { useUIStore } from '~/stores/ui'
 import EnhancedStudentModal from '~/components/EnhancedStudentModal.vue'
 import AddStudentModal from '~/components/AddStudentModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
@@ -300,6 +391,8 @@ const supabase = getSupabase()
 
 // Composables
 const { currentUser, fetchCurrentUser, isLoading: isUserLoading, userError } = useCurrentUser()
+const { sendSms } = useSmsService()
+const uiStore = useUIStore()
 
 // Local state
 const selectedStudent = ref<any>(null)
@@ -312,6 +405,9 @@ const searchQuery = ref('')
 const showInactive = ref(false)
 const showAllStudents = ref(false)
 const showOnlyNoUpcoming = ref(false)
+const showPendingModal = ref(false)
+const pendingStudent = ref<any>(null)
+const isResendingSms = ref(false)
 
 // Computed
 const filteredStudents = computed(() => {
@@ -623,14 +719,15 @@ const loadStudents = async (loadAppointments = true) => {
     }
 
     // ✅ Filterung basierend auf Aktiv/Inaktiv Status
+    // ABER: Pending-Users (noch kein auth_user_id) immer anzeigen
     if (showInactive.value) {
-      // Nur inaktive Schüler laden
-      query = query.eq('is_active', false)
-      console.log('📚 Loading inactive students only')
+      // Nur inaktive Schüler laden (exkl. pending)
+      query = query.eq('is_active', false).not('auth_user_id', 'is', null)
+      console.log('📚 Loading inactive students only (excluding pending)')
     } else {
-      // Nur aktive Schüler laden
-      query = query.eq('is_active', true)
-      console.log('📚 Loading active students only')
+      // Aktive Schüler ODER pending-Users (noch kein Konto)
+      query = query.or('is_active.eq.true,auth_user_id.is.null')
+      console.log('📚 Loading active students and pending onboarding users')
     }
 
     const { data, error: supabaseError } = await query
@@ -851,6 +948,76 @@ const formatDate = (dateString: string | null | undefined) => {
   } catch (error) {
     console.warn('Error formatting date:', dateString, error)
     return 'Datum Fehler'
+  }
+}
+
+// Pending Student Actions
+const showPendingActions = (student: any) => {
+  pendingStudent.value = student
+  showPendingModal.value = true
+}
+
+const resendOnboardingSms = async () => {
+  if (!pendingStudent.value) return
+  
+  isResendingSms.value = true
+  
+  try {
+    const baseUrl = window.location.origin
+    const onboardingLink = `${baseUrl}/onboarding/${pendingStudent.value.onboarding_token}`
+    const message = `Hallo ${pendingStudent.value.first_name}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+    
+    const result = await sendSms(pendingStudent.value.phone, message)
+    
+    if (result.success) {
+      uiStore.addNotification({
+        type: 'success',
+        title: 'SMS erfolgreich gesendet!',
+        message: `Onboarding-Link wurde an ${formatPhone(pendingStudent.value.phone)} gesendet.`
+      })
+      showPendingModal.value = false
+    } else {
+      uiStore.addNotification({
+        type: 'error',
+        title: 'SMS-Versand fehlgeschlagen',
+        message: result.error || 'Bitte versuchen Sie es erneut oder kopieren Sie den Link manuell.'
+      })
+    }
+  } catch (err: any) {
+    console.error('Error resending SMS:', err)
+    uiStore.addNotification({
+      type: 'error',
+      title: 'Fehler',
+      message: 'SMS konnte nicht gesendet werden.'
+    })
+  } finally {
+    isResendingSms.value = false
+  }
+}
+
+const copyOnboardingLink = async () => {
+  if (!pendingStudent.value) return
+  
+  try {
+    const baseUrl = window.location.origin
+    const onboardingLink = `${baseUrl}/onboarding/${pendingStudent.value.onboarding_token}`
+    
+    await navigator.clipboard.writeText(onboardingLink)
+    
+    uiStore.addNotification({
+      type: 'success',
+      title: 'Link kopiert!',
+      message: 'Der Onboarding-Link wurde in die Zwischenablage kopiert.'
+    })
+    
+    console.log('🔗 Onboarding-Link:', onboardingLink)
+  } catch (err) {
+    console.error('Error copying link:', err)
+    uiStore.addNotification({
+      type: 'error',
+      title: 'Fehler',
+      message: 'Link konnte nicht kopiert werden. Siehe Konsole für Details.'
+    })
   }
 }
 </script>
