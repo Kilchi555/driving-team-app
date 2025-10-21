@@ -489,11 +489,50 @@ const submitForm = async () => {
   } catch (error: any) {
     console.error('Fehler beim Hinzufügen des Schülers:', error)
     
-    // Handle specific errors
-    if (error.message?.includes('duplicate')) {
-      errors.value.email = 'Diese E-Mail-Adresse ist bereits registriert'
+    // ✅ Verständliche Fehlermeldungen mit Handlungsempfehlungen
+    if (error.message === 'DUPLICATE_PHONE') {
+      const existing = error.existingUser
+      const hasAccount = existing.auth_user_id !== null
+      
+      let message = `Diese Telefonnummer ist bereits registriert`
+      
+      if (existing.first_name && existing.last_name) {
+        message += ` für ${existing.first_name} ${existing.last_name}`
+      }
+      
+      if (hasAccount) {
+        message += `.\n\n✅ Dieser Schüler hat bereits ein Konto.\n\nBitte weisen Sie den Schüler an:\n- Sich mit seiner E-Mail/Telefonnummer anzumelden\n- Falls Passwort vergessen: "Passwort vergessen" beim Login verwenden`
+      } else {
+        message += `.\n\n⚠️ Dieser Schüler wurde bereits angelegt, hat aber noch kein Konto aktiviert.\n\nSie können:\n- Den Onboarding-Link erneut senden\n- Die bestehenden Daten überprüfen`
+      }
+      
+      errors.value.phone = 'Diese Telefonnummer ist bereits registriert (siehe Details oben)'
+      alert(message)
+      
+    } else if (error.message === 'DUPLICATE_EMAIL') {
+      const existing = error.existingUser
+      const hasAccount = existing.auth_user_id !== null
+      
+      let message = `Diese E-Mail-Adresse ist bereits registriert`
+      
+      if (existing.first_name && existing.last_name) {
+        message += ` für ${existing.first_name} ${existing.last_name}`
+      }
+      
+      if (hasAccount) {
+        message += `.\n\n✅ Dieser Schüler hat bereits ein Konto.\n\nBitte weisen Sie den Schüler an:\n- Sich mit seiner E-Mail anzumelden\n- Falls Passwort vergessen: "Passwort vergessen" beim Login verwenden`
+      } else {
+        message += `.\n\n⚠️ Dieser Schüler wurde bereits angelegt, hat aber noch kein Konto aktiviert.\n\nSie können:\n- Den Onboarding-Link erneut senden\n- Die bestehenden Daten überprüfen`
+      }
+      
+      errors.value.email = 'Diese E-Mail-Adresse ist bereits registriert (siehe Details oben)'
+      alert(message)
+      
+    } else if (error.message?.includes('duplicate')) {
+      errors.value.email = 'Diese E-Mail-Adresse oder Telefonnummer ist bereits registriert'
+      alert('Ein Schüler mit dieser E-Mail oder Telefonnummer existiert bereits.\n\nBitte überprüfen Sie die Eingaben oder weisen Sie den Schüler an, sich anzumelden.')
     } else {
-      // General error (you can show a toast notification here)
+      // General error
       alert('Fehler beim Hinzufügen des Schülers: ' + error.message)
     }
   } finally {

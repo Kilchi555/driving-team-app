@@ -194,6 +194,57 @@ export const useStudents = () => {
     try {
       const supabase = getSupabase()
       
+      // Get current user's tenant_id
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', authUser?.id)
+        .single()
+      
+      const tenantId = userProfile?.tenant_id
+      
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+      
+      // ✅ NEU: Prüfe auf Duplikate (phone und email) im gleichen Tenant
+      const duplicateChecks = []
+      
+      if (studentData.phone) {
+        const { data: existingPhone } = await supabase
+          .from('users')
+          .select('id, first_name, last_name, email, auth_user_id, is_active')
+          .eq('tenant_id', tenantId)
+          .eq('phone', studentData.phone)
+          .limit(1)
+        
+        if (existingPhone && existingPhone.length > 0) {
+          const existing = existingPhone[0]
+          const errorObj: any = new Error('DUPLICATE_PHONE')
+          errorObj.duplicateType = 'phone'
+          errorObj.existingUser = existing
+          throw errorObj
+        }
+      }
+      
+      if (studentData.email) {
+        const { data: existingEmail } = await supabase
+          .from('users')
+          .select('id, first_name, last_name, phone, auth_user_id, is_active')
+          .eq('tenant_id', tenantId)
+          .eq('email', studentData.email)
+          .limit(1)
+        
+        if (existingEmail && existingEmail.length > 0) {
+          const existing = existingEmail[0]
+          const errorObj: any = new Error('DUPLICATE_EMAIL')
+          errorObj.duplicateType = 'email'
+          errorObj.existingUser = existing
+          throw errorObj
+        }
+      }
+      
       // Generiere UUID und Token
       const userId = crypto.randomUUID()
       const onboardingToken = crypto.randomUUID()
@@ -207,6 +258,7 @@ export const useStudents = () => {
           ...studentData,
           id: userId,
           auth_user_id: null, // Erst nach Onboarding gesetzt
+          tenant_id: tenantId, // ✅ FIX: tenant_id hinzufügen
           role: 'client',
           is_active: false, // Inaktiv bis Onboarding abgeschlossen
           onboarding_status: 'pending',
