@@ -25,8 +25,8 @@
       <div class="p-6 space-y-4">
         <p class="text-gray-700">{{ duplicateInfo.message }}</p>
         
-        <!-- Existing User Info -->
-        <div v-if="duplicateInfo.existingUser" class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <!-- Existing User Info (nur wenn Daten vorhanden) -->
+        <div v-if="duplicateInfo.existingUser && duplicateInfo.existingUser.first_name" class="bg-gray-50 rounded-lg p-4 border border-gray-200">
           <p class="text-sm font-medium text-gray-900 mb-2">Bestehender Schüler:</p>
           <div class="space-y-1 text-sm text-gray-600">
             <p><strong>Name:</strong> {{ duplicateInfo.existingUser.first_name }} {{ duplicateInfo.existingUser.last_name }}</p>
@@ -562,60 +562,73 @@ const submitForm = async () => {
     console.error('Fehler beim Hinzufügen des Schülers:', error)
     
     // ✅ Verständliche Fehlermeldungen mit schönem Modal
-    if (error.message === 'DUPLICATE_PHONE') {
+    // Prüfe auch auf Datenbank-Constraint-Fehler (code: 23505)
+    const isDatabaseDuplicatePhone = error.code === '23505' && 
+      (error.message?.includes('users_phone_tenant_unique') || 
+       error.message?.includes('phone'))
+    
+    const isDatabaseDuplicateEmail = error.code === '23505' && 
+      (error.message?.includes('users_email_tenant_unique') || 
+       error.message?.includes('email'))
+    
+    if (error.message === 'DUPLICATE_PHONE' || isDatabaseDuplicatePhone) {
       const existing = error.existingUser
-      const hasAccount = existing.auth_user_id !== null
+      const hasAccount = existing?.auth_user_id !== null
       
-      let message = `Diese Telefonnummer ist bereits registriert`
+      let message = `Diese Telefonnummer ist bereits registriert.`
       
-      if (existing.first_name && existing.last_name) {
-        message += ` für ${existing.first_name} ${existing.last_name}.`
+      if (existing?.first_name && existing?.last_name) {
+        message = `Diese Telefonnummer ist bereits registriert für ${existing.first_name} ${existing.last_name}.`
       }
       
       duplicateInfo.value = {
         title: 'Telefonnummer bereits vorhanden',
         message: message,
-        existingUser: existing,
-        actionTitle: hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert',
-        actions: hasAccount 
+        existingUser: existing || null,
+        actionTitle: existing 
+          ? (hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert')
+          : '⚠️ Telefonnummer bereits verwendet',
+        actions: existing && hasAccount 
           ? [
               'Schüler anweisen, sich mit E-Mail/Telefon anzumelden',
               'Bei Passwort vergessen: "Passwort vergessen" verwenden'
             ]
           : [
-              'Onboarding-Link erneut senden',
-              'Bestehende Daten überprüfen',
-              'Ggf. inaktiven Schüler löschen und neu erstellen'
+              'Bestehende Telefonnummer in der Schülerliste suchen',
+              'Ggf. inaktiven/alten Schüler löschen',
+              'Andere Telefonnummer verwenden'
             ]
       }
       
       errors.value.phone = 'Diese Telefonnummer ist bereits registriert'
       showDuplicateWarning.value = true
       
-    } else if (error.message === 'DUPLICATE_EMAIL') {
+    } else if (error.message === 'DUPLICATE_EMAIL' || isDatabaseDuplicateEmail) {
       const existing = error.existingUser
-      const hasAccount = existing.auth_user_id !== null
+      const hasAccount = existing?.auth_user_id !== null
       
-      let message = `Diese E-Mail-Adresse ist bereits registriert`
+      let message = `Diese E-Mail-Adresse ist bereits registriert.`
       
-      if (existing.first_name && existing.last_name) {
-        message += ` für ${existing.first_name} ${existing.last_name}.`
+      if (existing?.first_name && existing?.last_name) {
+        message = `Diese E-Mail-Adresse ist bereits registriert für ${existing.first_name} ${existing.last_name}.`
       }
       
       duplicateInfo.value = {
         title: 'E-Mail bereits vorhanden',
         message: message,
-        existingUser: existing,
-        actionTitle: hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert',
-        actions: hasAccount 
+        existingUser: existing || null,
+        actionTitle: existing 
+          ? (hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert')
+          : '⚠️ E-Mail bereits verwendet',
+        actions: existing && hasAccount 
           ? [
               'Schüler anweisen, sich mit E-Mail anzumelden',
               'Bei Passwort vergessen: "Passwort vergessen" verwenden'
             ]
           : [
-              'Onboarding-Link erneut senden',
-              'Bestehende Daten überprüfen',
-              'Ggf. inaktiven Schüler löschen und neu erstellen'
+              'Bestehende E-Mail in der Schülerliste suchen',
+              'Ggf. inaktiven/alten Schüler löschen',
+              'Andere E-Mail verwenden'
             ]
       }
       
