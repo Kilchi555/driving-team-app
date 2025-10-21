@@ -676,7 +676,6 @@ const handleDurationsChanged = (durations: number[]) => {
     calculateEndTime,
     getLastAppointmentDuration,
     getAppointmentNumber,
-    loadStaffDurations,
     getDefaultTitle,
     getEventTypeName,
     getAdminFeeForCategory,

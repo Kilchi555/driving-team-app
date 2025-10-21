@@ -891,9 +891,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         custom_location_address: formData.value.custom_location_address || undefined,
         custom_location_name: formData.value.custom_location_name || undefined,
         google_place_id: formData.value.google_place_id || undefined,
-        // ✅ Add tenant_id and type for availability checking
-        tenant_id: dbUser.tenant_id,
-        type: formData.value.type || dbUser.category
+        // ✅ Add tenant_id for availability checking
+        tenant_id: dbUser.tenant_id
         // ✅ price_per_minute and is_paid removed - not in appointments table
       }
       
