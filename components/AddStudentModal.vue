@@ -62,7 +62,7 @@
               <!-- Email (Optional) -->
               <div class="md:col-span-2">
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                  E-Mail Adresse <span class="text-gray-400">(optional - kann vom Schüler ergänzt werden)</span>
+                  E-Mail Adresse <span class="text-gray-400">(optional)</span>
                 </label>
                 <input
                   id="email"
@@ -153,7 +153,7 @@
           <!-- Address Information (Optional) -->
           <div>
             <h3 class="text-lg font-medium text-gray-900 mb-4">
-              Adresse <span class="text-sm font-normal text-gray-500">(optional - Schüler kann später ergänzen)</span>
+              Adresse <span class="text-sm font-normal text-gray-500">(optional)</span>
             </h3>
             
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -166,7 +166,6 @@
                   id="street"
                   v-model="form.street"
                   type="text"
-                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.street }"
                   placeholder="Musterstrasse"
@@ -177,13 +176,12 @@
               <!-- Street Number -->
               <div>
                 <label for="streetNr" class="block text-sm font-medium text-gray-700 mb-1">
-                  Hausnummer *
+                  Hausnummer
                 </label>
                 <input
                   id="streetNr"
                   v-model="form.street_nr"
                   type="text"
-                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.street_nr }"
                   placeholder="123"
@@ -194,13 +192,12 @@
               <!-- ZIP -->
               <div>
                 <label for="zip" class="block text-sm font-medium text-gray-700 mb-1">
-                  PLZ *
+                  PLZ
                 </label>
                 <input
                   id="zip"
                   v-model="form.zip"
                   type="text"
-                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.zip }"
                   placeholder="8000"
@@ -211,13 +208,12 @@
               <!-- City -->
               <div class="md:col-span-2">
                 <label for="city" class="block text-sm font-medium text-gray-700 mb-1">
-                  Stadt *
+                  Stadt
                 </label>
                 <input
                   id="city"
                   v-model="form.city"
                   type="text"
-                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.city }"
                   placeholder="Zürich"
@@ -318,14 +314,8 @@ const errors = ref<Record<string, string>>({})
 const isFormValid = computed(() => {
   return form.value.first_name.trim() && 
          form.value.last_name.trim() && 
-         form.value.email.trim() && 
-         isValidEmail(form.value.email) &&
          form.value.phone.trim() &&
-         form.value.category.trim() &&
-         form.value.street.trim() &&
-         form.value.street_nr.trim() &&
-         form.value.zip.trim() &&
-         form.value.city.trim()
+         form.value.phone.trim().length >= 12
 })
 
 // Methods
