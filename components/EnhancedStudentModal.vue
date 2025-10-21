@@ -614,13 +614,21 @@
                 @click="payment.appointments?.status !== 'cancelled' ? markPaymentAsCashPaid(payment) : null"
               >
                 <div class="flex justify-between items-start mb-2">
-                  <div>
-                    <h5 :class="[
-                      'font-semibold',
-                      payment.appointments?.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-900'
-                    ]">
-                      {{ (payment.total_amount_rappen / 100).toFixed(2) }} CHF
-                    </h5>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                      <h5 :class="[
+                        'font-semibold',
+                        payment.appointments?.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-900'
+                      ]">
+                        {{ (payment.total_amount_rappen / 100).toFixed(2) }} CHF
+                      </h5>
+                      <span v-if="payment.appointments?.type" :class="[
+                        'px-2 py-0.5 text-xs font-medium rounded',
+                        payment.appointments?.status === 'cancelled' ? 'bg-gray-200 text-gray-400' : 'bg-blue-100 text-blue-800'
+                      ]">
+                        {{ payment.appointments.type }}
+                      </span>
+                    </div>
                     <p :class="[
                       'text-sm',
                       payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'
@@ -658,7 +666,7 @@
                 </div>
                 
                 <!-- Product Sales & Discounts Section -->
-                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale" class="mt-3 pt-3 border-t border-gray-300">
+                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale || (payment.admin_fee_rappen && payment.admin_fee_rappen > 0)" class="mt-3 pt-3 border-t border-gray-300">
                   <!-- Product Sales -->
                   <div v-if="payment.product_sales && payment.product_sales.length > 0" class="mb-3">
                     <h6 class="text-xs font-semibold text-gray-700 mb-2">Produkte:</h6>
@@ -678,6 +686,22 @@
                           {{ ((productSale.unit_price_rappen || 0) * productSale.quantity / 100).toFixed(2) }} CHF
                         </span>
                       </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Admin Fee -->
+                  <div v-if="payment.admin_fee_rappen && payment.admin_fee_rappen > 0" class="mb-3">
+                    <h6 class="text-xs font-semibold text-gray-700 mb-2">Zusatzkosten:</h6>
+                    <div class="flex justify-between items-center text-sm">
+                      <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                        Adminpauschale
+                      </span>
+                      <span :class="[
+                        'font-medium',
+                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
+                      ]">
+                        {{ (payment.admin_fee_rappen / 100).toFixed(2) }} CHF
+                      </span>
                     </div>
                   </div>
                   
@@ -725,6 +749,10 @@
                         <div v-if="calculateCancelledPayment(payment)!.productCost > 0" class="flex justify-between">
                           <span>Produkte (immer verrechnet):</span>
                           <span>{{ (calculateCancelledPayment(payment)!.productCost / 100).toFixed(2) }} CHF</span>
+                        </div>
+                        <div v-if="calculateCancelledPayment(payment)!.adminFee > 0" class="flex justify-between">
+                          <span>Adminpauschale (immer verrechnet):</span>
+                          <span>{{ (calculateCancelledPayment(payment)!.adminFee / 100).toFixed(2) }} CHF</span>
                         </div>
                         <div v-if="calculateCancelledPayment(payment)!.discountRefund > 0" class="flex justify-between text-green-600">
                           <span>Rabatt zurückgegeben:</span>
@@ -1251,6 +1279,9 @@ const calculateCancelledPayment = (payment: any) => {
     return sum + (ps.unit_price_rappen || 0) * ps.quantity
   }, 0)
   
+  // Admin-Fee (wird IMMER verrechnet)
+  const adminFee = payment.admin_fee_rappen || 0
+  
   // Discount-Wert (wird nach Policy behandelt)
   const discountValue = payment.discount_sale?.discount_amount_rappen || 0
   
@@ -1258,17 +1289,18 @@ const calculateCancelledPayment = (payment: any) => {
   const appointmentRefund = Math.round(appointmentCost * (policy.refund_percentage / 100))
   const finalAppointmentCost = appointmentCost - appointmentRefund
   
-  // Discount wird nur zurückgegeben wenn 0% verrechnet wird
+  // Discount wird nur zurückgegeben wenn 100% Rückerstattung
   const discountRefund = policy.refund_percentage === 100 ? discountValue : 0
   const finalDiscountValue = discountValue - discountRefund
   
-  const totalCost = finalAppointmentCost + productCost - finalDiscountValue
+  const totalCost = finalAppointmentCost + productCost + adminFee - finalDiscountValue
   
   return {
     appointmentCost,
     appointmentRefund,
     finalAppointmentCost,
     productCost,
+    adminFee,
     discountValue,
     discountRefund,
     finalDiscountValue,
@@ -1913,6 +1945,7 @@ const loadPayments = async () => {
         payment_method,
         payment_status,
         total_amount_rappen,
+        admin_fee_rappen,
         appointment_id,
         appointments!inner(
           user_id, 
@@ -1921,6 +1954,7 @@ const loadPayments = async () => {
           status, 
           event_type_code,
           staff_id,
+          type,
           event_types(name)
         )
       `)
