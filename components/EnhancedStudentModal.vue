@@ -655,7 +655,7 @@
                 </div>
                 
                 <!-- Product Sales & Discounts Section -->
-                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || (payment.discount_sales && payment.discount_sales.length > 0)" class="mt-3 pt-3 border-t border-gray-300">
+                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale" class="mt-3 pt-3 border-t border-gray-300">
                   <!-- Product Sales -->
                   <div v-if="payment.product_sales && payment.product_sales.length > 0" class="mb-3">
                     <h6 class="text-xs font-semibold text-gray-700 mb-2">Produkte:</h6>
@@ -672,31 +672,25 @@
                           'font-medium',
                           payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
                         ]">
-                          {{ ((productSale.products?.price_rappen || 0) * productSale.quantity / 100).toFixed(2) }} CHF
+                          {{ ((productSale.unit_price_rappen || 0) * productSale.quantity / 100).toFixed(2) }} CHF
                         </span>
                       </div>
                     </div>
                   </div>
                   
-                  <!-- Discount Sales -->
-                  <div v-if="payment.discount_sales && payment.discount_sales.length > 0">
-                    <h6 class="text-xs font-semibold text-gray-700 mb-2">Rabatte:</h6>
-                    <div class="space-y-1">
-                      <div 
-                        v-for="discountSale in payment.discount_sales" 
-                        :key="discountSale.id"
-                        class="flex justify-between items-center text-sm"
-                      >
-                        <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
-                          {{ discountSale.discounts?.name || 'Rabatt' }}
-                        </span>
-                        <span :class="[
-                          'font-medium',
-                          payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
-                        ]">
-                          -{{ ((discountSale.discounts?.discount_amount_rappen || 0) / 100).toFixed(2) }} CHF
-                        </span>
-                      </div>
+                  <!-- Discount Sale (Rabatt) -->
+                  <div v-if="payment.discount_sale && payment.discount_sale.discount_amount_rappen > 0">
+                    <h6 class="text-xs font-semibold text-gray-700 mb-2">Rabatt:</h6>
+                    <div class="flex justify-between items-center text-sm">
+                      <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                        {{ payment.discount_sale.discount_reason || 'Rabatt' }}
+                      </span>
+                      <span :class="[
+                        'font-medium',
+                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
+                      ]">
+                        -{{ ((payment.discount_sale.discount_amount_rappen || 0) / 100).toFixed(2) }} CHF
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -874,15 +868,6 @@
                       {{ selectedStudent.zip }} {{ selectedStudent.city }}
                     </div>
                     <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
-                  </div>
-                </div>
-
-                <!-- Lernfahrausweis Nummer -->
-                <div class="flex items-start space-x-3">
-                  <div class="flex-shrink-0 w-5 h-5 mt-0.5">
-                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
                   </div>
                 </div>
               </div>
@@ -1260,13 +1245,11 @@ const calculateCancelledPayment = (payment: any) => {
   
   // Product-Kosten (werden IMMER verrechnet)
   const productCost = (payment.product_sales || []).reduce((sum: number, ps: any) => {
-    return sum + (ps.products?.price_rappen || 0) * ps.quantity
+    return sum + (ps.unit_price_rappen || 0) * ps.quantity
   }, 0)
   
   // Discount-Wert (wird nach Policy behandelt)
-  const discountValue = (payment.discount_sales || []).reduce((sum: number, ds: any) => {
-    return sum + (ds.discounts?.discount_amount_rappen || 0)
-  }, 0)
+  const discountValue = payment.discount_sale?.discount_amount_rappen || 0
   
   // Berechnung
   const appointmentRefund = Math.round(appointmentCost * (policy.refund_percentage / 100))
@@ -1649,7 +1632,7 @@ const loadLessons = async () => {
         description,
         duration_minutes,
         event_type_code,
-        instructor_id,
+        staff_id,
         event_types (
           name
         )
@@ -1715,7 +1698,7 @@ const loadLessons = async () => {
     
     // Lade Instructor-Namen
     const instructorIds = [...new Set((appointmentsData || [])
-      .map(apt => apt.instructor_id)
+      .map(apt => apt.staff_id)
       .filter(Boolean))]
     
     let instructorsMap: Record<string, any> = {}
@@ -1740,7 +1723,7 @@ const loadLessons = async () => {
       ...apt,
       notes: evaluationsMap[apt.id] || [],
       evaluations: (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating),
-      instructor: apt.instructor_id ? instructorsMap[apt.instructor_id] : null
+      instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
     }))
     
     lessons.value = lessonsWithEvaluations
@@ -1786,7 +1769,7 @@ const loadExamResults = async () => {
         title, 
         user_id, 
         event_type_code,
-        instructor_id,
+        staff_id,
         event_types (
           name
         )
@@ -1820,7 +1803,7 @@ const loadExamResults = async () => {
     
     // Lade Instructor-Namen für Prüfungen
     const instructorIds = [...new Set(studentAppointments
-      .map(apt => apt.instructor_id)
+      .map(apt => apt.staff_id)
       .filter(Boolean))]
     
     let instructorsMap: Record<string, any> = {}
@@ -1843,7 +1826,7 @@ const loadExamResults = async () => {
     // Verknüpfe exam_results mit appointment-Daten und Instructor-Namen
     const appointmentsMap = new Map(studentAppointments.map(apt => [apt.id, {
       ...apt,
-      instructor: apt.instructor_id ? instructorsMap[apt.instructor_id] : null
+      instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
     }]))
     
     examResults.value = (examResultsData || []).map(result => ({
@@ -1865,19 +1848,42 @@ const loadCancellationPolicies = async () => {
   try {
     const supabase = getSupabase()
     
+    // Lade policies mit ihren rules
     const { data: policiesData, error: policiesError } = await supabase
       .from('cancellation_policies')
-      .select('*')
+      .select(`
+        *,
+        cancellation_rules (*)
+      `)
       .eq('is_active', true)
-      .order('hours_before_appointment', { ascending: true })
     
     if (policiesError) {
       console.error('❌ Error loading cancellation policies:', policiesError)
       return
     }
     
-    cancellationPolicies.value = policiesData || []
-    console.log('✅ Loaded', cancellationPolicies.value.length, 'cancellation policies')
+    // Flache die Rules zu einer Liste um (für einfachere Verwendung)
+    const allRules: any[] = []
+    policiesData?.forEach(policy => {
+      if (policy.cancellation_rules) {
+        policy.cancellation_rules.forEach((rule: any) => {
+          allRules.push({
+            ...rule,
+            policy_id: policy.id,
+            policy_name: policy.name,
+            refund_percentage: 100 - rule.charge_percentage,
+            hours_before_appointment: rule.hours_before_appointment
+          })
+        })
+      }
+    })
+    
+    // Sortiere nach hours_before_appointment
+    cancellationPolicies.value = allRules.sort((a, b) => 
+      b.hours_before_appointment - a.hours_before_appointment
+    )
+    
+    console.log('✅ Loaded', cancellationPolicies.value.length, 'cancellation rules')
     
   } catch (error: any) {
     console.error('Error loading cancellation policies:', error)
@@ -1915,58 +1921,56 @@ const loadPayments = async () => {
       throw paymentsError
     }
     
-    // Lade product_sales und discount_sales für die Zahlungen
-    const paymentIds = (paymentsData || []).map(p => p.id)
+    // Lade discount_sales und product_sales über appointment_id
+    const appointmentIds = (paymentsData || []).map(p => p.appointment_id).filter(Boolean)
+    let discountSalesMap: Record<string, any> = {}
     let productSalesMap: Record<string, any[]> = {}
-    let discountSalesMap: Record<string, any[]> = {}
     
-    if (paymentIds.length > 0) {
-      // Lade product_sales
-      const { data: productSalesData, error: productSalesError } = await supabase
-        .from('product_sales')
-        .select(`
-          *,
-          products(name, price_rappen)
-        `)
-        .in('payment_id', paymentIds)
-      
-      if (productSalesError) {
-        console.error('❌ Error loading product sales:', productSalesError)
-      } else if (productSalesData) {
-        productSalesData.forEach(ps => {
-          if (!productSalesMap[ps.payment_id]) {
-            productSalesMap[ps.payment_id] = []
-          }
-          productSalesMap[ps.payment_id].push(ps)
-        })
-      }
-      
-      // Lade discount_sales
+    if (appointmentIds.length > 0) {
+      // Lade discount_sales (Haupt-Verkauf mit Rabatt)
       const { data: discountSalesData, error: discountSalesError } = await supabase
         .from('discount_sales')
-        .select(`
-          *,
-          discounts(name, discount_percentage, discount_amount_rappen)
-        `)
-        .in('payment_id', paymentIds)
+        .select('*')
+        .in('appointment_id', appointmentIds)
       
       if (discountSalesError) {
         console.error('❌ Error loading discount sales:', discountSalesError)
       } else if (discountSalesData) {
         discountSalesData.forEach(ds => {
-          if (!discountSalesMap[ds.payment_id]) {
-            discountSalesMap[ds.payment_id] = []
+          discountSalesMap[ds.appointment_id] = ds
+          
+          // Lade product_sales (Items) für diese discount_sale
+          if (ds.id) {
+            supabase
+              .from('product_sales')
+              .select(`
+                *,
+                products(name, price_rappen)
+              `)
+              .eq('product_sale_id', ds.id)
+              .then(({ data: productsData, error: productsError }) => {
+                if (productsError) {
+                  console.error('❌ Error loading products for sale:', productsError)
+                } else if (productsData) {
+                  if (!productSalesMap[ds.appointment_id]) {
+                    productSalesMap[ds.appointment_id] = []
+                  }
+                  productSalesMap[ds.appointment_id].push(...productsData)
+                }
+              })
           }
-          discountSalesMap[ds.payment_id].push(ds)
         })
       }
     }
     
-    // Verknüpfe alle Daten
+    // Warte kurz auf die product_sales Queries
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Verknüpfe alle Daten über appointment_id
     payments.value = (paymentsData || []).map(payment => ({
       ...payment,
-      product_sales: productSalesMap[payment.id] || [],
-      discount_sales: discountSalesMap[payment.id] || []
+      discount_sale: payment.appointment_id ? discountSalesMap[payment.appointment_id] : null,
+      product_sales: payment.appointment_id ? (productSalesMap[payment.appointment_id] || []) : []
     }))
     
     console.log('✅ Loaded', payments.value.length, 'payments with product/discount sales')
