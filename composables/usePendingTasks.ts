@@ -220,7 +220,7 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
       .lt('start_time', toLocalTimeString(new Date)) // ✅ Termine die bereits gestartet haben
       .in('status', ['completed', 'confirmed', 'scheduled']) // Alle relevanten Status für Pendenzen
       .is('deleted_at', null) // ✅ Soft Delete Filter - nur nicht gelöschte Termine
-      .in('event_type_code', ['lesson', 'exam']) // ✅ Nur lesson und exam Event Types
+      .in('event_type_code', ['lesson', 'exam', 'theory']) // ✅ lesson, exam UND theory Event Types
       .order('start_time', { ascending: true }) // Älteste zuerst (überfällige zuerst)
 
     if (fetchError) {
