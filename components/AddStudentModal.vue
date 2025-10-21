@@ -1,5 +1,62 @@
 <!-- components/AddStudentModal.vue -->
 <template>
+  <!-- Duplicate Warning Modal (higher z-index) -->
+  <div v-if="showDuplicateWarning" class="fixed inset-0 z-[60] flex items-center justify-center">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black bg-opacity-50" @click="showDuplicateWarning = false"></div>
+    
+    <!-- Modal -->
+    <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 border-b bg-orange-50">
+        <div class="flex items-center gap-3">
+          <div class="text-3xl">⚠️</div>
+          <h2 class="text-xl font-bold text-gray-900">{{ duplicateInfo.title }}</h2>
+        </div>
+        <button 
+          @click="showDuplicateWarning = false"
+          class="text-gray-400 hover:text-gray-600 text-2xl"
+        >
+          ×
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6 space-y-4">
+        <p class="text-gray-700">{{ duplicateInfo.message }}</p>
+        
+        <!-- Existing User Info -->
+        <div v-if="duplicateInfo.existingUser" class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <p class="text-sm font-medium text-gray-900 mb-2">Bestehender Schüler:</p>
+          <div class="space-y-1 text-sm text-gray-600">
+            <p><strong>Name:</strong> {{ duplicateInfo.existingUser.first_name }} {{ duplicateInfo.existingUser.last_name }}</p>
+            <p v-if="duplicateInfo.existingUser.email"><strong>E-Mail:</strong> {{ duplicateInfo.existingUser.email }}</p>
+            <p v-if="duplicateInfo.existingUser.phone"><strong>Telefon:</strong> {{ duplicateInfo.existingUser.phone }}</p>
+          </div>
+        </div>
+
+        <!-- Action Instructions -->
+        <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <p class="text-sm font-medium text-blue-900 mb-2">{{ duplicateInfo.actionTitle }}</p>
+          <ul class="text-sm text-blue-800 space-y-1 list-disc list-inside">
+            <li v-for="(action, index) in duplicateInfo.actions" :key="index">{{ action }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-end p-6 border-t bg-gray-50 gap-3">
+        <button
+          @click="showDuplicateWarning = false"
+          class="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+        >
+          Verstanden
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Student Modal -->
   <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center">
     <!-- Backdrop -->
     <div class="absolute inset-0 bg-black bg-opacity-50" @click="$emit('close')"></div>
@@ -270,6 +327,9 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStudents } from '~/composables/useStudents'
 import { getSupabase } from '~/utils/supabase'
+import { useUIStore } from '~/stores/ui'
+
+const uiStore = useUIStore()
 
 const emit = defineEmits<{
   close: []
@@ -292,6 +352,14 @@ const isSubmitting = ref(false)
 const staffMembers = ref<any[]>([])
 const availableCategories = ref<any[]>([])
 const isLoadingCategories = ref(false)
+const showDuplicateWarning = ref(false)
+const duplicateInfo = ref({
+  title: '',
+  message: '',
+  existingUser: null as any,
+  actionTitle: '',
+  actions: [] as string[]
+})
 
 // Form Data
 const form = ref({
@@ -478,8 +546,12 @@ const submitForm = async () => {
     // Success feedback
     console.log('Schüler erfolgreich hinzugefügt:', newStudent)
     
-    // ✅ NEUER WORKFLOW: SMS mit Onboarding-Link wird versendet
-    alert(`Schüler erfolgreich erstellt!\n\nEine SMS mit einem Onboarding-Link wurde an ${form.value.phone} gesendet.\n\nDer Schüler kann über diesen Link:\n- Sein Passwort setzen\n- Email-Adresse ergänzen\n- Adresse & weitere Daten ausfüllen\n- Ausweis hochladen`)
+    // ✅ Schöne Erfolgs-Benachrichtigung
+    uiStore.addNotification({
+      type: 'success',
+      title: 'Schüler erfolgreich erstellt!',
+      message: `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet. Der Schüler kann sein Konto jetzt aktivieren.`
+    })
     
     // Reset form and close modal
     resetForm()
@@ -489,7 +561,7 @@ const submitForm = async () => {
   } catch (error: any) {
     console.error('Fehler beim Hinzufügen des Schülers:', error)
     
-    // ✅ Verständliche Fehlermeldungen mit Handlungsempfehlungen
+    // ✅ Verständliche Fehlermeldungen mit schönem Modal
     if (error.message === 'DUPLICATE_PHONE') {
       const existing = error.existingUser
       const hasAccount = existing.auth_user_id !== null
@@ -497,17 +569,28 @@ const submitForm = async () => {
       let message = `Diese Telefonnummer ist bereits registriert`
       
       if (existing.first_name && existing.last_name) {
-        message += ` für ${existing.first_name} ${existing.last_name}`
+        message += ` für ${existing.first_name} ${existing.last_name}.`
       }
       
-      if (hasAccount) {
-        message += `.\n\n✅ Dieser Schüler hat bereits ein Konto.\n\nBitte weisen Sie den Schüler an:\n- Sich mit seiner E-Mail/Telefonnummer anzumelden\n- Falls Passwort vergessen: "Passwort vergessen" beim Login verwenden`
-      } else {
-        message += `.\n\n⚠️ Dieser Schüler wurde bereits angelegt, hat aber noch kein Konto aktiviert.\n\nSie können:\n- Den Onboarding-Link erneut senden\n- Die bestehenden Daten überprüfen`
+      duplicateInfo.value = {
+        title: 'Telefonnummer bereits vorhanden',
+        message: message,
+        existingUser: existing,
+        actionTitle: hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert',
+        actions: hasAccount 
+          ? [
+              'Schüler anweisen, sich mit E-Mail/Telefon anzumelden',
+              'Bei Passwort vergessen: "Passwort vergessen" verwenden'
+            ]
+          : [
+              'Onboarding-Link erneut senden',
+              'Bestehende Daten überprüfen',
+              'Ggf. inaktiven Schüler löschen und neu erstellen'
+            ]
       }
       
-      errors.value.phone = 'Diese Telefonnummer ist bereits registriert (siehe Details oben)'
-      alert(message)
+      errors.value.phone = 'Diese Telefonnummer ist bereits registriert'
+      showDuplicateWarning.value = true
       
     } else if (error.message === 'DUPLICATE_EMAIL') {
       const existing = error.existingUser
@@ -516,24 +599,43 @@ const submitForm = async () => {
       let message = `Diese E-Mail-Adresse ist bereits registriert`
       
       if (existing.first_name && existing.last_name) {
-        message += ` für ${existing.first_name} ${existing.last_name}`
+        message += ` für ${existing.first_name} ${existing.last_name}.`
       }
       
-      if (hasAccount) {
-        message += `.\n\n✅ Dieser Schüler hat bereits ein Konto.\n\nBitte weisen Sie den Schüler an:\n- Sich mit seiner E-Mail anzumelden\n- Falls Passwort vergessen: "Passwort vergessen" beim Login verwenden`
-      } else {
-        message += `.\n\n⚠️ Dieser Schüler wurde bereits angelegt, hat aber noch kein Konto aktiviert.\n\nSie können:\n- Den Onboarding-Link erneut senden\n- Die bestehenden Daten überprüfen`
+      duplicateInfo.value = {
+        title: 'E-Mail bereits vorhanden',
+        message: message,
+        existingUser: existing,
+        actionTitle: hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert',
+        actions: hasAccount 
+          ? [
+              'Schüler anweisen, sich mit E-Mail anzumelden',
+              'Bei Passwort vergessen: "Passwort vergessen" verwenden'
+            ]
+          : [
+              'Onboarding-Link erneut senden',
+              'Bestehende Daten überprüfen',
+              'Ggf. inaktiven Schüler löschen und neu erstellen'
+            ]
       }
       
-      errors.value.email = 'Diese E-Mail-Adresse ist bereits registriert (siehe Details oben)'
-      alert(message)
+      errors.value.email = 'Diese E-Mail-Adresse ist bereits registriert'
+      showDuplicateWarning.value = true
       
     } else if (error.message?.includes('duplicate')) {
       errors.value.email = 'Diese E-Mail-Adresse oder Telefonnummer ist bereits registriert'
-      alert('Ein Schüler mit dieser E-Mail oder Telefonnummer existiert bereits.\n\nBitte überprüfen Sie die Eingaben oder weisen Sie den Schüler an, sich anzumelden.')
+      uiStore.addNotification({
+        type: 'error',
+        title: 'Duplikat gefunden',
+        message: 'Ein Schüler mit dieser E-Mail oder Telefonnummer existiert bereits.'
+      })
     } else {
       // General error
-      alert('Fehler beim Hinzufügen des Schülers: ' + error.message)
+      uiStore.addNotification({
+        type: 'error',
+        title: 'Fehler',
+        message: 'Fehler beim Hinzufügen des Schülers: ' + error.message
+      })
     }
   } finally {
     isSubmitting.value = false

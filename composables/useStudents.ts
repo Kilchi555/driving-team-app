@@ -282,7 +282,6 @@ export const useStudents = () => {
 
       // 2. Sende SMS mit Onboarding-Link
       try {
-        const { $fetch } = useNuxtApp()
         await $fetch('/api/students/send-onboarding-sms', {
           method: 'POST',
           body: {
