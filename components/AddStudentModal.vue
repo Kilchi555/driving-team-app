@@ -541,17 +541,39 @@ const submitForm = async () => {
       studentData.assigned_staff_id = props.currentUser.id
     }
 
-    const newStudent = await addStudent(studentData)
+    const newStudent = await addStudent(studentData) as any
     
     // Success feedback
     console.log('Schüler erfolgreich hinzugefügt:', newStudent)
     
-    // ✅ Schöne Erfolgs-Benachrichtigung
-    uiStore.addNotification({
-      type: 'success',
-      title: 'Schüler erfolgreich erstellt!',
-      message: `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet. Der Schüler kann sein Konto jetzt aktivieren.`
-    })
+    // ✅ Schöne Erfolgs-Benachrichtigung mit SMS-Status
+    if (newStudent.smsSuccess) {
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Schüler erfolgreich erstellt!',
+        message: `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet. Der Schüler kann sein Konto jetzt aktivieren.`
+      })
+    } else {
+      // SMS fehlgeschlagen - zeige Link zum manuellen Kopieren
+      uiStore.addNotification({
+        type: 'warning',
+        title: 'Schüler erstellt, aber SMS fehlgeschlagen',
+        message: `Bitte senden Sie den Onboarding-Link manuell an ${form.value.phone}`
+      })
+      
+      // Zeige den Link in der Konsole für Copy/Paste
+      console.log('🔗 Onboarding-Link:', newStudent.onboardingLink)
+      
+      // Optional: Kopiere Link in Zwischenablage
+      if (newStudent.onboardingLink && navigator.clipboard) {
+        try {
+          await navigator.clipboard.writeText(newStudent.onboardingLink)
+          console.log('✅ Link wurde in Zwischenablage kopiert')
+        } catch (e) {
+          console.log('⚠️ Konnte Link nicht in Zwischenablage kopieren')
+        }
+      }
+    }
     
     // Reset form and close modal
     resetForm()

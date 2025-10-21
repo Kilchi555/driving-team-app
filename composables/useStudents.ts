@@ -283,7 +283,13 @@ export const useStudents = () => {
       }
 
       // 2. Sende SMS mit Onboarding-Link
+      let smsSuccess = false
+      let onboardingLink = ''
+      
       try {
+        const baseUrl = window.location.origin
+        onboardingLink = `${baseUrl}/onboarding/${onboardingToken}`
+        
         await $fetch('/api/students/send-onboarding-sms', {
           method: 'POST',
           body: {
@@ -294,11 +300,17 @@ export const useStudents = () => {
         })
         
         console.log('✅ Onboarding SMS sent to:', data.phone)
+        smsSuccess = true
         
       } catch (smsError: any) {
         console.warn('⚠️ SMS sending failed:', smsError.message)
         // Student wurde erstellt, SMS-Versand hat gefehlt - kann manuell wiederholt werden
+        smsSuccess = false
       }
+      
+      // Füge SMS-Status und Link zu den Daten hinzu
+      data.smsSuccess = smsSuccess
+      data.onboardingLink = onboardingLink
 
       // Zur lokalen Liste hinzufügen
       students.value.unshift(data)
