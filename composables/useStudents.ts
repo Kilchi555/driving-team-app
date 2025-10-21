@@ -1,6 +1,7 @@
 // composables/useStudents.ts
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useSmsService } from '~/composables/useSmsService'
 import type { User } from '~/types'
 
 export const useStudents = () => {
@@ -282,7 +283,7 @@ export const useStudents = () => {
         onboarding_token_expires: tokenExpires.toISOString()
       }
 
-      // 2. Sende SMS mit Onboarding-Link
+      // 2. Sende SMS mit Onboarding-Link (client-seitig via useSmsService)
       let smsSuccess = false
       let onboardingLink = ''
       
@@ -290,21 +291,22 @@ export const useStudents = () => {
         const baseUrl = window.location.origin
         onboardingLink = `${baseUrl}/onboarding/${onboardingToken}`
         
-        await $fetch('/api/students/send-onboarding-sms', {
-          method: 'POST',
-          body: {
-            phone: data.phone,
-            firstName: data.first_name,
-            token: onboardingToken
-          }
-        })
+        // ✅ Verwende useSmsService wie im Admin Dashboard
+        const { sendSms } = useSmsService()
+        const message = `Hallo ${data.first_name}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
         
-        console.log('✅ Onboarding SMS sent to:', data.phone)
-        smsSuccess = true
+        const smsResult = await sendSms(data.phone, message)
+        
+        if (smsResult.success) {
+          console.log('✅ Onboarding SMS sent to:', data.phone, 'SID:', smsResult.data?.sid)
+          smsSuccess = true
+        } else {
+          console.warn('⚠️ SMS sending failed:', smsResult.error)
+          smsSuccess = false
+        }
         
       } catch (smsError: any) {
-        console.warn('⚠️ SMS sending failed:', smsError.message)
-        // Student wurde erstellt, SMS-Versand hat gefehlt - kann manuell wiederholt werden
+        console.error('⚠️ SMS sending error:', smsError)
         smsSuccess = false
       }
       
