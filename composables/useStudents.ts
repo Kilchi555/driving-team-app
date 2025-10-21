@@ -228,12 +228,13 @@ export const useStudents = () => {
         }
       }
       
-      if (studentData.email) {
+      if (studentData.email && studentData.email.trim() !== '') {
         const { data: existingEmail } = await supabase
           .from('users')
           .select('id, first_name, last_name, phone, auth_user_id, is_active')
           .eq('tenant_id', tenantId)
           .eq('email', studentData.email)
+          .neq('email', '') // Ignoriere leere E-Mails
           .limit(1)
         
         if (existingEmail && existingEmail.length > 0) {
@@ -259,6 +260,7 @@ export const useStudents = () => {
           id: userId,
           auth_user_id: null, // Erst nach Onboarding gesetzt
           tenant_id: tenantId, // ✅ FIX: tenant_id hinzufügen
+          email: studentData.email || '', // ✅ FIX: Leerer String statt null
           role: 'client',
           is_active: false, // Inaktiv bis Onboarding abgeschlossen
           onboarding_status: 'pending',
