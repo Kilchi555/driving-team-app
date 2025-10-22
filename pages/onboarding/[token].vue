@@ -94,9 +94,11 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Mindestens 8 Zeichen"
                 >
-                <p class="mt-1 text-xs text-gray-500">
-                  Mindestens 8 Zeichen, empfohlen: Gross-/Kleinbuchstaben, Zahlen & Sonderzeichen
-                </p>
+                <div class="mt-1 text-xs">
+                  <p :class="passwordTooShort ? 'text-red-600' : 'text-gray-500'">
+                    {{ passwordTooShort ? 'Passwort ist zu kurz (min. 8 Zeichen).' : 'Mindestens 8 Zeichen, empfohlen: Gross-/Kleinbuchstaben, Zahlen & Sonderzeichen' }}
+                  </p>
+                </div>
               </div>
 
               <div>
@@ -110,6 +112,7 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Passwort wiederholen"
                 >
+                <p v-if="passwordMismatch" class="mt-1 text-xs text-red-600">Passwörter stimmen nicht überein.</p>
               </div>
 
               <p v-if="passwordError" class="text-red-600 text-sm">{{ passwordError }}</p>
@@ -162,11 +165,9 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="">Kategorie wählen</option>
-                  <option value="B">B - Auto</option>
-                  <option value="A1">A1 - Motorrad 125cc</option>
-                  <option value="A">A - Motorrad</option>
-                  <option value="BE">BE - Anhänger</option>
-                  <option value="C">C - LKW</option>
+                  <option v-for="cat in categories" :key="cat.code || cat.id" :value="cat.code || cat.id">
+                    {{ cat.name || cat.code || cat.id }}
+                  </option>
                 </select>
               </div>
 
@@ -233,37 +234,21 @@
           <div v-if="step === 2">
             <h2 class="text-xl font-bold mb-4">Dokumente hochladen</h2>
             <p class="text-sm text-gray-600 mb-6">
-              Bitte lade deinen Ausweis und Lernfahrausweis hoch (falls vorhanden).
+              Bitte lade deinen Lernfahr- oder Fahrausweis hoch.
             </p>
 
             <div class="space-y-4">
-              <!-- Identity Card -->
+              <!-- Lernfahr- oder Fahrausweis (Required) -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Ausweis (ID/Pass) *
-                </label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  @change="handleFileUpload($event, 'identity')"
-                  class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-                  required
-                >
-                <p v-if="uploadedFiles.identity" class="mt-1 text-sm text-green-600">
-                  ✓ {{ uploadedFiles.identity.name }}
-                </p>
-              </div>
-
-              <!-- Learner Permit (Optional) -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Lernfahrausweis (optional)
+                  Lernfahr- oder Fahrausweis *
                 </label>
                 <input
                   type="file"
                   accept="image/*,.pdf"
                   @change="handleFileUpload($event, 'learner_permit')"
                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                  required
                 >
                 <p v-if="uploadedFiles.learner_permit" class="mt-1 text-sm text-green-600">
                   ✓ {{ uploadedFiles.learner_permit.name }}
@@ -282,10 +267,9 @@
             <div class="space-y-4">
               <div class="border rounded-md p-4 max-h-60 overflow-y-auto bg-gray-50">
                 <h3 class="font-semibold mb-2">Allgemeine Geschäftsbedingungen</h3>
-                <p class="text-sm text-gray-700">
-                  <!-- TODO: Add your actual terms & conditions -->
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit...
-                </p>
+                <div class="text-sm text-gray-700 whitespace-pre-wrap">
+                  {{ termsText }}
+                </div>
               </div>
 
               <div class="flex items-start">
@@ -316,7 +300,7 @@
 
             <button
               type="submit"
-              :disabled="isSubmitting"
+              :disabled="isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch))"
               class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {{ step === 3 ? 'Registrierung abschliessen' : 'Weiter' }}
@@ -345,9 +329,13 @@ const isLoading = ref(true)
 const isSubmitting = ref(false)
 const error = ref('')
 const passwordError = ref('')
+const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 8)
+const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.password !== form.confirmPassword)
 
 const tenantName = ref('Deiner Fahrschule')
 const userData = ref<any>(null)
+const categories = ref<any[]>([])
+const termsText = ref('AGB werden geladen...')
 
 const form = reactive({
   password: '',
@@ -382,6 +370,26 @@ onMounted(async () => {
     
     // Pre-fill known data
     if (userData.value.email) form.email = userData.value.email
+
+    // Load dynamic categories
+    try {
+      const { data: catData } = await useFetch(`/api/onboarding/categories`, {
+        method: 'GET',
+        query: { token }
+      })
+      categories.value = catData.value?.categories || []
+    } catch {}
+
+    // Load dynamic terms/policies
+    try {
+      const { data: termsData } = await useFetch(`/api/onboarding/terms`, {
+        method: 'GET',
+        query: { token }
+      })
+      termsText.value = (termsData.value?.terms || 'AGB aktuell nicht verfügbar').trim()
+    } catch {
+      termsText.value = 'AGB aktuell nicht verfügbar'
+    }
     
   } catch (err: any) {
     error.value = 'Fehler beim Laden der Daten. Bitte versuche es später erneut.'

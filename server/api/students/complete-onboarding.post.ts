@@ -62,13 +62,16 @@ export default defineEventHandler(async (event) => {
     }
 
     // 4. Update user record with all data
+    // Ensure category stored as array
+    const categoryValue = Array.isArray(category) ? category : (category ? [category] : [])
+
     const { error: updateError } = await supabaseAdmin
       .from('users')
       .update({
         auth_user_id: authData.user.id,
         email: email,
         birthdate: birthdate,
-        category: category,
+        category: categoryValue,
         street: street,
         street_nr: street_nr,
         zip: zip,
