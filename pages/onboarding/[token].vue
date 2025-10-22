@@ -41,34 +41,39 @@
         
         <!-- Progress Steps -->
         <div class="mb-8">
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between max-w-2xl mx-auto">
             <div 
               v-for="(stepItem, index) in steps" 
               :key="index"
-              class="flex-1"
+              class="flex-1 flex flex-col items-center"
             >
-              <div class="flex items-center">
+              <div class="flex items-center w-full">
                 <div 
-                  class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full"
+                  class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full border-2 transition-all duration-300"
                   :class="{
-                    'bg-green-600 text-white': index < step,
-                    'bg-green-600 text-white': index === step,
-                    'bg-gray-300 text-gray-600': index > step
+                    'bg-green-600 border-green-600 text-white shadow-lg': index < step,
+                    'bg-green-600 border-green-600 text-white shadow-lg ring-4 ring-green-100': index === step,
+                    'bg-white border-gray-300 text-gray-400': index > step
                   }"
                 >
-                  <span v-if="index < step">✓</span>
-                  <span v-else>{{ index + 1 }}</span>
+                  <svg v-if="index < step" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                  </svg>
+                  <span v-else class="text-sm font-semibold">{{ index + 1 }}</span>
                 </div>
                 <div 
                   v-if="index < steps.length - 1"
-                  class="flex-1 h-1 mx-2"
+                  class="flex-1 h-0.5 mx-3 transition-colors duration-300"
                   :class="{
                     'bg-green-600': index < step,
                     'bg-gray-300': index >= step
                   }"
                 ></div>
               </div>
-              <p class="mt-2 text-xs text-center text-gray-600">{{ stepItem }}</p>
+              <p class="mt-3 text-xs text-center font-medium" :class="{
+                'text-green-600': index <= step,
+                'text-gray-500': index > step
+              }">{{ stepItem }}</p>
             </div>
           </div>
         </div>
@@ -239,22 +244,80 @@
               Bitte lade deinen Lernfahr- oder Fahrausweis hoch.
             </p>
 
-            <div class="space-y-4">
+            <div class="space-y-6">
               <!-- Lernfahr- oder Fahrausweis (Required) -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-medium text-gray-700 mb-3">
                   Lernfahr- oder Fahrausweis *
                 </label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  @change="handleFileUpload($event, 'learner_permit')"
-                  class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-                  required
+                
+                <!-- File Upload Area -->
+                <div 
+                  @drop="handleDrop($event, 'learner_permit')"
+                  @dragover="handleDragOver($event, 'learner_permit')"
+                  @dragenter="handleDragOver($event, 'learner_permit')"
+                  @dragleave="handleDragLeave($event, 'learner_permit')"
+                  :class="[
+                    'border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200',
+                    dragOver.learner_permit ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400'
+                  ]"
                 >
-                <p v-if="uploadedFiles.learner_permit" class="mt-1 text-sm text-green-600">
-                  ✓ {{ uploadedFiles.learner_permit.name }}
-                </p>
+                  <div v-if="!uploadedFiles.learner_permit">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <div class="mt-4">
+                      <label for="learner_permit" class="cursor-pointer">
+                        <span class="mt-2 block text-sm font-medium text-gray-900">
+                          Datei hierher ziehen oder
+                          <span class="text-green-600 hover:text-green-500">durchsuchen</span>
+                        </span>
+                        <p class="mt-1 text-xs text-gray-500">
+                          PNG, JPG, PDF bis 10MB
+                        </p>
+                      </label>
+                      <input
+                        id="learner_permit"
+                        type="file"
+                        accept="image/*,.pdf"
+                        @change="handleFileUpload($event, 'learner_permit')"
+                        class="sr-only"
+                        required
+                      >
+                    </div>
+                  </div>
+                  
+                  <!-- File Preview -->
+                  <div v-else class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center space-x-3">
+                      <div class="flex-shrink-0">
+                        <svg v-if="uploadedFiles.learner_permit.type.startsWith('image/')" class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <svg v-else class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-green-900 truncate">
+                          {{ uploadedFiles.learner_permit.name }}
+                        </p>
+                        <p class="text-xs text-green-600">
+                          {{ formatFileSize(uploadedFiles.learner_permit.size) }}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      @click="removeFile('learner_permit')"
+                      class="flex-shrink-0 p-1 text-green-600 hover:text-green-800"
+                    >
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -267,51 +330,55 @@
             </p>
 
             <div class="space-y-4">
-              <div class="border rounded-md p-4 max-h-60 overflow-y-auto bg-gray-50">
-                <h3 class="font-semibold mb-2">Allgemeine Geschäftsbedingungen</h3>
-                <div class="text-sm text-gray-700 whitespace-pre-wrap">
+              <div class="border rounded-md p-4 max-h-60 sm:max-h-80 overflow-y-auto bg-gray-50">
+                <h3 class="font-semibold mb-2 text-gray-900">Allgemeine Geschäftsbedingungen</h3>
+                <div class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                   {{ termsText }}
                 </div>
               </div>
 
-              <div class="flex items-start">
+              <div class="flex items-start space-x-3 p-4 bg-green-50 rounded-lg border border-green-200">
                 <input
                   v-model="form.acceptedTerms"
                   type="checkbox"
                   required
-                  class="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  class="mt-1 h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded flex-shrink-0"
                 >
-                <label class="ml-2 text-sm text-gray-700">
-                  Ich akzeptiere die Allgemeinen Geschäftsbedingungen *
+                <label class="text-sm text-gray-700 leading-relaxed">
+                  Ich akzeptiere die Allgemeinen Geschäftsbedingungen und bestätige, dass ich alle Angaben korrekt gemacht habe. *
                 </label>
               </div>
             </div>
           </div>
 
           <!-- Navigation Buttons -->
-          <div class="mt-8 flex justify-between">
+          <div class="mt-8 flex flex-col sm:flex-row justify-between gap-4">
             <button
               v-if="step > 0"
               type="button"
               @click="step--"
-              class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              class="w-full sm:w-auto px-6 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors font-medium"
             >
-              Zurück
+              ← Zurück
             </button>
-            <div v-else></div>
+            <div v-else class="hidden sm:block"></div>
 
             <button
               type="submit"
               :disabled="isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch))"
-              class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {{ step === 3 ? 'Registrierung abschliessen' : 'Weiter' }}
+              <span v-if="isSubmitting" class="flex items-center justify-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Wird verarbeitet...
+              </span>
+              <span v-else>
+                {{ step === 3 ? 'Registrierung abschliessen' : 'Weiter →' }}
+              </span>
             </button>
-          </div>
-
-          <!-- Loading Indicator -->
-          <div v-if="isSubmitting" class="mt-4 text-center text-sm text-gray-600">
-            Wird verarbeitet...
           </div>
         </form>
 
@@ -353,6 +420,7 @@ const form = reactive({
 })
 
 const uploadedFiles = reactive<Record<string, File>>({})
+const dragOver = reactive<Record<string, boolean>>({})
 
 // Load user data by token
 onMounted(async () => {
@@ -407,6 +475,46 @@ const handleFileUpload = (event: Event, type: string) => {
   if (file) {
     uploadedFiles[type] = file
   }
+}
+
+// Handle drag and drop
+const handleDrop = (event: DragEvent, type: string) => {
+  event.preventDefault()
+  dragOver[type] = false
+  
+  const files = event.dataTransfer?.files
+  if (files && files.length > 0) {
+    const file = files[0]
+    if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+      uploadedFiles[type] = file
+    }
+  }
+}
+
+// Handle drag over
+const handleDragOver = (event: DragEvent, type: string) => {
+  event.preventDefault()
+  dragOver[type] = true
+}
+
+// Handle drag leave
+const handleDragLeave = (event: DragEvent, type: string) => {
+  event.preventDefault()
+  dragOver[type] = false
+}
+
+// Remove file
+const removeFile = (type: string) => {
+  delete uploadedFiles[type]
+}
+
+// Format file size
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 // Handle next step

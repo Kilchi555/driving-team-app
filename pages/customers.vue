@@ -308,7 +308,6 @@
     <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
       <div class="p-6">
         <div class="flex items-start gap-4">
-          <div class="flex-shrink-0 text-3xl">⏳</div>
           <div class="flex-1">
             <h3 class="text-lg font-semibold text-gray-900 mb-2">
               {{ pendingStudent?.first_name }} {{ pendingStudent?.last_name }}
