@@ -288,8 +288,7 @@ export const useStudents = () => {
       let onboardingLink = ''
       
       try {
-        const baseUrl = window.location.origin
-        onboardingLink = `${baseUrl}/onboarding/${onboardingToken}`
+        onboardingLink = `https://simy.ch/onboarding/${onboardingToken}`
         
         // ✅ Verwende useSmsService wie im Admin Dashboard
         const { sendSms } = useSmsService()

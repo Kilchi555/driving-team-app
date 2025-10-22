@@ -17,7 +17,6 @@
                 {{ pendingCount }}
               </span>
             </h1>
-            <p class="text-sm text-green-100">Unbewertete Fahrlektionen</p>
           </div>
           
           <!-- Close Button -->
@@ -29,22 +28,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
-        </div>
-
-        <!-- Smart Stats mit Farbkodierung -->
-        <div class="mt-4 flex gap-4 items-center text-sm">
-          <span class="text-green-200">
-            <span class="inline-block w-2 h-2 bg-green-300 rounded-full mr-1"></span>
-            Offen: {{ getOpenCount() }}
-          </span>
-          <span class="text-orange-200">
-            <span class="inline-block w-2 h-2 bg-orange-300 rounded-full mr-1"></span>
-            Fällig: {{ getDueCount() }}
-          </span>
-          <span class="text-red-200">
-            <span class="inline-block w-2 h-2 bg-red-300 rounded-full mr-1"></span>
-            Überfällig: {{ getOverdueCount() }}
-          </span>
         </div>
       </div>
 
@@ -74,14 +57,11 @@
           <div class="text-center px-4">
             <div class="text-6xl mb-4">🎉</div>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Pendenzen!</h3>
-            <p class="text-gray-600 mb-4">
-              Alle Lektionen sind bewertet und kommentiert.
-            </p>
             <button 
               @click="closeModal"
               class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
             >
-              Super! Schließen
+              Super! Schliessen
             </button>
           </div>
         </div>

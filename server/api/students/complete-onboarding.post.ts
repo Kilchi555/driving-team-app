@@ -1,5 +1,4 @@
 // server/api/students/complete-onboarding.post.ts
-import { serverSupabaseServiceRole } from '#supabase/server'
 import { createClient } from '@supabase/supabase-js'
 
 export default defineEventHandler(async (event) => {

@@ -92,6 +92,19 @@
         </button>
       </div>
 
+      <!-- Neuer Schüler Button - immer sichtbar wenn kein Student ausgewählt -->
+      <div v-if="!selectedStudent && !isLoading" class="mb-3">
+        <button 
+          @click="openAddStudentModal"
+          class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Neuer Schüler
+        </button>
+      </div>
+
       <!-- Scrollbare Schülerliste - nur wenn kein Schüler ausgewählt -->
       <div v-if="!selectedStudent" class="border border-gray-300 rounded-lg bg-white">
         <!-- Loading State -->
@@ -147,6 +160,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Add Student Modal -->
+    <AddStudentModal
+      :show="showAddStudentModal"
+      :current-user="props.currentUser"
+      @close="showAddStudentModal = false"
+      @added="handleStudentAdded"
+    />
   </div>
 </template>
 
@@ -159,6 +180,7 @@ import {
   isCacheValid, 
   getCacheStatus 
 } from '~/utils/studentCache'
+import AddStudentModal from '~/components/AddStudentModal.vue'
 
 // Student Interface
 interface Student {
@@ -214,6 +236,7 @@ const isLoading = ref(false)
 const error = ref<string | null>(null)
 const showAllStudentsLocal = ref(props.showAllStudents)
 const loadTime = ref(0)
+const showAddStudentModal = ref(false)
 
 // Computed
 const selectedStudent = computed({
@@ -640,6 +663,36 @@ const clearStudent = () => {
   
   console.log('🗑️ StudentSelector: Student cleared')
   emit('student-cleared')
+}
+
+const openAddStudentModal = () => {
+  console.log('🆕 Opening Add Student Modal')
+  showAddStudentModal.value = true
+}
+
+const handleStudentAdded = async (newStudent: any) => {
+  console.log('✅ New student added:', newStudent)
+  showAddStudentModal.value = false
+  
+  // Konvertiere den neuen Schüler zum richtigen Format
+  const typedStudent: Student = {
+    id: newStudent.id,
+    first_name: newStudent.first_name || '',
+    last_name: newStudent.last_name || '',
+    email: newStudent.email || '',
+    phone: newStudent.phone || '',
+    category: newStudent.category || '',
+    assigned_staff_id: newStudent.assigned_staff_id || '',
+    preferred_location_id: newStudent.preferred_location_id || undefined
+  }
+  
+  // Füge den neuen Schüler zur Liste hinzu (an den Anfang)
+  availableStudents.value.unshift(typedStudent)
+  console.log('✅ Added new student to list:', typedStudent.first_name, typedStudent.last_name)
+  
+  // Wähle den neuen Schüler automatisch aus
+  selectStudent(typedStudent, true)
+  console.log('✅ Auto-selected new student')
 }
 
 const selectStudentById = async (userId: string, retryCount = 0) => {

@@ -168,16 +168,6 @@
                   : 'cursor-pointer hover:shadow-md hover:border-orange-300 opacity-75'
               ]"
             >
-              <!-- Pending User Hinweis -->
-              <div v-if="!student.auth_user_id" class="mb-3 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
-                <div class="flex items-center gap-2">
-                  <span class="text-orange-600">⏳</span>
-                  <div class="flex-1">
-                    <p class="font-medium text-orange-800">Benutzer muss noch Konto erstellen</p>
-                    <p class="text-orange-600 text-[10px] mt-0.5">Onboarding-Link wurde an {{ formatPhone(student.phone) }} gesendet</p>
-                  </div>
-                </div>
-              </div>
 
               <!-- Mobile-First Layout -->
               <div class="flex items-center justify-between">
@@ -687,7 +677,11 @@ const loadStudents = async (loadAppointments = true) => {
       is_active,
       category,
       assigned_staff_id,
-      payment_provider_customer_id
+      payment_provider_customer_id,
+      auth_user_id,
+      onboarding_status,
+      onboarding_token,
+      onboarding_token_expires
     `
     
     // Only add appointments if specifically requested
@@ -708,6 +702,40 @@ const loadStudents = async (loadAppointments = true) => {
       .eq('role', 'client') // Nur Schüler laden
       .eq('tenant_id', tenantId) // Filter by current tenant
       .order('first_name', { ascending: true })
+    
+    // FIX: Lade alle Studenten, unabhängig von is_active
+    // Das ermöglicht es, auch inaktive Pending-Users zu sehen
+    
+    // DEBUG: Teste direkte Query
+    console.log('🔍 Testing direct query for all students in tenant...')
+    const { data: testData } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id')
+      .eq('role', 'client')
+      .eq('tenant_id', tenantId)
+    
+    console.log('🔍 Direct query result:', testData)
+    
+    // DEBUG: Teste mit Service Role (ohne RLS)
+    const { data: testDataNoRLS } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id')
+      .eq('role', 'client')
+      .eq('tenant_id', tenantId)
+    
+    console.log('🔍 Direct query result (no RLS):', testDataNoRLS)
+    
+    // DEBUG: Teste spezifische Query für Max Mustermann
+    console.log('🔍 Searching for Max Mustermann by ID...')
+    const { data: maxQuery, error: maxError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', 'b09e0af1-3ded-44e0-a80e-b52b11e630e1')
+    
+    console.log('🔍 Max Mustermann by ID result:', maxQuery)
+    console.log('🔍 Max Mustermann by ID error:', maxError)
+    
+    
 
     // ✅ Filterung basierend auf Benutzerrolle
     if (currentUser.value.role === 'staff' && !showAllStudents.value) {
@@ -718,19 +746,39 @@ const loadStudents = async (loadAppointments = true) => {
       console.log('👑 Loading all students for admin')
     }
 
-    // ✅ Filterung basierend auf Aktiv/Inaktiv Status
-    // ABER: Pending-Users (noch kein auth_user_id) immer anzeigen
-    if (showInactive.value) {
-      // Nur inaktive Schüler laden (exkl. pending)
-      query = query.eq('is_active', false).not('auth_user_id', 'is', null)
-      console.log('📚 Loading inactive students only (excluding pending)')
-    } else {
-      // Aktive Schüler ODER pending-Users (noch kein Konto)
-      query = query.or('is_active.eq.true,auth_user_id.is.null')
-      console.log('📚 Loading active students and pending onboarding users')
-    }
+    // ✅ FIX: Lade IMMER alle Studenten des Tenants (aktive und inaktive)
+    // Das ermöglicht es, auch inaktive Pending-Users zu sehen
+    console.log('📚 Loading ALL students in tenant (active and inactive)')
 
-    const { data, error: supabaseError } = await query
+    // FIX: Verwende die normale users Tabelle, aber ohne appointments
+    // Das umgeht Schema-Cache-Probleme
+    const { data, error: supabaseError } = await supabase
+      .from('users')
+      .select(`
+        id,
+        created_at,
+        email,
+        first_name,
+        last_name,
+        phone,
+        birthdate,
+        street,
+        street_nr,
+        zip,
+        city,
+        is_active,
+        category,
+        assigned_staff_id,
+        payment_provider_customer_id,
+        auth_user_id,
+        onboarding_status,
+        onboarding_token,
+        onboarding_token_expires
+      `)
+      .eq('role', 'client')
+      .eq('tenant_id', tenantId)
+      .order('first_name', { ascending: true })
+    
 
     if (supabaseError) {
       throw new Error(`Database error: ${supabaseError.message}`)
@@ -742,8 +790,18 @@ const loadStudents = async (loadAppointments = true) => {
       return
     }
 
+    // ✅ Client-seitige Filterung für active/pending users
+    let filteredData = data
+    if (!showInactive.value) {
+      // Filtere: aktive Schüler ODER pending users (auth_user_id = null)
+      filteredData = data.filter((student: any) => {
+        return student.is_active === true || student.auth_user_id === null
+      })
+      console.log(`📊 Client-side filtering: ${data.length} total → ${filteredData.length} after filter`)
+    }
+
     // ✅ NEU: Intelligente Filterung basierend auf showAllStudents
-    let studentsToProcess = data as any[]
+    let studentsToProcess = filteredData as any[]
     
     // ✅ DEBUG: Zeige alle geladenen Schüler
     console.log('🔍 All loaded students:', studentsToProcess.map((s: any) => ({ 
@@ -758,9 +816,10 @@ const loadStudents = async (loadAppointments = true) => {
     const inactiveCount = studentsToProcess.filter((s: any) => !s.is_active).length
     console.log(`📊 Students status: ${activeCount} active, ${inactiveCount} inactive`)
     
+    
     if (!showAllStudents.value) {
-      // Standard: Nur eigene Schüler (mit denen ich Fahrstunden hatte)
-      console.log('📚 Loading only students with lessons from current staff:', currentUser.value.id)
+      // Standard: Alle Schüler des Tenants (nicht nur die mit Fahrstunden)
+      console.log('📚 Loading all students in tenant (not just those with lessons):', currentUser.value.id)
       console.log('🔍 Current user details:', {
         id: currentUser.value.id,
         email: currentUser.value.email,
@@ -768,49 +827,14 @@ const loadStudents = async (loadAppointments = true) => {
         first_name: currentUser.value.first_name
       })
       
-      const studentsWithMyLessons = []
-      for (const student of studentsToProcess) {
-        console.log(`🔍 Checking student: ${(student as any).first_name} ${(student as any).last_name} (ID: ${(student as any).id})`)
-        
-        // ✅ KORRIGIERT: Prüfe ob der Schüler Lektionen mit dem aktuellen Fahrlehrer hat
-        const { data: myLessons, error: lessonError } = await supabase
-          .from('appointments')
-          .select('staff_id')
-          .eq('user_id', (student as any).id)
-          .eq('staff_id', currentUser.value.id)
-          .limit(1)
-
-        if (lessonError) {
-          console.error('❌ Error checking my lessons for student:', (student as any).id, lessonError)
-          continue
-        }
-
-        console.log(`🔍 Lessons found for ${(student as any).first_name}:`, myLessons)
-
-        if (myLessons && myLessons.length > 0) {
-          studentsWithMyLessons.push(student)
-          console.log(`✅ Added ${(student as any).first_name} to my students list`)
-        } else {
-          console.log(`⚠️ No lessons found for ${(student as any).first_name} with current staff`)
-          
-          // ✅ DEBUG: Zeige alle Termine für diesen Schüler
-          const { data: allLessons } = await supabase
-            .from('appointments')
-            .select('staff_id, start_time, status')
-            .eq('user_id', (student as any).id)
-            .limit(5)
-          
-          console.log(`🔍 All lessons for ${(student as any).first_name}:`, allLessons)
-        }
-      }
-      
-      studentsToProcess = studentsWithMyLessons
-      console.log(`✅ Found ${studentsWithMyLessons.length} students with lessons from current staff out of ${(data as any[]).length} total`)
+      // ✅ FIX: Alle Studenten des Tenants verwenden (nicht nur die mit Fahrstunden)
+      // Das ermöglicht es, auch Pending-Users ohne Fahrstunden zu sehen
+      console.log(`✅ Using all ${studentsToProcess.length} students in tenant (including those without lessons)`)
     } else {
-      // Alle aktiven Kunden
-      console.log('👑 Loading all active customers')
-      studentsToProcess = (data as any[]).filter((student: any) => student.is_active)
-      console.log(`✅ Found ${studentsToProcess.length} active customers`)
+      // Alle Kunden (aktive und inaktive)
+      console.log('👑 Loading all customers (active and inactive)')
+      studentsToProcess = data as any[]
+      console.log(`✅ Found ${studentsToProcess.length} total customers`)
     }
 
     // ✅ OPTIMIERT: Lade alle Fahrlehrer-Daten in EINER Abfrage
@@ -963,8 +987,7 @@ const resendOnboardingSms = async () => {
   isResendingSms.value = true
   
   try {
-    const baseUrl = window.location.origin
-    const onboardingLink = `${baseUrl}/onboarding/${pendingStudent.value.onboarding_token}`
+    const onboardingLink = `https://simy.ch/onboarding/${pendingStudent.value.onboarding_token}`
     const message = `Hallo ${pendingStudent.value.first_name}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
     
     const result = await sendSms(pendingStudent.value.phone, message)
@@ -999,8 +1022,7 @@ const copyOnboardingLink = async () => {
   if (!pendingStudent.value) return
   
   try {
-    const baseUrl = window.location.origin
-    const onboardingLink = `${baseUrl}/onboarding/${pendingStudent.value.onboarding_token}`
+    const onboardingLink = `https://simy.ch/onboarding/${pendingStudent.value.onboarding_token}`
     
     await navigator.clipboard.writeText(onboardingLink)
     

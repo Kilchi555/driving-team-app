@@ -1,5 +1,8 @@
 // server/api/students/verify-onboarding-token.post.ts
-import { serverSupabaseClient } from '#supabase/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.SUPABASE_URL!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export default defineEventHandler(async (event) => {
   try {
@@ -12,7 +15,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabase = await serverSupabaseClient(event)
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Find user by token
     const { data: user, error } = await supabase

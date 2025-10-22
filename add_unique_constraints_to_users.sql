@@ -66,3 +66,4 @@ BEGIN
   RAISE NOTICE 'Phone and email are now unique per tenant';
 END $$;
 
+

@@ -23,7 +23,7 @@
     "@nuxtjs/supabase": "^1.5.3",
     "@pinia/nuxt": "^0.5.5",
     "@stripe/stripe-js": "^7.9.0",
-    "@supabase/supabase-js": "^2.52.1",
+    "@supabase/supabase-js": "^2.76.1",
     "jspdf": "^3.0.1",
     "nuxt": "^3.17.7",
     "pinia": "^2.2.6",

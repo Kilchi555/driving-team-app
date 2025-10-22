@@ -1,5 +1,8 @@
 // server/api/students/send-onboarding-sms.post.ts
-import { serverSupabaseClient } from '#supabase/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.SUPABASE_URL!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export default defineEventHandler(async (event) => {
   try {
@@ -15,9 +18,8 @@ export default defineEventHandler(async (event) => {
     // Format phone number (ensure +41 format)
     const formattedPhone = formatSwissPhoneNumber(phone)
     
-    // Build onboarding link
-    const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
-    const onboardingLink = `${baseUrl}/onboarding/${token}`
+    // Build onboarding link (force public domain)
+    const onboardingLink = `https://simy.ch/onboarding/${token}`
     
     // SMS Message
     const message = `Hallo ${firstName}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
@@ -29,7 +31,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // ✅ Use existing Twilio integration via Supabase Edge Function
-    const supabase = await serverSupabaseClient(event)
+    const supabase = createClient(supabaseUrl, supabaseKey)
     
     const { data: smsData, error: smsError } = await supabase.functions.invoke('send-twilio-sms', {
       body: {
