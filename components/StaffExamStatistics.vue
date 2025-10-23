@@ -35,16 +35,22 @@
           <!-- Overall Statistics -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div class="text-sm text-blue-700 font-medium mb-1">Gesamt Prüfungen</div>
-              <div class="text-2xl font-bold text-blue-800">{{ totalExams }}</div>
+              <div class="flex justify-between items-center">
+                <div class="text-sm text-blue-700 font-medium">Gesamt Prüfungen</div>
+                <div class="text-2xl font-bold text-blue-800">{{ totalExams }}</div>
+              </div>
             </div>
             <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-              <div class="text-sm text-green-700 font-medium mb-1">Bestanden</div>
-              <div class="text-2xl font-bold text-green-800">{{ passedExams }}</div>
+              <div class="flex justify-between items-center">
+                <div class="text-sm text-green-700 font-medium">Bestanden</div>
+                <div class="text-2xl font-bold text-green-800">{{ passedExams }}</div>
+              </div>
             </div>
             <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
-              <div class="text-sm text-orange-700 font-medium mb-1">Erfolgsquote</div>
-              <div class="text-2xl font-bold text-orange-800">{{ successRate }}%</div>
+              <div class="flex justify-between items-center">
+                <div class="text-sm text-orange-700 font-medium">Erfolgsquote</div>
+                <div class="text-2xl font-bold text-orange-800">{{ successRate }}%</div>
+              </div>
             </div>
           </div>
 
@@ -117,10 +123,10 @@
           </button>
         </div>
         
-        <div class="p-2 space-y-6">
+        <div class="p-2">
 
           <!-- Examiners Statistics -->
-          <div class="space-y-4">
+          <div class="space-y-2">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div 
