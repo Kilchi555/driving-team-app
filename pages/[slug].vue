@@ -272,6 +272,12 @@ const isSubRoute = computed(() => {
   return currentPath.includes('/services') || currentPath.includes('/register')
 })
 
+// Check if this is specifically a register route
+const isRegisterRoute = computed(() => {
+  const currentPath = route.path
+  return currentPath.includes('/register')
+})
+
 // Methods
 const handleLogin = async () => {
   if (!loginForm.value.email || !loginForm.value.password) {

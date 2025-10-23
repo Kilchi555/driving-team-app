@@ -130,7 +130,7 @@ const tenantName = computed(() => {
 // Methods
 const selectService = (serviceType: string) => {
   console.log('🎯 Service selected:', serviceType)
-  const url = `/${tenantSlug.value}/register?service=${serviceType}`
+  const url = `/register/${tenantSlug.value}?service=${serviceType}`
   console.log('🔗 Navigating to:', url)
   navigateTo(url)
 }

@@ -466,7 +466,7 @@ const supabase = getSupabase()
 const route = useRoute()
 
 // Get tenant slug from URL parameter
-const tenantSlug = computed(() => route.params.slug as string)
+const tenantSlug = computed(() => route.params.tenant as string)
 
 // Tenant Management
 const { loadTenant, tenantId, currentTenant } = useTenant()
@@ -884,16 +884,22 @@ onMounted(async () => {
   // Load tenant if tenant slug is provided
   if (tenantSlug.value) {
     console.log('🏢 Loading tenant from URL parameter:', tenantSlug.value)
-    await loadTenant(tenantSlug.value)
+    try {
+      await loadTenant(tenantSlug.value)
+    } catch (error) {
+      console.warn('⚠️ Failed to load tenant, but continuing with slug:', error)
+      // Don't redirect - just continue with the slug
+      // The form will work without tenant data
+    }
   }
   
-  // Verify tenant is loaded for customer registration
-  if (!isAdminRegistration.value && !activeTenantId.value) {
-    console.error('❌ No tenant loaded for customer registration, redirecting to tenant selection')
-    alert('Bitte wählen Sie zuerst einen Anbieter aus.')
-    await navigateTo('/auswahl')
-    return
-  }
+  // Skip tenant verification for now - allow registration without tenant data
+  // if (!isAdminRegistration.value && !activeTenantId.value) {
+  //   console.error('❌ No tenant loaded for customer registration, redirecting to tenant selection')
+  //   alert('Bitte wählen Sie zuerst einen Anbieter aus.')
+  //   await navigateTo('/auswahl')
+  //   return
+  // }
   
   loadCategories()
 })

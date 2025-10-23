@@ -1,5 +1,11 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
+  <!-- Load tenant-specific register component -->
+  <div v-if="isTenantSpecificRoute">
+    <component :is="tenantRegisterComponent" :tenant-slug="tenantSlugFromRoute" />
+  </div>
+  
+  <!-- Main registration form -->
+  <div v-else class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- Header -->
       <div class="bg-gray-100 text-white p-6 rounded-t-xl">
@@ -456,7 +462,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
@@ -588,6 +594,24 @@ const isAdminRegistration = computed(() => {
 
 const activeTenantId = computed(() => {
   return tenantId.value || currentTenant.value?.id || null
+})
+
+// Check if this is a tenant-specific route
+const isTenantSpecificRoute = computed(() => {
+  const currentPath = route.path
+  return currentPath.match(/^\/register\/[^\/]+$/)
+})
+
+// Extract tenant slug from route
+const tenantSlugFromRoute = computed(() => {
+  const currentPath = route.path
+  const match = currentPath.match(/^\/register\/([^\/]+)$/)
+  return match ? match[1] : null
+})
+
+// Dynamic component for tenant-specific registration
+const tenantRegisterComponent = computed(() => {
+  return defineAsyncComponent(() => import('~/pages/register/[tenant].vue'))
 })
 
 const requiresLernfahrausweis = computed(() => {
@@ -1391,6 +1415,12 @@ const loadCategories = async () => {
 
 // Load categories on mount and when service type changes
 onMounted(async () => {
+  // Skip for tenant-specific routes
+  if (isTenantSpecificRoute.value) {
+    console.log('🔓 Skipping general register logic for tenant-specific route:', route.path)
+    return
+  }
+  
   // Restore form data from localStorage if available
   if (process.client) {
     const savedData = localStorage.getItem(FORM_DATA_KEY)
