@@ -178,7 +178,7 @@
                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfer</th>
                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ergebnis</th>
                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bewertung</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notizen</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfer-Notizen</th>
                     </tr>
                   </thead>
                   <tbody class="bg-white divide-y divide-gray-200">
@@ -213,7 +213,7 @@
                         <div v-if="exam.notes" class="truncate" :title="exam.notes">
                           {{ exam.notes }}
                         </div>
-                        <span v-else class="text-gray-400">Keine Notizen</span>
+                        <span v-else class="text-gray-400">Keine Prüfer-Notizen</span>
                       </td>
                     </tr>
                   </tbody>
@@ -264,11 +264,17 @@
                     </div>
                   </div>
 
-                  <!-- Notes -->
+                  <!-- Examiner Notes -->
                   <div v-if="exam.notes" class="border-t border-gray-100 pt-3">
-                    <div class="text-xs text-gray-500 mb-1">Notizen:</div>
+                    <div class="text-xs text-gray-500 mb-1">Prüfer-Notizen:</div>
                     <div class="text-sm text-gray-900 bg-gray-50 p-2 rounded">
                       {{ exam.notes }}
+                    </div>
+                  </div>
+                  <div v-else class="border-t border-gray-100 pt-3">
+                    <div class="text-xs text-gray-500 mb-1">Prüfer-Notizen:</div>
+                    <div class="text-sm text-gray-400 italic">
+                      Keine Prüfer-Notizen vorhanden
                     </div>
                   </div>
                 </div>
