@@ -108,7 +108,6 @@
             <h3 class="text-xl font-bold text-gray-900">
               Prüfungsdetails: {{ selectedCategory?.category }}
             </h3>
-            <span class="text-sm text-gray-500">{{ staffName }}</span>
           </div>
           <button
             @click="showDetailsModal = false"
@@ -119,25 +118,9 @@
         </div>
         
         <div class="p-6 space-y-6">
-          <!-- Category Overview -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div class="text-sm text-blue-700 font-medium mb-1">Gesamt Prüfungen</div>
-              <div class="text-3xl font-bold text-blue-800">{{ selectedCategory?.total }}</div>
-            </div>
-            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-              <div class="text-sm text-green-700 font-medium mb-1">Bestanden</div>
-              <div class="text-3xl font-bold text-green-800">{{ selectedCategory?.passed }}</div>
-            </div>
-            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
-              <div class="text-sm text-orange-700 font-medium mb-1">Erfolgsquote</div>
-              <div class="text-3xl font-bold text-orange-800">{{ selectedCategory?.successRate }}%</div>
-            </div>
-          </div>
 
           <!-- Examiners Statistics -->
           <div class="space-y-4">
-            <h4 class="text-lg font-semibold text-gray-900">Prüfer-Statistiken</h4>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div 
@@ -182,61 +165,115 @@
             </div>
           </div>
 
-          <!-- Detailed Exam List -->
-          <div class="space-y-4">
-            <h4 class="text-lg font-semibold text-gray-900">Alle Prüfungen dieser Kategorie</h4>
-            
-            <div class="overflow-x-auto border border-gray-200 rounded-lg">
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                  <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schüler</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfer</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ergebnis</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bewertung</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notizen</th>
-                  </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="exam in selectedCategory?.exams" :key="exam.id" class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            <!-- Detailed Exam List -->
+            <div class="space-y-4">
+              
+              <!-- Desktop Table View -->
+              <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schüler</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfer</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ergebnis</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bewertung</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notizen</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    <tr v-for="exam in selectedCategory?.exams" :key="exam.id" class="hover:bg-gray-50">
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ formatDate(exam.exam_date) }}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ exam.student_name }}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <span :class="{
+                          'text-gray-500': exam.examiner_name === 'Nicht zugewiesen',
+                          'text-gray-400': exam.examiner_name === 'Unbekannt'
+                        }">
+                          {{ exam.examiner_name }}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full" :class="{
+                          'bg-green-100 text-green-800': exam.passed,
+                          'bg-red-100 text-red-800': !exam.passed
+                        }">
+                          {{ exam.passed ? 'Bestanden' : 'Nicht bestanden' }}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <span v-if="exam.score" class="font-medium">{{ exam.score }}</span>
+                        <span v-else class="text-gray-400">N/A</span>
+                      </td>
+                      <td class="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                        <div v-if="exam.notes" class="truncate" :title="exam.notes">
+                          {{ exam.notes }}
+                        </div>
+                        <span v-else class="text-gray-400">Keine Notizen</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Mobile Card View -->
+              <div class="md:hidden space-y-3">
+                <div 
+                  v-for="exam in selectedCategory?.exams" 
+                  :key="exam.id"
+                  class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                >
+                  <!-- Header with Date and Result -->
+                  <div class="flex justify-between items-start mb-3">
+                    <div class="text-sm font-medium text-gray-900">
                       {{ formatDate(exam.exam_date) }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ exam.student_name }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <span :class="{
+                    </div>
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full" :class="{
+                      'bg-green-100 text-green-800': exam.passed,
+                      'bg-red-100 text-red-800': !exam.passed
+                    }">
+                      {{ exam.passed ? 'Bestanden' : 'Nicht bestanden' }}
+                    </span>
+                  </div>
+
+                  <!-- Student and Examiner -->
+                  <div class="space-y-2 mb-3">
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Schüler:</span>
+                      <span class="text-gray-900 font-medium">{{ exam.student_name }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Prüfer:</span>
+                      <span class="text-gray-900" :class="{
                         'text-gray-500': exam.examiner_name === 'Nicht zugewiesen',
                         'text-gray-400': exam.examiner_name === 'Unbekannt'
                       }">
                         {{ exam.examiner_name }}
                       </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full" :class="{
-                        'bg-green-100 text-green-800': exam.passed,
-                        'bg-red-100 text-red-800': !exam.passed
-                      }">
-                        {{ exam.passed ? 'Bestanden' : 'Nicht bestanden' }}
+                    </div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Bewertung:</span>
+                      <span class="text-gray-900 font-medium">
+                        <span v-if="exam.score">{{ exam.score }}</span>
+                        <span v-else class="text-gray-400">N/A</span>
                       </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <span v-if="exam.score" class="font-medium">{{ exam.score }}</span>
-                      <span v-else class="text-gray-400">N/A</span>
-                    </td>
-                    <td class="px-6 py-4 text-sm text-gray-900 max-w-xs">
-                      <div v-if="exam.notes" class="truncate" :title="exam.notes">
-                        {{ exam.notes }}
-                      </div>
-                      <span v-else class="text-gray-400">Keine Notizen</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                    </div>
+                  </div>
+
+                  <!-- Notes -->
+                  <div v-if="exam.notes" class="border-t border-gray-100 pt-3">
+                    <div class="text-xs text-gray-500 mb-1">Notizen:</div>
+                    <div class="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+                      {{ exam.notes }}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
         </div>
       </div>
     </div>
