@@ -159,7 +159,7 @@
         <div class="mt-6 text-center">
           <p class="text-sm text-gray-600">
             Noch kein Account? 
-            <NuxtLink to="/register" class="font-medium hover:underline" :style="{ color: primaryColor }">
+            <NuxtLink :to="`/${tenantSlug}/login`" class="font-medium hover:underline" :style="{ color: primaryColor }">
               Registrieren
             </NuxtLink>
           </p>
