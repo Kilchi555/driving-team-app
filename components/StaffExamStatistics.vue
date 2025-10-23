@@ -96,63 +96,20 @@
             </div>
           </div>
 
-          <!-- Recent Exams -->
-          <div class="space-y-4">
-            <h3 class="text-lg font-semibold text-gray-900">Letzte Prüfungen</h3>
-            
-            <div class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                  <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategorie</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schüler</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfer</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ergebnis</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bewertung</th>
-                  </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="exam in recentExams" :key="exam.id" class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ formatDate(exam.exam_date) }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ exam.category }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ exam.student_name }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ exam.examiner_name }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full" :class="{
-                        'bg-green-100 text-green-800': exam.passed,
-                        'bg-red-100 text-red-800': !exam.passed
-                      }">
-                        {{ exam.passed ? 'Bestanden' : 'Nicht bestanden' }}
-                      </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ exam.score || 'N/A' }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
       </div>
     </div>
 
     <!-- Category Details Modal -->
     <div v-if="showDetailsModal" class="fixed inset-0 z-60 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+      <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h3 class="text-lg font-semibold text-gray-900">
-            Details: {{ selectedCategory?.category }}
-          </h3>
+          <div class="flex items-center space-x-3">
+            <h3 class="text-xl font-bold text-gray-900">
+              Prüfungsdetails: {{ selectedCategory?.category }}
+            </h3>
+            <span class="text-sm text-gray-500">{{ staffName }}</span>
+          </div>
           <button
             @click="showDetailsModal = false"
             class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold"
@@ -161,56 +118,64 @@
           </button>
         </div>
         
-        <div class="p-6 space-y-4">
+        <div class="p-6 space-y-6">
           <!-- Category Overview -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-blue-50 p-4 rounded-lg">
-              <div class="text-sm text-blue-700 font-medium mb-1">Gesamt</div>
-              <div class="text-2xl font-bold text-blue-800">{{ selectedCategory?.total }}</div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div class="text-sm text-blue-700 font-medium mb-1">Gesamt Prüfungen</div>
+              <div class="text-3xl font-bold text-blue-800">{{ selectedCategory?.total }}</div>
             </div>
-            <div class="bg-green-50 p-4 rounded-lg">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
               <div class="text-sm text-green-700 font-medium mb-1">Bestanden</div>
-              <div class="text-2xl font-bold text-green-800">{{ selectedCategory?.passed }}</div>
+              <div class="text-3xl font-bold text-green-800">{{ selectedCategory?.passed }}</div>
             </div>
-            <div class="bg-orange-50 p-4 rounded-lg">
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
               <div class="text-sm text-orange-700 font-medium mb-1">Erfolgsquote</div>
-              <div class="text-2xl font-bold text-orange-800">{{ selectedCategory?.successRate }}%</div>
+              <div class="text-3xl font-bold text-orange-800">{{ selectedCategory?.successRate }}%</div>
             </div>
           </div>
 
           <!-- Examiners Statistics -->
           <div class="space-y-4">
-            <h4 class="text-md font-semibold text-gray-900">Prüfer-Statistiken</h4>
+            <h4 class="text-lg font-semibold text-gray-900">Prüfer-Statistiken</h4>
             
-            <div class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div 
                 v-for="examiner in selectedCategory?.examiners" 
                 :key="examiner.name"
-                class="border border-gray-200 rounded-lg p-4"
+                class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
               >
-                <div class="flex justify-between items-start mb-2">
-                  <h5 class="font-medium text-gray-900">{{ examiner.name }}</h5>
-                  <span class="text-sm text-gray-500">{{ examiner.total }} Prüfungen</span>
+                <div class="flex justify-between items-start mb-3">
+                  <h5 class="font-semibold text-gray-900">{{ examiner.name }}</h5>
+                  <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ examiner.total }} Prüfungen</span>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span class="text-green-600 font-medium">{{ examiner.passed }}</span> bestanden
+                <div class="grid grid-cols-2 gap-4 text-sm mb-3">
+                  <div class="text-center">
+                    <div class="text-green-600 font-bold text-lg">{{ examiner.passed }}</div>
+                    <div class="text-gray-600">bestanden</div>
                   </div>
-                  <div>
-                    <span class="text-red-600 font-medium">{{ examiner.failed }}</span> nicht bestanden
+                  <div class="text-center">
+                    <div class="text-red-600 font-bold text-lg">{{ examiner.failed }}</div>
+                    <div class="text-gray-600">nicht bestanden</div>
                   </div>
                 </div>
                 
-                <div class="mt-2">
-                  <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="mt-3">
+                  <div class="w-full bg-gray-200 rounded-full h-3">
                     <div 
-                      class="bg-green-500 h-2 rounded-full"
+                      class="bg-green-500 h-3 rounded-full transition-all duration-300"
                       :style="{ width: `${examiner.successRate}%` }"
                     ></div>
                   </div>
-                  <div class="text-center mt-1">
-                    <span class="text-sm font-medium">{{ examiner.successRate }}% Erfolgsquote</span>
+                  <div class="text-center mt-2">
+                    <span class="text-sm font-semibold" :class="{
+                      'text-green-600': examiner.successRate >= 80,
+                      'text-orange-600': examiner.successRate >= 60 && examiner.successRate < 80,
+                      'text-red-600': examiner.successRate < 60
+                    }">
+                      {{ examiner.successRate }}% Erfolgsquote
+                    </span>
                   </div>
                 </div>
               </div>
@@ -219,33 +184,42 @@
 
           <!-- Detailed Exam List -->
           <div class="space-y-4">
-            <h4 class="text-md font-semibold text-gray-900">Alle Prüfungen dieser Kategorie</h4>
+            <h4 class="text-lg font-semibold text-gray-900">Alle Prüfungen dieser Kategorie</h4>
             
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto border border-gray-200 rounded-lg">
               <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                   <tr>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Schüler</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Prüfer</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ergebnis</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Bewertung</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schüler</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ergebnis</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bewertung</th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                   <tr v-for="exam in selectedCategory?.exams" :key="exam.id" class="hover:bg-gray-50">
-                    <td class="px-4 py-2 text-sm text-gray-900">{{ formatDate(exam.exam_date) }}</td>
-                    <td class="px-4 py-2 text-sm text-gray-900">{{ exam.student_name }}</td>
-                    <td class="px-4 py-2 text-sm text-gray-900">{{ exam.examiner_name }}</td>
-                    <td class="px-4 py-2">
-                      <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full" :class="{
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {{ formatDate(exam.exam_date) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {{ exam.student_name }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {{ exam.examiner_name }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full" :class="{
                         'bg-green-100 text-green-800': exam.passed,
                         'bg-red-100 text-red-800': !exam.passed
                       }">
                         {{ exam.passed ? 'Bestanden' : 'Nicht bestanden' }}
                       </span>
                     </td>
-                    <td class="px-4 py-2 text-sm text-gray-900">{{ exam.score || 'N/A' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span v-if="exam.score" class="font-medium">{{ exam.score }}</span>
+                      <span v-else class="text-gray-400">N/A</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -384,11 +358,6 @@ const categoryStats = computed(() => {
   return Array.from(categories.values()).sort((a, b) => b.total - a.total)
 })
 
-const recentExams = computed(() => {
-  return examResults.value
-    .sort((a, b) => new Date(b.exam_date).getTime() - new Date(a.exam_date).getTime())
-    .slice(0, 10)
-})
 
 // Methods
 const loadExamResults = async () => {
