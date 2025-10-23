@@ -22,13 +22,6 @@
             <span>Kasse</span>
           </button>
           
-          <!-- Calendar Integration Button -->
-          <button
-            @click="openCalendarIntegration"
-            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
-          >
-            <span>📅 Kalender</span>
-          </button>
         </div>
         <button
           @click="$emit('close')"
@@ -358,8 +351,19 @@
         </div>
       </div>
 
-      <!-- Footer with Logout Button -->
+      <!-- Footer with Logout Button and Calendar Link -->
       <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+          <div class="text-sm text-gray-600">
+            Angemeldet als: {{ currentUser?.first_name }} {{ currentUser?.last_name }}
+          </div>
+          <button
+            @click="openCalendarIntegration"
+            class="text-sm text-blue-600 hover:text-blue-800 underline"
+          >
+            Kalender-Link
+          </button>
+        </div>
         <button
           @click="handleLogout"
           class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
@@ -396,9 +400,6 @@
               <span class="text-2xl">📱</span>
               <h4 class="text-md font-semibold text-gray-900">Handy-Kalender Integration</h4>
             </div>
-            <p class="text-sm text-gray-600">
-              Kopieren Sie diesen Link in Ihren Handy-Kalender, um alle Termine automatisch zu synchronisieren:
-            </p>
             
             <div class="space-y-3">
               <div>
@@ -436,9 +437,6 @@
               <span class="text-2xl">👥</span>
               <h4 class="text-md font-semibold text-gray-900">Schüler-Registrierung</h4>
             </div>
-            <p class="text-sm text-gray-600">
-              Teilen Sie diesen Link mit neuen Schülern, damit sie sich direkt registrieren können:
-            </p>
             
             <div class="space-y-3">
               <div>
@@ -1401,7 +1399,7 @@ const shareViaWhatsApp = () => {
 // Share via Email
 const shareViaEmail = () => {
   const subject = 'Fahrstunden-Registrierung'
-  const body = `Hallo!\n\nHier ist der Link zur Registrierung für Fahrstunden:\n${registrationLink.value}\n\nMit freundlichen Grüßen`
+  const body = `Hallo!\n\nHier ist der Link zur Registrierung für Fahrstunden:\n${registrationLink.value}\n\nBeste Grüsse`
   const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   window.open(mailtoUrl)
 }
