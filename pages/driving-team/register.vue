@@ -1,11 +1,11 @@
-<!-- pages/driving-team/login.vue -->
+<!-- pages/driving-team/register.vue -->
 <template>
   <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- Header -->
       <div class="bg-gray-100 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <LoadingLogo size="xl" class="mb-3" :tenant-id="activeTenantId || undefined" />
+          <LoadingLogo size="xl" class="mb-3" :tenant-id="currentTenant?.id || undefined" />
           <h1 class="text-2xl font-bold text-gray-700">
             {{ isAdminRegistration ? 'Admin-Account erstellen' :
                serviceType === 'fahrlektion' ? 'Registrierung für Fahrlektionen' : 
@@ -518,16 +518,14 @@ const submitRegistration = async () => {
 
 // Initialize
 onMounted(async () => {
-  if (tenantParam.value) {
-    try {
-      await loadTenant(tenantParam.value)
-      await loadCategories()
-      await loadTerms()
-    } catch (error) {
-      console.error('❌ Error initializing:', error)
-      await navigateTo('/auswahl')
-    }
-  } else {
+  try {
+    console.log('🏢 Loading tenant:', tenantParam.value)
+    await loadTenant(tenantParam.value)
+    console.log('✅ Tenant loaded:', currentTenant.value)
+    await loadCategories()
+    await loadTerms()
+  } catch (error) {
+    console.error('❌ Error initializing:', error)
     await navigateTo('/auswahl')
   }
 })
