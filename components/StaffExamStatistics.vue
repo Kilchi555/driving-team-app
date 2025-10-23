@@ -400,20 +400,10 @@ const loadExamResults = async () => {
   try {
     const supabase = getSupabase()
     
-    // First, get all appointments for this staff member that have exam results
+    // First, get all appointments for this staff member
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
-      .select(`
-        id,
-        title,
-        category,
-        start_time,
-        student_id,
-        student:users!appointments_student_id_fkey (
-          first_name,
-          last_name
-        )
-      `)
+      .select('id, title, category, start_time, student_id')
       .eq('staff_id', props.currentUser.id)
       .not('status', 'is', null)
     
@@ -444,6 +434,20 @@ const loadExamResults = async () => {
     
     if (examError) throw examError
     
+    // Get student names
+    const studentIds = [...new Set(appointments?.map(apt => apt.student_id).filter(Boolean) || [])]
+    let students: any[] = []
+    
+    if (studentIds.length > 0) {
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('users')
+        .select('id, first_name, last_name')
+        .in('id', studentIds)
+      
+      if (studentsError) throw studentsError
+      students = studentsData || []
+    }
+    
     // Get examiner names
     const examinerIds = [...new Set(examResultsData?.map(exam => exam.examiner_id).filter(Boolean) || [])]
     let examiners: any[] = []
@@ -461,14 +465,15 @@ const loadExamResults = async () => {
     // Combine the data
     examResults.value = (examResultsData || []).map((exam: any) => {
       const appointment = appointments?.find(apt => apt.id === exam.appointment_id)
+      const student = students.find(stu => stu.id === appointment?.student_id)
       const examiner = examiners.find(exp => exp.id === exam.examiner_id)
       
       return {
         id: exam.id,
         exam_date: exam.exam_date,
         category: appointment?.category || 'Unbekannt',
-        student_name: appointment?.student ? 
-          `${(appointment.student as any).first_name || ''} ${(appointment.student as any).last_name || ''}`.trim() : 
+        student_name: student ? 
+          `${student.first_name || ''} ${student.last_name || ''}`.trim() : 
           'Unbekannt',
         examiner_name: examiner ? 
           `${examiner.first_name || ''} ${examiner.last_name || ''}`.trim() : 
