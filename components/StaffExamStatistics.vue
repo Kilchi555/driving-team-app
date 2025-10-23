@@ -101,7 +101,7 @@
     </div>
 
     <!-- Category Details Modal -->
-    <div v-if="showDetailsModal" class="fixed inset-0 z-60 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div v-if="showDetailsModal" class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <div class="flex items-center space-x-3">
@@ -195,6 +195,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prüfer</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ergebnis</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bewertung</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notizen</th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -206,7 +207,12 @@
                       {{ exam.student_name }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {{ exam.examiner_name }}
+                      <span :class="{
+                        'text-gray-500': exam.examiner_name === 'Nicht zugewiesen',
+                        'text-gray-400': exam.examiner_name === 'Unbekannt'
+                      }">
+                        {{ exam.examiner_name }}
+                      </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full" :class="{
@@ -219,6 +225,12 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <span v-if="exam.score" class="font-medium">{{ exam.score }}</span>
                       <span v-else class="text-gray-400">N/A</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                      <div v-if="exam.notes" class="truncate" :title="exam.notes">
+                        {{ exam.notes }}
+                      </div>
+                      <span v-else class="text-gray-400">Keine Notizen</span>
                     </td>
                   </tr>
                 </tbody>
@@ -247,6 +259,7 @@ interface ExamResult {
   examiner_name: string
   passed: boolean
   score?: number
+  notes?: string
   staff_id: string
 }
 
@@ -325,25 +338,28 @@ const categoryStats = computed(() => {
   categories.forEach(category => {
     category.successRate = category.total > 0 ? Math.round((category.passed / category.total) * 100) : 0
     
-    // Group by examiner
+    // Group by examiner (only for assigned examiners)
     const examiners = new Map<string, ExaminerStats>()
     category.exams.forEach(exam => {
-      if (!examiners.has(exam.examiner_name)) {
-        examiners.set(exam.examiner_name, {
-          name: exam.examiner_name,
-          total: 0,
-          passed: 0,
-          failed: 0,
-          successRate: 0
-        })
-      }
-      
-      const examiner = examiners.get(exam.examiner_name)!
-      examiner.total++
-      if (exam.passed) {
-        examiner.passed++
-      } else {
-        examiner.failed++
+      // Only include assigned examiners, skip "Nicht zugewiesen" and "Unbekannt"
+      if (exam.examiner_name && exam.examiner_name !== 'Nicht zugewiesen' && exam.examiner_name !== 'Unbekannt') {
+        if (!examiners.has(exam.examiner_name)) {
+          examiners.set(exam.examiner_name, {
+            name: exam.examiner_name,
+            total: 0,
+            passed: 0,
+            failed: 0,
+            successRate: 0
+          })
+        }
+        
+        const examiner = examiners.get(exam.examiner_name)!
+        examiner.total++
+        if (exam.passed) {
+          examiner.passed++
+        } else {
+          examiner.failed++
+        }
       }
     })
     
@@ -417,7 +433,7 @@ const loadExamResults = async () => {
       students = studentsData || []
     }
     
-    // Get examiner names
+    // Get examiner names (only for non-null examiner_ids)
     const examinerIds = [...new Set(examResultsData?.map(exam => exam.examiner_id).filter(Boolean) || [])]
     let examiners: any[] = []
     
@@ -446,9 +462,10 @@ const loadExamResults = async () => {
           'Unbekannt',
         examiner_name: examiner ? 
           `${examiner.first_name || ''} ${examiner.last_name || ''}`.trim() : 
-          'Unbekannt',
+          (exam.examiner_id ? 'Unbekannt' : 'Nicht zugewiesen'),
         passed: exam.passed,
         score: exam.examiner_behavior_rating,
+        notes: exam.examiner_behavior_notes,
         staff_id: props.currentUser.id
       }
     })
