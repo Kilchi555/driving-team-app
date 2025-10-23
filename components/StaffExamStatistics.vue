@@ -7,7 +7,6 @@
       <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
         <div class="flex items-center space-x-3">
           <h2 class="text-xl font-bold text-gray-900">Prüfungsstatistik</h2>
-          <span class="text-sm text-gray-500">{{ staffName }}</span>
         </div>
         <button
           @click="$emit('close')"
@@ -401,41 +400,84 @@ const loadExamResults = async () => {
   try {
     const supabase = getSupabase()
     
-    // Load exam results for this staff member
-    const { data, error: fetchError } = await supabase
-      .from('exam_results')
+    // First, get all appointments for this staff member that have exam results
+    const { data: appointments, error: appointmentsError } = await supabase
+      .from('appointments')
       .select(`
         id,
-        exam_date,
+        title,
         category,
-        passed,
-        score,
-        staff_id,
-        student:students!exam_results_student_id_fkey (
-          first_name,
-          last_name
-        ),
-        examiner:users!exam_results_examiner_id_fkey (
+        start_time,
+        student_id,
+        student:users!appointments_student_id_fkey (
           first_name,
           last_name
         )
       `)
       .eq('staff_id', props.currentUser.id)
+      .not('status', 'is', null)
+    
+    if (appointmentsError) throw appointmentsError
+    
+    // Then get exam results for these appointments
+    const appointmentIds = appointments?.map(apt => apt.id) || []
+    
+    if (appointmentIds.length === 0) {
+      examResults.value = []
+      console.log('✅ No appointments found for staff member')
+      return
+    }
+    
+    const { data: examResultsData, error: examError } = await supabase
+      .from('exam_results')
+      .select(`
+        id,
+        exam_date,
+        passed,
+        examiner_behavior_rating,
+        examiner_behavior_notes,
+        appointment_id,
+        examiner_id
+      `)
+      .in('appointment_id', appointmentIds)
       .order('exam_date', { ascending: false })
     
-    if (fetchError) throw fetchError
+    if (examError) throw examError
     
-    // Transform the data
-    examResults.value = (data || []).map((exam: any) => ({
-      id: exam.id,
-      exam_date: exam.exam_date,
-      category: exam.category,
-      student_name: `${exam.student?.first_name || ''} ${exam.student?.last_name || ''}`.trim(),
-      examiner_name: `${exam.examiner?.first_name || ''} ${exam.examiner?.last_name || ''}`.trim(),
-      passed: exam.passed,
-      score: exam.score,
-      staff_id: exam.staff_id
-    }))
+    // Get examiner names
+    const examinerIds = [...new Set(examResultsData?.map(exam => exam.examiner_id).filter(Boolean) || [])]
+    let examiners: any[] = []
+    
+    if (examinerIds.length > 0) {
+      const { data: examinersData, error: examinersError } = await supabase
+        .from('users')
+        .select('id, first_name, last_name')
+        .in('id', examinerIds)
+      
+      if (examinersError) throw examinersError
+      examiners = examinersData || []
+    }
+    
+    // Combine the data
+    examResults.value = (examResultsData || []).map((exam: any) => {
+      const appointment = appointments?.find(apt => apt.id === exam.appointment_id)
+      const examiner = examiners.find(exp => exp.id === exam.examiner_id)
+      
+      return {
+        id: exam.id,
+        exam_date: exam.exam_date,
+        category: appointment?.category || 'Unbekannt',
+        student_name: appointment?.student ? 
+          `${(appointment.student as any).first_name || ''} ${(appointment.student as any).last_name || ''}`.trim() : 
+          'Unbekannt',
+        examiner_name: examiner ? 
+          `${examiner.first_name || ''} ${examiner.last_name || ''}`.trim() : 
+          'Unbekannt',
+        passed: exam.passed,
+        score: exam.examiner_behavior_rating,
+        staff_id: props.currentUser.id
+      }
+    })
     
     console.log('✅ Exam results loaded:', examResults.value.length)
     
