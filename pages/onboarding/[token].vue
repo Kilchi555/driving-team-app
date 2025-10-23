@@ -567,21 +567,27 @@ const completeOnboarding = async () => {
     }
 
     // Complete onboarding
+    const requestBody = {
+      token,
+      password: form.password,
+      email: form.email,
+      birthdate: form.birthdate,
+      category: form.category,
+      street: form.street,
+      street_nr: form.street_nr,
+      zip: form.zip,
+      city: form.city,
+      documentUrls
+    }
+    
+    console.log('📤 Sending onboarding completion request:', requestBody)
+    
     const { data, error: completeError } = await useFetch('/api/students/complete-onboarding', {
       method: 'POST',
-      body: {
-        token,
-        password: form.password,
-        email: form.email,
-        birthdate: form.birthdate,
-        category: form.category,
-        street: form.street,
-        street_nr: form.street_nr,
-        zip: form.zip,
-        city: form.city,
-        documentUrls
-      }
+      body: requestBody
     })
+    
+    console.log('📥 Onboarding completion response:', { data: data.value, error: completeError.value })
 
     if (completeError.value || !data.value?.success) {
       throw new Error('Registrierung fehlgeschlagen')
