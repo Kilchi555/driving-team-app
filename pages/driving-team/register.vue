@@ -5,7 +5,11 @@
       <!-- Header -->
       <div class="bg-gray-100 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <LoadingLogo size="xl" class="mb-3" :tenant-id="'64259d68-195a-4c68-8875-f1b44d962830'" />
+          <img 
+            src="https://unyjaetebnaexaflpyoc.supabase.co/storage/v1/object/public/public/Driving_Team_Logo.png" 
+            alt="Driving Team Logo" 
+            class="h-16 w-auto mx-auto mb-3"
+          />
           <h1 class="text-2xl font-bold text-gray-700">
             {{ isAdminRegistration ? 'Admin-Account erstellen' :
                serviceType === 'fahrlektion' ? 'Registrierung für Fahrlektionen' : 
@@ -584,8 +588,8 @@ onMounted(async () => {
       language: 'de'
     }
     
-    // Set the tenant data directly
-    currentTenant.value = tenantData
+    // Set the tenant data directly (using Object.assign to avoid readonly error)
+    Object.assign(currentTenant.value || {}, tenantData)
     console.log('✅ Tenant data set directly:', tenantData.name)
     
     await loadCategories()
