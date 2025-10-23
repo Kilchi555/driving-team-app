@@ -87,6 +87,12 @@
             </p>
 
             <div class="space-y-4">
+              <!-- Hidden dummy fields to prevent password suggestions -->
+              <div style="position: absolute; left: -9999px; opacity: 0;">
+                <input type="text" name="username" autocomplete="username">
+                <input type="password" name="password" autocomplete="current-password">
+              </div>
+              
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
                   Passwort *
@@ -96,8 +102,8 @@
                   type="password"
                   required
                   minlength="8"
-                  autocomplete="new-password"
-                  data-form-type="other"
+                  autocomplete="off"
+                  name="new-password-field"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Mindestens 8 Zeichen"
                 >
@@ -116,8 +122,8 @@
                   v-model="form.confirmPassword"
                   type="password"
                   required
-                  autocomplete="new-password"
-                  data-form-type="other"
+                  autocomplete="off"
+                  name="confirm-password-field"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Passwort wiederholen"
                 >
