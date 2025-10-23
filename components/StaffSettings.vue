@@ -647,7 +647,7 @@ const calendarLink = computed(() => {
 const registrationLink = computed(() => {
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
   const tenantSlug = props.currentUser?.tenant_id
-  return `${baseUrl}/register?tenant=${tenantSlug}`
+  return `${baseUrl}/driving-team?tenant=${tenantSlug}`
 })
 
 const activeExamLocations = computed(() => {
