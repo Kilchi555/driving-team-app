@@ -1,5 +1,14 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4" 
+  <!-- Skip rendering for sub-routes -->
+  <div v-if="isSubRoute" class="min-h-screen flex items-center justify-center p-4">
+    <div class="text-center">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p class="text-gray-600">Lade...</p>
+    </div>
+  </div>
+  
+  <!-- Main login form -->
+  <div v-else class="min-h-screen flex items-center justify-center p-4" 
        :style="{ 
          background: currentBranding?.colors ? 
            `linear-gradient(to bottom right, ${currentBranding.colors.primary}15, ${currentBranding.colors.secondary}15)` : 
@@ -9,7 +18,7 @@
     <!-- Loading State -->
     <div v-if="isLoadingBranding" class="text-center">
       <div class="w-16 h-16 mx-auto mb-4 animate-pulse bg-gray-200 rounded-lg"></div>
-      <p class="text-gray-600">Lade Fahrschul-Design...</p>
+      <p class="text-gray-600">Lade...</p>
     </div>
 
     <!-- Error State -->
@@ -159,7 +168,7 @@
         <div class="mt-6 text-center">
           <p class="text-sm text-gray-600">
             Noch kein Account? 
-            <NuxtLink :to="`/${tenantSlug}/register`" class="font-medium hover:underline" :style="{ color: primaryColor }">
+            <NuxtLink :to="`/services/${tenantSlug}`" class="font-medium hover:underline" :style="{ color: primaryColor }">
               Registrieren
             </NuxtLink>
           </p>
@@ -256,6 +265,12 @@ const loginForm = ref({
 const tenantSlug = computed(() => route.params.slug as string)
 const currentBranding = computed(() => currentTenantBranding.value)
 const headerLogo = computed(() => getLogo('header'))
+
+// Check if this is a sub-route that should be handled by other pages
+const isSubRoute = computed(() => {
+  const currentPath = route.path
+  return currentPath.includes('/services') || currentPath.includes('/register')
+})
 
 // Methods
 const handleLogin = async () => {
@@ -358,6 +373,13 @@ const handleLogout = async () => {
 
 // Lifecycle
 onMounted(async () => {
+  // Skip für bestimmte Unterpfade (services, register)
+  const currentPath = route.path
+  if (currentPath.includes('/services') || currentPath.includes('/register')) {
+    console.log('🔓 Skipping login page for sub-route:', currentPath)
+    return
+  }
+  
   // Lade Tenant-Branding
   try {
     await loadTenantBranding(tenantSlug.value)

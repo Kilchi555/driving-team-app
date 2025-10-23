@@ -646,9 +646,8 @@ const calendarLink = computed(() => {
 
 const registrationLink = computed(() => {
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
-  // For now, use 'driving-team' as the default tenant slug
-  // TODO: Load tenant slug from tenant_id if needed
-  return `${baseUrl}/driving-team/register`
+  // Use the service selection page first
+  return `${baseUrl}/services/driving-team`
 })
 
 const activeExamLocations = computed(() => {

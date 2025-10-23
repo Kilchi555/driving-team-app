@@ -9,6 +9,31 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Warte auf Router-Initialisierung
   if (!process.client) return
   
+  // Skip auth middleware for public pages
+  const publicRoutes = [
+    '/',
+    '/auswahl',
+    '/tenant-register',
+    '/tenant-start',
+    '/tenant-demo',
+    '/tenant-test',
+    '/tenant-debug',
+    '/login',
+    '/register',
+    '/reset-password'
+  ]
+  
+  // Skip for dynamic routes that are public (like /[slug]/services, /[slug]/register)
+  const isPublicRoute = publicRoutes.includes(to.path) || 
+                       to.path.includes('/services') || 
+                       to.path.includes('/register') ||
+                       to.path.match(/^\/[^\/]+\/(services|register)/)
+  
+  if (isPublicRoute) {
+    console.log('🔓 Auth middleware: Skipping public route:', to.path)
+    return
+  }
+  
   const authStore = useAuthStore()
   
   // Initialisiere sofort wenn nicht initialisiert

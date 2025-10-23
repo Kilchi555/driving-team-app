@@ -117,7 +117,7 @@
         <div class="mt-6 text-center">
           <p class="text-sm text-gray-600">
             Noch kein Account? 
-            <NuxtLink to="/register" class="font-medium text-blue-600 hover:underline">
+            <NuxtLink to="/auswahl" class="font-medium text-blue-600 hover:underline">
               Registrieren
             </NuxtLink>
           </p>

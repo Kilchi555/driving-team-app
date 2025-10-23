@@ -30,6 +30,7 @@
           </div>
           <div class="flex items-center gap-2">
             <NuxtLink :to="`/${t.slug}`" class="px-3 py-2 rounded-md bg-gray-900 text-white hover:bg-black">Anmelden</NuxtLink>
+            <NuxtLink :to="`/services/${t.slug}`" class="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Registrieren</NuxtLink>
           </div>
         </li>
       </ul>
