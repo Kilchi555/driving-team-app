@@ -353,17 +353,12 @@
 
       <!-- Footer with Logout Button and Calendar Link -->
       <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-between items-center">
-        <div class="flex items-center space-x-4">
-          <div class="text-sm text-gray-600">
-            Angemeldet als: {{ currentUser?.first_name }} {{ currentUser?.last_name }}
-          </div>
-          <button
-            @click="openCalendarIntegration"
-            class="text-sm text-blue-600 hover:text-blue-800 underline"
-          >
-            Kalender-Link
-          </button>
-        </div>
+        <button
+          @click="openCalendarIntegration"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+        >
+          <span>Kalender-Link</span>
+        </button>
         <button
           @click="handleLogout"
           class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
