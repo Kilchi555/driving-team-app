@@ -485,7 +485,7 @@ const { loadTenant, tenantSlug, tenantId, currentTenant } = useTenant()
 // Get service type from URL parameter
 const serviceType = ref(route.query.service as string || 'fahrlektion')
 
-// Get tenant from URL parameter
+// Get tenant from URL parameter (slug)
 const tenantParam = ref(route.query.tenant as string || '')
 
 // Get role from URL parameter (for admin registration)
@@ -515,6 +515,7 @@ watch(() => route.query.tenant, (newTenant) => {
     loadTenant(tenantParam.value)
   }
 }, { immediate: true })
+
 
 watch(() => route.query.role, (newRole) => {
   if (newRole && newRole !== roleParam.value) {
