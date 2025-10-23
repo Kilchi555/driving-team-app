@@ -11,8 +11,7 @@
             @click="openExamStatistics"
             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
           >
-            <span>📊</span>
-            <span>Prüfungsstatistik</span>
+            <span>Statistik</span>
           </button>
           
           <!-- Cash Control Button -->
@@ -21,6 +20,14 @@
             class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
           >
             <span>Kasse</span>
+          </button>
+          
+          <!-- Calendar Integration Button -->
+          <button
+            @click="openCalendarIntegration"
+            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+          >
+            <span>📅 Kalender</span>
           </button>
         </div>
         <button
@@ -368,6 +375,133 @@
       :current-user="props.currentUser"
       @close="showExamStatistics = false"
     />
+
+    <!-- Calendar Integration Modal -->
+    <div v-if="showCalendarIntegration" class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+          <h3 class="text-lg font-semibold text-gray-900">📅 Kalender-Integration</h3>
+          <button
+            @click="showCalendarIntegration = false"
+            class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold"
+          >
+            ×
+          </button>
+        </div>
+        
+        <div class="p-6 space-y-6">
+          <!-- Calendar Link Section -->
+          <div class="space-y-4">
+            <div class="flex items-center space-x-2">
+              <span class="text-2xl">📱</span>
+              <h4 class="text-md font-semibold text-gray-900">Handy-Kalender Integration</h4>
+            </div>
+            <p class="text-sm text-gray-600">
+              Kopieren Sie diesen Link in Ihren Handy-Kalender, um alle Termine automatisch zu synchronisieren:
+            </p>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Kalender-Link:</label>
+                <div class="flex space-x-2">
+                  <input
+                    :value="calendarLink"
+                    readonly
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  >
+                  <button
+                    @click="copyToClipboard(calendarLink, 'Kalender-Link')"
+                    class="px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
+                  >
+                    Kopieren
+                  </button>
+                </div>
+              </div>
+              
+              <div class="bg-blue-50 p-3 rounded-lg">
+                <div class="flex items-start space-x-2">
+                  <span class="text-blue-600 text-sm">💡</span>
+                  <div class="text-sm text-blue-800">
+                    <strong>Anleitung:</strong> Fügen Sie diesen Link in Ihren Handy-Kalender ein (Google Calendar, Apple Calendar, etc.). 
+                    Alle Ihre Termine werden automatisch synchronisiert.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Registration Link Section -->
+          <div class="space-y-4">
+            <div class="flex items-center space-x-2">
+              <span class="text-2xl">👥</span>
+              <h4 class="text-md font-semibold text-gray-900">Schüler-Registrierung</h4>
+            </div>
+            <p class="text-sm text-gray-600">
+              Teilen Sie diesen Link mit neuen Schülern, damit sie sich direkt registrieren können:
+            </p>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Registrierungs-Link:</label>
+                <div class="flex space-x-2">
+                  <input
+                    :value="registrationLink"
+                    readonly
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                  <button
+                    @click="copyToClipboard(registrationLink, 'Registrierungs-Link')"
+                    class="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+                  >
+                    Kopieren
+                  </button>
+                </div>
+              </div>
+              
+              <div class="bg-green-50 p-3 rounded-lg">
+                <div class="flex items-start space-x-2">
+                  <span class="text-green-600 text-sm">📧</span>
+                  <div class="text-sm text-green-800">
+                    <strong>Verwendung:</strong> Senden Sie diesen Link per SMS, E-Mail oder WhatsApp an neue Schüler. 
+                    Sie können sich direkt registrieren und Termine buchen.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="border-t pt-4">
+            <h4 class="text-md font-semibold text-gray-900 mb-3">Schnellaktionen</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button
+                @click="shareViaWhatsApp"
+                class="flex items-center justify-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                <span>📱</span>
+                <span>WhatsApp teilen</span>
+              </button>
+              <button
+                @click="shareViaEmail"
+                class="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                <span>📧</span>
+                <span>E-Mail teilen</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <Toast
+      :show="showToast"
+      :type="toastType"
+      :title="toastTitle"
+      :message="toastMessage"
+      @close="closeToast"
+    />
   </div>
 </template>
 
@@ -375,6 +509,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { navigateTo } from '#app/composables/router'
 import { getSupabase } from '~/utils/supabase'
+import Toast from '~/components/Toast.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import ExamLocationSearchDropdown from './ExamLocationSearchDropdown.vue'
 import StaffExamStatistics from './StaffExamStatistics.vue'
@@ -419,6 +554,15 @@ const emit = defineEmits<{
 
 // Exam Statistics Modal State
 const showExamStatistics = ref(false)
+
+// Calendar Integration Modal State
+const showCalendarIntegration = ref(false)
+
+// Toast State
+const showToast = ref(false)
+const toastType = ref<'success' | 'error' | 'warning' | 'info'>('info')
+const toastTitle = ref('')
+const toastMessage = ref('')
 
 // State
 const isLoading = ref(false)
@@ -498,6 +642,19 @@ const filteredCategoriesForDurations = computed(() => {
   return availableCategories.value.filter(cat => 
     selectedCategories.value.includes(cat.id)
   )
+})
+
+// Calendar Integration Links
+const calendarLink = computed(() => {
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
+  const staffId = props.currentUser?.id
+  return `${baseUrl}/api/calendar/ics?staff_id=${staffId}`
+})
+
+const registrationLink = computed(() => {
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
+  const tenantSlug = props.currentUser?.tenant_id
+  return `${baseUrl}/register?tenant=${tenantSlug}`
 })
 
 const activeExamLocations = computed(() => {
@@ -1218,6 +1375,63 @@ const openCashControl = () => {
   navigateTo('/staff/cash-control')
 }
 
+// Calendar Integration Funktion
+const openCalendarIntegration = () => {
+  showCalendarIntegration.value = true
+}
+
+// Copy to Clipboard Funktion
+const copyToClipboard = async (text: string, type: string) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    showSuccessToast(`${type} kopiert!`, 'Der Link wurde in die Zwischenablage kopiert.')
+  } catch (err) {
+    console.error('Failed to copy:', err)
+    showErrorToast('Kopieren fehlgeschlagen', 'Bitte kopieren Sie den Link manuell.')
+  }
+}
+
+// Share via WhatsApp
+const shareViaWhatsApp = () => {
+  const message = `Hallo! Hier ist der Link zur Registrierung für Fahrstunden: ${registrationLink.value}`
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+  window.open(whatsappUrl, '_blank')
+}
+
+// Share via Email
+const shareViaEmail = () => {
+  const subject = 'Fahrstunden-Registrierung'
+  const body = `Hallo!\n\nHier ist der Link zur Registrierung für Fahrstunden:\n${registrationLink.value}\n\nMit freundlichen Grüßen`
+  const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  window.open(mailtoUrl)
+}
+
+// Toast functions
+const showSuccessToast = (title: string, message: string = '') => {
+  toastType.value = 'success'
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+}
+
+const showErrorToast = (title: string, message: string = '') => {
+  toastType.value = 'error'
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+}
+
+const showWarningToast = (title: string, message: string = '') => {
+  toastType.value = 'warning'
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+}
+
+const closeToast = () => {
+  showToast.value = false
+}
+
 // Logout Funktion
 const handleLogout = async () => {
   try {
@@ -1233,19 +1447,25 @@ const handleLogout = async () => {
     
     if (error) {
       console.error('❌ Logout error:', error)
-      alert('Fehler beim Abmelden. Bitte versuchen Sie es erneut.')
+      showErrorToast('Abmeldung fehlgeschlagen', 'Bitte versuchen Sie es erneut.')
       return
     }
     
-    // Schließe das Modal
-    emit('close')
+    // Erfolgreiche Abmeldung
+    showSuccessToast('Erfolgreich abgemeldet', 'Sie werden zur Anmeldeseite weitergeleitet.')
     
-    // Navigiere zur Login-Seite
-    await navigateTo('/login')
+    // Kurze Verzögerung für Toast-Anzeige
+    setTimeout(async () => {
+      // Schließe das Modal
+      emit('close')
+      
+      // Navigiere zur Login-Seite
+      await navigateTo('/login')
+    }, 1500)
     
   } catch (err: any) {
     console.error('❌ Logout error:', err)
-    alert('Fehler beim Abmelden. Bitte versuchen Sie es erneut.')
+    showErrorToast('Abmeldung fehlgeschlagen', 'Ein unerwarteter Fehler ist aufgetreten.')
   }
 }
 
