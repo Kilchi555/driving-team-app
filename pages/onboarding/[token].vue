@@ -495,6 +495,15 @@ const dragOver = reactive<Record<string, boolean>>({})
 
 // Load user data by token
 onMounted(async () => {
+  // Redirect if we're on localhost to production domain
+  if (process.client && window.location.hostname === 'localhost') {
+    const token = route.params.token
+    const redirectUrl = `https://simy.ch/onboarding/${token}`
+    console.log('🔄 Redirecting onboarding link from localhost to production:', redirectUrl)
+    window.location.href = redirectUrl
+    return
+  }
+
   try {
     const { data, error: fetchError } = await useFetch('/api/students/verify-onboarding-token', {
       method: 'POST',
