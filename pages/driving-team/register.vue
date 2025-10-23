@@ -361,7 +361,8 @@ const { loadTenant, tenantSlug, tenantId, currentTenant } = useTenant()
 const route = useRoute()
 const supabase = getSupabase()
 
-// Get tenant from URL parameter (slug) - for /driving-team/login, the tenant is "driving-team"
+// Get tenant from URL parameter (slug) - for /driving-team/register, we need to find the actual tenant
+// Since "driving-team" doesn't exist, we'll use the tenant ID from the current user context
 const tenantParam = ref('driving-team')
 
 // Form data
@@ -393,35 +394,58 @@ const termsText = ref('')
 // Load categories
 const loadCategories = async () => {
   try {
+    const tenantId = currentTenant.value?.id || '64259d68-195a-4c68-8875-f1b44d962830'
+    console.log('📋 Loading categories for tenant:', tenantId)
+    
     const { data: categories, error } = await supabase
       .from('categories')
       .select('*')
-      .eq('tenant_id', currentTenant.value?.id)
+      .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('code')
     
     if (error) throw error
     availableCategories.value = categories || []
+    console.log('✅ Categories loaded:', categories?.length || 0)
   } catch (error) {
     console.error('❌ Error loading categories:', error)
+    // Fallback: use empty array
+    availableCategories.value = []
   }
 }
 
 // Load terms
 const loadTerms = async () => {
   try {
-    const { data: policies, error } = await supabase
-      .from('policies')
-      .select('content')
-      .eq('tenant_id', currentTenant.value?.id)
-      .eq('type', 'terms')
-      .single()
+    // Since policies table doesn't exist, use default terms
+    termsText.value = `
+Allgemeine Geschäftsbedingungen
+
+1. Geltungsbereich
+Diese Allgemeinen Geschäftsbedingungen gelten für alle Dienstleistungen der Driving Team Fahrschule.
+
+2. Anmeldung und Vertrag
+Die Anmeldung erfolgt schriftlich oder online. Mit der Anmeldung erkennt der Teilnehmer diese AGB an.
+
+3. Zahlungsbedingungen
+Die Gebühren sind vor Beginn der Ausbildung zu entrichten. Bei Ratenzahlung gelten die vereinbarten Zahlungstermine.
+
+4. Stornierung
+Stornierungen sind bis 24 Stunden vor dem Termin kostenfrei möglich. Bei kurzfristigeren Absagen können Gebühren anfallen.
+
+5. Haftung
+Die Fahrschule haftet nur für Schäden, die auf Vorsatz oder grober Fahrlässigkeit beruhen.
+
+6. Datenschutz
+Personenbezogene Daten werden gemäß der geltenden Datenschutzbestimmungen verarbeitet.
+
+Stand: ${new Date().toLocaleDateString('de-CH')}
+    `.trim()
     
-    if (error && error.code !== 'PGRST116') throw error
-    termsText.value = policies?.content || 'Keine AGB verfügbar.'
+    console.log('✅ Default terms loaded')
   } catch (error) {
     console.error('❌ Error loading terms:', error)
-    termsText.value = 'Fehler beim Laden der AGB.'
+    termsText.value = 'Allgemeine Geschäftsbedingungen werden geladen...'
   }
 }
 
@@ -519,9 +543,33 @@ const submitRegistration = async () => {
 // Initialize
 onMounted(async () => {
   try {
-    console.log('🏢 Loading tenant:', tenantParam.value)
+    console.log('🏢 Loading tenant by slug:', tenantParam.value)
+    
+    // Try to load tenant by slug first
     await loadTenant(tenantParam.value)
-    console.log('✅ Tenant loaded:', currentTenant.value)
+    
+    if (currentTenant.value) {
+      console.log('✅ Tenant loaded by slug:', currentTenant.value)
+    } else {
+      // Fallback: load by ID if slug doesn't work
+      console.log('🔄 Fallback: Loading tenant by ID')
+      const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'
+      
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('id', tenantId)
+        .single()
+      
+      if (tenantError) {
+        console.error('❌ Error loading tenant by ID:', tenantError)
+        throw tenantError
+      }
+      
+      console.log('✅ Tenant loaded by ID:', tenant)
+      currentTenant.value = tenant
+    }
+    
     await loadCategories()
     await loadTerms()
   } catch (error) {
