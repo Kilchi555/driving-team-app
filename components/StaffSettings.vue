@@ -342,6 +342,22 @@
           </div>
         </div>
       </div>
+
+      <!-- Footer with Logout Button -->
+      <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-between items-center">
+        <div class="text-sm text-gray-500">
+          {{ props.currentUser?.first_name }} {{ props.currentUser?.last_name }}
+        </div>
+        <button
+          @click="handleLogout"
+          class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+          <span>Abmelden</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -1182,6 +1198,37 @@ const openCashControl = () => {
   
   // Navigiere zur Staff Cash Control Seite
   navigateTo('/staff/cash-control')
+}
+
+// Logout Funktion
+const handleLogout = async () => {
+  try {
+    const supabase = getSupabase()
+    
+    // Bestätigung vor Logout
+    if (!confirm('Möchten Sie sich wirklich abmelden?')) {
+      return
+    }
+    
+    // Logout aus Supabase
+    const { error } = await supabase.auth.signOut()
+    
+    if (error) {
+      console.error('❌ Logout error:', error)
+      alert('Fehler beim Abmelden. Bitte versuchen Sie es erneut.')
+      return
+    }
+    
+    // Schließe das Modal
+    emit('close')
+    
+    // Navigiere zur Login-Seite
+    await navigateTo('/login')
+    
+  } catch (err: any) {
+    console.error('❌ Logout error:', err)
+    alert('Fehler beim Abmelden. Bitte versuchen Sie es erneut.')
+  }
 }
 
 // Working Hours Methods
