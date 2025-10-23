@@ -403,7 +403,7 @@ const loadExamResults = async () => {
     // First, get all appointments for this staff member
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
-      .select('id, title, category, start_time, student_id')
+      .select('id, title, type, start_time, user_id')
       .eq('staff_id', props.currentUser.id)
       .not('status', 'is', null)
     
@@ -435,7 +435,7 @@ const loadExamResults = async () => {
     if (examError) throw examError
     
     // Get student names
-    const studentIds = [...new Set(appointments?.map(apt => apt.student_id).filter(Boolean) || [])]
+    const studentIds = [...new Set(appointments?.map(apt => apt.user_id).filter(Boolean) || [])]
     let students: any[] = []
     
     if (studentIds.length > 0) {
@@ -465,13 +465,13 @@ const loadExamResults = async () => {
     // Combine the data
     examResults.value = (examResultsData || []).map((exam: any) => {
       const appointment = appointments?.find(apt => apt.id === exam.appointment_id)
-      const student = students.find(stu => stu.id === appointment?.student_id)
+      const student = students.find(stu => stu.id === appointment?.user_id)
       const examiner = examiners.find(exp => exp.id === exam.examiner_id)
       
       return {
         id: exam.id,
         exam_date: exam.exam_date,
-        category: appointment?.category || 'Unbekannt',
+        category: appointment?.type || 'Unbekannt',
         student_name: student ? 
           `${student.first_name || ''} ${student.last_name || ''}`.trim() : 
           'Unbekannt',
