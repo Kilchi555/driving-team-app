@@ -384,6 +384,66 @@
 
       </div>
     </div>
+
+    <!-- Error Modal -->
+    <div v-if="showErrorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg max-w-md w-full p-6">
+        <div class="flex items-center mb-4">
+          <div class="flex-shrink-0">
+            <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-lg font-medium text-gray-900">Registrierung fehlgeschlagen</h3>
+          </div>
+        </div>
+        <div class="mb-6">
+          <p class="text-sm text-gray-600">{{ error }}</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            @click="showErrorModal = false"
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Nochmal versuchen
+          </button>
+          <button
+            @click="goToLogin"
+            class="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            Zum Login
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div v-if="showSuccessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg max-w-md w-full p-6">
+        <div class="flex items-center mb-4">
+          <div class="flex-shrink-0">
+            <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-lg font-medium text-gray-900">Registrierung erfolgreich!</h3>
+          </div>
+        </div>
+        <div class="mb-6">
+          <p class="text-sm text-gray-600">{{ successMessage }}</p>
+        </div>
+        <div class="flex justify-end">
+          <button
+            @click="goToLogin"
+            class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            Zum Login
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -398,6 +458,9 @@ const isLoading = ref(true)
 const isSubmitting = ref(false)
 const error = ref('')
 const passwordError = ref('')
+const successMessage = ref('')
+const showErrorModal = ref(false)
+const showSuccessModal = ref(false)
 const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 8)
 const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.password !== form.confirmPassword)
 
@@ -517,6 +580,23 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
+// Show error message
+const showErrorMessage = (message: string) => {
+  error.value = message
+  showErrorModal.value = true
+}
+
+// Show success message
+const showSuccessMessage = (message: string) => {
+  successMessage.value = message
+  showSuccessModal.value = true
+}
+
+// Navigate to login
+const goToLogin = async () => {
+  await navigateTo('/login')
+}
+
 // Handle next step
 const handleNextStep = async () => {
   // Validate current step
@@ -589,16 +669,25 @@ const completeOnboarding = async () => {
     
     console.log('📥 Onboarding completion response:', { data: data.value, error: completeError.value })
 
-    if (completeError.value || !data.value?.success) {
-      throw new Error('Registrierung fehlgeschlagen')
+    if (completeError.value) {
+      console.error('❌ Complete error details:', completeError.value)
+      const errorMessage = completeError.value.data?.message || completeError.value.message || 'Unbekannter Fehler'
+      throw new Error(`Registrierung fehlgeschlagen: ${errorMessage}`)
     }
 
-    // Success - redirect to login
-    alert('Registrierung erfolgreich abgeschlossen! Du kannst dich jetzt anmelden.')
-    await navigateTo('/login')
+    if (!data.value?.success) {
+      throw new Error('Registrierung fehlgeschlagen: Server hat keinen Erfolg zurückgegeben')
+    }
+
+    // Success - show success message and redirect
+    showSuccessMessage('Registrierung erfolgreich abgeschlossen! Du wirst zum Login weitergeleitet...')
+    setTimeout(async () => {
+      await navigateTo('/login')
+    }, 2000)
 
   } catch (err: any) {
-    error.value = err.message || 'Fehler beim Abschliessen der Registrierung'
+    console.error('❌ Onboarding completion error:', err)
+    showErrorMessage(err.message || 'Fehler beim Abschliessen der Registrierung')
   } finally {
     isSubmitting.value = false
   }

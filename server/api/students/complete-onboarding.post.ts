@@ -72,9 +72,20 @@ export default defineEventHandler(async (event) => {
 
     if (authError) {
       console.error('❌ Auth user creation error:', authError)
+      
+      // Provide user-friendly error messages
+      let userMessage = 'Fehler beim Erstellen des Benutzerkontos'
+      if (authError.message.includes('already registered')) {
+        userMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich direkt an.'
+      } else if (authError.message.includes('password')) {
+        userMessage = 'Das Passwort entspricht nicht den Anforderungen. Bitte wähle ein stärkeres Passwort.'
+      } else if (authError.message.includes('email')) {
+        userMessage = 'Die E-Mail-Adresse ist ungültig. Bitte überprüfe deine Eingabe.'
+      }
+      
       throw createError({
         statusCode: 400,
-        statusMessage: `Failed to create account: ${authError.message}`
+        statusMessage: userMessage
       })
     }
 
@@ -105,10 +116,19 @@ export default defineEventHandler(async (event) => {
       .eq('id', user.id)
 
     if (updateError) {
-      console.error('User update error:', updateError)
+      console.error('❌ User update error:', updateError)
+      
+      // Provide user-friendly error messages
+      let userMessage = 'Fehler beim Speichern der Profildaten'
+      if (updateError.message.includes('duplicate')) {
+        userMessage = 'Ein Benutzer mit diesen Daten existiert bereits.'
+      } else if (updateError.message.includes('constraint')) {
+        userMessage = 'Die eingegebenen Daten sind ungültig. Bitte überprüfe deine Angaben.'
+      }
+      
       throw createError({
         statusCode: 400,
-        statusMessage: `Failed to update profile: ${updateError.message}`
+        statusMessage: userMessage
       })
     }
 
