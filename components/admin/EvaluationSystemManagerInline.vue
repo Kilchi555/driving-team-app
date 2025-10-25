@@ -74,7 +74,12 @@
                 <div class="flex items-center space-x-3">
                   <div class="w-4 h-4 rounded-full" :style="{ backgroundColor: category.color }"></div>
                   <div>
-                    <h4 class="text-lg font-semibold text-gray-900">{{ category.name }}</h4>
+                    <h4 class="text-lg font-semibold text-gray-900">
+                      {{ category.name }}
+                      <span v-if="category.is_theory" class="ml-2 text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                        📚 Theorie
+                      </span>
+                    </h4>
                     <p class="text-sm text-gray-600">{{ category.description }}</p>
                   </div>
                 </div>
@@ -362,6 +367,23 @@
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="1"
                 />
+              </div>
+
+              <!-- Is Theory Checkbox -->
+              <div>
+                <label class="flex items-center space-x-2">
+                  <input
+                    v-model="categoryForm.is_theory"
+                    type="checkbox"
+                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span class="text-sm font-medium text-gray-700">
+                    📚 Theorie-Kategorie
+                  </span>
+                </label>
+                <p class="text-xs text-gray-500 mt-1">
+                  Diese Kategorie wird nur bei Theorielektionen angezeigt
+                </p>
               </div>
 
               <!-- Info: Kategorie gilt für alle Fahrkategorien -->
@@ -761,7 +783,8 @@ const categoryForm = ref({
   name: '',
   description: '',
   color: '#3B82F6',
-  display_order: 0
+  display_order: 0,
+  is_theory: false
 })
 
 const criteriaForm = ref({
@@ -852,7 +875,7 @@ const loadData = async () => {
     // Load evaluation categories (filtered by tenant)
     const { data: evalCatData, error: evalCatError } = await supabase
       .from('evaluation_categories')
-      .select('id, name, description, color, display_order, is_active, tenant_id')
+      .select('id, name, description, color, display_order, is_active, tenant_id, is_theory')
       .eq('is_active', true)
       .eq('tenant_id', userProfile.tenant_id)
       .order('display_order')
@@ -862,7 +885,7 @@ const loadData = async () => {
       // Fallback: try without driving_categories column
       const { data: evalCatDataFallback, error: evalCatErrorFallback } = await supabase
         .from('evaluation_categories')
-        .select('id, name, description, color, display_order, is_active, tenant_id')
+        .select('id, name, description, color, display_order, is_active, tenant_id, is_theory')
         .eq('is_active', true)
         .eq('tenant_id', userProfile.tenant_id)
         .order('display_order')
@@ -1209,7 +1232,8 @@ const closeCategoryModal = () => {
     name: '',
     description: '',
     color: '#3B82F6',
-    display_order: 0
+    display_order: 0,
+    is_theory: false
   }
 }
 
@@ -1219,7 +1243,8 @@ const saveCategory = async () => {
       name: categoryForm.value.name,
       description: categoryForm.value.description,
       color: categoryForm.value.color,
-      display_order: categoryForm.value.display_order
+      display_order: categoryForm.value.display_order,
+      is_theory: categoryForm.value.is_theory
     }
 
     if (editingCategory.value) {

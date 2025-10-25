@@ -216,6 +216,7 @@ const isAdmin = computed(() => {
         .from('users')
         .select(`
           id,
+          auth_user_id,
           email,
           role,
           first_name,

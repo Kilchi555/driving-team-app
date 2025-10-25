@@ -90,6 +90,81 @@ export const useLoadingLogo = () => {
       isLoadingLogo.value = false
     }
   }
+
+  // Get tenant logo by slug (with fallback to server API)
+  const getTenantLogoBySlug = async (tenantSlug?: string): Promise<string | null> => {
+    if (!tenantSlug) {
+      console.log('🖼️ No tenant slug provided, no logo available')
+      return null
+    }
+    
+    try {
+      isLoadingLogo.value = true
+      logoError.value = null
+      
+      console.log('🔄 Loading tenant logo by slug:', tenantSlug)
+      
+      // Load from database
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('id, logo_square_url, logo_wide_url, logo_url, name')
+        .eq('slug', tenantSlug)
+        .eq('is_active', true)
+        .single()
+      
+      if (error) {
+        console.warn('⚠️ Tenant not found for slug (client query):', tenantSlug, '→ trying server API fallback')
+        // Fallback to server API (bypasses RLS)
+        try {
+          const serverResp: any = await $fetch(`/api/tenants/by-slug`, { params: { slug: tenantSlug } })
+          if (serverResp?.success && serverResp.data) {
+            const logoUrl = serverResp.data.logo_square_url || serverResp.data.logo_wide_url || serverResp.data.logo_url || null
+            
+            // Cache the result using the tenant ID
+            if (serverResp.data.id) {
+              logoCache.value.set(serverResp.data.id, {
+                url: logoUrl,
+                timestamp: Date.now(),
+                tenantId: serverResp.data.id
+              })
+            }
+            
+            console.log('✅ Tenant logo loaded via server API:', serverResp.data.name, logoUrl)
+            return logoUrl
+          }
+        } catch (e) {
+          console.warn('Server API fallback failed:', e)
+        }
+        return null
+      }
+      
+      // Prefer square logo, then wide, then standard
+      const logoUrl = data.logo_square_url || data.logo_wide_url || data.logo_url || null
+      
+      // Cache the result
+      logoCache.value.set(data.id, {
+        url: logoUrl,
+        timestamp: Date.now(),
+        tenantId: data.id
+      })
+      
+      console.log('✅ Tenant logo loaded and cached:', data.name, logoUrl)
+      
+      // Preload the image to avoid flash
+      if (process.client && logoUrl) {
+        preloadLogo(logoUrl)
+      }
+      
+      return logoUrl
+      
+    } catch (err) {
+      console.error('❌ Unexpected error loading tenant logo by slug:', err)
+      logoError.value = err instanceof Error ? err.message : 'Failed to load logo'
+      return null
+    } finally {
+      isLoadingLogo.value = false
+    }
+  }
   
   // Load logo for current user's tenant
   const loadCurrentTenantLogo = async (): Promise<string | null> => {
@@ -178,6 +253,7 @@ export const useLoadingLogo = () => {
     
     // Methods
     getTenantLogo,
+    getTenantLogoBySlug,
     loadCurrentTenantLogo,
     preloadLogo,
     clearLogoCache,

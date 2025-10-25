@@ -22,6 +22,7 @@
             <span>Kasse</span>
           </button>
           
+          
         </div>
         <button
           @click="$emit('close')"
@@ -148,6 +149,23 @@
                 </div>
               </div>
               
+            </div>
+          </div>
+        </div>
+
+        <!-- Device Manager -->
+        <div class="border border-gray-200 rounded-lg">
+          <button
+            @click="toggleSection('deviceManager')"
+            class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+          >
+            <span class="font-medium text-gray-900">📱 Geräte-Verwaltung</span>
+            <span class="text-gray-600 font-bold">{{ openSections.deviceManager ? '−' : '+' }}</span>
+          </button>
+          
+          <div v-if="openSections.deviceManager" class="px-4 pb-4 border-t border-gray-100">
+            <div class="mt-4">
+              <DeviceManager />
             </div>
           </div>
         </div>
@@ -484,6 +502,8 @@
             </div>
           </div>
         </div>
+
+
       </div>
     </div>
 
@@ -506,7 +526,9 @@ import Toast from '~/components/Toast.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import ExamLocationSearchDropdown from './ExamLocationSearchDropdown.vue'
 import StaffExamStatistics from './StaffExamStatistics.vue'
+import DeviceManager from './DeviceManager.vue'
 import { useStaffWorkingHours, WEEKDAYS, type WorkingDayForm, type WorkingHourBlock } from '~/composables/useStaffWorkingHours'
+import { useTenant } from '~/composables/useTenant'
 
 interface Props {
   currentUser: any
@@ -545,6 +567,9 @@ const emit = defineEmits<{
   'settings-updated': []
 }>()
 
+// Tenant composable
+const { currentTenant } = useTenant()
+
 // Exam Statistics Modal State
 const showExamStatistics = ref(false)
 
@@ -577,7 +602,8 @@ const openSections = reactive({
   worktime: false,
   notifications: false,
   workingStats: false,    
-  examLocations: false 
+  examLocations: false,
+  deviceManager: false
 })
 
 // NEUE STATE für Prüfungsstandorte
@@ -1430,10 +1456,7 @@ const handleLogout = async () => {
   try {
     const supabase = getSupabase()
     
-    // Bestätigung vor Logout
-    if (!confirm('Möchten Sie sich wirklich abmelden?')) {
-      return
-    }
+    // Direct logout without confirmation for better UX
     
     // Logout aus Supabase
     const { error } = await supabase.auth.signOut()
@@ -1452,8 +1475,12 @@ const handleLogout = async () => {
       // Schließe das Modal
       emit('close')
       
-      // Navigiere zur Login-Seite
-      await navigateTo('/login')
+      // Navigiere zur tenant-spezifischen Login-Seite
+      if (currentTenant.value?.slug) {
+        await navigateTo(`/${currentTenant.value.slug}`)
+      } else {
+        await navigateTo('/')
+      }
     }, 1500)
     
   } catch (err: any) {
@@ -1674,11 +1701,11 @@ const clearWorkingHours = async () => {
     initializeWorkingHoursForm()
     
     console.log('✅ All working hours cleared')
-    alert('✅ Alle Arbeitszeiten wurden gelöscht!')
+    showSuccessToast('Arbeitszeiten gelöscht', 'Alle Arbeitszeiten wurden erfolgreich gelöscht!')
     
   } catch (err: any) {
     console.error('❌ Error clearing working hours:', err)
-    alert(`❌ Fehler beim Löschen: ${err.message}`)
+    showErrorToast('Fehler beim Löschen', err.message)
   } finally {
     isSavingWorkingHours.value = false
   }
@@ -1689,6 +1716,11 @@ onMounted(async () => {
   await loadData()
   await loadWorkingHoursData()
   await loadExamLocations()
+  
+  // Load working hours from composable
+  if (props.currentUser?.id) {
+    await loadWorkingHours(props.currentUser.id)
+  }
   
   // Initialize working hours form after data is loaded
   initializeWorkingHoursForm()

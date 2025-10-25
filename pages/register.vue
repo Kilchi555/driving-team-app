@@ -466,10 +466,12 @@ import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
+import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
 
 const supabase = getSupabase()
 const route = useRoute()
+const { showError, showSuccess } = useUIStore()
 
 // Tenant Management
 const { loadTenant, tenantSlug, tenantId, currentTenant } = useTenant()
@@ -732,7 +734,7 @@ const handleFileUpload = (event: Event) => {
   if (file) {
     // Check file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Datei zu groß! Maximale Größe: 5MB')
+      showError('Datei zu groß', 'Maximale Größe: 5MB')
       return
     }
     
@@ -1032,11 +1034,11 @@ const submitRegistration = async () => {
         
         if (loginError) {
           console.warn('Auto-login failed, user needs to login manually:', loginError)
-          alert('🎉 Admin-Account erfolgreich erstellt!\n\nBitte loggen Sie sich mit Ihren Zugangsdaten ein.')
-          await navigateTo('/login')
+          showSuccess('Admin-Account erstellt', 'Bitte loggen Sie sich mit Ihren Zugangsdaten ein.')
+          await navigateTo('/')
         } else {
           console.log('✅ Auto-login successful for admin')
-          alert('🎉 Admin-Account erfolgreich erstellt!\n\nSie werden automatisch angemeldet...')
+          showSuccess('Admin-Account erstellt', 'Sie werden automatisch angemeldet...')
           
           // Clear saved form data
           if (process.client) {
@@ -1047,7 +1049,7 @@ const submitRegistration = async () => {
         }
       } catch (autoLoginError) {
         console.warn('Auto-login failed:', autoLoginError)
-        alert('🎉 Admin-Account erfolgreich erstellt!\n\nBitte loggen Sie sich mit Ihren Zugangsdaten ein.')
+        showSuccess('Admin-Account erstellt', 'Bitte loggen Sie sich mit Ihren Zugangsdaten ein.')
         
         // Clear saved form data
         if (process.client) {
@@ -1057,7 +1059,7 @@ const submitRegistration = async () => {
         await navigateTo('/login')
       }
     } else {
-      alert('🎉 Registrierung erfolgreich!\n\nIhr Account wurde erstellt. Bitte prüfen Sie Ihre E-Mails zur Bestätigung und loggen Sie sich dann ein.')
+      showSuccess('Registrierung erfolgreich', 'Ihr Account wurde erstellt. Bitte prüfen Sie Ihre E-Mails zur Bestätigung und loggen Sie sich dann ein.')
       
       // Clear saved form data after successful registration
       if (process.client) {
@@ -1082,7 +1084,7 @@ const submitRegistration = async () => {
     }
     
     // ✅ BENUTZERFREUNDLICH: Zeige Fehler an, ohne Eingaben zu verlieren
-    alert(`❌ Registrierung nicht möglich:\n\n${errorMessage}\n\nBitte korrigieren Sie die Eingaben und versuchen Sie es erneut.`)
+    showError('Registrierung fehlgeschlagen', `${errorMessage}\n\nBitte korrigieren Sie die Eingaben und versuchen Sie es erneut.`)
     
   } finally {
     isSubmitting.value = false
@@ -1482,7 +1484,7 @@ onMounted(async () => {
       await loadTenant(derivedSlug)
     } else {
       console.error('❌ Unknown domain, cannot derive tenant:', hostname)
-      alert('Bitte verwenden Sie den Registrierungs-Link Ihrer Fahrschule oder wählen Sie einen Anbieter aus.')
+      showError('Unbekannte Domain', 'Bitte verwenden Sie den Registrierungs-Link Ihrer Fahrschule oder wählen Sie einen Anbieter aus.')
       await navigateTo('/auswahl')
       return
     }
@@ -1491,7 +1493,7 @@ onMounted(async () => {
   // Verify tenant is loaded for customer registration
   if (!isAdminRegistration.value && !activeTenantId.value) {
     console.error('❌ No tenant loaded for customer registration, redirecting to tenant selection')
-    alert('Bitte wählen Sie zuerst einen Anbieter aus.')
+    showError('Anbieter erforderlich', 'Bitte wählen Sie zuerst einen Anbieter aus.')
     await navigateTo('/auswahl')
     return
   }

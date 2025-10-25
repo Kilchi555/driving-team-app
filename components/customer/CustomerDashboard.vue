@@ -266,6 +266,33 @@
       :lessons="upcomingAppointments"
       @close="showUpcomingLessonsModal = false"
     />
+
+    <!-- Logout Button - At bottom of content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex justify-end">
+        <button
+          @click="handleLogout"
+          :disabled="isLoggingOut"
+          class="flex items-center space-x-2 px-4 py-3 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 disabled:opacity-50 transition-all duration-200 transform hover:scale-105"
+        >
+          <svg 
+            class="w-5 h-5" 
+            :class="{ 'animate-spin': isLoggingOut }" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path 
+              stroke-linecap="round" 
+              stroke-linejoin="round" 
+              stroke-width="2" 
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+            />
+          </svg>
+          <span class="font-medium">{{ isLoggingOut ? 'Wird abgemeldet...' : 'Abmelden' }}</span>
+        </button>
+      </div>
+    </div>
   </div>
   
 </template>
@@ -299,6 +326,7 @@ const staff = ref<any[]>([])
 const lessons = ref<any[]>([]) 
 const showEvaluationsModal = ref(false) 
 const showUpcomingLessonsModal = ref(false)
+const isLoggingOut = ref(false)
 
 // In CustomerDashboard.vue - vor dem Template:
 const isServerSide = process.server
@@ -423,6 +451,7 @@ const getFirstName = () => {
   
   return firstName || currentUser.value.email?.split('@')[0] || 'Unbekannt'
 }
+
 
 const formatDateTime = (dateString: string | null | undefined) => {
   if (!dateString) return 'Kein Datum/Zeit'
@@ -755,12 +784,24 @@ const loadStaff = async () => {
 }
 
 const handleLogout = async () => {
+  if (isLoggingOut.value) return
+  
   try {
+    isLoggingOut.value = true
+    console.log('🚪 Logging out user...')
+    
     const supabase = getSupabase()
     await authStore.logout(supabase)
+    
+    console.log('✅ Logout successful, redirecting to home...')
     await navigateTo('/')
+    
   } catch (err: any) {
     console.error('❌ Fehler beim Abmelden:', err)
+    // Still redirect to home even if logout fails
+    await navigateTo('/')
+  } finally {
+    isLoggingOut.value = false
   }
 }
 

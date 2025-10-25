@@ -611,7 +611,12 @@ const showSuccessMessage = (message: string) => {
 
 // Navigate to login
 const goToLogin = async () => {
-  await navigateTo('/login')
+  // Try to navigate to tenant-specific login if we have tenant info
+  if (userData.value?.tenant_slug) {
+    await navigateTo(`/${userData.value.tenant_slug}`)
+  } else {
+    await navigateTo('/')
+  }
 }
 
 // Handle next step
@@ -699,7 +704,12 @@ const completeOnboarding = async () => {
     // Success - show success message and redirect
     showSuccessMessage('Registrierung erfolgreich abgeschlossen! Du wirst zum Login weitergeleitet...')
     setTimeout(async () => {
-      await navigateTo('/login')
+      // Try to navigate to tenant-specific login if we have tenant info
+      if (userData.value?.tenant_slug) {
+        await navigateTo(`/${userData.value.tenant_slug}`)
+      } else {
+        await navigateTo('/')
+      }
     }, 2000)
 
   } catch (err: any) {

@@ -32,12 +32,13 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useLoadingLogo } from '~/composables/useLoadingLogo'
 
 // Loading logo system
-const { loadCurrentTenantLogo, isLoadingLogo, getTenantLogo, logoCache } = useLoadingLogo()
+const { loadCurrentTenantLogo, isLoadingLogo, getTenantLogo, getTenantLogoBySlug, logoCache } = useLoadingLogo()
 
 interface Props {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   alt?: string
   tenantId?: string
+  tenantSlug?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -78,7 +79,7 @@ const handleImageLoad = () => {
 }
 
 // Function to load logo for a specific tenant
-const loadLogoForTenant = async (tenantId: string | null) => {
+const loadLogoForTenant = async (tenantId: string | null, tenantSlug?: string) => {
   try {
     if (tenantId) {
       console.log('🎯 LoadingLogo: Using explicit tenantId:', tenantId)
@@ -98,6 +99,9 @@ const loadLogoForTenant = async (tenantId: string | null) => {
       } else {
         tenantLogo.value = await getTenantLogo(tenantId)
       }
+    } else if (tenantSlug) {
+      console.log('🎯 LoadingLogo: Using tenantSlug:', tenantSlug)
+      tenantLogo.value = await getTenantLogoBySlug(tenantSlug)
     } else {
       console.log('🔄 LoadingLogo: Auto-detecting tenant from current user')
       tenantLogo.value = await loadCurrentTenantLogo()
@@ -111,14 +115,17 @@ const loadLogoForTenant = async (tenantId: string | null) => {
 
 // Load tenant logo on mount with immediate cache check
 onMounted(async () => {
-  await loadLogoForTenant(props.tenantId)
+  await loadLogoForTenant(props.tenantId, props.tenantSlug)
 })
 
-// Watch for changes in tenantId prop
-watch(() => props.tenantId, async (newTenantId, oldTenantId) => {
-  if (newTenantId !== oldTenantId) {
-    console.log('🔄 LoadingLogo: tenantId prop changed:', { from: oldTenantId, to: newTenantId })
-    await loadLogoForTenant(newTenantId)
+// Watch for changes in tenantId or tenantSlug props
+watch([() => props.tenantId, () => props.tenantSlug], async ([newTenantId, newTenantSlug], [oldTenantId, oldTenantSlug]) => {
+  if (newTenantId !== oldTenantId || newTenantSlug !== oldTenantSlug) {
+    console.log('🔄 LoadingLogo: props changed:', { 
+      tenantId: { from: oldTenantId, to: newTenantId },
+      tenantSlug: { from: oldTenantSlug, to: newTenantSlug }
+    })
+    await loadLogoForTenant(newTenantId, newTenantSlug)
   }
 })
 </script>

@@ -198,6 +198,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, definePageMeta, useHead } from '#imports'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTenant } from '~/composables/useTenant'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { getSupabase } from '~/utils/supabase'
@@ -242,41 +243,11 @@ const {
   getLogo
 } = useTenantBranding()
 
-const { login, logout, isLoggedIn, loading } = useAuthStore()
+const authStore = useAuthStore()
+const { login, logout, isLoggedIn, loading } = authStore
 const { showError, showSuccess } = useUIStore()
+const { currentTenant } = useTenant()
 const supabase = getSupabase()
-
-// Computed
-const isCheckingSession = computed<boolean>(() => Boolean((loading as any).value ?? loading))
-const isAuthenticated = computed<boolean>(() => Boolean((isLoggedIn as any).value ?? isLoggedIn))
-
-// State
-const isLoading = ref(false)
-const loginError = ref<string | null>(null)
-const showPassword = ref(false)
-
-const loginForm = ref({
-  email: '',
-  password: '',
-  rememberMe: false
-})
-
-// Computed
-const tenantSlug = computed(() => route.params.slug as string)
-const currentBranding = computed(() => currentTenantBranding.value)
-const headerLogo = computed(() => getLogo('header'))
-
-// Check if this is a sub-route that should be handled by other pages
-const isSubRoute = computed(() => {
-  const currentPath = route.path
-  return currentPath.includes('/services') || currentPath.includes('/register')
-})
-
-// Check if this is specifically a register route
-const isRegisterRoute = computed(() => {
-  const currentPath = route.path
-  return currentPath.includes('/register')
-})
 
 // Methods
 const handleLogin = async () => {
@@ -318,7 +289,98 @@ const handleLogin = async () => {
       return
     }
     
-    console.log('✅ Login successful, redirecting...')
+    console.log('✅ Login successful, checking device security...')
+    
+    // Check device security after successful login
+    try {
+      const user = authStore.userProfile
+      if (user?.id) {
+        console.log('🔒 Checking device security for user:', user.id)
+        console.log('🔍 User profile data:', user)
+        
+        // Use auth_user_id for device tracking (this is the auth.users.id)
+        const authUserId = user.auth_user_id || user.id
+        console.log('🔑 Using auth_user_id for device tracking:', authUserId)
+        
+        // Generate device fingerprint
+        const deviceFingerprint = await generateDeviceFingerprint()
+        if (!deviceFingerprint) {
+          console.warn('Could not generate device fingerprint')
+          return
+        }
+        
+        // Use API route to handle device security (bypasses RLS)
+        try {
+          console.log('🔒 Checking device via API...')
+          
+          const checkResponse = await $fetch('/api/admin/device-security-handler', {
+            method: 'POST',
+            body: {
+              action: 'check',
+              userId: authUserId,
+              deviceFingerprint: deviceFingerprint
+            }
+          })
+          
+          if (!checkResponse.success) {
+            console.error('Error checking device:', checkResponse.error)
+            return
+          }
+          
+          if (!checkResponse.deviceExists) {
+            console.log('⚠️ Unknown device detected, registering...')
+            
+            const registerResponse = await $fetch('/api/admin/device-security-handler', {
+              method: 'POST',
+              body: {
+                action: 'register',
+                userId: authUserId,
+                deviceFingerprint: deviceFingerprint,
+                userAgent: navigator.userAgent,
+                ipAddress: '127.0.0.1' // TODO: Get real IP
+              }
+            })
+            
+            if (registerResponse.success) {
+              console.log('✅ New device registered:', registerResponse.device.id)
+              showSuccess('Neues Gerät erkannt', 'Dieses Gerät wurde für zusätzliche Sicherheit registriert.')
+            } else {
+              console.error('Error registering device:', registerResponse.error)
+            }
+          } else {
+            console.log('✅ Known device detected, updating last seen')
+            
+            const updateResponse = await $fetch('/api/admin/device-security-handler', {
+              method: 'POST',
+              body: {
+                action: 'update',
+                userId: authUserId,
+                deviceFingerprint: deviceFingerprint
+              }
+            })
+            
+            if (updateResponse.success) {
+              const device = checkResponse.device
+              if (device.is_trusted) {
+                console.log('✅ Trusted device confirmed')
+              } else {
+                console.log('⚠️ Untrusted device detected')
+                showSuccess('Gerät erkannt', 'Dieses Gerät ist bekannt, aber noch nicht als vertrauenswürdig markiert.')
+              }
+            } else {
+              console.error('Error updating device:', updateResponse.error)
+            }
+          }
+        } catch (apiError) {
+          console.log('⚠️ Device tracking API not available:', apiError)
+          // Continue without device tracking
+        }
+      }
+    } catch (deviceError) {
+      console.warn('⚠️ Device security check failed:', deviceError)
+      // Don't block login for device security errors
+    }
+    
     showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
     
     // Check if there's a redirect parameter first
@@ -340,7 +402,6 @@ const handleLogin = async () => {
     }
     
     // Weiterleitung basierend auf Rolle (fallback)
-    const authStore = useAuthStore()
     const user = authStore.userProfile
     if (user?.role === 'admin' || user?.role === 'tenant_admin') {
       router.push('/admin')
@@ -369,13 +430,105 @@ const handleLogout = async () => {
   try {
     await logout(supabase)
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
-    // Seite neu laden um den Zustand zurückzusetzen
-    window.location.reload()
+    // Zur tenant-spezifischen Login-Seite weiterleiten
+    if (currentTenant.value?.slug) {
+      router.push(`/${currentTenant.value.slug}`)
+    } else {
+      router.push('/')
+    }
   } catch (error) {
     console.error('Logout error:', error)
     showError('Fehler', 'Fehler beim Abmelden.')
   }
 }
+
+// Device fingerprinting functions
+const generateDeviceFingerprint = async (): Promise<string | null> => {
+  if (!process.client) return null
+  
+  try {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      ctx.textBaseline = 'top'
+      ctx.font = '14px Arial'
+      ctx.fillText('Browser fingerprint', 2, 2)
+    }
+    
+    const fingerprint = {
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      platform: navigator.platform,
+      screenResolution: `${screen.width}x${screen.height}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      canvas: canvas.toDataURL(),
+      cookieEnabled: navigator.cookieEnabled,
+      doNotTrack: navigator.doNotTrack
+    }
+    
+    // Create a hash-like identifier from the fingerprint
+    const fingerprintString = JSON.stringify(fingerprint)
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(fingerprintString))
+    const hashArray = Array.from(new Uint8Array(hash))
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    
+    return hashHex.substring(0, 16) // Ensure it fits in VARCHAR(17)
+  } catch (error) {
+    console.error('Error generating device fingerprint:', error)
+    return null
+  }
+}
+
+const getDeviceName = (userAgent: string): string => {
+  if (userAgent.includes('Mobile') || userAgent.includes('Android') || userAgent.includes('iPhone')) {
+    return 'Mobile Device'
+  } else if (userAgent.includes('Tablet') || userAgent.includes('iPad')) {
+    return 'Tablet'
+  } else if (userAgent.includes('Chrome')) {
+    return 'Chrome Browser'
+  } else if (userAgent.includes('Firefox')) {
+    return 'Firefox Browser'
+  } else if (userAgent.includes('Safari')) {
+    return 'Safari Browser'
+  } else if (userAgent.includes('Edge')) {
+    return 'Edge Browser'
+  } else {
+    return 'Unknown Browser'
+  }
+}
+
+// Computed
+const isCheckingSession = computed<boolean>(() => Boolean((loading as any).value ?? loading))
+const isAuthenticated = computed<boolean>(() => Boolean((isLoggedIn as any).value ?? isLoggedIn))
+
+// State
+const isLoading = ref(false)
+const loginError = ref<string | null>(null)
+const showPassword = ref(false)
+
+const loginForm = ref({
+  email: '',
+  password: '',
+  rememberMe: false
+})
+
+// Computed
+const tenantSlug = computed(() => route.params.slug as string)
+const currentBranding = computed(() => currentTenantBranding.value)
+const headerLogo = computed(() => getLogo('header'))
+
+// Check if this is a sub-route that should be handled by other pages
+const isSubRoute = computed(() => {
+  const currentPath = route.path
+  return currentPath.includes('/services') || currentPath.includes('/register')
+})
+
+// Check if this is specifically a register route
+const isRegisterRoute = computed(() => {
+  const currentPath = route.path
+  return currentPath.includes('/register')
+})
+
 
 // Lifecycle
 onMounted(async () => {

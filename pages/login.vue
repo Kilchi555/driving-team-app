@@ -250,7 +250,8 @@ const handleLogout = async () => {
   try {
     await logout(supabase)
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
-    window.location.reload()
+    // Zur Login-Seite weiterleiten
+    navigateTo('/')
   } catch (error) {
     console.error('Logout error:', error)
     showError('Fehler', 'Fehler beim Abmelden.')

@@ -382,27 +382,90 @@ const loadAllCriteria = async () => {
     if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
-    // Neue Abfrage: Hole alle evaluation_criteria für die Fahrkategorie (filtered by tenant)
-    const { data: criteria, error: cError } = await supabase
-      .from('evaluation_criteria')
-      .select(`
-        id, 
-        name, 
-        description, 
-        is_active,
-        display_order,
-        category_id,
-        driving_categories,
-        evaluation_categories!inner(tenant_id)
-      `)
-      .eq('is_active', true)
-      .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
-      .contains('driving_categories', [props.studentCategory])
+    // ✅ PRÜFE OB ES EINE THEORIELEKTION IST
+    const isTheoryLesson = props.appointment?.appointment_type === 'theory' || props.appointment?.event_type_code === 'theory'
+    
+    let criteria: any[] = []
+    let cError: any = null
+
+    if (isTheoryLesson) {
+      console.log('📚 Loading evaluation criteria for theory lesson - category:', props.studentCategory)
+      // Bei Theorielektionen: Lade normale Kriterien + Theorie-Kriterien
+      
+      // 1. Lade normale Fahrkategorie-Kriterien
+      const regularResult = await supabase
+        .from('evaluation_criteria')
+        .select(`
+          id, 
+          name, 
+          description, 
+          is_active,
+          display_order,
+          category_id,
+          driving_categories,
+          evaluation_categories!inner(tenant_id, is_theory)
+        `)
+        .eq('is_active', true)
+        .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
+        .contains('driving_categories', [props.studentCategory])
+        .eq('evaluation_categories.is_theory', false) // Nur normale Kriterien
+      
+      // 2. Lade Theorie-Kriterien (für alle Fahrkategorien)
+      const theoryResult = await supabase
+        .from('evaluation_criteria')
+        .select(`
+          id, 
+          name, 
+          description, 
+          is_active,
+          display_order,
+          category_id,
+          driving_categories,
+          evaluation_categories!inner(tenant_id, is_theory)
+        `)
+        .eq('is_active', true)
+        .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
+        .eq('evaluation_categories.is_theory', true) // Nur Theorie-Kriterien
+      
+      if (regularResult.error) throw regularResult.error
+      if (theoryResult.error) throw theoryResult.error
+      
+      // Kombiniere beide Listen
+      criteria = [...(regularResult.data || []), ...(theoryResult.data || [])]
+      console.log('📚 Loaded criteria for theory lesson:', {
+        regular: regularResult.data?.length || 0,
+        theory: theoryResult.data?.length || 0,
+        total: criteria.length
+      })
+    } else {
+      console.log('📚 Loading regular evaluation criteria for category:', props.studentCategory)
+      // Normale Lektion: Lade nur normale Fahrkategorie-Kriterien
+      const result = await supabase
+        .from('evaluation_criteria')
+        .select(`
+          id, 
+          name, 
+          description, 
+          is_active,
+          display_order,
+          category_id,
+          driving_categories,
+          evaluation_categories!inner(tenant_id, is_theory)
+        `)
+        .eq('is_active', true)
+        .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
+        .contains('driving_categories', [props.studentCategory])
+        .eq('evaluation_categories.is_theory', false) // Nur normale Kriterien
+      
+      criteria = result.data || []
+      cError = result.error
+    }
 
     if (cError) throw cError
 
     if (!criteria || criteria.length === 0) {
-      error.value = 'Keine Bewertungskriterien gefunden für Kategorie ' + props.studentCategory
+      const categoryType = isTheoryLesson ? 'Theorie' : props.studentCategory
+      error.value = `Keine Bewertungskriterien gefunden für ${categoryType}`
       return
     }
 

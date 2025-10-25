@@ -3,10 +3,10 @@
   <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- Header -->
-      <div class="bg-gray-100 text-white p-6 rounded-t-xl">
+      <div class="bg-gray-100 text-white p-1 rounded-t-xl">
         <div class="text-center">
-          <LoadingLogo size="md" class="mb-3" :tenant-id="activeTenantId || undefined" />
-          <h1 class="text-2xl font-bold text-gray-700">
+          <LoadingLogo size="2xl" :tenant-id="activeTenantId || undefined" :tenant-slug="tenantSlug" />
+          <h1 class="text-xl font-bold text-gray-700">
             {{ isAdminRegistration ? 'Admin-Account erstellen' :
                serviceType === 'fahrlektion' ? 'Registrierung für Fahrlektionen' : 
                serviceType === 'theorie' ? 'Registrierung für Theorielektion' : 
@@ -277,7 +277,6 @@
               
               <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div class="flex items-start gap-3">
-                  <div class="text-2xl">✅</div>
                   <div>
                     <p class="text-green-800 font-semibold">Ausweis hochgeladen</p>
                   </div>
@@ -460,10 +459,12 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
+import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
 
 const supabase = getSupabase()
 const route = useRoute()
+const { showError, showSuccess } = useUIStore()
 
 // Get tenant slug from URL parameter
 const tenantSlug = computed(() => route.params.tenant as string)
@@ -655,7 +656,7 @@ const handleFileUpload = (event: Event) => {
   if (file) {
     // Check file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Datei zu groß! Maximale Größe: 5MB')
+      showError('Datei zu groß', 'Maximale Größe: 5MB')
       return
     }
     
@@ -697,10 +698,13 @@ const submitRegistration = async () => {
       email: formData.value.email.trim().toLowerCase(),
       password: formData.value.password,
       options: {
+        emailRedirectTo: `${window.location.origin}/login`,
         data: {
           first_name: formData.value.firstName.trim(),
           last_name: formData.value.lastName.trim(),
           tenant_id: activeTenantId,
+          tenant_name: currentTenant.value?.name || 'Driving Team',
+          tenant_slug: tenantSlug.value,
           phone: formData.value.phone?.trim() || null,
           birthdate: formData.value.birthDate || null,
           street: formData.value.street?.trim() || null,
@@ -725,6 +729,38 @@ const submitRegistration = async () => {
     }
     
     console.log('✅ Auth User created:', authData.user.id)
+    
+    // Create user profile in users table
+    console.log('👤 Creating user profile in users table...')
+    const { data: userProfile, error: userError } = await supabase
+      .from('users')
+      .insert({
+        auth_user_id: authData.user.id,
+        tenant_id: activeTenantId,
+        first_name: formData.value.firstName.trim(),
+        last_name: formData.value.lastName.trim(),
+        email: formData.value.email.trim().toLowerCase(),
+        phone: formData.value.phone?.trim() || null,
+        birthdate: formData.value.birthDate || null,
+        street: formData.value.street?.trim() || null,
+        street_nr: formData.value.streetNr?.trim() || null,
+        zip: formData.value.zip?.trim() || null,
+        city: formData.value.city?.trim() || null,
+        category: formData.value.categories || null,
+        lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null,
+        role: isAdminRegistration.value ? 'tenant_admin' : 'client',
+        is_active: true
+      })
+      .select()
+      .single()
+    
+    if (userError) {
+      console.error('❌ Error creating user profile:', userError)
+      // Don't fail registration for user profile error - auth user is already created
+      console.warn('⚠️ User profile creation failed, but auth user exists')
+    } else {
+      console.log('✅ User profile created:', userProfile.id)
+    }
     
     // Upload Lernfahrausweis image to Supabase Storage (if exists)
     if (uploadedImage.value) {
@@ -768,10 +804,12 @@ const submitRegistration = async () => {
     
     // Success
     if (isAdminRegistration.value) {
-      alert('🎉 Admin-Account erfolgreich erstellt!\n\nBitte loggen Sie sich mit Ihren Zugangsdaten ein.')
-      await navigateTo('/login')
+      showSuccess('Admin-Account erstellt', 'Bitte loggen Sie sich mit Ihren Zugangsdaten ein.')
+      // Navigiere zur tenant-spezifischen Login-Seite
+      const tenantSlug = route.params.tenant as string
+      await navigateTo(`/${tenantSlug}`)
     } else {
-      alert('🎉 Registrierung erfolgreich!\n\nIhr Account wurde erstellt. Bitte prüfen Sie Ihre E-Mails zur Bestätigung und loggen Sie sich dann ein.')
+      showSuccess('Registrierung erfolgreich', 'Ihr Account wurde erstellt. Bitte prüfen Sie Ihre E-Mails zur Bestätigung und loggen Sie sich dann ein.')
       await navigateTo('/')
     }
     
@@ -789,7 +827,7 @@ const submitRegistration = async () => {
       errorMessage = 'Passwort zu schwach. Mindestens 8 Zeichen, 1 Großbuchstabe und 1 Zahl erforderlich.'
     }
     
-    alert(`❌ Registrierung nicht möglich:\n\n${errorMessage}\n\nBitte korrigieren Sie die Eingaben und versuchen Sie es erneut.`)
+    showError('Registrierung fehlgeschlagen', `${errorMessage}\n\nBitte korrigieren Sie die Eingaben und versuchen Sie es erneut.`)
     
   } finally {
     isSubmitting.value = false

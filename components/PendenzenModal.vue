@@ -270,6 +270,8 @@ const getStudentCategory = (appointment: any) => {
   console.log('🔥 getStudentCategory called:', {
     userCategory: appointment?.users?.category,
     appointmentType: appointment?.type,
+    appointmentTypeField: appointment?.appointment_type,
+    eventTypeCode: appointment?.event_type_code,
     finalCategory: category
   })
   return category
@@ -281,6 +283,7 @@ const openEvaluation = (appointment: any) => {
     userCategory: appointment.users?.category,
     appointmentType: appointment.type,
     eventTypeCode: appointment.event_type_code,
+    appointmentTypeField: appointment.appointment_type,
     finalCategory: getStudentCategory(appointment)
   })
   
@@ -289,7 +292,14 @@ const openEvaluation = (appointment: any) => {
     console.log('📝 Exam detected - showing exam result modal')
     showExamResultModal.value = true
     currentExamAppointment.value = appointment
-  } else {
+  } 
+  // ✅ PRÜFE OB ES EINE THEORIELEKTION IST
+  else if (appointment.appointment_type === 'theory' || appointment.event_type_code === 'theory') {
+    console.log('📚 Theory lesson detected - showing evaluation modal with theory criteria')
+    showEvaluationModal.value = true
+    selectedAppointment.value = appointment
+  } 
+  else {
     // Normale Lektion - zeige normale Bewertung
     console.log('📚 Lesson detected - showing evaluation modal')
     showEvaluationModal.value = true
