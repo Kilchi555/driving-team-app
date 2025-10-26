@@ -101,6 +101,36 @@
                 {{ studentDetail.assigned_staff.first_name }} {{ studentDetail.assigned_staff.last_name }}
               </p>
             </div>
+            
+            <!-- Instructors List -->
+            <div v-if="instructors.length > 0" class="mt-6 pt-6 border-t">
+              <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Fahrlehrer</label>
+              <div class="space-y-2">
+                <div 
+                  v-for="instructor in instructors" 
+                  :key="instructor.id"
+                  @click="showInstructorDetails(instructor)"
+                  class="flex items-center justify-between p-2 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors group"
+                >
+                  <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span class="text-blue-600 font-bold text-sm">
+                        {{ instructor.first_name?.[0] }}{{ instructor.last_name?.[0] }}
+                      </span>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-900 group-hover:text-blue-600">
+                        {{ instructor.first_name }} {{ instructor.last_name }}
+                      </p>
+                      <p class="text-xs text-gray-500">{{ instructor.lessonCount }} Fahrstunde{{ instructor.lessonCount !== 1 ? 'n' : '' }}</p>
+                    </div>
+                  </div>
+                  <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Quick Stats -->
@@ -250,6 +280,77 @@
         </div>
       </div>
     </div>
+    
+    <!-- Instructor Details Modal -->
+    <div v-if="showInstructorModal && selectedInstructor" class="fixed inset-0 z-60 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black bg-opacity-50" @click="closeInstructorModal"></div>
+      
+      <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-6 border-b bg-gray-50">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <span class="text-blue-600 font-bold text-lg">
+                {{ selectedInstructor.first_name?.[0] }}{{ selectedInstructor.last_name?.[0] }}
+              </span>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">
+                {{ selectedInstructor.first_name }} {{ selectedInstructor.last_name }}
+              </h3>
+              <p class="text-sm text-gray-600">Fahrlehrer</p>
+            </div>
+          </div>
+          
+          <button @click="closeInstructorModal" class="text-gray-400 hover:text-gray-600 text-2xl">
+            ×
+          </button>
+        </div>
+        
+        <!-- Content -->
+        <div class="p-6 space-y-4">
+          <!-- Contact Information -->
+          <div v-if="selectedInstructor.email" class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-900">E-Mail</p>
+              <a :href="`mailto:${selectedInstructor.email}`" class="text-sm text-blue-600 hover:text-blue-800">
+                {{ selectedInstructor.email }}
+              </a>
+            </div>
+          </div>
+          
+          <div v-if="selectedInstructor.phone" class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-900">Telefon</p>
+              <a :href="`tel:${selectedInstructor.phone}`" class="text-sm text-blue-600 hover:text-blue-800">
+                {{ selectedInstructor.phone }}
+              </a>
+            </div>
+          </div>
+          
+          <!-- Lesson Statistics -->
+          <div class="pt-4 border-t">
+            <h4 class="text-sm font-medium text-gray-900 mb-3">Fahrstunden mit diesem Schüler</h4>
+            <div class="bg-blue-50 rounded-lg p-4">
+              <div class="text-center">
+                <div class="text-2xl font-bold text-blue-600">{{ selectedInstructor.lessonCount }}</div>
+                <div class="text-sm text-blue-600">Fahrstunde{{ selectedInstructor.lessonCount !== 1 ? 'n' : '' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -281,6 +382,9 @@ const appointments = ref<any[]>([])
 const loadingAppointments = ref(false)
 const isToggling = ref(false)
 const appointmentFilter = ref<'all' | 'upcoming' | 'past'>('all')
+const instructors = ref<any[]>([])
+const showInstructorModal = ref(false)
+const selectedInstructor = ref<any>(null)
 
 // Computed
 const filteredAppointments = computed(() => {
@@ -313,11 +417,47 @@ const loadStudentData = async () => {
     loadingAppointments.value = true
     appointments.value = await fetchStudentAppointments(props.student.id)
     
+    // Load instructors from appointments
+    loadInstructors()
+    
   } catch (error) {
     console.error('Fehler beim Laden der Schülerdaten:', error)
   } finally {
     loadingAppointments.value = false
   }
+}
+
+const loadInstructors = () => {
+  // Group appointments by instructor and count lessons
+  const instructorMap = new Map()
+  
+  appointments.value.forEach(appointment => {
+    if (appointment.staff) {
+      const instructorId = appointment.staff.id
+      if (instructorMap.has(instructorId)) {
+        instructorMap.get(instructorId).lessonCount++
+      } else {
+        instructorMap.set(instructorId, {
+          ...appointment.staff,
+          lessonCount: 1
+        })
+      }
+    }
+  })
+  
+  // Convert to array and sort by lesson count
+  instructors.value = Array.from(instructorMap.values())
+    .sort((a, b) => b.lessonCount - a.lessonCount)
+}
+
+const showInstructorDetails = (instructor: any) => {
+  selectedInstructor.value = instructor
+  showInstructorModal.value = true
+}
+
+const closeInstructorModal = () => {
+  showInstructorModal.value = false
+  selectedInstructor.value = null
 }
 
 const toggleStatus = async () => {

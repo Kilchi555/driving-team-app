@@ -14,6 +14,9 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   if (!requiredFeature) return // Route doesn't require feature flag
   
   try {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') return
+    
     // Get tenant ID from auth store
     const { useAuthStore } = await import('~/stores/auth')
     const authStore = useAuthStore()

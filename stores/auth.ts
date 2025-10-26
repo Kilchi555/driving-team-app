@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import type { User, SupabaseClient } from '@supabase/supabase-js'
 import type { Ref } from 'vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { getSupabase } from '~/utils/supabase'
 
 // Types
 interface UserProfile {
@@ -55,51 +56,41 @@ const isAdmin = computed(() => {
 
   // Actions
 
-  const initializeAuthStore = (
-    supabaseClient: SupabaseClient,
-    supabaseUserRef: Ref<User | null>
-  ) => {
+  const initializeAuthStore = async () => {
     console.log('🔥 Initializing Auth Store')
 
-      // ✅ NEU: Session beim Start wiederherstellen
-  if (process.client) {
-    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user && !user.value) {
-        console.log('🔄 Restoring session for:', session.user.email)
-        user.value = session.user
-        fetchUserProfile(supabaseClient, session.user.id)
+    // Get Supabase client
+    const supabaseClient = getSupabase()
+    if (!supabaseClient) {
+      console.error('❌ Failed to get Supabase client')
+      return
+    }
+
+    // ✅ NEU: Session beim Start wiederherstellen
+    if (process.client) {
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession()
+        if (session?.user && !user.value) {
+          console.log('🔄 Restoring session for:', session.user.email)
+          user.value = session.user
+          await fetchUserProfile(session.user.id)
+        }
+      } catch (error) {
+        console.error('❌ Error restoring session:', error)
       }
-    })
-  }
-    
-    // Setze den initialen Benutzerwert
-    user.value = supabaseUserRef.value
+    }
 
     // Auth State Change Listener
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    supabaseClient.auth.onAuthStateChange(async (event: any, session: any) => {
       console.log('🔄 Auth state changed:', event, !!session)
       
       if (session?.user) {
         user.value = session.user
-        await fetchUserProfile(supabaseClient, session.user.id)
+        await fetchUserProfile(session.user.id)
       } else {
         clearAuthState()
       }
     })
-
-    // Watcher für Supabase User
-    if (process.client) {
-      watch(supabaseUserRef, async (newUser) => {
-        console.log('👤 User ref changed:', !!newUser)
-        user.value = newUser
-        
-        if (newUser) {
-          await fetchUserProfile(supabaseClient, newUser.id)
-        } else {
-          clearAuthState()
-        }
-      }, { immediate: true })
-    }
 
     isInitialized.value = true
       console.log('✅ Auth Store initialization completed, isInitialized:', isInitialized.value)
@@ -107,9 +98,15 @@ const isAdmin = computed(() => {
   }
 
   // stores/auth.ts - nach Zeile wo initializeAuthStore steht
-    const restoreSession = async (supabaseClient: SupabaseClient) => {
+    const restoreSession = async () => {
       try {
         console.log('🔄 Restoring session...')
+        
+        const supabaseClient = getSupabase()
+        if (!supabaseClient) {
+          console.error('❌ Failed to get Supabase client')
+          return false
+        }
         
         const { data: { session }, error } = await supabaseClient.auth.getSession()
         
@@ -121,7 +118,7 @@ const isAdmin = computed(() => {
         if (session?.user) {
           console.log('✅ Session restored for:', session.user.email)
           user.value = session.user
-          await fetchUserProfile(supabaseClient, session.user.id)
+          await fetchUserProfile(session.user.id)
           return true
         } else {
           console.log('❌ No session found to restore')
@@ -133,12 +130,17 @@ const isAdmin = computed(() => {
       }
     }
 
-  const login = async (email: string, password: string, supabaseClient: SupabaseClient) => {
+  const login = async (email: string, password: string) => {
     loading.value = true
     errorMessage.value = null
 
     try {
       console.log('🔑 Attempting login for:', email)
+      
+      const supabaseClient = getSupabase()
+      if (!supabaseClient) {
+        throw new Error('Failed to get Supabase client')
+      }
       
       const { data, error } = await supabaseClient.auth.signInWithPassword({
         email,
@@ -149,7 +151,7 @@ const isAdmin = computed(() => {
 
       if (data.user) {
         user.value = data.user
-        await fetchUserProfile(supabaseClient, data.user.id)
+        await fetchUserProfile(data.user.id)
         console.log('✅ Login successful')
         return true
       }
@@ -164,12 +166,17 @@ const isAdmin = computed(() => {
     }
   }
 
-  const register = async (email: string, password: string, supabaseClient: SupabaseClient) => {
+  const register = async (email: string, password: string) => {
     loading.value = true
     errorMessage.value = null
 
     try {
       console.log('📝 Attempting registration for:', email)
+      
+      const supabaseClient = getSupabase()
+      if (!supabaseClient) {
+        throw new Error('Failed to get Supabase client')
+      }
       
       const { error } = await supabaseClient.auth.signUp({
         email,
@@ -188,12 +195,17 @@ const isAdmin = computed(() => {
     }
   }
 
-  const logout = async (supabaseClient: SupabaseClient) => {
+  const logout = async () => {
     loading.value = true
     errorMessage.value = null
 
     try {
       console.log('🚪 Logging out')
+      
+      const supabaseClient = getSupabase()
+      if (!supabaseClient) {
+        throw new Error('Failed to get Supabase client')
+      }
       
       const { error } = await supabaseClient.auth.signOut()
       if (error) throw error
@@ -208,9 +220,15 @@ const isAdmin = computed(() => {
     }
   }
 
-  const fetchUserProfile = async (supabaseClient: SupabaseClient, userId: string) => {
+  const fetchUserProfile = async (userId: string) => {
     try {
       console.log('👤 Fetching user profile for:', userId)
+      
+      const supabaseClient = getSupabase()
+      if (!supabaseClient) {
+        console.error('❌ Failed to get Supabase client')
+        return
+      }
       
       const { data, error } = await supabaseClient
         .from('users')
@@ -257,11 +275,16 @@ const isAdmin = computed(() => {
     }
   }
 
-  const updateUserProfile = async (supabaseClient: SupabaseClient, updates: Partial<UserProfile>) => {
+  const updateUserProfile = async (updates: Partial<UserProfile>) => {
     if (!user.value?.id) return false
 
     try {
       console.log('📝 Updating user profile')
+      
+      const supabaseClient = getSupabase()
+      if (!supabaseClient) {
+        throw new Error('Failed to get Supabase client')
+      }
       
       const { data, error } = await supabaseClient
         .from('users')
@@ -284,7 +307,7 @@ const isAdmin = computed(() => {
     }
   }
 
-  const createUserProfile = async (supabaseClient: SupabaseClient, profileData: {
+  const createUserProfile = async (profileData: {
     role: string
     first_name?: string
     last_name?: string
@@ -294,6 +317,11 @@ const isAdmin = computed(() => {
 
     try {
       console.log('🆕 Creating user profile')
+      
+      const supabaseClient = getSupabase()
+      if (!supabaseClient) {
+        throw new Error('Failed to get Supabase client')
+      }
       
       const { data, error } = await supabaseClient
         .from('users')
@@ -390,7 +418,7 @@ const isAdmin = computed(() => {
     requireStaff,
 
     // Legacy compatibility
-    fetchUserRole: (supabaseClient: SupabaseClient, userId: string) => 
-      fetchUserProfile(supabaseClient, userId)
+    fetchUserRole: (userId: string) => 
+      fetchUserProfile(userId)
   }
 })

@@ -1,48 +1,50 @@
 <template>
   <div>
-      <div class="flex items-center justify-between">
-        <div class="p-4">
-          <h1 class="text-2xl font-bold text-gray-900">Rechnungen</h1>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-2 sm:p-4">
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Rechnungen</h1>
         </div>
-        <div class="flex space-x-3">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
             @click="showCreateModal = true"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
-            Neue Rechnung
+            <span class="hidden sm:inline">Neue Rechnung</span>
+            <span class="sm:hidden">Neu</span>
           </button>
           <button
             @click="refreshData"
             :disabled="isLoading"
-            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Aktualisieren
+            <span class="hidden sm:inline">Aktualisieren</span>
+            <span class="sm:hidden">↻</span>
           </button>
         </div>
       </div>
 
     <div class="min-h-screen bg-gray-50">
       <!-- Filter und Suche -->
-      <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-3 border-b border-gray-200">
-          <h3 class="text-base font-medium text-gray-900">Filter & Suche</h3>
+      <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+        <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+          <h3 class="text-sm sm:text-base font-medium text-gray-900">Filter & Suche</h3>
         </div>
-        <div class="px-4 py-3">
-          <div class="flex flex-wrap items-center gap-3">
+        <div class="px-3 sm:px-4 py-3">
+          <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
             <!-- Suchfeld -->
-            <div class="flex-1 min-w-48">
+            <div class="flex-1 min-w-0">
               <input
                 v-model="filters.search"
                 type="text"
                 placeholder="Suche..."
                 :class="[
-                  'w-full px-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2',
+                  'w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2',
                   filters.search && filters.search.trim()
                     ? 'border-green-500 focus:ring-green-500' 
                     : 'border-gray-300 focus:ring-blue-500'
@@ -52,11 +54,11 @@
             </div>
 
             <!-- Status Filter -->
-            <div class="relative" data-dropdown="status">
+            <div class="relative w-full sm:w-auto" data-dropdown="status">
               <button
               @click.stop="toggleStatusDropdown"
               :class="[
-                'inline-flex items-center px-3 py-1.5 text-sm border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
+                'inline-flex items-center justify-between w-full sm:w-auto px-3 py-2 text-sm border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
                 (filters.status?.length || 0) > 0 
                   ? 'border-green-500 bg-green-50 text-green-700 hover:bg-gray-100 focus:ring-green-500' 
                   : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500'

@@ -34,19 +34,19 @@
           
           <!-- Overall Statistics -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div class="bg-blue-50 p-2 rounded-lg border border-blue-200">
               <div class="flex justify-between items-center">
                 <div class="text-sm text-blue-700 font-medium">Gesamt Prüfungen</div>
                 <div class="text-2xl font-bold text-blue-800">{{ totalExams }}</div>
               </div>
             </div>
-            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+            <div class="bg-green-50 p-2 rounded-lg border border-green-200">
               <div class="flex justify-between items-center">
                 <div class="text-sm text-green-700 font-medium">Bestanden</div>
                 <div class="text-2xl font-bold text-green-800">{{ passedExams }}</div>
               </div>
             </div>
-            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <div class="bg-orange-50 p-2 rounded-lg border border-orange-200">
               <div class="flex justify-between items-center">
                 <div class="text-sm text-orange-700 font-medium">Erfolgsquote</div>
                 <div class="text-2xl font-bold text-orange-800">{{ successRate }}%</div>
@@ -62,12 +62,24 @@
               <div 
                 v-for="category in categoryStats" 
                 :key="category.category"
-                class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                class="border border-gray-200 rounded-lg p-4 hover:shadow-lg hover:border-blue-300 transition-all duration-200 cursor-pointer group"
                 @click="showCategoryDetails(category)"
               >
-                <div class="flex justify-between items-start mb-2">
-                  <h4 class="font-semibold text-gray-900">{{ category.category }}</h4>
-                  <span class="text-sm text-gray-500">{{ category.total }} Prüfungen</span>
+                <div class="flex justify-between items-center mb-2">
+                  <h4 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{{ category.category }}</h4>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-lg font-bold" :class="{
+                      'text-green-600': category.successRate >= 80,
+                      'text-orange-600': category.successRate >= 60 && category.successRate < 80,
+                      'text-red-600': category.successRate < 60
+                    }">
+                      {{ category.successRate }}%
+                    </span>
+                    <span class="text-sm text-gray-500">{{ category.total }} Prüfungen</span>
+                    <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </div>
                 </div>
                 
                 <div class="space-y-2">
@@ -88,15 +100,6 @@
                     ></div>
                   </div>
                   
-                  <div class="text-center">
-                    <span class="text-lg font-bold" :class="{
-                      'text-green-600': category.successRate >= 80,
-                      'text-orange-600': category.successRate >= 60 && category.successRate < 80,
-                      'text-red-600': category.successRate < 60
-                    }">
-                      {{ category.successRate }}%
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -123,53 +126,40 @@
           </button>
         </div>
         
-        <div class="p-2">
-
-          <!-- Examiners Statistics -->
-          <div class="space-y-2">
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div 
-                v-for="examiner in selectedCategory?.examiners" 
-                :key="examiner.name"
-                class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-              >
-                <div class="flex justify-between items-start mb-3">
-                  <h5 class="font-semibold text-gray-900">{{ examiner.name }}</h5>
-                  <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ examiner.total }} Prüfungen</span>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4 text-sm mb-3">
-                  <div class="text-center">
-                    <div class="text-green-600 font-bold text-lg">{{ examiner.passed }}</div>
-                    <div class="text-gray-600">bestanden</div>
-                  </div>
-                  <div class="text-center">
-                    <div class="text-red-600 font-bold text-lg">{{ examiner.failed }}</div>
-                    <div class="text-gray-600">nicht bestanden</div>
-                  </div>
-                </div>
-                
-                <div class="mt-3">
-                  <div class="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      class="bg-green-500 h-3 rounded-full transition-all duration-300"
-                      :style="{ width: `${examiner.successRate}%` }"
-                    ></div>
-                  </div>
-                  <div class="text-center mt-2">
-                    <span class="text-sm font-semibold" :class="{
-                      'text-green-600': examiner.successRate >= 80,
-                      'text-orange-600': examiner.successRate >= 60 && examiner.successRate < 80,
-                      'text-red-600': examiner.successRate < 60
-                    }">
-                      {{ examiner.successRate }}% Erfolgsquote
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <!-- Tabs -->
+        <div class="border-b border-gray-200">
+          <nav class="flex space-x-8 px-6">
+            <button
+              @click="activeTab = 'exams'"
+              :class="[
+                'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
+                activeTab === 'exams'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ]"
+            >
+              Termine ({{ selectedCategory?.exams?.length || 0 }})
+            </button>
+            <button
+              @click="activeTab = 'examiners'"
+              :class="[
+                'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
+                activeTab === 'examiners'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ]"
+            >
+              Experten ({{ selectedCategory?.examiners?.length || 0 }})
+            </button>
+          </nav>
+        </div>
+        
+        <div class="p-6">
+          <!-- Tab Content -->
+          
+          <!-- Exams Tab -->
+          <div v-if="activeTab === 'exams'">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4">Alle Prüfungstermine</h4>
 
             <!-- Detailed Exam List -->
             <div class="space-y-4">
@@ -317,6 +307,62 @@
                 </div>
               </div>
             </div>
+          </div>
+          
+          <!-- Examiners Tab -->
+          <div v-if="activeTab === 'examiners'">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4">Experten-Statistik</h4>
+            
+            <div v-if="selectedCategory?.examiners && selectedCategory.examiners.length > 0" class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div 
+                  v-for="examiner in selectedCategory.examiners" 
+                  :key="examiner.name"
+                  class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
+                  <div class="flex justify-between items-start mb-3">
+                    <h5 class="font-semibold text-gray-900">{{ examiner.name }}</h5>
+                    <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ examiner.total }} Prüfungen</span>
+                  </div>
+                  
+                  <div class="grid grid-cols-2 gap-4 text-sm mb-3">
+                    <div class="text-center">
+                      <div class="text-green-600 font-bold text-lg">{{ examiner.passed }}</div>
+                      <div class="text-gray-600">bestanden</div>
+                    </div>
+                    <div class="text-center">
+                      <div class="text-red-600 font-bold text-lg">{{ examiner.failed }}</div>
+                      <div class="text-gray-600">nicht bestanden</div>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-3">
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                      <div 
+                        class="bg-green-500 h-3 rounded-full transition-all duration-300"
+                        :style="{ width: `${examiner.successRate}%` }"
+                      ></div>
+                    </div>
+                    <div class="text-center mt-2">
+                      <span class="text-sm font-semibold" :class="{
+                        'text-green-600': examiner.successRate >= 80,
+                        'text-orange-600': examiner.successRate >= 60 && examiner.successRate < 80,
+                        'text-red-600': examiner.successRate < 60
+                      }">
+                        {{ examiner.successRate }}% Erfolgsquote
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div v-else class="text-center py-8 text-gray-500">
+              <div class="text-4xl mb-2">👨‍🏫</div>
+              <p>Keine Experten-Statistiken verfügbar</p>
+              <p class="text-sm">Alle Prüfungen wurden ohne zugewiesenen Experten durchgeführt</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -373,6 +419,7 @@ const examResults = ref<ExamResult[]>([])
 const showDetailsModal = ref(false)
 const selectedCategory = ref<CategoryStats | null>(null)
 const expandedExams = ref<Set<string>>(new Set())
+const activeTab = ref<'exams' | 'examiners'>('exams')
 
 // Computed
 const staffName = computed(() => {
@@ -520,7 +567,7 @@ const loadExamResults = async () => {
     
     if (examinerIds.length > 0) {
       const { data: examinersData, error: examinersError } = await supabase
-        .from('users')
+        .from('examiners')
         .select('id, first_name, last_name')
         .in('id', examinerIds)
       
@@ -563,6 +610,7 @@ const loadExamResults = async () => {
 
 const showCategoryDetails = (category: CategoryStats) => {
   selectedCategory.value = category
+  activeTab.value = 'exams' // Reset to exams tab when opening
   showDetailsModal.value = true
 }
 

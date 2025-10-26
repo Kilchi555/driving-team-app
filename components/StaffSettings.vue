@@ -1475,12 +1475,8 @@ const handleLogout = async () => {
       // Schließe das Modal
       emit('close')
       
-      // Navigiere zur tenant-spezifischen Login-Seite
-      if (currentTenant.value?.slug) {
-        await navigateTo(`/${currentTenant.value.slug}`)
-      } else {
-        await navigateTo('/')
-      }
+      // Navigiere zur Login-Seite
+      await navigateTo('/login')
     }, 1500)
     
   } catch (err: any) {

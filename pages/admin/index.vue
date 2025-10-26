@@ -1,64 +1,64 @@
 <template>
-  <div class="p-4">
+  <div class="p-2 sm:p-4">
     <!-- Loading State -->
-    <div v-if="isLoading" class="flex justify-center items-center py-12">
+    <div v-if="isLoading" class="flex justify-center items-center py-8 sm:py-12">
       <div class="text-center">
         <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
-        <p class="text-gray-600 mt-4">Dashboard wird geladen...</p>
+        <p class="text-gray-600 mt-4 text-sm sm:text-base">Dashboard wird geladen...</p>
       </div>
     </div>
 
     <!-- Main Dashboard Content -->
-    <div v-else class="space-y-6">
+    <div v-else class="space-y-4 sm:space-y-6">
 
       <!-- Alle Widgets in 4 Spalten -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <!-- Umsätze -->
         <div class="bg-white rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow" @click="showRevenueModal = true">
-          <div class="px-4 py-3 border-b border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-900">
+          <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-900">
               💰 Umsätze
             </h3>
           </div>
-          <div class="p-4">
-            <div class="space-y-2 text-xs">
+          <div class="p-3 sm:p-4">
+            <div class="space-y-1 sm:space-y-2 text-xs">
               <div v-for="month in revenueMonths" :key="month.name" class="flex justify-between">
-                <span class="text-gray-600">{{ month.name }}:</span>
-                <span class="font-semibold text-green-600">CHF {{ (month.revenue / 100).toFixed(0) }}</span>
+                <span class="text-gray-600 truncate">{{ month.name }}:</span>
+                <span class="font-semibold text-green-600 flex-shrink-0 ml-2">CHF {{ (month.revenue / 100).toFixed(0) }}</span>
               </div>
             </div>
           </div>
         </div>
         <!-- Recent Invoices Overview -->
         <div class="bg-white rounded-lg shadow-sm border">
-          <div class="px-4 py-3 border-b border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-900">
+          <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-900">
               📄 Rechnungen
             </h3>
           </div>
-          <div class="p-4">
-            <div v-if="isLoadingInvoices" class="h-40 flex items-center justify-center text-gray-500">
+          <div class="p-3 sm:p-4">
+            <div v-if="isLoadingInvoices" class="h-32 sm:h-40 flex items-center justify-center text-gray-500">
               <div class="text-center">
                 <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
                 <div class="mt-1 text-xs">Laden...</div>
               </div>
             </div>
-            <div v-else-if="recentInvoices.length === 0" class="h-40 flex items-center justify-center text-gray-500">
+            <div v-else-if="recentInvoices.length === 0" class="h-32 sm:h-40 flex items-center justify-center text-gray-500">
               <div class="text-center">
-                <div class="text-2xl mb-1">📄</div>
+                <div class="text-xl sm:text-2xl mb-1">📄</div>
                 <div class="text-xs">Keine Rechnungen</div>
               </div>
             </div>
-            <div v-else class="space-y-2">
+            <div v-else class="space-y-1 sm:space-y-2">
               <!-- Summary kompakt -->
               <div class="text-xs space-y-1">
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Diese Woche:</span>
-                  <span class="font-medium text-green-600">CHF {{ (thisWeekTotal / 100).toFixed(0) }}</span>
+                  <span class="text-gray-600 truncate">Diese Woche:</span>
+                  <span class="font-medium text-green-600 flex-shrink-0 ml-2">CHF {{ (thisWeekTotal / 100).toFixed(0) }}</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-gray-600">Letzte Woche:</span>
-                  <span class="font-medium text-blue-600">CHF {{ (lastWeekTotal / 100).toFixed(0) }}</span>
+                  <span class="text-gray-600 truncate">Letzte Woche:</span>
+                  <span class="font-medium text-blue-600 flex-shrink-0 ml-2">CHF {{ (lastWeekTotal / 100).toFixed(0) }}</span>
                 </div>
               </div>
             </div>
@@ -67,38 +67,38 @@
 
         <!-- Students with Most Pending Payments -->
         <div class="bg-white rounded-lg shadow-sm border">
-          <div class="px-4 py-3 border-b border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-900">
+          <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-900">
               💰 Ausstehend
             </h3>
           </div>
-          <div class="p-4">
-            <div v-if="isLoadingPendingStudents" class="h-40 flex items-center justify-center text-gray-500">
+          <div class="p-3 sm:p-4">
+            <div v-if="isLoadingPendingStudents" class="h-32 sm:h-40 flex items-center justify-center text-gray-500">
               <div class="text-center">
                 <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
                 <div class="mt-1 text-xs">Laden...</div>
               </div>
             </div>
-            <div v-else-if="pendingStudents.length === 0" class="h-40 flex items-center justify-center text-gray-500">
+            <div v-else-if="pendingStudents.length === 0" class="h-32 sm:h-40 flex items-center justify-center text-gray-500">
               <div class="text-center">
-                <div class="text-2xl mb-1">✅</div>
+                <div class="text-xl sm:text-2xl mb-1">✅</div>
                 <div class="text-xs">Keine ausstehenden Zahlungen</div>
               </div>
             </div>
-            <div v-else class="space-y-2">
+            <div v-else class="space-y-1 sm:space-y-2">
               <div v-for="student in pendingStudents.slice(0, 3)" :key="student.id" 
-                   class="flex items-center justify-between text-xs cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+                   class="flex items-center justify-between text-xs cursor-pointer hover:bg-gray-50 p-1 sm:p-2 rounded transition-colors"
                    @click="navigateToStudentPayments(student.id)">
                 <div class="font-medium text-gray-900 truncate">
                   {{ student.first_name }} {{ student.last_name }}
                 </div>
-                <div class="text-right ml-2">
+                <div class="text-right ml-2 flex-shrink-0">
                   <div class="font-semibold text-orange-600">{{ student.pending_payments_count }}</div>
                 </div>
               </div>
               <button 
                 @click="showPendingStudentsModal = true"
-                class="w-full text-xs text-blue-600 hover:text-blue-800 mt-2"
+                class="w-full text-xs text-blue-600 hover:text-blue-800 mt-1 sm:mt-2"
               >
                 Alle anzeigen →
               </button>
@@ -108,30 +108,30 @@
 
         <!-- Kurse -->
         <div class="bg-white rounded-lg shadow-sm border">
-          <div class="px-4 py-3 border-b border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-900">
+          <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-900">
               📚 Kurse
             </h3>
           </div>
-          <div class="p-4">
-            <div v-if="isLoadingCourses" class="h-40 flex items-center justify-center text-gray-500">
+          <div class="p-3 sm:p-4">
+            <div v-if="isLoadingCourses" class="h-32 sm:h-40 flex items-center justify-center text-gray-500">
               <div class="text-center">
                 <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
                 <div class="mt-1 text-xs">Laden...</div>
               </div>
             </div>
-            <div v-else class="space-y-2 text-xs">
+            <div v-else class="space-y-1 sm:space-y-2 text-xs">
               <div class="flex justify-between">
-                <span class="text-gray-600">Aktive Kurse:</span>
-                <span class="font-semibold text-blue-600">{{ coursesStats.active }}</span>
+                <span class="text-gray-600 truncate">Aktive Kurse:</span>
+                <span class="font-semibold text-blue-600 flex-shrink-0 ml-2">{{ coursesStats.active }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Teilnehmer:</span>
-                <span class="font-semibold text-green-600">{{ coursesStats.participants }}</span>
+                <span class="text-gray-600 truncate">Teilnehmer:</span>
+                <span class="font-semibold text-green-600 flex-shrink-0 ml-2">{{ coursesStats.participants }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Dieser Monat:</span>
-                <span class="font-semibold text-purple-600">{{ coursesStats.thisMonth }}</span>
+                <span class="text-gray-600 truncate">Dieser Monat:</span>
+                <span class="font-semibold text-purple-600 flex-shrink-0 ml-2">{{ coursesStats.thisMonth }}</span>
               </div>
             </div>
           </div>
@@ -139,30 +139,30 @@
 
         <!-- Guthaben -->
         <div class="bg-white rounded-lg shadow-sm border">
-          <div class="px-4 py-3 border-b border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-900">
+          <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-900">
               💳 Guthaben
             </h3>
           </div>
-          <div class="p-4">
-            <div v-if="isLoadingCredits" class="h-40 flex items-center justify-center text-gray-500">
+          <div class="p-3 sm:p-4">
+            <div v-if="isLoadingCredits" class="h-32 sm:h-40 flex items-center justify-center text-gray-500">
               <div class="text-center">
                 <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
                 <div class="mt-1 text-xs">Laden...</div>
               </div>
             </div>
-            <div v-else class="space-y-2 text-xs">
+            <div v-else class="space-y-1 sm:space-y-2 text-xs">
               <div class="flex justify-between">
-                <span class="text-gray-600">Schüler mit Guthaben:</span>
-                <span class="font-semibold text-green-600">{{ creditsStats.studentsWithCredit }}</span>
+                <span class="text-gray-600 truncate">Schüler mit Guthaben:</span>
+                <span class="font-semibold text-green-600 flex-shrink-0 ml-2">{{ creditsStats.studentsWithCredit }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Gesamt Guthaben:</span>
-                <span class="font-semibold text-blue-600">CHF {{ (creditsStats.totalCredit / 100).toFixed(2) }}</span>
+                <span class="text-gray-600 truncate">Gesamt Guthaben:</span>
+                <span class="font-semibold text-blue-600 flex-shrink-0 ml-2">CHF {{ (creditsStats.totalCredit / 100).toFixed(2) }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Ø pro Schüler:</span>
-                <span class="font-semibold text-purple-600">CHF {{ creditsStats.studentsWithCredit > 0 ? ((creditsStats.totalCredit / creditsStats.studentsWithCredit) / 100).toFixed(2) : '0.00' }}</span>
+                <span class="text-gray-600 truncate">Ø pro Schüler:</span>
+                <span class="font-semibold text-purple-600 flex-shrink-0 ml-2">CHF {{ creditsStats.studentsWithCredit > 0 ? ((creditsStats.totalCredit / creditsStats.studentsWithCredit) / 100).toFixed(2) : '0.00' }}</span>
               </div>
             </div>
           </div>
@@ -170,30 +170,30 @@
 
         <!-- Absagen -->
         <div class="bg-white rounded-lg shadow-sm border">
-          <div class="px-4 py-3 border-b border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-900">
+          <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-900">
               ❌ Absagen
             </h3>
           </div>
-          <div class="p-4">
-            <div v-if="isLoadingCancellations" class="h-40 flex items-center justify-center text-gray-500">
+          <div class="p-3 sm:p-4">
+            <div v-if="isLoadingCancellations" class="h-32 sm:h-40 flex items-center justify-center text-gray-500">
               <div class="text-center">
                 <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
                 <div class="mt-1 text-xs">Laden...</div>
               </div>
             </div>
-            <div v-else class="space-y-2 text-xs">
+            <div v-else class="space-y-1 sm:space-y-2 text-xs">
               <div class="flex justify-between">
-                <span class="text-gray-600">Diese Woche:</span>
-                <span class="font-semibold text-red-600">{{ cancellationsStats.thisWeek }}</span>
+                <span class="text-gray-600 truncate">Diese Woche:</span>
+                <span class="font-semibold text-red-600 flex-shrink-0 ml-2">{{ cancellationsStats.thisWeek }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Dieser Monat:</span>
-                <span class="font-semibold text-orange-600">{{ cancellationsStats.thisMonth }}</span>
+                <span class="text-gray-600 truncate">Dieser Monat:</span>
+                <span class="font-semibold text-orange-600 flex-shrink-0 ml-2">{{ cancellationsStats.thisMonth }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Letzter Monat:</span>
-                <span class="font-semibold text-gray-600">{{ cancellationsStats.lastMonth }}</span>
+                <span class="text-gray-600 truncate">Letzter Monat:</span>
+                <span class="font-semibold text-gray-600 flex-shrink-0 ml-2">{{ cancellationsStats.lastMonth }}</span>
               </div>
             </div>
           </div>
@@ -201,30 +201,30 @@
 
         <!-- Stunden -->
         <div class="bg-white rounded-lg shadow-sm border">
-          <div class="px-4 py-3 border-b border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-900">
+          <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-900">
               ⏱️ Stunden
             </h3>
           </div>
-          <div class="p-4">
-            <div v-if="isLoadingHours" class="h-40 flex items-center justify-center text-gray-500">
+          <div class="p-3 sm:p-4">
+            <div v-if="isLoadingHours" class="h-32 sm:h-40 flex items-center justify-center text-gray-500">
               <div class="text-center">
                 <LoadingLogo size="sm" :tenant-id="currentUser?.tenant_id" />
                 <div class="mt-1 text-xs">Laden...</div>
               </div>
             </div>
-            <div v-else class="space-y-2 text-xs">
+            <div v-else class="space-y-1 sm:space-y-2 text-xs">
               <div class="flex justify-between">
-                <span class="text-gray-600">Heute:</span>
-                <span class="font-semibold text-blue-600">{{ hoursStats.today }}h</span>
+                <span class="text-gray-600 truncate">Heute:</span>
+                <span class="font-semibold text-blue-600 flex-shrink-0 ml-2">{{ hoursStats.today }}h</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Diese Woche:</span>
-                <span class="font-semibold text-green-600">{{ hoursStats.thisWeek }}h</span>
+                <span class="text-gray-600 truncate">Diese Woche:</span>
+                <span class="font-semibold text-green-600 flex-shrink-0 ml-2">{{ hoursStats.thisWeek }}h</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Dieser Monat:</span>
-                <span class="font-semibold text-purple-600">{{ hoursStats.thisMonth }}h</span>
+                <span class="text-gray-600 truncate">Dieser Monat:</span>
+                <span class="font-semibold text-purple-600 flex-shrink-0 ml-2">{{ hoursStats.thisMonth }}h</span>
               </div>
             </div>
           </div>
@@ -233,8 +233,8 @@
 
       <!-- Recent Activity - Kompakt -->
       <div class="bg-white rounded-lg shadow-sm border">
-        <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-          <h3 class="text-sm font-semibold text-gray-900">
+        <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 flex justify-between items-center">
+          <h3 class="text-xs sm:text-sm font-semibold text-gray-900">
             🕒 Aktivitäten
           </h3>
           <NuxtLink to="/admin/payment-overview" 
@@ -242,11 +242,11 @@
             Alle →
           </NuxtLink>
         </div>
-        <div class="p-4">
-          <div class="space-y-2">
+        <div class="p-3 sm:p-4">
+          <div class="space-y-1 sm:space-y-2">
             <div v-for="activity in recentActivities.slice(0, 5)" :key="activity.id" 
-                 class="flex items-center gap-2 text-xs hover:bg-gray-50 p-2 rounded transition-colors">
-              <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                 class="flex items-center gap-2 text-xs hover:bg-gray-50 p-1 sm:p-2 rounded transition-colors">
+              <div class="w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center flex-shrink-0"
                    :class="activity.type === 'payment' ? 'bg-green-100' : 
                           activity.type === 'pending_payment' ? 'bg-orange-100' :
                           activity.type === 'booking' ? 'bg-blue-100' : 'bg-gray-100'">
@@ -266,102 +266,139 @@
   </div>
 
   <!-- Pending Students Modal -->
-  <div v-if="showPendingStudentsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+  <div v-if="showPendingStudentsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
       <!-- Modal Header -->
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h2 class="text-xl font-semibold text-gray-900">
+      <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-lg sm:text-xl font-semibold text-gray-900">
           Alle Schüler mit ausstehenden Zahlungen
         </h2>
         <button 
           @click="showPendingStudentsModal = false"
           class="text-gray-400 hover:text-gray-600 transition-colors"
         >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
       </div>
 
       <!-- Modal Content -->
-      <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-        <div v-if="isLoadingPendingStudents" class="flex items-center justify-center py-12">
+      <div class="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)]">
+        <div v-if="isLoadingPendingStudents" class="flex items-center justify-center py-8 sm:py-12">
           <div class="text-center">
             <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
-            <div class="mt-2 text-gray-500">Wird geladen...</div>
+            <div class="mt-2 text-gray-500 text-sm sm:text-base">Wird geladen...</div>
           </div>
         </div>
         
-        <div v-else-if="pendingStudents.length === 0" class="text-center py-12 text-gray-500">
-          <div class="text-4xl mb-2">✅</div>
-          <div>Keine ausstehenden Zahlungen gefunden!</div>
+        <div v-else-if="pendingStudents.length === 0" class="text-center py-8 sm:py-12 text-gray-500">
+          <div class="text-3xl sm:text-4xl mb-2">✅</div>
+          <div class="text-sm sm:text-base">Keine ausstehenden Zahlungen gefunden!</div>
         </div>
         
-        <div v-else class="space-y-4">
+        <div v-else class="space-y-3 sm:space-y-4">
           <!-- Summary Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div class="text-sm text-blue-600 font-medium">Gesamt Schüler</div>
-              <div class="text-2xl font-bold text-blue-700">{{ pendingStudents.length }}</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div class="bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-200">
+              <div class="text-xs sm:text-sm text-blue-600 font-medium">Gesamt Schüler</div>
+              <div class="text-xl sm:text-2xl font-bold text-blue-700">{{ pendingStudents.length }}</div>
             </div>
-            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
-              <div class="text-sm text-orange-600 font-medium">Gesamt ausstehende Zahlungen</div>
-              <div class="text-2xl font-bold text-orange-700">{{ totalPendingPayments }}</div>
+            <div class="bg-orange-50 p-3 sm:p-4 rounded-lg border border-orange-200">
+              <div class="text-xs sm:text-sm text-orange-600 font-medium">Gesamt ausstehende Zahlungen</div>
+              <div class="text-xl sm:text-2xl font-bold text-orange-700">{{ totalPendingPayments }}</div>
             </div>
-            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
-              <div class="text-sm text-red-600 font-medium">Gesamt ausstehender Betrag</div>
-              <div class="text-2xl font-bold text-red-700">CHF {{ (totalPendingAmount / 100).toFixed(2) }}</div>
+            <div class="bg-red-50 p-3 sm:p-4 rounded-lg border border-red-200">
+              <div class="text-xs sm:text-sm text-red-600 font-medium">Gesamt ausstehender Betrag</div>
+              <div class="text-xl sm:text-2xl font-bold text-red-700">CHF {{ (totalPendingAmount / 100).toFixed(2) }}</div>
             </div>
           </div>
 
           <!-- Students Table -->
           <div class="bg-gray-50 rounded-lg overflow-hidden">
-            <table class="w-full">
-              <thead class="bg-gray-100">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schüler</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-Mail</th>
-                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ausstehende Zahlungen</th>
-                  <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gesamtbetrag</th>
-                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aktion</th>
-                </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="student in pendingStudents" :key="student.id" class="hover:bg-gray-50">
-                  <td class="px-4 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                      <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                        <span class="text-orange-600 font-semibold text-sm">
-                          {{ student.first_name?.charAt(0) }}{{ student.last_name?.charAt(0) }}
-                        </span>
+            <!-- Desktop Table -->
+            <div class="hidden md:block">
+              <table class="w-full">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schüler</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-Mail</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ausstehende Zahlungen</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gesamtbetrag</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aktion</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-for="student in pendingStudents" :key="student.id" class="hover:bg-gray-50">
+                    <td class="px-4 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                          <span class="text-orange-600 font-semibold text-sm">
+                            {{ student.first_name?.charAt(0) }}{{ student.last_name?.charAt(0) }}
+                          </span>
+                        </div>
+                        <div>
+                          <div class="font-medium text-gray-900">{{ student.first_name }} {{ student.last_name }}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div class="font-medium text-gray-900">{{ student.first_name }} {{ student.last_name }}</div>
-                      </div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {{ student.email }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-center">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        {{ student.pending_payments_count }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                      CHF {{ (student.total_pending_amount / 100).toFixed(2) }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-center">
+                      <button 
+                        @click="navigateToStudentPayments(student.id); showPendingStudentsModal = false"
+                        class="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                      >
+                        Details anzeigen
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Mobile Cards -->
+            <div class="md:hidden space-y-3 p-3">
+              <div v-for="student in pendingStudents" :key="student.id" 
+                   class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center">
+                    <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                      <span class="text-orange-600 font-semibold text-sm">
+                        {{ student.first_name?.charAt(0) }}{{ student.last_name?.charAt(0) }}
+                      </span>
                     </div>
-                  </td>
-                  <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {{ student.email }}
-                  </td>
-                  <td class="px-4 py-4 whitespace-nowrap text-center">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                      {{ student.pending_payments_count }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                    <div>
+                      <div class="font-medium text-gray-900 text-sm">{{ student.first_name }} {{ student.last_name }}</div>
+                      <div class="text-xs text-gray-500">{{ student.email }}</div>
+                    </div>
+                  </div>
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                    {{ student.pending_payments_count }}
+                  </span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <div class="text-sm font-medium text-gray-900">
                     CHF {{ (student.total_pending_amount / 100).toFixed(2) }}
-                  </td>
-                  <td class="px-4 py-4 whitespace-nowrap text-center">
-                    <button 
-                      @click="navigateToStudentPayments(student.id); showPendingStudentsModal = false"
-                      class="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
-                    >
-                      Details anzeigen
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+                  <button 
+                    @click="navigateToStudentPayments(student.id); showPendingStudentsModal = false"
+                    class="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                  >
+                    Details anzeigen
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1270,6 +1307,7 @@ const load12MonthsRevenue = async () => {
         name: monthName,
         revenue: totalRevenue,
         paymentsCount,
+        pendingCount: 0, // Not used in 12 months view
         monthKey: `${targetDate.getFullYear()}-${targetDate.getMonth() + 1}`
       })
     }

@@ -61,7 +61,8 @@
       
       <!-- Tab Navigation -->
       <div class="border-b border-gray-200 mb-6">
-        <nav class="-mb-px flex space-x-8">
+        <!-- Desktop: Horizontal Tabs -->
+        <nav class="hidden md:flex -mb-px space-x-8">
           <button
             v-for="tab in tabs"
             :key="tab.id"
@@ -79,6 +80,51 @@
             </span>
           </button>
         </nav>
+
+        <!-- Mobile: Dropdown Menu -->
+        <div class="md:hidden">
+          <div class="relative tab-dropdown-container">
+            <button
+              @click="showTabDropdown = !showTabDropdown"
+              class="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              <span class="flex items-center">
+                <component :is="getCurrentTabIcon()" class="w-5 h-5 mr-2" />
+                {{ getCurrentTabName() }}
+              </span>
+              <svg 
+                class="w-4 h-4 transition-transform" 
+                :class="{ 'rotate-180': showTabDropdown }"
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            
+            <!-- Dropdown Content -->
+            <div
+              v-show="showTabDropdown"
+              class="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-64 overflow-y-auto"
+            >
+              <div class="py-2">
+                <button
+                  v-for="tab in tabs"
+                  :key="tab.id"
+                  @click="selectTab(tab.id)"
+                  :class="[
+                    'w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors',
+                    activeTab === tab.id ? 'bg-blue-50 text-blue-600' : ''
+                  ]"
+                >
+                  <component :is="tab.icon" class="w-5 h-5 mr-3" />
+                  {{ tab.name }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Tab Content -->
@@ -440,40 +486,36 @@
 
         <!-- Funktionen Tab -->
         <div v-show="activeTab === 'features'" class="space-y-6">
-          <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">Funktionen</h2>
+          <div class="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
+            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Funktionen</h2>
 
             <!-- Features Grid Container -->
             <div>
-              <div v-if="isLoadingFeatures" class="flex justify-center items-center py-8">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span class="ml-2 text-gray-600">Lade Funktionen...</span>
+              <div v-if="isLoadingFeatures" class="flex justify-center items-center py-6 sm:py-8">
+                <div class="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600"></div>
+                <span class="ml-2 text-sm sm:text-base text-gray-600">Lade Funktionen...</span>
               </div>
               
-              <div v-if="!isLoadingFeatures" class="grid grid-cols-4 xl:grid-cols-4 lg:grid-cols-4 md:grid-cols-4 sm:grid-cols-2 gap-4 p-1">
-                <!-- Debug Info -->
-                <div class="col-span-full bg-blue-50 p-2 rounded text-xs">
-                  Debug: {{ featureDefinitions.length }} features loaded
-                </div>
+              <div v-if="!isLoadingFeatures" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 <!-- Dynamic Features -->
                 <div 
                   v-for="feature in featureDefinitions" 
                   :key="feature.key"
-                  class="bg-gray-50 rounded-lg border p-4 hover:shadow-md transition-shadow"
+                  class="bg-gray-50 rounded-lg border p-3 sm:p-4 hover:shadow-md transition-shadow"
                 >
                   <div class="flex flex-col h-full">
                     <div class="flex-1 mb-3">
-                      <h3 class="font-semibold text-gray-900 text-sm mb-2 flex items-center">
-                        <span class="text-lg mr-2">{{ feature.icon }}</span>
-                        {{ feature.displayName }}
+                      <h3 class="font-semibold text-gray-900 text-sm sm:text-base mb-2 flex items-center">
+                        <span class="text-base sm:text-lg mr-2">{{ feature.icon }}</span>
+                        <span class="truncate">{{ feature.displayName }}</span>
                       </h3>
-                      <p class="text-xs text-gray-600 leading-relaxed">{{ feature.description }}</p>
+                      <p class="text-xs sm:text-sm text-gray-600 leading-relaxed">{{ feature.description }}</p>
                     </div>
                     <div class="flex justify-end">
                       <label class="inline-flex items-center cursor-pointer select-none" @click.stop @mousedown.stop>
                         <input type="checkbox" class="sr-only" :checked="feature.isEnabled" @change="toggleFeature(feature.key, ($event.target as HTMLInputElement).checked)" />
-                        <div :class="['relative w-10 h-6 rounded-full transition-colors', feature.isEnabled ? 'bg-green-600' : 'bg-gray-300']">
-                          <span :class="['absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform', feature.isEnabled ? 'translate-x-4' : 'translate-x-0']"></span>
+                        <div :class="['relative w-9 h-5 sm:w-10 sm:h-6 rounded-full transition-colors', feature.isEnabled ? 'bg-green-600' : 'bg-gray-300']">
+                          <span :class="['absolute top-0.5 left-0.5 h-4 w-4 sm:h-5 sm:w-5 bg-white rounded-full transition-transform', feature.isEnabled ? 'translate-x-4' : 'translate-x-0']"></span>
                         </div>
                       </label>
                     </div>
@@ -1130,7 +1172,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, markRaw, watch } from 'vue'
+import { ref, onMounted, markRaw, watch, onUnmounted } from 'vue'
 import { definePageMeta, navigateTo } from '#imports'
 import { getSupabase } from '~/utils/supabase'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -1193,6 +1235,7 @@ const isSaving = ref(false)
 const activeTab = ref('design')
 const selectedPreset = ref('')
 const selectedFont = ref('')
+const showTabDropdown = ref(false)
 // Features
 const { flags: featureFlags, definitions: featureDefinitions, isLoading: isLoadingFeatures, load: loadFeatures, isEnabled, setEnabled } = useFeatures()
 const authStore = useAuthStore()
@@ -1343,6 +1386,21 @@ const brandingForm = ref({
 })
 
 // Methods
+const selectTab = (tabId: string) => {
+  activeTab.value = tabId
+  showTabDropdown.value = false
+}
+
+const getCurrentTabName = () => {
+  const currentTab = tabs.value.find(tab => tab.id === activeTab.value)
+  return currentTab?.name || 'Design'
+}
+
+const getCurrentTabIcon = () => {
+  const currentTab = tabs.value.find(tab => tab.id === activeTab.value)
+  return currentTab?.icon || PaletteIcon
+}
+
 const loadData = async () => {
   try {
     let tenantId = (authStore.userProfile as any)?.tenant_id
@@ -1963,8 +2021,18 @@ const resetForm = () => {
 
 // Auth check (authStore already declared above)
 
+// Click outside handler for dropdown
+const handleClickOutside = (event: Event) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.tab-dropdown-container')) {
+    showTabDropdown.value = false
+  }
+}
+
 // Lifecycle
 onMounted(async () => {
+  // Add click outside listener
+  document.addEventListener('click', handleClickOutside)
   console.log('🔍 Profile page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
@@ -2035,6 +2103,11 @@ watch(currentTemplate, () => {
     saveTemplate()
   }, 2000)
 }, { deep: true })
+
+// Cleanup
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped>

@@ -262,7 +262,6 @@ const validationErrors = ref<string[]>([])
 const examinerSearch = ref('')
 const showExaminerDropdown = ref(false)
 const selectedExaminerName = ref('')
-const selectedExaminerCode = ref('')
 
 // Exam Result Form
 const examResult = ref({
@@ -293,8 +292,7 @@ const filteredExaminers = computed(() => {
   const searchTerm = examinerSearch.value.toLowerCase()
   return availableExaminers.value.filter(examiner => {
     const fullName = `${examiner.first_name || ''} ${examiner.last_name || ''}`.toLowerCase()
-    const code = (examiner.examiner_code || '').toLowerCase()
-    return fullName.includes(searchTerm) || code.includes(searchTerm)
+    return fullName.includes(searchTerm)
   })
 })
 
@@ -302,10 +300,25 @@ const filteredExaminers = computed(() => {
 const loadExaminers = async () => {
   try {
     const supabase = getSupabase()
+    
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    if (!userProfile?.tenant_id) {
+      console.error('❌ User has no tenant assigned')
+      return
+    }
+    
     const { data, error } = await supabase
       .from('examiners')
       .select('*')
       .eq('is_active', true)
+      .eq('tenant_id', userProfile.tenant_id)
       .order('last_name')
     
     if (error) throw error
@@ -322,7 +335,6 @@ const loadExaminers = async () => {
 const selectExaminer = (examiner: any) => {
   examResult.value.examiner_id = examiner.id
   selectedExaminerName.value = `${examiner.first_name || ''} ${examiner.last_name || ''}`.trim()
-  selectedExaminerCode.value = examiner.examiner_code || ''
   examinerSearch.value = ''
   showExaminerDropdown.value = false
 }
@@ -338,7 +350,6 @@ const setRating = (rating: number) => {
 const clearSelectedExaminer = () => {
   examResult.value.examiner_id = ''
   selectedExaminerName.value = ''
-  selectedExaminerCode.value = ''
   examinerSearch.value = ''
   showExaminerDropdown.value = false
 }
@@ -352,18 +363,16 @@ const addExaminer = async () => {
 
     const supabase = getSupabase()
     
-    // Generiere automatisch einen Experten-Code
-    const { data: lastExaminer } = await supabase
-      .from('examiners')
-      .select('examiner_code')
-      .order('examiner_code', { ascending: false })
-      .limit(1)
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
       .single()
     
-    let nextCode = 'EXP001'
-    if (lastExaminer?.examiner_code) {
-      const lastNumber = parseInt(lastExaminer.examiner_code.replace('EXP', ''))
-      nextCode = `EXP${String(lastNumber + 1).padStart(3, '0')}`
+    if (!userProfile?.tenant_id) {
+      throw new Error('User has no tenant assigned')
     }
     
     const { data, error } = await supabase
@@ -371,8 +380,8 @@ const addExaminer = async () => {
       .insert({
         first_name: newExaminer.value.first_name.trim(),
         last_name: newExaminer.value.last_name.trim(),
-        examiner_code: nextCode,
-        is_active: true
+        is_active: true,
+        tenant_id: userProfile.tenant_id
       })
       .select()
       .single()

@@ -4,15 +4,15 @@
       <h2 class="text-2xl font-bold text-gray-900">Bewertungssystem verwalten</h2>
     </div>
 
-    <!-- Tabs -->
+    <!-- Tabs - Mobile optimized with horizontal scroll -->
     <div class="border-b border-gray-200 mb-6">
-      <nav class="flex space-x-8">
+      <nav class="flex space-x-4 overflow-x-auto scrollbar-hide pb-2">
         <button
           v-for="tab in tabs"
           :key="tab.id"
           @click="activeTab = tab.id"
           :class="[
-            'py-2 px-1 border-b-2 font-medium text-sm',
+            'py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0',
             activeTab === tab.id
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -27,18 +27,18 @@
     <div v-for="drivingCat in drivingCategories" :key="drivingCat.code">
       <div v-if="activeTab === `category-${drivingCat.code}`" class="space-y-6">
         <div class="mb-4">
-          <div class="flex items-center justify-between">
-            <div>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex-1">
               <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ drivingCat.name }}</h3>
               <p class="text-sm text-gray-600">{{ drivingCat.description || `Bewertungskriterien für ${drivingCat.name}` }}</p>
             </div>
-            <div class="flex space-x-2">
+            <div class="flex flex-col sm:flex-row gap-2">
               <!-- Load Standards Button (only show if no tenant-specific categories exist and for driving schools) -->
               <button
                 v-if="filteredEvaluationCategories.length === 0 && evaluationCategories.length === 0 && tenantBusinessType === 'driving_school'"
                 @click="loadStandardEvaluationCategories"
                 :disabled="isLoadingStandards"
-                class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                class="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
               >
                 <svg v-if="isLoadingStandards" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -46,19 +46,22 @@
                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                 </svg>
-                {{ isLoadingStandards ? 'Lade Standards...' : 'Standard-Templates laden' }}
+                <span class="hidden sm:inline">{{ isLoadingStandards ? 'Lade Standards...' : 'Standard-Templates laden' }}</span>
+                <span class="sm:hidden">{{ isLoadingStandards ? 'Lade...' : 'Standards' }}</span>
               </button>
               <button
                 @click="showAddCategoryModal = true"
-                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
               >
-                + {{ tenantBusinessType === 'driving_school' ? 'Bewertungskategorie' : 'Bewertungsbereich' }}
+                <span class="hidden sm:inline">+ {{ tenantBusinessType === 'driving_school' ? 'Bewertungskategorie' : 'Bewertungsbereich' }}</span>
+                <span class="sm:hidden">+ Kategorie</span>
               </button>
               <button
                 @click="showAddCriteriaModal = true"
-                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
               >
-                + Kriterium
+                <span class="hidden sm:inline">+ Kriterium</span>
+                <span class="sm:hidden">+ Kriterium</span>
               </button>
             </div>
           </div>
@@ -123,18 +126,9 @@
                               : 'bg-gray-100 text-gray-800'">
                         {{ hasDrivingCategory(criteria, drivingCat.code) ? 'Aktiv' : 'Inaktiv' }}
                       </span>
-                      <button @click.stop="toggleDrivingCategory(criteria, drivingCat.code)" 
-                              :class="hasDrivingCategory(criteria, drivingCat.code) 
-                                ? 'text-red-600 hover:text-red-900' 
-                                : 'text-green-600 hover:text-green-900'"
-                              :title="hasDrivingCategory(criteria, drivingCat.code) 
-                                ? 'Aus dieser Fahrkategorie entfernen' 
-                                : 'Für diese Fahrkategorie aktivieren'">
-                        <svg v-if="hasDrivingCategory(criteria, drivingCat.code)" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <button @click.stop="deleteCriteria(criteria.id)" class="text-red-600 hover:text-red-900">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M3 7h16"></path>
-                        </svg>
-                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
                       </button>
                     </div>
@@ -223,18 +217,18 @@
     <!-- Bewertungsskala Tab -->
     <div v-if="activeTab === 'scale'" class="p-6 space-y-4">
       <div class="mb-4">
-        <div class="flex items-center justify-between">
-          <div>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div class="flex-1">
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Bewertungsskala</h3>
             <p class="text-sm text-gray-600">Verwalten Sie die Bewertungsstufen und deren Labels</p>
           </div>
-          <div class="flex space-x-2">
+          <div class="flex flex-col sm:flex-row gap-2">
             <!-- Load Standards Button (only show if no tenant-specific scale exists) -->
             <button
               v-if="scale.length === 0"
               @click="loadStandardEvaluationScale"
               :disabled="isLoadingStandards"
-              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
             >
               <svg v-if="isLoadingStandards" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -242,13 +236,15 @@
               <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
-              {{ isLoadingStandards ? 'Lade Standards...' : 'Standard-Skala laden' }}
+              <span class="hidden sm:inline">{{ isLoadingStandards ? 'Lade Standards...' : 'Standard-Skala laden' }}</span>
+              <span class="sm:hidden">{{ isLoadingStandards ? 'Lade...' : 'Standards' }}</span>
             </button>
             <button
               @click="showAddScaleModal = true"
-              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
             >
-              + Bewertungsstufe hinzufügen
+              <span class="hidden sm:inline">+ Bewertungsstufe hinzufügen</span>
+              <span class="sm:hidden">+ Stufe</span>
             </button>
           </div>
         </div>
@@ -291,11 +287,12 @@
 
     <!-- Category Modal -->
     <div v-if="showAddCategoryModal || editingCategory" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div class="bg-blue-600 text-white p-4">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold">
-              {{ editingCategory ? 'Bewertungskategorie bearbeiten' : 'Neue Bewertungskategorie' }}
+              <span class="hidden sm:inline">{{ editingCategory ? 'Bewertungskategorie bearbeiten' : 'Neue Bewertungskategorie' }}</span>
+              <span class="sm:hidden">{{ editingCategory ? 'Kategorie bearbeiten' : 'Neue Kategorie' }}</span>
             </h3>
             <button @click="closeCategoryModal" class="text-white hover:text-blue-200">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -398,15 +395,16 @@
               <button
                 type="button"
                 @click="closeCategoryModal"
-                class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                class="px-3 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors text-sm sm:text-base"
               >
                 Abbrechen
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                class="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base"
               >
-                {{ editingCategory ? 'Aktualisieren' : 'Erstellen' }}
+                <span class="hidden sm:inline">{{ editingCategory ? 'Aktualisieren' : 'Erstellen' }}</span>
+                <span class="sm:hidden">{{ editingCategory ? 'Update' : 'Erstellen' }}</span>
               </button>
             </div>
           </form>
@@ -416,11 +414,12 @@
 
     <!-- Criteria Modal -->
     <div v-if="showAddCriteriaModal || editingCriteria" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div class="bg-green-600 text-white p-4">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold">
-              {{ editingCriteria ? 'Kriterium bearbeiten' : 'Neues Kriterium' }}
+              <span class="hidden sm:inline">{{ editingCriteria ? 'Kriterium bearbeiten' : 'Neues Kriterium' }}</span>
+              <span class="sm:hidden">{{ editingCriteria ? 'Kriterium bearbeiten' : 'Neues Kriterium' }}</span>
             </h3>
             <button @click="closeCriteriaModal" class="text-white hover:text-green-200">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -520,7 +519,7 @@
 
     <!-- Scale Modal -->
     <div v-if="editingScale" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div class="bg-purple-600 text-white p-4">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold">Bewertung bearbeiten</h3>
@@ -618,7 +617,7 @@
 
     <!-- Scale Modal -->
     <div v-if="showAddScaleModal || editingScale" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div class="bg-green-600 text-white p-4">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold">
@@ -712,6 +711,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useUIStore } from '~/stores/ui'
+
+// Initialize UI store for toast notifications
+const uiStore = useUIStore()
 
 // Types
 interface EvaluationCategory {
@@ -721,6 +724,9 @@ interface EvaluationCategory {
   color: string
   display_order: number
   is_active: boolean
+  is_theory: boolean
+  tenant_id?: string
+  driving_categories?: string[]
 }
 
 interface DrivingCategory {
@@ -731,6 +737,7 @@ interface DrivingCategory {
   color: string | null
   is_active: boolean
   created_at: string
+  tenant_id?: string
 }
 
 interface Criteria {
@@ -791,7 +798,8 @@ const criteriaForm = ref({
   category_id: '',
   name: '',
   description: '',
-  display_order: 0
+  display_order: 0,
+  driving_categories: [] as string[]
 })
 
 const scaleForm = ref({
@@ -809,7 +817,7 @@ const tabs = computed(() => {
   // Dynamische Tabs für jede Fahrkategorie (oder allgemeine Kategorie für non-driving schools)
   const drivingCategoryTabs = drivingCategories.value.map(dc => ({
     id: `category-${dc.code}`,
-    name: dc.name || dc.code, // Use name if available, fallback to code
+    name: dc.name || dc.code, // Use name if available, fallback to code (without "Kategorie")
     drivingCategory: dc.code
   }))
   
@@ -833,8 +841,15 @@ const filteredEvaluationCategories = computed(() => {
     return evaluationCategories.value
   }
   
-  // If driving_categories column doesn't exist, return all categories
+  // Filter categories: show all theory categories + categories for current driving category
   const filtered = evaluationCategories.value.filter(category => {
+    // Always show theory categories in all driving categories
+    if (category.is_theory) {
+      console.log('📚 Showing theory category:', category.name)
+      return true
+    }
+    
+    // For non-theory categories, check if they apply to current driving category
     if (!category.driving_categories) return true
     return category.driving_categories.includes(currentDrivingCategory.value!.code)
   })
@@ -872,12 +887,12 @@ const loadData = async () => {
 
     console.log('🔍 Loading evaluation data for tenant:', userProfile.tenant_id)
 
-    // Load evaluation categories (filtered by tenant)
+    // Load evaluation categories (filtered by tenant + global theory categories)
     const { data: evalCatData, error: evalCatError } = await supabase
       .from('evaluation_categories')
       .select('id, name, description, color, display_order, is_active, tenant_id, is_theory')
       .eq('is_active', true)
-      .eq('tenant_id', userProfile.tenant_id)
+      .or(`tenant_id.eq.${userProfile.tenant_id},and(is_theory.eq.true,tenant_id.is.null)`)
       .order('display_order')
     
     if (evalCatError) {
@@ -887,17 +902,25 @@ const loadData = async () => {
         .from('evaluation_categories')
         .select('id, name, description, color, display_order, is_active, tenant_id, is_theory')
         .eq('is_active', true)
-        .eq('tenant_id', userProfile.tenant_id)
+        .or(`tenant_id.eq.${userProfile.tenant_id},and(is_theory.eq.true,tenant_id.is.null)`)
         .order('display_order')
       
       if (evalCatErrorFallback) {
         console.error('❌ Fallback also failed:', evalCatErrorFallback)
       } else {
-        evaluationCategories.value = evalCatDataFallback || []
+        // Ensure is_theory has a default value
+        evaluationCategories.value = (evalCatDataFallback || []).map(cat => ({
+          ...cat,
+          is_theory: cat.is_theory ?? false
+        }))
         console.log('📊 Loaded evaluation categories (fallback):', evalCatDataFallback?.length || 0, evalCatDataFallback)
       }
     } else {
-      evaluationCategories.value = evalCatData || []
+      // Ensure is_theory has a default value
+      evaluationCategories.value = (evalCatData || []).map(cat => ({
+        ...cat,
+        is_theory: cat.is_theory ?? false
+      }))
       console.log('📊 Loaded evaluation categories:', evalCatData?.length || 0, evalCatData)
     }
 
@@ -929,12 +952,22 @@ const loadData = async () => {
       console.log('🔍 Creating generic categories for non-driving school tenant:', tenantData?.business_type)
       // For other business types: Create generic categories
       drivingCategories.value = [
-        { id: 1, code: 'ALL', name: 'Allgemein', description: 'Allgemeine Bewertungskriterien', is_active: true, tenant_id: userProfile.tenant_id }
+        { 
+          id: 1, 
+          code: 'ALL', 
+          name: 'Allgemein', 
+          description: 'Allgemeine Bewertungskriterien', 
+          color: null,
+          is_active: true, 
+          created_at: new Date().toISOString(),
+          tenant_id: userProfile.tenant_id 
+        }
       ]
     }
 
-    // Load criteria with driving categories (filtered by tenant through categories)
-    const { data: critData } = await supabase
+    // Load criteria with driving categories (filtered by tenant through categories + global theory categories)
+    // First: Load tenant-specific criteria
+    const { data: tenantCritData } = await supabase
       .from('evaluation_criteria')
       .select(`
         id,
@@ -945,12 +978,33 @@ const loadData = async () => {
         is_active,
         driving_categories,
         tenant_id,
-        evaluation_categories!inner(tenant_id)
+        evaluation_categories!inner(tenant_id, is_theory)
       `)
       .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
       .order('display_order')
-    criteria.value = critData || []
-    console.log('📊 Loaded evaluation criteria:', critData?.length || 0, critData)
+    
+    // Second: Load global theory criteria
+    const { data: theoryCritData } = await supabase
+      .from('evaluation_criteria')
+      .select(`
+        id,
+        category_id,
+        name,
+        description,
+        display_order,
+        is_active,
+        driving_categories,
+        tenant_id,
+        evaluation_categories!inner(tenant_id, is_theory)
+      `)
+      .is('evaluation_categories.tenant_id', null)
+      .eq('evaluation_categories.is_theory', true)
+      .order('display_order')
+    
+    // Combine both results
+    const allCriteria = [...(tenantCritData || []), ...(theoryCritData || [])]
+    criteria.value = allCriteria
+    console.log('📊 Loaded evaluation criteria:', allCriteria.length, { tenant: tenantCritData?.length || 0, theory: theoryCritData?.length || 0 })
 
     // Load scale (filtered by tenant)
     const { data: scaleData } = await supabase
@@ -995,7 +1049,7 @@ const loadStandardEvaluationScale = async () => {
     if (fetchError) throw fetchError
 
     if (!globalScale || globalScale.length === 0) {
-      alert('Keine Standard-Bewertungsskala gefunden. Bitte wenden Sie sich an den Administrator.')
+      uiStore.showError('Keine Standard-Skala gefunden', 'Bitte wenden Sie sich an den Administrator.')
       return
     }
 
@@ -1021,11 +1075,11 @@ const loadStandardEvaluationScale = async () => {
     // Reload data to show the new scale
     await loadData()
     
-    alert('Standard-Bewertungsskala erfolgreich geladen!')
+    uiStore.showSuccess('Standard-Skala geladen', 'Die Bewertungsskala wurde erfolgreich geladen.')
     
   } catch (error: any) {
     console.error('❌ Error loading standard evaluation scale:', error)
-    alert(`Fehler beim Laden der Standard-Skala: ${error.message}`)
+    uiStore.showError('Fehler beim Laden', `Fehler beim Laden der Standard-Skala: ${error.message}`)
   } finally {
     isLoadingStandards.value = false
   }
@@ -1096,7 +1150,7 @@ const loadStandardEvaluationCategories = async () => {
     if (categoriesError) throw categoriesError
 
     if (!globalCategories || globalCategories.length === 0) {
-      alert('Keine Standard-Bewertungskategorien gefunden. Bitte wenden Sie sich an den Administrator.')
+      uiStore.showError('Keine Standard-Kategorien gefunden', 'Bitte wenden Sie sich an den Administrator.')
       return
     }
 
@@ -1155,11 +1209,11 @@ const loadStandardEvaluationCategories = async () => {
     // Reload data to show the new categories
     await loadData()
     
-    alert('Standard-Bewertungskategorien erfolgreich geladen!')
+    uiStore.showSuccess('Standard-Kategorien geladen', 'Die Bewertungskategorien wurden erfolgreich geladen.')
     
   } catch (error: any) {
     console.error('❌ Error loading standard evaluation categories:', error)
-    alert(`Fehler beim Laden der Standard-Kategorien: ${error.message}`)
+    uiStore.showError('Fehler beim Laden', `Fehler beim Laden der Standard-Kategorien: ${error.message}`)
   } finally {
     isLoadingStandards.value = false
   }
@@ -1281,6 +1335,21 @@ const deleteCategory = async (id: string) => {
   }
 }
 
+const deleteCriteria = async (id: string) => {
+  if (confirm('Sind Sie sicher, dass Sie dieses Kriterium löschen möchten?')) {
+    console.log('Deleting criteria:', id)
+    try {
+      await supabase
+        .from('evaluation_criteria')
+        .delete()
+        .eq('id', id)
+      await loadData()
+    } catch (error) {
+      console.error('Error deleting criteria:', error)
+    }
+  }
+}
+
 // Helper function to get criteria for a specific category
 const getCriteriaForCategory = (categoryId: string) => {
   // Während des Drags die ursprüngliche Reihenfolge beibehalten
@@ -1365,7 +1434,7 @@ const toggleAllCategoriesForCriteria = async (criteria: any) => {
     console.log(`✅ All categories ${hasAll ? 'deactivated' : 'activated'} for criteria: ${criteria.name}`)
   } catch (err: any) {
     console.error('❌ Error toggling all categories for criteria:', err)
-    alert(`Fehler beim Umschalten aller Kategorien: ${err.message}`)
+    uiStore.showError('Fehler beim Umschalten', `Fehler beim Umschalten aller Kategorien: ${err.message}`)
   }
 }
 
@@ -1433,7 +1502,7 @@ const toggleAllDrivingCategories = async (event: Event) => {
     console.log(`✅ All driving categories ${isChecked ? 'activated' : 'deactivated'} successfully`)
   } catch (err: any) {
     console.error('❌ Error toggling all driving categories:', err)
-    alert(`Fehler beim Umschalten aller Fahrkategorien: ${err.message}`)
+    uiStore.showError('Fehler beim Umschalten', `Fehler beim Umschalten aller Fahrkategorien: ${err.message}`)
     // Checkbox zurücksetzen bei Fehler
     target.checked = !isChecked
   }
@@ -1485,12 +1554,12 @@ const cancelInlineAdd = () => {
 const saveInlineCriteria = async (category: EvaluationCategory) => {
   try {
     if (!inlineCriteriaForm.value.name.trim()) {
-      alert('Bitte geben Sie einen Namen für das Kriterium ein.')
+      uiStore.showWarning('Name erforderlich', 'Bitte geben Sie einen Namen für das Kriterium ein.')
       return
     }
     
     if (inlineCriteriaForm.value.driving_categories.length === 0) {
-      alert('Bitte wählen Sie mindestens eine Fahrkategorie aus.')
+      uiStore.showWarning('Fahrkategorie erforderlich', 'Bitte wählen Sie mindestens eine Fahrkategorie aus.')
       return
     }
     
@@ -1520,7 +1589,7 @@ const saveInlineCriteria = async (category: EvaluationCategory) => {
     cancelInlineAdd()
   } catch (err: any) {
     console.error('❌ Error creating inline criteria:', err)
-    alert(`Fehler beim Erstellen des Kriteriums: ${err.message}`)
+    uiStore.showError('Fehler beim Erstellen', `Fehler beim Erstellen des Kriteriums: ${err.message}`)
   }
 }
 
@@ -1604,7 +1673,7 @@ const onDrop = async (event: DragEvent, targetCriteria: any, targetCategoryId: s
     
   } catch (err: any) {
     console.error('❌ Error updating criteria order:', err)
-    alert(`Fehler beim Aktualisieren der Reihenfolge: ${err.message}`)
+    uiStore.showError('Fehler beim Aktualisieren', `Fehler beim Aktualisieren der Reihenfolge: ${err.message}`)
   } finally {
     draggedCriteria.value = null
     draggedCategoryId.value = null
@@ -1626,18 +1695,32 @@ const closeCriteriaModal = () => {
     name: '',
     description: '',
     display_order: 0,
-    
+    driving_categories: []
   }
 }
 
 const saveCriteria = async () => {
   try {
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
     const criteriaData = {
       category_id: criteriaForm.value.category_id,
       name: criteriaForm.value.name,
       description: criteriaForm.value.description,
       display_order: criteriaForm.value.display_order,
-
+      driving_categories: criteriaForm.value.driving_categories || [],
+      tenant_id: userProfile.tenant_id
     }
 
     if (editingCriteria.value) {

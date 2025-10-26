@@ -3,69 +3,68 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <!-- Back Button & Header -->
-      <div class="mb-8">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-4">
+      <div class="mb-6 sm:mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+          <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
             <NuxtLink 
               to="/admin/payment-overview" 
               class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700"
             >
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
               </svg>
-              Zurück zur Übersicht
+              <span class="hidden sm:inline">Zurück zur Übersicht</span>
+              <span class="sm:hidden">Zurück</span>
             </NuxtLink>
             
             <div>
-              <h1 class="text-3xl font-bold text-gray-900">
+              <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
                 👤 {{ displayName }}
               </h1>
             </div>
           </div>
           
           <!-- Action Buttons -->
-          <div class="flex space-x-3">        
+          <div class="flex space-x-2 sm:space-x-3">        
             <button 
               :disabled="isLoading"
-              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              class="inline-flex items-center px-3 py-2 sm:px-4 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
               @click="refreshData"
             >
-              <svg v-if="isLoading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg v-if="isLoading" class="animate-spin -ml-1 mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
               </svg>
-              <svg v-else class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-else class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
-              {{ isLoading ? 'Laden...' : 'Aktualisieren' }}
+              <span class="hidden sm:inline">{{ isLoading ? 'Laden...' : 'Aktualisieren' }}</span>
+              <span class="sm:hidden">{{ isLoading ? '...' : '↻' }}</span>
             </button>
-            
-
-
           </div>
         </div>
       </div>
 
       <!-- Loading State -->
       <div v-if="isLoading && !userDetails" class="bg-white shadow rounded-lg">
-        <div class="px-6 py-12 text-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"/>
-          <p class="text-gray-600">Benutzerdaten werden geladen...</p>
+        <div class="px-4 sm:px-6 py-8 sm:py-12 text-center">
+          <div class="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-green-600 mx-auto mb-4"/>
+          <p class="text-sm sm:text-base text-gray-600">Benutzerdaten werden geladen...</p>
         </div>
       </div>
 
       <!-- Error State -->
       <div v-else-if="error" class="bg-white shadow rounded-lg">
-        <div class="px-6 py-12 text-center">
-          <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+        <div class="px-4 sm:px-6 py-8 sm:py-12 text-center">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
             </svg>
           </div>
-          <h3 class="text-lg font-medium text-gray-900 mb-2">Fehler beim Laden</h3>
-          <p class="text-gray-600 mb-4">{{ error }}</p>
+          <h3 class="text-base sm:text-lg font-medium text-gray-900 mb-2">Fehler beim Laden</h3>
+          <p class="text-sm sm:text-base text-gray-600 mb-4">{{ error }}</p>
           <button 
-            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+            class="inline-flex items-center px-3 py-2 sm:px-4 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-green-600 hover:bg-green-700"
             @click="refreshData"
           >
             Erneut versuchen
@@ -81,11 +80,11 @@
           v-if="selectedAppointments.length > 0"
           class="sticky top-16 z-40 bg-white border-b border-gray-200 shadow-sm transition-all duration-200"
         >
-          <div class="px-6 py-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-4">
+          <div class="px-4 sm:px-6 py-3 sm:py-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+              <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                 <div class="flex items-center space-x-2">
-                  <span class="text-base font-medium text-gray-700">
+                  <span class="text-sm sm:text-base font-medium text-gray-700">
                     {{ selectedAppointments.length }} Termin{{ selectedAppointments.length > 1 ? 'e' : '' }} ausgewählt
                   </span>
                   <button
@@ -99,20 +98,21 @@
                   </button>
                 </div>
                 
-                <div class="text-base text-gray-600">
+                <div class="text-sm sm:text-base text-gray-600">
                   Gesamtbetrag: <span class="font-semibold text-green-600">{{ formatCurrency(selectedAppointmentsTotal) }}</span>
                 </div>
               </div>
               
-              <div class="flex items-center space-x-3">
+              <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                 <button
-                  class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-2 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                   @click="showSelectedAppointmentsDetails = true"
                 >
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                   </svg>
-                  Details
+                  <span class="hidden sm:inline">Details</span>
+                  <span class="sm:hidden">📋</span>
                 </button>
                 
                 <!-- Aktionen basierend auf Filter -->
@@ -1404,8 +1404,48 @@ const loadUserAppointments = async () => {
       
       if (paymentsError) throw paymentsError
       paymentsData = payments || []
-      
+    }
 
+    // OPTIMIZATION: Batch load all products and discounts at once
+    let allProducts: any[] = []
+    let allDiscounts: any[] = []
+    
+    if (appointmentIds.length > 0) {
+      // Load all products for all appointments in one query
+      const { data: productsData, error: productsError } = await supabase
+        .from('appointment_products')
+        .select(`
+          appointment_id,
+          id,
+          quantity,
+          unit_price_rappen,
+          total_price_rappen,
+          products (
+            name,
+            description
+          )
+        `)
+        .in('appointment_id', appointmentIds)
+      
+      if (!productsError && productsData) {
+        allProducts = productsData
+      }
+
+      // Load all discounts for all appointments in one query
+      const { data: discountsData, error: discountsError } = await supabase
+        .from('discounts')
+        .select(`
+          appointment_id,
+          id,
+          amount_rappen,
+          discount_type,
+          reason
+        `)
+        .in('appointment_id', appointmentIds)
+      
+      if (!discountsError && discountsData) {
+        allDiscounts = discountsData
+      }
     }
 
     // Kombiniere Termine mit Zahlungsinformationen
@@ -1419,83 +1459,29 @@ const loadUserAppointments = async () => {
       ;(appointment as any).payment_status = payment?.payment_status || 'pending'
       ;(appointment as any).payment_method = payment?.payment_method || 'pending'
       
-      console.log(`📋 Appointment ${appointment.id}: payment_status=${payment?.payment_status}, is_paid=${isPaid}`)
-      
       // Verwende echte Daten aus der Datenbank
       const lessonPrice = payment ? (payment.lesson_price_rappen || 0) / 100 : 0
       const adminFee = payment ? (payment.admin_fee_rappen || 0) / 100 : 0
       const productsPrice = payment ? (payment.products_price_rappen || 0) / 100 : 0
       const discountAmount = payment ? (payment.discount_amount_rappen || 0) / 100 : 0
       
-      console.log(`💰 Payment data for appointment ${appointment.id}:`, {
-        payment_id: payment?.id,
-        lesson_price_rappen: payment?.lesson_price_rappen,
-        admin_fee_rappen: payment?.admin_fee_rappen,
-        products_price_rappen: payment?.products_price_rappen,
-        discount_amount_rappen: payment?.discount_amount_rappen,
-        lessonPrice,
-        adminFee,
-        productsPrice,
-        discountAmount
-      })
-      
       // Bestimme ob Produkte oder Rabatte vorhanden sind
       const hasProducts = productsPrice > 0
       const hasDiscounts = discountAmount > 0
       
-      console.log(`🔍 Appointment ${appointment.id} price breakdown:`, {
-        lessonPrice,
-        adminFee,
-        productsPrice,
-        discountAmount,
-        hasProducts,
-        hasDiscounts
-      })
-      
-      // Lade echte Produkt-Daten für diesen Termin
+      // Get products for this appointment from batch-loaded data
       let products = undefined
       if (hasProducts) {
-        try {
-          console.log(`🔍 Loading products for appointment ${appointment.id}...`)
-          const { data: appointmentProducts, error: productsError } = await supabase
-            .from('appointment_products')
-            .select(`
-              id,
-              quantity,
-              unit_price_rappen,
-              total_price_rappen,
-              products (
-                name,
-                description
-              )
-            `)
-            .eq('appointment_id', appointment.id)
-          
-          console.log(`🔍 Products query result:`, { appointmentProducts, productsError })
-          
-          if (!productsError && appointmentProducts) {
-            products = appointmentProducts.map(ap => ({
-              name: (ap.products as any)?.name || 'Unbekanntes Produkt',
-              price: (ap.total_price_rappen || 0) / 100,
-              quantity: ap.quantity || 1,
-              total_price: (ap.total_price_rappen || 0) / 100
-            }))
-            console.log(`✅ Products loaded for appointment ${appointment.id}:`, products)
-          } else {
-            // Fallback wenn Produkt-Details nicht geladen werden können
-            products = [
-              { 
-                name: 'Zusatzprodukt', 
-                price: productsPrice, 
-                quantity: 1,
-                total_price: productsPrice
-              }
-            ]
-            console.log(`⚠️ Using fallback products for appointment ${appointment.id}:`, products)
-          }
-        } catch (error) {
-          console.warn('Fehler beim Laden der Produkt-Details:', error)
-          // Fallback
+        const appointmentProducts = allProducts.filter(p => p.appointment_id === appointment.id)
+        if (appointmentProducts.length > 0) {
+          products = appointmentProducts.map(ap => ({
+            name: (ap.products as any)?.name || 'Unbekanntes Produkt',
+            price: (ap.total_price_rappen || 0) / 100,
+            quantity: ap.quantity || 1,
+            total_price: (ap.total_price_rappen || 0) / 100
+          }))
+        } else {
+          // Fallback wenn Produkt-Details nicht geladen werden können
           products = [
             { 
               name: 'Zusatzprodukt', 
@@ -1507,43 +1493,19 @@ const loadUserAppointments = async () => {
         }
       }
       
-      // Lade echte Rabatt-Daten für diesen Termin
+      // Get discounts for this appointment from batch-loaded data
       let discounts = undefined
       if (hasDiscounts) {
-        try {
-          const { data: appointmentDiscounts, error: discountsError } = await supabase
-            .from('discounts')
-            .select(`
-              id,
-              amount_rappen,
-              discount_type,
-              reason
-            `)
-            .eq('appointment_id', appointment.id)
-          
-          if (!discountsError && appointmentDiscounts) {
-            discounts = appointmentDiscounts.map(discount => ({
-              name: discount.reason || 'Rabatt',
-              amount: (discount.amount_rappen || 0) / 100,
-              type: discount.discount_type || 'fixed' as const,
-              total_amount: (discount.amount_rappen || 0) / 100
-            }))
-            console.log(`✅ Discounts loaded for appointment ${appointment.id}:`, discounts)
-          } else {
-            // Fallback wenn Rabatt-Details nicht geladen werden können
-            discounts = [
-              { 
-                name: 'Rabatt', 
-                amount: discountAmount, 
-                type: 'fixed' as const,
-                total_amount: discountAmount
-              }
-            ]
-            console.log(`⚠️ Using fallback discounts for appointment ${appointment.id}:`, discounts)
-          }
-        } catch (error) {
-          console.warn('Fehler beim Laden der Rabatt-Details:', error)
-          // Fallback
+        const appointmentDiscounts = allDiscounts.filter(d => d.appointment_id === appointment.id)
+        if (appointmentDiscounts.length > 0) {
+          discounts = appointmentDiscounts.map(discount => ({
+            name: discount.reason || 'Rabatt',
+            amount: (discount.amount_rappen || 0) / 100,
+            type: discount.discount_type || 'fixed' as const,
+            total_amount: (discount.amount_rappen || 0) / 100
+          }))
+        } else {
+          // Fallback wenn Rabatt-Details nicht geladen werden können
           discounts = [
             { 
               name: 'Rabatt', 

@@ -4,18 +4,18 @@
     <!-- Header -->
     <div class="bg-white shadow-lg border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
-          <div class="flex items-center space-x-4">
+        <div class="flex justify-between items-center py-3 sm:py-4">
+          <div class="flex items-center space-x-2 sm:space-x-4">
             <button 
               @click="goBack"
               class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <div>
-              <h1 class="text-2xl font-bold text-gray-900">Zahlungen</h1>
+              <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Zahlungen</h1>
             </div>
           </div>
         </div>
@@ -23,28 +23,28 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div v-if="isLoading" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div class="text-center">
-        <div class="animate-spin rounded-full h-16 w-16 border-4 border-green-500 border-t-transparent mx-auto"></div>
-        <p class="mt-4 text-gray-600 text-lg">Zahlungsdaten werden geladen...</p>
+        <div class="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-green-500 border-t-transparent mx-auto"></div>
+        <p class="mt-4 text-gray-600 text-base sm:text-lg">Zahlungsdaten werden geladen...</p>
       </div>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="bg-red-50 border-l-4 border-red-400 rounded-lg p-6">
+    <div v-else-if="error" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div class="bg-red-50 border-l-4 border-red-400 rounded-lg p-4 sm:p-6">
         <div class="flex">
           <div class="flex-shrink-0">
-            <svg class="h-6 w-6 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <svg class="h-5 w-5 sm:h-6 sm:w-6 text-red-400" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
             </svg>
           </div>
           <div class="ml-3">
-            <h3 class="text-lg font-medium text-red-800">Fehler beim Laden</h3>
-            <p class="mt-2 text-red-700">{{ error }}</p>
+            <h3 class="text-base sm:text-lg font-medium text-red-800">Fehler beim Laden</h3>
+            <p class="mt-2 text-sm sm:text-base text-red-700">{{ error }}</p>
             <button 
               @click="retryLoad" 
-              class="mt-4 bg-red-100 text-red-800 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors"
+              class="mt-3 sm:mt-4 bg-red-100 text-red-800 px-3 py-2 sm:px-4 rounded-lg hover:bg-red-200 transition-colors text-sm sm:text-base"
             >
               Erneut versuchen
             </button>
@@ -54,37 +54,37 @@
     </div>
 
     <!-- Main Content -->
-    <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       
       <!-- Payment Status Overview -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
         
         <!-- Offene Rechnungen -->
         <div class="bg-white rounded-xl shadow-lg border relative"
             :class="unpaidPayments.length > 0 ? 'border-red-200' : 'border-green-200'">
-          <div class="p-6">
+          <div class="p-4 sm:p-6">
             <div class="flex mb-2">
-              <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
+              <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center mr-2 sm:mr-3"
                   :class="unpaidPayments.length > 0 ? 'bg-red-100' : 'bg-green-100'">
-                <svg v-if="unpaidPayments.length > 0" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg v-if="unpaidPayments.length > 0" class="h-5 w-5 sm:h-6 sm:w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
-                <svg v-else class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg v-else class="h-5 w-5 sm:h-6 sm:w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 class="text-sm font-medium text-gray-500">
+              <h3 class="text-xs sm:text-sm font-medium text-gray-500">
                 {{ unpaidPayments.length > 0 ? 'Offene Rechnungen' : 'Zahlungsstatus' }}
               </h3>
             </div>
             
             <div v-if="unpaidPayments.length > 0">
-              <p class="text-3xl font-bold text-red-600">{{ unpaidPayments.length }}</p>
-              <p class="text-sm text-red-500 mt-1">CHF {{ totalUnpaidAmount.toFixed(2) }}</p>
+              <p class="text-2xl sm:text-3xl font-bold text-red-600">{{ unpaidPayments.length }}</p>
+              <p class="text-xs sm:text-sm text-red-500 mt-1">CHF {{ totalUnpaidAmount.toFixed(2) }}</p>
             </div>
             <div v-else>
-              <p class="text-3xl font-bold text-green-600">Alles bezahlt</p>
-              <p class="text-sm text-green-500 mt-1">✓ Keine offenen Beträge</p>
+              <p class="text-2xl sm:text-3xl font-bold text-green-600">Alles bezahlt</p>
+              <p class="text-xs sm:text-sm text-green-500 mt-1">✓ Keine offenen Beträge</p>
             </div>
             
             <!-- Action Button -->
@@ -92,10 +92,10 @@
               v-if="unpaidPayments.length > 0"
               @click="payAllUnpaid"
               :disabled="isProcessingPayment"
-              class="mt-4 w-full bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium disabled:opacity-50"
+              class="mt-3 sm:mt-4 w-full bg-red-500 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-red-600 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base"
             >
               <span v-if="isProcessingPayment" class="flex items-center justify-center">
-                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <svg class="animate-spin -ml-1 mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -105,131 +105,85 @@
             </button>
           </div>
         </div>
-
-        <!-- Bezahlte Rechnungen -->
-        <div class="bg-white rounded-xl shadow-lg border border-blue-200 relative">
-          <div class="p-6">
-            <div class="flex items-center mb-2">
-              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 class="text-sm font-medium text-gray-500">Vergangene Zahlungen</h3>
-            </div>
-            <p class="text-3xl font-bold text-gray-900">{{ paidPayments.length }}</p>
-            <p class="text-sm text-gray-500 mt-1">CHF {{ totalPaidAmount.toFixed(2) }}</p>
-          </div>
-          <button 
-            @click="showSettings = true"
-            class="absolute bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:opacity-50"
-          >
-            Details
-          </button>
-        </div>
-
-        <!-- Bevorzugte Zahlungsart -->
-        <div class="bg-white rounded-xl shadow-lg border border-purple-200 relative">
-          <div class="p-6">
-            <div class="flex items-center mb-2">
-              <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                </svg>
-              </div>
-              <h3 class="text-sm font-medium text-gray-500">Bevorzugte Zahlungsart</h3>
-            </div>
-            <p class="text-lg font-bold text-gray-900">{{ preferredPaymentMethodLabel }}</p>
-            <button 
-              @click="showSettings = true"
-              class="absolute bottom-4 right-4 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors font-medium disabled:opacity-50"
-            >
-              Ändern
-            </button>
-          </div>
-        </div>
       </div>
 
       <!-- Payment List -->
       <div class="bg-white rounded-xl shadow-lg border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <div class="flex justify-between items-center">
-            <h2 class="text-lg font-semibold text-gray-900">Zahlungsdetails</h2>
-            <div class="flex space-x-2">
-              <select v-model="statusFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="all">Alle Status</option>
-                <option value="pending">Offen</option>
-                <option value="completed">Bezahlt</option>
-              </select>
-              <select v-model="methodFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="all">Alle Methoden</option>
-                <option value="cash">Bar</option>
-                <option value="twint">Twint</option>
-                <option value="invoice">Rechnung</option>
-              </select>
+        <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+            <h2 class="text-base sm:text-lg font-semibold text-gray-900">Zahlungsdetails</h2>
+            <div class="flex flex-wrap gap-2">
+              <button 
+                @click="statusFilter = 'all'"
+                :class="statusFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                class="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors"
+              >
+                Alle Status
+              </button>
+              <button 
+                @click="statusFilter = 'pending'"
+                :class="statusFilter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                class="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors"
+              >
+                Offen
+              </button>
+              <button 
+                @click="statusFilter = 'completed'"
+                :class="statusFilter === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                class="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors"
+              >
+                Bezahlt
+              </button>
             </div>
           </div>
         </div>
 
         <!-- Payment Items -->
-        <div v-if="filteredPayments.length === 0" class="px-6 py-12 text-center">
+        <div v-if="filteredPayments.length === 0" class="px-4 sm:px-6 py-8 sm:py-12 text-center">
           <div class="text-gray-500">
-            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <h3 class="mt-2 text-sm font-medium text-gray-900">Keine Zahlungen gefunden</h3>
-            <p class="mt-1 text-sm text-gray-500">Es wurden keine Zahlungen mit den aktuellen Filtern gefunden.</p>
+            <p class="mt-1 text-xs sm:text-sm text-gray-500">Es wurden keine Zahlungen mit den aktuellen Filtern gefunden.</p>
           </div>
         </div>
 
         <div v-else class="divide-y divide-gray-200">
           <div v-for="(payment, index) in filteredPayments" :key="payment.id" 
-               class="px-6 py-6 hover:bg-gray-50 transition-colors">
+               class="px-4 sm:px-6 py-4 sm:py-6 hover:bg-gray-50 transition-colors">
             
             <!-- Payment Header -->
-            <div class="flex justify-between items-start mb-4">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 space-y-3 sm:space-y-0">
               <div class="flex-1">
-                <div class="flex items-center space-x-3 mb-2">
-                  <span class="text-sm text-gray-500">Position {{ index + 1 }} von {{ filteredPayments.length }}</span>
+                <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
+                  <span class="text-xs sm:text-sm text-gray-500">Position {{ index + 1 }} von {{ filteredPayments.length }}</span>
                   <span :class="getStatusClass(payment.payment_status)" 
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit">
                     {{ getStatusLabel(payment.payment_status) }}
                   </span>
                 </div>
-                
-                <!-- Payment Description -->
-                <h3 class="text-lg font-semibold text-gray-900 mb-1">
-                  {{ payment.description || 'Zahlung' }}
-                </h3>
                 
                 <!-- Date and Time -->
                 <div class="flex items-center space-x-4 text-sm text-gray-600 mb-2">
                   <span>{{ formatDateTime(payment.created_at) }}</span>
                 </div>
-                
-                <!-- Payment Type -->
-                <div class="flex items-center space-x-3 text-sm text-gray-600">
-                  <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-md">
-                    {{ payment.payment_method || 'Unbekannt' }}
-                  </span>
-
-                </div>
               </div>
               
               <!-- Payment Amount -->
-              <div class="text-right ml-6">
-                <div class="text-2xl font-bold text-gray-900">
+              <div class="text-left sm:text-right sm:ml-6">
+                <div class="text-xl sm:text-2xl font-bold text-gray-900">
                   CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}
                 </div>
-                <div class="text-sm text-gray-500">
+                <div class="text-xs sm:text-sm text-gray-500">
                   {{ getPaymentMethodLabel(payment.payment_method) }}
                 </div>
               </div>
             </div>
             
             <!-- Payment Details -->
-            <div class="bg-gray-50 rounded-lg p-4 mb-4">
-              <div class="space-y-2 text-sm">
+            <div class="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4">
+              <div class="space-y-2 text-xs sm:text-sm">
                 <div class="flex justify-between">
                   <span class="text-gray-600">Fahrlektion</span>
                   <span class="font-medium text-gray-600">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
@@ -250,7 +204,7 @@
                   <span class="font-medium text-green-600">- CHF {{ (payment.discount_amount_rappen / 100).toFixed(2) }}</span>
                 </div>
                 
-                <div class="border-t border-gray-200 pt-2 flex justify-between font-semibold">
+                <div class="border-t border-gray-200 text-gray-900 pt-2 flex justify-between font-semibold">
                   <span>Gesamtbetrag</span>
                   <span>CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}</span>
                 </div>
@@ -258,23 +212,18 @@
             </div>
             
             <!-- Action Buttons -->
-            <div class="flex justify-end space-x-3">
+            <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <button v-if="payment.payment_status === 'pending'"
                       @click="payIndividual(payment)"
                       :disabled="isProcessingPayment"
-                      class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50">
+                      class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
                 {{ isProcessingPayment ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
               </button>
               
               <button v-if="payment.payment_status === 'completed'"
                       @click="downloadReceipt(payment)"
-                      class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                      class="bg-gray-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm sm:text-base">
                 Quittung herunterladen
-              </button>
-              
-              <button @click="showPaymentDetails(payment)"
-                      class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium">
-                Details anzeigen
               </button>
             </div>
           </div>

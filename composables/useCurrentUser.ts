@@ -1,5 +1,5 @@
 // composables/useCurrentUser.ts
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 
@@ -133,11 +133,19 @@ export const useCurrentUser = () => {
     }
   }
 
+  // Computed properties
+  const isClient = computed(() => currentUser.value?.role === 'client')
+  const isAdmin = computed(() => currentUser.value?.role === 'admin')
+  const isStaff = computed(() => currentUser.value?.role === 'staff')
+
   return {
     currentUser,
     isLoading,
     userError,
     profileExists, // 🆕 NEU exportiert
+    isClient,
+    isAdmin,
+    isStaff,
     fetchCurrentUser,
     createUserProfile // 🆕 NEU exportiert
   }

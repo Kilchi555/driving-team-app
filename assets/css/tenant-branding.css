@@ -377,12 +377,21 @@ html body .admin-layout textarea[class*="text-gray"],
 html body .admin-layout input[class*="bg-gray"],
 html body .admin-layout select[class*="bg-gray"],
 html body .admin-layout textarea[class*="bg-gray"],
-html body .admin-layout input[class*="bg-white"],
-html body .admin-layout select[class*="bg-white"],
-html body .admin-layout textarea[class*="bg-white"] {
+html body .admin-layout input[class*="bg-white"]:not([class*="session"]),
+html body .admin-layout select[class*="bg-white"]:not([class*="session"]),
+html body .admin-layout textarea[class*="bg-white"]:not([class*="session"]) {
   color: white !important;
   background-color: #374151 !important; /* gray-700 */
   border-color: #6b7280 !important; /* gray-500 */
+}
+
+/* Session input fields should have proper contrast */
+html body .admin-layout input[class*="bg-white"][class*="session"],
+html body .admin-layout select[class*="bg-white"][class*="session"],
+html body .admin-layout textarea[class*="bg-white"][class*="session"] {
+  color: #1f2937 !important; /* gray-800 - dark text */
+  background-color: #ffffff !important; /* white background */
+  border-color: #d1d5db !important; /* gray-300 */
 }
 
 /* === CHECKBOX STYLING === */

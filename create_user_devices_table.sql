@@ -79,3 +79,4 @@ COMMENT ON COLUMN public.user_devices.user_agent IS 'Browser/device user agent s
 COMMENT ON COLUMN public.user_devices.ip_address IS 'IP address of the device';
 
 
+

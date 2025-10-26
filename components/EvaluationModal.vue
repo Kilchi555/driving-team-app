@@ -262,32 +262,45 @@ const filteredCriteria = computed(() => {
     !selectedCriteriaOrder.value.includes(criteria.id)
   )
   
+  console.log('📚 filteredCriteria - allCriteria.value:', allCriteria.value.length)
+  console.log('📚 filteredCriteria - unratedCriteria:', unratedCriteria.length)
+  console.log('📚 filteredCriteria - first unrated:', unratedCriteria[0])
+  
   // Wenn kein Suchtext eingegeben, zeige alle unbewerteten
   if (!searchQuery.value || searchQuery.value.trim() === '') {
+    console.log('📚 filteredCriteria - returning unratedCriteria (no search)')
     return unratedCriteria
   }
   
   // Filtere unbewertete Kriterien nach Suchtext
   const query = searchQuery.value.toLowerCase()
-  return unratedCriteria.filter(criteria => 
+  const filtered = unratedCriteria.filter(criteria => 
     (criteria.name?.toLowerCase().includes(query) ||
      criteria.category_name?.toLowerCase().includes(query) ||
      false)
   )
+  
+  console.log('📚 filteredCriteria - returning filtered:', filtered.length)
+  return filtered
 })
 
 // Gruppierte Kriterien nach Kategorien
 const groupedCriteria = computed(() => {
   const groups: Record<string, any[]> = {}
   
+  console.log('📚 groupedCriteria - filteredCriteria.value:', filteredCriteria.value.length)
+  console.log('📚 groupedCriteria - first criterion:', filteredCriteria.value[0])
+  
   filteredCriteria.value.forEach(criteria => {
-    const categoryName = criteria.category_name || 'Sonstiges'
+    const categoryName = criteria.evaluation_categories?.name || 'Unbekannte Kategorie'
+    console.log('📚 groupedCriteria - processing:', criteria.name, 'categoryName:', categoryName)
     if (!groups[categoryName]) {
       groups[categoryName] = []
     }
     groups[categoryName].push(criteria)
   })
   
+  console.log('📚 groupedCriteria - final groups:', Object.keys(groups))
   return groups
 })
 
@@ -390,10 +403,10 @@ const loadAllCriteria = async () => {
 
     if (isTheoryLesson) {
       console.log('📚 Loading evaluation criteria for theory lesson - category:', props.studentCategory)
-      // Bei Theorielektionen: Lade normale Kriterien + Theorie-Kriterien
+      // Bei Theorielektionen: Lade NUR Theorie-Kriterien
       
-      // 1. Lade normale Fahrkategorie-Kriterien
-      const regularResult = await supabase
+      // 1. Lade tenant-spezifische Theorie-Kriterien
+      const tenantTheoryResult = await supabase
         .from('evaluation_criteria')
         .select(`
           id, 
@@ -403,15 +416,14 @@ const loadAllCriteria = async () => {
           display_order,
           category_id,
           driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory)
+          evaluation_categories!inner(tenant_id, is_theory, name)
         `)
         .eq('is_active', true)
         .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
-        .contains('driving_categories', [props.studentCategory])
-        .eq('evaluation_categories.is_theory', false) // Nur normale Kriterien
+        .eq('evaluation_categories.is_theory', true)
       
-      // 2. Lade Theorie-Kriterien (für alle Fahrkategorien)
-      const theoryResult = await supabase
+      // 2. Lade globale Theorie-Kriterien
+      const globalTheoryResult = await supabase
         .from('evaluation_criteria')
         .select(`
           id, 
@@ -421,21 +433,53 @@ const loadAllCriteria = async () => {
           display_order,
           category_id,
           driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory)
+          evaluation_categories!inner(tenant_id, is_theory, name)
         `)
         .eq('is_active', true)
-        .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
-        .eq('evaluation_categories.is_theory', true) // Nur Theorie-Kriterien
+        .is('evaluation_categories.tenant_id', null)
+        .eq('evaluation_categories.is_theory', true)
       
-      if (regularResult.error) throw regularResult.error
-      if (theoryResult.error) throw theoryResult.error
+      if (tenantTheoryResult.error) throw tenantTheoryResult.error
+      if (globalTheoryResult.error) throw globalTheoryResult.error
       
       // Kombiniere beide Listen
-      criteria = [...(regularResult.data || []), ...(theoryResult.data || [])]
+      criteria = [...(tenantTheoryResult.data || []), ...(globalTheoryResult.data || [])]
+      
+      // Debug: Logge die ersten Kriterien um zu sehen was geladen wird
       console.log('📚 Loaded criteria for theory lesson:', {
-        regular: regularResult.data?.length || 0,
-        theory: theoryResult.data?.length || 0,
+        tenant: tenantTheoryResult.data?.length || 0,
+        global: globalTheoryResult.data?.length || 0,
         total: criteria.length
+      })
+      console.log('📚 First criteria sample:', criteria[0])
+      console.log('📚 First criteria evaluation_categories:', criteria[0]?.evaluation_categories)
+      
+      // Lade Kategorie-Namen separat falls sie fehlen
+      const categoryIds = [...new Set(criteria.map(c => c.category_id))]
+      console.log('📚 Category IDs to load:', categoryIds)
+      
+      const { data: categoriesData } = await supabase
+        .from('evaluation_categories')
+        .select('id, name')
+        .in('id', categoryIds)
+      
+      console.log('📚 Loaded categories data:', categoriesData)
+      
+      // Füge Kategorie-Namen zu den Kriterien hinzu
+      criteria = criteria.map(criterion => {
+        console.log('📚 Processing criterion:', criterion.name, 'category_id:', criterion.category_id)
+        console.log('📚 Current evaluation_categories:', criterion.evaluation_categories)
+        
+        if (!criterion.evaluation_categories?.name) {
+          const category = categoriesData?.find(c => c.id === criterion.category_id)
+          console.log('📚 Found category for criterion:', category)
+          criterion.evaluation_categories = { 
+            name: category?.name || 'Unbekannte Kategorie',
+            ...criterion.evaluation_categories 
+          }
+        }
+        console.log('📚 Final evaluation_categories:', criterion.evaluation_categories)
+        return criterion
       })
     } else {
       console.log('📚 Loading regular evaluation criteria for category:', props.studentCategory)
@@ -450,7 +494,7 @@ const loadAllCriteria = async () => {
           display_order,
           category_id,
           driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory)
+          evaluation_categories!inner(tenant_id, is_theory, name)
         `)
         .eq('is_active', true)
         .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
@@ -493,6 +537,7 @@ const loadAllCriteria = async () => {
         short_code: '', // Nicht mehr in der neuen Struktur vorhanden
         category_name: category?.name || '',
         category_color: category?.color || '#gray',
+        evaluation_categories: criterion.evaluation_categories || { name: category?.name || 'Unbekannte Kategorie' },
         category_order: category?.display_order || 0,
         criteria_order: criterion.display_order || 0,
         is_required: false, // Wird nicht mehr verwendet, aber für Kompatibilität beibehalten

@@ -29,7 +29,7 @@ export default defineNuxtPlugin(async () => {
       authStore.user = session.user
       
       // Lade User-Profil
-      await authStore.fetchUserProfile(supabase, session.user.id)
+      await authStore.fetchUserProfile(session.user.id)
       
       console.log('✅ Session restored in plugin, role:', authStore.userRole)
     } else {

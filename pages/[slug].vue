@@ -203,6 +203,32 @@ import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { getSupabase } from '~/utils/supabase'
 
+// Types
+interface User {
+  id: string
+  email: string
+  role: string
+  first_name: string | null
+  last_name: string | null
+  phone: string | null
+  tenant_id: string | null
+  is_active: boolean
+  preferred_payment_method?: string
+  auth_user_id?: string
+}
+
+interface DeviceSecurityResponse {
+  success: boolean
+  message?: string
+  data?: any
+  deviceExists?: boolean
+  device?: {
+    id: string
+    is_trusted: boolean
+  }
+  error?: string
+}
+
 // Reserved routes that should not be caught by the slug route
 const reservedRoutes = [
   'admin', 'dashboard', 'customer-dashboard', 'login', 'register', 
@@ -293,7 +319,7 @@ const handleLogin = async () => {
     
     // Check device security after successful login
     try {
-      const user = authStore.userProfile
+      const user = authStore.userProfile as User
       if (user?.id) {
         console.log('🔒 Checking device security for user:', user.id)
         console.log('🔍 User profile data:', user)
@@ -313,7 +339,7 @@ const handleLogin = async () => {
         try {
           console.log('🔒 Checking device via API...')
           
-          const checkResponse = await $fetch('/api/admin/device-security-handler', {
+          const checkResponse = await $fetch<DeviceSecurityResponse>('/api/admin/device-security-handler', {
             method: 'POST',
             body: {
               action: 'check',
@@ -323,14 +349,14 @@ const handleLogin = async () => {
           })
           
           if (!checkResponse.success) {
-            console.error('Error checking device:', checkResponse.error)
+            console.error('Error checking device:', checkResponse.message)
             return
           }
           
           if (!checkResponse.deviceExists) {
             console.log('⚠️ Unknown device detected, registering...')
             
-            const registerResponse = await $fetch('/api/admin/device-security-handler', {
+            const registerResponse = await $fetch<DeviceSecurityResponse>('/api/admin/device-security-handler', {
               method: 'POST',
               body: {
                 action: 'register',
@@ -342,15 +368,15 @@ const handleLogin = async () => {
             })
             
             if (registerResponse.success) {
-              console.log('✅ New device registered:', registerResponse.device.id)
+              console.log('✅ New device registered:', registerResponse.data?.id)
               showSuccess('Neues Gerät erkannt', 'Dieses Gerät wurde für zusätzliche Sicherheit registriert.')
             } else {
-              console.error('Error registering device:', registerResponse.error)
+              console.error('Error registering device:', registerResponse.message)
             }
           } else {
             console.log('✅ Known device detected, updating last seen')
             
-            const updateResponse = await $fetch('/api/admin/device-security-handler', {
+            const updateResponse = await $fetch<DeviceSecurityResponse>('/api/admin/device-security-handler', {
               method: 'POST',
               body: {
                 action: 'update',
@@ -360,15 +386,15 @@ const handleLogin = async () => {
             })
             
             if (updateResponse.success) {
-              const device = checkResponse.device
-              if (device.is_trusted) {
+              const device = checkResponse.data
+              if (device?.is_trusted) {
                 console.log('✅ Trusted device confirmed')
               } else {
                 console.log('⚠️ Untrusted device detected')
                 showSuccess('Gerät erkannt', 'Dieses Gerät ist bekannt, aber noch nicht als vertrauenswürdig markiert.')
               }
             } else {
-              console.error('Error updating device:', updateResponse.error)
+              console.error('Error updating device:', updateResponse.message)
             }
           }
         } catch (apiError) {

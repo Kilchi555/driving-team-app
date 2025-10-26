@@ -67,6 +67,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -202,18 +203,95 @@ const formatDate = (dateString: string | null | undefined): string => {
   try { const date = new Date(dateString); if (isNaN(date.getTime())) return 'Ungültiges Datum'; return date.toLocaleDateString('de-CH', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) } catch { return 'Datum Fehler' }
 }
 
-const goToCalendar = () => { router.push('/customer-dashboard') }
+const goToCalendar = async () => {
+  // Prüfe zuerst den Benutzerstatus
+  const authStore = useAuthStore()
+  await authStore.fetchUserProfile()
+  
+  if (authStore.isClient) {
+    router.push('/customer-dashboard')
+  } else if (authStore.isAdmin) {
+    router.push('/admin')
+  } else {
+    // Fallback zur Hauptseite
+    router.push('/')
+  }
+}
 
 const downloadReceipt = async () => {
   if (!paymentDetails.value) return
+  
   try {
     const paymentId = (paymentDetails.value.id || route.query.transaction_id || route.query.id) as string
     if (!paymentId) throw new Error('Payment ID is required')
-    const res = await fetch('/api/payments/receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentId }) })
-    if (!res.ok) throw new Error(await res.text())
-    const buffer = await res.arrayBuffer(); const blob = new Blob([buffer], { type: 'application/pdf' })
-    const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `Quittung_${paymentId}.pdf`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url)
-  } catch (err: any) { console.error('❌ Error downloading receipt:', err); alert('Fehler beim Herunterladen der Quittung') }
+    
+    console.log('📄 Downloading receipt for payment:', paymentId)
+    
+    const res = await fetch('/api/payments/receipt', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ paymentId }) 
+    })
+    
+    console.log('📄 Response status:', res.status)
+    console.log('📄 Response headers:', Object.fromEntries(res.headers.entries()))
+    
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error('❌ Receipt API error:', res.status, errorText)
+      throw new Error(`Server error: ${res.status} - ${errorText}`)
+    }
+    
+    const buffer = await res.arrayBuffer()
+    console.log('📄 Received buffer size:', buffer.byteLength)
+    
+    if (buffer.byteLength === 0) {
+      throw new Error('Empty PDF received from server')
+    }
+    
+    const blob = new Blob([buffer], { type: 'application/pdf' })
+    console.log('📄 Created blob size:', blob.size)
+    
+    // Try multiple download methods
+    try {
+      // Method 1: Standard download link
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Quittung_${paymentId}.pdf`
+      link.style.display = 'none'
+      
+      // Add to DOM and trigger download
+      document.body.appendChild(link)
+      link.click()
+      
+      // Cleanup after a short delay
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link)
+        }
+        URL.revokeObjectURL(url)
+      }, 1000)
+      
+    } catch (downloadError) {
+      console.warn('⚠️ Standard download failed, trying alternative method:', downloadError)
+      
+      // Method 2: Open in new window
+      const url = URL.createObjectURL(blob)
+      const newWindow = window.open(url, '_blank')
+      if (newWindow) {
+        newWindow.document.title = `Quittung_${paymentId}.pdf`
+        setTimeout(() => URL.revokeObjectURL(url), 5000)
+      } else {
+        throw new Error('Popup blocked. Bitte erlauben Sie Popups für diese Seite.')
+      }
+    }
+    
+    console.log('✅ Receipt downloaded successfully')
+  } catch (err: any) { 
+    console.error('❌ Error downloading receipt:', err)
+    alert(`Fehler beim Herunterladen der Quittung: ${err.message}`)
+  }
 }
 
 // Gutschein-Funktionen

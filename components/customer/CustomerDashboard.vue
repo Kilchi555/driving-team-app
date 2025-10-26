@@ -249,10 +249,67 @@
           </div>
         </div>
       </div>
-    </div>
-      <div v-else class="min-h-screen flex items-center justify-center">
-        <LoadingLogo size="xl" />
+
+      <!-- Fahrlehrer Sektion -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-purple-100 mb-8">
+        <div class="p-8">
+          <div class="flex items-center mb-6">
+            <div class="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
+              <svg class="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900 mb-2">Meine Fahrlehrer</h2>
+            </div>
+          </div>
+          
+          <!-- Loading State -->
+          <div v-if="isLoading" class="text-center py-8">
+            <LoadingLogo size="md" />
+            <p class="text-gray-500 mt-2">Fahrlehrer werden geladen...</p>
+          </div>
+          
+          <!-- Fahrlehrer Liste -->
+          <div v-else-if="instructors && instructors.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div 
+              v-for="instructor in instructors" 
+              :key="instructor.id"
+              @click="showInstructorDetails(instructor)"
+              class="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200 hover:border-purple-300"
+            >
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <span class="text-purple-600 font-semibold text-lg">
+                    {{ getInstructorInitials(instructor) }}
+                  </span>
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-semibold text-gray-900">{{ instructor.name }}</h3>
+                </div>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Keine Fahrlehrer -->
+          <div v-else class="text-center py-8">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Noch keine Fahrlehrer</h3>
+            <p class="text-gray-600">Buchen Sie Ihre erste Fahrstunde, um Ihre Fahrlehrer kennenzulernen.</p>
+          </div>
+        </div>
       </div>
+    </div>
+    <div v-else class="min-h-screen flex items-center justify-center">
+      <LoadingLogo size="xl" />
+    </div>
 
     <!-- Modals -->
     <EvaluationsOverviewModal 
@@ -266,6 +323,88 @@
       :lessons="upcomingAppointments"
       @close="showUpcomingLessonsModal = false"
     />
+
+    <!-- Instructor Details Modal -->
+    <div v-if="showInstructorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <!-- Header -->
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center space-x-3">
+              <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                <span class="text-purple-600 font-semibold text-lg">
+                  {{ getInstructorInitials(selectedInstructor) }}
+                </span>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-gray-900">{{ selectedInstructor?.name }}</h2>
+                <p class="text-sm text-gray-600">Fahrlehrer</p>
+              </div>
+            </div>
+            <button 
+              @click="showInstructorModal = false"
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Contact Information -->
+          <div class="space-y-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="font-semibold text-gray-900 mb-3">Kontaktinformationen</h3>
+              <div class="space-y-2">
+                <div v-if="selectedInstructor?.email" class="flex items-center space-x-3">
+                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <a :href="`mailto:${selectedInstructor.email}`" class="text-blue-600 hover:text-blue-800">
+                    {{ selectedInstructor.email }}
+                  </a>
+                </div>
+                <div v-if="selectedInstructor?.phone" class="flex items-center space-x-3">
+                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  <a :href="`tel:${selectedInstructor.phone}`" class="text-blue-600 hover:text-blue-800">
+                    {{ selectedInstructor.phone }}
+                  </a>
+                </div>
+                <div v-if="!selectedInstructor?.email && !selectedInstructor?.phone" class="text-gray-500 text-sm">
+                  Keine Kontaktinformationen verfügbar
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="mt-6 flex space-x-3">
+            <button 
+              v-if="selectedInstructor?.email"
+              @click="openEmail(selectedInstructor.email)"
+              class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <span>E-Mail</span>
+            </button>
+            <button 
+              v-if="selectedInstructor?.phone"
+              @click="openPhone(selectedInstructor.phone)"
+              class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+              <span>Anrufen</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Logout Button - At bottom of content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -327,6 +466,9 @@ const lessons = ref<any[]>([])
 const showEvaluationsModal = ref(false) 
 const showUpcomingLessonsModal = ref(false)
 const isLoggingOut = ref(false)
+const instructors = ref<any[]>([])
+const showInstructorModal = ref(false)
+const selectedInstructor = ref<any>(null)
 
 // In CustomerDashboard.vue - vor dem Template:
 const isServerSide = process.server
@@ -525,8 +667,8 @@ const navigateToLessonBooking = async () => {
 }
 
 const navigateToCourseBooking = async () => {
-  // Navigiere zur Kurs-Übersicht (alle Kategorien)
-  await navigateTo('/courses')
+  // Navigiere zur Customer Kurs-Übersicht
+  await navigateTo('/customer/courses')
 }
 
 const navigateToMyCourses = async () => {
@@ -554,6 +696,9 @@ const loadAllData = async () => {
       loadLocations(),
       loadStaff()
     ])
+
+    // Load instructors after appointments are loaded
+    loadInstructors()
 
     console.log('✅ Customer dashboard data loaded successfully')
   } catch (err: any) {
@@ -595,6 +740,13 @@ const loadAppointments = async () => {
         event_type_code,
         user_id,
         staff_id,
+        staff:users!staff_id (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone
+        ),
 
         notes (
           id,
@@ -783,6 +935,61 @@ const loadStaff = async () => {
   }
 }
 
+const loadInstructors = () => {
+  // Group appointments by instructor and count lessons
+  const instructorMap = new Map()
+  
+  // Ensure appointments.value is an array
+  if (appointments.value && Array.isArray(appointments.value)) {
+    appointments.value.forEach(appointment => {
+      if (appointment && appointment.staff) {
+        const instructorId = appointment.staff.id
+        const instructorName = `${appointment.staff.first_name || ''} ${appointment.staff.last_name || ''}`.trim()
+        
+        if (instructorMap.has(instructorId)) {
+          instructorMap.get(instructorId).lessonCount++
+        } else {
+          instructorMap.set(instructorId, {
+            id: instructorId,
+            name: instructorName,
+            first_name: appointment.staff.first_name,
+            last_name: appointment.staff.last_name,
+            email: appointment.staff.email,
+            phone: appointment.staff.phone,
+            lessonCount: 1
+          })
+        }
+      }
+    })
+  }
+  
+  instructors.value = Array.from(instructorMap.values())
+  console.log('✅ Instructors loaded:', instructors.value.length)
+}
+
+const getInstructorInitials = (instructor: any) => {
+  const firstName = instructor.first_name || ''
+  const lastName = instructor.last_name || ''
+  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+}
+
+const showInstructorDetails = (instructor: any) => {
+  selectedInstructor.value = instructor
+  showInstructorModal.value = true
+}
+
+const openEmail = (email: string) => {
+  if (process.client) {
+    window.open(`mailto:${email}`, '_blank')
+  }
+}
+
+const openPhone = (phone: string) => {
+  if (process.client) {
+    window.open(`tel:${phone}`, '_self')
+  }
+}
+
 const handleLogout = async () => {
   if (isLoggingOut.value) return
   
@@ -790,16 +997,15 @@ const handleLogout = async () => {
     isLoggingOut.value = true
     console.log('🚪 Logging out user...')
     
-    const supabase = getSupabase()
-    await authStore.logout(supabase)
+    await authStore.logout()
     
-    console.log('✅ Logout successful, redirecting to home...')
-    await navigateTo('/')
+    console.log('✅ Logout successful, redirecting to login...')
+    await navigateTo('/login')
     
   } catch (err: any) {
     console.error('❌ Fehler beim Abmelden:', err)
-    // Still redirect to home even if logout fails
-    await navigateTo('/')
+    // Still redirect to login even if logout fails
+    await navigateTo('/login')
   } finally {
     isLoggingOut.value = false
   }

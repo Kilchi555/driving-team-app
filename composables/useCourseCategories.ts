@@ -182,7 +182,9 @@ export const useCourseCategories = () => {
       max_participants: category.default_max_participants,
       price_rappen: category.default_price_rappen,
       requires_room: category.default_requires_room,
-      requires_vehicle: category.default_requires_vehicle
+      requires_vehicle: category.default_requires_vehicle,
+      default_room_id: category.default_room_id,
+      default_vehicle_id: category.default_vehicle_id
     }
   }
 

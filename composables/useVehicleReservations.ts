@@ -30,6 +30,11 @@ interface Vehicle {
   description?: string
   requires_reservation: boolean
   is_active: boolean
+  marke?: string
+  modell?: string
+  getriebe?: string
+  aufbau?: string
+  farbe?: string
 }
 
 export const useVehicleReservations = () => {

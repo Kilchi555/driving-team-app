@@ -270,8 +270,8 @@
       }"
     >
       <div class="container mx-auto px-4">
-        <!-- Quick links -->
-        <div class="flex flex-wrap justify-center space-x-4 mb-3">
+        <!-- Desktop: Quick links -->
+        <div class="hidden md:flex flex-wrap justify-center space-x-4 mb-3">
           <!-- Loading state -->
           <div v-if="featuresLoading" class="flex items-center space-x-2 text-white text-opacity-80 text-sm">
             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -348,6 +348,126 @@
           </NuxtLink>
         </div>
         
+        <!-- Mobile: Dropdown Menu -->
+        <div class="md:hidden mb-3">
+          <div class="relative">
+            <button
+              @click="showFooterDropdown = !showFooterDropdown"
+              class="w-full flex items-center justify-between px-4 py-2 bg-white bg-opacity-10 rounded-lg text-white text-sm font-medium hover:bg-opacity-20 transition-colors"
+            >
+              <span>Admin-Bereiche</span>
+              <svg 
+                class="w-4 h-4 transition-transform" 
+                :class="{ 'rotate-180': showFooterDropdown }"
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            
+            <!-- Dropdown Content -->
+            <div
+              v-show="showFooterDropdown"
+              class="absolute bottom-full left-0 right-0 mb-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50 max-h-64 overflow-y-auto"
+            >
+              <div class="py-2">
+                <!-- Loading state -->
+                <div v-if="featuresLoading" class="flex items-center justify-center px-4 py-3 text-white text-sm">
+                  <svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Lade Links...</span>
+                </div>
+                
+                <!-- Footer links -->
+                <template v-else>
+                  <NuxtLink 
+                    v-if="shouldShowNavLink('product_sales_enabled')" 
+                    to="/admin/products" 
+                    @click="showFooterDropdown = false"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Produkte
+                  </NuxtLink>
+                  <NuxtLink 
+                    v-if="shouldShowNavLink('data_management_enabled')" 
+                    to="/admin/data-management" 
+                    @click="showFooterDropdown = false"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Datenverwaltung
+                  </NuxtLink>
+                  <NuxtLink 
+                    v-if="shouldShowNavLink('discounts_enabled')" 
+                    to="/admin/discounts" 
+                    @click="showFooterDropdown = false"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Rabatte
+                  </NuxtLink>
+                  <NuxtLink 
+                    v-if="shouldShowNavLink('categories_enabled')" 
+                    to="/admin/categories" 
+                    @click="showFooterDropdown = false"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Kategorien
+                  </NuxtLink>
+                  <NuxtLink 
+                    v-if="shouldShowNavLink('courses_enabled')" 
+                    to="/admin/courses" 
+                    @click="showFooterDropdown = false"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Kurse
+                  </NuxtLink>
+                  <NuxtLink 
+                    v-if="shouldShowNavLink('examiners_enabled')" 
+                    to="/admin/examiners" 
+                    @click="showFooterDropdown = false"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Experten
+                  </NuxtLink>
+                  <NuxtLink 
+                    to="/admin/users" 
+                    @click="showFooterDropdown = false"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Benutzer
+                  </NuxtLink>
+                  <NuxtLink 
+                    v-if="shouldShowNavLink('evaluations_enabled')" 
+                    to="/admin/evaluation-system" 
+                    @click="showFooterDropdown = false"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Bewertungen
+                  </NuxtLink>
+                  <NuxtLink 
+                    v-if="shouldShowNavLink('exams_enabled')" 
+                    to="/admin/exam-statistics" 
+                    @click="showFooterDropdown = false"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Prüfungen
+                  </NuxtLink>
+                  <NuxtLink 
+                    to="/admin/profile" 
+                    @click="showFooterDropdown = false"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Profil
+                  </NuxtLink>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <!-- Info Row -->
         <div class="flex flex-col md:flex-row justify-between items-center text-sm border-t border-white border-opacity-20 pt-2">
           <!-- Left side - Copyright -->
@@ -393,6 +513,7 @@ import { useRoute } from '#app'
 
 const route = useRoute()
 const showMobileMenu = ref(false)
+const showFooterDropdown = ref(false)
 
 // Auth Store für Logout
 const { logout } = useAuthStore()
@@ -541,9 +662,10 @@ watch(() => showMobileMenu.value, (newValue) => {
 
 // Simple watch for route changes
 watchEffect(() => {
-  // Close menu when route changes
+  // Close menus when route changes
   if (route.path) {
     showMobileMenu.value = false
+    showFooterDropdown.value = false
   }
 })
 
@@ -559,14 +681,16 @@ watchEffect(async () => {
 const handleLogout = async () => {
   try {
     console.log('🚪 Logging out user...')
-    await logout(supabase)
+    await logout()
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
     
-    // Weiterleitung zur Tenant-Auswahl
-    await navigateTo('/')
+    // Weiterleitung zur Login-Seite
+    await navigateTo('/login')
   } catch (error) {
     console.error('❌ Logout error:', error)
     showError('Fehler', 'Fehler beim Abmelden. Bitte versuchen Sie es erneut.')
+    // Still redirect to login even if logout fails
+    await navigateTo('/login')
   }
 }
 

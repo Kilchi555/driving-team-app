@@ -76,27 +76,36 @@ export default defineEventHandler(async (event) => {
     lineItem.amountIncludingTax = amount // Keep as is for now to see actual value
     lineItem.type = Wallee.model.LineItemType.PRODUCT
     
-    // ✅ Generate short IDs for customer and merchant reference (max 100 chars)
+    // ✅ Generate consistent customer ID for Wallee tokenization
+    // Use email as base for consistent customer ID (Wallee will tokenize payment methods per customer)
+    const customerIdBase = customerEmail.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+    const shortCustomerId = `dt-${customerIdBase}-${customerIdBase.length > 20 ? customerIdBase.substring(0, 20) : customerIdBase}`
+    
+    // Generate unique merchant reference for this transaction
     const timestamp = Date.now()
-    const shortCustomerId = `cust-${timestamp}-${Math.random().toString(36).substr(2, 9)}`
     const shortMerchantRef = `order-${timestamp}-${Math.random().toString(36).substr(2, 9)}`
     
     console.log('🔑 Transaction IDs generated:', { 
       customerId: shortCustomerId,
       customerIdLength: shortCustomerId.length,
+      customerEmail: customerEmail,
       merchantReference: shortMerchantRef,
       merchantReferenceLength: shortMerchantRef.length
     })
     
-    // ✅ TRANSACTION (exakt wie Dokumentation)
+    // ✅ TRANSACTION mit Tokenisierung für Wallee
     const transaction: Wallee.model.TransactionCreate = new Wallee.model.TransactionCreate()
     transaction.lineItems = [lineItem]
     transaction.autoConfirmationEnabled = true
     transaction.currency = currency
-    transaction.customerId = shortCustomerId // Use short ID (under 100 chars)
-    transaction.merchantReference = shortMerchantRef // Use short ID (under 100 chars)
+    transaction.customerId = shortCustomerId // Konsistente Customer ID für Tokenisierung
+    transaction.merchantReference = shortMerchantRef
     transaction.language = 'de-CH'
     transaction.customerEmailAddress = customerEmail
+    
+    // ✅ Tokenisierung aktivieren - Wallee speichert Zahlungsmethoden automatisch
+    transaction.tokenizationEnabled = true
+    // transaction.customerPresence = Wallee.model.CustomerPresence.NOT_PRESENT // Entfernt - nicht verfügbar
     
     // Keine Adresse - testen ob das das Problem löst
     

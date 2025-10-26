@@ -155,6 +155,15 @@
             <option value="completed">Abgeschlossen</option>
           </select>
 
+          <!-- Instructor Toggle -->
+          <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-gray-700">Instruktor für Kunden anzeigen</label>
+            <ToggleSwitch
+              v-model="showInstructorColumn"
+              :disabled="false"
+            />
+          </div>
+
           <button
             @click="loadCourses"
             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
@@ -220,6 +229,22 @@
                   <div class="text-sm text-gray-900">
                     {{ getInstructorName(course) }}
                   </div>
+                  <div v-if="course.sessions && course.sessions.length > 0" class="text-xs text-gray-500 mt-1">
+                    <div v-for="session in course.sessions.slice(0, 2)" :key="session.id" class="flex items-center gap-2">
+                      <span>{{ formatDate(session.start_time) }}</span>
+                      <span>{{ formatTime(session.start_time) }}</span>
+                      <span v-if="session.instructor_type === 'internal' && session.staff" class="text-blue-600">
+                        👤 {{ session.staff.first_name }} {{ session.staff.last_name }}
+                      </span>
+                      <span v-else-if="session.instructor_type === 'external' && session.external_instructor_name" class="text-green-600">
+                        🌐 {{ session.external_instructor_name }}
+                      </span>
+                      <span v-else class="text-gray-400">Kein Instruktor</span>
+                    </div>
+                    <div v-if="course.sessions.length > 2" class="text-gray-400">
+                      +{{ course.sessions.length - 2 }} weitere Sessions
+                    </div>
+                  </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm text-gray-900">
@@ -240,7 +265,7 @@
                 <td class="px-6 py-4 whitespace-nowrap">
                   <select 
                     :value="getCourseStatus(course)" 
-                    @change="updateCourseStatus(course, $event.target.value)"
+                    @change="updateCourseStatus(course, ($event.target as HTMLSelectElement)?.value)"
                     @click.stop
                     :class="getStatusBadgeClass(course)"
                     class="px-2 py-1 text-xs font-medium rounded-full border-0 bg-transparent cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -596,17 +621,29 @@
     </div>
 
     <!-- Create Course Modal -->
-    <div v-if="showCreateCourseModal" :class="modal.getModalWrapperClasses()" @click="closeCreateCourseModal">
-      <div :class="modal.getStickyModalContentClasses('lg')" @click="modal.handleClickStop">
-        <div :class="modal.getStickyModalHeaderClasses()">
-          <h2 class="text-xl font-bold text-gray-900">{{ editingCourse ? 'Kurs bearbeiten' : 'Neuer Kurs erstellen' }}</h2>
+    <div v-if="showCreateCourseModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="closeCreateCourseModal">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-6xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
+        <div class="px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold text-gray-900">{{ editingCourse ? 'Kurs bearbeiten' : 'Neuer Kurs erstellen' }}</h2>
+            <button
+              @click="closeCreateCourseModal"
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
         </div>
         
-        <div :class="modal.getStickyModalBodyClasses() + ' space-y-6'">
+        <div class="px-6 py-6 space-y-6">
           <!-- Basic Course Info -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-bold text-black mb-2">Kursname *</label>
+          <div class="space-y-4">
+            <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Grunddaten</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Kursname *</label>
               <input
                 v-model="newCourse.name"
                 type="text"
@@ -617,7 +654,7 @@
             </div>
             
             <div>
-              <label class="block text-sm font-bold text-black mb-2">Kursart</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Kursart</label>
               <select
                 v-model="newCourse.course_category_id"
                 @change="onCategoryChange"
@@ -659,7 +696,7 @@
           </div>
 
           <div>
-            <label class="block text-sm font-bold text-black mb-2">Beschreibung</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Beschreibung</label>
             <textarea
               v-model="newCourse.description"
               rows="3"
@@ -670,7 +707,7 @@
 
           <!-- Instructor Selection -->
           <div>
-            <label class="block text-sm font-bold text-black mb-2">Instruktor *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Instruktor *</label>
             <div class="space-y-3">
               <div class="flex items-center space-x-4">
                 <label class="flex items-center">
@@ -695,6 +732,7 @@
 
               <!-- Internal Staff Selection -->
               <div v-if="instructorType === 'internal'">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Staff-Mitarbeiter *</label>
                 <select
                   v-model="newCourse.instructor_id"
                   class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -709,29 +747,32 @@
 
               <!-- External Instructor -->
               <div v-if="instructorType === 'external'" class="space-y-3">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Externer Instruktor *</label>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <input
                     v-model="newCourse.external_instructor_name"
                     type="text"
                     placeholder="Name *"
-                    class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input
                     v-model="newCourse.external_instructor_email"
                     type="email"
                     placeholder="E-Mail *"
-                    class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input
                     v-model="newCourse.external_instructor_phone"
                     type="tel"
                     placeholder="Telefon"
-                    class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 
                 <div class="flex items-center space-x-4 bg-blue-50 p-3 rounded-lg">
-                  <div class="text-blue-400">ℹ️</div>
+                  <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                  </svg>
                   <div class="text-sm text-blue-800">
                     Der externe Instruktor erhält eine E-Mail-Einladung mit einem Link zur Bestätigung.
                   </div>
@@ -741,9 +782,11 @@
           </div>
 
           <!-- Participant Settings -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-sm font-bold text-black mb-2">Max. Teilnehmer *</label>
+          <div class="space-y-4">
+            <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Teilnehmer-Einstellungen</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Max. Teilnehmer *</label>
               <input
                 v-model.number="newCourse.max_participants"
                 type="number"
@@ -765,7 +808,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-black mb-2">Preis pro Teilnehmer (CHF)</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Preis pro Teilnehmer (CHF)</label>
               <input
                 v-model.number="coursePrice"
                 type="number"
@@ -778,16 +821,27 @@
 
           <!-- Course Sessions -->
           <div class="space-y-4">
-            <div class="flex justify-between items-center">
-              <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Kurs-Sessions</h3>
-              <button
-                v-if="selectedCategoryInfo && selectedCategoryInfo.session_count > 0"
-                @click="generateSessionsFromCategory"
-                type="button"
-                class="text-sm bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded transition-colors"
-              >
-                Sessions neu generieren ({{ selectedCategoryInfo.session_count }})
-              </button>
+            <div class="flex justify-between items-center border-b border-gray-200 pb-4">
+              <h3 class="text-lg font-medium text-gray-900">Kurs-Sessions</h3>
+              <div class="flex gap-2">
+                <button
+                  @click="addSession"
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                  </svg>
+                  Session hinzufügen
+                </button>
+                <button
+                  v-if="selectedCategoryInfo && selectedCategoryInfo.session_count > 0"
+                  @click="generateSessionsFromCategory"
+                  type="button"
+                  class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  Sessions generieren ({{ selectedCategoryInfo.session_count }})
+                </button>
+              </div>
             </div>
             
             <!-- Course Duration Info from Category -->
@@ -809,63 +863,132 @@
             </div>
 
             <!-- Sessions List -->
-            <div class="space-y-3">
+            <div class="space-y-4">
               <div 
                 v-for="(session, index) in courseSessions" 
                 :key="index"
-                class="bg-gray-50 p-4 rounded-lg border border-gray-200"
+                class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm"
               >
-                <div class="flex justify-between items-center mb-3">
-                  <h4 class="text-md font-medium text-gray-900">Session {{ index + 1 }}</h4>
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="text-lg font-semibold text-gray-900">Session {{ index + 1 }}</h4>
                   <button
                     @click="removeSession(index)"
                     type="button"
-                    class="text-red-600 hover:text-red-800 text-sm"
+                    class="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                    title="Session entfernen"
                   >
-                    🗑️ Entfernen
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
                   </button>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div>
-                    <label class="block text-sm font-medium" style="color: #9CA3AF;">Datum *</label>
-                    <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Datum *</label>
+                    <div class="flex items-center gap-2">
+                      <div v-if="session.date" class="text-sm text-gray-600 font-medium min-w-[2rem]">
+                        {{ getWeekdayShort(session.date) }}
+                      </div>
                       <input
                         v-model="session.date"
                         type="date"
                         required
-                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      <div v-if="session.date" class="absolute left-3 top-2 text-xs text-gray-500 pointer-events-none text-white">
-                        {{ getWeekdayShort(session.date) }}
-                      </div>
                     </div>
                   </div>
                   <div>
-                    <label class="block text-sm font-medium" style="color: #9CA3AF;">Startzeit *</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Startzeit *</label>
                     <input
                       v-model="session.start_time"
                       type="time"
                       required
-                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium" style="color: #9CA3AF;">Endzeit *</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Endzeit *</label>
                     <input
                       v-model="session.end_time"
                       type="time"
                       required
-                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium" style="color: #9CA3AF;">Beschreibung</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Instruktor-Typ</label>
+                    <select
+                      v-model="session.instructor_type"
+                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Kein Instruktor</option>
+                      <option value="internal">Interner Staff</option>
+                      <option value="external">Externer Instruktor</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <!-- Instructor Details Row -->
+                <div v-if="session.instructor_type" class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h5 class="text-sm font-medium text-blue-900 mb-4">Instruktor-Details</h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Internal Staff Selection -->
+                    <div v-if="session.instructor_type === 'internal'">
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Staff-Mitarbeiter *</label>
+                      <select
+                        v-model="session.staff_id"
+                        required
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Staff auswählen</option>
+                        <option v-for="staff in availableStaff" :key="staff.id" :value="staff.id">
+                          {{ staff.first_name }} {{ staff.last_name }}
+                        </option>
+                      </select>
+                    </div>
+                  
+                  <!-- External Instructor Fields -->
+                  <template v-if="session.instructor_type === 'external'">
+                    <div class="col-span-full">
+                      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                          <div>
+                            <h4 class="text-sm font-medium text-blue-900">Externer Instruktor</h4>
+                            <p class="text-xs text-blue-700 mt-1">
+                              Erstellen Sie einen Benutzer-Account für den externen Instruktor
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            @click="openExternalInstructorModal(session, index)"
+                            class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                          >
+                            {{ session.staff_id ? 'Bearbeiten' : 'Benutzer erstellen' }}
+                          </button>
+                        </div>
+                        <div v-if="session.staff_id" class="mt-3 p-3 bg-white rounded border">
+                          <div class="text-sm text-gray-900">
+                            <strong>{{ session.external_instructor_name }}</strong>
+                          </div>
+                          <div class="text-xs text-gray-600">
+                            {{ session.external_instructor_email }}
+                          </div>
+                          <div v-if="session.external_instructor_phone" class="text-xs text-gray-600">
+                            📞 {{ session.external_instructor_phone }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Beschreibung</label>
                     <input
                       v-model="session.description"
                       type="text"
                       :placeholder="`Session ${index + 1} Beschreibung`"
-                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -875,22 +998,28 @@
               <button
                 @click="addSession"
                 type="button"
-                class="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-200 hover:text-gray-800 hover:border-gray-400 transition-colors"
+                class="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
               >
-                + Neue Session hinzufügen
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Session hinzufügen
               </button>
               
               <!-- No Sessions Warning -->
-              <div v-if="courseSessions.length === 0" class="text-center py-8 text-gray-500">
-                <p>Noch keine Sessions definiert.</p>
-                <p class="text-sm">Fügen Sie mindestens eine Session hinzu oder generieren Sie Sessions aus der Kursart.</p>
+              <div v-if="courseSessions.length === 0" class="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                <svg class="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+                <p class="text-lg font-medium text-gray-700 mb-2">Noch keine Sessions definiert</p>
+                <p class="text-sm text-gray-600">Fügen Sie mindestens eine Session hinzu oder generieren Sie Sessions aus der Kursart.</p>
               </div>
             </div>
           </div>
 
           <!-- Resource Requirements -->
           <div class="space-y-4">
-            <h3 class="text-lg font-medium text-gray-900">Ressourcen</h3>
+            <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Ressourcen</h3>
             
             <!-- Room Requirement -->
             <div class="flex items-center space-x-4">
@@ -961,7 +1090,7 @@
 
           <!-- Course Settings -->
           <div class="space-y-4">
-            <h3 class="text-lg font-medium text-gray-900">Kurs-Einstellungen</h3>
+            <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Kurs-Einstellungen</h3>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="flex items-center">
@@ -1003,7 +1132,7 @@
         </div>
         
         <!-- Modal Footer -->
-        <div :class="modal.getStickyModalFooterClasses()">
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3 sticky bottom-0 bg-white">
           <button
             @click="cancelCreateCourse"
             class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
@@ -1016,6 +1145,128 @@
             class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
           >
             {{ isCreating ? 'Speichere...' : (editingCourse ? 'Kurs aktualisieren' : 'Kurs erstellen') }}
+          </button>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- External Instructor Modal -->
+    <div v-if="showExternalInstructorModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="closeExternalInstructorModal">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-2xl w-full max-h-[90vh] overflow-y-auto admin-modal" @click.stop>
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-xl font-bold text-gray-900">Externer Instruktor erstellen</h2>
+        </div>
+        
+        <div class="px-6 py-4 space-y-6">
+          <!-- Personal Information -->
+          <div class="space-y-4">
+            <h3 class="text-lg font-medium text-gray-900">Persönliche Daten</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Vorname *</label>
+                <input
+                  v-model="externalInstructorForm.first_name"
+                  type="text"
+                  required
+                  class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Max"
+                />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nachname *</label>
+                <input
+                  v-model="externalInstructorForm.last_name"
+                  type="text"
+                  required
+                  class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Mustermann"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">E-Mail *</label>
+              <input
+                v-model="externalInstructorForm.email"
+                type="email"
+                required
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="max.mustermann@example.com"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Telefon</label>
+              <input
+                v-model="externalInstructorForm.phone"
+                type="tel"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="+41 XX XXX XX XX"
+              />
+            </div>
+          </div>
+
+          <!-- Role Information -->
+          <div class="space-y-4">
+            <h3 class="text-lg font-medium text-gray-900">Rolle & Berechtigungen</h3>
+            
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div class="flex items-start">
+                <div class="flex-shrink-0">
+                  <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h4 class="text-sm font-medium text-yellow-800">Externer Instruktor</h4>
+                  <p class="text-sm text-yellow-700 mt-1">
+                    Dieser Benutzer wird als "externer_instruktor" erstellt und kann nur seine eigenen Kurse einsehen.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Invitation Settings -->
+          <div class="space-y-4">
+            <h3 class="text-lg font-medium text-gray-900">Einladung</h3>
+            
+            <div class="flex items-center">
+              <input
+                v-model="sendInvitation"
+                type="checkbox"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label class="ml-2 text-sm text-gray-700">
+                Einladungs-E-Mail senden
+              </label>
+            </div>
+            
+            <div v-if="sendInvitation" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p class="text-sm text-blue-800">
+                Der externe Instruktor erhält eine E-Mail mit einem Einladungslink, um sein Passwort zu setzen und sich anzumelden.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+          <button
+            @click="closeExternalInstructorModal"
+            class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+          >
+            Abbrechen
+          </button>
+          <button
+            @click="createExternalInstructor"
+            :disabled="!canCreateExternalInstructor || isCreatingExternalInstructor"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          >
+            {{ isCreatingExternalInstructor ? 'Erstelle...' : 'Instruktor erstellen' }}
           </button>
         </div>
       </div>
@@ -2296,6 +2547,7 @@
       </div>
     </div>
   </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -2303,6 +2555,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { definePageMeta, navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
+import { useNuxtApp } from '#imports'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useCourseCategories } from '~/composables/useCourseCategories'
 import { useInstructorInvitations } from '~/composables/useInstructorInvitations'
@@ -2311,6 +2564,16 @@ import { useVehicleReservations } from '~/composables/useVehicleReservations'
 import { useModal } from '~/composables/useModal'
 import { useGeneralResources } from '~/composables/useGeneralResources'
 import { formatDateTime } from '~/utils/dateUtils'
+
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('de-CH')
+}
+
+const formatTime = (dateString: string | null | undefined) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+}
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
 
 definePageMeta({
@@ -2377,6 +2640,26 @@ const success = ref<string | null>(null)
 const searchQuery = ref('')
 const selectedCategory = ref('')
 const selectedStatus = ref('')
+const showInstructorColumn = ref(true)
+
+// Load instructor column preference from localStorage
+onMounted(() => {
+  const savedPreference = localStorage.getItem('showInstructorColumn')
+  if (savedPreference !== null) {
+    showInstructorColumn.value = savedPreference === 'true'
+  }
+})
+
+// Watch for changes and save to localStorage
+watch(showInstructorColumn, (newValue) => {
+  localStorage.setItem('showInstructorColumn', newValue.toString())
+  // Dispatch storage event to notify other tabs/pages
+  window.dispatchEvent(new StorageEvent('storage', {
+    key: 'showInstructorColumn',
+    newValue: newValue.toString(),
+    oldValue: localStorage.getItem('showInstructorColumn')
+  }))
+})
 
 // Tabs
 const activeTab = ref('courses')
@@ -2613,8 +2896,8 @@ const roomForm = ref({
 const newCourse = ref({
   name: '',
   description: '',
-  course_category_id: '',
-  instructor_id: '',
+  course_category_id: null as string | null,
+  instructor_id: null as string | null,
   external_instructor_name: '',
   external_instructor_email: '',
   external_instructor_phone: '',
@@ -2622,12 +2905,12 @@ const newCourse = ref({
   min_participants: 1,
   price_per_participant_rappen: 0,
   requires_room: false,
-  room_id: '',
+  room_id: null as string | null,
   requires_vehicle: false,
-  vehicle_id: '',
+  vehicle_id: null as string | null,
   is_public: true,
   sari_managed: false,
-  sari_course_id: '',
+  sari_course_id: null as string | null,
   registration_deadline: null as string | null,
   status: 'draft'
 })
@@ -2638,7 +2921,33 @@ const courseSessions = ref<Array<{
   start_time: string
   end_time: string
   description: string
+  instructor_type: 'internal' | 'external' | null
+  staff_id: string | null
+  external_instructor_name: string | null
+  external_instructor_email: string | null
+  external_instructor_phone: string | null
 }>>([])
+
+// External Instructor Modal
+const showExternalInstructorModal = ref(false)
+const isCreatingExternalInstructor = ref(false)
+const sendInvitation = ref(true)
+const currentSessionIndex = ref<number | null>(null)
+const currentSession = ref<any>(null)
+
+const externalInstructorForm = ref({
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone: ''
+})
+
+const canCreateExternalInstructor = computed(() => {
+  return externalInstructorForm.value.first_name && 
+         externalInstructorForm.value.last_name && 
+         externalInstructorForm.value.email
+})
+
 
 // Additional state for category handling
 const selectedCategoryInfo = computed(() => {
@@ -2705,7 +3014,7 @@ const loadCourses = async () => {
 
   try {
     // Load courses with related data
-    const { data: coursesData, error: coursesError } = await supabase
+    const { data: coursesData, error: coursesError } = await getSupabase()
       .from('courses')
       .select(`
         *,
@@ -2713,7 +3022,18 @@ const loadCourses = async () => {
         room:rooms(name, location, capacity),
         vehicle:vehicles(name, location),
         course_category:course_categories(name, icon),
-        sessions:course_sessions(id, session_number, start_time, end_time),
+        sessions:course_sessions(
+          id, 
+          session_number, 
+          start_time, 
+          end_time, 
+          instructor_type,
+          staff_id,
+          external_instructor_name,
+          external_instructor_email,
+          external_instructor_phone,
+          staff:users!staff_id(id, first_name, last_name)
+        ),
         registrations:course_registrations(id, status, deleted_at),
         waitlist:course_waitlist(id)
       `)
@@ -2751,7 +3071,7 @@ const loadStaff = async () => {
   if (!currentUser.value?.tenant_id) return
 
   try {
-    const { data, error: staffError } = await supabase
+    const { data, error: staffError } = await getSupabase()
       .from('users')
       .select('id, first_name, last_name, email, role')
       .eq('tenant_id', currentUser.value.tenant_id)
@@ -2788,6 +3108,13 @@ const createCourse = async () => {
       external_instructor_phone: instructorType.value === 'external' ? newCourse.value.external_instructor_phone : null,
     }
 
+    // Convert empty strings to null for UUID fields
+    if (courseData.course_category_id === '') courseData.course_category_id = null
+    if (courseData.instructor_id === '') courseData.instructor_id = null
+    if (courseData.room_id === '') courseData.room_id = null
+    if (courseData.vehicle_id === '') courseData.vehicle_id = null
+    if (courseData.sari_course_id === '') courseData.sari_course_id = null
+
     // Remove empty resource IDs (omit from object)
     if (!newCourse.value.requires_room) {
       const { room_id, ...restData } = courseData
@@ -2801,7 +3128,7 @@ const createCourse = async () => {
     let courseResult
     if (editingCourse.value) {
       // Update existing course
-      courseResult = await supabase
+      courseResult = await getSupabase()
         .from('courses')
         .update(courseData)
         .eq('id', editingCourse.value.id)
@@ -2811,7 +3138,7 @@ const createCourse = async () => {
       console.log('✅ Course updated:', editingCourse.value.id)
     } else {
       // Create new course
-      courseResult = await supabase
+      courseResult = await getSupabase()
         .from('courses')
         .insert(courseData)
         .select()
@@ -2827,23 +3154,28 @@ const createCourse = async () => {
     if (courseSessions.value.length > 0) {
       if (editingCourse.value) {
         // Delete existing sessions and create new ones
-        await supabase
+        await getSupabase()
           .from('course_sessions')
           .delete()
           .eq('course_id', createdCourse.id)
       }
 
-      const sessionData = courseSessions.value.map((session, index) => ({
-        course_id: createdCourse.id,
-        session_number: index + 1,
-        start_time: `${session.date}T${session.start_time}:00`,
-        end_time: `${session.date}T${session.end_time}:00`,
-        description: session.description || `Session ${index + 1}`,
-        tenant_id: currentUser.value.tenant_id
-        // created_by: currentUser.value.id // Temporarily disabled until migration is run
-      }))
+    const sessionData = courseSessions.value.map((session, index) => ({
+      course_id: createdCourse.id,
+      session_number: index + 1,
+      start_time: `${session.date}T${session.start_time}:00`,
+      end_time: `${session.date}T${session.end_time}:00`,
+      description: session.description || `Session ${index + 1}`,
+      instructor_type: session.instructor_type,
+      staff_id: session.instructor_type === 'internal' ? session.staff_id : null,
+      external_instructor_name: session.instructor_type === 'external' ? session.external_instructor_name : null,
+      external_instructor_email: session.instructor_type === 'external' ? session.external_instructor_email : null,
+      external_instructor_phone: session.instructor_type === 'external' ? session.external_instructor_phone : null,
+      tenant_id: currentUser.value.tenant_id
+      // created_by: currentUser.value.id // Temporarily disabled until migration is run
+    }))
 
-      const { error: sessionsError } = await supabase
+      const { error: sessionsError } = await getSupabase()
         .from('course_sessions')
         .insert(sessionData)
 
@@ -2896,6 +3228,7 @@ const createCourse = async () => {
 
 const onCategoryChange = () => {
   // Auto-fill defaults when category is selected
+  if (!newCourse.value.course_category_id) return
   const defaults = getCategoryDefaults(newCourse.value.course_category_id)
   if (defaults) {
     newCourse.value.max_participants = defaults.max_participants
@@ -2947,8 +3280,8 @@ const resetNewCourse = () => {
   newCourse.value = {
     name: '',
     description: '',
-    course_category_id: '',
-    instructor_id: '',
+    course_category_id: null,
+    instructor_id: null,
     external_instructor_name: '',
     external_instructor_email: '',
     external_instructor_phone: '',
@@ -2956,12 +3289,12 @@ const resetNewCourse = () => {
     min_participants: 1,
     price_per_participant_rappen: 0,
     requires_room: false,
-    room_id: '',
+    room_id: null,
     requires_vehicle: false,
-    vehicle_id: '',
+    vehicle_id: null,
     is_public: true,
     sari_managed: false,
-    sari_course_id: '',
+    sari_course_id: null,
     registration_deadline: null,
     status: 'draft'
   }
@@ -2982,12 +3315,93 @@ const addSession = () => {
     date: tomorrow.toISOString().split('T')[0],
     start_time: '09:00',
     end_time: '17:00',
-    description: ''
+    description: '',
+    instructor_type: null,
+    staff_id: null,
+    external_instructor_name: null,
+    external_instructor_email: null,
+    external_instructor_phone: null
   })
 }
 
 const removeSession = (index: number) => {
   courseSessions.value.splice(index, 1)
+}
+
+// External Instructor Functions
+const openExternalInstructorModal = (session: any, index: number) => {
+  currentSessionIndex.value = index
+  currentSession.value = session
+  
+  // Pre-fill form if editing existing instructor
+  if (session.staff_id) {
+    externalInstructorForm.value = {
+      first_name: session.external_instructor_name?.split(' ')[0] || '',
+      last_name: session.external_instructor_name?.split(' ').slice(1).join(' ') || '',
+      email: session.external_instructor_email || '',
+      phone: session.external_instructor_phone || ''
+    }
+  } else {
+    // Reset form for new instructor
+    externalInstructorForm.value = {
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: ''
+    }
+  }
+  
+  showExternalInstructorModal.value = true
+}
+
+const closeExternalInstructorModal = () => {
+  showExternalInstructorModal.value = false
+  currentSessionIndex.value = null
+  currentSession.value = null
+  externalInstructorForm.value = {
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: ''
+  }
+}
+
+const createExternalInstructor = async () => {
+  if (!currentUser.value?.tenant_id) return
+  
+  isCreatingExternalInstructor.value = true
+  error.value = null
+  
+  try {
+    // Create external instructor via API
+    const response = await $fetch('/api/staff/invite-external-instructor', {
+      method: 'POST',
+      body: {
+        email: externalInstructorForm.value.email,
+        first_name: externalInstructorForm.value.first_name,
+        last_name: externalInstructorForm.value.last_name,
+        tenant_id: currentUser.value.tenant_id
+      }
+    })
+    
+    // Update the session with the new instructor data
+    if (currentSessionIndex.value !== null) {
+      const session = courseSessions.value[currentSessionIndex.value]
+      session.staff_id = (response as any).user.id
+      session.external_instructor_name = `${externalInstructorForm.value.first_name} ${externalInstructorForm.value.last_name}`
+      session.external_instructor_email = externalInstructorForm.value.email
+      session.external_instructor_phone = externalInstructorForm.value.phone
+    }
+    
+    success.value = 'Externer Instruktor erfolgreich erstellt und Einladung gesendet!'
+    closeExternalInstructorModal()
+    
+  } catch (err: any) {
+    console.error('Error creating external instructor:', err)
+    error.value = `Fehler beim Erstellen: ${err.data?.message || err.message}`
+  } finally {
+    isCreatingExternalInstructor.value = false
+  }
 }
 
 const generateSessionsFromCategory = () => {
@@ -3008,12 +3422,17 @@ const generateSessionsFromCategory = () => {
     const endTime = new Date(startTime)
     endTime.setHours(startTime.getHours() + hoursPerSession)
     
-    courseSessions.value.push({
-      date: sessionDate.toISOString().split('T')[0],
-      start_time: startTime.toTimeString().slice(0, 5),
-      end_time: endTime.toTimeString().slice(0, 5),
-      description: `Session ${i + 1}`
-    })
+      courseSessions.value.push({
+        date: sessionDate.toISOString().split('T')[0],
+        start_time: startTime.toTimeString().slice(0, 5),
+        end_time: endTime.toTimeString().slice(0, 5),
+        description: `Session ${i + 1}`,
+        instructor_type: null,
+        staff_id: null,
+        external_instructor_name: null,
+        external_instructor_email: null,
+        external_instructor_phone: null
+      })
   }
   
   console.log(`✅ Generated ${sessionCount} sessions from category:`, courseSessions.value)
@@ -3022,20 +3441,25 @@ const generateSessionsFromCategory = () => {
 // Load existing course sessions for editing
 const loadCourseSessions = async (courseId: string) => {
   try {
-    const { data: sessions, error } = await supabase
+    const { data: sessions, error } = await getSupabase()
       .from('course_sessions')
-      .select('*')
+      .select('*, staff:users!staff_id(id, first_name, last_name)')
       .eq('course_id', courseId)
       .order('session_number', { ascending: true })
 
     if (error) throw error
 
-    courseSessions.value = (sessions || []).map(session => ({
-      date: session.start_time.split('T')[0],
-      start_time: session.start_time.split('T')[1].slice(0, 5),
-      end_time: session.end_time.split('T')[1].slice(0, 5),
-      description: session.description || ''
-    }))
+      courseSessions.value = (sessions || []).map(session => ({
+        date: session.start_time.split('T')[0],
+        start_time: session.start_time.split('T')[1].slice(0, 5),
+        end_time: session.end_time.split('T')[1].slice(0, 5),
+        description: session.description || '',
+        instructor_type: session.instructor_type || null,
+        staff_id: session.staff_id || null,
+        external_instructor_name: session.external_instructor_name || null,
+        external_instructor_email: session.external_instructor_email || null,
+        external_instructor_phone: session.external_instructor_phone || null
+      }))
 
     console.log(`✅ Loaded ${courseSessions.value.length} sessions for course ${courseId}`)
   } catch (error) {
@@ -3054,6 +3478,17 @@ const getWeekdayShort = (dateString: string) => {
 const cancelCreateCourse = () => {
   showCreateCourseModal.value = false
   resetNewCourse()
+}
+
+const closeCreateCourseModal = () => {
+  showCreateCourseModal.value = false
+  resetNewCourse()
+}
+
+const closeCreateCategoryModal = () => {
+  showCreateCategoryModal.value = false
+  showEditCategoryModal.value = false
+  resetCategoryForm()
 }
 
 // Helper functions
@@ -3210,10 +3645,10 @@ const saveCategory = async () => {
 
     // Remove empty UUID fields to avoid validation errors
     if (!categoryData.default_room_id) {
-      delete categoryData.default_room_id
+      delete (categoryData as any).default_room_id
     }
     if (!categoryData.default_vehicle_id) {
-      delete categoryData.default_vehicle_id
+      delete (categoryData as any).default_vehicle_id
     }
 
     if (showEditCategoryModal.value && editingCategory.value) {
@@ -3282,7 +3717,7 @@ const createVehicle = async () => {
   error.value = null
 
   try {
-    const { data, error: createError } = await supabase
+    const { data, error: createError } = await getSupabase()
       .from('vehicles')
       .insert({
         ...vehicleForm.value,
@@ -3314,7 +3749,7 @@ const createRoom = async () => {
   error.value = null
 
   try {
-    const { data, error: createError } = await supabase
+    const { data, error: createError } = await getSupabase()
       .from('rooms')
       .insert({
         name: roomForm.value.name,
@@ -3407,7 +3842,7 @@ const updateVehicle = async () => {
   error.value = null
 
   try {
-    const { data, error: updateError } = await supabase
+    const { data, error: updateError } = await getSupabase()
       .from('vehicles')
       .update({
         marke: vehicleForm.value.marke,
@@ -3448,7 +3883,7 @@ const updateRoom = async () => {
   error.value = null
 
   try {
-    const { data, error: updateError } = await supabase
+    const { data, error: updateError } = await getSupabase()
       .from('rooms')
       .update({
         name: roomForm.value.name,
@@ -3552,7 +3987,7 @@ const editCourse = (course: any) => {
 
 const updateCourseStatus = async (course: any, newStatus: string) => {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('courses')
       .update({ 
         status: newStatus,
@@ -3672,7 +4107,7 @@ const sendCancellationNotifications = async () => {
       created_by: currentUser.value.id
     }))
 
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('course_notifications')
       .insert(notifications)
 
@@ -3787,7 +4222,7 @@ onMounted(async () => {
   
   // Load tenant business type
   if (currentUser.value?.tenant_id) {
-    const { data: tenantData } = await supabase
+    const { data: tenantData } = await getSupabase()
       .from('tenants')
       .select('business_type')
       .eq('id', currentUser.value.tenant_id)
@@ -3900,7 +4335,7 @@ const searchUsers = async () => {
 
   try {
     isSearchingUsers.value = true
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('users')
       .select('id, first_name, last_name, email, phone, role')
       .or(`first_name.ilike.%${userSearchQuery.value}%,last_name.ilike.%${userSearchQuery.value}%,email.ilike.%${userSearchQuery.value}%`)
@@ -3975,7 +4410,7 @@ const selectExistingUser = async (user: any) => {
 
 const loadCourseEnrollments = async (courseId: string) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('course_registrations')
       .select(`
         *,
@@ -4004,7 +4439,7 @@ const loadCourseEnrollments = async (courseId: string) => {
 
 const loadDeletedEnrollments = async (courseId: string) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('course_registrations')
       .select(`
         *,
@@ -4048,7 +4483,7 @@ const addParticipant = async () => {
     let userId = null
     
     // Check if user exists
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await getSupabase()
       .from('users')
       .select('id')
       .eq('email', newParticipant.value.email)
@@ -4061,7 +4496,7 @@ const addParticipant = async () => {
     } else {
       // Try to create user
       console.log('Creating new user...')
-      const { data: newUser, error: userError } = await supabase
+      const { data: newUser, error: userError } = await getSupabase()
         .from('users')
         .insert({
           first_name: newParticipant.value.first_name,
@@ -4146,7 +4581,7 @@ const removeParticipant = async (enrollment: any) => {
 
   try {
     // Soft delete: Set deleted_at and deleted_by instead of hard delete
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('course_registrations')
       .update({
         deleted_at: new Date().toISOString(),
@@ -4182,7 +4617,7 @@ const restoreParticipant = async (enrollment: any) => {
 
   try {
     // Restore: Clear deleted_at and deleted_by
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('course_registrations')
       .update({
         deleted_at: null,
