@@ -77,6 +77,41 @@
           <p class="text-gray-600">Überprüfe Session...</p>
         </div>
 
+        <!-- Device Verification Required Modal -->
+        <div v-if="requiresDeviceVerification" class="text-center py-8">
+          <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6 mb-4">
+            <div class="text-yellow-600 mb-4">
+              <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-yellow-800 mb-2">Geräte-Verifikation erforderlich</h3>
+            <p class="text-yellow-700 mb-4">
+              Ein neues Gerät wurde erkannt: <strong>{{ pendingDeviceName || 'Unbekanntes Gerät' }}</strong>
+            </p>
+            <p class="text-sm text-yellow-600 mb-4">
+              Wir haben einen Verifikations-Link an <strong>{{ pendingVerificationEmail }}</strong> gesendet.
+            </p>
+            <p class="text-xs text-yellow-600 mb-4">
+              Bitte klicken Sie auf den Link in Ihrer E-Mail, um das Gerät zu bestätigen. Der Link ist 24 Stunden gültig.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                @click="requiresDeviceVerification = false"
+                class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
+              >
+                Erneut versuchen
+              </button>
+              <button
+                @click="resendVerificationEmail"
+                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+              >
+                Link erneut senden
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Login Form -->
         <form v-else @submit.prevent="handleLogin" class="space-y-4">
           <!-- Email Input -->
@@ -225,7 +260,17 @@ interface DeviceSecurityResponse {
   device?: {
     id: string
     is_trusted: boolean
+    verified_at?: string | null
+    device_name?: string
   }
+  error?: string
+}
+
+interface VerificationResponse {
+  success: boolean
+  message?: string
+  verificationLink?: string
+  expiresAt?: string
   error?: string
 }
 
@@ -307,7 +352,7 @@ const handleLogin = async () => {
     }
 
     // 2. If validation passes, proceed with login
-    const loginSuccess = await login(loginForm.value.email, loginForm.value.password, supabase)
+    const loginSuccess = await login(loginForm.value.email, loginForm.value.password)
     
     if (!loginSuccess) {
       console.error('❌ Login failed - no success returned')
@@ -354,8 +399,9 @@ const handleLogin = async () => {
           }
           
           if (!checkResponse.deviceExists) {
-            console.log('⚠️ Unknown device detected, registering...')
+            console.log('⚠️ Unknown device detected - requiring verification...')
             
+            // ✅ NEU: Registriere Gerät (aber noch nicht verifiziert)
             const registerResponse = await $fetch<DeviceSecurityResponse>('/api/admin/device-security-handler', {
               method: 'POST',
               body: {
@@ -367,11 +413,96 @@ const handleLogin = async () => {
               }
             })
             
-            if (registerResponse.success) {
-              console.log('✅ New device registered:', registerResponse.data?.id)
-              showSuccess('Neues Gerät erkannt', 'Dieses Gerät wurde für zusätzliche Sicherheit registriert.')
+            if (registerResponse.success && registerResponse.data) {
+              const deviceId = registerResponse.data.id
+              const deviceName = registerResponse.data.device_name || 'Unbekanntes Gerät'
+              
+              console.log('✅ New device registered (unverified):', deviceId)
+              
+              // ✅ 2FA: Sende Magic Link zur Verifikation
+              try {
+                const verificationResponse = await $fetch<VerificationResponse>('/api/admin/send-device-verification', {
+                  method: 'POST',
+                  body: {
+                    userId: authUserId,
+                    deviceId: deviceId,
+                    userEmail: user.email,
+                    deviceName: deviceName
+                  }
+                })
+                
+                if (verificationResponse.success) {
+                  // ✅ LOGOUT: User muss Gerät erst verifizieren
+                  console.log('🔒 Logging out user - device verification required')
+                  await supabase.auth.signOut()
+                  
+                  // Zeige Verifikations-Seite statt weiterzuleiten
+                  showError(
+                    'Geräte-Verifikation erforderlich', 
+                    `Ein neues Gerät wurde erkannt. Wir haben einen Verifikations-Link an ${user.email} gesendet. Bitte klicken Sie auf den Link in Ihrer E-Mail, um das Gerät zu bestätigen.`
+                  )
+                  
+                  // Setze Flag für Verifikations-Pending Modal
+                  requiresDeviceVerification.value = true
+                  pendingVerificationEmail.value = user.email
+                  pendingDeviceName.value = deviceName
+                  
+                  // ✅ KRITISCH: Verhindere Login-Redirect - User muss warten
+                  return // Exit early - Login nicht abschließen
+                } else {
+                  throw new Error('Failed to send verification email')
+                }
+              } catch (verificationError: any) {
+                console.error('❌ Error sending verification email:', verificationError)
+                
+                // Fallback: Zeige manuellen Link (für Testing)
+                showError(
+                  'Geräte-Verifikation erforderlich',
+                  `Ein neues Gerät wurde erkannt. Bitte kontaktieren Sie den Administrator für die Verifikation.`
+                )
+                
+                // Logout trotzdem
+                await supabase.auth.signOut()
+                requiresDeviceVerification.value = true
+                return
+              }
             } else {
               console.error('Error registering device:', registerResponse.message)
+            }
+          }
+          
+          // ✅ Prüfe ob Gerät existiert aber nicht verifiziert ist
+          if (checkResponse.deviceExists && checkResponse.device) {
+            const existingDevice = checkResponse.device as any
+            if (existingDevice && !existingDevice.verified_at) {
+              console.log('⚠️ Device exists but not verified - requiring verification...')
+              
+              // Gerät existiert aber ist nicht verifiziert - sende erneut Verifikations-Link
+              try {
+                const verificationResponse = await $fetch<VerificationResponse>('/api/admin/send-device-verification', {
+                  method: 'POST',
+                  body: {
+                    userId: authUserId,
+                    deviceId: existingDevice.id,
+                    userEmail: user.email,
+                    deviceName: existingDevice.device_name || 'Unbekanntes Gerät'
+                  }
+                })
+                
+                if (verificationResponse.success) {
+                  // Logout und zeige Verifikations-Modal
+                  await supabase.auth.signOut()
+                  showError(
+                    'Geräte-Verifikation erforderlich',
+                    `Ihr Gerät muss noch verifiziert werden. Wir haben einen Verifikations-Link an ${user.email} gesendet.`
+                  )
+                  requiresDeviceVerification.value = true
+                  pendingVerificationEmail.value = user.email
+                  return // Verhindere Login
+                }
+              } catch (verificationError) {
+                console.error('Error re-sending verification:', verificationError)
+              }
             }
           } else {
             console.log('✅ Known device detected, updating last seen')
@@ -387,11 +518,46 @@ const handleLogin = async () => {
             
             if (updateResponse.success) {
               const device = checkResponse.data
-              if (device?.is_trusted) {
-                console.log('✅ Trusted device confirmed')
+              
+              // ✅ PRÜFUNG: Ist Gerät verifiziert?
+              if (!device?.verified_at) {
+                console.log('⚠️ Device not verified - requiring verification...')
+                
+                // Gerät existiert aber nicht verifiziert - sende Verifikations-Link
+                try {
+                  const verificationResponse = await $fetch<VerificationResponse>('/api/admin/send-device-verification', {
+                    method: 'POST',
+                    body: {
+                      userId: authUserId,
+                      deviceId: device.id,
+                      userEmail: user.email,
+                      deviceName: device.device_name || 'Unbekanntes Gerät'
+                    }
+                  })
+                  
+                  if (verificationResponse.success) {
+                    // Logout und zeige Verifikations-Modal
+                    await supabase.auth.signOut()
+                    showError(
+                      'Geräte-Verifikation erforderlich',
+                      `Ihr Gerät muss noch verifiziert werden. Wir haben einen Verifikations-Link an ${user.email} gesendet.`
+                    )
+                    requiresDeviceVerification.value = true
+                    pendingVerificationEmail.value = user.email
+                    pendingDeviceName.value = device.device_name || 'Unbekanntes Gerät'
+                    return // Verhindere Login
+                  }
+                } catch (verificationError) {
+                  console.error('Error sending verification:', verificationError)
+                }
+              }
+              
+              if (device?.is_trusted && device?.verified_at) {
+                console.log('✅ Trusted and verified device confirmed')
+              } else if (device?.verified_at) {
+                console.log('✅ Verified device (but not yet trusted)')
               } else {
-                console.log('⚠️ Untrusted device detected')
-                showSuccess('Gerät erkannt', 'Dieses Gerät ist bekannt, aber noch nicht als vertrauenswürdig markiert.')
+                console.log('⚠️ Untrusted and unverified device')
               }
             } else {
               console.error('Error updating device:', updateResponse.message)
@@ -407,6 +573,8 @@ const handleLogin = async () => {
       // Don't block login for device security errors
     }
     
+    // ✅ Erfolgsmeldung und sofortiger Redirect - Device-Check blockiert NICHT
+    console.log('✅ Login completed, redirecting to dashboard...')
     showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
     
     // Check if there's a redirect parameter first
@@ -454,7 +622,7 @@ const handleLogin = async () => {
 
 const handleLogout = async () => {
   try {
-    await logout(supabase)
+    await logout()
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
     // Zur tenant-spezifischen Login-Seite weiterleiten
     if (currentTenant.value?.slug) {
@@ -468,28 +636,73 @@ const handleLogout = async () => {
   }
 }
 
+const resendVerificationEmail = async () => {
+  if (!pendingVerificationEmail.value) return
+  
+  try {
+    isLoading.value = true
+    
+    // Finde Gerät für User
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) {
+      showError('Fehler', 'Bitte melden Sie sich erneut an.')
+      return
+    }
+    
+    // Finde unverifiziertes Gerät
+    const { data: devices } = await supabase
+      .from('user_devices')
+      .select('*')
+      .eq('user_id', authUser.id)
+      .is('verified_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    
+    if (!devices || devices.length === 0) {
+      showError('Fehler', 'Kein Gerät zum Verifizieren gefunden.')
+      return
+    }
+    
+    const device = devices[0]
+    
+    // Sende Verifikations-Link erneut
+    const response = await $fetch<VerificationResponse>('/api/admin/send-device-verification', {
+      method: 'POST',
+      body: {
+        userId: authUser.id,
+        deviceId: device.id,
+        userEmail: pendingVerificationEmail.value,
+        deviceName: device.device_name || 'Unbekanntes Gerät'
+      }
+    })
+    
+    if (response.success) {
+      showSuccess('E-Mail gesendet', `Verifikations-Link wurde erneut an ${pendingVerificationEmail.value} gesendet.`)
+    } else {
+      showError('Fehler', 'Link konnte nicht gesendet werden.')
+    }
+  } catch (error: any) {
+    console.error('Error resending verification:', error)
+    showError('Fehler', error.message || 'Link konnte nicht gesendet werden.')
+  } finally {
+    isLoading.value = false
+  }
+}
+
 // Device fingerprinting functions
+// ✅ VERBESSERT: Nur stabile Eigenschaften verwenden (ohne Canvas, der sich ändern kann)
 const generateDeviceFingerprint = async (): Promise<string | null> => {
   if (!process.client) return null
   
   try {
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    if (ctx) {
-      ctx.textBaseline = 'top'
-      ctx.font = '14px Arial'
-      ctx.fillText('Browser fingerprint', 2, 2)
-    }
-    
+    // ✅ NUR STABILE EIGENSCHAFTEN: Diese ändern sich nicht bei Browser-Updates
     const fingerprint = {
       userAgent: navigator.userAgent,
-      language: navigator.language,
       platform: navigator.platform,
       screenResolution: `${screen.width}x${screen.height}`,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      canvas: canvas.toDataURL(),
-      cookieEnabled: navigator.cookieEnabled,
-      doNotTrack: navigator.doNotTrack
+      colorDepth: screen.colorDepth,
+      hardwareConcurrency: navigator.hardwareConcurrency || 0,
+      // ✅ ENTFERNT: canvas, language, timezone, doNotTrack - diese können sich ändern
     }
     
     // Create a hash-like identifier from the fingerprint
@@ -497,6 +710,11 @@ const generateDeviceFingerprint = async (): Promise<string | null> => {
     const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(fingerprintString))
     const hashArray = Array.from(new Uint8Array(hash))
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    
+    console.log('🔐 Generated device fingerprint:', {
+      hash: hashHex.substring(0, 16),
+      components: fingerprint
+    })
     
     return hashHex.substring(0, 16) // Ensure it fits in VARCHAR(17)
   } catch (error) {
@@ -523,14 +741,19 @@ const getDeviceName = (userAgent: string): string => {
   }
 }
 
+// State für Session-Check
+const isCheckingSession = ref(true) // Start mit true, wird nach Prüfung auf false gesetzt
+
 // Computed
-const isCheckingSession = computed<boolean>(() => Boolean((loading as any).value ?? loading))
 const isAuthenticated = computed<boolean>(() => Boolean((isLoggedIn as any).value ?? isLoggedIn))
 
 // State
 const isLoading = ref(false)
 const loginError = ref<string | null>(null)
 const showPassword = ref(false)
+const requiresDeviceVerification = ref(false)
+const pendingVerificationEmail = ref<string | null>(null)
+const pendingDeviceName = ref<string | null>(null)
 
 const loginForm = ref({
   email: '',
@@ -577,18 +800,52 @@ onMounted(async () => {
     console.error('Failed to load tenant branding:', error)
   }
   
-  // Prüfe ob bereits angemeldet - aber nur wenn nicht gerade ein Login-Versuch läuft
-  if (isAuthenticated.value && !isLoading.value) {
-    console.log('🔄 User already authenticated, redirecting...')
-    const authStore = useAuthStore()
-    const user = authStore.userProfile
-    if (user?.role === 'admin' || user?.role === 'tenant_admin') {
-      router.push('/admin')
-    } else if (user?.role === 'staff') {
-      router.push('/dashboard')
-    } else {
-      router.push('/customer-dashboard')
+  // ✅ PRÜFUNG: Session-Check mit Timeout - verhindert hängen bleiben
+  try {
+    // Setze Timeout für Session-Check (max 2 Sekunden)
+    const sessionCheckTimeout = setTimeout(() => {
+      console.log('⏱️ Session check timeout - showing login form')
+      isCheckingSession.value = false
+    }, 2000)
+    
+    const { data: { session } } = await supabase.auth.getSession()
+    clearTimeout(sessionCheckTimeout)
+    
+    if (!session) {
+      console.log('✅ No session found - user is logged out, showing login form')
+      isCheckingSession.value = false
+      return
     }
+    
+    // Session existiert - prüfe ob User authentifiziert ist
+    console.log('✅ Session found, checking authentication status')
+    
+    // Warte kurz auf Auth-Store Initialisierung
+    let attempts = 0
+    while ((loading as any).value && attempts < 10) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
+    }
+    
+    isCheckingSession.value = false
+    
+    // Prüfe ob bereits angemeldet
+    if (isAuthenticated.value && !isLoading.value) {
+      console.log('🔄 User already authenticated, redirecting...')
+      const authStore = useAuthStore()
+      const user = authStore.userProfile
+      if (user?.role === 'admin' || user?.role === 'tenant_admin') {
+        router.push('/admin')
+      } else if (user?.role === 'staff') {
+        router.push('/dashboard')
+      } else {
+        router.push('/customer-dashboard')
+      }
+    }
+  } catch (sessionError) {
+    console.log('✅ Session check failed (user logged out):', sessionError)
+    isCheckingSession.value = false
+    // Session-Check ist abgeschlossen - Login-Formular anzeigen
   }
 })
 

@@ -712,7 +712,7 @@ import SkeletonLoader from '~/components/SkeletonLoader.vue'
 // @ts-ignore
 definePageMeta({
   layout: 'admin',
-  middleware: 'features'
+  middleware: 'admin'
 })
 
 // Types

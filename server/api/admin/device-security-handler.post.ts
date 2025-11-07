@@ -37,8 +37,42 @@ export default defineEventHandler(async (event) => {
       }
       
       case 'register': {
-        // Register new device
+        // ✅ PRÜFUNG: Suche nach ähnlichen Geräten (gleicher User + ähnlicher Browser) um Duplikate zu vermeiden
         const deviceName = getDeviceName(userAgent)
+        
+        // Suche nach bestehenden Geräten mit gleichem User und ähnlichem Browser
+        const { data: similarDevices } = await supabase
+          .from('user_devices')
+          .select('*')
+          .eq('user_id', userId)
+          .ilike('user_agent', `%${userAgent.split(' ')[0]}%`) // Grobe Browser-Erkennung
+          .order('last_seen', { ascending: false })
+          .limit(5)
+        
+        // Wenn ähnliche Geräte gefunden wurden, verwende das neueste (merge behavior)
+        if (similarDevices && similarDevices.length > 0) {
+          const mostRecent = similarDevices[0]
+          console.log('🔄 Similar device found, updating instead of creating new:', mostRecent.id)
+          
+          // Aktualisiere das bestehende Gerät
+          const { data: updatedDevice, error: updateError } = await supabase
+            .from('user_devices')
+            .update({ 
+              mac_address: deviceFingerprint, // Update fingerprint (kann sich geändert haben)
+              user_agent: userAgent,
+              ip_address: ipAddress || '127.0.0.1',
+              device_name: deviceName,
+              last_seen: new Date().toISOString()
+            })
+            .eq('id', mostRecent.id)
+            .select()
+            .single()
+          
+          if (updateError) throw updateError
+          return { success: true, device: updatedDevice, merged: true }
+        }
+        
+        // Neues Gerät registrieren
         const { data: newDevice, error: registerError } = await supabase
           .from('user_devices')
           .insert({
@@ -55,7 +89,7 @@ export default defineEventHandler(async (event) => {
           .single()
 
         if (registerError) throw registerError
-        return { success: true, device: newDevice }
+        return { success: true, device: newDevice, merged: false }
       }
       
       case 'update': {
@@ -101,6 +135,7 @@ function getDeviceName(userAgent: string): string {
     return 'Unknown Browser'
   }
 }
+
 
 
 

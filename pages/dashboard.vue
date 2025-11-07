@@ -31,6 +31,8 @@ const pendingTasksComposable = usePendingTasks()
 const { 
   pendingAppointments,
   pendingCount,
+  unconfirmedNext24h,
+  unconfirmedNext24hCount,
   buttonClasses,
   buttonText,
   fetchPendingTasks,
@@ -50,6 +52,7 @@ const calendarRef = ref<{ getApi(): CalendarApi } | null>(null)
 const showStaffSettings = ref(false)
 const showCustomers = ref(false)
 const showPendenzen = ref(false)
+const defaultPendenzenTab = ref<'bewertungen' | 'unconfirmed'>('bewertungen')
 const showProductSaleModal = ref(false)
 const isTodayActive = ref(false)
 const currentMonth = ref('')
@@ -125,6 +128,13 @@ const reloadDashboardData = async () => {
     // 2. Pendenzen neu laden
     await refreshPendingData()
     console.log('✅ Pending data reloaded')
+    
+    // 3. Falls unbestätigte Termine (24h) existieren: Modal öffnen auf Tab "unconfirmed"
+    if ((unconfirmedNext24hCount?.value || 0) > 0) {
+      console.log('🔔 Opening Pendenzen modal for unconfirmed appointments within 24h:', unconfirmedNext24hCount.value)
+      defaultPendenzenTab.value = 'unconfirmed'
+      showPendenzen.value = true
+    }
     
     console.log('✅ Dashboard reload complete')
   } catch (err) {
@@ -231,6 +241,25 @@ watch(pendingCount, (newCount, oldCount) => {
   console.log(`🔄 Pending count changed: ${oldCount} → ${newCount}`)
 }, { immediate: true })
 
+// Watch for userError changes and redirect to tenant login
+watch(userError, async (error) => {
+  if (error === 'Nicht eingeloggt' && process.client) {
+    // Try to get tenant slug from localStorage
+    let tenantSlug: string | null = null
+    try {
+      tenantSlug = localStorage.getItem('last_tenant_slug')
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+    
+    if (tenantSlug) {
+      await navigateTo(`/${tenantSlug}`)
+    } else {
+      await navigateTo('/login')
+    }
+  }
+}, { immediate: true })
+
 // onMounted
 // onMounted - UPDATED VERSION mit Feature Flags
 onMounted(async () => {
@@ -244,6 +273,7 @@ onMounted(async () => {
   console.log('🔥 Current user after fetch:', currentUser.value)
   console.log('Debug - profileExists:', profileExists?.value)
   console.log('Debug - userError:', userError.value)
+
 
   if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
     console.log('🔄 About to refresh pending data...')
@@ -301,23 +331,18 @@ onUnmounted(() => {
     />
   </div>
 
-  <!-- Auth Error State (nur bei echten Auth-Fehlern) -->
+  <!-- Auth Error State - Redirect automatically -->
   <div v-else-if="userError && userError === 'Nicht eingeloggt'" class="min-h-[100svh] flex items-center justify-center">
-    <div class="text-center max-w-md p-6 bg-red-50 rounded-lg">
-      <h2 class="text-xl font-bold text-red-800 mb-4">Nicht angemeldet</h2>
-      <p class="text-red-600 mb-4">Du musst dich anmelden, um das Dashboard zu verwenden.</p>
-      <button 
-        @click="navigateTo('/')" 
-        class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-      >
-        Zum Login
-      </button>
-    </div>
+    <LoadingLogo 
+      size="2xl" 
+      loading-text="Weiterleitung zum Login..."
+    />
   </div>
 
   <!-- Success State - Dashboard -->
   <div v-else-if="currentUser" class="h-[100svh] flex flex-col">
-    <!-- NEU: Reload Button oben rechts -->
+    <!-- Temporär entfernt: Reload Button oben rechts -->
+    <!--
     <button
       @click="reloadDashboardData"
       class="fixed top-2 right-2 z-50 w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg transform active:scale-95 transition-all duration-200 flex items-center justify-center"
@@ -327,6 +352,7 @@ onUnmounted(() => {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
       </svg>
     </button>
+    -->
 
     <!-- NEU: Status Update Indicator -->
     <div v-if="isUpdatingStatus" class="fixed top-4 right-20 bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg z-50">
@@ -341,13 +367,15 @@ onUnmounted(() => {
     <!-- Main Content -->
     <div class="flex-1 overflow-hidden">
       
-      <!-- Admin Staff Switcher - nur wenn Benutzer geladen ist und Staff/Admin -->
+      <!-- Temporär entfernt: Admin Staff Switcher -->
+      <!--
       <AdminStaffSwitcher
         v-if="shouldShowStaffSwitcher"
         :current-user="currentUser"
         :current-staff-id="selectedStaffId || undefined"
         @staff-changed="onStaffChanged"
       />
+      -->
       
       <CalendarComponent 
         ref="calendarRef" 
@@ -382,6 +410,7 @@ onUnmounted(() => {
       <PendenzenModal
         :is-open="showPendenzen"
         :current-user="currentUser"
+        :default-tab="defaultPendenzenTab"
         @close="() => { 
           console.log('🔥 Closing pendenzen modal'); 
           showPendenzen = false; 

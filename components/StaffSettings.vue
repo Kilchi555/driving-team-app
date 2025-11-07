@@ -393,6 +393,24 @@
       @close="showExamStatistics = false"
     />
 
+    <!-- Cash Control Modal -->
+    <div v-if="showCashControl" class="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+          <h3 class="text-lg font-semibold text-gray-900">Meine Kassen</h3>
+          <button
+            @click="showCashControl = false"
+            class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold"
+          >
+            ×
+          </button>
+        </div>
+        <div class="p-4">
+          <StaffCashBalance :current-user="props.currentUser" />
+        </div>
+      </div>
+    </div>
+
     <!-- Calendar Integration Modal -->
     <div v-if="showCalendarIntegration" class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
@@ -526,9 +544,11 @@ import Toast from '~/components/Toast.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import ExamLocationSearchDropdown from './ExamLocationSearchDropdown.vue'
 import StaffExamStatistics from './StaffExamStatistics.vue'
+import StaffCashBalance from './StaffCashBalance.vue'
 import DeviceManager from './DeviceManager.vue'
 import { useStaffWorkingHours, WEEKDAYS, type WorkingDayForm, type WorkingHourBlock } from '~/composables/useStaffWorkingHours'
 import { useTenant } from '~/composables/useTenant'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 interface Props {
   currentUser: any
@@ -572,6 +592,9 @@ const { currentTenant } = useTenant()
 
 // Exam Statistics Modal State
 const showExamStatistics = ref(false)
+
+// Cash Control Modal State
+const showCashControl = ref(false)
 
 // Calendar Integration Modal State
 const showCalendarIntegration = ref(false)
@@ -1387,11 +1410,7 @@ const openExamStatistics = () => {
 
 // Cash Control Funktion
 const openCashControl = () => {
-  // Schließe das Staff Settings Modal
-  emit('close')
-  
-  // Navigiere zur Staff Cash Control Seite
-  navigateTo('/staff/cash-control')
+  showCashControl.value = true
 }
 
 // Calendar Integration Funktion
@@ -1475,8 +1494,10 @@ const handleLogout = async () => {
       // Schließe das Modal
       emit('close')
       
-      // Navigiere zur Login-Seite
-      await navigateTo('/login')
+      // Navigiere zur tenant-spezifischen Login-Seite
+      const { currentTenantBranding } = useTenantBranding()
+      const slug = currentTenantBranding.value?.slug
+      await navigateTo(slug ? `/${slug}` : '/login')
     }, 1500)
     
   } catch (err: any) {

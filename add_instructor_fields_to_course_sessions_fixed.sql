@@ -42,3 +42,4 @@ SELECT COUNT(*) as total_sessions,
        COUNT(instructor_type) as sessions_with_instructor_type
 FROM course_sessions;
 
+

@@ -14,9 +14,22 @@ export const useCustomerPayments = () => {
   const error = ref<string | null>(null)
 
   // Computed
-  const pendingPayments = computed(() => 
-    payments.value.filter(p => p.payment_status === 'pending')
-  )
+  // ✅ Exclude payments for pending_confirmation appointments (these are handled separately)
+  const pendingPayments = computed(() => {
+    return payments.value.filter(p => {
+      // Nur Payments mit status 'pending' berücksichtigen
+      if (p.payment_status !== 'pending') return false
+      
+      // ✅ WICHTIG: Exclude payments für pending_confirmation Appointments
+      // Diese werden im Bestätigungs-Banner angezeigt, nicht als "offene Zahlung"
+      const appointment = Array.isArray(p.appointments) ? p.appointments[0] : p.appointments
+      if (appointment && appointment.status === 'pending_confirmation') {
+        return false // Nicht als "offene Zahlung" anzeigen
+      }
+      
+      return true
+    })
+  })
 
   // Methods
   const loadPayments = async () => {
@@ -45,7 +58,7 @@ export const useCustomerPayments = () => {
 
       // 1. Lade alle payments für diesen User (nur für nicht gelöschte Termine)
       try {
-        // ✅ Lade alle payments für den User mit Tenant-Filter
+        // ✅ Lade alle payments für den User mit Tenant-Filter + Appointments für Überfälligkeitsprüfung
         const { data: paymentsData, error: paymentsError } = await supabase
           .from('payments')
           .select(`
@@ -65,7 +78,27 @@ export const useCustomerPayments = () => {
             paid_at,
             description,
             metadata,
-            tenant_id
+            tenant_id,
+            automatic_payment_consent,
+            automatic_payment_consent_at,
+            scheduled_payment_date,
+            payment_method_id,
+            automatic_payment_processed,
+            automatic_payment_processed_at,
+            appointments (
+              id,
+              start_time,
+              end_time,
+              duration_minutes,
+              status,
+              confirmation_token,
+              staff_id,
+              staff:users!staff_id (
+                id,
+                first_name,
+                last_name
+              )
+            )
           `)
           .eq('tenant_id', userData.tenant_id) // Filter by tenant
           .or(`user_id.eq.${userData.id},user_id.eq.${currentUser.value.id}`)

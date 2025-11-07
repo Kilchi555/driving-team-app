@@ -797,7 +797,7 @@ import { formatDateTime } from '~/utils/dateUtils'
 
 definePageMeta({ 
   layout: 'admin',
-  middleware: 'features'
+  middleware: 'admin'
 })
 useHead({ title: 'Datenverwaltung - Admin' })
 

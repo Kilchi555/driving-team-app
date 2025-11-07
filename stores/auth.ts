@@ -202,6 +202,24 @@ const isAdmin = computed(() => {
     try {
       console.log('🚪 Logging out')
       
+      // Save tenant_id and get slug BEFORE clearing auth state
+      let tenantSlug: string | null = null
+      if (userProfile.value?.tenant_id) {
+        try {
+          const supabaseClient = getSupabase()
+          if (supabaseClient) {
+            const { data: tenantData } = await supabaseClient
+              .from('tenants')
+              .select('slug')
+              .eq('id', userProfile.value.tenant_id)
+              .single()
+            tenantSlug = tenantData?.slug || null
+          }
+        } catch (slugError) {
+          console.warn('⚠️ Could not fetch tenant slug:', slugError)
+        }
+      }
+      
       const supabaseClient = getSupabase()
       if (!supabaseClient) {
         throw new Error('Failed to get Supabase client')
@@ -212,9 +230,49 @@ const isAdmin = computed(() => {
       
       clearAuthState()
       console.log('✅ Logout successful')
+      
+      // Save tenant slug to localStorage for redirect after logout
+      if (process.client && tenantSlug) {
+        try {
+          localStorage.setItem('last_tenant_slug', tenantSlug)
+        } catch (e) {
+          console.warn('⚠️ Could not save tenant slug to localStorage:', e)
+        }
+      }
+      
+      // Redirect to tenant login page
+      if (process.client) {
+        const { navigateTo } = await import('#app')
+        if (tenantSlug) {
+          await navigateTo(`/${tenantSlug}`)
+        } else {
+          await navigateTo('/login')
+        }
+      }
     } catch (err: any) {
       console.error('❌ Logout error:', err.message)
       errorMessage.value = err.message || 'Abmeldung fehlgeschlagen.'
+      
+      // Redirect anyway if we have tenant slug
+      if (process.client && userProfile.value?.tenant_id) {
+        try {
+          const supabaseClient = getSupabase()
+          if (supabaseClient) {
+            const { data: tenantData } = await supabaseClient
+              .from('tenants')
+              .select('slug')
+              .eq('id', userProfile.value.tenant_id)
+              .single()
+            const slug = tenantData?.slug || null
+            if (slug) {
+              const { navigateTo } = await import('#app')
+              await navigateTo(`/${slug}`)
+            }
+          }
+        } catch {
+          // Ignore errors in fallback redirect
+        }
+      }
     } finally {
       loading.value = false
     }
@@ -355,6 +413,7 @@ const isAdmin = computed(() => {
     userProfile.value = null
     userRole.value = ''
     errorMessage.value = null
+    loading.value = false // ✅ WICHTIG: Loading zurücksetzen damit Login-Seite nicht hängen bleibt
   }
 
   const clearError = () => {

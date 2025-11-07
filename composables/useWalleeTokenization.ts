@@ -40,13 +40,15 @@ export interface WalleeRecurringTransactionResult {
 export const useWalleeTokenization = () => {
   
   // ✅ Gespeicherte Zahlungsmethoden eines Kunden abrufen
-  const getCustomerPaymentMethods = async (customerEmail: string): Promise<WalleeCustomerPaymentMethods> => {
+  const getCustomerPaymentMethods = async (customerEmailOrIds: string | { userId: string; tenantId: string }): Promise<WalleeCustomerPaymentMethods> => {
     try {
-      console.log('🔍 Getting payment methods for customer:', customerEmail)
+      console.log('🔍 Getting payment methods for customer:', typeof customerEmailOrIds === 'string' ? customerEmailOrIds : { hasTenantId: !!customerEmailOrIds.tenantId, hasUserId: !!customerEmailOrIds.userId })
       
       const response = await $fetch('/api/wallee/get-customer-payment-methods', {
         method: 'POST',
-        body: { customerEmail }
+        body: typeof customerEmailOrIds === 'string' 
+          ? { customerEmail: customerEmailOrIds }
+          : { userId: customerEmailOrIds.userId, tenantId: customerEmailOrIds.tenantId }
       }) as WalleeCustomerPaymentMethods
       
       console.log('✅ Customer payment methods retrieved:', {
@@ -87,9 +89,9 @@ export const useWalleeTokenization = () => {
   }
   
   // ✅ Prüfen ob Kunde gespeicherte Zahlungsmethoden hat
-  const hasSavedPaymentMethods = async (customerEmail: string): Promise<boolean> => {
+  const hasSavedPaymentMethods = async (customerEmailOrIds: string | { userId: string; tenantId: string }): Promise<boolean> => {
     try {
-      const result = await getCustomerPaymentMethods(customerEmail)
+      const result = await getCustomerPaymentMethods(customerEmailOrIds)
       return result.paymentMethods.length > 0
     } catch (error) {
       console.error('❌ Error checking saved payment methods:', error)
@@ -97,10 +99,13 @@ export const useWalleeTokenization = () => {
     }
   }
   
-  // ✅ Konsistente Customer ID generieren (gleiche Logik wie in API)
-  const generateCustomerId = (customerEmail: string): string => {
-    const customerIdBase = customerEmail.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
-    return `dt-${customerIdBase}-${customerIdBase.length > 20 ? customerIdBase.substring(0, 20) : customerIdBase}`
+  // ✅ Konsistente Customer ID generieren (pseudonym bevorzugt)
+  const generateCustomerId = (input: { userId: string; tenantId: string } | { customerEmail: string }): string => {
+    if ('userId' in input && 'tenantId' in input) {
+      return `dt-${input.tenantId}-${input.userId}`
+    }
+    const base = input.customerEmail.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+    return `dt-${base}-${base.length > 20 ? base.substring(0, 20) : base}`
   }
   
   return {
@@ -110,4 +115,5 @@ export const useWalleeTokenization = () => {
     generateCustomerId
   }
 }
+
 

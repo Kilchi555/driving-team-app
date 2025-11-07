@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 
 interface TenantRegistrationData {
   name: string
+  legal_company_name?: string
   slug: string
   contact_person_first_name: string
   contact_person_last_name: string
@@ -46,6 +47,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     // Daten aus FormData extrahieren
     const data: TenantRegistrationData = {
       name: '',
+    legal_company_name: '',
       slug: '',
       contact_person_first_name: '',
       contact_person_last_name: '',
@@ -73,7 +75,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
           type: field.type || 'image/jpeg'
         })
         console.log(`  ✅ Processed logo file: ${field.filename}`)
-      } else if (field.name && field.data) {
+        } else if (field.name && field.data) {
         // Text-Felder
         const value = field.data.toString()
         if (field.name in data) {
@@ -156,6 +158,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       .insert({
         id: tenantId,
         name: data.name,
+        legal_company_name: data.legal_company_name || data.name,
         slug: data.slug,
         domain: `simy.ch/${data.slug}`, // Automatische Domain
         customer_number: customerNumber,

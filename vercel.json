@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/sync-external-calendars",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/process-automatic-payments",
+      "schedule": "0 * * * *"
     }
   ]
 }

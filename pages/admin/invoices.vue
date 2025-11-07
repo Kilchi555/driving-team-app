@@ -464,7 +464,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-import { definePageMeta, navigateTo } from '#imports'
+import { navigateTo } from '#app'
 import { useInvoices } from '~/composables/useInvoices'
 import { useAuthStore } from '~/stores/auth'
 import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
@@ -474,7 +474,7 @@ import type { InvoiceStatus, PaymentStatus, InvoiceFilters } from '~/types/invoi
 // Page meta
 definePageMeta({
   layout: 'admin',
-  middleware: 'features'
+  middleware: 'admin'
 })
 
 // Auth check

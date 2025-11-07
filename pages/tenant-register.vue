@@ -67,6 +67,20 @@
               >
             </div>
 
+            <!-- Rechtlicher Firmenname -->
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Rechtlicher Firmenname (für Quittungen/Rechnungen) *
+              </label>
+              <input
+                v-model="formData.legal_company_name"
+                type="text"
+                required
+                placeholder="z.B. Musterfirma GmbH"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+            </div>
+
             <!-- URL-Slug -->
             <div class="sm:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -457,7 +471,8 @@
               <div>
                 <h4 class="font-medium text-gray-900 mb-2">Grunddaten</h4>
                 <div class="space-y-1 text-sm text-gray-600">
-                  <p><strong>Name:</strong> {{ formData.name }}</p>
+                  <p><strong>Brand-Name:</strong> {{ formData.name }}</p>
+                  <p><strong>Rechtlicher Name:</strong> {{ formData.legal_company_name }}</p>
                   <p><strong>URL:</strong> www.simy.ch/{{ formData.slug }}</p>
                   <p><strong>Kontaktperson:</strong> {{ formData.contact_person_first_name }} {{ formData.contact_person_last_name }}</p>
                   <p><strong>E-Mail:</strong> {{ formData.contact_email }}</p>
@@ -614,6 +629,7 @@ definePageMeta({
 // Form Data
 const formData = ref({
   name: '',
+  legal_company_name: '',
   slug: '',
   contact_person_first_name: '',
   contact_person_last_name: '',
@@ -653,6 +669,7 @@ const logoInput = ref<HTMLInputElement>()
 const canProceed = computed(() => {
   if (currentStep.value === 0) {
     return formData.value.name && 
+           formData.value.legal_company_name && 
            formData.value.slug && 
            formData.value.contact_person_first_name && 
            formData.value.contact_person_last_name && 

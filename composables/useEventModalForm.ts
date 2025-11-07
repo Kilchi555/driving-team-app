@@ -2,6 +2,7 @@
 import { ref, computed, reactive } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useCategoryData } from '~/composables/useCategoryData'
+import { toLocalTimeString } from '~/utils/dateUtils'
 import { useEventTypes } from '~/composables/useEventTypes'
 
 // Types (können später in separates types file)
@@ -875,24 +876,39 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ FIX: Für "other" EventTypes ohne Schüler, verwende staff_id als user_id
       const userId = formData.value.user_id || (formData.value.eventType === 'other' ? formData.value.staff_id || dbUser.id : null)
       
+      // Determine if this is a chargeable lesson-type appointment
+      const isChargeableLesson = (formData.value.appointment_type || 'lesson') && ['lesson', 'exam', 'theory'].includes(formData.value.appointment_type || 'lesson')
+      // Generate confirmation token for chargeable appointments
+      const confirmationToken = isChargeableLesson ? crypto.randomUUID?.() || Math.random().toString(36).slice(2) : null
+
+      // Build local timestamps for start/end and created/updated
+      const localStart = toLocalTimeString(new Date(`${formData.value.startDate}T${formData.value.startTime}:00`))
+      const localEnd = toLocalTimeString(new Date(`${formData.value.startDate}T${formData.value.endTime}:00`))
+      const nowLocal = toLocalTimeString(new Date())
+
       const appointmentData = {
         title: formData.value.title,
         description: formData.value.description,
         user_id: userId,
         staff_id: formData.value.staff_id || dbUser.id,
         location_id: formData.value.location_id,
-        start_time: `${formData.value.startDate}T${formData.value.startTime}:00`,
-        end_time: `${formData.value.startDate}T${formData.value.endTime}:00`,
+        start_time: localStart,
+        end_time: localEnd,
         duration_minutes: formData.value.duration_minutes,
         type: formData.value.type,
-        status: formData.value.status,
+        // For chargeable lessons, newly created appointments should require confirmation first
+        status: mode === 'create' && isChargeableLesson ? 'pending_confirmation' : formData.value.status,
         // ✅ Missing fields added
         event_type_code: formData.value.appointment_type || 'lesson',
         custom_location_address: formData.value.custom_location_address || undefined,
         custom_location_name: formData.value.custom_location_name || undefined,
         google_place_id: formData.value.google_place_id || undefined,
+        confirmation_token: confirmationToken || undefined,
         // ✅ Add tenant_id for availability checking
-        tenant_id: dbUser.tenant_id
+        tenant_id: dbUser.tenant_id,
+        // Store created/updated timestamps explicitly in local time
+        created_at: nowLocal,
+        updated_at: nowLocal
         // ✅ price_per_minute and is_paid removed - not in appointments table
       }
       
@@ -935,7 +951,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       const isLessonType = ['lesson', 'exam', 'theory'].includes(appointmentType)
       if (isLessonType) {
         if (mode === 'create') {
-          console.log('🚀 Creating new payment entry for lesson type:', appointmentType)
+          console.log('🚀 Creating new payment entry for lesson type (pending_confirmation flow):', appointmentType)
           const paymentResult = await createPaymentEntry(result.id, discountSale?.id)
           console.log('📊 Payment creation result:', paymentResult)
         } else {
@@ -1183,6 +1199,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
 
       // ✅ WICHTIG: tenant_id für Payments hinzufügen
       const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('tenant_id')
@@ -1318,7 +1337,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let invoiceAddress = null
       
       if (paymentMethod === 'invoice') {
-        const invoiceAddressData = refs?.companyBillingAddress?.value
+        const invoiceAddressData = (refs as any)?.companyBillingAddress?.value
         if (invoiceAddressData) {
           companyBillingAddressId = invoiceAddressData.id
           invoiceAddress = {

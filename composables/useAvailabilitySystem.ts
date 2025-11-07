@@ -515,7 +515,11 @@ export const useAvailabilitySystem = () => {
           // Check if location supports this category (must be in the array)
           // Handle both flat arrays ["C"] and nested arrays [["C"]]
           const categoryArray = Array.isArray(location.category) ? location.category.flat() : []
-          if (!categoryArray.length || !categoryArray.includes(filters.category_code)) {
+          
+          // TEMPORARY FIX: If location has no categories defined, assume it supports all
+          if (categoryArray.length === 0) {
+            console.log('📍 Location', location.name, 'has no categories defined - assuming all categories supported')
+          } else if (!categoryArray.includes(filters.category_code)) {
             console.log('📍 Location', location.name, 'does not support category', filters.category_code, 'Available:', categoryArray)
             continue
           }

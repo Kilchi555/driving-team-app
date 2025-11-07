@@ -269,7 +269,7 @@ import SkeletonLoader from '~/components/SkeletonLoader.vue'
 // Configure page meta for admin layout
 definePageMeta({
   layout: 'admin',
-  middleware: 'features'
+  middleware: 'admin'
 })
 
 // State

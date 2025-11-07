@@ -48,14 +48,11 @@
               <div>
                 <h3 class="text-lg font-semibold text-gray-900">{{ policy.name }}</h3>
                 <p v-if="policy.description" class="text-sm text-gray-600 mt-1">{{ policy.description }}</p>
+                <p class="text-xs text-gray-500 mt-1">
+                  {{ policy.applies_to === 'appointments' ? '📋 Für Fahrstunden' : '📚 Für Kurse' }}
+                </p>
               </div>
               <div class="flex space-x-2">
-                <span
-                  v-if="policy.is_default"
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                >
-                  Standard
-                </span>
                 <span
                   :class="policy.is_active 
                     ? 'bg-green-100 text-green-800' 
@@ -113,17 +110,27 @@
               class="flex items-center justify-between p-3 bg-gray-50 rounded-md"
             >
               <div class="flex-1">
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-4 flex-wrap">
                   <div class="text-sm font-medium text-gray-900">
-                    {{ formatHoursBefore(rule.hours_before_appointment) }}
+                    {{ formatRuleTime(rule) }}
                   </div>
                   <div class="text-sm text-gray-600">
                     {{ rule.charge_percentage }}% verrechnen
                   </div>
-                  <div class="text-sm text-gray-600">
-                    {{ rule.credit_hours_to_instructor ? 'Stunden gutschreiben' : 'Keine Gutschrift' }}
+                  <!-- Nur bei Fahrstunden-Policies anzeigen -->
+                  <div 
+                    v-if="policy.applies_to === 'appointments'"
+                    :class="[
+                      'text-sm font-medium',
+                      rule.credit_hours_to_instructor ? 'text-green-600' : 'text-gray-500'
+                    ]"
+                  >
+                    {{ rule.credit_hours_to_instructor ? '✓ Fahrlehrer-Stunden gutschreiben' : '✗ Keine Fahrlehrer-Stunden gutschreiben' }}
                   </div>
-                  <div v-if="rule.description" class="text-sm text-gray-500">
+                  <div v-if="(rule as any).exclude_sundays" class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded">
+                    Sonntage ausgeschlossen
+                  </div>
+                  <div v-if="rule.description" class="text-sm text-gray-500 italic">
                     {{ rule.description }}
                   </div>
                 </div>
@@ -149,13 +156,16 @@
     </div>
 
     <!-- Create/Edit Policy Modal -->
-    <div v-if="showCreatePolicyModal || showEditPolicyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">
-          {{ showCreatePolicyModal ? 'Neue Policy erstellen' : 'Policy bearbeiten' }}
-        </h3>
+    <div v-if="showCreatePolicyModal || showEditPolicyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] flex flex-col">
+        <div class="p-6 pb-4 border-b border-gray-200 flex-shrink-0">
+          <h3 class="text-lg font-semibold text-gray-900">
+            {{ showCreatePolicyModal ? 'Neue Policy erstellen' : 'Policy bearbeiten' }}
+          </h3>
+        </div>
 
-        <form @submit.prevent="savePolicy" class="space-y-4">
+        <form @submit.prevent="savePolicy" class="flex flex-col flex-1 min-h-0">
+          <div class="p-6 pt-4 space-y-4 overflow-y-auto flex-1">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
             <input
@@ -175,27 +185,37 @@
             ></textarea>
           </div>
 
-          <div class="flex items-center space-x-4">
-            <label class="flex items-center">
-              <input
-                v-model="policyForm.is_active"
-                type="checkbox"
-                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="ml-2 text-sm text-gray-700">Aktiv</span>
-            </label>
-
-            <label class="flex items-center">
-              <input
-                v-model="policyForm.is_default"
-                type="checkbox"
-                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="ml-2 text-sm text-gray-700">Standard Policy</span>
-            </label>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Gilt für</label>
+            <div class="flex items-center space-x-6">
+              <label class="flex items-center cursor-pointer">
+                <input
+                  v-model="policyForm.applies_to"
+                  type="radio"
+                  value="appointments"
+                  class="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="ml-2 text-sm text-gray-700">Für Fahrstunden</span>
+              </label>
+              <label class="flex items-center cursor-pointer">
+                <input
+                  v-model="policyForm.applies_to"
+                  type="radio"
+                  value="courses"
+                  class="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="ml-2 text-sm text-gray-700">Für Kurse</span>
+              </label>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">
+              {{ policyForm.applies_to === 'appointments' 
+                ? 'Gilt für einzelne Termine, die direkt mit Fahrschülern vereinbart wurden' 
+                : 'Gilt für alle Kurse, die über das Kursmodul erstellt und gebucht wurden' }}
+            </p>
+          </div>
           </div>
 
-          <div class="flex justify-end space-x-3 pt-4">
+          <div class="p-6 pt-4 border-t border-gray-200 flex justify-end space-x-3 flex-shrink-0">
             <button
               type="button"
               @click="closePolicyModal"
@@ -216,23 +236,70 @@
     </div>
 
     <!-- Create/Edit Rule Modal -->
-    <div v-if="showCreateRuleModal || showEditRuleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">
-          {{ showCreateRuleModal ? 'Neue Regel erstellen' : 'Regel bearbeiten' }}
-        </h3>
+    <div v-if="showCreateRuleModal || showEditRuleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] flex flex-col">
+        <div class="p-6 pb-4 border-b border-gray-200 flex-shrink-0">
+          <h3 class="text-lg font-semibold text-gray-900">
+            {{ showCreateRuleModal ? 'Neue Regel erstellen' : 'Regel bearbeiten' }}
+          </h3>
+        </div>
 
-        <form @submit.prevent="saveRule" class="space-y-4">
+        <form @submit.prevent="saveRule" class="flex flex-col flex-1 min-h-0">
+          <div class="p-6 pt-4 space-y-4 overflow-y-auto flex-1">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Stunden vor Termin</label>
-            <input
-              v-model.number="ruleForm.hours_before_appointment"
-              type="number"
-              min="0"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p class="text-xs text-gray-500 mt-1">z.B. 72 für 3 Tage, 24 für 1 Tag, 0 für weniger als 24h</p>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Zeitpunkt der Absage</label>
+            
+            <div class="mb-3">
+              <div class="flex space-x-2">
+                <button
+                  type="button"
+                  @click="ruleForm.comparison_type = 'more_than'"
+                  :class="[
+                    'flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors',
+                    ruleForm.comparison_type === 'more_than'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ]"
+                >
+                  Mehr als
+                </button>
+                <button
+                  type="button"
+                  @click="ruleForm.comparison_type = 'less_than'"
+                  :class="[
+                    'flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors',
+                    ruleForm.comparison_type === 'less_than'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ]"
+                >
+                  Weniger als
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Stunden</label>
+              <input
+                v-model.number="ruleForm.hours_before_appointment"
+                type="number"
+                min="0"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <p class="text-xs text-gray-500 mt-2">
+              <span v-if="ruleForm.comparison_type === 'more_than'">
+                Beispiel: "Mehr als 72 Stunden" bedeutet, wenn die Absage mehr als 72 Stunden (3 Tage) vor dem Termin erfolgt.
+              </span>
+              <span v-else-if="ruleForm.comparison_type === 'less_than'">
+                Beispiel: "Weniger als 24 Stunden" bedeutet, wenn die Absage weniger als 24 Stunden vor dem Termin erfolgt.
+              </span>
+              <span v-else>
+                Bitte wählen Sie zuerst "Mehr als" oder "Weniger als" aus.
+              </span>
+            </p>
           </div>
 
           <div>
@@ -257,18 +324,44 @@
             />
           </div>
 
-          <div>
-            <label class="flex items-center">
-              <input
-                v-model="ruleForm.credit_hours_to_instructor"
-                type="checkbox"
-                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="ml-2 text-sm text-gray-700">Stunden an Fahrlehrer gutschreiben</span>
-            </label>
+          <div class="space-y-4">
+            <!-- Stunden an Fahrlehrer gutschreiben (nur für Fahrstunden-Policies) -->
+            <div v-if="!isRuleForCourses" class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Fahrstunden an Fahrlehrer gutschreiben</label>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  v-model="ruleForm.credit_hours_to_instructor"
+                  class="sr-only peer"
+                >
+                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+            
+            <!-- Sonntage ausschliessen -->
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Sonntage ausschliessen</label>
+                <p class="text-xs text-gray-500 mt-1">
+                  Sonntage werden bei der Berechnung nicht mitgezählt. 
+                  Beispiel: Absage am Samstag 08:00 für Montag 09:00 = nur Samstag und Montag Stunden zählen.
+                </p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  v-model="ruleForm.exclude_sundays"
+                  class="sr-only peer"
+                >
+                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          </div>
           </div>
 
-          <div class="flex justify-end space-x-3 pt-4">
+          <div class="p-6 pt-4 border-t border-gray-200 flex justify-end space-x-3 flex-shrink-0">
             <button
               type="button"
               @click="closeRuleModal"
@@ -291,7 +384,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useCancellationPolicies, type CancellationPolicy, type CancellationRule } from '~/composables/useCancellationPolicies'
 
 const {
@@ -318,13 +411,14 @@ const showEditRuleModal = ref(false)
 const policyForm = ref({
   name: '',
   description: '',
-  is_active: true,
-  is_default: false
+  applies_to: 'appointments' as 'appointments' | 'courses'
 })
 
 const ruleForm = ref({
   policy_id: '',
   hours_before_appointment: 0,
+  comparison_type: 'more_than' as 'more_than' | 'less_than', // 'more_than' = mehr als X Stunden, 'less_than' = weniger als X Stunden
+  exclude_sundays: false, // If true, Sundays are excluded from time calculation
   charge_percentage: 0,
   credit_hours_to_instructor: false,
   description: ''
@@ -332,6 +426,15 @@ const ruleForm = ref({
 
 const editingPolicy = ref<CancellationPolicy | null>(null)
 const editingRule = ref<CancellationRule | null>(null)
+
+// Computed: Check if current rule is for courses (don't show instructor hours credit)
+const isRuleForCourses = computed(() => {
+  if (!ruleForm.value.policy_id && !editingRule.value?.policy_id) return false
+  
+  const policyId = ruleForm.value.policy_id || editingRule.value?.policy_id
+  const policy = policiesWithRules.value.find(p => p.id === policyId)
+  return policy?.applies_to === 'courses'
+})
 
 // Load data on mount
 onMounted(() => {
@@ -344,18 +447,35 @@ const editPolicy = (policy: CancellationPolicy) => {
   policyForm.value = {
     name: policy.name,
     description: policy.description || '',
-    is_active: policy.is_active,
-    is_default: policy.is_default
+    applies_to: policy.applies_to || 'appointments'
   }
   showEditPolicyModal.value = true
 }
 
 const savePolicy = async () => {
   try {
+    // Always set is_active to true and is_default based on whether it's the first policy of this type
+    const policyData = {
+      ...policyForm.value,
+      is_active: true,
+      is_default: false // Will be set to true if it's the first policy of this type
+    }
+    
     if (showCreatePolicyModal.value) {
-      await createPolicy(policyForm.value)
+      // Check if this is the first policy for this applies_to type
+      const existingPolicies = policiesWithRules.value.filter(p => p.applies_to === policyData.applies_to)
+      if (existingPolicies.length === 0) {
+        policyData.is_default = true
+      }
+      await createPolicy(policyData)
     } else if (editingPolicy.value) {
-      await updatePolicy(editingPolicy.value.id, policyForm.value)
+      // When editing, only update name, description, and applies_to
+      // Don't change is_active or is_default
+      await updatePolicy(editingPolicy.value.id, {
+        name: policyData.name,
+        description: policyData.description,
+        applies_to: policyData.applies_to
+      })
     }
     closePolicyModal()
   } catch (err) {
@@ -370,8 +490,7 @@ const closePolicyModal = () => {
   policyForm.value = {
     name: '',
     description: '',
-    is_active: true,
-    is_default: false
+    applies_to: 'appointments'
   }
 }
 
@@ -388,6 +507,8 @@ const addRule = (policyId: string) => {
   ruleForm.value = {
     policy_id: policyId,
     hours_before_appointment: 0,
+    comparison_type: 'more_than',
+    exclude_sundays: false,
     charge_percentage: 0,
     credit_hours_to_instructor: false,
     description: ''
@@ -400,6 +521,8 @@ const editRule = (rule: CancellationRule) => {
   ruleForm.value = {
     policy_id: rule.policy_id,
     hours_before_appointment: rule.hours_before_appointment,
+    comparison_type: (rule as any).comparison_type || 'more_than', // Fallback für alte Regeln
+    exclude_sundays: (rule as any).exclude_sundays || false, // Fallback für alte Regeln
     charge_percentage: rule.charge_percentage,
     credit_hours_to_instructor: rule.credit_hours_to_instructor,
     description: rule.description || ''
@@ -427,6 +550,8 @@ const closeRuleModal = () => {
   ruleForm.value = {
     policy_id: '',
     hours_before_appointment: 0,
+    comparison_type: 'more_than',
+    exclude_sundays: false,
     charge_percentage: 0,
     credit_hours_to_instructor: false,
     description: ''
@@ -439,5 +564,12 @@ const formatHoursBefore = (hours: number) => {
   if (hours < 24) return `${hours}h vorher`
   const days = Math.floor(hours / 24)
   return `${days} Tag${days > 1 ? 'e' : ''} vorher`
+}
+
+const formatRuleTime = (rule: any) => {
+  const comparison = rule.comparison_type || 'more_than'
+  const comparisonText = comparison === 'more_than' ? 'Mehr als' : 'Weniger als'
+  const timeText = formatHoursBefore(rule.hours_before_appointment)
+  return `${comparisonText} ${timeText}`
 }
 </script>

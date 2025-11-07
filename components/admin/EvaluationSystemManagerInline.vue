@@ -71,7 +71,7 @@
         <div class="space-y-4">
           <template v-for="category in filteredEvaluationCategories" :key="category.id">
             <!-- Kategorie-Header -->
-            <div class="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 hover:border-blue-300 border border-transparent transition-all"
+            <div class="bg-gray-50 rounded-lg px-3 md:px-4 py-4 cursor-pointer hover:bg-gray-100 hover:border-blue-300 border border-transparent transition-all"
                  @click="editCategory(category)">
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
@@ -97,9 +97,9 @@
             </div>
 
             <!-- Kriterien für diese Kategorie und Fahrkategorie -->
-            <div class="ml-4 space-y-2">
+            <div class="ml-2 md:ml-4 space-y-2">
               <template v-for="criteria in getCriteriaForCategoryAndDrivingCategory(category.id, drivingCat.code)" :key="criteria.id">
-                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-blue-300"
+                <div class="bg-white border border-gray-200 rounded-lg px-2 md:px-4 py-4 hover:shadow-md transition-shadow cursor-pointer hover:border-blue-300"
                      draggable="true"
                      @click="editCriteria(criteria)"
                      @dragstart="startDrag($event, criteria, category.id)"
@@ -116,16 +116,46 @@
                       <div>
                         <h5 class="font-medium text-gray-900">{{ criteria.name }}</h5>
                         <p class="text-sm text-gray-500">{{ criteria.description }}</p>
+                        <!-- Educational content indicators (stacked on small screens) -->
+                        <div v-if="criteria.educational_content && (criteria.educational_content.title || (criteria.educational_content.sections && criteria.educational_content.sections.length > 0))" class="mt-1 flex items-center gap-2 md:hidden">
+                          <span v-if="criteria.educational_content.title || criteria.educational_content.sections?.some(s => s.text && s.text.length > 0)"
+                                class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200"
+                                title="Lerntext vorhanden">
+                            📄 <span class="ml-1">Text</span>
+                          </span>
+                          <span v-if="criteria.educational_content.sections?.some(s => s.images && s.images.length > 0)"
+                                class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                title="Bilder vorhanden">
+                            🖼️ <span class="ml-1">Bilder</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <div class="flex items-center space-x-2">
-                      <!-- Aktiviert/Deaktiviert Status -->
-                      <span class="text-xs px-2 py-1 rounded-full"
-                            :class="hasDrivingCategory(criteria, drivingCat.code) 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'">
-                        {{ hasDrivingCategory(criteria, drivingCat.code) ? 'Aktiv' : 'Inaktiv' }}
-                      </span>
+                      <!-- Educational content indicators (inline on md+ screens) -->
+                      <div v-if="criteria.educational_content && (criteria.educational_content.title || (criteria.educational_content.sections && criteria.educational_content.sections.length > 0))" class="hidden md:flex items-center gap-2 mr-2">
+                        <span v-if="criteria.educational_content.title || criteria.educational_content.sections?.some(s => s.text && s.text.length > 0)"
+                              class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200"
+                              title="Lerntext vorhanden">
+                          📄 <span class="ml-1">Text</span>
+                        </span>
+                        <span v-if="criteria.educational_content.sections?.some(s => s.images && s.images.length > 0)"
+                              class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              title="Bilder vorhanden">
+                          🖼️ <span class="ml-1">Bilder</span>
+                        </span>
+                      </div>
+                      
+                      <!-- Inhalt bearbeiten Button -->
+                      <button 
+                        @click.stop="openEducationalContentModal(criteria)" 
+                        class="text-blue-600 hover:text-blue-900"
+                        title="Lerninhalt bearbeiten"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                      </button>
                       <button @click.stop="deleteCriteria(criteria.id)" class="text-red-600 hover:text-red-900">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M3 7h16"></path>
@@ -163,15 +193,7 @@
                       />
                     </div>
                     
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
-                      <textarea
-                        v-model="inlineCriteriaForm.description"
-                        rows="2"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Beschreibung des Kriteriums..."
-                      ></textarea>
-                    </div>
+                    
 
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Fahrkategorien</label>
@@ -302,7 +324,7 @@
           </div>
         </div>
 
-        <div class="p-6">
+        <div class="p-3 sm:p-6">
           <form @submit.prevent="saveCategory">
             <div class="space-y-4">
               <!-- Name -->
@@ -429,7 +451,7 @@
           </div>
         </div>
 
-        <div class="p-6">
+        <div class="p-3 sm:p-6">
           <form @submit.prevent="saveCriteria">
             <div class="space-y-4">
               <!-- Category -->
@@ -467,33 +489,33 @@
                 />
               </div>
 
-              <!-- Description -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  Beschreibung
-                </label>
-                <textarea
-                  v-model="criteriaForm.description"
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Beschreibung des Kriteriums..."
-                ></textarea>
-              </div>
+              
 
-              <!-- Display Order -->
-              <div>
+              <!-- Fahrkategorien -->
+              <div v-if="drivingCategories.length > 0">
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                  Reihenfolge
+                  Fahrkategorien
                 </label>
-                <input
-                  v-model.number="criteriaForm.display_order"
-                  type="number"
-                  min="0"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="1"
-                />
+                <div class="flex flex-wrap gap-3">
+                  <label 
+                    v-for="dc in drivingCategories" 
+                    :key="dc.code" 
+                    class="flex items-center space-x-2 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="dc.code"
+                      v-model="criteriaForm.driving_categories"
+                      class="w-4 h-4 rounded border-2 border-gray-300 bg-white focus:ring-green-500 focus:ring-offset-0"
+                      style="accent-color: #10b981;"
+                    />
+                    <span class="text-sm text-gray-700">{{ dc.code }} - {{ dc.name }}</span>
+                  </label>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">
+                  Wählen Sie für welche Fahrkategorien dieses Kriterium verfügbar sein soll.
+                </p>
               </div>
-
 
             </div>
 
@@ -531,7 +553,7 @@
           </div>
         </div>
 
-        <div class="p-6">
+        <div class="p-3 sm:p-6">
           <form @submit.prevent="saveScale">
             <div class="space-y-4">
               <!-- Rating (readonly) -->
@@ -631,7 +653,7 @@
           </div>
         </div>
         
-        <div class="p-6">
+        <div class="p-3 sm:p-6">
           <form @submit.prevent="saveScale" class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -704,6 +726,243 @@
       </div>
     </div>
 
+    <!-- Educational Content Modal -->
+    <div v-if="editingEducationalContent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="bg-blue-600 text-white p-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold">
+              Lerninhalt bearbeiten: {{ editingEducationalContent.name }}
+            </h3>
+            <button @click="closeEducationalContentModal" class="text-white hover:text-blue-200">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <div class="space-y-6">
+            <!-- Haupttitel -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Haupttitel
+              </label>
+              <input
+                v-model="educationalContentForm.title"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="z.B. Einführung in die Blicksystematik"
+              />
+            </div>
+
+            <!-- Sections -->
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <label class="block text-sm font-medium text-gray-700">
+                  Abschnitte
+                </label>
+                <button
+                  @click="addSection"
+                  type="button"
+                  class="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                  Abschnitt hinzufügen
+                </button>
+              </div>
+
+              <div v-if="educationalContentForm.sections.length === 0" class="text-center py-8 text-gray-500 border border-dashed border-gray-300 rounded-lg">
+                <p class="text-sm">Noch keine Abschnitte vorhanden</p>
+                <p class="text-xs mt-1">Klicken Sie auf "Abschnitt hinzufügen"</p>
+              </div>
+
+              <!-- Section List -->
+              <div v-for="(section, sectionIndex) in educationalContentForm.sections" :key="sectionIndex" class="mb-6 border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="text-sm font-semibold text-gray-700">Abschnitt {{ sectionIndex + 1 }}</h4>
+                  <div class="flex items-center gap-2">
+                    <!-- Move Up -->
+                    <button
+                      type="button"
+                      @click="moveSectionUp(sectionIndex)"
+                      :disabled="sectionIndex === 0"
+                      class="px-2 py-1 rounded border text-xs disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+                      title="Abschnitt nach oben"
+                    >
+                      ▲
+                    </button>
+                    <!-- Move Down -->
+                    <button
+                      type="button"
+                      @click="moveSectionDown(sectionIndex)"
+                      :disabled="sectionIndex === educationalContentForm.sections.length - 1"
+                      class="px-2 py-1 rounded border text-xs disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+                      title="Abschnitt nach unten"
+                    >
+                      ▼
+                    </button>
+                    <!-- Remove -->
+                    <button
+                      @click="removeSection(sectionIndex)"
+                      type="button"
+                      class="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      Entfernen
+                    </button>
+                  </div>
+                </div>
+
+                <div class="space-y-4">
+                  <!-- Section Title -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      Titel des Abschnitts
+                    </label>
+                    <input
+                      v-model="section.title"
+                      type="text"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="z.B. Spiegelsystematik"
+                    />
+                  </div>
+
+                  <!-- Section Text -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      Textinhalt
+                    </label>
+                    <textarea
+                      v-model="section.text"
+                      rows="4"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Beschreibung des Abschnitts..."
+                    ></textarea>
+                  </div>
+
+                  <!-- Section Images -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Bilder
+                    </label>
+                    
+                    <!-- Image Upload Area -->
+                    <div 
+                      @click="triggerSectionImageUpload(sectionIndex)"
+                      class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors mb-3"
+                    >
+                      <input
+                        :ref="el => setSectionImageInput(sectionIndex, el as HTMLInputElement | null)"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        @change="handleSectionImageUpload($event, sectionIndex)"
+                        class="hidden"
+                      />
+                      <svg class="w-8 h-8 mx-auto text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                      </svg>
+                      <p class="text-xs text-gray-600">Klicken Sie hier oder ziehen Sie Bilder hierher</p>
+                      <p class="text-xs text-gray-500 mt-0.5">JPG, PNG bis 5MB</p>
+                    </div>
+
+                    <!-- Image Preview Grid for this section -->
+                    <div v-if="(sectionImagePreviews.get(sectionIndex)?.length || 0) > 0 || section.images.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <!-- Existing Images -->
+                      <div 
+                        v-for="(imageUrl, imgIndex) in section.images" 
+                        :key="`existing-${sectionIndex}-${imgIndex}`"
+                        class="relative group"
+                      >
+                        <img 
+                          :src="imageUrl" 
+                          :alt="`Bild ${imgIndex + 1}`"
+                          class="w-full h-24 object-cover rounded-lg border border-gray-300"
+                        />
+                        <button
+                          @click="removeSectionImage(sectionIndex, imgIndex, 'existing')"
+                          class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      
+                      <!-- New Upload Previews -->
+                      <div 
+                        v-for="(preview, imgIndex) in sectionImagePreviews.get(sectionIndex) || []" 
+                        :key="`preview-${sectionIndex}-${imgIndex}`"
+                        class="relative group"
+                      >
+                        <img 
+                          :src="preview" 
+                          :alt="`Neues Bild ${imgIndex + 1}`"
+                          class="w-full h-24 object-cover rounded-lg border border-gray-300"
+                        />
+                        <div v-if="currentUploadingSection === sectionIndex" class="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                        </div>
+                        <button
+                          v-else
+                          @click="removeSectionImage(sectionIndex, imgIndex, 'preview')"
+                          class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Section Categories (visibility per driving category) -->
+                  <div v-if="drivingCategories.length > 0">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Sichtbar für Fahrkategorien
+                    </label>
+                    <div class="flex flex-wrap gap-3">
+                      <label 
+                        v-for="dc in drivingCategories" 
+                        :key="dc.code"
+                        class="inline-flex items-center gap-2 cursor-pointer text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          :value="dc.code"
+                          v-model="section.categories"
+                          class="w-4 h-4 rounded border-2 border-gray-300 bg-white focus:ring-emerald-500 focus:ring-offset-0"
+                          style="accent-color: #059669;"
+                        />
+                        <span class="text-gray-700">{{ dc.code }}</span>
+                      </label>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Leer lassen = in allen Fahrkategorien anzeigen.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3 mt-6">
+            <button
+              type="button"
+              @click="closeEducationalContentModal"
+              class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              @click="saveEducationalContent"
+              :disabled="isUploadingImage"
+              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ isUploadingImage ? 'Speichern...' : 'Speichern' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </div>
 </template>
@@ -748,6 +1007,14 @@ interface Criteria {
   display_order: number
   is_active: boolean
   driving_categories: string[] // Neue Feld für Fahrkategorie-Zuordnung
+  educational_content?: {
+    title?: string
+    sections?: Array<{
+      title?: string
+      text?: string
+      images?: string[]
+    }>
+  } | null
 }
 
 interface Scale {
@@ -776,7 +1043,31 @@ const isLoadingStandards = ref(false)
 const editingCategory = ref<EvaluationCategory | null>(null)
 const editingCriteria = ref<Criteria | null>(null)
 const editingScale = ref<Scale | null>(null)
+const editingEducationalContent = ref<Criteria | null>(null)
 const tenantBusinessType = ref<string>('')
+
+// Educational Content Form
+interface EducationalSection {
+  title: string
+  text: string
+  images: string[]
+  categories?: string[] // Fahrkategorien, für die dieser Abschnitt sichtbar ist
+}
+
+const educationalContentForm = ref<{
+  title: string
+  sections: EducationalSection[]
+}>({
+  title: '',
+  sections: []
+})
+
+// Image upload state
+const isUploadingImage = ref(false)
+const currentUploadingSection = ref<number | null>(null) // Track which section is uploading
+const sectionImagePreviews = ref<Map<number, string[]>>(new Map()) // Map: section index -> preview URLs
+const sectionPendingFiles = ref<Map<number, File[]>>(new Map()) // Map: section index -> pending files
+const sectionImageInputs = ref<Map<number, HTMLInputElement | null>>(new Map()) // Map: section index -> input element
 
 // Inline criteria form
 const inlineCriteriaForm = ref({
@@ -977,6 +1268,7 @@ const loadData = async () => {
         display_order,
         is_active,
         driving_categories,
+        educational_content,
         tenant_id,
         evaluation_categories!inner(tenant_id, is_theory)
       `)
@@ -994,6 +1286,7 @@ const loadData = async () => {
         display_order,
         is_active,
         driving_categories,
+        educational_content,
         tenant_id,
         evaluation_categories!inner(tenant_id, is_theory)
       `)
@@ -1684,7 +1977,13 @@ const onDrop = async (event: DragEvent, targetCriteria: any, targetCategoryId: s
 // Criteria methods
 const editCriteria = (criteria: Criteria) => {
   editingCriteria.value = criteria
-  criteriaForm.value = { ...criteria }
+  criteriaForm.value = {
+    category_id: criteria.category_id,
+    name: criteria.name,
+    description: criteria.description || '',
+    display_order: criteria.display_order,
+    driving_categories: criteria.driving_categories || []
+  }
 }
 
 const closeCriteriaModal = () => {
@@ -1806,6 +2105,290 @@ const deleteScale = async (id: string) => {
     } catch (error) {
       console.error('Error deleting scale:', error)
     }
+  }
+}
+
+// Educational Content Methods
+const openEducationalContentModal = (criteria: Criteria) => {
+  editingEducationalContent.value = criteria
+  
+  // Load existing content
+  if (criteria.educational_content) {
+    educationalContentForm.value = {
+      title: criteria.educational_content.title || '',
+      sections: (criteria.educational_content.sections || []).map((s: any) => ({
+        title: s?.title || '',
+        text: s?.text || '',
+        images: s?.images || [],
+        categories: s?.categories || []
+      }))
+    }
+  } else {
+    educationalContentForm.value = {
+      title: '',
+      sections: []
+    }
+  }
+  
+  // Reset image previews and pending files for all sections
+  sectionImagePreviews.value.clear()
+  sectionPendingFiles.value.clear()
+  sectionImageInputs.value.clear()
+}
+
+const closeEducationalContentModal = () => {
+  editingEducationalContent.value = null
+  educationalContentForm.value = {
+    title: '',
+    sections: []
+  }
+  sectionImagePreviews.value.clear()
+  sectionPendingFiles.value.clear()
+  sectionImageInputs.value.clear()
+  currentUploadingSection.value = null
+}
+
+const addSection = () => {
+  educationalContentForm.value.sections.push({
+    title: '',
+    text: '',
+    images: []
+  })
+}
+
+const removeSection = (index: number) => {
+  educationalContentForm.value.sections.splice(index, 1)
+  // Clean up previews and pending files for removed section
+  sectionImagePreviews.value.delete(index)
+  sectionPendingFiles.value.delete(index)
+  sectionImageInputs.value.delete(index)
+  // Update indices for sections after the removed one
+  const newMapPreviews = new Map<number, string[]>()
+  const newMapFiles = new Map<number, File[]>()
+  const newMapInputs = new Map<number, HTMLInputElement | null>()
+  sectionImagePreviews.value.forEach((value, key) => {
+    if (key < index) {
+      newMapPreviews.set(key, value)
+      newMapFiles.set(key, sectionPendingFiles.value.get(key) || [])
+      newMapInputs.set(key, sectionImageInputs.value.get(key) || null)
+    } else if (key > index) {
+      newMapPreviews.set(key - 1, value)
+      newMapFiles.set(key - 1, sectionPendingFiles.value.get(key) || [])
+      newMapInputs.set(key - 1, sectionImageInputs.value.get(key) || null)
+    }
+  })
+  sectionImagePreviews.value = newMapPreviews
+  sectionPendingFiles.value = newMapFiles
+  sectionImageInputs.value = newMapInputs
+}
+
+const setSectionImageInput = (sectionIndex: number, el: HTMLInputElement | null) => {
+  sectionImageInputs.value.set(sectionIndex, el)
+}
+
+const triggerSectionImageUpload = (sectionIndex: number) => {
+  sectionImageInputs.value.get(sectionIndex)?.click()
+}
+
+const handleSectionImageUpload = async (event: Event, sectionIndex: number) => {
+  const files = (event.target as HTMLInputElement).files
+  if (!files || files.length === 0) return
+  
+  // Validate files
+  const validFiles: File[] = []
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    if (file.size > 5 * 1024 * 1024) {
+      uiStore.showWarning('Datei zu groß', `${file.name} ist größer als 5MB`)
+      continue
+    }
+    if (!file.type.startsWith('image/')) {
+      uiStore.showWarning('Ungültiger Dateityp', `${file.name} ist kein Bild`)
+      continue
+    }
+    validFiles.push(file)
+  }
+  
+  if (validFiles.length === 0) return
+  
+  // Get or create preview array for this section
+  const previews = sectionImagePreviews.value.get(sectionIndex) || []
+  const pending = sectionPendingFiles.value.get(sectionIndex) || []
+  
+  // Create preview URLs
+  for (const file of validFiles) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        previews.push(e.target.result as string)
+        sectionImagePreviews.value.set(sectionIndex, [...previews])
+      }
+    }
+    reader.readAsDataURL(file)
+    pending.push(file)
+  }
+  
+  sectionPendingFiles.value.set(sectionIndex, pending)
+}
+
+const removeSectionImage = (sectionIndex: number, imgIndex: number, type: 'existing' | 'preview') => {
+  if (type === 'existing') {
+    educationalContentForm.value.sections[sectionIndex].images.splice(imgIndex, 1)
+  } else {
+    const previews = sectionImagePreviews.value.get(sectionIndex) || []
+    const pending = sectionPendingFiles.value.get(sectionIndex) || []
+    previews.splice(imgIndex, 1)
+    pending.splice(imgIndex, 1)
+    sectionImagePreviews.value.set(sectionIndex, previews)
+    sectionPendingFiles.value.set(sectionIndex, pending)
+  }
+}
+
+const swapMapEntries = <T>(map: Map<number, T>, i: number, j: number) => {
+  const iVal = map.get(i)
+  const jVal = map.get(j)
+  if (typeof iVal !== 'undefined' || typeof jVal !== 'undefined') {
+    if (typeof iVal === 'undefined') {
+      map.delete(j)
+    } else {
+      map.set(j, iVal as T)
+    }
+    if (typeof jVal === 'undefined') {
+      map.delete(i)
+    } else {
+      map.set(i, jVal as T)
+    }
+  }
+}
+
+const moveSectionUp = (index: number) => {
+  if (index <= 0) return
+  const sections = educationalContentForm.value.sections
+  ;[sections[index - 1], sections[index]] = [sections[index], sections[index - 1]]
+  // Swap previews/pendingFiles/inputs for indices
+  swapMapEntries(sectionImagePreviews.value, index, index - 1)
+  swapMapEntries(sectionPendingFiles.value, index, index - 1)
+  swapMapEntries(sectionImageInputs.value, index, index - 1)
+}
+
+const moveSectionDown = (index: number) => {
+  const sections = educationalContentForm.value.sections
+  if (index >= sections.length - 1) return
+  ;[sections[index + 1], sections[index]] = [sections[index], sections[index + 1]]
+  // Swap previews/pendingFiles/inputs for indices
+  swapMapEntries(sectionImagePreviews.value, index, index + 1)
+  swapMapEntries(sectionPendingFiles.value, index, index + 1)
+  swapMapEntries(sectionImageInputs.value, index, index + 1)
+}
+
+const saveEducationalContent = async () => {
+  if (!editingEducationalContent.value) return
+  
+  try {
+    isUploadingImage.value = true
+    
+    // Get current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Nicht angemeldet')
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
+    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+    
+    // Upload images for each section
+    const processedSections = await Promise.all(
+      educationalContentForm.value.sections.map(async (section, sectionIndex) => {
+        const pendingFiles = sectionPendingFiles.value.get(sectionIndex) || []
+        const uploadedImageUrls: string[] = []
+        
+        // Upload new images for this section
+        for (const file of pendingFiles) {
+          currentUploadingSection.value = sectionIndex
+          const fileExt = file.name.split('.').pop()
+          const fileName = `${editingEducationalContent.value!.id}/section_${sectionIndex}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+          const filePath = `evaluation-content/${fileName}`
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('evaluation-content')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false
+            })
+          
+          if (uploadError) {
+            console.error('❌ Error uploading image:', uploadError)
+            if (uploadError.message.includes('Bucket not found') || uploadError.message.includes('not found')) {
+              uiStore.showError(
+                'Storage-Bucket fehlt',
+                'Bitte erstelle den Bucket "evaluation-content" im Supabase Dashboard:\n\n1. Gehe zu Storage -> Buckets\n2. Klicke auf "New bucket"\n3. Name: evaluation-content\n4. Setze "Public bucket" auf Aktiviert\n5. Klicke auf "Create bucket"'
+              )
+              throw new Error(`Der Storage-Bucket "evaluation-content" wurde noch nicht erstellt. Bitte erstelle ihn im Supabase Dashboard unter Storage -> Buckets mit öffentlichem Zugriff.`)
+            }
+            throw new Error(`Fehler beim Hochladen von ${file.name}: ${uploadError.message}`)
+          }
+          
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('evaluation-content')
+            .getPublicUrl(filePath)
+          
+          uploadedImageUrls.push(publicUrl)
+        }
+        
+        // Combine existing and new images
+        const allImages = [...section.images, ...uploadedImageUrls]
+        
+        return {
+          title: section.title || null,
+          text: section.text || null,
+          images: allImages.length > 0 ? allImages : null,
+          categories: (section.categories && section.categories.length > 0) ? section.categories : null
+        }
+      })
+    )
+    
+    // Prepare educational_content JSON
+    const educationalContent = {
+      title: educationalContentForm.value.title || null,
+      sections: processedSections.filter(s => s.title || s.text || s.images)
+    }
+    
+    // Only save if there's content
+    const contentToSave = (educationalContent.title || educationalContent.sections.length > 0)
+      ? educationalContent
+      : null
+    
+    // Update criteria in database
+    const { error: updateError } = await supabase
+      .from('evaluation_criteria')
+      .update({
+        educational_content: contentToSave,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', editingEducationalContent.value.id)
+    
+    if (updateError) throw updateError
+    
+    // Update local criteria
+    const criteriaIndex = criteria.value.findIndex(c => c.id === editingEducationalContent.value!.id)
+    if (criteriaIndex !== -1) {
+      criteria.value[criteriaIndex].educational_content = contentToSave as any
+    }
+    
+    uiStore.showSuccess('Erfolgreich gespeichert', 'Der Lerninhalt wurde erfolgreich gespeichert.')
+    closeEducationalContentModal()
+    
+  } catch (error: any) {
+    console.error('❌ Error saving educational content:', error)
+    uiStore.showError('Fehler beim Speichern', `Fehler: ${error.message}`)
+  } finally {
+    isUploadingImage.value = false
+    currentUploadingSection.value = null
   }
 }
 

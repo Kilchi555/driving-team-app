@@ -1414,12 +1414,27 @@ const saveInvoiceAddress = async () => {
   try {
     // Hole den aktuellen Benutzer für created_by
     const supabase = getSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
-    const currentUserId = user?.id
+    const { data: { user: authUser } } = await supabase.auth.getUser()
     
-    if (!currentUserId) {
+    if (!authUser?.id) {
       throw new Error('Benutzer nicht angemeldet')
     }
+    
+    // ✅ WICHTIG: Hole die Business User ID aus der users Tabelle (nicht die Auth User ID)
+    // Der Foreign Key created_by verweist auf users.id, nicht auf auth.users.id
+    const { data: businessUser, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', authUser.id)
+      .single()
+    
+    if (userError || !businessUser) {
+      console.error('❌ Error fetching business user:', userError)
+      throw new Error('Benutzerprofil nicht gefunden. Bitte melden Sie sich erneut an.')
+    }
+    
+    const currentUserId = businessUser.id
+    console.log('🔍 Using business user ID for created_by:', currentUserId, '(auth user ID:', authUser.id, ')')
     
     let result
     
@@ -1452,7 +1467,7 @@ const saveInvoiceAddress = async () => {
       
       const addressData = {
         ...invoiceData.value,
-        created_by: currentUserId,
+        created_by: currentUserId, // ✅ Business User ID aus users Tabelle
         is_active: true,
         is_verified: false
       }

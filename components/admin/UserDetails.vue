@@ -228,6 +228,13 @@
           </div>
         </div>
 
+      <!-- Fahrlehrer & Verfügbarkeit (nur für Rolle staff) -->
+      <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="p-0">
+          <StaffTab :current-user="{ id: userDetails?.id }" :tenant-settings="{}" />
+        </div>
+      </div>
+
         <!-- System-Aktivitäten -->
         <div class="bg-white shadow rounded-lg overflow-hidden">
           <div class="px-6 py-4 border-b border-gray-200">
@@ -487,9 +494,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAdminHierarchy } from '~/composables/useAdminHierarchy'
+import StaffTab from '~/components/users/StaffTab.vue'
+import { useFeatures } from '~/composables/useFeatures'
 
 // Types
 interface UserDetails {
@@ -535,6 +544,13 @@ const {
   getUserAuditLog,
   loadCurrentUser 
 } = useAdminHierarchy()
+
+const { isEnabled, load: loadFeatures } = useFeatures()
+
+// Prüfe ob Online-Buchung aktiviert ist
+const isOnlineBookingEnabled = computed(() => {
+  return isEnabled('allow_online_booking', true) // Default: true für Rückwärtskompatibilität
+})
 
 // Reactive state
 const isLoading = ref(true)
@@ -932,6 +948,7 @@ const loadAuditLog = async () => {
 // Lifecycle
 onMounted(async () => {
   try {
+    await loadFeatures()
     await Promise.all([
       loadCurrentUser(), // Load current admin user for permissions
       loadUserDetails(),

@@ -1,17 +1,12 @@
 <template>
-  <div>
-    <AdminLayout>
-      <template #header>
-        <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">Bewertungssystem</h1>
-            <p class="text-gray-600">Verwalten Sie Kategorien, Kriterien und Bewertungsskala</p>
-          </div>
-        </div>
-      </template>
+  <div class="p-3 sm:p-6">
+    <!-- Page Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Bewertungssystem</h1>
+      <p class="text-gray-600">Verwalten Sie Kategorien, Kriterien und Bewertungsskala</p>
+    </div>
 
-      <EvaluationSystemManagerInline />
-    </AdminLayout>
+    <EvaluationSystemManagerInline />
   </div>
 </template>
 
@@ -21,10 +16,9 @@ import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import EvaluationSystemManagerInline from '~/components/admin/EvaluationSystemManagerInline.vue'
 
-// @ts-ignore
 definePageMeta({
   layout: 'admin',
-  middleware: 'features'
+  middleware: 'admin'
 })
 
 // Auth check

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <label class="block text-sm font-medium text-gray-700 mb-2 mt-2">
+    <label class="block text-sm font-medium text-white mb-2 mt-2">
      ⏱️ Dauer
     </label>
     

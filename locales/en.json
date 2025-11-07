@@ -1,0 +1,57 @@
+{
+  "eventType": {
+    "lesson": "Driving Lesson",
+    "theory": "Theory Lesson",
+    "exam": "Driving Test",
+    "WarmUp": "WarmUp"
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "pending_confirmation": "Pending Confirmation",
+    "confirmed": "Confirmed",
+    "cancelled": "Cancelled",
+    "completed": "Completed",
+    "pending": "Pending",
+    "in_progress": "In Progress",
+    "no_show": "No Show"
+  },
+  "receipt": {
+    "title": "Payment Receipt",
+    "date": "Receipt Date",
+    "customer": "Customer",
+    "paymentInfo": "Payment Information",
+    "paymentId": "Payment ID",
+    "paymentMethod": "Payment Method",
+    "status": "Status",
+    "transactionId": "Transaction ID",
+    "appointmentDetails": "Appointment Details",
+    "costBreakdown": "Cost Breakdown",
+    "baseAmount": "Base Amount",
+    "adminFee": "Admin Fee",
+    "products": "Products",
+    "discount": "Discount",
+    "totalAmount": "Total Amount",
+    "cancelled": "Cancelled",
+    "cancelledOn": "Cancelled On",
+    "reason": "Reason",
+    "charged": "Charged",
+    "yes": "Yes",
+    "no": "No",
+    "footer": "This receipt was automatically generated. If you have any questions, please contact {email}."
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "loading": "Loading...",
+    "yes": "Yes",
+    "no": "No",
+    "close": "Close",
+    "confirm": "Confirm"
+  }
+}
+

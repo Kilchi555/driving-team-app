@@ -580,7 +580,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { definePageMeta, navigateTo } from '#imports'
+import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString, formatDate } from '~/utils/dateUtils'
 import LoadingLogo from '~/components/LoadingLogo.vue'

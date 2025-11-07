@@ -110,14 +110,30 @@
             </div>
           </div>
 
+          <!-- Automatic Payment Info -->
+          <div v-if="automaticPaymentBlocked" class="mb-6 p-4 bg-blue-50 border-2 border-blue-400 rounded-lg">
+            <div class="flex items-start space-x-3">
+              <svg class="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <div class="flex-1">
+                <h4 class="font-semibold text-blue-900 mb-1">Automatische Zahlung aktiv</h4>
+                <p class="text-sm text-blue-800">{{ automaticPaymentMessage }}</p>
+                <p class="text-xs text-blue-700 mt-2">
+                  Die Zahlung erfolgt automatisch von Ihrem hinterlegten Zahlungsmittel. Sie müssen nichts weiter tun.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- Action Buttons -->
           <div class="space-y-3">
             <button
               @click="processPayment(true)"
-              :disabled="isProcessing"
+              :disabled="isProcessing || automaticPaymentBlocked"
               class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {{ isProcessing ? 'Verarbeitung...' : `CHF ${totalAmount.toFixed(2)} bezahlen` }}
+              {{ isProcessing ? 'Verarbeitung...' : automaticPaymentBlocked ? 'Automatische Zahlung aktiv' : `CHF ${totalAmount.toFixed(2)} bezahlen` }}
             </button>
             
             <button
@@ -134,7 +150,7 @@
             <div class="flex items-center space-x-2 text-sm">
               <span class="text-blue-600">💳</span>
               <span class="text-blue-800">
-                <strong>Online-Zahlung:</strong> Sie werden zu Wallee weitergeleitet, wo Sie zwischen verschiedenen Zahlungsmethoden wählen können.
+                <strong>Online-Zahlung:</strong> Du wirst zu Wallee weitergeleitet, wo Du zwischen verschiedenen Zahlungsmethoden auswählen kannst.
               </span>
             </div>
           </div>
@@ -181,6 +197,8 @@ const isLoading = ref(true)
 const isProcessing = ref(false)
 const error = ref('')
 const paymentDetails = ref<any[]>([])
+const automaticPaymentBlocked = ref(false)
+const automaticPaymentMessage = ref('')
 
 
 
@@ -224,6 +242,55 @@ const loadPaymentDetails = async () => {
       console.warn('⚠️ Could not load event types:', error)
     }
     
+    // ✅ PRÜFE TENANT SETTINGS: Automatische Zahlung aktiviert?
+    let automaticPaymentEnabled = false
+    let automaticPaymentHoursBefore = 24
+    
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('auth_user_id', authUser.id)
+          .single()
+        
+        if (userData?.tenant_id) {
+          // Lade automatische Zahlungs-Einstellungen (zwei separate Queries für bessere Kompatibilität)
+          const { data: enabledSetting } = await supabase
+            .from('tenant_settings')
+            .select('setting_value')
+            .eq('tenant_id', userData.tenant_id)
+            .eq('setting_key', 'automatic_payment_enabled')
+            .eq('is_active', true)
+            .maybeSingle()
+          
+          const { data: hoursSetting } = await supabase
+            .from('tenant_settings')
+            .select('setting_value')
+            .eq('tenant_id', userData.tenant_id)
+            .eq('setting_key', 'automatic_payment_hours_before')
+            .eq('is_active', true)
+            .maybeSingle()
+          
+          if (enabledSetting) {
+            automaticPaymentEnabled = enabledSetting.setting_value === true || enabledSetting.setting_value === 'true'
+          }
+          
+          if (hoursSetting) {
+            automaticPaymentHoursBefore = Number(hoursSetting.setting_value) || 24
+          }
+          
+          console.log('🔧 Automatic payment settings:', {
+            enabled: automaticPaymentEnabled,
+            hoursBefore: automaticPaymentHoursBefore
+          })
+        }
+      }
+    } catch (settingsError) {
+      console.warn('⚠️ Could not load tenant settings:', settingsError)
+    }
+    
     // 1. Lade Payments mit Appointments (falls vorhanden)
     try {
               const { data: paymentsData, error: loadError } = await supabase
@@ -239,7 +306,8 @@ const loadPaymentDetails = async () => {
               type,
               event_type_code,
               location_id,
-              staff_id
+              staff_id,
+              status
             )
           `)
           .in('id', paymentIds.value)
@@ -295,6 +363,45 @@ const loadPaymentDetails = async () => {
                 .eq('id', payment.appointments.staff_id)
                 .single()
               staffData = staffResult
+            }
+          }
+          
+          // ✅ PRÜFUNG: Blockiere manuelle Zahlung wenn automatische Zahlung geplant ist
+          if (automaticPaymentEnabled && payment.payment_method === 'wallee') {
+            const appointment = payment.appointments
+            if (appointment?.start_time && payment.scheduled_payment_date) {
+              const appointmentStart = new Date(appointment.start_time)
+              const scheduledPaymentDate = new Date(payment.scheduled_payment_date)
+              const now = new Date()
+              
+              // Prüfe ob scheduled_payment_date in der Zukunft liegt (mehr als X Stunden vor Termin)
+              if (scheduledPaymentDate > now && !payment.automatic_payment_processed) {
+                const hoursUntilPayment = (scheduledPaymentDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+                const hoursUntilAppointment = (appointmentStart.getTime() - now.getTime()) / (1000 * 60 * 60)
+                
+                console.log('🔒 Automatic payment scheduled:', {
+                  paymentId: payment.id,
+                  appointmentStart: appointmentStart.toISOString(),
+                  scheduledPaymentDate: scheduledPaymentDate.toISOString(),
+                  hoursUntilPayment: hoursUntilPayment.toFixed(1),
+                  hoursUntilAppointment: hoursUntilAppointment.toFixed(1),
+                  automaticPaymentEnabled
+                })
+                
+                // ✅ Blockiere manuelle Zahlung wenn automatische Zahlung geplant ist
+                // UND Termin ist mehr als X Stunden entfernt
+                if (hoursUntilAppointment > automaticPaymentHoursBefore) {
+                  automaticPaymentBlocked.value = true
+                  const appointmentDateStr = appointmentStart.toLocaleDateString('de-CH', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
+                  automaticPaymentMessage.value = `Diese Zahlung wird automatisch ${Math.round(hoursUntilPayment)} Stunden vor dem Termin (${appointmentDateStr}) abgebucht. Eine manuelle Zahlung ist nicht erforderlich, da der Termin noch mehr als ${automaticPaymentHoursBefore} Stunden entfernt ist.`
+                }
+              }
             }
           }
           
@@ -495,11 +602,40 @@ const loadPaymentDetails = async () => {
 }
 
 const processPayment = async (success: boolean) => {
+  // ✅ PRÜFUNG: Blockiere wenn automatische Zahlung aktiv ist
+  if (automaticPaymentBlocked.value) {
+    alert(automaticPaymentMessage.value || 'Diese Zahlung wird automatisch verarbeitet. Eine manuelle Zahlung ist nicht erforderlich.')
+    return
+  }
+  
   isProcessing.value = true
   
   try {
     console.log('🔄 Processing payment for IDs:', paymentIds.value)
     console.log('💰 Total amount:', totalAmount.value)
+    
+    // ✅ ZUSÄTZLICHE PRÜFUNG: Validiere dass keine automatische Zahlung geplant ist
+    for (const payment of paymentDetails.value) {
+      if (payment.scheduled_payment_date && payment.payment_method === 'wallee' && !payment.automatic_payment_processed) {
+        const scheduledDate = new Date(payment.scheduled_payment_date)
+        const now = new Date()
+        
+        if (scheduledDate > now) {
+          const appointment = payment.appointments
+          if (appointment?.start_time) {
+            const appointmentStart = new Date(appointment.start_time)
+            const hoursUntilAppointment = (appointmentStart.getTime() - now.getTime()) / (1000 * 60 * 60)
+            
+            if (hoursUntilAppointment > 24) {
+              throw new Error(
+                `Eine automatische Zahlung ist bereits für diesen Termin geplant (${new Date(payment.scheduled_payment_date).toLocaleString('de-CH')}). ` +
+                `Die Zahlung erfolgt automatisch. Eine manuelle Zahlung ist nicht erforderlich.`
+              )
+            }
+          }
+        }
+      }
+    }
     
     // Get current user
     const { data: { user } } = await supabase.auth.getUser()
@@ -508,14 +644,21 @@ const processPayment = async (success: boolean) => {
     // Get user data from users table
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id, first_name, last_name, email')
+      .select('id, first_name, last_name, email, tenant_id')
       .eq('auth_user_id', user.id)
       .single()
     
     if (userError || !userData) throw new Error('User data not found')
     
     // Create Wallee transaction
-    const walleeResponse = await $fetch('/api/wallee/create-transaction', {
+    interface WalleeResponse {
+      success: boolean
+      paymentUrl?: string
+      transactionId?: number | string
+      error?: string
+    }
+    
+    const walleeResponse = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
       method: 'POST',
       body: {
         orderId: `payment-${paymentIds.value.join('-')}-${Date.now()}`,
@@ -525,7 +668,10 @@ const processPayment = async (success: boolean) => {
         customerName: `${userData.first_name} ${userData.last_name}`,
         description: `Zahlung für ${paymentDetails.value.length} Termin(e)`,
         successUrl: `${window.location.origin}/payment/success?payment_ids=${paymentIds.value.join(',')}`,
-        failedUrl: `${window.location.origin}/payment/failed?payment_ids=${paymentIds.value.join(',')}`
+        failedUrl: `${window.location.origin}/payment/failed?payment_ids=${paymentIds.value.join(',')}`,
+        // Pseudonyme Customer-ID Inputs
+        userId: userData.id,
+        tenantId: userData.tenant_id
       }
     })
     

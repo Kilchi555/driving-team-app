@@ -43,3 +43,4 @@ CREATE POLICY "Allow authenticated users to update tenants" ON tenants
 
 
 
+

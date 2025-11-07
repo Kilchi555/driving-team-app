@@ -284,7 +284,7 @@ import { getSupabase } from '~/utils/supabase'
 // Meta
 definePageMeta({
   layout: 'admin',
-  middleware: 'features'
+  middleware: 'admin'
 })
 
 // Composables

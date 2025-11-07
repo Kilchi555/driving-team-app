@@ -1,0 +1,57 @@
+{
+  "eventType": {
+    "lesson": "Sürücü dersi",
+    "theory": "Teorik ders",
+    "exam": "Sürücü sınavı",
+    "WarmUp": "Isınma"
+  },
+  "status": {
+    "scheduled": "Planlandı",
+    "pending_confirmation": "Onay bekleniyor",
+    "confirmed": "Onaylandı",
+    "cancelled": "İptal edildi",
+    "completed": "Tamamlandı",
+    "pending": "Beklemede",
+    "in_progress": "Devam ediyor",
+    "no_show": "Gelmedi"
+  },
+  "receipt": {
+    "title": "Ödeme makbuzu",
+    "date": "Makbuz tarihi",
+    "customer": "Müşteri",
+    "paymentInfo": "Ödeme bilgileri",
+    "paymentId": "Ödeme ID",
+    "paymentMethod": "Ödeme yöntemi",
+    "status": "Durum",
+    "transactionId": "İşlem ID",
+    "appointmentDetails": "Randevu detayları",
+    "costBreakdown": "Maliyet dökümü",
+    "baseAmount": "Temel tutar",
+    "adminFee": "Yönetim ücreti",
+    "products": "Ürünler",
+    "discount": "İndirim",
+    "totalAmount": "Toplam tutar",
+    "cancelled": "İptal edildi",
+    "cancelledOn": "İptal tarihi",
+    "reason": "Sebep",
+    "charged": "Ücretlendirildi",
+    "yes": "Evet",
+    "no": "Hayır",
+    "footer": "Bu makbuz otomatik olarak oluşturulmuştur. Sorularınız için {email} adresine başvurun."
+  },
+  "common": {
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "back": "Geri",
+    "next": "İleri",
+    "previous": "Önceki",
+    "loading": "Yükleniyor...",
+    "yes": "Evet",
+    "no": "Hayır",
+    "close": "Kapat",
+    "confirm": "Onayla"
+  }
+}
+

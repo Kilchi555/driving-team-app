@@ -1026,65 +1026,76 @@
         <!-- Payments Tab -->
         <div v-show="activeTab === 'payments'" class="space-y-6">
           
-          <!-- Online Payment Deadline Settings -->
+          <!-- Automatic Payment Collection Settings -->
           <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Online-Zahlungsfrist</h2>
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Automatische Abbuchung</h2>
             <p class="text-sm text-gray-600 mb-4">
-              Legen Sie fest, bis wann Termine online bezahlt werden müssen.
+              Konfigurieren Sie, wann Zahlungen automatisch von hinterlegten Zahlungsmitteln abgebucht werden sollen.
             </p>
 
             <div class="space-y-4">
-              <!-- Payment Deadline Type -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Zahlungsfrist
+              <!-- Enable Automatic Payment -->
+              <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div class="flex-1">
+                  <h3 class="text-sm font-medium text-gray-900">Automatische Abbuchung aktivieren</h3>
+                  <p class="text-sm text-gray-600">Bei Terminbestätigung stimmt der Kunde zu, dass der Betrag automatisch abgebucht wird</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    v-model="paymentSettings.automatic_payment_enabled"
+                    class="sr-only peer"
+                  />
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
-                <select
-                  v-model="paymentSettings.payment_deadline_type"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="immediate">Sofort (vor Buchung)</option>
-                  <option value="hours_before">X Stunden vor Termin</option>
-                  <option value="days_before">X Tage vor Termin</option>
-                  <option value="no_limit">Keine Frist (jederzeit)</option>
-                </select>
               </div>
 
-              <!-- Custom Time Period -->
-              <div v-if="paymentSettings.payment_deadline_type === 'hours_before' || paymentSettings.payment_deadline_type === 'days_before'">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  {{ paymentSettings.payment_deadline_type === 'hours_before' ? 'Anzahl Stunden' : 'Anzahl Tage' }}
-                </label>
-                <input
-                  v-model.number="paymentSettings.payment_deadline_value"
-                  type="number"
-                  min="1"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  :placeholder="paymentSettings.payment_deadline_type === 'hours_before' ? 'z.B. 24' : 'z.B. 7'"
-                />
-                <p class="text-xs text-gray-500 mt-1">
-                  Termine müssen {{ paymentSettings.payment_deadline_value }} 
-                  {{ paymentSettings.payment_deadline_type === 'hours_before' ? 'Stunden' : 'Tage' }} 
-                  vor dem Termin bezahlt werden.
-                </p>
+              <!-- Automatic Payment Timing -->
+              <div v-if="paymentSettings.automatic_payment_enabled" class="border-l-4 border-blue-500 pl-4 space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Abbuchungszeitpunkt vor Termin
+                  </label>
+                  <div class="flex items-center space-x-4">
+                    <input
+                      v-model.number="paymentSettings.automatic_payment_hours_before"
+                      type="number"
+                      min="1"
+                      max="168"
+                      class="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="24"
+                    />
+                    <span class="text-sm text-gray-700">Stunden vor dem Termin</span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Die Zahlung wird automatisch {{ paymentSettings.automatic_payment_hours_before || 24 }} Stunden vor dem Termin von dem hinterlegten Zahlungsmittel des Kunden abgebucht.
+                  </p>
+                </div>
+
+                <!-- Info Box -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div class="flex">
+                    <svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="text-sm text-blue-800">
+                      <strong>So funktioniert's:</strong>
+                      <ul class="mt-2 list-disc list-inside space-y-1">
+                        <li>Der Kunde erhält eine Terminanfrage und bestätigt diese (z.B. eine Woche vor dem Termin)</li>
+                        <li>Mit der Bestätigung erklärt sich der Kunde einverstanden, dass der angezeigte Betrag automatisch abgebucht wird</li>
+                        <li>Die Abbuchung erfolgt {{ paymentSettings.automatic_payment_hours_before || 24 }} Stunden vor dem Termin</li>
+                        <li>Der Kunde muss zuvor ein Zahlungsmittel hinterlegt haben</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <!-- Preview -->
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 class="text-sm font-medium text-blue-900 mb-2">Vorschau</h4>
-                <p class="text-sm text-blue-800">
-                  <span v-if="paymentSettings.payment_deadline_type === 'immediate'">
-                    Kunden müssen sofort bei der Buchung bezahlen.
-                  </span>
-                  <span v-else-if="paymentSettings.payment_deadline_type === 'hours_before'">
-                    Kunden müssen {{ paymentSettings.payment_deadline_value }} Stunden vor dem Termin bezahlen.
-                  </span>
-                  <span v-else-if="paymentSettings.payment_deadline_type === 'days_before'">
-                    Kunden müssen {{ paymentSettings.payment_deadline_value }} Tage vor dem Termin bezahlen.
-                  </span>
-                  <span v-else-if="paymentSettings.payment_deadline_type === 'no_limit'">
-                    Kunden können jederzeit bezahlen, auch nach dem Termin.
-                  </span>
+              <!-- Preview when disabled -->
+              <div v-else class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Aktuelle Einstellung</h4>
+                <p class="text-sm text-gray-600">
+                  Automatische Abbuchung ist deaktiviert. Kunden müssen manuell bezahlen.
                 </p>
               </div>
             </div>
@@ -1165,6 +1176,10 @@
 
         </div>
 
+        <!-- Reglemente Tab -->
+        <div v-show="activeTab === 'reglemente'" class="space-y-6">
+          <ReglementeManager />
+        </div>
 
       </div>
     </div>
@@ -1173,7 +1188,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, markRaw, watch, onUnmounted } from 'vue'
-import { definePageMeta, navigateTo } from '#imports'
+import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useUIStore } from '~/stores/ui'
@@ -1181,6 +1196,7 @@ import { useAuthStore } from '~/stores/auth'
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useFeatures } from '~/composables/useFeatures'
 import EventTypesManager from '~/components/admin/EventTypesManager.vue'
+import ReglementeManager from '~/components/admin/ReglementeManager.vue'
 
 // Icons for tabs
 const PaletteIcon = markRaw({
@@ -1210,6 +1226,12 @@ const ShieldIcon = markRaw({
 const PaymentIcon = markRaw({
   template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+  </svg>`
+})
+
+const DocumentIcon = markRaw({
+  template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
   </svg>`
 })
 
@@ -1260,7 +1282,8 @@ const tabs = ref([
   { id: 'eventtypes', name: 'Eventtypen', icon: ShieldIcon },
   { id: 'reminders', name: 'Erinnerungen', icon: ShieldIcon },
   { id: 'templates', name: 'Nachrichten-Vorlagen', icon: ShieldIcon },
-  { id: 'payments', name: 'Zahlungen', icon: PaymentIcon }
+  { id: 'payments', name: 'Zahlungen', icon: PaymentIcon },
+  { id: 'reglemente', name: 'Reglemente', icon: DocumentIcon }
 ])
 
 // Session Settings
@@ -1273,8 +1296,8 @@ const sessionSettings = ref({
 
 // Payment Settings
 const paymentSettings = ref({
-  payment_deadline_type: 'no_limit',
-  payment_deadline_value: 24,
+  automatic_payment_enabled: false,
+  automatic_payment_hours_before: 24,
   cash_payments_enabled: true,
   cash_payment_visibility: 'staff_only'
 })

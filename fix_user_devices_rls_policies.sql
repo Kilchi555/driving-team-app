@@ -51,3 +51,4 @@ CREATE POLICY "Service role full access" ON public.user_devices
 
 
 
+

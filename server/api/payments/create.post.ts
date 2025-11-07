@@ -44,8 +44,9 @@ export default defineEventHandler(async (event): Promise<PaymentResponse> => {
     
     // Check feature flag
     const url = event.node.req.url || ''
+    const tenantIdHeader = getHeader(event, 'x-tenant-id') || (getQuery(event).tenantId as string | undefined)
     if (routeRequiresFeatureFlag(url)) {
-      const tenantId = getHeader(event, 'x-tenant-id') || getQuery(event).tenantId as string
+      const tenantId = tenantIdHeader as string
       if (!tenantId) {
         throw createError({
           statusCode: 400,
@@ -147,7 +148,10 @@ async function processWalleePayment(payment: any, request: PaymentRequest): Prom
       customerName: request.customerName,
       description: request.description || 'Fahrlektion',
       successUrl: request.successUrl || `${getRequestURL(event).origin}/payment/success`,
-      failedUrl: request.failedUrl || `${getRequestURL(event).origin}/payment/failed`
+      failedUrl: request.failedUrl || `${getRequestURL(event).origin}/payment/failed`,
+      // Pseudonyme Customer-ID inputs
+      userId: request.userId,
+      tenantId: (tenantIdHeader as string) || payment.tenant_id || undefined
     }
 
     const response = await $fetch('/api/wallee/create-transaction', {

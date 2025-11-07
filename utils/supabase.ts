@@ -4,6 +4,56 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 let supabaseInstance: SupabaseClient | null = null
 let supabaseAdminInstance: SupabaseClient | null = null
 
+// Custom Storage Adapter für fenster-spezifische Sessions
+// Jedes Browser-Fenster bekommt eine eigene Session
+function createWindowSpecificStorage() {
+  if (typeof window === 'undefined') {
+    // Fallback für Server-Side: normales localStorage-Verhalten
+    return {
+      getItem: (key: string) => null,
+      setItem: (key: string, value: string) => {},
+      removeItem: (key: string) => {}
+    }
+  }
+
+  // Generiere eine fenster-spezifische ID (bleibt für die Lebensdauer des Fensters)
+  let windowId = sessionStorage.getItem('supabase_window_id')
+  if (!windowId) {
+    windowId = `window_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    sessionStorage.setItem('supabase_window_id', windowId)
+  }
+
+  const getStorageKey = (key: string) => `${windowId}_${key}`
+
+  return {
+    getItem: (key: string): string | null => {
+      try {
+        const prefixedKey = getStorageKey(key)
+        return localStorage.getItem(prefixedKey)
+      } catch (error) {
+        console.error('❌ Error reading from storage:', error)
+        return null
+      }
+    },
+    setItem: (key: string, value: string): void => {
+      try {
+        const prefixedKey = getStorageKey(key)
+        localStorage.setItem(prefixedKey, value)
+      } catch (error) {
+        console.error('❌ Error writing to storage:', error)
+      }
+    },
+    removeItem: (key: string): void => {
+      try {
+        const prefixedKey = getStorageKey(key)
+        localStorage.removeItem(prefixedKey)
+      } catch (error) {
+        console.error('❌ Error removing from storage:', error)
+      }
+    }
+  }
+}
+
 export const getSupabase = (): SupabaseClient => {
   if (!supabaseInstance) {
     // Handle both client and server environments
@@ -44,11 +94,15 @@ export const getSupabase = (): SupabaseClient => {
 
     console.log('🔗 Initializing Supabase client with URL:', supabaseUrl)
     
+    // Use custom storage for client-side to support multiple windows with different users
+    const storageAdapter = process.client ? createWindowSpecificStorage() : undefined
+    
     supabaseInstance = createClient(supabaseUrl, supabaseKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: true,
+        storage: storageAdapter as any // Custom storage adapter für fenster-spezifische Sessions
       }
     })
   }

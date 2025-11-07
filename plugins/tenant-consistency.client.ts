@@ -28,24 +28,34 @@ export default defineNuxtPlugin(() => {
     await validateTenantConsistency()
   })
   
-  // Validate before navigation - wrapped in try/catch to handle router initialization
-  try {
-    const router = useRouter()
-    if (router) {
-      router.beforeEach(async (to: any, from: any) => {
-        if (to.path.startsWith('/admin')) {
-          const isConsistent = await validateTenantConsistency()
-          if (!isConsistent) {
-            console.error('🚨 Blocking admin navigation due to tenant inconsistency')
-            // Could redirect to login or show error
-            return false
+  // Validate before navigation - wait for router to be ready
+  const setupRouterGuard = () => {
+    try {
+      const router = useRouter()
+      if (router && router.beforeEach) {
+        router.beforeEach(async (to: any, from: any) => {
+          if (to.path.startsWith('/admin')) {
+            const isConsistent = await validateTenantConsistency()
+            if (!isConsistent) {
+              console.error('🚨 Blocking admin navigation due to tenant inconsistency')
+              // Could redirect to login or show error
+              return false
+            }
           }
-        }
-      })
+        })
+        console.log('✅ Router guard for tenant consistency registered')
+      } else {
+        // Router not ready yet, try again later
+        setTimeout(setupRouterGuard, 100)
+      }
+    } catch (err) {
+      console.log('⚠️ Router not ready yet for tenant consistency checks, retrying...')
+      setTimeout(setupRouterGuard, 100)
     }
-  } catch (err) {
-    console.log('⚠️ Router not ready yet for tenant consistency checks')
   }
+  
+  // Start trying to setup router guard
+  setupRouterGuard()
   
   console.log('✅ Tenant consistency monitoring initialized')
 })

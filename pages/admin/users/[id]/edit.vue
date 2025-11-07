@@ -184,6 +184,13 @@
           </div>
         </div>
 
+        <!-- Fahrlehrer & Verfügbarkeit (nur für Rolle staff) -->
+        <div v-if="userDetails?.role === 'staff'" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-0">
+            <StaffTab :current-user="{ id: userDetails?.id }" :tenant-settings="{}" />
+          </div>
+        </div>
+
         <!-- Erfolgsmeldung -->
         <div v-if="successMessage" class="bg-green-50 border border-green-200 rounded-md p-4">
           <div class="flex">
@@ -206,7 +213,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-import { definePageMeta } from '#imports'
+// definePageMeta is auto-imported
+import { useRoute } from '#app'
+import StaffTab from '~/components/users/StaffTab.vue'
 
 // Page Meta für Admin-Layout
 definePageMeta({
@@ -299,11 +308,14 @@ const loadUserDetails = async () => {
     }
 
     // Extract tenant name if available
-    if (data.tenants) {
-      data.tenant_name = data.tenants.name
-    }
+    const tenantName = Array.isArray((data as any).tenants)
+      ? (data as any).tenants[0]?.name
+      : (data as any).tenants?.name
     
-    userDetails.value = data
+    userDetails.value = {
+      ...(data as any),
+      tenant_name: tenantName || null
+    }
     
     // Populate edit form
     editForm.value = {

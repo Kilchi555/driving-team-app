@@ -1,0 +1,57 @@
+{
+  "eventType": {
+    "lesson": "Lekcija vožnje",
+    "theory": "Teorijska lekcija",
+    "exam": "Ispit vožnje",
+    "WarmUp": "Zagrijavanje"
+  },
+  "status": {
+    "scheduled": "Zakazano",
+    "pending_confirmation": "Potvrda na čekanju",
+    "confirmed": "Potvrđeno",
+    "cancelled": "Otkazano",
+    "completed": "Završeno",
+    "pending": "Na čekanju",
+    "in_progress": "U tijeku",
+    "no_show": "Nije se pojavio"
+  },
+  "receipt": {
+    "title": "Potvrda o plaćanju",
+    "date": "Datum potvrde",
+    "customer": "Kupac",
+    "paymentInfo": "Informacije o plaćanju",
+    "paymentId": "ID plaćanja",
+    "paymentMethod": "Način plaćanja",
+    "status": "Status",
+    "transactionId": "ID transakcije",
+    "appointmentDetails": "Detalji termina",
+    "costBreakdown": "Pregled troškova",
+    "baseAmount": "Osnovni iznos",
+    "adminFee": "Administrativna naknada",
+    "products": "Proizvodi",
+    "discount": "Popust",
+    "totalAmount": "Ukupan iznos",
+    "cancelled": "Otkazano",
+    "cancelledOn": "Otkazano dana",
+    "reason": "Razlog",
+    "charged": "Naplaćeno",
+    "yes": "Da",
+    "no": "Ne",
+    "footer": "Ovaj račun je automatski generiran. Za pitanja kontaktirajte {email}."
+  },
+  "common": {
+    "save": "Spremi",
+    "cancel": "Odustani",
+    "delete": "Obriši",
+    "edit": "Uredi",
+    "back": "Natrag",
+    "next": "Sljedeće",
+    "previous": "Prethodno",
+    "loading": "Učitavanje...",
+    "yes": "Da",
+    "no": "Ne",
+    "close": "Zatvori",
+    "confirm": "Potvrdi"
+  }
+}
+

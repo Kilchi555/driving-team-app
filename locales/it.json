@@ -1,0 +1,57 @@
+{
+  "eventType": {
+    "lesson": "Lezione di guida",
+    "theory": "Lezione teorica",
+    "exam": "Esame di guida",
+    "WarmUp": "Riscaldamento"
+  },
+  "status": {
+    "scheduled": "Programmato",
+    "pending_confirmation": "Conferma in sospeso",
+    "confirmed": "Confermato",
+    "cancelled": "Cancellato",
+    "completed": "Completato",
+    "pending": "In attesa",
+    "in_progress": "In corso",
+    "no_show": "Non presentato"
+  },
+  "receipt": {
+    "title": "Ricevuta di pagamento",
+    "date": "Data ricevuta",
+    "customer": "Cliente",
+    "paymentInfo": "Informazioni di pagamento",
+    "paymentId": "ID pagamento",
+    "paymentMethod": "Metodo di pagamento",
+    "status": "Stato",
+    "transactionId": "ID transazione",
+    "appointmentDetails": "Dettagli appuntamento",
+    "costBreakdown": "Riepilogo costi",
+    "baseAmount": "Importo base",
+    "adminFee": "Tassa amministrativa",
+    "products": "Prodotti",
+    "discount": "Sconto",
+    "totalAmount": "Importo totale",
+    "cancelled": "Cancellato",
+    "cancelledOn": "Cancellato il",
+    "reason": "Motivo",
+    "charged": "Addebitato",
+    "yes": "Sì",
+    "no": "No",
+    "footer": "Questa ricevuta è stata generata automaticamente. Per domande, contattare {email}."
+  },
+  "common": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "back": "Indietro",
+    "next": "Avanti",
+    "previous": "Precedente",
+    "loading": "Caricamento...",
+    "yes": "Sì",
+    "no": "No",
+    "close": "Chiudi",
+    "confirm": "Conferma"
+  }
+}
+

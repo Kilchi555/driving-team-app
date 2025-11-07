@@ -1,5 +1,30 @@
 <template>
   <div class="p-6">
+    <!-- Tabs (Kunden, Fahrlehrer, Admins) -->
+    <div class="bg-white shadow-sm border p-4 rounded-lg mb-6">
+      <div class="flex items-center justify-between">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Benutzerverwaltung</h1>
+      </div>
+      <div class="mt-4">
+        <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            @click="activeTab = tab.id as any"
+            :class="[
+              'flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors',
+              activeTab === tab.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            ]"
+          >
+            {{ tab.name }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kunden-Ansicht (bestehende Liste bleibt unverändert) -->
+    
+    
     <!-- Invite Toast -->
     <div v-if="showInviteToast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-xl">
       <div class="bg-white border border-gray-200 shadow-lg rounded-lg p-4">
@@ -50,70 +75,8 @@
         </div>
       </div>
     </div>
-    <!-- Page Header -->
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">
-        👥 Benutzerverwaltung
-      </h1>
-      <p v-if="currentTenant" class="text-sm text-gray-600">
-        Tenant: <span class="font-medium text-blue-600">{{ currentTenant.name }}</span>
-      </p>
-    </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div class="bg-white rounded-lg shadow-sm border p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-600">Alle Benutzer</p>
-            <p class="text-2xl font-bold text-gray-900">{{ totalUsers }}</p>
-            <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
-          </div>
-          <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-            <span class="text-blue-600 text-xl">👥</span>
-          </div>
-        </div>
-      </div>
 
-      <div class="bg-white rounded-lg shadow-sm border p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-600">Kunden</p>
-            <p class="text-2xl font-bold text-green-600">{{ clientCount }}</p>
-            <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
-          </div>
-          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-            <span class="text-green-600 text-xl">🚗</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-lg shadow-sm border p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-600">Fahrlehrer</p>
-            <p class="text-2xl font-bold text-purple-600">{{ staffCount }}</p>
-            <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
-          </div>
-          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-            <span class="text-purple-600 text-xl">👨‍🏫</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-lg shadow-sm border p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-600">Neue (7 Tage)</p>
-            <p class="text-2xl font-bold text-orange-600">{{ newUsersCount }}</p>
-            <p v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</p>
-          </div>
-          <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-            <span class="text-orange-600 text-xl">✨</span>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Filters and Search -->
     <div class="bg-white rounded-lg shadow-sm border mb-6">
@@ -137,16 +100,7 @@
               </div>
             </div>
 
-            <!-- Role Filter -->
-            <select
-              v-model="selectedRole"
-              class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Alle Rollen</option>
-              <option value="client">Kunden</option>
-              <option value="staff">Fahrlehrer</option>
-              <option value="admin">Admins</option>
-            </select>
+            
 
             <!-- Status Filter -->
             <select
@@ -159,21 +113,37 @@
               <option value="unpaid">Mit offenen Zahlungen</option>
             </select>
 
-            <!-- Invite Staff Button -->
-            <button
-              @click="showInviteStaffModal = true"
-              class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
-            >
-              📧 Fahrlehrer einladen
-            </button>
-
-            <!-- New User Button -->
-            <button
-              @click="showCreateUserModal = true"
-              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-            >
-              ➕ Neuer Benutzer
-            </button>
+            <!-- Tab-abhängige Aktionen -->
+            <template v-if="activeTab === 'customers'">
+              <button
+                @click="openCreateForCurrentTab()"
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              >
+                ➕ Neuer Kunde
+              </button>
+            </template>
+            <template v-else-if="activeTab === 'staff'">
+              <button
+                @click="showInviteStaffModal = true"
+                class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
+              >
+                📧 Fahrlehrer einladen
+              </button>
+              <button
+                @click="openCreateForCurrentTab()"
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              >
+                ➕ Neuer Fahrlehrer
+              </button>
+            </template>
+            <template v-else-if="activeTab === 'admins'">
+              <button
+                @click="openCreateForCurrentTab()"
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              >
+                ➕ Neuer Admin
+              </button>
+            </template>
           </div>
         </div>
       </div>
@@ -417,19 +387,19 @@
                 </svg>
               </button>
               
-              <!-- Dropdown Options - NUR Fahrlehrer und Sub-Admin -->
+              <!-- Dropdown Options - Tab-abhängig -->
               <div v-if="showRoleDropdown" class="absolute top-full left-0 right-0 mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-10">
                 <div
-                  @click="selectRole('staff')"
-                  class="px-3 py-2 text-white hover:bg-gray-600 cursor-pointer rounded-t-lg"
+                  v-for="role in availableRolesForTab"
+                  :key="role"
+                  @click="selectRole(role)"
+                  class="px-3 py-2 text-white hover:bg-gray-600 cursor-pointer"
+                  :class="{ 'rounded-t-lg': role === availableRolesForTab[0], 'rounded-b-lg': role === availableRolesForTab[availableRolesForTab.length-1] }"
                 >
-                  👨‍🏫 Fahrlehrer
-                </div>
-                <div
-                  @click="selectRole('sub_admin')"
-                  class="px-3 py-2 text-white hover:bg-gray-600 cursor-pointer rounded-b-lg"
-                >
-                  🔧 Sub-Admin
+                  <span v-if="role === 'client'">👤 Kunde</span>
+                  <span v-else-if="role === 'staff'">👨‍🏫 Fahrlehrer</span>
+                  <span v-else-if="role === 'admin'">👑 Admin</span>
+                  <span v-else-if="role === 'sub_admin'">🔧 Sub-Admin</span>
                 </div>
               </div>
             </div>
@@ -602,8 +572,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div class="mt-2">
-                    <p class="text-sm font-medium text-gray-900">{{ newUser.licenseFrontFile.name }}</p>
-                    <p class="text-xs text-gray-500">{{ formatFileSize(newUser.licenseFrontFile.size) }}</p>
+                    <p class="text-sm font-medium text-gray-900">{{ newUser.licenseFrontFile?.name }}</p>
+                    <p class="text-xs text-gray-500">{{ getFileSize(newUser.licenseFrontFile) }}</p>
                     <button
                       type="button"
                       @click.stop="removeLicenseFrontFile"
@@ -664,8 +634,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div class="mt-2">
-                    <p class="text-sm font-medium text-gray-900">{{ newUser.licenseBackFile.name }}</p>
-                    <p class="text-xs text-gray-500">{{ formatFileSize(newUser.licenseBackFile.size) }}</p>
+                    <p class="text-sm font-medium text-gray-900">{{ newUser.licenseBackFile?.name }}</p>
+                    <p class="text-xs text-gray-500">{{ getFileSize(newUser.licenseBackFile) }}</p>
                     <button
                       type="button"
                       @click.stop="removeLicenseBackFile"
@@ -772,12 +742,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { definePageMeta, useRuntimeConfig, navigateTo } from '#imports'
+import { useRuntimeConfig, navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useRouter } from '#app'
 import { createClient } from '@supabase/supabase-js'
 import { useAuthStore } from '~/stores/auth'
+import StaffTab from '~/components/users/StaffTab.vue'
+import AdminsTab from '~/components/users/AdminsTab.vue'
+import CustomersTab from '~/components/users/CustomersTab.vue'
 
 definePageMeta({
   middleware: 'admin',
@@ -805,13 +778,26 @@ interface User {
 
 // State
 const supabase = getSupabase()
+const authStore = useAuthStore()
+const activeTab = ref<string>('customers')
+const tabs = computed(() => {
+  const base = [
+    { id: 'customers', name: 'Kunden' },
+    { id: 'staff', name: 'Fahrlehrer' }
+  ] as any[]
+  if (authStore.isAdmin) base.push({ id: 'admins', name: 'Admins' })
+  return base
+})
+const currentUserForTabs = computed(() => authStore.user)
 const isLoading = ref(true)
 const users = ref<User[]>([])
 const searchTerm = ref('')
-const selectedRole = ref('')
+const selectedRole = ref('client')
 const selectedStatus = ref('')
 const showCreateUserModal = ref(false)
 const currentTenant = ref<any>(null)
+
+// (tabs defined above)
 
 // Staff Invitation State
 const showInviteStaffModal = ref(false)
@@ -841,6 +827,14 @@ const copyInviteLink = async () => {
   }
 }
 
+// Öffnet das Erstellen-Modal mit passender Rolle basierend auf Tab
+const openCreateForCurrentTab = () => {
+  if (activeTab.value === 'customers') newUser.value.role = 'client'
+  else if (activeTab.value === 'staff') newUser.value.role = 'staff'
+  else if (activeTab.value === 'admins') newUser.value.role = 'admin'
+  showCreateUserModal.value = true
+}
+
 // Normalize Swiss phone numbers to E.164 (+41...) format
 const normalizeSwissPhone = (raw: string) => {
   if (!raw) return ''
@@ -865,6 +859,13 @@ watch(() => inviteForm.value.sendVia, (newVal: string, oldVal: string) => {
     inviteForm.value.phone = normalizeSwissPhone(inviteForm.value.phone)
   }
 })
+
+// Sync role filter with active tab
+watch(activeTab, (tab) => {
+  if (tab === 'customers') selectedRole.value = 'client'
+  else if (tab === 'staff') selectedRole.value = 'staff'
+  else if (tab === 'admins') selectedRole.value = 'admin'
+}, { immediate: true })
 
 // Toast state for fallback link
 const showInviteToast = ref(false)
@@ -1207,6 +1208,12 @@ const selectRole = (role: string) => {
   console.log('🎯 Role selected:', role)
 }
 
+const availableRolesForTab = computed(() => {
+  if (activeTab.value === 'customers') return ['client']
+  if (activeTab.value === 'staff') return ['staff']
+  return ['admin', 'sub_admin']
+})
+
 // File Upload Functions
 const validateFile = (file: File): string | null => {
   // Validate file size (5MB max)
@@ -1282,6 +1289,15 @@ const formatFileSize = (bytes: number): string => {
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+const getFileSize = (file: File | null) => {
+  if (!file) return ''
+  try {
+    return formatFileSize(file.size)
+  } catch {
+    return ''
+  }
 }
 
 // Drag & Drop Functions
@@ -1645,9 +1661,6 @@ const closeRoleDropdown = (event: Event) => {
   }
 }
 
-// Auth check
-const authStore = useAuthStore()
-
 // Auth-Prüfung
 onMounted(async () => {
   console.log('🔍 Users page mounted, checking auth...')
@@ -1678,13 +1691,9 @@ onMounted(async () => {
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading users...')
-  
-  // Original onMounted logic
-  loadUsers()
-  loadCategories() // ✅ Kategorien für Staff-Zuordnung laden
-  
-  // Add click listener to close dropdown
+  // Original Ansicht laden
+  await loadUsers()
+  await loadCategories()
   document.addEventListener('click', closeRoleDropdown)
 })
 

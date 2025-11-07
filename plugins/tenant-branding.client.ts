@@ -95,17 +95,27 @@ export default defineNuxtPlugin(async () => {
     }
   }
 
-  // Router-Hooks registrieren - wrapped in try/catch
-  try {
-    if ($router && typeof $router.beforeEach === 'function') {
-      $router.beforeEach(async (to, from, next) => {
-        await handleRouteChange(to)
-        next()
-      })
+  // Router-Hooks registrieren - wait for router to be ready
+  const setupRouterGuard = () => {
+    try {
+      if ($router && $router.beforeEach) {
+        $router.beforeEach(async (to, from, next) => {
+          await handleRouteChange(to)
+          next()
+        })
+        console.log('✅ Router guard for tenant branding registered')
+      } else {
+        // Router not ready yet, try again later
+        setTimeout(setupRouterGuard, 100)
+      }
+    } catch (err) {
+      console.log('⚠️ Router not ready yet for tenant branding hooks, retrying...')
+      setTimeout(setupRouterGuard, 100)
     }
-  } catch (err) {
-    console.log('⚠️ Router not ready yet for tenant branding hooks')
   }
+  
+  // Start trying to setup router guard
+  setupRouterGuard()
 
   // DEAKTIVIERT: Automatisches Laden wird von den Layouts gesteuert
   // setTimeout(async () => {

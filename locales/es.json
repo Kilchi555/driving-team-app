@@ -1,0 +1,57 @@
+{
+  "eventType": {
+    "lesson": "Clase de conducción",
+    "theory": "Clase teórica",
+    "exam": "Examen de conducir",
+    "WarmUp": "Calentamiento"
+  },
+  "status": {
+    "scheduled": "Programado",
+    "pending_confirmation": "Confirmación pendiente",
+    "confirmed": "Confirmado",
+    "cancelled": "Cancelado",
+    "completed": "Completado",
+    "pending": "Pendiente",
+    "in_progress": "En progreso",
+    "no_show": "No se presentó"
+  },
+  "receipt": {
+    "title": "Recibo de pago",
+    "date": "Fecha del recibo",
+    "customer": "Cliente",
+    "paymentInfo": "Información de pago",
+    "paymentId": "ID de pago",
+    "paymentMethod": "Método de pago",
+    "status": "Estado",
+    "transactionId": "ID de transacción",
+    "appointmentDetails": "Detalles de la cita",
+    "costBreakdown": "Desglose de costos",
+    "baseAmount": "Importe base",
+    "adminFee": "Tarifa administrativa",
+    "products": "Productos",
+    "discount": "Descuento",
+    "totalAmount": "Importe total",
+    "cancelled": "Cancelado",
+    "cancelledOn": "Cancelado el",
+    "reason": "Motivo",
+    "charged": "Cobrado",
+    "yes": "Sí",
+    "no": "No",
+    "footer": "Este recibo fue generado automáticamente. Si tiene preguntas, contacte {email}."
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "loading": "Cargando...",
+    "yes": "Sí",
+    "no": "No",
+    "close": "Cerrar",
+    "confirm": "Confirmar"
+  }
+}
+

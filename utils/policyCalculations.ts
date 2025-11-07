@@ -20,20 +20,78 @@ export interface CancellationResult {
 /**
  * Calculate cancellation charges based on policy and appointment timing
  */
+// Helper function to calculate hours excluding Sundays
+const calculateHoursExcludingSundays = (startDate: Date, endDate: Date): number => {
+  let totalHours = 0
+  let currentDate = new Date(startDate)
+  
+  while (currentDate < endDate) {
+    const dayOfWeek = currentDate.getDay() // 0 = Sunday, 1 = Monday, etc.
+    
+    // Skip Sundays
+    if (dayOfWeek === 0) {
+      // Move to next day (Monday) at 00:00
+      currentDate.setDate(currentDate.getDate() + 1)
+      currentDate.setHours(0, 0, 0, 0)
+      continue
+    }
+    
+    // Calculate hours until end of day or endDate, whichever comes first
+    const endOfDay = new Date(currentDate)
+    endOfDay.setHours(23, 59, 59, 999)
+    const effectiveEnd = endDate < endOfDay ? endDate : endOfDay
+    
+    const hoursInThisPeriod = (effectiveEnd.getTime() - currentDate.getTime()) / (1000 * 60 * 60)
+    totalHours += hoursInThisPeriod
+    
+    // Move to next day at 00:00
+    currentDate.setDate(currentDate.getDate() + 1)
+    currentDate.setHours(0, 0, 0, 0)
+  }
+  
+  return Math.floor(totalHours)
+}
+
 export const calculateCancellationCharges = (
   policy: PolicyWithRules,
   appointmentData: AppointmentData,
   cancellationDate: Date = new Date()
 ): CancellationResult => {
   const appointmentDate = new Date(appointmentData.start_time)
-  const hoursBeforeAppointment = Math.floor(
-    (appointmentDate.getTime() - cancellationDate.getTime()) / (1000 * 60 * 60)
-  )
+  
+  // Check if any rule has exclude_sundays enabled
+  const hasExcludeSundays = policy.rules.some(rule => (rule as any).exclude_sundays === true)
+  
+  let hoursBeforeAppointment: number
+  if (hasExcludeSundays) {
+    // Use calculation that excludes Sundays
+    hoursBeforeAppointment = calculateHoursExcludingSundays(cancellationDate, appointmentDate)
+  } else {
+    // Standard calculation
+    hoursBeforeAppointment = Math.floor(
+      (appointmentDate.getTime() - cancellationDate.getTime()) / (1000 * 60 * 60)
+    )
+  }
 
-  // Find the applicable rule (first rule where hours_before_appointment <= hoursBeforeAppointment)
-  const applicableRule = policy.rules.find(rule => 
-    hoursBeforeAppointment >= rule.hours_before_appointment
-  ) || policy.rules[policy.rules.length - 1] // Fallback to last rule
+  // Find the applicable rule based on comparison_type
+  // For 'more_than': rule applies if hoursBeforeAppointment >= rule.hours_before_appointment
+  // For 'less_than': rule applies if hoursBeforeAppointment <= rule.hours_before_appointment
+  // If rule has exclude_sundays, we need to recalculate hours for that specific rule
+  const applicableRule = policy.rules.find(rule => {
+    let ruleHours = hoursBeforeAppointment
+    
+    // If this specific rule excludes Sundays, recalculate for this rule
+    if ((rule as any).exclude_sundays && !hasExcludeSundays) {
+      ruleHours = calculateHoursExcludingSundays(cancellationDate, appointmentDate)
+    }
+    
+    const comparisonType = rule.comparison_type || 'more_than' // Default to 'more_than' for backward compatibility
+    if (comparisonType === 'more_than') {
+      return ruleHours >= rule.hours_before_appointment
+    } else {
+      return ruleHours <= rule.hours_before_appointment
+    }
+  }) || policy.rules[policy.rules.length - 1] // Fallback to last rule
 
   const calculation: CancellationCalculation = {
     applicableRule,

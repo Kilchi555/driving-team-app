@@ -229,15 +229,21 @@ const loadExternalCalendars = async () => {
       return
     }
 
+    console.log('🔍 Loading calendars for staff_id:', userData.id)
+
     const { data: calendars, error } = await supabase
       .from('external_calendars')
       .select('*')
       .eq('staff_id', userData.id)
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error loading calendars:', error)
+      throw error
+    }
+    
     externalCalendars.value = calendars || []
-    console.log('✅ Loaded calendars:', calendars?.length || 0)
+    console.log('✅ Loaded calendars:', calendars?.length || 0, calendars)
   } catch (err: any) {
     console.error('Error loading external calendars:', err)
     error.value = 'Fehler beim Laden der Kalender-Verbindungen'

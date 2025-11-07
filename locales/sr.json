@@ -1,0 +1,57 @@
+{
+  "eventType": {
+    "lesson": "Лекција вожње",
+    "theory": "Теоријска лекција",
+    "exam": "Испит вожње",
+    "WarmUp": "Загревање"
+  },
+  "status": {
+    "scheduled": "Заказано",
+    "pending_confirmation": "Потврда на чекању",
+    "confirmed": "Потврђено",
+    "cancelled": "Отказано",
+    "completed": "Завршено",
+    "pending": "На чекању",
+    "in_progress": "У току",
+    "no_show": "Није се појавио"
+  },
+  "receipt": {
+    "title": "Потврда о плаћању",
+    "date": "Датум потврде",
+    "customer": "Купац",
+    "paymentInfo": "Информације о плаћању",
+    "paymentId": "ID плаћања",
+    "paymentMethod": "Начин плаћања",
+    "status": "Статус",
+    "transactionId": "ID трансакције",
+    "appointmentDetails": "Детаљи термина",
+    "costBreakdown": "Преглед трошкова",
+    "baseAmount": "Основни износ",
+    "adminFee": "Административна накнада",
+    "products": "Производи",
+    "discount": "Попуст",
+    "totalAmount": "Укупан износ",
+    "cancelled": "Отказано",
+    "cancelledOn": "Отказано дана",
+    "reason": "Разлог",
+    "charged": "Наплаћено",
+    "yes": "Да",
+    "no": "Не",
+    "footer": "Овај рачун је аутоматски генерисан. За питања контактирајте {email}."
+  },
+  "common": {
+    "save": "Сачувај",
+    "cancel": "Одустани",
+    "delete": "Обриши",
+    "edit": "Уреди",
+    "back": "Назад",
+    "next": "Следеће",
+    "previous": "Претходно",
+    "loading": "Учитавање...",
+    "yes": "Да",
+    "no": "Не",
+    "close": "Затвори",
+    "confirm": "Потврди"
+  }
+}
+

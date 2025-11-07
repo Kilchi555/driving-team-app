@@ -177,20 +177,52 @@ export const calculateOfflinePrice = (categoryCode: string, durationMinutes: num
 const getEventTypeByCode = async (code: string, tenantId: string) => {
   try {
     const supabase = getSupabase()
-    const { data, error } = await supabase
+    
+    // 1. Zuerst in event_types suchen
+    const { data: eventTypeData, error: eventTypeError } = await supabase
       .from('event_types')
       .select('code, name, default_price_rappen, default_fee_rappen, require_payment')
       .eq('code', code)
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
     
-    if (error) {
-      console.error('Error loading event type:', error)
-      return null
+    if (!eventTypeError && eventTypeData) {
+      return eventTypeData
     }
     
-    return data
+    // 2. Fallback: In categories suchen, wenn event_type nicht gefunden wurde
+    console.log(`⚠️ Event type "${code}" not found in event_types, checking categories table...`)
+    const { data: categoryData, error: categoryError } = await supabase
+      .from('categories')
+      .select('code, name')
+      .eq('code', code)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .maybeSingle()
+    
+    if (!categoryError && categoryData) {
+      console.log(`✅ Found category "${code}" in categories table, using as fallback`)
+      // Konvertiere category zu event_type Format
+      // Categories haben keine default_price_rappen/default_fee_rappen, daher null
+      // Das Pricing wird dann über pricing_rules oder Staff-Preise berechnet
+      return {
+        code: categoryData.code,
+        name: categoryData.name,
+        default_price_rappen: null,
+        default_fee_rappen: null,
+        require_payment: true // Categories sind normalerweise kostenpflichtig
+      }
+    }
+    
+    if (eventTypeError) {
+      console.error('Error loading event type:', eventTypeError)
+    }
+    if (categoryError) {
+      console.error('Error loading category (fallback):', categoryError)
+    }
+    
+    return null
   } catch (err) {
     console.error('Error in getEventTypeByCode:', err)
     return null
@@ -488,13 +520,23 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       
       // ✅ Filtere nach Kategorie in den metadata
       const paymentsWithAdminFee = data?.filter(payment => {
+        let metadataObj: any = {}
         try {
-          const metadata = payment.metadata ? JSON.parse(payment.metadata) : {}
-          return metadata.category === categoryCode
-        } catch (e) {
-          console.warn('⚠️ Could not parse payment metadata:', payment.metadata)
-          return false
+          if (payment.metadata == null) {
+            metadataObj = {}
+          } else if (typeof payment.metadata === 'string') {
+            metadataObj = JSON.parse(payment.metadata)
+          } else if (typeof payment.metadata === 'object') {
+            metadataObj = payment.metadata
+          } else {
+            metadataObj = {}
+          }
+        } catch (_e) {
+          // Nur String-Parsing-Fehler melden, Objekte nicht
+          console.warn('⚠️ Could not parse payment metadata string')
+          metadataObj = {}
         }
+        return metadataObj?.category === categoryCode
       }) || []
       
       const hasPaid = paymentsWithAdminFee.length > 0
@@ -676,23 +718,44 @@ const roundToNearestFranken = (rappen: number): number => {
     return result
   }
   
+  // ✅ Prüfe dynamisch, ob categoryCode eine gültige Fahrkategorie ist (aus DB)
+  let actualTenantId = tenantId
+  if (!actualTenantId && userId) {
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('id', userId)
+      .single()
+    actualTenantId = userProfile?.tenant_id
+  }
+  
+  // Prüfe ob categoryCode in categories Tabelle existiert
+  let isDrivingCategory = validDrivingCategories.includes(categoryCode)
+  if (!isDrivingCategory && actualTenantId) {
+    try {
+      const { data: categoryCheck } = await supabase
+        .from('categories')
+        .select('code')
+        .eq('code', categoryCode)
+        .eq('tenant_id', actualTenantId)
+        .eq('is_active', true)
+        .maybeSingle()
+      
+      if (categoryCheck) {
+        isDrivingCategory = true
+        console.log(`✅ Category "${categoryCode}" found in categories table, treating as driving category`)
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not check if category exists in DB:', err)
+    }
+  }
+  
   // ✅ Nicht-Fahrkategorien: Event-Type-basierte Preisberechnung
-  if (!validDrivingCategories.includes(categoryCode)) {
+  if (!isDrivingCategory) {
     console.log(`🔄 Using event-type-based pricing for: ${categoryCode}`)
     
-    // Tenant-ID ermitteln falls nicht übergeben
-    let actualTenantId = tenantId
-    if (!actualTenantId && userId) {
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', userId)
-        .single()
-      actualTenantId = userProfile?.tenant_id
-    }
-    
     // Lade Event-Type für Preisberechnung
-    const eventType = await getEventTypeByCode(categoryCode, actualTenantId)
+    const eventType = await getEventTypeByCode(categoryCode, actualTenantId!)
     if (!eventType || !eventType.require_payment) {
       console.log(`🚫 Event type ${categoryCode} does not require payment`)
       return {

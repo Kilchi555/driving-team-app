@@ -1,0 +1,47 @@
+-- ⚠️ WICHTIG: Storage Bucket manuell erstellen
+-- 
+-- Storage Buckets können NICHT per SQL erstellt werden!
+-- Bitte folge diesen Schritten im Supabase Dashboard:
+
+-- 📍 SCHRITT 1: Bucket erstellen
+-- 1. Öffne: https://supabase.com/dashboard/project/unyjaetebnaexaflpyoc/storage/buckets
+-- 2. Klicke auf "New bucket" (oder "Erstellen")
+-- 3. Name: evaluation-content
+-- 4. ✅ Setze "Public bucket" auf AKTIVIERT (wichtig!)
+-- 5. (Optional) File size limit: 5242880 (5MB)
+-- 6. (Optional) Allowed MIME types: image/jpeg, image/png, image/gif, image/webp
+-- 7. Klicke auf "Create bucket"
+
+-- 📍 SCHRITT 2: Policies konfigurieren
+-- Nach dem Erstellen des Buckets:
+-- 
+-- OPTION A: Automatisch per SQL (empfohlen)
+-- Führe die Datei "create_evaluation_content_storage_policies.sql" im SQL Editor aus
+-- Das erstellt alle notwendigen Policies automatisch.
+--
+-- OPTION B: Manuell im Dashboard
+-- 1. Gehe zu Storage -> Policies -> evaluation-content
+-- 2. Stelle sicher, dass folgende Policies existieren:
+--
+--    Policy 1: "Public Access" (für SELECT/READ)
+--    - Operation: SELECT
+--    - Target roles: public
+--    - Policy definition: (bucket_id = 'evaluation-content'::text)
+--
+--    Policy 2: "Authenticated Upload" (für INSERT/UPLOAD)
+--    - Operation: INSERT
+--    - Target roles: authenticated
+--    - Policy definition: (bucket_id = 'evaluation-content'::text AND auth.role() = 'authenticated')
+--
+--    Policy 3: "Authenticated Update" (für UPDATE)
+--    - Operation: UPDATE
+--    - Target roles: authenticated
+--    - Policy definition: (bucket_id = 'evaluation-content'::text AND auth.role() = 'authenticated')
+--
+--    Policy 4: "Authenticated Delete" (für DELETE)
+--    - Operation: DELETE
+--    - Target roles: authenticated
+--    - Policy definition: (bucket_id = 'evaluation-content'::text AND auth.role() = 'authenticated')
+
+-- ✅ Fertig! Der Bucket sollte nun funktionieren.
+

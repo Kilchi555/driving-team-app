@@ -375,7 +375,7 @@ import CancellationPoliciesManager from '~/components/admin/CancellationPolicies
 // Meta
 definePageMeta({
   layout: 'admin',
-  middleware: 'features'
+  middleware: 'admin'
 })
 
 // Composables
@@ -393,7 +393,8 @@ const {
   error: reasonsError, 
   fetchAllCancellationReasons,
   createCancellationReason,
-  updateCancellationReason
+  updateCancellationReason,
+  deleteCancellationReason
 } = useCancellationReasons()
 
 // Computed: Sortiere Gründe nach Typ (Schüler zuerst, dann Fahrlehrer)

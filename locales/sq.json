@@ -1,0 +1,57 @@
+{
+  "eventType": {
+    "lesson": "Mësim për vozitje",
+    "theory": "Mësim teorik",
+    "exam": "Provim për vozitje",
+    "WarmUp": "Ngrohje"
+  },
+  "status": {
+    "scheduled": "E planifikuar",
+    "pending_confirmation": "Konfirmim në pritje",
+    "confirmed": "E konfirmuar",
+    "cancelled": "E anuluar",
+    "completed": "E përfunduar",
+    "pending": "Në pritje",
+    "in_progress": "Në proces",
+    "no_show": "Nuk u paraqit"
+  },
+  "receipt": {
+    "title": "Faturë pagese",
+    "date": "Data e faturës",
+    "customer": "Klienti",
+    "paymentInfo": "Informacione pagese",
+    "paymentId": "ID e pagesës",
+    "paymentMethod": "Metoda e pagesës",
+    "status": "Statusi",
+    "transactionId": "ID e transaksionit",
+    "appointmentDetails": "Detajet e takimit",
+    "costBreakdown": "Zbërthim kostoje",
+    "baseAmount": "Shuma bazë",
+    "adminFee": "Tarifë administrative",
+    "products": "Produktet",
+    "discount": "Zbritje",
+    "totalAmount": "Shuma totale",
+    "cancelled": "E anuluar",
+    "cancelledOn": "E anuluar më",
+    "reason": "Arsye",
+    "charged": "E paguar",
+    "yes": "Po",
+    "no": "Jo",
+    "footer": "Kjo faturë është krijuar automatikisht. Për pyetje, kontaktoni {email}."
+  },
+  "common": {
+    "save": "Ruaj",
+    "cancel": "Anulo",
+    "delete": "Fshi",
+    "edit": "Redakto",
+    "back": "Kthehu",
+    "next": "Tjetra",
+    "previous": "E mëparshme",
+    "loading": "Duke ngarkuar...",
+    "yes": "Po",
+    "no": "Jo",
+    "close": "Mbyll",
+    "confirm": "Konfirmo"
+  }
+}
+

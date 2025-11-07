@@ -260,7 +260,7 @@
 // Page meta
 definePageMeta({
   layout: 'admin',
-  middleware: 'features'
+  middleware: 'admin'
 })
 
 import { ref, computed, onMounted } from 'vue'

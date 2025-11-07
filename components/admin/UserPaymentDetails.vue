@@ -919,21 +919,10 @@ v-if="(appointment.discount_amount || 0) > 0"
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <span v-if="appointment.is_paid" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                      </svg>
-                      Bezahlt
-                    </span>
-                    <span v-else class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                      </svg>
-                      Offen
-                    </span>
-                    <!-- Zahlungsstatus aus payments -->
+                    <!-- Einheitlicher Badge: payment_status hat Priorität, sonst is_paid -->
                     <span
-                      class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                      v-if="appointment.payment_status"
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                       :class="[
                         appointment.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
                         appointment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -941,7 +930,47 @@ v-if="(appointment.discount_amount || 0) > 0"
                         'bg-gray-100 text-gray-800'
                       ]"
                     >
-                      {{ appointment.payment_status || 'unknown' }}
+                      <svg 
+                        v-if="appointment.payment_status === 'completed'" 
+                        class="w-3 h-3 mr-1" 
+                        fill="currentColor" 
+                        viewBox="0 0 20 20"
+                      >
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                      </svg>
+                      <svg 
+                        v-else-if="appointment.payment_status === 'pending' || appointment.payment_status === 'failed'" 
+                        class="w-3 h-3 mr-1" 
+                        fill="currentColor" 
+                        viewBox="0 0 20 20"
+                      >
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                      </svg>
+                      {{
+                        appointment.payment_status === 'completed' ? 'Bezahlt' :
+                        appointment.payment_status === 'pending' ? 'Ausstehend' :
+                        appointment.payment_status === 'failed' ? 'Fehlgeschlagen' :
+                        appointment.payment_status
+                      }}
+                    </span>
+                    <!-- Fallback auf is_paid wenn kein payment_status vorhanden -->
+                    <span 
+                      v-else-if="appointment.is_paid" 
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                    >
+                      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                      </svg>
+                      Bezahlt
+                    </span>
+                    <span 
+                      v-else 
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                    >
+                      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                      </svg>
+                      Offen
                     </span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -1411,24 +1440,51 @@ const loadUserAppointments = async () => {
     let allDiscounts: any[] = []
     
     if (appointmentIds.length > 0) {
-      // Load all products for all appointments in one query
-      const { data: productsData, error: productsError } = await supabase
-        .from('appointment_products')
+      // ✅ Lade Produkte genau wie in useProductSelection.ts - mit verschachtelter Relation
+      // Lade product_sales mit product_sale_items und products für alle appointments
+      const { data: productSalesData, error: productSalesError } = await supabase
+        .from('product_sales')
         .select(`
-          appointment_id,
           id,
-          quantity,
-          unit_price_rappen,
-          total_price_rappen,
-          products (
-            name,
-            description
+          appointment_id,
+          product_sale_items (
+            id,
+            quantity,
+            unit_price_rappen,
+            total_price_rappen,
+            products (
+              id,
+              name,
+              description
+            )
           )
         `)
         .in('appointment_id', appointmentIds)
       
-      if (!productsError && productsData) {
-        allProducts = productsData
+      if (!productSalesError && productSalesData) {
+        // Verarbeite alle product_sales und sammle die Produkte
+        productSalesData.forEach((sale: any) => {
+          if (sale.product_sale_items && sale.product_sale_items.length > 0) {
+            sale.product_sale_items.forEach((item: any) => {
+              const productData = item.products
+              const productName = productData?.name || 'Unbekanntes Produkt'
+              
+              allProducts.push({
+                appointment_id: sale.appointment_id,
+                id: item.id,
+                quantity: item.quantity,
+                unit_price_rappen: item.unit_price_rappen,
+                total_price_rappen: item.total_price_rappen,
+                product_id: productData?.id,
+                products: { name: productName }
+              })
+            })
+          }
+        })
+        
+        console.log('✅ Loaded products from product_sales with nested relations:', allProducts.length, 'items')
+      } else if (productSalesError) {
+        console.warn('⚠️ Error loading product_sales:', productSalesError)
       }
 
       // Load all discounts for all appointments in one query
@@ -1473,23 +1529,95 @@ const loadUserAppointments = async () => {
       let products = undefined
       if (hasProducts) {
         const appointmentProducts = allProducts.filter(p => p.appointment_id === appointment.id)
+        console.log('🔍 Debug - appointmentProducts for appointment', appointment.id, ':', appointmentProducts)
+        
         if (appointmentProducts.length > 0) {
-          products = appointmentProducts.map(ap => ({
-            name: (ap.products as any)?.name || 'Unbekanntes Produkt',
-            price: (ap.total_price_rappen || 0) / 100,
-            quantity: ap.quantity || 1,
-            total_price: (ap.total_price_rappen || 0) / 100
-          }))
-        } else {
-          // Fallback wenn Produkt-Details nicht geladen werden können
-          products = [
-            { 
-              name: 'Zusatzprodukt', 
-              price: productsPrice, 
-              quantity: 1,
-              total_price: productsPrice
+          products = appointmentProducts.map(ap => {
+            // Handle both single object and array cases for products relation
+            const productData = Array.isArray(ap.products) ? ap.products[0] : ap.products
+            const productName = 
+              productData?.name || 
+              (typeof productData === 'object' && productData !== null ? (productData as any)?.name : null) ||
+              'Unbekanntes Produkt'
+            
+            console.log('🔍 Debug - Product data:', {
+              ap,
+              products: ap.products,
+              productData,
+              productName,
+              quantity: ap.quantity,
+              total_price_rappen: ap.total_price_rappen
+            })
+            
+            return {
+              name: productName,
+              price: (ap.total_price_rappen || 0) / 100,
+              quantity: ap.quantity || 1,
+              total_price: (ap.total_price_rappen || 0) / 100
             }
-          ]
+          }).filter(p => p.name !== 'Unbekanntes Produkt') // Filtere ungültige Produkte heraus
+        } else {
+          console.warn('⚠️ No products found in batch load for appointment', appointment.id, 'but hasProducts is true')
+          // Fallback: Versuche Produktnamen direkt zu laden
+            // Schritt 1: Finde product_sales für dieses appointment
+            const { data: fallbackSales, error: fallbackSalesError } = await supabase
+              .from('product_sales')
+              .select('id')
+              .eq('appointment_id', appointment.id)
+          
+          if (!fallbackSalesError && fallbackSales && fallbackSales.length > 0) {
+            const fallbackSaleIds = fallbackSales.map(s => s.id)
+            
+            // Schritt 2: Lade product_sale_items
+            const { data: fallbackItems, error: fallbackItemsError } = await supabase
+              .from('product_sale_items')
+              .select('id, product_sale_id, product_id, quantity, unit_price_rappen, total_price_rappen')
+              .in('product_sale_id', fallbackSaleIds)
+            
+            if (!fallbackItemsError && fallbackItems && fallbackItems.length > 0) {
+              // Schritt 3: Lade Produktnamen
+              const fallbackProductIds = fallbackItems.map((item: any) => item.product_id).filter(Boolean)
+              let fallbackProductNamesMap: Record<string, string> = {}
+              
+              if (fallbackProductIds.length > 0) {
+                const { data: fallbackProducts, error: fallbackProductsError } = await supabase
+                  .from('products')
+                  .select('id, name')
+                  .in('id', fallbackProductIds)
+                
+                if (!fallbackProductsError && fallbackProducts) {
+                  fallbackProducts.forEach(p => {
+                    fallbackProductNamesMap[p.id] = p.name
+                  })
+                }
+              }
+              
+              // Schritt 4: Erstelle products Array
+              products = fallbackItems.map((item: any) => ({
+                name: fallbackProductNamesMap[item.product_id] || 'Unbekanntes Produkt',
+                price: (item.total_price_rappen || 0) / 100,
+                quantity: item.quantity || 1,
+                total_price: (item.total_price_rappen || 0) / 100
+              })).filter(p => p.name !== 'Unbekanntes Produkt')
+              
+              if (products.length > 0) {
+                console.log('✅ Loaded products from fallback query:', products)
+              }
+            }
+          }
+          
+          // Nur als letzter Fallback "Zusatzprodukt" verwenden
+          if (!products || products.length === 0) {
+            console.warn('⚠️ Using fallback "Zusatzprodukt" for appointment', appointment.id)
+            products = [
+              { 
+                name: 'Zusatzprodukt', 
+                price: productsPrice, 
+                quantity: 1,
+                total_price: productsPrice
+              }
+            ]
+          }
         }
       }
       

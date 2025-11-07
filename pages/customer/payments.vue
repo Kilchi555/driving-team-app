@@ -138,6 +138,24 @@
           </div>
         </div>
 
+        <!-- Download All Receipts Button -->
+        <div v-if="paidPayments.length > 0" class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+          <button
+            @click="downloadAllReceipts"
+            :disabled="isProcessingReceipt"
+            class="w-full sm:w-auto bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base flex items-center justify-center space-x-2"
+          >
+            <svg v-if="!isProcessingReceipt" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <svg v-else class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>{{ isProcessingReceipt ? 'Wird erstellt...' : 'Alle Quittungen herunterladen' }}</span>
+          </button>
+        </div>
+
         <!-- Payment Items -->
         <div v-if="filteredPayments.length === 0" class="px-4 sm:px-6 py-8 sm:py-12 text-center">
           <div class="text-gray-500">
@@ -161,22 +179,22 @@
                   <span :class="getStatusClass(payment.payment_status)" 
                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit">
                     {{ getStatusLabel(payment.payment_status) }}
+                    <span v-if="payment.payment_status === 'completed' && payment.paid_at" class="ml-2 text-xs font-normal">
+                      am {{ formatDateTime(payment.paid_at) }}
+                    </span>
                   </span>
-                </div>
-                
-                <!-- Date and Time -->
-                <div class="flex items-center space-x-4 text-sm text-gray-600 mb-2">
-                  <span>{{ formatDateTime(payment.created_at) }}</span>
                 </div>
               </div>
               
               <!-- Payment Amount -->
-              <div class="text-left sm:text-right sm:ml-6">
-                <div class="text-xl sm:text-2xl font-bold text-gray-900">
-                  CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}
-                </div>
-                <div class="text-xs sm:text-sm text-gray-500">
-                  {{ getPaymentMethodLabel(payment.payment_method) }}
+              <div class="text-left sm:ml-6">
+                <div class="flex items-center justify-between sm:justify-end space-x-4">
+                  <div class="text-xl sm:text-2xl font-bold text-gray-900">
+                    CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}
+                  </div>
+                  <div class="text-xs sm:text-sm text-gray-500">
+                    {{ getPaymentMethodLabel(payment.payment_method) }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -184,9 +202,16 @@
             <!-- Payment Details -->
             <div class="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4">
               <div class="space-y-2 text-xs sm:text-sm">
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Fahrlektion</span>
-                  <span class="font-medium text-gray-600">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <div class="text-gray-900 font-medium mb-1">
+                      {{ getAppointmentTitle(payment) }}
+                    </div>
+                    <div class="text-gray-500 text-xs">
+                      {{ getAppointmentDateTime(payment) }}
+                    </div>
+                  </div>
+                  <span class="font-medium text-gray-600 ml-4">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
                 </div>
                 
                 <div v-if="payment.admin_fee_rappen > 0" class="flex justify-between">
@@ -203,11 +228,6 @@
                   <span class="text-gray-600">Rabatt</span>
                   <span class="font-medium text-green-600">- CHF {{ (payment.discount_amount_rappen / 100).toFixed(2) }}</span>
                 </div>
-                
-                <div class="border-t border-gray-200 text-gray-900 pt-2 flex justify-between font-semibold">
-                  <span>Gesamtbetrag</span>
-                  <span>CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}</span>
-                </div>
               </div>
             </div>
             
@@ -218,12 +238,6 @@
                       :disabled="isProcessingPayment"
                       class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
                 {{ isProcessingPayment ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
-              </button>
-              
-              <button v-if="payment.payment_status === 'completed'"
-                      @click="downloadReceipt(payment)"
-                      class="bg-gray-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm sm:text-base">
-                Quittung herunterladen
               </button>
             </div>
           </div>
@@ -239,7 +253,6 @@ import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
-import { definePageMeta } from '#imports'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 
 
@@ -270,6 +283,7 @@ const {
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const isProcessingPayment = ref(false)
+const isProcessingReceipt = ref(false)
 const statusFilter = ref('all')
 const methodFilter = ref('all')
 const showDetailsModal = ref(false)
@@ -427,22 +441,49 @@ const payIndividual = async (payment: any) => {
   }
 }
 
-const downloadReceipt = async (payment: any) => {
+const downloadAllReceipts = async () => {
+  if (paidPayments.value.length === 0) {
+    alert('Keine bezahlten Zahlungen gefunden.')
+    return
+  }
+
+  isProcessingReceipt.value = true
+  
   try {
-    // Generate receipt download URL
-    const receiptUrl = `/api/payments/${payment.id}/receipt`
+    const paymentIds = paidPayments.value.map(p => p.id)
+    const res = await fetch('/api/payments/receipt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentIds })
+    })
     
-    // Create download link
+    if (!res.ok) {
+      const msg = await res.text()
+      throw new Error(`Serverfehler: ${res.status} ${msg}`)
+    }
+    
+    const contentType = res.headers.get('content-type') || ''
+    if (!contentType.includes('application/pdf')) {
+      const text = await res.text()
+      throw new Error(text || 'Unerwartetes Antwortformat')
+    }
+    
+    const blob = await res.blob()
+    if (!blob || blob.size === 0) throw new Error('Leere PDF erhalten')
+    
+    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.href = receiptUrl
-    link.download = `Quittung_${payment.invoice_number || payment.id}.pdf`
+    link.href = url
+    link.download = `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    
+    URL.revokeObjectURL(url)
   } catch (err: any) {
-    console.error('❌ Error downloading receipt:', err)
-    alert('Fehler beim Herunterladen der Quittung. Bitte versuchen Sie es erneut.')
+    console.error('❌ Error downloading receipts:', err)
+    alert('Fehler beim Erstellen der Quittungen. Bitte versuchen Sie es erneut.')
+  } finally {
+    isProcessingReceipt.value = false
   }
 }
 
@@ -516,6 +557,40 @@ const formatDate = (dateString: string): string => {
     month: '2-digit',
     year: 'numeric'
   })
+}
+
+const getAppointmentTitle = (payment: any): string => {
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  if (!appointment) return 'Fahrlektion'
+  
+  const staff = Array.isArray(appointment.staff) ? appointment.staff[0] : appointment.staff
+  const staffFirstName = staff?.first_name || ''
+  
+  if (staffFirstName) {
+    return `Fahrlektion mit ${staffFirstName}`
+  }
+  return 'Fahrlektion'
+}
+
+const getAppointmentDateTime = (payment: any): string => {
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  if (!appointment || !appointment.start_time) return ''
+  
+  const startDate = new Date(appointment.start_time)
+  const duration = appointment.duration_minutes || 45
+  
+  const dateStr = startDate.toLocaleDateString('de-CH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+  
+  const timeStr = startDate.toLocaleTimeString('de-CH', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  
+  return `${dateStr}, ${timeStr} Uhr • ${duration} Min.`
 }
 
 // Watch for user role changes

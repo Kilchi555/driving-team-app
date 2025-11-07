@@ -422,7 +422,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { definePageMeta, navigateTo } from '#imports'
+import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'
 import { useAuthStore } from '~/stores/auth'
@@ -430,7 +430,7 @@ import ProductSaleModal from '~/components/ProductSaleModal.vue'
 
 definePageMeta({
   layout: 'admin',
-  middleware: 'features'
+  middleware: 'admin'
 })
 
 // Types

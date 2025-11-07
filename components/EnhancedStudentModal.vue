@@ -364,10 +364,12 @@
                   'rounded-lg p-4 border transition-all',
                   lesson.status === 'cancelled' 
                     ? 'border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed' 
-                    : 'border-gray-200 cursor-pointer hover:shadow-md'
+                    : canEvaluateLesson(lesson)
+                      ? 'border-gray-200 cursor-pointer hover:shadow-md'
+                      : 'border-gray-200 opacity-75 cursor-not-allowed'
                 ]"
                 :style="lesson.status !== 'cancelled' ? { backgroundColor: primaryColor + '15' } : {}"
-                @click="lesson.status !== 'cancelled' ? openEvaluationModal(lesson) : null"
+                @click="lesson.status !== 'cancelled' && canEvaluateLesson(lesson) ? openEvaluationModal(lesson) : null"
               >
                 <div class="flex justify-between items-start mb-2">
                   <div>
@@ -440,7 +442,20 @@
                         <span class="font-medium text-gray-700">
                           {{ evaluation.evaluation_criteria?.name || 'Bewertung' }}
                         </span>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">
+                        <span 
+                          v-if="getRatingLabel(evaluation.criteria_rating)"
+                          class="text-xs px-2 py-0.5 rounded-full font-medium"
+                          :style="{
+                            backgroundColor: getRatingColor(evaluation.criteria_rating) || '#3B82F6',
+                            color: '#FFFFFF'
+                          }"
+                        >
+                          {{ getRatingLabel(evaluation.criteria_rating) }}
+                        </span>
+                        <span 
+                          v-else
+                          class="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-800"
+                        >
                           {{ evaluation.criteria_rating }}/6
                         </span>
                       </div>
@@ -1213,6 +1228,7 @@ const paymentsFilterMode = ref<'alle' | 'ausstehend'>('alle') // Filter für Zah
 const lessonsError = ref<string | null>(null)
 const paymentsError = ref<string | null>(null)
 const examResultsError = ref<string | null>(null)
+const ratingPointsMap = ref<Record<number, { color: string; label: string }>>({}) // Map für Rating-Punkte aus DB
 
 // Evaluation Modal State
 const showEvaluationModal = ref(false)
@@ -1469,8 +1485,30 @@ const closeModal = () => {
   emit('close')
 }
 
+// Check if current user can evaluate this lesson
+const canEvaluateLesson = (lesson: any): boolean => {
+  // Admins können alle Lektionen bewerten
+  if (props.currentUser?.role === 'admin') {
+    return true
+  }
+  
+  // Staff können nur ihre eigenen Lektionen bewerten
+  if (props.currentUser?.role === 'staff') {
+    return lesson.staff_id === props.currentUser?.id
+  }
+  
+  // Andere Rollen können nicht bewerten
+  return false
+}
+
 // Evaluation Modal Functions
 const openEvaluationModal = (lesson: any) => {
+  // Double check - sollte nicht passieren wegen disabled state, aber sicherheitshalber
+  if (!canEvaluateLesson(lesson)) {
+    console.warn('⚠️ Cannot evaluate lesson - not own lesson or not staff/admin')
+    return
+  }
+  
   console.log('📝 Opening evaluation modal for lesson:', lesson.id)
   selectedAppointmentForEvaluation.value = lesson
   showEvaluationModal.value = true
@@ -1639,6 +1677,84 @@ const calculateAge = (birthdate: string | null | undefined): number | null => {
     age--
   }
   return age
+}
+
+// Load rating points from database
+const loadRatingPoints = async () => {
+  if (!props.selectedStudent) return
+  
+  try {
+    const supabase = getSupabase()
+    
+    // Get tenant_id from current user or selected student
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', authUser?.id)
+      .single()
+    
+    const tenantId = userProfile?.tenant_id || props.selectedStudent.tenant_id
+    
+    if (!tenantId) {
+      console.warn('⚠️ No tenant_id found for loading rating points')
+      return
+    }
+    
+    console.log('📊 Loading evaluation scale for tenant:', tenantId)
+    
+    let ratingPoints: any[] | null = null
+    
+    // Try with tenant_id first (if the column exists)
+    // The example data shows tenant_id exists
+    const { data: dataWithTenant, error: errorWithTenant } = await supabase
+      .from('evaluation_scale')
+      .select('rating, color, label')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+    
+    if (!errorWithTenant && dataWithTenant) {
+      ratingPoints = dataWithTenant
+    } else {
+      console.warn('⚠️ Error loading with tenant_id, trying without:', errorWithTenant)
+      // Fallback: try without tenant_id filter (for backwards compatibility)
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('evaluation_scale')
+        .select('rating, color, label')
+        .eq('is_active', true)
+      
+      if (fallbackError) {
+        console.error('❌ Error loading evaluation scale (fallback):', fallbackError)
+        return
+      }
+      
+      ratingPoints = fallbackData
+    }
+    
+    // Create map from rating to color and label
+    const map: Record<number, { color: string; label: string }> = {}
+    ratingPoints?.forEach(rp => {
+      map[rp.rating] = {
+        color: rp.color || '#3B82F6',
+        label: rp.label || ''
+      }
+    })
+    
+    ratingPointsMap.value = map
+    console.log('✅ Loaded rating points:', Object.keys(map).length, 'ratings')
+    
+  } catch (error: any) {
+    console.error('❌ Error in loadRatingPoints:', error)
+  }
+}
+
+// Helper functions to get rating color and label
+const getRatingColor = (rating: number): string | null => {
+  return ratingPointsMap.value[rating]?.color || null
+}
+
+const getRatingLabel = (rating: number): string | null => {
+  return ratingPointsMap.value[rating]?.label || null
 }
 
 // Load functions
@@ -2150,6 +2266,7 @@ const uploadCurrentFile = async (file: File) => {
 // Watch for student changes
 watch(() => props.selectedStudent, (newStudent) => {
   if (newStudent) {
+    loadRatingPoints() // Load rating points first
     loadLessons()
     loadExamResults()
     loadPayments()

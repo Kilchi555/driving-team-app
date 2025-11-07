@@ -9,6 +9,7 @@ export interface CancellationPolicy {
   description?: string
   is_active: boolean
   is_default: boolean
+  applies_to: 'appointments' | 'courses' // 'appointments' = einzelne Termine, 'courses' = Kurstermine
   created_at: string
   updated_at: string
   created_by?: string
@@ -18,6 +19,8 @@ export interface CancellationRule {
   id: string
   policy_id: string
   hours_before_appointment: number
+  comparison_type?: 'more_than' | 'less_than' // 'more_than' = mehr als X Stunden, 'less_than' = weniger als X Stunden
+  exclude_sundays?: boolean // If true, Sundays are excluded from time calculation
   charge_percentage: number
   credit_hours_to_instructor: boolean
   description?: string
@@ -45,7 +48,7 @@ export const useCancellationPolicies = () => {
   const error = ref<string | null>(null)
 
   // Fetch all active policies with their rules
-  const fetchPolicies = async () => {
+  const fetchPolicies = async (appliesTo?: 'appointments' | 'courses') => {
     try {
       isLoading.value = true
       error.value = null
@@ -63,14 +66,21 @@ export const useCancellationPolicies = () => {
         throw new Error('User has no tenant assigned')
       }
 
-      console.log('🔍 Cancellation Policies - Current tenant_id:', tenantId)
+      console.log('🔍 Cancellation Policies - Current tenant_id:', tenantId, 'appliesTo:', appliesTo)
 
-      // Fetch policies (nur aktive - das sollte für alle Benutzer funktionieren)
-      const { data: policiesData, error: policiesError } = await supabase
+      // Build query
+      let query = supabase
         .from('cancellation_policies')
         .select('*')
         .eq('is_active', true)
         .eq('tenant_id', tenantId) // Filter by current tenant
+      
+      // Filter by applies_to if specified
+      if (appliesTo) {
+        query = query.eq('applies_to', appliesTo)
+      }
+      
+      const { data: policiesData, error: policiesError } = await query
         .order('created_at', { ascending: false })
 
       if (policiesError) {
@@ -84,10 +94,17 @@ export const useCancellationPolicies = () => {
       const policiesWithRulesData: PolicyWithRules[] = []
       
       for (const policy of policies.value) {
-        const { data: rulesData, error: rulesError } = await supabase
+        let rulesQuery = supabase
           .from('cancellation_rules')
           .select('*')
           .eq('policy_id', policy.id)
+        
+        // Filter by tenant_id if policy has tenant_id (not a template)
+        if (policy.tenant_id) {
+          rulesQuery = rulesQuery.eq('tenant_id', policy.tenant_id)
+        }
+        
+        const { data: rulesData, error: rulesError } = await rulesQuery
           .order('hours_before_appointment', { ascending: false })
 
         if (rulesError) {
@@ -161,10 +178,17 @@ export const useCancellationPolicies = () => {
       const policiesWithRulesData: PolicyWithRules[] = []
       
       for (const policy of policies.value) {
-        const { data: rulesData, error: rulesError } = await supabase
+        let rulesQuery = supabase
           .from('cancellation_rules')
           .select('*')
           .eq('policy_id', policy.id)
+        
+        // Filter by tenant_id if policy has tenant_id (not a template)
+        if (policy.tenant_id) {
+          rulesQuery = rulesQuery.eq('tenant_id', policy.tenant_id)
+        }
+        
+        const { data: rulesData, error: rulesError } = await rulesQuery
           .order('hours_before_appointment', { ascending: false })
 
         if (rulesError) {
@@ -213,9 +237,15 @@ export const useCancellationPolicies = () => {
         throw new Error('User has no tenant assigned')
       }
 
+      // Ensure applies_to is set (default to 'appointments' for backward compatibility)
+      const policyWithAppliesTo = {
+        ...policyData,
+        applies_to: policyData.applies_to || 'appointments'
+      }
+
       const { data, error: createError } = await supabase
         .from('cancellation_policies')
-        .insert([{ ...policyData, tenant_id: tenantId }])
+        .insert([{ ...policyWithAppliesTo, tenant_id: tenantId }])
         .select()
         .single()
 
@@ -296,9 +326,22 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
+      // Get current user's tenant_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', currentUser?.id)
+        .single()
+      const tenantId = userProfile?.tenant_id
+      
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
+
       const { data, error: createError } = await supabase
         .from('cancellation_rules')
-        .insert([ruleData])
+        .insert([{ ...ruleData, tenant_id: tenantId }])
         .select()
         .single()
 
@@ -413,20 +456,77 @@ export const useCancellationPolicies = () => {
     }
   }
 
+  // Helper function to calculate hours excluding Sundays
+  const calculateHoursExcludingSundays = (startDate: Date, endDate: Date): number => {
+    let totalHours = 0
+    let currentDate = new Date(startDate)
+    
+    while (currentDate < endDate) {
+      const dayOfWeek = currentDate.getDay() // 0 = Sunday, 1 = Monday, etc.
+      
+      // Skip Sundays
+      if (dayOfWeek === 0) {
+        // Move to next day (Monday) at 00:00
+        currentDate.setDate(currentDate.getDate() + 1)
+        currentDate.setHours(0, 0, 0, 0)
+        continue
+      }
+      
+      // Calculate hours until end of day or endDate, whichever comes first
+      const endOfDay = new Date(currentDate)
+      endOfDay.setHours(23, 59, 59, 999)
+      const effectiveEnd = endDate < endOfDay ? endDate : endOfDay
+      
+      const hoursInThisPeriod = (effectiveEnd.getTime() - currentDate.getTime()) / (1000 * 60 * 60)
+      totalHours += hoursInThisPeriod
+      
+      // Move to next day at 00:00
+      currentDate.setDate(currentDate.getDate() + 1)
+      currentDate.setHours(0, 0, 0, 0)
+    }
+    
+    return Math.floor(totalHours)
+  }
+
   // Calculate cancellation charges based on policy and timing
   const calculateCancellationCharges = (
     policy: PolicyWithRules,
     appointmentDate: Date,
     cancellationDate: Date = new Date()
   ): CancellationCalculation => {
-    const hoursBeforeAppointment = Math.floor(
-      (appointmentDate.getTime() - cancellationDate.getTime()) / (1000 * 60 * 60)
-    )
+    // Check if any rule has exclude_sundays enabled
+    const hasExcludeSundays = policy.rules.some(rule => rule.exclude_sundays === true)
+    
+    let hoursBeforeAppointment: number
+    if (hasExcludeSundays) {
+      // Use calculation that excludes Sundays
+      hoursBeforeAppointment = calculateHoursExcludingSundays(cancellationDate, appointmentDate)
+    } else {
+      // Standard calculation
+      hoursBeforeAppointment = Math.floor(
+        (appointmentDate.getTime() - cancellationDate.getTime()) / (1000 * 60 * 60)
+      )
+    }
 
-    // Find the applicable rule (first rule where hours_before_appointment <= hoursBeforeAppointment)
-    const applicableRule = policy.rules.find(rule => 
-      hoursBeforeAppointment >= rule.hours_before_appointment
-    ) || policy.rules[policy.rules.length - 1] // Fallback to last rule
+    // Find the applicable rule based on comparison_type
+    // For 'more_than': rule applies if hoursBeforeAppointment >= rule.hours_before_appointment
+    // For 'less_than': rule applies if hoursBeforeAppointment <= rule.hours_before_appointment
+    // If rule has exclude_sundays, we need to recalculate hours for that specific rule
+    const applicableRule = policy.rules.find(rule => {
+      let ruleHours = hoursBeforeAppointment
+      
+      // If this specific rule excludes Sundays, recalculate for this rule
+      if (rule.exclude_sundays && !hasExcludeSundays) {
+        ruleHours = calculateHoursExcludingSundays(cancellationDate, appointmentDate)
+      }
+      
+      const comparisonType = rule.comparison_type || 'more_than' // Default to 'more_than' for backward compatibility
+      if (comparisonType === 'more_than') {
+        return ruleHours >= rule.hours_before_appointment
+      } else {
+        return ruleHours <= rule.hours_before_appointment
+      }
+    }) || policy.rules[policy.rules.length - 1] // Fallback to last rule
 
     return {
       applicableRule,

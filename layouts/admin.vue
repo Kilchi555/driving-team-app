@@ -52,6 +52,7 @@
               <NuxtLink
                 v-if="shouldShowNavLink('invoices_enabled')"
                 to="/admin/payment-overview"
+                @click.prevent="onNav('/admin/payment-overview')"
                 class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
                 :class="isActive('/admin/payment-overview') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
               >
@@ -60,6 +61,7 @@
             <NuxtLink
               v-if="shouldShowNavLink('invoices_enabled')"
               to="/admin/invoices"
+              @click.prevent="onNav('/admin/invoices')"
               class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
               :class="isActive('/admin/invoices') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
             >
@@ -75,6 +77,7 @@
             <NuxtLink
               v-if="shouldShowNavLink('cash_management_enabled')"
               to="/admin/cash-management"
+              @click.prevent="onNav('/admin/cash-management')"
               class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
               :class="isActive('/admin/cash-management') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
             >
@@ -83,6 +86,7 @@
             <NuxtLink
               v-if="shouldShowNavLink('cancellation_management_enabled')"
               to="/admin/cancellation-management"
+              @click.prevent="onNav('/admin/cancellation-management')"
               class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
               :class="isActive('/admin/cancellation-management') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
             >
@@ -91,10 +95,26 @@
             <NuxtLink
               v-if="shouldShowNavLink('staff_hours_enabled')"
               to="/admin/staff-hours"
+              @click.prevent="onNav('/admin/staff-hours')"
               class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
               :class="isActive('/admin/staff-hours') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
             >
               Stunden
+            </NuxtLink>
+            <NuxtLink
+              to="/admin/users"
+              class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
+              :class="isActive('/admin/users') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
+            >
+              Benutzer
+            </NuxtLink>
+            <NuxtLink
+              to="/admin/cron-status"
+              @click.prevent="onNav('/admin/cron-status')"
+              class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
+              :class="isActive('/admin/cron-status') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
+            >
+              Cron Status
             </NuxtLink>
               <NuxtLink
                 to="/dashboard"
@@ -228,6 +248,22 @@
               >
                 Stundenübersicht
               </NuxtLink>
+              <NuxtLink
+                to="/admin/users"
+                @click="showMobileMenu = false"
+                class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
+                :class="isActive('/admin/users') ? 'bg-black bg-opacity-30' : ''"
+              >
+                Benutzer
+              </NuxtLink>
+              <NuxtLink
+                to="/admin/cron-status"
+                @click="showMobileMenu = false; onNav('/admin/cron-status')"
+                class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
+                :class="isActive('/admin/cron-status') ? 'bg-black bg-opacity-30' : ''"
+              >
+                Cron Status
+              </NuxtLink>
                 <NuxtLink
                   to="/dashboard"
                   @click="showMobileMenu = false"
@@ -286,66 +322,71 @@
             <NuxtLink 
               v-if="shouldShowNavLink('product_sales_enabled')" 
               to="/admin/products" 
+              @click.prevent="onNav('/admin/products')"
               class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
             >
               Produkte
             </NuxtLink>
-          <NuxtLink 
-            v-if="shouldShowNavLink('data_management_enabled')" 
-            to="/admin/data-management" 
-            class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-          >
-            Datenverwaltung
-          </NuxtLink>
-          <NuxtLink 
-            v-if="shouldShowNavLink('discounts_enabled')" 
-            to="/admin/discounts" 
-            class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-          >
-            Rabatte
-          </NuxtLink>
+            <NuxtLink 
+              v-if="shouldShowNavLink('data_management_enabled')" 
+              to="/admin/data-management" 
+              @click.prevent="onNav('/admin/data-management')"
+              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
+            >
+              Datenverwaltung
+            </NuxtLink>
+            <NuxtLink 
+              v-if="shouldShowNavLink('discounts_enabled')" 
+              to="/admin/discounts" 
+              @click.prevent="onNav('/admin/discounts')"
+              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
+            >
+              Rabatte
+            </NuxtLink>
             <NuxtLink 
               v-if="shouldShowNavLink('categories_enabled')" 
               to="/admin/categories" 
+              @click.prevent="onNav('/admin/categories')"
               class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
             >
               Kategorien
             </NuxtLink>
+            <NuxtLink 
+              v-if="shouldShowNavLink('courses_enabled')" 
+              to="/admin/courses" 
+              @click.prevent="onNav('/admin/courses')"
+              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
+            >
+              Kurse
+            </NuxtLink>
+            <NuxtLink 
+              v-if="shouldShowNavLink('examiners_enabled')" 
+              to="/admin/examiners" 
+              @click.prevent="onNav('/admin/examiners')"
+              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
+            >
+              Experten
+            </NuxtLink>
+            <NuxtLink 
+              v-if="shouldShowNavLink('evaluations_enabled')" 
+              to="/admin/evaluation-system" 
+              @click.prevent="onNav('/admin/evaluation-system')"
+              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
+            >
+              Bewertungen
+            </NuxtLink>
+            <NuxtLink 
+              v-if="shouldShowNavLink('exams_enabled')" 
+              to="/admin/exam-statistics" 
+              @click.prevent="onNav('/admin/exam-statistics')"
+              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
+            >
+              Prüfungen
+            </NuxtLink>
+            <NuxtLink to="/admin/profile" @click.prevent="onNav('/admin/profile')" class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm">
+              Profil
+            </NuxtLink>
           </template>
-          <NuxtLink 
-            v-if="shouldShowNavLink('courses_enabled')" 
-            to="/admin/courses" 
-            class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-          >
-            Kurse
-          </NuxtLink>
-          <NuxtLink 
-            v-if="shouldShowNavLink('examiners_enabled')" 
-            to="/admin/examiners" 
-            class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-          >
-            Experten
-          </NuxtLink>
-          <NuxtLink to="/admin/users" class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm">
-            Benutzer
-          </NuxtLink>
-          <NuxtLink 
-            v-if="shouldShowNavLink('evaluations_enabled')" 
-            to="/admin/evaluation-system" 
-            class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-          >
-            Bewertungen
-          </NuxtLink>
-          <NuxtLink 
-            v-if="shouldShowNavLink('exams_enabled')" 
-            to="/admin/exam-statistics" 
-            class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-          >
-            Prüfungen
-          </NuxtLink>
-          <NuxtLink to="/admin/profile" class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm">
-            Profil
-          </NuxtLink>
         </div>
         
         <!-- Mobile: Dropdown Menu -->
@@ -387,7 +428,7 @@
                   <NuxtLink 
                     v-if="shouldShowNavLink('product_sales_enabled')" 
                     to="/admin/products" 
-                    @click="showFooterDropdown = false"
+                    @click.prevent="onFooterNav('/admin/products')"
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Produkte
@@ -395,7 +436,7 @@
                   <NuxtLink 
                     v-if="shouldShowNavLink('data_management_enabled')" 
                     to="/admin/data-management" 
-                    @click="showFooterDropdown = false"
+                    @click.prevent="onFooterNav('/admin/data-management')"
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Datenverwaltung
@@ -403,7 +444,7 @@
                   <NuxtLink 
                     v-if="shouldShowNavLink('discounts_enabled')" 
                     to="/admin/discounts" 
-                    @click="showFooterDropdown = false"
+                    @click.prevent="onFooterNav('/admin/discounts')"
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Rabatte
@@ -411,7 +452,7 @@
                   <NuxtLink 
                     v-if="shouldShowNavLink('categories_enabled')" 
                     to="/admin/categories" 
-                    @click="showFooterDropdown = false"
+                    @click.prevent="onFooterNav('/admin/categories')"
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Kategorien
@@ -419,7 +460,7 @@
                   <NuxtLink 
                     v-if="shouldShowNavLink('courses_enabled')" 
                     to="/admin/courses" 
-                    @click="showFooterDropdown = false"
+                    @click.prevent="onFooterNav('/admin/courses')"
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Kurse
@@ -427,14 +468,14 @@
                   <NuxtLink 
                     v-if="shouldShowNavLink('examiners_enabled')" 
                     to="/admin/examiners" 
-                    @click="showFooterDropdown = false"
+                    @click.prevent="onFooterNav('/admin/examiners')"
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Experten
                   </NuxtLink>
                   <NuxtLink 
                     to="/admin/users" 
-                    @click="showFooterDropdown = false"
+                    @click.prevent="onFooterNav('/admin/users')"
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Benutzer
@@ -442,7 +483,7 @@
                   <NuxtLink 
                     v-if="shouldShowNavLink('evaluations_enabled')" 
                     to="/admin/evaluation-system" 
-                    @click="showFooterDropdown = false"
+                    @click.prevent="onFooterNav('/admin/evaluation-system')"
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Bewertungen
@@ -450,14 +491,14 @@
                   <NuxtLink 
                     v-if="shouldShowNavLink('exams_enabled')" 
                     to="/admin/exam-statistics" 
-                    @click="showFooterDropdown = false"
+                    @click.prevent="onFooterNav('/admin/exam-statistics')"
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Prüfungen
                   </NuxtLink>
                   <NuxtLink 
                     to="/admin/profile" 
-                    @click="showFooterDropdown = false"
+                    @click.prevent="onFooterNav('/admin/profile')"
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Profil
@@ -628,31 +669,28 @@ const shouldShowNavLink = (featureKey) => {
     return false
   }
   
-  // Check if this is a driving school by looking at categories
-  const isDrivingSchool = computed(() => {
-    if (!currentUser.value?.tenant_id) return false
-    
-    // Check if tenant has driving school categories
-    const drivingSchoolCategories = ['A', 'A1', 'A35kW', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE', 'Motorboot', 'BPT']
-    // This would need to be checked against the actual categories in the database
-    // For now, we'll use a simple heuristic based on tenant name or other indicators
-    
-    // Special cases for known non-driving school tenants
-    const nonDrivingSchoolTenants = [
-      '1', // Mental Coaching (if tenant_id is stored as string)
-      '0e4d92a9-85a0-4628-b9eb-b93d3ec4acd8' // Current tenant from logs
-    ]
-    
-    return !nonDrivingSchoolTenants.includes(currentUser.value.tenant_id.toString())
-  })
-  
-  // Hide categories for non-driving schools
-  if (featureKey === 'categories_enabled') {
-    return isDrivingSchool.value
-  }
-  
-  // For other features, use feature flags with default to true
+  // For all features, use feature flags with default to true
+  // The useFeatures composable already handles business_type filtering
   return isEnabled(featureKey, true)
+}
+
+// Force navigation helper (avoids rare NuxtLink preventions/overlays)
+const onNav = async (to) => {
+  try {
+    showMobileMenu.value = false
+    await navigateTo(to)
+  } catch (e) {
+    console.error('Nav error:', e)
+  }
+}
+
+const onFooterNav = async (to) => {
+  try {
+    showFooterDropdown.value = false
+    await navigateTo(to)
+  } catch (e) {
+    console.error('Footer nav error:', e)
+  }
 }
 
 // Debug: Log when menu state changes
@@ -684,13 +722,20 @@ const handleLogout = async () => {
     await logout()
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
     
-    // Weiterleitung zur Login-Seite
-    await navigateTo('/login')
+    // Weiterleitung zur Tenant-Login-Seite (immer tenant-spezifisch)
+    const slug = currentTenantBranding.value?.slug
+    if (slug) {
+      await navigateTo(`/${slug}`)
+    } else {
+      // Fallback: generische Login-Seite
+      await navigateTo('/login')
+    }
   } catch (error) {
     console.error('❌ Logout error:', error)
     showError('Fehler', 'Fehler beim Abmelden. Bitte versuchen Sie es erneut.')
-    // Still redirect to login even if logout fails
-    await navigateTo('/login')
+    // Trotzdem weiterleiten (Tenant falls verfügbar)
+    const slug = currentTenantBranding.value?.slug
+    await navigateTo(slug ? `/${slug}` : '/login')
   }
 }
 

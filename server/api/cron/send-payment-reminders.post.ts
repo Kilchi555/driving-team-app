@@ -3,7 +3,7 @@ import { getSupabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🔔 Starting payment reminders cron job...')
+    console.log('🔔 Starting appointment confirmation reminders cron job...')
     
     const supabase = getSupabase()
     const now = new Date()
@@ -27,8 +27,11 @@ export default defineEventHandler(async (event) => {
 
     console.log(`📋 Processing ${tenants.length} tenants...`)
 
-    let totalReminders = 0
-    const results: any[] = []
+    // ✅ NUR Confirmation Reminders (Payment Reminders nicht mehr nötig - automatische Zahlung nach Bestätigung)
+    let totalConfirmationReminders = 0
+    const confirmationResults: any[] = []
+
+    console.log('📅 Processing appointment confirmation reminders...')
 
     for (const tenant of tenants) {
       try {
@@ -38,45 +41,51 @@ export default defineEventHandler(async (event) => {
 
         // Skip if reminders are not enabled
         if (!settings?.is_enabled) {
-          console.log(`⏭️ Skipping tenant ${tenant.tenant_id} - reminders disabled`)
           continue
         }
 
-        console.log(`🏢 Processing tenant ${tenant.tenant_id}...`)
-
-        // Get all pending payments for this tenant
-        const { data: payments, error: paymentsError } = await supabase
-          .from('payments')
+        // Get all pending confirmation appointments for this tenant
+        // ✅ WICHTIG: Auch Termine die bereits vorbei sind (überfällig) werden weiterhin erinnert
+        const { data: appointments, error: appointmentsError } = await supabase
+          .from('appointments')
           .select(`
             id,
             created_at,
-            last_reminder_sent_at,
-            last_reminder_stage,
-            payment_status,
+            start_time,
+            end_time,
+            confirmation_token,
+            status,
+            metadata,
             users!inner (
               tenant_id
             )
           `)
-          .eq('payment_status', 'pending')
+          .eq('status', 'pending_confirmation')
           .eq('users.tenant_id', tenant.tenant_id)
+          .not('confirmation_token', 'is', null)
+          // ✅ KEIN Filter nach start_time - auch vergangene Termine werden weiterhin erinnert
 
-        if (paymentsError) {
-          console.error(`❌ Error loading payments for tenant ${tenant.tenant_id}:`, paymentsError)
+        if (appointmentsError) {
+          console.error(`❌ Error loading appointments for tenant ${tenant.tenant_id}:`, appointmentsError)
           continue
         }
 
-        if (!payments || payments.length === 0) {
-          console.log(`ℹ️ No pending payments for tenant ${tenant.tenant_id}`)
+        if (!appointments || appointments.length === 0) {
+          console.log(`ℹ️ No pending confirmation appointments for tenant ${tenant.tenant_id}`)
           continue
         }
 
-        console.log(`💰 Found ${payments.length} pending payments for tenant ${tenant.tenant_id}`)
+        console.log(`📅 Found ${appointments.length} pending confirmation appointments for tenant ${tenant.tenant_id}`)
 
-        // Process each payment
-        for (const payment of payments) {
+        // Process each appointment
+        for (const appointment of appointments) {
           try {
-            const paymentCreatedAt = new Date(payment.created_at)
-            const hoursSinceCreation = (now.getTime() - paymentCreatedAt.getTime()) / (1000 * 60 * 60)
+            const appointmentCreatedAt = new Date(appointment.created_at)
+            const hoursSinceCreation = (now.getTime() - appointmentCreatedAt.getTime()) / (1000 * 60 * 60)
+
+            // Get last reminder info from metadata
+            const lastConfirmationReminder = appointment.metadata?.last_confirmation_reminder_sent_at
+            const lastConfirmationStage = appointment.metadata?.last_confirmation_reminder_stage
 
             let shouldSendReminder = false
             let reminderStage: 'first' | 'second' | 'final' | null = null
@@ -86,8 +95,8 @@ export default defineEventHandler(async (event) => {
               push: false
             }
 
-            // Determine which reminder to send
-            if (!payment.last_reminder_sent_at) {
+            // Determine which reminder to send (same logic as payments)
+            if (!lastConfirmationReminder) {
               // No reminder sent yet - check if it's time for first reminder
               if (hoursSinceCreation >= settings.first_after_hours) {
                 shouldSendReminder = true
@@ -99,11 +108,11 @@ export default defineEventHandler(async (event) => {
                 }
               }
             } else {
-              const lastReminderSentAt = new Date(payment.last_reminder_sent_at)
+              const lastReminderSentAt = new Date(lastConfirmationReminder)
               const hoursSinceLastReminder = (now.getTime() - lastReminderSentAt.getTime()) / (1000 * 60 * 60)
 
               // Check for second reminder
-              if (payment.last_reminder_stage === 'first' && 
+              if (lastConfirmationStage === 'first' && 
                   hoursSinceCreation >= settings.second_after_hours) {
                 shouldSendReminder = true
                 reminderStage = 'second'
@@ -114,7 +123,7 @@ export default defineEventHandler(async (event) => {
                 }
               }
               // Check for final reminder
-              else if (payment.last_reminder_stage === 'second' && 
+              else if (lastConfirmationStage === 'second' && 
                        hoursSinceCreation >= settings.final_after_hours) {
                 shouldSendReminder = true
                 reminderStage = 'final'
@@ -128,38 +137,38 @@ export default defineEventHandler(async (event) => {
 
             // Send reminder if needed
             if (shouldSendReminder && reminderStage) {
-              console.log(`📤 Sending ${reminderStage} reminder for payment ${payment.id}`)
+              console.log(`📤 Sending ${reminderStage} confirmation reminder for appointment ${appointment.id}`)
 
               // Import the reminder service dynamically
               const { useReminderService } = await import('~/composables/useReminderService')
-              const { sendPaymentReminder } = useReminderService()
+              const { sendConfirmationReminder } = useReminderService()
 
-              const result = await sendPaymentReminder(payment.id, reminderStage, channels)
+              const result = await sendConfirmationReminder(appointment.id, reminderStage, channels)
 
               if (result.success) {
-                totalReminders++
-                results.push({
-                  payment_id: payment.id,
+                totalConfirmationReminders++
+                confirmationResults.push({
+                  appointment_id: appointment.id,
                   stage: reminderStage,
                   success: true
                 })
-                console.log(`✅ Reminder sent successfully for payment ${payment.id}`)
+                console.log(`✅ Confirmation reminder sent successfully for appointment ${appointment.id}`)
               } else {
-                results.push({
-                  payment_id: payment.id,
+                confirmationResults.push({
+                  appointment_id: appointment.id,
                   stage: reminderStage,
                   success: false,
                   error: result.error
                 })
-                console.error(`❌ Failed to send reminder for payment ${payment.id}:`, result.error)
+                console.error(`❌ Failed to send confirmation reminder for appointment ${appointment.id}:`, result.error)
               }
             }
-          } catch (paymentError: any) {
-            console.error(`❌ Error processing payment ${payment.id}:`, paymentError)
-            results.push({
-              payment_id: payment.id,
+          } catch (appointmentError: any) {
+            console.error(`❌ Error processing appointment ${appointment.id}:`, appointmentError)
+            confirmationResults.push({
+              appointment_id: appointment.id,
               success: false,
-              error: paymentError.message
+              error: appointmentError.message
             })
           }
         }
@@ -168,13 +177,13 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    console.log(`✅ Cron job completed. Sent ${totalReminders} reminders.`)
+    console.log(`✅ Cron job completed. Sent ${totalConfirmationReminders} confirmation reminders.`)
 
     return {
       success: true,
-      message: `Sent ${totalReminders} reminders`,
-      total_reminders: totalReminders,
-      results
+      message: `Sent ${totalConfirmationReminders} confirmation reminders`,
+      total_confirmation_reminders: totalConfirmationReminders,
+      confirmation_results: confirmationResults
     }
   } catch (error: any) {
     console.error('❌ Cron job failed:', error)

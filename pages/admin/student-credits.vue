@@ -369,7 +369,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { definePageMeta, navigateTo } from '#imports'
+import { navigateTo } from '#app'
 import { useStudentCredits } from '~/composables/useStudentCredits'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'

@@ -80,3 +80,4 @@ COMMENT ON COLUMN public.user_devices.ip_address IS 'IP address of the device';
 
 
 
+

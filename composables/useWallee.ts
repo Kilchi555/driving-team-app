@@ -73,6 +73,8 @@ export const useWallee = () => {
           currency: request.currency || 'CHF',
           customerId: request.customerId,
           customerEmail: request.customerEmail,
+          userId: request.userId,
+          // tenantId wird serverseitig aus Header oder Payment abgeleitet, kann optional mitgegeben werden
           lineItems: request.lineItems || [
             {
               uniqueId: request.appointmentId ? `appointment-${request.appointmentId}` : `standalone-${Date.now()}`,

@@ -11,119 +11,303 @@ async function getPuppeteer() {
   return puppeteer
 }
 
-interface ReceiptRequest { paymentId: string }
+interface ReceiptRequest { paymentId?: string; paymentIds?: string[] }
+
+async function generateReceiptHTML(payment: any, supabase: any, tenant: any, primary: string, secondary: string, translateFn: any) {
+  // Load appointment details separately
+  let appointment: any = null
+  let user: any = null
+  let products: Array<{ name: string; description?: string; quantity: number; unit_price_rappen: number; total_price_rappen: number; }> = []
+  
+  if (payment.appointment_id) {
+    const { data: appointmentData, error: aErr } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        title,
+        start_time,
+        end_time,
+        duration_minutes,
+        type,
+        status,
+        event_type_code,
+        deleted_at,
+        deletion_reason,
+        cancellation_reason_id,
+        cancellation_type,
+        cancellation_charge_percentage,
+        cancellation_credit_hours,
+        cancellation_policy_applied,
+        user_id
+      `)
+      .eq('id', payment.appointment_id)
+      .single()
+    
+    if (!aErr && appointmentData) {
+      appointment = appointmentData
+      
+      // Load user details (including language)
+      if (appointment.user_id) {
+        const { data: userData, error: uErr } = await supabase
+          .from('users')
+          .select('first_name, last_name, email, phone, street, street_nr, zip, city, language')
+          .eq('id', appointment.user_id)
+          .single()
+        
+        if (!uErr && userData) {
+          user = userData
+        }
+      }
+    }
+
+    // Load products via discount_sales -> product_sales chain (optional)
+    try {
+      const { data: discountSale } = await supabase
+        .from('discount_sales')
+        .select('id')
+        .eq('appointment_id', payment.appointment_id)
+        .maybeSingle()
+      if (discountSale?.id) {
+        const { data: ps } = await supabase
+          .from('product_sales')
+          .select(`id, quantity, unit_price_rappen, total_price_rappen, products ( name, description )`)
+          .eq('product_sale_id', discountSale.id)
+        products = (ps || []).map((row: any) => ({
+          name: row.products?.name || 'Produkt',
+          description: row.products?.description || '',
+          quantity: row.quantity || 1,
+          unit_price_rappen: row.unit_price_rappen || 0,
+          total_price_rappen: row.total_price_rappen || 0
+        }))
+      }
+    } catch (productErr) {
+      console.warn('⚠️ Could not load products:', productErr)
+    }
+  }
+
+  // Build customer name
+  const customerName = user 
+    ? `${user.first_name || ''} ${user.last_name || ''}`.trim() 
+    : 'Kunde'
+
+  // Build customer address
+  const customerAddress = []
+  if (user?.street && user?.street_nr) {
+    customerAddress.push(`${user.street} ${user.street_nr}`)
+  }
+  if (user?.zip && user?.city) {
+    customerAddress.push(`${user.zip} ${user.city}`)
+  }
+  const customerFullAddress = customerAddress.join(', ')
+
+  const customerEmail = user?.email || ''
+  const customerPhone = user?.phone || ''
+
+  // Build tenant address
+  const tenantAddress = []
+  if (tenant?.address) {
+    tenantAddress.push(tenant.address)
+  }
+  const fullAddress = tenantAddress.join(', ')
+
+  const companyName = tenant?.legal_company_name || tenant?.name || 'Unternehmen'
+  const tenantEmail = tenant?.email || ''
+  const tenantPhone = tenant?.phone || ''
+
+  // Load logo
+  let logoSrc = null
+  let logoDataUrl = null
+  if (tenant?.logo_url) {
+    logoSrc = tenant.logo_url
+    try {
+      const logoRes = await fetch(logoSrc)
+      if (logoRes.ok) {
+        const logoBuffer = await logoRes.arrayBuffer()
+        const logoBase64 = Buffer.from(logoBuffer).toString('base64')
+        const logoMime = logoRes.headers.get('content-type') || 'image/png'
+        logoDataUrl = `data:${logoMime};base64,${logoBase64}`
+      }
+    } catch (logoErr) {
+      console.warn('⚠️ Could not load logo:', logoErr)
+    }
+  }
+
+  // Calculate amounts
+  const lesson = (payment.lesson_price_rappen || 0) / 100
+  const adminFee = (payment.admin_fee_rappen || 0) / 100
+  const discountAmount = (payment.discount_amount_rappen || 0) / 100
+  const amount = lesson + adminFee - discountAmount + (products.reduce((sum, p) => sum + (p.total_price_rappen / 100), 0))
+
+  // Format appointment details
+  const appointmentDate = appointment && appointment.start_time 
+    ? new Date(appointment.start_time).toLocaleDateString('de-CH')
+    : ''
+  const appointmentTime = appointment && appointment.start_time
+    ? new Date(appointment.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+    : ''
+  const appointmentDuration = appointment?.duration_minutes || 0
+
+  // Translate appointment details using the provided translateFn function
+  const eventTypeTranslated = appointment ? translateFn(`eventType.${appointment.event_type_code || 'lesson'}`) : ''
+  const statusTranslated = appointment ? translateFn(`status.${appointment.status || 'pending'}`) : ''
+  const isCancelled = appointment && (appointment.status === 'cancelled' || appointment.deleted_at)
+  const cancellationDate = appointment && appointment.deleted_at ? new Date(appointment.deleted_at).toLocaleDateString('de-CH') : '-'
+  const cancellationReason = appointment ? (appointment.deletion_reason || appointment.cancellation_type || appointment.cancellation_reason_id || '-') : '-'
+  const isCharged = appointment && (Number(appointment.cancellation_charge_percentage || 0) > 0 || appointment.cancellation_policy_applied)
+
+  return `
+    <div class="doc" style="page-break-after: always;">
+      <div class="header">
+        <div class="header-left">
+          <div class="title">${translateFn('receipt.title')}</div>
+          <div style="margin-top:12px;">
+            <div class="label">${translateFn('receipt.customer')}</div>
+            <div class="value">${customerName}</div>
+            ${customerFullAddress ? `<div class="address-left">${customerFullAddress}</div>` : ''}
+            ${customerEmail || customerPhone ? `<div class="contact-left">${customerEmail ? customerEmail : ''}${customerEmail && customerPhone ? '<br/>' : ''}${customerPhone ? customerPhone : ''}</div>` : ''}
+            <div style="margin-top:8px;">
+              <div class="label">${translateFn('receipt.date')}</div>
+              <div class="value" style="display:inline;">${new Date(payment.paid_at || payment.created_at).toLocaleDateString('de-CH')}</div>
+            </div>
+          </div>
+        </div>
+        <div class="header-right">
+          ${logoSrc ? `<img class="logo" src="${logoDataUrl || logoSrc}" alt="Logo"/>` : ''}
+          ${companyName ? `<div class="value">${companyName}</div>` : ''}
+          ${fullAddress ? `<div class="address">${fullAddress}</div>` : ''}
+          ${tenantEmail || tenantPhone ? `<div class="contact">${tenantEmail ? tenantEmail : ''}${tenantEmail && tenantPhone ? '<br/>' : ''}${tenantPhone ? tenantPhone : ''}</div>` : ''}
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">${translateFn('receipt.costBreakdown')}</div>
+        ${appointment ? `
+        <div class="row">
+          <div class="label">
+            ${eventTypeTranslated} - ${statusTranslated} - ${appointmentDate} ${appointmentTime} - ${appointmentDuration} ${translateFn('receipt.minutes')}
+            ${isCancelled ? `<br/><span style=\"font-size:12px; color:#6b7280;\">${translateFn('receipt.cancelled')}: ${cancellationDate} | ${translateFn('receipt.reason')}: ${cancellationReason} | ${translateFn('receipt.charged')}: ${isCharged ? translateFn('receipt.yes') : translateFn('receipt.no')}</span>` : ''}
+          </div>
+          <div class="value">CHF ${lesson.toFixed(2)}</div>
+        </div>
+        ` : `
+        <div class="row"><div class="label">${translateFn('receipt.baseAmount')}</div><div class="value">CHF ${lesson.toFixed(2)}</div></div>
+        `}
+        <div class="row"><div class="label">${translateFn('receipt.adminFee')}</div><div class="value">CHF ${adminFee.toFixed(2)}</div></div>
+        ${products && products.length > 0 ? products.map(p => `
+        <div class="row">
+          <div class="label">${p.name} × ${p.quantity}</div>
+          <div class="value">CHF ${(Number(p.total_price_rappen || 0)/100).toFixed(2)}</div>
+        </div>
+        `).join('') : ''}
+        ${Number(payment.discount_amount_rappen || 0) > 0 ? `
+          <div class="row" style=\"color:#059669;\">
+            <div class="label">${translateFn('receipt.discount')}</div>
+            <div class="value">- CHF ${(Number(payment.discount_amount_rappen)/100).toFixed(2)}</div>
+          </div>
+        ` : ''}
+        <div class="row" style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb;"><div class="label">${translateFn('receipt.totalAmount')}</div><div class="amount">CHF ${amount.toFixed(2)}</div></div>
+      </div>
+      
+      <div class="section">
+        <div class="muted">${translateFn('receipt.footer', { email: tenantEmail || 'den Support' })}</div>
+      </div>
+    </div>
+  `
+}
 
 export default defineEventHandler(async (event) => {
   try {
     console.log('📄 Receipt API called')
     
-    const { paymentId }: ReceiptRequest = await readBody(event)
-    console.log('📄 Payment ID received:', paymentId)
+    const { paymentId, paymentIds }: ReceiptRequest = await readBody(event)
     
-    if (!paymentId) {
-      console.error('❌ No payment ID provided')
-      throw new Error('Payment ID is required')
+    // Determine which payments to process
+    const ids = paymentIds && paymentIds.length > 0 ? paymentIds : (paymentId ? [paymentId] : [])
+    
+    if (ids.length === 0) {
+      console.error('❌ No payment ID(s) provided')
+      throw new Error('Payment ID(s) is required')
     }
 
-    console.log('📄 Generating receipt for payment:', paymentId)
+    console.log('📄 Generating receipt(s) for payment(s):', ids)
 
     const supabase = getSupabaseAdmin()
 
-    // Load payment first
-    const { data: payment, error: pErr } = await supabase
+    // Load all payments
+    const { data: payments, error: pErr } = await supabase
       .from('payments')
       .select('*')
-      .eq('id', paymentId)
-      .single()
+      .in('id', ids)
 
     if (pErr) {
-      console.error('❌ Error loading payment:', pErr)
-      throw new Error(`Payment not found: ${pErr.message}`)
+      console.error('❌ Error loading payments:', pErr)
+      throw new Error(`Payments not found: ${pErr.message}`)
     }
     
-    if (!payment) {
-      throw new Error('Payment not found')
+    if (!payments || payments.length === 0) {
+      throw new Error('Payments not found')
     }
 
-    // Load appointment details separately
-    let appointment: any = null
-    let user: any = null
-    
-    if (payment.appointment_id) {
-      const { data: appointmentData, error: aErr } = await supabase
-        .from('appointments')
-        .select(`
-          id,
-          title,
-          start_time,
-          end_time,
-          duration_minutes,
-          type,
-          status,
-          user_id
-        `)
-        .eq('id', payment.appointment_id)
-        .single()
-      
-      if (!aErr && appointmentData) {
-        appointment = appointmentData
-        
-        // Load user details
-        if (appointment.user_id) {
-          const { data: userData, error: uErr } = await supabase
-            .from('users')
-            .select('first_name, last_name, email')
-            .eq('id', appointment.user_id)
-            .single()
-          
-          if (!uErr && userData) {
-            user = userData
-          }
+    // Load tenant branding (once for all payments)
+    const firstPayment = payments[0]
+    const tenantId = firstPayment.tenant_id || firstPayment.metadata?.tenant_id || null
+    let tenant: any = null
+    if (tenantId) {
+      try {
+        const { data, error } = await supabase
+          .from('tenants')
+          .select('name, legal_company_name, primary_color, secondary_color, logo_url, logo_square_url, logo_wide_url, address, contact_email, contact_phone')
+          .eq('id', tenantId)
+          .maybeSingle()
+        if (error) {
+          console.error('❌ Tenant fetch error:', error)
         }
+        tenant = data
+      } catch (tErr) {
+        console.error('❌ Tenant fetch exception:', tErr)
       }
     }
 
-    // Load tenant branding (optional)
-    const tenantId = payment.tenant_id || payment.metadata?.tenant_id || null
-    let tenant: any = null
-    if (tenantId) {
-      const { data } = await supabase
-        .from('tenants')
-        .select('name, primary_color, secondary_color, logo_url, address, zip, city, email, phone, street, house_number')
-        .eq('id', tenantId)
-        .single()
-      tenant = data
-    }
-
-    // Build HTML (simple, neutral, tenant-aware)
     const primary = tenant?.primary_color || '#2563eb'
     const secondary = tenant?.secondary_color || '#6b7280'
-    const companyName = tenant?.name || 'Quittung'
-    
-    // Build tenant address
-    const tenantAddress = []
-    if (tenant?.street && tenant?.house_number) {
-      tenantAddress.push(`${tenant.street} ${tenant.house_number}`)
-    } else if (tenant?.address) {
-      tenantAddress.push(tenant.address)
+
+    // Translation helper function (needs to be passed to generateReceiptHTML)
+    const translateFn = (key: string, params?: Record<string, any>) => {
+      const translations: Record<string, any> = {
+        'receipt.title': 'Quittung',
+        'receipt.customer': 'Kunde',
+        'receipt.date': 'Datum',
+        'receipt.costBreakdown': 'Kostenaufstellung',
+        'receipt.baseAmount': 'Basisbetrag',
+        'receipt.adminFee': 'Administrationsgebühr',
+        'receipt.discount': 'Rabatt',
+        'receipt.totalAmount': 'Gesamtbetrag',
+        'receipt.minutes': 'Minuten',
+        'receipt.cancelled': 'Storniert',
+        'receipt.reason': 'Grund',
+        'receipt.charged': 'Berechnet',
+        'receipt.yes': 'Ja',
+        'receipt.no': 'Nein',
+        'receipt.footer': `Bei Fragen wenden Sie sich bitte an ${tenant?.contact_email || 'den Support'}.`,
+        'eventType.lesson': 'Fahrlektion',
+        'status.scheduled': 'Geplant',
+        'status.completed': 'Abgeschlossen',
+        'status.cancelled': 'Storniert'
+      }
+      const value = translations[key] || key
+      if (typeof value !== 'string') return key
+      if (params) {
+        return value.replace(/{(\w+)}/g, (match: string, param: string) => params[param] || match)
+      }
+      return value
     }
-    if (tenant?.zip && tenant?.city) {
-      tenantAddress.push(`${tenant.zip} ${tenant.city}`)
-    }
-    const fullAddress = tenantAddress.join(', ')
 
-    const amount = Number(payment.total_amount_rappen || 0) / 100
-    const adminFee = Number(payment.admin_fee_rappen || 0) / 100
-    const lesson = Number(payment.lesson_price_rappen || 0) / 100
+    // Generate HTML for each payment
+    const receiptHTMLs = await Promise.all(
+      payments.map(payment => generateReceiptHTML(payment, supabase, tenant, primary, secondary, translateFn))
+    )
 
-    // Extract appointment and user data
-    const appointmentTitle = appointment?.title || 'Fahrstunde'
-    const appointmentDate = appointment?.start_time ? new Date(appointment.start_time).toLocaleDateString('de-CH') : '-'
-    const appointmentTime = appointment?.start_time ? new Date(appointment.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) : '-'
-    const appointmentDuration = appointment?.duration_minutes || 45
-    const customerName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '-'
-    const customerEmail = user?.email || '-'
-
+    // Combine all receipts into one HTML document
     const html = `
       <!DOCTYPE html>
       <html>
@@ -139,7 +323,10 @@ export default defineEventHandler(async (event) => {
           .logo { height:60px; width:auto; object-fit:contain; max-width:150px; }
           .title { font-size:24px; font-weight:800; color:var(--primary); }
           .subtitle { font-size:14px; color:var(--secondary); margin-top:2px; }
-          .address { font-size:12px; color:#6b7280; line-height:1.4; text-align:right; }
+          .address { font-size:12px; color:#6b7280; line-height:1.3; text-align:right; }
+          .contact { font-size:12px; color:#6b7280; line-height:1.3; text-align:right; }
+          .address-left { font-size:12px; color:#6b7280; line-height:1.3; text-align:left; }
+          .contact-left { font-size:12px; color:#6b7280; line-height:1.3; text-align:left; }
           .section { padding:20px 24px; border-top:1px solid #f3f4f6; }
           .section-title { font-size:16px; font-weight:600; color:var(--primary); margin-bottom:12px; }
           .row { display:flex; justify-content:space-between; margin:8px 0; font-size:14px; }
@@ -153,119 +340,33 @@ export default defineEventHandler(async (event) => {
         </style>
       </head>
       <body>
-        <div class="doc">
-          <div class="header">
-            <div class="header-left">
-              <div>
-                <div class="title">Zahlungsquittung</div>
-                <div class="subtitle">${companyName}</div>
-              </div>
-            </div>
-            <div class="header-right">
-              ${tenant?.logo_url ? `<img class="logo" src="${tenant.logo_url}" alt="Logo"/>` : ''}
-              <div>
-                <div class="label">Quittungsdatum</div>
-                <div class="value">${new Date(payment.paid_at || payment.created_at).toLocaleDateString('de-CH')}</div>
-              </div>
-              ${fullAddress ? `<div class="address">${fullAddress}</div>` : ''}
-            </div>
-          </div>
-          
-          <div class="section">
-            <div class="section-title">Zahlungsinformationen</div>
-            <div class="grid">
-              <div>
-                <div class="label">Zahlungs-ID</div>
-                <div class="value">${payment.id}</div>
-              </div>
-              <div>
-                <div class="label">Zahlungsart</div>
-                <div class="value">${payment.payment_method || '-'}</div>
-              </div>
-              <div>
-                <div class="label">Status</div>
-                <div class="value">${payment.payment_status || '-'}</div>
-              </div>
-              <div>
-                <div class="label">Transaktions-ID</div>
-                <div class="value">${payment.wallee_transaction_id || payment.id}</div>
-              </div>
-            </div>
-          </div>
-
-          ${appointment ? `
-          <div class="section">
-            <div class="section-title">Termindetails</div>
-            <div class="appointment-details">
-              <div class="grid">
-                <div>
-                  <div class="label">Termin</div>
-                  <div class="value">${appointmentTitle}</div>
-                </div>
-                <div>
-                  <div class="label">Datum</div>
-                  <div class="value">${appointmentDate}</div>
-                </div>
-                <div>
-                  <div class="label">Uhrzeit</div>
-                  <div class="value">${appointmentTime}</div>
-                </div>
-                <div>
-                  <div class="label">Dauer</div>
-                  <div class="value">${appointmentDuration} Min.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          ` : ''}
-
-          ${user ? `
-          <div class="section">
-            <div class="section-title">Kundeninformationen</div>
-            <div class="customer-info">
-              <div class="grid">
-                <div>
-                  <div class="label">Name</div>
-                  <div class="value">${customerName}</div>
-                </div>
-                <div>
-                  <div class="label">E-Mail</div>
-                  <div class="value">${customerEmail}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          ` : ''}
-
-          <div class="section">
-            <div class="section-title">Kostenaufstellung</div>
-            <div class="row"><div class="label">Grundbetrag</div><div class="value">CHF ${lesson.toFixed(2)}</div></div>
-            <div class="row"><div class="label">Admin-Gebühr</div><div class="value">CHF ${adminFee.toFixed(2)}</div></div>
-            <div class="row" style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb;"><div class="label">Gesamtbetrag</div><div class="amount">CHF ${amount.toFixed(2)}</div></div>
-          </div>
-          
-          <div class="section">
-            <div class="muted">Diese Quittung wurde automatisch erstellt. Bei Fragen wenden Sie sich an ${tenant?.email || 'den Support'}.</div>
-          </div>
-        </div>
+        ${receiptHTMLs.join('')}
       </body>
     </html>
     `
 
+    // Remove the last page-break
+    const finalHtml = html.replace(/style="page-break-after: always;">/g, (match, offset) => {
+      // If this is the last occurrence, remove it
+      const lastIndex = html.lastIndexOf(match)
+      return offset === lastIndex ? '>' : match
+    })
+
     console.log('📄 Generating PDF with Puppeteer...')
     
+    let browser: any
     try {
       const { default: Puppeteer } = await getPuppeteer()
       console.log('✅ Puppeteer loaded successfully')
       
-      const browser = await Puppeteer.launch({ 
+      browser = await Puppeteer.launch({ 
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
         headless: true
       })
       console.log('✅ Browser launched successfully')
       
       const page = await browser.newPage()
-      await page.setContent(html, { waitUntil: 'networkidle0' })
+      await page.setContent(finalHtml, { waitUntil: 'networkidle0' })
       
       console.log('📄 Converting to PDF...')
       const pdfBuffer = await page.pdf({ 
@@ -280,11 +381,14 @@ export default defineEventHandler(async (event) => {
       console.log('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
       
       setHeader(event, 'Content-Type', 'application/pdf')
-      setHeader(event, 'Content-Disposition', `attachment; filename="Quittung_${payment.id}.pdf"`)
+      const filename = payments.length === 1 
+        ? `Quittung_${payments[0].id}.pdf`
+        : `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
+      setHeader(event, 'Content-Disposition', `attachment; filename="${filename}"`)
       return send(event, pdfBuffer)
-    } catch (pdfError) {
+    } catch (pdfError: any) {
       console.error('❌ PDF generation error:', pdfError)
-      if (typeof browser !== 'undefined') {
+      if (browser) {
         await browser.close()
       }
       throw new Error(`PDF generation failed: ${pdfError.message}`)

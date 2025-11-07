@@ -2,6 +2,7 @@
 // ✅ Payment Status API für Updates und Abfragen
 
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface PaymentStatusRequest {
   paymentId: string
@@ -68,7 +69,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
     if (body.status) {
       const updateData: any = {
         payment_status: body.status,
-        updated_at: new Date().toISOString()
+        updated_at: toLocalTimeString(new Date())
       }
 
       // Wallee-spezifische Updates
@@ -82,7 +83,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
 
       // Completion timestamp setzen
       if (body.status === 'completed') {
-        updateData.paid_at = new Date().toISOString()
+        updateData.paid_at = toLocalTimeString(new Date())
       }
 
       const { error: updateError } = await supabase
@@ -102,7 +103,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
         .update({
           payment_status: 'paid',
           is_paid: true,
-          updated_at: new Date().toISOString()
+          updated_at: toLocalTimeString(new Date())
         })
         .eq('id', payment.appointment_id)
 

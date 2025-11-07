@@ -429,12 +429,194 @@ export const useReminderService = () => {
     }
   }
 
+  /**
+   * Send reminder for an appointment confirmation
+   */
+  const sendConfirmationReminder = async (
+    appointmentId: string,
+    stage: 'first' | 'second' | 'final',
+    channels: {
+      email?: boolean
+      sms?: boolean
+      push?: boolean
+    }
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log('🔔 Sending confirmation reminder:', { appointmentId, stage, channels })
+
+      // Get appointment details
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select(`
+          id,
+          title,
+          start_time,
+          end_time,
+          duration_minutes,
+          type,
+          location_id,
+          confirmation_token,
+          status,
+          metadata,
+          user_id,
+          users!inner (
+            id,
+            first_name,
+            last_name,
+            email,
+            phone,
+            tenant_id,
+            tenants!inner(slug)
+          )
+        `)
+        .eq('id', appointmentId)
+        .single()
+
+      if (appointmentError || !appointment) {
+        console.error('❌ Appointment query error:', appointmentError)
+        throw new Error('Appointment not found')
+      }
+
+      const userData = appointment.users as any
+
+      // Check if appointment still needs confirmation
+      if (appointment.status !== 'pending_confirmation') {
+        console.log('ℹ️ Appointment is not pending confirmation, skipping reminder')
+        return { success: true }
+      }
+
+      if (!appointment.confirmation_token) {
+        console.error('❌ No confirmation token found for appointment')
+        throw new Error('Confirmation token missing')
+      }
+
+      // Get location details if available
+      let locationName = 'Nicht angegeben'
+      if (appointment.location_id) {
+        const { data: locData } = await supabase
+          .from('locations')
+          .select('name, address')
+          .eq('id', appointment.location_id)
+          .single()
+
+        if (locData) {
+          locationName = locData.name || 'Nicht angegeben'
+        }
+      }
+
+      // Format appointment data
+      const appointmentDate = new Date(appointment.start_time).toLocaleDateString('de-CH', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+
+      const appointmentTime = new Date(appointment.start_time).toLocaleTimeString('de-CH', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+
+      // Create confirmation link with token
+      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
+      const tenantSlug = userData.tenants?.slug || 'driving-team'
+      const confirmationLink = `${baseUrl}/confirm/${appointment.confirmation_token}`
+
+      console.log('🔗 Confirmation link constructed:', {
+        tenantSlug,
+        confirmationLink
+      })
+
+      // Get payment amount if payment exists
+      let price = '0.00'
+      const { data: payment } = await supabase
+        .from('payments')
+        .select('total_amount_rappen')
+        .eq('appointment_id', appointment.id)
+        .maybeSingle()
+
+      if (payment && payment.total_amount_rappen) {
+        price = ((payment.total_amount_rappen || 0) / 100).toFixed(2)
+      }
+
+      // Template data
+      const templateData = {
+        student_name: `${userData.first_name} ${userData.last_name}`,
+        appointment_date: appointmentDate,
+        appointment_time: appointmentTime,
+        location: locationName,
+        price,
+        confirmation_link: confirmationLink,
+        payment_link: confirmationLink // Same as confirmation link for now
+      }
+
+      const results: any[] = []
+
+      // Send via enabled channels
+      if (channels.email && userData.email) {
+        const template = await getReminderTemplate(userData.tenant_id, stage, 'email', 'de')
+        if (template) {
+          const subject = processTemplate(template.subject || '', templateData)
+          const body = processTemplate(template.body || '', templateData)
+          const result = await sendEmailReminder(userData.email, subject, body)
+          results.push({ channel: 'email', ...result })
+        }
+      }
+
+      if (channels.sms && userData.phone) {
+        const template = await getReminderTemplate(userData.tenant_id, stage, 'sms', 'de')
+        if (template) {
+          const message = processTemplate(template.body || '', templateData)
+          const result = await sendSmsReminder(userData.phone, message)
+          results.push({ channel: 'sms', ...result })
+        }
+      }
+
+      if (channels.push) {
+        const template = await getReminderTemplate(userData.tenant_id, stage, 'push', 'de')
+        if (template) {
+          const message = processTemplate(template.body || '', templateData)
+          const result = await sendPushReminder(userData.id, message)
+          results.push({ channel: 'push', ...result })
+        }
+      }
+
+      // Update appointment metadata with last reminder info
+      await supabase
+        .from('appointments')
+        .update({
+          metadata: {
+            ...appointment.metadata,
+            last_confirmation_reminder_sent_at: new Date().toISOString(),
+            last_confirmation_reminder_stage: stage,
+            confirmation_reminder_history: [
+              ...(appointment.metadata?.confirmation_reminder_history || []),
+              {
+                stage,
+                sent_at: new Date().toISOString(),
+                channels: Object.keys(channels).filter(k => channels[k as keyof typeof channels])
+              }
+            ]
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointmentId)
+
+      console.log('✅ Confirmation reminder sent successfully:', results)
+      return { success: true }
+    } catch (error: any) {
+      console.error('❌ Error sending confirmation reminder:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
   return {
     processTemplate,
     sendEmailReminder,
     sendSmsReminder,
     sendPushReminder,
     getReminderTemplate,
-    sendPaymentReminder
+    sendPaymentReminder,
+    sendConfirmationReminder
   }
 }

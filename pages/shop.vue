@@ -1746,7 +1746,9 @@ const startOnlinePayment = async () => {
       customerName: `${formData.value.firstName} ${formData.value.lastName}`,
       description: `Driving Team Bestellung #${order.id}`,
       successUrl: `${window.location.origin}/payment/success?order=${order.id}`,
-      failedUrl: `${window.location.origin}/payment/failed?order=${order.id}`
+      failedUrl: `${window.location.origin}/payment/failed?order=${order.id}`,
+      // Pseudonyme Customer-ID Inputs (Gast-Checkout: nur tenantId verfügbar)
+      tenantId: tenantId.value || undefined
     }
     
     const response = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {

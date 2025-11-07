@@ -11,7 +11,7 @@ import UsersPaymentOverview from '~/components/admin/UsersPaymentOverview.vue'
 
 definePageMeta({
   layout: 'admin',
-  middleware: 'features'
+  middleware: 'admin'
 })
 
 // Auth check
