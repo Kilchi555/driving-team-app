@@ -1,10 +1,22 @@
 <template>
   <div class="student-selector">
     <!-- Toggle nur anzeigen wenn kein Student ausgewählt -->
+    <div class="flex items-center gap-2 mb-4">    
+      <button 
+            v-if="showSwitchToOther"
+            @click="handleSwitchToOther"
+            class="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            >
+            Andere Terminart
+          </button>
+      </div>
+
     <div 
       v-if="!selectedStudent && currentUser?.role === 'staff'"
       class="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg border"
     >
+
+
       <div class="flex items-center gap-2">
         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
@@ -26,18 +38,6 @@
     </div>
     
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <div class="flex justify-between items-center mb-3">
-        <label class="block text-sm font-semibold text-gray-900">
-          🎓 Fahrschüler:in
-        </label>
-       <button 
-          v-if="showSwitchToOther"
-          @click="handleSwitchToOther"
-          class="text-xs text-blue-600 font-bold hover:text-blue-800 border-solid border-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed"
-        >
-          Andere Terminart
-        </button>
-      </div>
       
       <!-- Ausgewählter Schüler Anzeige (oben) -->
       <div v-if="selectedStudent" class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -78,7 +78,7 @@
           type="text"
           placeholder="Schüler suchen (Name, E-Mail oder Telefon)..."
           autocomplete="off"
-          class="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 !bg-white !text-black"
         />
       </div>
 
@@ -96,12 +96,12 @@
       <div v-if="!selectedStudent && !isLoading" class="mb-3">
         <button 
           @click="openAddStudentModal"
-          class="w-full px-4 py-3 bg-green-600 text-black rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+          class="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
           </svg>
-          Neuer Schüler
+          Neuer Schüler erstellen
         </button>
       </div>
 

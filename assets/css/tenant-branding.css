@@ -394,6 +394,25 @@ html body .admin-layout textarea[class*="bg-white"][class*="session"] {
   border-color: #d1d5db !important; /* gray-300 */
 }
 
+/* === EVENT MODAL OVERRIDE === */
+/* EventModal should have white inputs with black text */
+.fixed.inset-0:not(.admin-modal):not(.admin-layout) input:not([type="checkbox"]):not([type="radio"]),
+.fixed.inset-0:not(.admin-modal):not(.admin-layout) select,
+.fixed.inset-0:not(.admin-modal):not(.admin-layout) textarea {
+  color: black !important;
+  background-color: white !important;
+  border-color: #d1d5db !important; /* gray-300 */
+  /* Fix für iOS/Android - konsistentes Padding und Größe */
+  padding: 0.75rem !important; /* 12px */
+  min-height: 44px !important; /* iOS minimum touch target */
+  font-size: 16px !important; /* Verhindert Auto-Zoom auf iOS */
+  line-height: 1.5 !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  box-sizing: border-box !important;
+}
+
 /* === CHECKBOX STYLING === */
 /* Keep normal checkboxes for filters and multi-select */
 input[type="checkbox"].keep-checkbox {
