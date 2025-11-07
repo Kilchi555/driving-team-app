@@ -12,17 +12,17 @@
         'w-full p-3 border rounded-lg focus:outline-none',
         props.isPastAppointment
           ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed'
-          : 'border-gray-300 bg-gray-800 text-white focus:ring-2 focus:ring-green-500 disabled:opacity-50'
+          : 'border-gray-300 bg-white text-black focus:ring-2 focus:ring-green-500 disabled:opacity-50'
       ]"
     >
-      <option value="" class="text-white bg-gray-800">
+      <option value="" class="text-black bg-white">
         {{ isLoading ? 'Kategorien laden...' : 'Kategorie wählen' }}
       </option>
       <option 
         v-for="category in availableCategoriesForUser" 
         :key="category.code"
         :value="category.code"
-        class="text-white bg-gray-800"
+        class="text-black bg-white"
       >
         {{ category.name }}
       </option>

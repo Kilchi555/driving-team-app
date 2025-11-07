@@ -47,7 +47,7 @@
           @focus="showLocationSuggestions = true"
           type="text"
           placeholder="z.B. Zürich HB, Bahnhofstrasse 1, 8001 Zürich"
-          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-white bg-gray-800"
+          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black bg-white"
         />
       </div>
 
@@ -95,28 +95,28 @@
         'w-full p-3 border rounded-lg focus:outline-none',
         props.isPastAppointment
           ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed'
-          : 'border-gray-300 bg-gray-800 text-white focus:ring-2 focus:ring-green-500'
+          : 'border-gray-300 bg-white text-black focus:ring-2 focus:ring-green-500'
       ]"
       :required="required"
     >
-      <option value="" class="text-white bg-gray-800">Standort wählen</option>
+      <option value="" class="text-black bg-white">Standort wählen</option>
       
       <!-- Standard Locations -->
-      <optgroup label="Standorte" v-if="standardLocations.length > 0" class="text-white bg-gray-800">
-        <option v-for="location in standardLocations" :key="`standard-${location.id}`" :value="location.id" class="text-white bg-gray-800">
+      <optgroup label="Standorte" v-if="standardLocations.length > 0" class="text-black bg-white">
+        <option v-for="location in standardLocations" :key="`standard-${location.id}`" :value="location.id" class="text-black bg-white">
           {{ location.address }}
         </option>
       </optgroup>
       
       <!-- Pickup Locations (Schüler) -->
-      <optgroup label="📍 Gespeicherte Treffpunkte" v-if="studentPickupLocations.length > 0 && selectedStudentId" class="text-white bg-gray-800">
-          <option v-for="location in studentPickupLocations" :key="`pickup-${location.id}`" :value="location.id" class="text-white bg-gray-800">
+      <optgroup label="📍 Gespeicherte Treffpunkte" v-if="studentPickupLocations.length > 0 && selectedStudentId" class="text-black bg-white">
+          <option v-for="location in studentPickupLocations" :key="`pickup-${location.id}`" :value="location.id" class="text-black bg-white">
           {{ location.address }}
-          </option>
+        </option>
       </optgroup>
       
       <!-- Loading State -->
-      <option v-if="isLoadingLocations" disabled class="text-white bg-gray-800">Lade Standorte...</option>
+      <option v-if="isLoadingLocations" disabled class="text-black bg-white">Lade Standorte...</option>
     </select>
 
     <!-- Selected Custom Location Preview -->

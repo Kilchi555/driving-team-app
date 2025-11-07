@@ -36,7 +36,7 @@
             :class="[
               'p-3 text-sm rounded border text-left transition-colors duration-200',
               selectedType === eventType.code
-                ? 'bg-purple-600 text-white border-purple-600'
+                ? 'bg-purple-600 text-black border-purple-600'
                 : showBackButton
                   ? 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'

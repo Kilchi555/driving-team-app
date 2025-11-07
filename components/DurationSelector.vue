@@ -14,8 +14,8 @@
           'p-2 text-sm rounded border transition-colors',
           Number(modelValue) === Number(duration.value)
             ? props.isPastAppointment 
-              ? 'bg-green-400 text-white border-green-400 cursor-not-allowed' 
-              : 'bg-green-600 text-white border-green-600'
+              ? 'bg-green-400 text-black border-green-400 cursor-not-allowed' 
+              : 'bg-green-600 text-black border-green-600'
             : props.isPastAppointment
               ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
               : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'

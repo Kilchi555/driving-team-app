@@ -10,7 +10,7 @@
       @input="updateTitle(($event.target as HTMLInputElement)?.value || '')"
       @blur="handleBlur"
       type="text"
-      class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors text-white bg-gray-800"
+      class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors text-black bg-white"
       :placeholder="computedPlaceholder"
       :disabled="disabled"
       :maxlength="maxLength"
