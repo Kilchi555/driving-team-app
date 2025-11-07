@@ -20,7 +20,12 @@ export default defineEventHandler(async (event) => {
       successUrl,
       failedUrl,
       // Optional: restrict shown payment methods on Wallee payment page
-      allowedPaymentMethodConfigurationIds
+      allowedPaymentMethodConfigurationIds,
+      // Optional: Flag für Tokenization-only (wird später automatisch storniert)
+      isTokenizationOnly,
+      // Neu: pseudonyme IDs statt E-Mail-basiert
+      userId: requestUserId,
+      tenantId: requestTenantId
     } = body
 
     // Validierung der erforderlichen Felder
@@ -76,10 +81,15 @@ export default defineEventHandler(async (event) => {
     lineItem.amountIncludingTax = amount // Keep as is for now to see actual value
     lineItem.type = Wallee.model.LineItemType.PRODUCT
     
-    // ✅ Generate consistent customer ID for Wallee tokenization
-    // Use email as base for consistent customer ID (Wallee will tokenize payment methods per customer)
-    const customerIdBase = customerEmail.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
-    const shortCustomerId = `dt-${customerIdBase}-${customerIdBase.length > 20 ? customerIdBase.substring(0, 20) : customerIdBase}`
+    // ✅ Generate consistent customer ID for Wallee tokenization (pseudonymous)
+    // Preferred: dt-<tenantId>-<userId>; Fallback: legacy email-based ID for backward compatibility
+    let shortCustomerId: string
+    if (requestTenantId && requestUserId) {
+      shortCustomerId = `dt-${requestTenantId}-${requestUserId}`
+    } else {
+      const customerIdBase = customerEmail.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+      shortCustomerId = `dt-${customerIdBase}-${customerIdBase.length > 20 ? customerIdBase.substring(0, 20) : customerIdBase}`
+    }
     
     // Generate unique merchant reference for this transaction
     const timestamp = Date.now()
@@ -88,10 +98,37 @@ export default defineEventHandler(async (event) => {
     console.log('🔑 Transaction IDs generated:', { 
       customerId: shortCustomerId,
       customerIdLength: shortCustomerId.length,
-      customerEmail: customerEmail,
+      emailPreview: customerEmail ? `${customerEmail.split('@')[0].slice(0,3)}***@***` : undefined,
+      hasTenantId: !!requestTenantId,
+      hasUserId: !!requestUserId,
       merchantReference: shortMerchantRef,
       merchantReferenceLength: shortMerchantRef.length
     })
+    
+    // ✅ LADE VERFÜGBARE ZAHLUNGSMETHODEN VON WALLEE
+    // Wenn keine Zahlungsmethoden im Space aktiviert sind, bekommt man "Keine geeignete Zahlart"
+    let availablePaymentMethodIds: number[] = []
+    
+    try {
+      const paymentMethodService = new Wallee.api.PaymentMethodConfigurationService(config)
+      const paymentMethodsResponse = await (paymentMethodService as any).readAll(spaceId)
+      
+      if (paymentMethodsResponse.body && Array.isArray(paymentMethodsResponse.body)) {
+        // Filtere nur aktive Zahlungsmethoden
+        const activePaymentMethods = paymentMethodsResponse.body.filter((pm: any) => pm.state === 'ACTIVE')
+        availablePaymentMethodIds = activePaymentMethods.map((pm: any) => pm.id as number)
+        
+        console.log('💳 Available payment methods in Space:', {
+          total: paymentMethodsResponse.body.length,
+          active: activePaymentMethods.length,
+          ids: availablePaymentMethodIds,
+          names: activePaymentMethods.map((pm: any) => ({ id: pm.id, name: pm.name, method: pm.paymentMethod }))
+        })
+      }
+    } catch (pmError: any) {
+      console.warn('⚠️ Could not fetch payment methods from Wallee:', pmError.message)
+      // Continue without restricting payment methods - let Wallee show all available
+    }
     
     // ✅ TRANSACTION mit Tokenisierung für Wallee
     const transaction: Wallee.model.TransactionCreate = new Wallee.model.TransactionCreate()
@@ -104,20 +141,35 @@ export default defineEventHandler(async (event) => {
     transaction.customerEmailAddress = customerEmail
     
     // ✅ Tokenisierung aktivieren - Wallee speichert Zahlungsmethoden automatisch
-    transaction.tokenizationEnabled = true
-    // transaction.customerPresence = Wallee.model.CustomerPresence.NOT_PRESENT // Entfernt - nicht verfügbar
+    ;(transaction as any).tokenizationEnabled = true
     
-    // Keine Adresse - testen ob das das Problem löst
+    // ✅ Für Tokenization-only: Speichere Flag in Metadata für spätere automatische Stornierung
+    if (isTokenizationOnly) {
+      transaction.metaData = {
+        ...(transaction.metaData || {}),
+        isTokenizationOnly: 'true',
+        tokenizationPurpose: 'payment_method_storage'
+      }
+      console.log('🔑 Tokenization-only transaction flagged for auto-refund')
+    }
     
-    // ✅ Optional: Limit to specific payment method configurations (e.g., Visa, TWINT)
+    // ✅ SETZE VERFÜGBARE ZAHLUNGSMETHODEN
+    // Wenn explizite IDs übergeben wurden, verwende diese
     if (Array.isArray(allowedPaymentMethodConfigurationIds) && allowedPaymentMethodConfigurationIds.length > 0) {
-      // Wallee expects an array of numeric IDs
       try {
         transaction.allowedPaymentMethodConfigurations = allowedPaymentMethodConfigurationIds.map((id: any) => Number(id)).filter((n: number) => Number.isFinite(n))
-        console.log('🧩 Restricting to payment method configuration IDs:', transaction.allowedPaymentMethodConfigurations)
+        console.log('🧩 Using provided payment method configuration IDs:', transaction.allowedPaymentMethodConfigurations)
       } catch (e) {
-        console.warn('⚠️ Could not set allowedPaymentMethodConfigurations:', e)
+        console.warn('⚠️ Could not set provided allowedPaymentMethodConfigurations:', e)
       }
+    } 
+    // Sonst: Verwende alle verfügbaren aktiven Zahlungsmethoden aus dem Space
+    else if (availablePaymentMethodIds.length > 0) {
+      transaction.allowedPaymentMethodConfigurations = availablePaymentMethodIds
+      console.log('💳 Using all available active payment methods from Space:', transaction.allowedPaymentMethodConfigurations)
+    } else {
+      console.warn('⚠️ No payment methods found in Space - Wallee will show error "Keine geeignete Zahlart"')
+      console.warn('⚠️ Lösung: Aktiviere Zahlungsmethoden im Wallee Dashboard unter Space → Payment Methods')
     }
     
     // ✅ OPTIONALE FELDER

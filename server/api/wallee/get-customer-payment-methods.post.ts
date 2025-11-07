@@ -10,12 +10,17 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     console.log('📨 Received request:', body)
     
-    const { customerEmail } = body
-
-    if (!customerEmail) {
+    // Support both legacy email-based and new pseudonymous ID scheme
+    const { customerEmail, userId: requestUserId, tenantId: requestTenantId } = body as {
+      customerEmail?: string
+      userId?: string
+      tenantId?: string
+    }
+    
+    if (!customerEmail && !(requestUserId && requestTenantId)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required field: customerEmail'
+        statusMessage: 'Missing required identifier: provide customerEmail or (userId and tenantId)'
       })
     }
 
@@ -30,40 +35,54 @@ export default defineEventHandler(async (event) => {
       api_secret: apiSecret
     }
     
-    // ✅ Konsistente Customer ID (gleiche wie bei Zahlungen)
-    const customerIdBase = customerEmail.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
-    const consistentCustomerId = `dt-${customerIdBase}-${customerIdBase.length > 20 ? customerIdBase.substring(0, 20) : customerIdBase}`
+    // ✅ Konsistente Customer IDs (neue pseudonyme ID bevorzugen, E-Mail-basiert als Fallback)
+    const buildEmailCustomerId = (email: string) => {
+      const base = email.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+      return `dt-${base}-${base.length > 20 ? base.substring(0, 20) : base}`
+    }
+    const pseudonymousId = requestTenantId && requestUserId ? `dt-${requestTenantId}-${requestUserId}` : undefined
+    const legacyId = customerEmail ? buildEmailCustomerId(customerEmail) : undefined
     
-    console.log('🔍 Looking for payment methods for customer:', {
-      customerId: consistentCustomerId,
-      customerEmail: customerEmail
-    })
+    // Try order: pseudonymous first, then legacy
+    const candidateCustomerIds = [pseudonymousId, legacyId].filter(Boolean) as string[]
+    
+    console.log('🔍 Looking for payment methods for customers (by priority):', candidateCustomerIds)
     
     // ✅ CUSTOMER SERVICE für Customer-Details
     const customerService: Wallee.api.CustomerService = new Wallee.api.CustomerService(config)
     
     try {
-      // Versuche Customer zu finden
-      const customers = await customerService.search(spaceId, {
-        filter: {
-          customerId: {
-            value: consistentCustomerId,
-            operator: Wallee.model.CriteriaOperator.EQUALS
-          }
-        }
-      })
+      let foundCustomer: any = null
+      let usedCustomerId: string | undefined
       
-      if (customers.length === 0) {
-        console.log('ℹ️ No customer found with ID:', consistentCustomerId)
+      // Versuche nacheinander alle Kandidaten-IDs
+      for (const candidateId of candidateCustomerIds) {
+        const customers = await customerService.search(spaceId, {
+          filter: {
+            customerId: {
+              value: candidateId,
+              operator: Wallee.model.CriteriaOperator.EQUALS
+            }
+          }
+        })
+        if (customers && customers.length > 0) {
+          foundCustomer = customers[0]
+          usedCustomerId = candidateId
+          break
+        }
+      }
+      
+      if (!foundCustomer) {
+        console.log('ℹ️ No customer found with provided identifiers:', candidateCustomerIds)
         return {
           success: true,
-          customerId: consistentCustomerId,
+          customerId: candidateCustomerIds[0] || null,
           paymentMethods: [],
           message: 'No saved payment methods found for this customer'
         }
       }
       
-      const customer = customers[0]
+      const customer = foundCustomer
       console.log('✅ Customer found:', {
         id: customer.id,
         customerId: customer.customerId,
@@ -85,61 +104,117 @@ export default defineEventHandler(async (event) => {
       
       console.log('💳 Available payment method configurations:', paymentMethodConfigs.length)
       
-      // ✅ TRANSACTION SERVICE für vergangene Transaktionen
-      const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
+      // ✅ TOKEN SERVICE - Hole aktive Payment Tokens direkt von Wallee
+      const tokenService: Wallee.api.TokenService = new Wallee.api.TokenService(config)
       
-      // Vergangene Transaktionen des Kunden abrufen
-      const transactions = await transactionService.search(spaceId, {
-        filter: {
-          customerId: {
-            value: consistentCustomerId,
-            operator: Wallee.model.CriteriaOperator.EQUALS
+      let tokens: any[] = []
+      try {
+        const tokenSearchResult = await tokenService.search(spaceId, {
+          filter: {
+            customerId: {
+              value: usedCustomerId!,
+              operator: Wallee.model.CriteriaOperator.EQUALS
+            },
+            state: {
+              value: Wallee.model.TokenState.ACTIVE,
+              operator: Wallee.model.CriteriaOperator.EQUALS
+            }
           },
-          state: {
-            value: Wallee.model.TransactionState.FULFILL,
-            operator: Wallee.model.CriteriaOperator.EQUALS
+          orderBy: {
+            field: 'createdOn',
+            direction: Wallee.model.SortOrder.DESC
           }
-        },
-        orderBy: {
-          field: 'createdOn',
-          direction: Wallee.model.SortOrder.DESC
-        }
-      })
+        })
+        
+        tokens = tokenSearchResult.body || []
+        console.log('💳 Found active tokens from TokenService:', tokens.length)
+      } catch (tokenError: any) {
+        console.warn('⚠️ Could not fetch tokens from TokenService, falling back to transactions:', tokenError.message)
+        tokens = []
+      }
       
-      console.log('📊 Found transactions for customer:', transactions.length)
+      // ✅ Fallback: Falls keine Tokens gefunden, extrahiere aus Transaktionen
+      let paymentMethods: any[] = []
       
-      // Zahlungsmethoden aus vergangenen Transaktionen extrahieren
-      const usedPaymentMethods = new Map()
-      
-      for (const transaction of transactions) {
-        if (transaction.paymentConnectorConfiguration && transaction.paymentConnectorConfiguration.paymentMethodConfiguration) {
-          const paymentMethod = transaction.paymentConnectorConfiguration.paymentMethodConfiguration
-          const methodId = paymentMethod.id
-          
-          if (!usedPaymentMethods.has(methodId)) {
-            usedPaymentMethods.set(methodId, {
-              id: methodId,
-              name: paymentMethod.name,
-              description: paymentMethod.description,
-              lastUsed: transaction.createdOn,
-              transactionCount: 1
-            })
-          } else {
-            usedPaymentMethods.get(methodId).transactionCount++
-            if (new Date(transaction.createdOn!) > new Date(usedPaymentMethods.get(methodId).lastUsed)) {
-              usedPaymentMethods.get(methodId).lastUsed = transaction.createdOn
+      if (tokens.length > 0) {
+        // Verwende Tokens von TokenService
+        paymentMethods = tokens.map(token => ({
+          id: token.id,
+          wallee_token_id: token.id,
+          display_name: token.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 
+                        (token.cardData?.lastFourDigits ? `Karte **** ${token.cardData.lastFourDigits}` : 'Gespeicherte Karte'),
+          payment_method_type: token.paymentConnectorConfiguration?.paymentMethodConfiguration?.description || 
+                              token.cardData?.brand || 'CARD',
+          last4: token.cardData?.lastFourDigits || null,
+          brand: token.cardData?.brand || null,
+          expires_at: token.cardData?.expiryDate || null,
+          is_default: token.defaultToken || false,
+          created_on: token.createdOn,
+          last_used: token.createdOn // TokenService gibt nicht direkt lastUsed zurück
+        }))
+      } else {
+        // Fallback: Extrahiere aus Transaktionen
+        const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
+        
+        const transactions = await transactionService.search(spaceId, {
+          filter: {
+            customerId: {
+              value: usedCustomerId!,
+              operator: Wallee.model.CriteriaOperator.EQUALS
+            },
+            state: {
+              value: Wallee.model.TransactionState.FULFILL,
+              operator: Wallee.model.CriteriaOperator.EQUALS
+            }
+          },
+          orderBy: {
+            field: 'createdOn',
+            direction: Wallee.model.SortOrder.DESC
+          }
+        })
+        
+        console.log('📊 Found transactions for customer (fallback):', transactions.length)
+        
+        const usedPaymentMethods = new Map()
+        
+        for (const transaction of transactions) {
+          if (transaction.paymentConnectorConfiguration && transaction.paymentConnectorConfiguration.paymentMethodConfiguration) {
+            const paymentMethod = transaction.paymentConnectorConfiguration.paymentMethodConfiguration
+            const methodId = paymentMethod.id
+            
+            if (!usedPaymentMethods.has(methodId)) {
+              usedPaymentMethods.set(methodId, {
+                id: methodId,
+                wallee_token_id: methodId,
+                name: paymentMethod.name,
+                description: paymentMethod.description,
+                lastUsed: transaction.createdOn,
+                transactionCount: 1
+              })
+            } else {
+              usedPaymentMethods.get(methodId).transactionCount++
+              if (new Date(transaction.createdOn!) > new Date(usedPaymentMethods.get(methodId).lastUsed)) {
+                usedPaymentMethods.get(methodId).lastUsed = transaction.createdOn
+              }
             }
           }
         }
+        
+        paymentMethods = Array.from(usedPaymentMethods.values()).map((pm: any) => ({
+          id: pm.id,
+          wallee_token_id: pm.id,
+          display_name: pm.name || 'Gespeicherte Karte',
+          payment_method_type: pm.description || 'CARD',
+          last_used: pm.lastUsed,
+          transaction_count: pm.transactionCount
+        }))
       }
-      
-      const paymentMethods = Array.from(usedPaymentMethods.values())
       
       console.log('💳 Found payment methods for customer:', paymentMethods.length)
       
       return {
         success: true,
-        customerId: consistentCustomerId,
+        customerId: usedCustomerId,
         customerEmail: customerEmail,
         paymentMethods: paymentMethods,
         totalTransactions: transactions.length,
@@ -150,7 +225,7 @@ export default defineEventHandler(async (event) => {
       console.log('ℹ️ Customer not found or no payment methods:', customerError.message)
       return {
         success: true,
-        customerId: consistentCustomerId,
+        customerId: candidateCustomerIds[0] || null,
         paymentMethods: [],
         message: 'No saved payment methods found for this customer'
       }
@@ -169,4 +244,5 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
+
 

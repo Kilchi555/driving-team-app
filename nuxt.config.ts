@@ -14,6 +14,7 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxt/eslint'
+    // '@nuxtjs/i18n' // Temporarily disabled - path resolution issues
   ],
   
   // --- Build Configuration ---
@@ -37,6 +38,16 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       wasm: true
+    }
+  },
+  
+  // --- Vite Configuration ---
+  vite: {
+    server: {
+      allowedHosts: [
+        '.ngrok-free.dev',
+        '.ngrok.io'
+      ]
     }
   },
   
@@ -88,5 +99,20 @@ export default defineNuxtConfig({
     '~/assets/css/loading.css',
     // Tenant-Branding CSS System
     '~/assets/css/tenant-branding.css'
-  ]
+  ],
+  
+  // --- i18n Configuration ---
+  // Temporarily disabled - will be re-enabled after fixing path resolution
+  // i18n: {
+  //   locales: [
+  //     { code: 'de', iso: 'de-CH', file: 'de.json', name: 'Deutsch' },
+  //     { code: 'en', iso: 'en-US', file: 'en.json', name: 'English' }
+  //   ],
+  //   lazy: true,
+  //   langDir: 'locales',
+  //   defaultLocale: 'de',
+  //   strategy: 'no_prefix',
+  //   detectBrowserLanguage: false,
+  //   vueI18n: './i18n.config.ts'
+  // }
 })

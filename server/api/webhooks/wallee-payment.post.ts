@@ -1,7 +1,7 @@
 // server/api/webhooks/wallee-payment.post.ts
 // ✅ WALLEE WEBHOOK HANDLER für Payment Updates
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 interface WalleeWebhookPayload {
   listenerEntityId: number
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const transactionId = body.entityId.toString()
     const walleeState = body.state
     
@@ -67,13 +67,16 @@ export default defineEventHandler(async (event) => {
     console.log(`🔄 Mapping Wallee state "${walleeState}" to payment status "${paymentStatus}"`)
     
     // Find ALL payments by Wallee transaction ID (there might be multiple)
-    const { data: payments, error: findError } = await supabase
+    console.log(`🔍 Searching for payment with wallee_transaction_id: "${transactionId}" (type: ${typeof transactionId})`)
+    
+    let { data: payments, error: findError } = await supabase
       .from('payments')
       .select(`
         id,
         payment_status,
         appointment_id,
         user_id,
+        tenant_id,
         total_amount_rappen,
         metadata,
         wallee_transaction_id,
@@ -85,86 +88,194 @@ export default defineEventHandler(async (event) => {
       `)
       .eq('wallee_transaction_id', transactionId)
     
+    console.log(`🔍 Query result:`, { 
+      found: payments?.length || 0, 
+      error: findError?.message,
+      payments: payments?.map(p => ({ id: p.id, wallee_transaction_id: p.wallee_transaction_id }))
+    })
+    
     if (findError || !payments || payments.length === 0) {
-      // Try to find anonymous sale instead
-      console.log('🔍 Payment not found, checking for anonymous sale...')
+      // ✅ Try to find appointment by transaction metadata (from confirmation page)
+      console.log('🔍 Payment not found, checking transaction metadata for appointment...')
       
-      const { data: anonymousSale, error: saleError } = await supabase
-        .from('product_sales')
-        .select(`
-          id,
-          status,
-          total_amount_rappen,
-          metadata,
-          user_id
-        `)
-        .eq('wallee_transaction_id', transactionId)
-        .single()
-      
-      if (saleError || !anonymousSale) {
-        console.error('❌ Neither payment nor anonymous sale found for transaction:', transactionId)
-        throw createError({
-          statusCode: 404,
-          statusMessage: 'Payment or sale not found'
-        })
-      }
-      
-      // Process anonymous sale
-      console.log('✅ Anonymous sale found:', {
-        saleId: anonymousSale.id,
-        currentStatus: anonymousSale.status,
-        newStatus: paymentStatus
-      })
-      
-      // Skip if status hasn't changed
-      if (anonymousSale.status === paymentStatus) {
-        console.log('ℹ️ Sale status unchanged, skipping update')
-        return { success: true, message: 'Status unchanged' }
-      }
-      
-      // Update anonymous sale status
-      const updateData: any = {
-        status: paymentStatus,
-        wallee_transaction_state: walleeState,
-        updated_at: new Date().toISOString()
-      }
-      
-      // Set completion timestamp if successful
-      if (paymentStatus === 'completed') {
-        updateData.paid_at = new Date().toISOString()
-      }
-      
-      const { error: updateError } = await supabase
-        .from('product_sales')
-        .update(updateData)
-        .eq('id', anonymousSale.id)
-      
-      if (updateError) {
-        console.error('❌ Error updating anonymous sale:', updateError)
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'Failed to update anonymous sale'
-        })
-      }
-      
-      console.log('✅ Anonymous sale status updated successfully')
-      
-      // Send confirmation email if payment completed
-      if (paymentStatus === 'completed') {
-        try {
-          await sendAnonymousSaleConfirmationEmail({
-            saleId: anonymousSale.id,
-            customerName: anonymousSale.metadata?.customer_name || 'Anonymer Kunde',
-            customerEmail: anonymousSale.metadata?.customer_email,
-            totalAmount: anonymousSale.total_amount_rappen,
-            paymentMethod: anonymousSale.metadata?.payment_method || 'online'
-          })
-        } catch (emailError) {
-          console.warn('⚠️ Could not send confirmation email:', emailError)
+      try {
+        // Fetch transaction details from Wallee to get merchantReference
+        const spaceId = body.spaceId || parseInt(process.env.WALLEE_SPACE_ID || '82592')
+        const userId = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
+        const apiSecret = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+        const config = {
+          space_id: spaceId,
+          user_id: userId,
+          api_secret: apiSecret
         }
+        
+        const WalleeModule = await import('wallee')
+        const Wallee = WalleeModule.default || WalleeModule.Wallee || WalleeModule
+        const transactionService = new (Wallee as any).api.TransactionService(config)
+        const transactionResponse = await transactionService.read(spaceId, parseInt(transactionId))
+        const walleeTransaction = transactionResponse.body
+        
+        console.log('📋 Wallee transaction details:', {
+          id: walleeTransaction.id,
+          merchantReference: (walleeTransaction as any).merchantReference,
+          customerId: (walleeTransaction as any).customerId,
+          amount: (walleeTransaction as any).lineItems?.[0]?.amountIncludingTax
+        })
+        
+        // Extract appointment ID from merchantReference (format: "appointment-{id}-{timestamp}")
+        const merchantRef = (walleeTransaction as any).merchantReference || ''
+        const appointmentIdMatch = merchantRef.match(/appointment-([a-f0-9-]+)-\d+/)
+        
+        if (appointmentIdMatch) {
+          const appointmentId = appointmentIdMatch[1]
+          console.log('✅ Found appointment ID from merchantReference:', appointmentId)
+          
+          // Load appointment
+          const { data: appointment, error: aptError } = await supabase
+            .from('appointments')
+            .select('*')
+            .eq('id', appointmentId)
+            .maybeSingle()
+          
+          if (!aptError && appointment) {
+            // Calculate amount in Rappen
+            const amountInCHF = (walleeTransaction as any).lineItems?.[0]?.amountIncludingTax || 0
+            const amountInRappen = Math.round(amountInCHF * 100)
+            
+            // Create payment record
+            const { data: newPayment, error: createError } = await supabase
+              .from('payments')
+              .insert({
+                appointment_id: appointmentId,
+                user_id: appointment.user_id,
+                staff_id: appointment.staff_id,
+                tenant_id: appointment.tenant_id,
+                total_amount_rappen: amountInRappen,
+                payment_method: 'wallee',
+                payment_status: paymentStatus,
+                wallee_transaction_id: transactionId,
+                currency: 'CHF',
+                description: `Termin: ${appointment.title || 'Fahrstunde'}`,
+                paid_at: paymentStatus === 'completed' ? new Date().toISOString() : null,
+                metadata: {
+                  created_from: 'webhook_auto_create',
+                  merchant_reference: merchantRef
+                }
+              })
+              .select()
+              .single()
+            
+            if (!createError && newPayment) {
+              console.log('✅ Created payment from transaction metadata:', newPayment.id)
+              
+              // Confirm appointment if payment completed
+              if (paymentStatus === 'completed') {
+                await supabase
+                  .from('appointments')
+                  .update({
+                    status: 'confirmed',
+                    is_paid: true,
+                    payment_status: 'paid',
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', appointmentId)
+                
+                console.log('✅ Appointment confirmed via webhook')
+              }
+              
+              // Use the newly created payment for further processing
+              payments = [newPayment]
+            } else {
+              console.error('❌ Error creating payment from transaction:', createError)
+            }
+          } else {
+            console.warn('⚠️ Appointment not found:', appointmentId)
+          }
+        }
+      } catch (transactionErr: any) {
+        console.warn('⚠️ Could not fetch transaction details from Wallee:', transactionErr.message)
       }
       
-      return { success: true, message: 'Anonymous sale updated' }
+      // If still no payment, try to find anonymous sale
+      if (!payments || payments.length === 0) {
+        console.log('🔍 Payment still not found, checking for anonymous sale...')
+        
+        const { data: anonymousSale, error: saleError } = await supabase
+          .from('product_sales')
+          .select(`
+            id,
+            status,
+            total_amount_rappen,
+            metadata,
+            user_id
+          `)
+          .eq('wallee_transaction_id', transactionId)
+          .single()
+        
+        if (saleError || !anonymousSale) {
+          console.error('❌ Neither payment nor anonymous sale found for transaction:', transactionId)
+          throw createError({
+            statusCode: 404,
+            statusMessage: 'Payment or sale not found'
+          })
+        }
+        
+        // Process anonymous sale
+        console.log('✅ Anonymous sale found:', {
+          saleId: anonymousSale.id,
+          currentStatus: anonymousSale.status,
+          newStatus: paymentStatus
+        })
+        
+        // Skip if status hasn't changed
+        if (anonymousSale.status === paymentStatus) {
+          console.log('ℹ️ Sale status unchanged, skipping update')
+          return { success: true, message: 'Status unchanged' }
+        }
+        
+        // Update anonymous sale status
+        const updateData: any = {
+          status: paymentStatus,
+          updated_at: new Date().toISOString()
+        }
+        
+        // Set completion timestamp if successful
+        if (paymentStatus === 'completed') {
+          updateData.paid_at = new Date().toISOString()
+        }
+        
+        const { error: updateError } = await supabase
+          .from('product_sales')
+          .update(updateData)
+          .eq('id', anonymousSale.id)
+        
+        if (updateError) {
+          console.error('❌ Error updating anonymous sale:', updateError)
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Failed to update anonymous sale'
+          })
+        }
+        
+        console.log('✅ Anonymous sale status updated successfully')
+        
+        // Send confirmation email if payment completed
+        if (paymentStatus === 'completed') {
+          try {
+            await sendAnonymousSaleConfirmationEmail({
+              saleId: anonymousSale.id,
+              customerName: anonymousSale.metadata?.customer_name || 'Anonymer Kunde',
+              customerEmail: anonymousSale.metadata?.customer_email,
+              totalAmount: anonymousSale.total_amount_rappen,
+              paymentMethod: anonymousSale.metadata?.payment_method || 'online'
+            })
+          } catch (emailError) {
+            console.warn('⚠️ Could not send confirmation email:', emailError)
+          }
+        }
+        
+        return { success: true, message: 'Anonymous sale updated' }
+      }
     }
     
     console.log('✅ Payments found:', {
@@ -177,7 +288,6 @@ export default defineEventHandler(async (event) => {
     // Update ALL payments with this transaction ID
     const updateData: any = {
       payment_status: paymentStatus,
-      wallee_transaction_state: walleeState,
       updated_at: new Date().toISOString()
     }
     
@@ -225,6 +335,56 @@ export default defineEventHandler(async (event) => {
       }
     }
     
+    // ✅ Save Wallee payment method token if tokenization was enabled
+    if (paymentStatus === 'completed' && payments.length > 0) {
+      const firstPayment = payments[0]
+      if (firstPayment.user_id && firstPayment.tenant_id) {
+        try {
+          // Versuche Payment Methods von Wallee zu synchronisieren und zu speichern
+          const syncResult = await $fetch('/api/wallee/sync-payment-methods', {
+            method: 'POST',
+            body: {
+              userId: firstPayment.user_id,
+              tenantId: firstPayment.tenant_id,
+              transactionId: transactionId
+            }
+          })
+          console.log('✅ Attempted to sync payment methods for transaction:', transactionId, syncResult)
+          
+          // ✅ Prüfe ob dies eine Tokenization-only Transaktion war
+          // Wenn ja, storniere die Transaktion automatisch
+          const syncResultTyped = syncResult as { success?: boolean; error?: string }
+          if (syncResultTyped.success && firstPayment.metadata?.isTokenizationOnly === 'true') {
+            try {
+              console.log('🔙 Auto-refunding tokenization-only transaction:', transactionId)
+              // TODO: Implementiere automatische Stornierung via Wallee API
+              // Für jetzt: Markiere Payment als refunded in unserer DB
+              await supabase
+                .from('payments')
+                .update({
+                  payment_status: 'refunded',
+                  metadata: {
+                    ...firstPayment.metadata,
+                    auto_refunded: true,
+                    refunded_at: new Date().toISOString(),
+                    refund_reason: 'Tokenization-only transaction - automatic refund'
+                  }
+                })
+                .eq('id', firstPayment.id)
+              
+              console.log('✅ Tokenization transaction marked as auto-refunded in DB')
+              // TODO: Rufe Wallee Refund API auf, um die Transaktion tatsächlich zu stornieren
+            } catch (refundErr: any) {
+              console.warn('⚠️ Could not auto-refund tokenization transaction (non-critical):', refundErr.message)
+            }
+          }
+        } catch (tokenErr: any) {
+          // Nicht kritisch - Token könnte später gespeichert werden
+          console.warn('⚠️ Could not save payment method token (non-critical):', tokenErr.message)
+        }
+      }
+    }
+
     // Create vouchers if payment completed and products are vouchers
     if (paymentStatus === 'completed') {
       for (const payment of payments) {
@@ -314,7 +474,7 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
     return
   }
 
-  const supabase = getSupabase()
+  const supabase = getSupabaseAdmin()
   
   for (const product of metadata.products) {
     // Check if this product is a voucher

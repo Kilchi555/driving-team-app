@@ -1008,11 +1008,20 @@ const loadAppointments = async (forceReload = false) => {
   try {
     console.log('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '(cached check)')
     
-    // Auto-Sync externe Kalender (mit Cooldown)
-    const { autoSyncCalendars } = useExternalCalendarSync()
-    autoSyncCalendars(props.currentUser?.id).catch(err => {
-      console.warn('Auto-sync failed (non-fatal):', err)
-    })
+    // ✅ Externe Kalender synchronisieren BEVOR Termine geladen werden
+    console.log('🔄 Syncing external calendars before loading appointments...')
+    try {
+      const { autoSyncCalendars } = useExternalCalendarSync()
+      const syncResult = await autoSyncCalendars(props.currentUser?.id)
+      if (syncResult.success && !syncResult.skipped) {
+        console.log('✅ External calendars synced successfully')
+      } else if (syncResult.skipped) {
+        console.log('⏭️ External calendar sync skipped (cooldown or already running)')
+      }
+    } catch (syncError) {
+      console.warn('⚠️ External calendar sync failed (non-fatal):', syncError)
+      // Sync-Fehler sind nicht fatal, wir laden trotzdem die Termine
+    }
     
     // Get current calendar view for date range (immer aktuell bei jedem Aufruf)
     const calendarApi = calendar.value?.getApi()
@@ -2013,10 +2022,10 @@ onMounted(async () => {
       emit('view-updated', calendarApi.view.currentStart)
     }
     
-    // ✅ Auto-Sync alle 5 Minuten starten
+    // ✅ Auto-Sync alle 5 Minuten starten (nur als Backup, da wir jetzt bei jedem loadAppointments syncen)
     const { autoSyncCalendars } = useExternalCalendarSync()
     syncInterval = setInterval(async () => {
-      console.log('⏰ Auto-sync interval triggered (every 5 min)')
+      console.log('⏰ Auto-sync interval triggered (every 5 min) - backup sync')
       try {
         const result = await autoSyncCalendars(props.currentUser?.id)
         if (result.success && !result.skipped) {
@@ -2028,7 +2037,7 @@ onMounted(async () => {
         console.warn('Auto-sync interval failed (non-fatal):', err)
       }
     }, 5 * 60 * 1000) // 5 Minuten
-    console.log('✅ Auto-sync interval started (every 5 min)')
+    console.log('✅ Auto-sync interval started (every 5 min) - backup sync')
     
     console.log('🔄 Initial appointment loading...')
     await loadAppointments()
@@ -2396,10 +2405,82 @@ defineExpose({
   border-color: #e5e7eb !important;
 }
 .fc-timegrid-slots td,
-.fc-timegrid-cols td {
+.fc-timegrid-cols td,
+.fc-timegrid-col {
   border-right: 1px solid #e5e7eb !important;
 }
 
+/* Vertikale Trennlinien zwischen Tagen */
+.fc-timegrid-axis,
+.fc-timegrid-slot-lane {
+  border-right: 1px solid #e5e7eb !important;
+}
+
+/* Stärkere Regel für Tages-Spalten */
+.fc-col-header-cell,
+.fc-timegrid-col-frame,
+.fc-daygrid-day-frame {
+  border-right: 1px solid #d1d5db !important;
+}
+
+/* Alle Spalten im TimeGrid */
+.fc-timegrid .fc-scrollgrid-sync-table td {
+  border-right: 1px solid #d1d5db !important;
+}
+
+/* SEHR SPEZIFISCHE Regeln für vertikale Linien */
+.fc-timegrid-body .fc-scrollgrid-sync-table colgroup col:not(:last-child) {
+  border-right: 1px solid #e5e7eb !important;
+}
+
+.fc-timegrid-body table tr td:not(:last-child) {
+  border-right: 1px solid #e5e7eb !important;
+}
+
+.fc-col-header table tr th:not(:last-child) {
+  border-right: 1px solid #e5e7eb !important;
+}
+
+/* Für die Zeitachse */
+.fc-timegrid-body .fc-timegrid-slots table tr td {
+  border-right: 1px solid #e5e7eb !important;
+}
+
+/* WICHTIG: Direkte Regel für die Tages-Spalten */
+.fc-timegrid-col:not(:last-child) {
+  border-right: 1px solid #e5e7eb !important;
+  box-shadow: 1px 0 0 0 #e5e7eb !important;
+}
+
+/* Für die Slots innerhalb der Spalten */
+.fc-timegrid-slot:not(:last-child) {
+  border-right: 1px solid #e5e7eb !important;
+}
+
+/* Für die Event-Container innerhalb der Spalten */
+.fc-timegrid-col-events {
+  border-right: 1px solid #e5e7eb !important;
+}
+
+/* Alternative: Box-Shadow für alle Spalten */
+.fc-timegrid-body .fc-timegrid-col {
+  position: relative;
+}
+
+.fc-timegrid-body .fc-timegrid-col::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #e5e7eb;
+  z-index: 1;
+}
+
+.fc-timegrid-body .fc-timegrid-col:last-child::after {
+  display: none;
+}
 
 .fc-timegrid-col.fc-day-today {
     color: #1d4ed8 !important;

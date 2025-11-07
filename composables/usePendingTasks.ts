@@ -51,12 +51,14 @@ export interface CriteriaEvaluationData {
 // SINGLETON PATTERN - Globaler reaktiver State
 const globalState = reactive({
   pendingAppointments: [] as PendingAppointment[],
+  unconfirmedNext24h: [] as PendingAppointment[],
   isLoading: false,
   error: null as string | null
 })
 
 // Computed values basierend auf globalem State
 const pendingCount = computed(() => globalState.pendingAppointments.length)
+const unconfirmedNext24hCount = computed(() => globalState.unconfirmedNext24h.length)
 
 const buttonClasses = computed(() =>
   `text-white font-bold px-4 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200
@@ -64,7 +66,7 @@ const buttonClasses = computed(() =>
 )
 
 const buttonText = computed(() => 
-  `Pendenzen${pendingCount.value > 0 ? `(${pendingCount.value})` : '(0)'}`
+  `Pendenzen${pendingCount.value > 0 ? `(${pendingCount.value})` : '(0)'}${unconfirmedNext24hCount.value > 0 ? ` • Unbestätigt(${unconfirmedNext24hCount.value})` : ''}`
 )
 
 // Hilfsfunktion für formatierte Anzeige
@@ -215,13 +217,70 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
       console.log('🔥 Query filter: staff_id =', userId)
     }
     
-    // Rest der Abfrage
+    // ✅ ZWEI QUERIES: 1. Abgeschlossene Termine ohne Evaluation, 2. Nicht-bestätigte Termine
+    // Query 1: Abgeschlossene Termine ohne Evaluation
     const { data, error: fetchError } = await query
       .lt('start_time', toLocalTimeString(new Date)) // ✅ Termine die bereits gestartet haben
       .in('status', ['completed', 'confirmed', 'scheduled']) // Alle relevanten Status für Pendenzen
       .is('deleted_at', null) // ✅ Soft Delete Filter - nur nicht gelöschte Termine
       .in('event_type_code', ['lesson', 'exam', 'theory']) // ✅ lesson, exam UND theory Event Types
       .order('start_time', { ascending: true }) // Älteste zuerst (überfällige zuerst)
+    
+    // Query 2: Nicht-bestätigte Termine (nur für Staff/Admin, nicht für Clients)
+    let unconfirmedAppointments: any[] = []
+    if (userRole === 'staff' || userRole === 'admin') {
+      let unconfirmedQuery = supabase
+        .from('appointments')
+        .select(`
+          id,
+          title,
+          start_time,
+          end_time,
+          user_id,
+          status,
+          event_type_code,
+          type,
+          created_by,
+          tenant_id,
+          confirmation_token,
+          users!appointments_user_id_fkey (
+            first_name,
+            last_name,
+            category
+          ),
+          created_by_user:created_by (
+            first_name,
+            last_name
+          ),
+          payments (
+            id,
+            payment_method,
+            payment_status,
+            total_amount_rappen,
+            metadata
+          )
+        `)
+        .eq('tenant_id', userData.tenant_id)
+        .eq('status', 'pending_confirmation')
+        .not('confirmation_token', 'is', null)
+        .is('deleted_at', null)
+        .in('event_type_code', ['lesson', 'exam', 'theory'])
+        .order('start_time', { ascending: true })
+      
+      // Filter nach staff_id für Staff, alle für Admin
+      if (userRole === 'staff') {
+        unconfirmedQuery = unconfirmedQuery.eq('staff_id', userId)
+      }
+      
+      const { data: unconfirmedData, error: unconfirmedError } = await unconfirmedQuery
+      
+      if (unconfirmedError) {
+        console.warn('⚠️ Error loading unconfirmed appointments:', unconfirmedError)
+      } else {
+        unconfirmedAppointments = unconfirmedData || []
+        console.log(`📋 Found ${unconfirmedAppointments.length} unconfirmed appointments`)
+      }
+    }
 
     if (fetchError) {
       console.error('❌ Supabase query error in usePendingTasks:', fetchError)
@@ -241,8 +300,11 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     console.log('🔥 Current time for comparison:', toLocalTimeString(new Date()))
     console.log('🔥 User ID being searched:', userId)
 
+    // ✅ NUR abgeschlossene Termine für Bewertungen verwenden (KEINE unbestätigten Termine)
+    const allAppointments = [...(data || [])]
+    
     // Termine ohne Kriterienbewertung oder Prüfungsergebnis filtern
-    const pending: PendingAppointment[] = (data || []).filter((appointment: any) => {
+    const pending: PendingAppointment[] = allAppointments.filter((appointment: any) => {
       // ✅ Zusätzlicher Filter: Stelle sicher, dass nur nicht gelöschte Termine angezeigt werden
       console.log(`🔥 Checking appointment ${appointment.id}: deleted_at = "${appointment.deleted_at}" (type: ${typeof appointment.deleted_at})`)
       
@@ -251,9 +313,13 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
         return false
       }
       
-      // Ein Termin ist "pending", wenn er KEINE Kriterien-Bewertung UND KEIN Prüfungsergebnis hat.
+      // ✅ Unbestätigte Termine werden NICHT in pendingAppointments aufgenommen
+      // Sie werden separat in unconfirmedNext24h verwaltet
+      if (appointment.status === 'pending_confirmation') {
+        return false
+      }
       
-      // Prüfe auf Kriterien-Bewertung
+      // Für abgeschlossene Termine: Prüfe auf Kriterien-Bewertung
       const hasCriteriaEvaluation = appointment.notes && 
         appointment.notes.some((note: any) => 
           note.evaluation_criteria_id !== null && 
@@ -302,6 +368,17 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     
     // WICHTIG: Globalen State komplett ersetzen (nicht mutieren)
     globalState.pendingAppointments = [...pending]
+    
+    // Speichere zusätzlich unbestätigte Termine innerhalb der nächsten 24h
+    const now = new Date()
+    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    globalState.unconfirmedNext24h = (unconfirmedAppointments || []).filter((apt: any) => {
+      if (!apt.start_time) return false
+      const start = new Date(apt.start_time)
+      return start >= now && start <= in24h
+    }).map((apt: any) => getFormattedAppointment(apt)) as any
+    
+    console.log('📌 Unconfirmed next 24h:', globalState.unconfirmedNext24h.length)
     console.log('🔥 Global pending state updated, count:', pendingCount.value)
     
   } catch (err: any) {
@@ -399,6 +476,8 @@ export const usePendingTasks = () => {
     pendingAppointments: computed(() => globalState.pendingAppointments),
     formattedAppointments,
     pendingCount,
+    unconfirmedNext24h: computed(() => globalState.unconfirmedNext24h),
+    unconfirmedNext24hCount,
     buttonClasses,
     buttonText,
     isLoading: computed(() => globalState.isLoading),

@@ -31,6 +31,25 @@
         </div>
       </div>
 
+      <!-- Tabs -->
+      <div class="bg-gray-50 border-b px-4">
+        <div class="flex space-x-4">
+          <button
+            :class="['py-3 border-b-2', activeTab === 'bewertungen' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
+            @click="activeTab = 'bewertungen'"
+          >
+            Bewertungen
+          </button>
+          <button
+            :class="['py-3 border-b-2 flex items-center space-x-2', activeTab === 'unconfirmed' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
+            @click="activeTab = 'unconfirmed'"
+          >
+            <span>Unbestätigt (24h)</span>
+            <span v-if="unconfirmedNext24hCount > 0" class="ml-1 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800">{{ unconfirmedNext24hCount }}</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Content - Scrollable -->
       <div class="flex-1 overflow-y-auto">
         <!-- Loading State -->
@@ -66,14 +85,15 @@
           </div>
         </div>
 
-        <!-- Pending Appointments List -->
-        <div v-else class="p-4 space-y-3">
+        <!-- Pending Appointments List (Bewertungen) -->
+        <div v-else-if="activeTab === 'bewertungen'" class="p-4 space-y-3">
           <div
-            v-for="appointment in formattedAppointments"
+            v-for="appointment in evaluationAppointments"
             :key="appointment.id"
             :class="[
               'rounded-lg border p-4 hover:shadow-md transition-all cursor-pointer relative',
-              getAppointmentBackgroundClass(appointment)
+              getAppointmentBackgroundClass(appointment),
+              appointment.status === 'pending_confirmation' ? 'border-red-300 bg-red-50' : ''
             ]"
             @click="openEvaluation(appointment)"
           >
@@ -160,13 +180,34 @@
                 {{ getPriorityText(appointment) }}
               </span>
             </div>
+          </div>
+        </div>
+        <div v-else-if="activeTab === 'unconfirmed'" class="p-4 space-y-3">
+          <div
+            v-for="appointment in formattedUnconfirmedAppointments"
+            :key="appointment.id"
+            class="rounded-lg border p-4 hover:shadow-md transition-all relative border-red-300 bg-red-50"
+          >
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="text-sm text-red-700 font-semibold mb-1">Nicht bestätigt</div>
+                <div class="text-gray-900 font-medium">{{ appointment.studentName }}</div>
+                <div class="text-sm text-gray-600 mt-1">
+                  {{ appointment.formattedDate }} • {{ appointment.formattedStartTime }} - {{ appointment.formattedEndTime }}
+                </div>
+              </div>
+              <div>
+                <span class="text-xs px-2 py-1 rounded-full font-medium bg-red-100 text-red-800">⚠️ <span v-if="hoursUntil(appointment) < 24">< 24h</span><span v-else>24h</span></span>
+              </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
-    <!-- Evaluation Modal (außerhalb des Hauptmodals) -->
-    <EvaluationModal
+  <!-- Evaluation Modal (außerhalb des Hauptmodals) -->
+  <EvaluationModal
       v-if="showEvaluationModal"
       :is-open="showEvaluationModal"
       :appointment="selectedAppointment"
@@ -174,28 +215,27 @@
       :current-user="currentUser"
       @close="closeEvaluationModal"
       @saved="onEvaluationSaved"
-    />
-    
-    <!-- ✅ EXAM RESULT MODAL -->
-    <ExamResultModal
-      v-if="showExamResultModal"
-      :is-visible="showExamResultModal"
-      :appointment="currentExamAppointment"
-      :current-user="currentUser"
-      @close="closeExamResultModal"
-      @exam-result-saved="onExamResultSaved"
-    />
+  />
+  
+  <!-- ✅ EXAM RESULT MODAL -->
+  <ExamResultModal
+    v-if="showExamResultModal"
+    :is-visible="showExamResultModal"
+    :appointment="currentExamAppointment"
+    :current-user="currentUser"
+    @close="closeExamResultModal"
+    @exam-result-saved="onExamResultSaved"
+  />
 
-    <!-- Cash Payment Confirmation Modal -->
-    <CashPaymentConfirmation
-      v-if="showCashPaymentModal"
-      :is-visible="showCashPaymentModal"
-      :payment="currentPayment"
-      :current-user-id="currentUser?.id"
-      @close="showCashPaymentModal = false"
-      @payment-confirmed="onCashPaymentConfirmed"
-    />
-  </div>
+  <!-- Cash Payment Confirmation Modal -->
+  <CashPaymentConfirmation
+    v-if="showCashPaymentModal"
+    :is-visible="showCashPaymentModal"
+    :payment="currentPayment"
+    :current-user-id="currentUser?.id"
+    @close="showCashPaymentModal = false"
+    @payment-confirmed="onCashPaymentConfirmed"
+  />
 </template>
 
 <script setup lang="ts">
@@ -212,6 +252,7 @@ import { getSupabase } from '~/utils/supabase'
 interface Props {
   isOpen: boolean
   currentUser: any
+  defaultTab?: 'bewertungen' | 'unconfirmed'
 }
 
 const props = defineProps<Props>()
@@ -227,6 +268,8 @@ const {
   pendingAppointments,
   formattedAppointments,
   pendingCount,
+  unconfirmedNext24h,
+  unconfirmedNext24hCount,
   isLoading,
   error,
   fetchPendingTasks,
@@ -239,6 +282,7 @@ const { allCategories, loadCategories } = useCategoryData()
 // Modal state
 const showEvaluationModal = ref(false)
 const selectedAppointment = ref<any>(null)
+const activeTab = ref<'bewertungen' | 'unconfirmed'>(props.defaultTab || 'bewertungen')
 
 // Cash Payment Confirmation Modal
 const showCashPaymentModal = ref(false)
@@ -248,6 +292,26 @@ const currentPayment = ref<any>(null)
 const showExamResultModal = ref(false)
 const currentExamAppointment = ref<any>(null)
 
+// Computed: Nur Bewertungen (ohne pending_confirmation)
+const evaluationAppointments = computed(() => {
+  return (formattedAppointments.value || []).filter((apt: any) => apt.status !== 'pending_confirmation')
+})
+
+// Computed: Formatierte unconfirmed appointments
+const formattedUnconfirmedAppointments = computed(() => {
+  return (unconfirmedNext24h.value || []).map((apt: any) => {
+    const startTime = new Date(apt.start_time)
+    const endTime = new Date(apt.end_time)
+    
+    return {
+      ...apt,
+      studentName: `${apt.users?.first_name || ''} ${apt.users?.last_name || ''}`.trim() || 'Unbekannt',
+      formattedDate: startTime.toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }),
+      formattedStartTime: startTime.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }),
+      formattedEndTime: endTime.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+    }
+  })
+})
 
 // Methods
 const closeModal = () => {
@@ -279,6 +343,15 @@ const getStudentCategory = (appointment: any) => {
 
 const openEvaluation = (appointment: any) => {
   console.log('🔥 PendenzenModal - opening evaluation for:', appointment.id)
+  
+  // ✅ PRÜFE OB TERMIN NICHT BESTÄTIGT IST
+  if (appointment.status === 'pending_confirmation') {
+    console.log('⚠️ Appointment not confirmed yet - cannot evaluate')
+    // Zeige Info-Meldung oder öffne Termin-Details
+    alert(`Dieser Termin wurde noch nicht vom Schüler bestätigt.\n\nSchüler: ${appointment.studentName}\nDatum: ${appointment.formattedDate} ${appointment.formattedStartTime}\n\nBitte warten Sie auf die Bestätigung des Schülers.`)
+    return
+  }
+  
   console.log('🔥 Student category debug:', {
     userCategory: appointment.users?.category,
     appointmentType: appointment.type,
@@ -594,6 +667,11 @@ const getAppointmentBackgroundClass = (appointment: any) => {
 }
 
 const getPriorityClass = (appointment: any) => {
+  // ✅ Nicht-bestätigte Termine haben höchste Priorität
+  if (appointment.status === 'pending_confirmation') {
+    return 'bg-red-100 text-red-800'
+  }
+  
   const appointmentDate = new Date(appointment.start_time).toDateString()
   const today = new Date().toDateString()
   const yesterday = new Date()
@@ -610,6 +688,19 @@ const getPriorityClass = (appointment: any) => {
 }
 
 const getPriorityText = (appointment: any) => {
+  // ✅ Nicht-bestätigte Termine
+  if (appointment.status === 'pending_confirmation') {
+    const appointmentTime = new Date(appointment.start_time)
+    const now = new Date()
+    const hoursUntil = Math.ceil((appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60))
+    
+    if (hoursUntil < 24) {
+      return '⚠️ Nicht bestätigt (<24h)'
+    } else {
+      return '⚠️ Nicht bestätigt'
+    }
+  }
+  
   const appointmentDate = new Date(appointment.start_time).toDateString()
   const today = new Date().toDateString()
   const yesterday = new Date()
@@ -625,6 +716,13 @@ const getPriorityText = (appointment: any) => {
   }
 }
 
+// Hilfsfunktion für Unbestätigt-Badge
+const hoursUntil = (appointment: any) => {
+  const start = new Date(appointment.start_time)
+  const now = new Date()
+  return Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60))
+}
+
 // Watch für Modal-Öffnung
 watch(() => props.isOpen, async (newIsOpen) => {
   console.log('🔥 PendenzenModal isOpen changed:', newIsOpen)
@@ -632,6 +730,15 @@ watch(() => props.isOpen, async (newIsOpen) => {
   
   if (newIsOpen && props.currentUser?.id) {
     console.log('🔄 PendenzenModal opened - loading data...')
+    // Setze Tab anhand defaultTab, falls übergeben
+    if (props.defaultTab) {
+      activeTab.value = props.defaultTab
+    } else if ((unconfirmedNext24hCount as any)?.value > 0) {
+      // Falls es unbestätigte gibt, priorisiere diesen Tab
+      activeTab.value = 'unconfirmed'
+    } else {
+      activeTab.value = 'bewertungen'
+    }
     await refreshData()
   } else if (!newIsOpen) {
     console.log('ℹ️ PendenzenModal closed')

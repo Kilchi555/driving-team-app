@@ -59,7 +59,8 @@ export default defineEventHandler(async (event) => {
       merchantReference: orderId || `appointment-test${Date.now()}`,
       language: 'de-CH',
       autoConfirmationEnabled: true,
-      customerEmailAddress: customerEmail || 'test@drivingteam.ch'
+      customerEmailAddress: customerEmail || 'test@drivingteam.ch',
+      tokenizationEnabled: true // ✅ Tokenization aktivieren für Payment Method Storage
     }
 
     // ✅ EXAKTE Headers wie Support Beispiel

@@ -46,6 +46,34 @@
         </div>
       </div>
 
+    <!-- ✅ BANNER: Bestätigung erforderlich -->
+    <div v-if="showContent && pendingConfirmations.length > 0" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div 
+        @click="showConfirmationModal = true"
+        class="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl shadow-lg p-6 cursor-pointer hover:from-orange-600 hover:to-red-600 transition-all transform hover:scale-[1.01]"
+      >
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4 flex-1">
+            <div class="bg-white bg-opacity-20 rounded-full p-3">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold mb-1">
+                {{ pendingConfirmations.length }} {{ pendingConfirmations.length === 1 ? 'Termin' : 'Termine' }} benötigt{{ pendingConfirmations.length === 1 ? '' : '' }} Ihre Bestätigung
+              </h3>
+            </div>
+          </div>
+          <div class="ml-4">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-8">
       <LoadingLogo size="xl" />
@@ -112,6 +140,44 @@
                   <p class="text-3xl font-bold text-yellow-600">{{ unpaidAppointments.length }}</p>
                   <p class="text-xs text-red-500 mt-1">
                     CHF {{ (totalUnpaidAmount / 100).toFixed(2) }} offen
+                  </p>
+                  
+                  <!-- Zahlungsdetails -->
+                  <div class="mt-3 space-y-2 text-xs">
+                    <div v-for="payment in unpaidAppointments.slice(0, 3)" :key="payment.id" class="border-t border-gray-100 pt-2">
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-gray-600">CHF {{ ((payment.total_amount_rappen || 0) / 100).toFixed(2) }}</span>
+                        <span v-if="payment.automatic_payment_consent && payment.payment_method_id" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          ✓ Automatisch
+                        </span>
+                        <span v-else-if="payment.automatic_payment_consent && !payment.payment_method_id" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          ⚠️ Einrichtung unvollständig
+                        </span>
+                        <span v-else class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          Manuell
+                        </span>
+                      </div>
+                      <!-- Automatische Zahlung aktiv -->
+                      <div v-if="payment.automatic_payment_consent && payment.payment_method_id && payment.scheduled_payment_date" class="text-gray-500 mt-1">
+                        Wird durchgeführt: {{ formatPaymentDate(payment.scheduled_payment_date) }}
+                      </div>
+                      <!-- Automatische Zahlung aktiviert, aber kein Zahlungsmittel -->
+                      <div v-else-if="payment.automatic_payment_consent && !payment.payment_method_id" class="text-orange-600 mt-1">
+                        Bitte Zahlungsmittel hinzufügen
+                      </div>
+                      <!-- Manuelle Zahlung -->
+                      <div v-else class="text-gray-500 mt-1">
+                        Automatische Zahlung nicht aktiviert
+                      </div>
+                    </div>
+                    <div v-if="unpaidAppointments.length > 3" class="text-gray-500 pt-1">
+                      + {{ unpaidAppointments.length - 3 }} weitere
+                    </div>
+                  </div>
+                  
+                  <!-- ✅ Zeige überfällige Zahlungen -->
+                  <p v-if="overduePayments.length > 0" class="text-xs text-red-700 font-semibold mt-2">
+                    ⚠️ {{ overduePayments.length }} {{ overduePayments.length === 1 ? 'überfällig' : 'überfällig' }}
                   </p>
                 </div>
                 <div v-else>
@@ -248,6 +314,32 @@
             </div>
           </div>
         </div>
+
+        <!-- Lernbereich -->
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-emerald-100">
+          <div class="p-8 h-full flex flex-col">
+            <div class="flex items-center mb-6">
+              <div class="w-16 h-16 bg-emerald-100 rounded-xl flex items-center justify-center mr-4">
+                <svg class="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0112 21.5c-2.28 0-4.4-.64-6.16-1.742L12 14z" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Lernbereich</h2>
+                <p class="text-sm text-gray-600">Themen mit Lerninhalt, die du bereits bearbeitet hast</p>
+              </div>
+            </div>
+
+            <div class="flex space-x-3">
+              <button
+                @click="navigateTo('/learning')"
+                class="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+              >
+                📘 Öffnen
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Fahrlehrer Sektion -->
@@ -306,9 +398,251 @@
           </div>
         </div>
       </div>
+
+      <!-- Reglemente Sektion -->
+      <div 
+        @click="showReglementeModal = true"
+        class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-indigo-100 mb-8 cursor-pointer"
+      >
+        <div class="p-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">Reglemente</h3>
+                <p class="text-xs text-gray-500">Wichtige Dokumente und Richtlinien</p>
+              </div>
+            </div>
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </div>
     </div>
     <div v-else class="min-h-screen flex items-center justify-center">
       <LoadingLogo size="xl" />
+    </div>
+
+    <!-- Reglemente Modal -->
+    <div v-if="showReglementeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200 flex-shrink-0">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-gray-900">Reglemente</h2>
+                <p class="text-sm text-gray-600">Wichtige Dokumente und Richtlinien</p>
+              </div>
+            </div>
+            <button 
+              @click="showReglementeModal = false"
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto flex-1">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              @click="navigateToReglement('datenschutz'); showReglementeModal = false"
+              class="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors border border-gray-200 hover:border-indigo-300"
+            >
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-semibold text-gray-900">Datenschutzerklärung</h3>
+                  <p class="text-xs text-gray-500 mt-1">Schutz Ihrer persönlichen Daten</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+
+            <button
+              @click="navigateToReglement('nutzungsbedingungen'); showReglementeModal = false"
+              class="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors border border-gray-200 hover:border-indigo-300"
+            >
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-semibold text-gray-900">Nutzungsbedingungen</h3>
+                  <p class="text-xs text-gray-500 mt-1">Regeln für die Nutzung der Plattform</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+
+            <button
+              @click="navigateToReglement('agb'); showReglementeModal = false"
+              class="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors border border-gray-200 hover:border-indigo-300"
+            >
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-semibold text-gray-900">AGB</h3>
+                  <p class="text-xs text-gray-500 mt-1">Allgemeine Geschäftsbedingungen</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+
+            <button
+              @click="navigateToReglement('haftung'); showReglementeModal = false"
+              class="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors border border-gray-200 hover:border-indigo-300"
+            >
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-semibold text-gray-900">Haftungsausschluss</h3>
+                  <p class="text-xs text-gray-500 mt-1">Rechtliche Hinweise zur Haftung</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+
+            <button
+              @click="navigateToReglement('rueckerstattung'); showReglementeModal = false"
+              class="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors border border-gray-200 hover:border-indigo-300"
+            >
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-semibold text-gray-900">Rückerstattung</h3>
+                  <p class="text-xs text-gray-500 mt-1">Richtlinien für Rückerstattungen</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ MODAL: Bestätigung mit automatischer Zahlung -->
+    <div v-if="showConfirmationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <!-- Header -->
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center space-x-3">
+              <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-gray-900">Terminbestätigung</h2>
+              </div>
+            </div>
+            <button 
+              @click="showConfirmationModal = false"
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Hinweis zur automatischen Zahlung absichtlich entfernt: erscheint erst auf der Bestätigungsseite -->
+
+          <!-- Pending Confirmations List -->
+          <div class="space-y-3 mb-6">
+            <div 
+              v-for="appointment in pendingConfirmations" 
+              :key="appointment.id"
+              class="border rounded-xl p-2 shadow-sm"
+              :class="isOverdue(appointment) ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-white'"
+            >
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <!-- Left: Info -->
+                <div class="flex-1">
+                  <div class="flex items-start sm:items-center sm:space-x-2 mb-1">
+                    <div class="flex items-center text-gray-900 font-semibold">
+                      <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {{ formatDateTime(appointment.start_time) }}
+                    </div>
+                    <span v-if="isOverdue(appointment)" class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-red-100 text-red-800 mt-1 sm:mt-0 ml-auto">
+                      Überfällig
+                    </span>
+                  </div>
+                  <div class="flex flex-wrap items-center text-sm text-gray-600 gap-x-3 gap-y-1">
+                    <span class="inline-flex items-center">
+                      <svg class="w-4 h-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
+                      </svg>
+                      {{ appointment.duration_minutes || 45 }} Minuten
+                    </span>
+                    <span class="inline-flex items-center">
+                      <svg class="w-4 h-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      </svg>
+                      CHF {{ formatPrice(appointment.total_amount_rappen || 0) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Right: Action -->
+                <button
+                  @click="confirmAppointment(appointment)"
+                  class="w-full sm:w-auto sm:ml-4 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  Jetzt bestätigen
+                </button>
+              </div>
+            </div>
+          </div>
+
+             
+        </div>
+      </div>
     </div>
 
     <!-- Modals -->
@@ -451,6 +785,7 @@ import EvaluationsOverviewModal from './EvaluationsOverviewModal.vue'
 import UpcomingLessonsModal from './UpcomingLessonsModal.vue'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 // Composables
 const authStore = useAuthStore()
@@ -469,6 +804,14 @@ const isLoggingOut = ref(false)
 const instructors = ref<any[]>([])
 const showInstructorModal = ref(false)
 const selectedInstructor = ref<any>(null)
+
+// ✅ State für Bestätigungen
+const pendingConfirmations = ref<any[]>([])
+const showConfirmationModal = ref(false)
+const showReglementeModal = ref(false)
+const hasPaymentMethod = ref(false)
+const automaticPaymentHoursBefore = ref(24)
+const automaticAuthorizationHoursBefore = ref(168) // Standard: 1 Woche vor Termin
 
 // In CustomerDashboard.vue - vor dem Template:
 const isServerSide = process.server
@@ -532,6 +875,45 @@ const completedAppointments = computed(() => {
 })
 
 
+// ✅ Computed: Überfällige Bestätigungen (Termin bereits vorbei)
+const overdueConfirmations = computed(() => {
+  const now = new Date()
+  return pendingConfirmations.value.filter(apt => {
+    const appointmentDate = new Date(apt.start_time)
+    return appointmentDate < now
+  })
+})
+
+// ✅ Computed: Überfällige Zahlungen (Termin vorbei + nicht bezahlt + pending_confirmation)
+const overduePayments = computed(() => {
+  const now = new Date()
+  return unpaidAppointments.value.filter(apt => {
+    // Check if appointment is overdue (start_time in past)
+    const appointmentDate = apt.start_time || apt.appointments?.start_time
+    if (!appointmentDate) return false
+    
+    const aptDate = new Date(appointmentDate)
+    if (aptDate >= now) return false
+    
+    // Check if status is pending_confirmation (not confirmed yet)
+    const status = apt.status || apt.appointments?.status
+    return status === 'pending_confirmation'
+  })
+})
+
+// ✅ Computed: Prüfung ob Bestätigung überfällig ist
+const isOverdue = (appointment: any) => {
+  const now = new Date()
+  const appointmentDate = new Date(appointment.start_time)
+  return appointmentDate < now
+}
+
+// ✅ Helper: Format price
+const formatPrice = (rappen: number) => {
+  if (!rappen || rappen === 0) return '0.00'
+  return (rappen / 100).toFixed(2)
+}
+
 const unpaidAppointments = computed(() => {
   // Verwende pendingPayments anstatt appointments für offene Rechnungen
   return pendingPayments.value || []
@@ -549,7 +931,9 @@ const refreshData = async () => {
   try {
     await Promise.all([
       loadAllData(),
-      loadPayments()
+      loadPayments(),
+      loadPendingConfirmations(),
+      checkPaymentMethod()
     ])
     console.log('✅ Data refreshed')
   } catch (err) {
@@ -599,21 +983,57 @@ const formatDateTime = (dateString: string | null | undefined) => {
   if (!dateString) return 'Kein Datum/Zeit'
   
   try {
-    const date = new Date(dateString)
+    // Parse als lokale Zeit (nicht UTC)
+    const parts = dateString.replace('T', ' ').replace('Z', '').split(/[-: ]/)
+    const date = new Date(
+      parseInt(parts[0]), // year
+      parseInt(parts[1]) - 1, // month (0-indexed)
+      parseInt(parts[2]), // day
+      parseInt(parts[3] || '0'), // hour
+      parseInt(parts[4] || '0'), // minute
+      parseInt(parts[5] || '0')  // second
+    )
     if (isNaN(date.getTime())) {
       return 'Ungültiges Datum/Zeit'
     }
-    return date.toLocaleDateString('de-CH', {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    const weekday = date.toLocaleDateString('de-CH', { weekday: 'short' }) // z.B. "Mi."
+    const datePart = date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const timePart = date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+    return `${weekday} ${datePart} ${timePart}`
   } catch (error) {
     console.warn('Error formatting dateTime:', dateString, error)
     return 'Datum/Zeit Fehler'
+  }
+}
+
+const formatPaymentDate = (dateString: string | null | undefined) => {
+  if (!dateString) return 'Nicht geplant'
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return 'Ungültiges Datum'
+    }
+    const now = new Date()
+    const diffHours = Math.round((date.getTime() - now.getTime()) / (1000 * 60 * 60))
+    
+    if (diffHours < 0) {
+      return 'Sofort fällig'
+    } else if (diffHours < 24) {
+      return `Heute ${date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
+    } else if (diffHours < 48) {
+      return `Morgen ${date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
+    } else {
+      return date.toLocaleDateString('de-CH', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+  } catch (error) {
+    console.error('Error formatting payment date:', error)
+    return 'Ungültiges Datum'
   }
 }
 
@@ -662,13 +1082,49 @@ const navigateToPayments = async () => {
 }
 
 const navigateToLessonBooking = async () => {
-  // Navigiere zur Fahrstunden-Buchung (falls vorhanden) oder zur Hauptseite
-  await navigateTo('/')
+  try {
+    // Get user's tenant_id from database
+    const supabase = getSupabase()
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser.value?.id)
+      .single()
+    
+    if (userError || !userData) {
+      console.error('❌ Error getting user tenant:', userError)
+      await navigateTo('/booking/availability-test')
+      return
+    }
+    
+    // Get tenant slug from tenant_id
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('slug')
+      .eq('id', userData.tenant_id)
+      .single()
+    
+    if (tenantError || !tenantData) {
+      console.error('❌ Error getting tenant slug:', tenantError)
+      await navigateTo('/booking/availability-test')
+      return
+    }
+    
+    // Navigate with tenant slug
+    await navigateTo(`/booking/availability/${tenantData.slug}`)
+  } catch (err) {
+    console.error('❌ Error navigating to lesson booking:', err)
+    await navigateTo('/booking/availability-test')
+  }
 }
 
 const navigateToCourseBooking = async () => {
   // Navigiere zur Customer Kurs-Übersicht
   await navigateTo('/customer/courses')
+}
+
+const navigateToReglement = async (type: string) => {
+  await navigateTo(`/customer/reglemente/${type}`)
 }
 
 const navigateToMyCourses = async () => {
@@ -694,7 +1150,9 @@ const loadAllData = async () => {
     await Promise.all([
       loadAppointments(),
       loadLocations(),
-      loadStaff()
+      loadStaff(),
+      loadPendingConfirmations(),
+      checkPaymentMethod()
     ])
 
     // Load instructors after appointments are loaded
@@ -706,6 +1164,417 @@ const loadAllData = async () => {
     error.value = err.message
   } finally {
     isLoading.value = false
+  }
+}
+
+// ✅ Load pending confirmation appointments
+const loadPendingConfirmations = async () => {
+  if (!currentUser.value?.id) {
+    console.log('⚠️ No current user ID for loadPendingConfirmations')
+    return
+  }
+
+  try {
+    const supabase = getSupabase()
+    
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('auth_user_id', currentUser.value.id)
+      .single()
+    
+    if (userError || !userData) return
+
+
+
+    // ✅ Load appointments with pending_confirmation status
+    const { data: confirmationsData, error: confirmationsError } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        title,
+        start_time,
+        end_time,
+        duration_minutes,
+        status,
+        confirmation_token,
+        type,
+        event_type_code
+      `)
+      .eq('user_id', userData.id)
+      .eq('status', 'pending_confirmation')
+      .eq('tenant_id', userData.tenant_id)
+      .not('confirmation_token', 'is', null)
+      .order('start_time', { ascending: true })
+
+    if (confirmationsError) {
+      console.warn('⚠️ Error loading pending confirmations:', confirmationsError)
+      return
+    }
+
+    if (!confirmationsData || confirmationsData.length === 0) {
+      pendingConfirmations.value = []
+      console.log('✅ No pending confirmations found')
+      return
+    }
+
+    // ✅ DANACH: Lade Payments für diese Appointments separat
+    const appointmentIds = confirmationsData.map(apt => apt.id)
+    let paymentsData = null
+    
+    // Nur Query ausführen wenn Appointment IDs vorhanden
+    if (appointmentIds.length > 0) {
+      const { data, error: paymentsError } = await supabase
+        .from('payments')
+        .select('id, appointment_id, total_amount_rappen, payment_method, payment_status')
+        .in('appointment_id', appointmentIds)
+      
+      if (paymentsError) {
+        console.warn('⚠️ Error loading payments for confirmations:', paymentsError)
+      } else {
+        paymentsData = data
+      }
+    }
+
+    // Erstelle Map für schnellen Zugriff
+    const paymentsMap = new Map()
+    if (paymentsData) {
+      paymentsData.forEach(payment => {
+        if (!paymentsMap.has(payment.appointment_id)) {
+          paymentsMap.set(payment.appointment_id, [])
+        }
+        paymentsMap.get(payment.appointment_id).push(payment)
+      })
+    }
+
+    // Load tenant payment settings for automatic payment hours (from payment_settings JSON)
+    if (userData.tenant_id) {
+      try {
+        const { data: paymentSettings } = await supabase
+          .from('tenant_settings')
+          .select('setting_value')
+          .eq('tenant_id', userData.tenant_id)
+          .eq('category', 'payment')
+          .eq('setting_key', 'payment_settings')
+          .maybeSingle()
+        
+        if (paymentSettings?.setting_value) {
+          const settings = typeof paymentSettings.setting_value === 'string' 
+            ? JSON.parse(paymentSettings.setting_value) 
+            : paymentSettings.setting_value
+          automaticPaymentHoursBefore.value = Number(settings?.automatic_payment_hours_before) || 24
+          automaticAuthorizationHoursBefore.value = Number(settings?.automatic_authorization_hours_before) || 168
+        }
+      } catch (e) {
+        console.warn('⚠️ Konnte Payment Settings nicht laden für Stunden:', e)
+      }
+    }
+
+    // Calculate total amount for each appointment (from payment)
+    pendingConfirmations.value = confirmationsData.map(apt => {
+      const payments = paymentsMap.get(apt.id) || []
+      const payment = payments.length > 0 ? payments[0] : null
+      
+      return {
+        ...apt,
+        total_amount_rappen: payment?.total_amount_rappen || 0,
+        payments: payments // Include for compatibility
+      }
+    })
+
+    console.log('✅ Loaded pending confirmations:', pendingConfirmations.value.length)
+  } catch (err: any) {
+    console.error('❌ Error loading pending confirmations:', err)
+  }
+}
+
+// ✅ Check if user has payment method
+const checkPaymentMethod = async () => {
+  if (!currentUser.value?.id) return
+
+  try {
+    const supabase = getSupabase()
+    
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', currentUser.value.id)
+      .single()
+    
+    if (userError || !userData) return
+
+    const { data, error } = await supabase
+      .from('customer_payment_methods')
+      .select('id')
+      .eq('user_id', userData.id)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
+    
+    hasPaymentMethod.value = !!data && !error
+    
+    console.log('✅ Payment method check:', hasPaymentMethod.value ? 'Has payment method' : 'No payment method')
+  } catch (err: any) {
+    console.error('❌ Error checking payment method:', err)
+    hasPaymentMethod.value = false
+  }
+}
+
+// ✅ Confirm appointment and redirect directly to Wallee (skip extra confirmation page)
+const confirmAppointment = async (appointment: any) => {
+  try {
+    if (!appointment?.id) {
+      alert('Fehler: Termin-ID fehlt')
+      return
+    }
+
+    const supabase = getSupabase()
+
+    // Hole aktuellen User (DB) inkl. tenant
+    const { data: userDb } = await supabase
+      .from('users')
+      .select('id, tenant_id, email')
+      .eq('auth_user_id', currentUser.value?.id)
+      .single()
+
+    if (!userDb) {
+      alert('Fehler: Benutzer nicht gefunden')
+      return
+    }
+
+    // Hole Payment für diesen Termin (Betrag)
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('id, total_amount_rappen')
+      .eq('appointment_id', appointment.id)
+      .order('created_at', { ascending: false })
+      .maybeSingle()
+
+    const amountRappen = payment?.total_amount_rappen || 0
+    if (!amountRappen || amountRappen <= 0) {
+      alert('Fehler: Betrag für den Termin nicht gefunden')
+      return
+    }
+
+    // Lade Tenant Payment Settings (für automatische Zahlung)
+    let automaticPaymentEnabledLocal = false
+    let automaticPaymentHoursBeforeLocal = 24
+    let automaticAuthorizationHoursBeforeLocal = 168
+    try {
+      const { data: paymentSettings } = await supabase
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', userDb.tenant_id)
+        .eq('category', 'payment')
+        .eq('setting_key', 'payment_settings')
+        .maybeSingle()
+      if (paymentSettings?.setting_value) {
+        const settings = typeof paymentSettings.setting_value === 'string' 
+          ? JSON.parse(paymentSettings.setting_value) 
+          : paymentSettings.setting_value
+        automaticPaymentEnabledLocal = !!settings?.automatic_payment_enabled
+        automaticPaymentHoursBeforeLocal = Number(settings?.automatic_payment_hours_before) || 24
+        automaticAuthorizationHoursBeforeLocal = Number(settings?.automatic_authorization_hours_before) || 168
+        
+        console.log('✅ Payment settings loaded:', {
+          automatic_payment_enabled: automaticPaymentEnabledLocal,
+          automatic_payment_hours_before: automaticPaymentHoursBeforeLocal,
+          automatic_authorization_hours_before: automaticAuthorizationHoursBeforeLocal,
+          rawSettings: settings
+        })
+      }
+    } catch (e) {
+      console.warn('⚠️ Konnte Payment Settings nicht laden:', e)
+    }
+
+    // ✅ OPTION 1: Hole Default-Zahlungsmittel (falls vorhanden)
+    // Beim ersten Termin: Kein Token vorhanden → Weiterleitung zu Wallee (Token wird erstellt)
+    // Bei weiteren Terminen: Token vorhanden → Automatische Zahlung möglich
+    let defaultMethodId: string | null = null
+    if (automaticPaymentEnabledLocal) {
+      const { data: method } = await supabase
+        .from('customer_payment_methods')
+        .select('id')
+        .eq('user_id', userDb.id)
+        .eq('is_active', true)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      
+      defaultMethodId = method?.id || null
+      
+      console.log('💳 Payment method check:', {
+        hasMethod: !!defaultMethodId,
+        automaticPaymentEnabled: automaticPaymentEnabledLocal,
+        note: defaultMethodId 
+          ? 'Token vorhanden → Automatische Zahlung möglich' 
+          : 'Kein Token → Weiterleitung zu Wallee (Token wird erstellt)'
+      })
+    }
+
+    // ✅ Entscheide: automatische Zahlung planen oder sofortige Zahlung
+    // Regel: Automatische Zahlung NUR wenn:
+    // 1. Automatische Zahlung aktiviert ist
+    // 2. Ein gespeichertes Zahlungsmittel (Token) vorhanden ist
+    // 3. Genug Stunden vor Termin (≥ configured hours)
+    // SONST: Weiterleitung zu Wallee (Token wird erstellt/gespeichert)
+    const startDate = new Date(appointment.start_time)
+    const now = new Date()
+    const diffHours = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60))
+    const canScheduleAutomatic = automaticPaymentEnabledLocal && !!defaultMethodId && diffHours >= automaticPaymentHoursBeforeLocal
+    
+    console.log('🔍 Automatic payment decision:', {
+      automaticPaymentEnabled: automaticPaymentEnabledLocal,
+      hasDefaultMethod: !!defaultMethodId,
+      diffHours: diffHours,
+      requiredHours: automaticPaymentHoursBeforeLocal,
+      canScheduleAutomatic: canScheduleAutomatic,
+      appointmentStart: appointment.start_time,
+      decision: canScheduleAutomatic 
+        ? '✅ Automatische Zahlung geplant' 
+        : defaultMethodId 
+          ? '⚠️ Zu wenig Stunden vor Termin → Weiterleitung zu Wallee'
+          : '💳 Kein Token vorhanden → Weiterleitung zu Wallee (Token wird erstellt)'
+    })
+
+    // Setze Termin direkt auf 'scheduled' (Bestätigung erfolgt jetzt)
+    await supabase
+      .from('appointments')
+      .update({ status: 'scheduled', updated_at: new Date().toISOString() })
+      .eq('id', appointment.id)
+
+    if (canScheduleAutomatic && payment?.id) {
+      // ✅ Plane automatische Zahlung 24h (oder konfiguriert) vor Termin
+      const scheduledPayDate = new Date(startDate.getTime() - automaticPaymentHoursBeforeLocal * 60 * 60 * 1000)
+      // ✅ Bestimme frühesten Autorisierungszeitpunkt (z. B. 1 Woche vorher)
+      const authDueDate = new Date(startDate.getTime() - automaticAuthorizationHoursBeforeLocal * 60 * 60 * 1000)
+      const shouldAuthorizeNow = now >= authDueDate
+
+      await supabase
+        .from('payments')
+        .update({
+          automatic_payment_consent: true,
+          automatic_payment_consent_at: new Date().toISOString(),
+          scheduled_payment_date: scheduledPayDate.toISOString(),
+          // speichere geplanten Autorisierungszeitpunkt, wenn noch nicht fällig
+          scheduled_authorization_date: shouldAuthorizeNow ? new Date().toISOString() : authDueDate.toISOString(),
+          payment_method_id: defaultMethodId,
+          payment_method: 'wallee',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payment.id)
+
+      if (shouldAuthorizeNow) {
+        try {
+          const authorizeResult = await $fetch('/api/wallee/authorize-payment', {
+            method: 'POST',
+            body: {
+              paymentId: payment.id,
+              userId: userDb.id,
+              tenantId: userDb.tenant_id
+            }
+          }) as { success?: boolean; transactionId?: number; state?: string; error?: string }
+
+          if (!authorizeResult.success) {
+            throw new Error(authorizeResult.error || 'Authorization failed')
+          }
+
+          console.log('✅ Payment authorized (provisional charge):', {
+            paymentId: payment.id,
+            transactionId: authorizeResult.transactionId,
+            scheduledPaymentDate: scheduledPayDate.toISOString()
+          })
+        } catch (authError: any) {
+          console.error('❌ Error authorizing payment (will rely on scheduled auth):', authError)
+          // wir lassen scheduled_authorization_date stehen; Cron wird autorisieren
+        }
+      } else {
+        console.log('⏳ Authorization scheduled at', authDueDate.toISOString(), '; capture scheduled at', scheduledPayDate.toISOString())
+      }
+
+      // Entferne den Termin aus der lokalen Liste der offenen Bestätigungen
+      pendingConfirmations.value = pendingConfirmations.value.filter((a: any) => a.id !== appointment.id)
+      showConfirmationModal.value = false
+      try {
+        // @ts-ignore
+        if (typeof showToast !== 'undefined' && typeof toastMessage !== 'undefined') {
+          // @ts-ignore
+          showToast.value = true
+          // @ts-ignore
+          toastMessage.value = shouldAuthorizeNow
+            ? 'Termin bestätigt. Der Betrag wurde provisorisch reserviert und 24h vor dem Termin abgebucht.'
+            : `Termin bestätigt. Die Karte wird ${automaticAuthorizationHoursBeforeLocal/24} Tage vor dem Termin reserviert, Abbuchung ${automaticPaymentHoursBeforeLocal}h vorher.`
+        }
+      } catch {}
+      return
+    }
+
+    // Erstelle Wallee-Transaktion über Backend
+    // Beschriftung für Wallee-Zusammenfassung: Lesson-Type + Datum/Zeit
+    const mapLessonType = (code: string | null | undefined) => {
+      if (!code) return 'Fahrlektion'
+      const c = String(code).toLowerCase()
+      if (c.includes('exam') || c === 'prüfung' || c === 'exam') return 'Prüfung'
+      if (c.includes('theor')) return 'Theorielektion'
+      if (c.includes('lesson') || c === 'fahrlektion') return 'Fahrlektion'
+      return 'Fahrlektion'
+    }
+    const formatSummaryDate = (dateStr: string) => {
+      // Parse als lokale Zeit (nicht UTC)
+      const parts = dateStr.replace('T', ' ').replace('Z', '').split(/[-: ]/)
+      const d = new Date(
+        parseInt(parts[0]), // year
+        parseInt(parts[1]) - 1, // month (0-indexed)
+        parseInt(parts[2]), // day
+        parseInt(parts[3] || '0'), // hour
+        parseInt(parts[4] || '0'), // minute
+        parseInt(parts[5] || '0')  // second
+      )
+      return `${d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
+    }
+    const summaryLabel = `${mapLessonType(appointment.event_type_code || appointment.type)} • ${formatSummaryDate(appointment.start_time)}`
+    type WalleeResponse = { success?: boolean; paymentUrl?: string; transactionId?: number | string; error?: string }
+    const orderId = `appointment-${appointment.id}-${Date.now()}`
+
+    const response = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
+      method: 'POST',
+      body: {
+        orderId,
+        amount: amountRappen / 100, // Wallee erwartet Betrag in CHF
+        currency: 'CHF',
+        customerEmail: userDb.email,
+        userId: userDb.id,
+        tenantId: userDb.tenant_id,
+        description: summaryLabel,
+        successUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`,
+        failedUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`
+      }
+    })
+
+    if (!response?.success || !response.paymentUrl) {
+      console.error('Create transaction failed:', response)
+      alert('Zahlung konnte nicht gestartet werden. Bitte später erneut versuchen.')
+      return
+    }
+
+    // Verknüpfe Payment mit der Wallee-Transaktion, falls Payment existiert
+    if (payment?.id && response.transactionId) {
+      await supabase
+        .from('payments')
+        .update({
+          payment_method: 'wallee',
+          wallee_transaction_id: String(response.transactionId),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payment.id)
+    }
+
+    // Direkt zu Wallee weiterleiten
+    window.location.href = response.paymentUrl
+  } catch (err: any) {
+    console.error('❌ Fehler beim Starten der Zahlung:', err)
+    alert('Fehler beim Starten der Zahlung: ' + (err?.message || 'Unbekannter Fehler'))
   }
 }
 
@@ -999,13 +1868,16 @@ const handleLogout = async () => {
     
     await authStore.logout()
     
-    console.log('✅ Logout successful, redirecting to login...')
-    await navigateTo('/login')
+    console.log('✅ Logout successful, redirecting to tenant login...')
+    const { currentTenantBranding } = useTenantBranding()
+    const slug = currentTenantBranding.value?.slug
+    await navigateTo(slug ? `/${slug}` : '/login')
     
   } catch (err: any) {
     console.error('❌ Fehler beim Abmelden:', err)
-    // Still redirect to login even if logout fails
-    await navigateTo('/login')
+    const { currentTenantBranding } = useTenantBranding()
+    const slug = currentTenantBranding.value?.slug
+    await navigateTo(slug ? `/${slug}` : '/login')
   } finally {
     isLoggingOut.value = false
   }

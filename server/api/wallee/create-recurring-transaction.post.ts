@@ -18,7 +18,10 @@ export default defineEventHandler(async (event) => {
       customerName,
       description,
       successUrl,
-      failedUrl
+      failedUrl,
+      // Neu: pseudonyme IDs statt E-Mail-basiert
+      userId: requestUserId,
+      tenantId: requestTenantId
     } = body
 
     // Validierung der erforderlichen Felder
@@ -44,13 +47,20 @@ export default defineEventHandler(async (event) => {
     // ✅ TRANSACTION SERVICE
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
     
-    // ✅ Konsistente Customer ID (gleiche wie bei erster Zahlung)
-    const customerIdBase = customerEmail.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
-    const consistentCustomerId = `dt-${customerIdBase}-${customerIdBase.length > 20 ? customerIdBase.substring(0, 20) : customerIdBase}`
+    // ✅ Konsistente Customer ID (gleiche wie bei erster Zahlung) – pseudonym bevorzugt
+    let consistentCustomerId: string
+    if (requestTenantId && requestUserId) {
+      consistentCustomerId = `dt-${requestTenantId}-${requestUserId}`
+    } else {
+      const customerIdBase = customerEmail.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+      consistentCustomerId = `dt-${customerIdBase}-${customerIdBase.length > 20 ? customerIdBase.substring(0, 20) : customerIdBase}`
+    }
     
     console.log('🔄 Recurring payment for customer:', {
       customerId: consistentCustomerId,
-      customerEmail: customerEmail,
+      emailPreview: customerEmail ? `${customerEmail.split('@')[0].slice(0,3)}***@***` : undefined,
+      hasTenantId: !!requestTenantId,
+      hasUserId: !!requestUserId,
       amount: amount
     })
     
@@ -74,14 +84,14 @@ export default defineEventHandler(async (event) => {
     transaction.customerEmailAddress = customerEmail
     
     // ✅ Für wiederkehrende Zahlungen - Wallee verwendet gespeicherte Zahlungsmethoden
-    transaction.tokenizationEnabled = true
+    ;(transaction as any).tokenizationEnabled = true
     // transaction.customerPresence = Wallee.model.CustomerPresence.NOT_PRESENT // Entfernt - nicht verfügbar
     
     console.log('📤 Creating recurring transaction with saved payment methods...')
     
     // ✅ TRANSACTION ERSTELLEN
     const response = await transactionService.create(spaceId, transaction)
-    const transactionCreate: Wallee.model.Transaction = response
+    const transactionCreate: Wallee.model.Transaction = (response as any).body || response
     
     console.log('✅ Recurring transaction created:', {
       transactionId: transactionCreate.id,
@@ -90,7 +100,7 @@ export default defineEventHandler(async (event) => {
     })
     
     // ✅ PAYMENT PAGE URL generieren
-    const paymentPageService: Wallee.api.PaymentPageService = new Wallee.api.PaymentPageService(config)
+    const paymentPageService = new (Wallee.api as any).PaymentPageService(config)
     const paymentPageUrl = paymentPageService.paymentPageUrl(spaceId, transactionCreate.id!)
     
     console.log('🔗 Payment page URL generated:', paymentPageUrl)
