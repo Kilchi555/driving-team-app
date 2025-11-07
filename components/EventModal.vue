@@ -6,34 +6,9 @@
       <!-- ✅ FIXED HEADER -->
       <div class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <!-- Links: Staff Selector und Reload Button -->
-        <div class="flex items-center space-x-4">
-          <!-- Staff Selector -->
-          <div class="flex items-center space-x-2">
-            
-            <select
-              :key="`staff-select-${formData.staff_id || 'none'}-${availableStaff.length}`"
-              :value="formData.staff_id"
-              :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              class="text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
-              style="background-color: white !important; color: #111827 !important;"
-              @change="handleStaffChanged"
-            >
-              <option v-if="!formData.staff_id" value="" style="background-color: white !important; color: #111827 !important;">Fahrlehrer wählen...</option>
-              <option
-                v-for="staff in availableStaff"
-                :key="staff.id"
-                :value="staff.id"
-                :disabled="!staff.isAvailable"
-                :style="staff.isAvailable ? 'background-color: white !important; color: #111827 !important;' : 'background-color: #f3f4f6 !important; color: #6b7280 !important;'"
-              >
-                {{ staff.first_name }} {{ staff.last_name }}
-              </option>
-            </select>
-          </div>
-          
+        <div class="flex items-center space-x-4">        
 
-        </div>
-        
+        </div>   
                   <!-- Action-Buttons (nur bei edit/view mode) -->
           <div v-if="props.mode !== 'create' && props.eventData?.id" class="flex items-center space-x-2">
             
@@ -289,9 +264,9 @@
 
       <!-- ✅ FIXED FOOTER -->
       <div class="bg-gray-50 px-4 py-2 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
-        <!-- Links: Schüler Fortschritt Button -->
+        <!-- Links: Schüler Fortschritt Button (nur im edit/view mode) -->
         <button
-          v-if="selectedStudent"
+          v-if="selectedStudent && (props.mode === 'edit' || props.mode === 'view')"
           @click="$emit('open-student-progress', selectedStudent)"
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           title="Schüler Fortschritt anzeigen"
@@ -3414,7 +3389,43 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     if (isLessonType) {
       console.log('💳 Cleaning up payment data for lesson appointment:', props.eventData.id)
       
-      // 1.1 Payments löschen
+      // ✅ 1.0: Prüfe ob Payment autorisiert ist und storniere bei Absage >24h vor Termin
+      const appointmentTime = new Date(props.eventData.start || props.eventData.start_time)
+      const now = new Date()
+      const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+      
+      if (hoursUntilAppointment > 24) {
+        // ✅ Hole authorized Payments und storniere sie
+        const { data: authorizedPayments } = await supabase
+          .from('payments')
+          .select('id, wallee_transaction_id, payment_status')
+          .eq('appointment_id', props.eventData.id)
+          .eq('payment_status', 'authorized')
+          .not('wallee_transaction_id', 'is', null)
+        
+        if (authorizedPayments && authorizedPayments.length > 0) {
+          console.log(`🔙 Voiding ${authorizedPayments.length} authorized payment(s) for cancellation >24h before appointment`)
+          
+          for (const payment of authorizedPayments) {
+            try {
+              await $fetch('/api/wallee/void-payment', {
+                method: 'POST',
+                body: {
+                  paymentId: payment.id,
+                  transactionId: payment.wallee_transaction_id,
+                  reason: `Appointment cancelled more than 24h before start: ${deletionReason}`
+                }
+              })
+              console.log(`✅ Payment ${payment.id} voided successfully`)
+            } catch (voidError: any) {
+              console.warn(`⚠️ Could not void payment ${payment.id}:`, voidError.message)
+              // Continue with deletion even if void fails
+            }
+          }
+        }
+      }
+      
+      // 1.1 Payments löschen (nach Void)
       const { error: paymentsError } = await supabase
         .from('payments')
         .delete()
@@ -3667,9 +3678,29 @@ const goBackToCancellationType = () => {
 const loadCancellationData = async () => {
   console.log('📋 Loading cancellation data')
   
-  // Load policies if not already loaded
-  if (!defaultPolicy.value) {
-    await fetchPolicies()
+  // Determine applies_to based on appointment's course_id
+  let appliesTo: 'appointments' | 'courses' | undefined = undefined
+  if (props.eventData?.id) {
+    try {
+      const supabase = getSupabase()
+      const { data: appointment } = await supabase
+        .from('appointments')
+        .select('course_id')
+        .eq('id', props.eventData.id)
+        .single()
+      
+      // If appointment has course_id, it's a course appointment, otherwise individual appointment
+      appliesTo = appointment?.course_id ? 'courses' : 'appointments'
+      console.log('📋 Appointment type detected:', appliesTo, 'course_id:', appointment?.course_id)
+    } catch (err) {
+      console.warn('⚠️ Could not check appointment course_id, defaulting to appointments:', err)
+      appliesTo = 'appointments'
+    }
+  }
+  
+  // Load policies filtered by applies_to
+  if (!defaultPolicy.value || (appliesTo && defaultPolicy.value.applies_to !== appliesTo)) {
+    await fetchPolicies(appliesTo)
   }
   
   // Load appointment price from payments table
@@ -3690,9 +3721,29 @@ const goToPolicySelection = async () => {
   console.log('📋 Going to policy selection')
   cancellationStep.value = 2
   
-  // Load policies if not already loaded
-  if (!defaultPolicy.value) {
-    await fetchPolicies()
+  // Determine applies_to based on appointment's course_id
+  let appliesTo: 'appointments' | 'courses' | undefined = undefined
+  if (props.eventData?.id) {
+    try {
+      const supabase = getSupabase()
+      const { data: appointment } = await supabase
+        .from('appointments')
+        .select('course_id')
+        .eq('id', props.eventData.id)
+        .single()
+      
+      // If appointment has course_id, it's a course appointment, otherwise individual appointment
+      appliesTo = appointment?.course_id ? 'courses' : 'appointments'
+      console.log('📋 Appointment type detected:', appliesTo, 'course_id:', appointment?.course_id)
+    } catch (err) {
+      console.warn('⚠️ Could not check appointment course_id, defaulting to appointments:', err)
+      appliesTo = 'appointments'
+    }
+  }
+  
+  // Load policies filtered by applies_to
+  if (!defaultPolicy.value || (appliesTo && defaultPolicy.value.applies_to !== appliesTo)) {
+    await fetchPolicies(appliesTo)
   }
   
   // Load appointment price from payments table
