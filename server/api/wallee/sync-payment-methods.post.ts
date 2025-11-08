@@ -234,6 +234,7 @@ export default defineEventHandler(async (event) => {
           .insert({
             user_id: userId,
             tenant_id: tenantId,
+            payment_provider: 'wallee',
             wallee_customer_id: walleeCustomerId,
             wallee_token: pm.wallee_token,
             display_name: pm.display_name,
