@@ -14,23 +14,66 @@ export default defineEventHandler(async (event) => {
     
     const {
       paymentId,
-      orderId,
-      amount,
-      currency = 'CHF',
-      customerEmail,
-      customerName,
-      description,
       userId,
       tenantId
     } = body
 
     // Validierung
-    if (!paymentId || !amount || !customerEmail) {
+    if (!paymentId || !userId || !tenantId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required fields: paymentId, amount, customerEmail'
+        statusMessage: 'Missing required fields: paymentId, userId, tenantId'
       })
     }
+
+    // Hole Payment-Daten aus DB
+    const supabase = getSupabaseAdmin()
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select(`
+        id,
+        total_amount_rappen,
+        description,
+        appointment_id,
+        user_id,
+        tenant_id,
+        appointments (
+          id,
+          title,
+          start_time,
+          event_type_code
+        )
+      `)
+      .eq('id', paymentId)
+      .single()
+
+    if (paymentError || !payment) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Payment not found'
+      })
+    }
+
+    // Hole User-Daten
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('email, first_name, last_name')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !user) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'User not found'
+      })
+    }
+
+    const amount = payment.total_amount_rappen / 100 // Convert to CHF
+    const customerEmail = user.email
+    const customerName = `${user.first_name || ''} ${user.last_name || ''}`.trim()
+    const description = payment.description || 'Fahrlektion'
+    const currency = 'CHF'
+    const orderId = `appointment-${payment.appointment_id}-${Date.now()}`
 
     // ✅ WALLEE SDK KONFIGURATION
     const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
@@ -82,7 +125,6 @@ export default defineEventHandler(async (event) => {
     })
 
     // ✅ Hole gespeicherte Payment Method (Token)
-    const supabase = getSupabaseAdmin()
     const { data: paymentMethod } = await supabase
       .from('customer_payment_methods')
       .select('wallee_token, provider_payment_method_id')
