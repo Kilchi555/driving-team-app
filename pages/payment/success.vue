@@ -21,11 +21,11 @@
         <div v-if="paymentDetails" class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
           <div class="flex justify-between mb-2">
             <span class="text-gray-600">Betrag:</span>
-            <span class="font-semibold">CHF {{ (paymentDetails.total_amount_rappen / 100).toFixed(2) }}</span>
+            <span class="font-semibold text-gray-900">CHF {{ (paymentDetails.total_amount_rappen / 100).toFixed(2) }}</span>
           </div>
           <div v-if="paymentDetails.appointment" class="flex justify-between">
             <span class="text-gray-600">Termin:</span>
-            <span class="font-semibold">{{ formatDate(paymentDetails.appointment.start_time) }}</span>
+            <span class="font-semibold text-gray-900">{{ formatDate(paymentDetails.appointment.start_time) }}</span>
           </div>
         </div>
 
