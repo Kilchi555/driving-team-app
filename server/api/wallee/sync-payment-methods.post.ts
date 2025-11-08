@@ -38,25 +38,36 @@ export default defineEventHandler(async (event) => {
     // ✅ Hole Customer von Wallee
     const customerService: Wallee.api.CustomerService = new Wallee.api.CustomerService(config)
     
-    const customers = await customerService.search(spaceId, {
-      filter: {
-        fieldName: 'customerId',
-        value: walleeCustomerId,
-        type: Wallee.model.EntityQueryFilterType.LEAF,
-        operator: Wallee.model.CriteriaOperator.EQUALS
-      }
-    })
-
-    if (!customers || customers.length === 0) {
-      console.log('ℹ️ No customer found with ID:', walleeCustomerId)
-      return {
-        success: false,
-        message: 'Customer not found in Wallee'
-      }
+    let customers: any
+    try {
+      customers = await customerService.search(spaceId, {
+        filter: {
+          fieldName: 'customerId',
+          value: walleeCustomerId,
+          type: Wallee.model.EntityQueryFilterType.LEAF,
+          operator: Wallee.model.CriteriaOperator.EQUALS
+        }
+      })
+      console.log('🔍 Customer search result:', { 
+        hasBody: !!customers?.body, 
+        bodyLength: customers?.body?.length,
+        raw: customers 
+      })
+    } catch (searchError: any) {
+      console.error('❌ Customer search failed:', searchError.message)
+      // Kein Customer gefunden - das ist OK, Token kann trotzdem existieren
+      console.log('ℹ️ Skipping customer check, proceeding with token search')
+      customers = null
     }
 
-    const customer = customers[0]
-    console.log('✅ Customer found:', customer.id)
+    const customerList = customers?.body || customers || []
+    
+    if (customerList.length === 0) {
+      console.log('ℹ️ No customer found with ID:', walleeCustomerId, '- proceeding with token search anyway')
+    } else {
+      const customer = customerList[0]
+      console.log('✅ Customer found:', customer.id)
+    }
 
     // ✅ Hole aktive Payment Tokens direkt von Wallee über TokenService
     const tokenService: Wallee.api.TokenService = new Wallee.api.TokenService(config)
