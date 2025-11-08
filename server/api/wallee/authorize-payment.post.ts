@@ -116,7 +116,7 @@ export default defineEventHandler(async (event) => {
 
     console.log('💳 Using saved payment method:', paymentMethod.wallee_token)
 
-    // ✅ Erstelle Transaction mit Token (für Authorization)
+    // ✅ Erstelle Transaction mit Token (für Authorization-only)
     const transactionData: any = {
       lineItems: [{
         name: description || 'Fahrlektion',
@@ -127,6 +127,8 @@ export default defineEventHandler(async (event) => {
         type: Wallee.model.LineItemType.PRODUCT
       }],
       autoConfirmationEnabled: false, // ❗ WICHTIG: false für Authorization
+      chargeRetryEnabled: false, // Keine automatischen Wiederholungen
+      completionBehavior: Wallee.model.TransactionCompletionBehavior.COMPLETE_DEFERRED, // ❗ Wichtig: Deferred = nur autorisieren
       currency: currency,
       customerId: customerId,
       merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
