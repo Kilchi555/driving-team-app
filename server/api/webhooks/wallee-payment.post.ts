@@ -55,11 +55,14 @@ export default defineEventHandler(async (event) => {
       'PENDING': 'pending',
       'CONFIRMED': 'processing',
       'PROCESSING': 'processing',
+      'AUTHORIZED': 'authorized', // Provisorische Belastung
+      'FULFILL': 'authorized', // Autorisiert und bereit für Capture
+      'COMPLETED': 'completed', // Finale Abbuchung durchgeführt
       'SUCCESSFUL': 'completed',
       'FAILED': 'failed',
       'CANCELED': 'cancelled',
       'DECLINE': 'failed',
-      'FULFILL': 'completed'
+      'VOIDED': 'cancelled'
     }
     
     const paymentStatus = statusMapping[walleeState] || 'pending'
@@ -333,7 +336,8 @@ export default defineEventHandler(async (event) => {
     }
     
     // ✅ Save Wallee payment method token if tokenization was enabled
-    if (paymentStatus === 'completed' && payments.length > 0) {
+    // Speichere Token bei authorized oder completed
+    if ((paymentStatus === 'completed' || paymentStatus === 'authorized') && payments.length > 0) {
       const firstPayment = payments[0]
       if (firstPayment.user_id && firstPayment.tenant_id) {
         try {
