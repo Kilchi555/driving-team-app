@@ -1054,7 +1054,29 @@
               <div v-if="paymentSettings.automatic_payment_enabled" class="border-l-4 border-blue-500 pl-4 space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Abbuchungszeitpunkt vor Termin
+                    Früheste Autorisierung vor Termin
+                  </label>
+                  <div class="flex items-center space-x-4">
+                    <input
+                      v-model.number="paymentSettings.automatic_authorization_hours_before"
+                      type="number"
+                      min="24"
+                      max="720"
+                      step="24"
+                      class="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="168"
+                    />
+                    <span class="text-sm text-gray-700">Stunden vor dem Termin</span>
+                    <span class="text-xs text-gray-500">({{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage)</span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Wenn der Kunde einen Termin bestätigt, der mehr als {{ paymentSettings.automatic_authorization_hours_before || 168 }} Stunden ({{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage) in der Zukunft liegt, wird der Betrag provisorisch reserviert. Bei kürzeren Zeiträumen erfolgt die sofortige Zahlung.
+                  </p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Finale Abbuchung vor Termin
                   </label>
                   <div class="flex items-center space-x-4">
                     <input
@@ -1068,7 +1090,7 @@
                     <span class="text-sm text-gray-700">Stunden vor dem Termin</span>
                   </div>
                   <p class="text-xs text-gray-500 mt-1">
-                    Die Zahlung wird automatisch {{ paymentSettings.automatic_payment_hours_before || 24 }} Stunden vor dem Termin von dem hinterlegten Zahlungsmittel des Kunden abgebucht.
+                    Die finale Abbuchung erfolgt automatisch {{ paymentSettings.automatic_payment_hours_before || 24 }} Stunden vor dem Termin.
                   </p>
                 </div>
 
@@ -1079,12 +1101,12 @@
                       <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
                     </svg>
                     <div class="text-sm text-blue-800">
-                      <strong>So funktioniert's:</strong>
+                      <strong>So funktioniert's (Authorize & Capture):</strong>
                       <ul class="mt-2 list-disc list-inside space-y-1">
-                        <li>Der Kunde erhält eine Terminanfrage und bestätigt diese (z.B. eine Woche vor dem Termin)</li>
-                        <li>Mit der Bestätigung erklärt sich der Kunde einverstanden, dass der angezeigte Betrag automatisch abgebucht wird</li>
-                        <li>Die Abbuchung erfolgt {{ paymentSettings.automatic_payment_hours_before || 24 }} Stunden vor dem Termin</li>
-                        <li>Der Kunde muss zuvor ein Zahlungsmittel hinterlegt haben</li>
+                        <li><strong>Termin weit in der Zukunft (>{{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage):</strong> Betrag wird provisorisch reserviert, finale Abbuchung erfolgt {{ paymentSettings.automatic_payment_hours_before || 24 }}h vor Termin</li>
+                        <li><strong>Termin in naher Zukunft (<{{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage):</strong> Sofortige Zahlung bei Bestätigung</li>
+                        <li><strong>Stornierung >24h vor Termin:</strong> Reservierung wird automatisch freigegeben</li>
+                        <li>Der Kunde muss ein Zahlungsmittel hinterlegt haben</li>
                       </ul>
                     </div>
                   </div>
@@ -1298,6 +1320,7 @@ const sessionSettings = ref({
 const paymentSettings = ref({
   automatic_payment_enabled: false,
   automatic_payment_hours_before: 24,
+  automatic_authorization_hours_before: 168, // 7 Tage
   cash_payments_enabled: true,
   cash_payment_visibility: 'staff_only'
 })
