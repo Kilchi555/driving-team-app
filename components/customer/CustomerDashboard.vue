@@ -1026,10 +1026,21 @@ const formatDateTime = (dateString: string | null | undefined) => {
 const formatPaymentDate = (dateString: string | null | undefined) => {
   if (!dateString) return 'Nicht geplant'
   try {
-    const date = new Date(dateString)
+    // Parse als lokale Zeit (nicht UTC) - konsistent mit formatDateTime
+    const parts = dateString.replace('T', ' ').replace('Z', '').replace('+00', '').split(/[-: ]/)
+    const date = new Date(
+      parseInt(parts[0]), // year
+      parseInt(parts[1]) - 1, // month (0-indexed)
+      parseInt(parts[2]), // day
+      parseInt(parts[3] || '0'), // hour
+      parseInt(parts[4] || '0'), // minute
+      parseInt(parts[5] || '0')  // second
+    )
+    
     if (isNaN(date.getTime())) {
       return 'Ungültiges Datum'
     }
+    
     const now = new Date()
     const diffHours = Math.round((date.getTime() - now.getTime()) / (1000 * 60 * 60))
     
