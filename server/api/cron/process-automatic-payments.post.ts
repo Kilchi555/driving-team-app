@@ -8,34 +8,55 @@ import crypto from 'crypto'
 export default defineEventHandler(async (event) => {
   console.log('🔄 Processing automatic payments...')
   
-  // ✅ SICHERHEIT STUFE 3: API-Key + Vercel Signature Validation
+  // ✅ SICHERHEIT: Vercel Cron oder Admin-Auth
   try {
     // 1. Prüfe ob Request von Vercel Cron kommt
     const vercelCronHeader = getHeader(event, 'x-vercel-cron')
     const isVercelCron = !!vercelCronHeader
     
-    // 2. API-Key Validierung (nur wenn NICHT von Vercel Cron)
-    // Vercel Cron Requests werden automatisch als vertrauenswürdig behandelt
-    // (Vercel sendet x-vercel-cron Header nur für echte Cron Jobs)
-    if (!isVercelCron) {
-      const apiKey = getHeader(event, 'x-api-key') || getHeader(event, 'authorization')?.replace('Bearer ', '')
-      const expectedApiKey = process.env.CRON_API_KEY
+    if (isVercelCron) {
+      console.log('✅ Vercel Cron request detected (trusted)')
+    } else {
+      // 2. Für manuelle Aufrufe: Prüfe ob User eingeloggt und Admin ist
+      const authHeader = getHeader(event, 'authorization')
+      const token = authHeader?.replace('Bearer ', '')
       
-      if (!apiKey || !expectedApiKey || apiKey !== expectedApiKey) {
-        console.warn('⚠️ Unauthorized: Invalid or missing API key', {
-          hasApiKey: !!apiKey,
-          hasExpectedKey: !!expectedApiKey,
-          isVercelCron: false
-        })
+      if (!token) {
+        console.warn('⚠️ Unauthorized: No auth token for manual request')
         throw createError({
           statusCode: 401,
-          statusMessage: 'Unauthorized: Invalid API key'
+          statusMessage: 'Unauthorized: Authentication required'
         })
       }
       
-      console.log('✅ API key validated (manual request)')
-    } else {
-      console.log('✅ Vercel Cron request detected (trusted)')
+      // Validiere Token mit Supabase
+      const supabase = getSupabase()
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+      
+      if (authError || !user) {
+        console.warn('⚠️ Unauthorized: Invalid auth token')
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Unauthorized: Invalid token'
+        })
+      }
+      
+      // Prüfe ob User Admin ist
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('auth_user_id', user.id)
+        .single()
+      
+      if (profile?.role !== 'admin') {
+        console.warn('⚠️ Unauthorized: User is not admin')
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Forbidden: Admin access required'
+        })
+      }
+      
+      console.log('✅ Admin authentication validated (manual request)')
     }
     
     // 2. Vercel Signature Validierung (optional, falls konfiguriert)

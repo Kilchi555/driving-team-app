@@ -298,10 +298,18 @@ const runCronManually = async (cronPath: string) => {
   try {
     console.log('🔄 Running cron job manually:', cronPath)
     
+    // Hole aktuellen Auth-Token von Supabase
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      throw new Error('Nicht eingeloggt oder Session abgelaufen')
+    }
+    
     const response = await $fetch(cronPath, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.CRON_SECRET || 'your-secret-here'}`
+        'Authorization': `Bearer ${session.access_token}`
       }
     })
     
@@ -313,7 +321,7 @@ const runCronManually = async (cronPath: string) => {
     await loadStatus()
   } catch (err: any) {
     console.error('❌ Error running cron job:', err)
-    alert(`❌ Fehler beim Ausführen des Cron Jobs:\n\nPath: ${cronPath}\n\nFehler: ${err.message || 'Unbekannter Fehler'}`)
+    alert(`❌ Fehler beim Ausführen des Cron Jobs:\n\nPath: ${cronPath}\n\nFehler: ${err.message || err.data?.message || 'Unbekannter Fehler'}`)
   } finally {
     runningCron.value = null
   }
