@@ -1193,6 +1193,52 @@
                     </div>
                   </div>
                 </div>
+
+                <!-- Staff Cash Payment Permissions -->
+                <div v-if="paymentSettings.cash_payment_visibility === 'staff_only'" class="mt-4">
+                  <h4 class="text-sm font-medium text-gray-900 mb-3">Berechtigte Mitarbeiter</h4>
+                  <p class="text-xs text-gray-500 mb-3">Wählen Sie aus, welche Mitarbeiter Barzahlungen entgegennehmen können</p>
+                  
+                  <div v-if="loadingStaff" class="text-center py-4">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p class="text-sm text-gray-500 mt-2">Lade Mitarbeiter...</p>
+                  </div>
+
+                  <div v-else-if="staffMembers.length === 0" class="text-center py-4 text-gray-500">
+                    Keine Mitarbeiter gefunden
+                  </div>
+
+                  <div v-else class="space-y-2 max-h-96 overflow-y-auto">
+                    <div
+                      v-for="staff in staffMembers"
+                      :key="staff.id"
+                      class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <span class="text-sm font-medium text-blue-600">
+                            {{ staff.first_name?.charAt(0) || '' }}{{ staff.last_name?.charAt(0) || '' }}
+                          </span>
+                        </div>
+                        <div>
+                          <div class="text-sm font-medium text-gray-900">
+                            {{ staff.first_name }} {{ staff.last_name }}
+                          </div>
+                          <div class="text-xs text-gray-500">{{ staff.email }}</div>
+                        </div>
+                      </div>
+                      <label class="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          v-model="staff.can_accept_cash"
+                          @change="updateStaffCashPermission(staff)"
+                          class="sr-only peer"
+                        />
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1281,6 +1327,8 @@ const activeTab = ref('design')
 const selectedPreset = ref('')
 const selectedFont = ref('')
 const showTabDropdown = ref(false)
+const staffMembers = ref<any[]>([])
+const loadingStaff = ref(false)
 // Features
 const { flags: featureFlags, definitions: featureDefinitions, isLoading: isLoadingFeatures, load: loadFeatures, isEnabled, setEnabled } = useFeatures()
 const authStore = useAuthStore()
@@ -1586,8 +1634,61 @@ const loadPaymentSettings = async (tenantId: string) => {
       }
       console.log('✅ Payment settings loaded:', paymentSettings.value)
     }
+
+    // Load staff members for cash payment permissions
+    await loadStaffMembers(tenantId)
   } catch (error) {
     console.error('Error loading payment settings:', error)
+  }
+}
+
+const loadStaffMembers = async (tenantId: string) => {
+  loadingStaff.value = true
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, first_name, last_name, role, can_accept_cash')
+      .eq('tenant_id', tenantId)
+      .in('role', ['staff', 'admin'])
+      .order('first_name', { ascending: true })
+    
+    if (error) {
+      console.error('Error loading staff members:', error)
+      return
+    }
+    
+    staffMembers.value = data || []
+    console.log('✅ Staff members loaded:', staffMembers.value.length)
+  } catch (error) {
+    console.error('Error loading staff members:', error)
+  } finally {
+    loadingStaff.value = false
+  }
+}
+
+const updateStaffCashPermission = async (staff: any) => {
+  try {
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('users')
+      .update({ can_accept_cash: staff.can_accept_cash })
+      .eq('id', staff.id)
+    
+    if (error) {
+      console.error('Error updating staff cash permission:', error)
+      showError('Fehler beim Speichern der Berechtigung')
+      // Revert the change
+      staff.can_accept_cash = !staff.can_accept_cash
+      return
+    }
+    
+    console.log('✅ Staff cash permission updated:', staff.id, staff.can_accept_cash)
+    showSuccess(`Berechtigung für ${staff.first_name} ${staff.last_name} aktualisiert`)
+  } catch (error) {
+    console.error('Error updating staff cash permission:', error)
+    showError('Fehler beim Speichern der Berechtigung')
+    staff.can_accept_cash = !staff.can_accept_cash
   }
 }
 
