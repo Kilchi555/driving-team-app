@@ -150,7 +150,7 @@ const formattedDurations = computed(() => {
       durations = (durations as string).split(',').map((d: string) => parseInt(d.trim(), 10)).filter((d: number) => !isNaN(d))
     }
   } else if (!Array.isArray(durations)) {
-    durations = [durations].filter(d => d !== null && d !== undefined)
+    durations = [durations].filter((d: any) => d !== null && d !== undefined)
   }
   
   // ✅ NEU: Behandle verschachtelte Arrays (z.B. [ [ 45, 60, 90 ] ])
@@ -159,12 +159,12 @@ const formattedDurations = computed(() => {
   }
   
   // ✅ Stelle sicher, dass alle Werte Zahlen sind
-  durations = durations.map(d => {
+  durations = durations.map((d: any) => {
     const num = parseInt(d.toString(), 10)
     return isNaN(num) ? 45 : num
-  }).filter(d => d > 0)
+  }).filter((d: number) => d > 0)
   
-  const result = durations.map(duration => {
+  const result = durations.map((duration: number) => {
     let label: string
     
     if (duration >= 120) {
@@ -201,7 +201,7 @@ const formattedDurations = computed(() => {
     processedDurations: durations,
     result: result,
     modelValue: props.modelValue,
-    hasMatchingValue: result.some(d => d.value === props.modelValue)
+    hasMatchingValue: result.some((d: any) => d.value === props.modelValue)
   })
   
   return result
@@ -226,7 +226,7 @@ watch(() => props.availableDurations, async (newDurations) => {
   console.log('🔄 DurationSelector - Available durations changed:', newDurations, 'Mode:', props.mode)
   
   // ✅ KORRIGIERT: Verwende formattedDurations für die Prüfung
-  const durations = formattedDurations.value.map(d => d.value)
+  const durations = formattedDurations.value.map((d: any) => d.value)
   
   // ✅ KORRIGIERT: Immer eine Dauer setzen wenn verfügbar und keine gesetzt ist
   if (durations.length > 0 && (!props.modelValue || !durations.includes(props.modelValue))) {
@@ -252,7 +252,7 @@ watch(() => props.selectedStudent, async (newStudent) => {
       const lastDuration = await getLastStudentDuration(newStudent.id)
       
       // ✅ KORRIGIERT: Verwende formattedDurations für die Prüfung
-      const durations = formattedDurations.value.map(d => d.value)
+      const durations = formattedDurations.value.map((d: any) => d.value)
       
       if (lastDuration && durations.includes(lastDuration)) {
         console.log('✅ Setting duration to student\'s last used duration:', lastDuration)
@@ -266,7 +266,7 @@ watch(() => props.selectedStudent, async (newStudent) => {
     } catch (err) {
       console.error('❌ Error loading last student duration:', err)
       // Fallback zur ersten verfügbaren Dauer
-      const durations = formattedDurations.value.map(d => d.value)
+      const durations = formattedDurations.value.map((d: any) => d.value)
       if (durations.length > 0) {
         emit('update:modelValue', durations[0])
         emit('duration-changed', durations[0])
