@@ -174,14 +174,29 @@ export default defineEventHandler(async (event) => {
     // ✅ Speichere/Update Payment Methods in unserer DB
     const savedTokens = []
     
+    console.log('🔄 Starting to save payment methods, count:', paymentMethods.length)
+    
     for (const pm of paymentMethods) {
+      console.log('💾 Processing payment method:', {
+        wallee_token: pm.wallee_token,
+        display_name: pm.display_name,
+        payment_method_type: pm.payment_method_type
+      })
+      
       // Prüfe ob bereits existiert
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from('customer_payment_methods')
         .select('id')
         .eq('wallee_customer_id', walleeCustomerId)
         .eq('wallee_token', pm.wallee_token)
         .maybeSingle()
+
+      if (checkError) {
+        console.error('❌ Error checking existing payment method:', checkError)
+        continue
+      }
+
+      console.log('🔍 Existing check result:', existing ? `Found: ${existing.id}` : 'Not found, will insert')
 
       if (existing) {
         // Update existing
@@ -207,7 +222,10 @@ export default defineEventHandler(async (event) => {
         if (updateError) {
           console.error('❌ Error updating payment method:', updateError)
         } else if (updated) {
+          console.log('✅ Updated payment method:', updated.id)
           savedTokens.push(updated)
+        } else {
+          console.warn('⚠️ Update returned no data')
         }
       } else {
         // Insert new
@@ -236,8 +254,18 @@ export default defineEventHandler(async (event) => {
 
         if (insertError) {
           console.error('❌ Error inserting payment method:', insertError)
+          console.error('❌ Insert data was:', {
+            user_id: userId,
+            tenant_id: tenantId,
+            wallee_customer_id: walleeCustomerId,
+            wallee_token: pm.wallee_token,
+            display_name: pm.display_name
+          })
         } else if (inserted) {
+          console.log('✅ Inserted payment method:', inserted.id)
           savedTokens.push(inserted)
+        } else {
+          console.warn('⚠️ Insert returned no data')
         }
       }
     }
