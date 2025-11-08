@@ -2,7 +2,7 @@
 // Synchronisiert Payment Methods aus Wallee und speichert sie in unserer DB
 // Wird nach erfolgreichen Zahlungen aufgerufen, um Tokens zu speichern
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { Wallee } from 'wallee'
 
 export default defineEventHandler(async (event) => {
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
 
     // ✅ WALLEE SDK KONFIGURATION
     const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
