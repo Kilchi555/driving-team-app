@@ -3,7 +3,7 @@
 // ============================================
 // Sendet E-Mails wenn ein Termin automatisch gelöscht wurde
 
-import { getSupabaseAdmin } from '~/server/utils/supabaseAdmin.ts'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail, generateAppointmentDeletedEmail, generateStaffNotificationEmail } from '~/server/utils/email'
 import { sendSMS, generateAppointmentDeletedSMS } from '~/server/utils/sms'
 

@@ -3,7 +3,7 @@
 // ============================================
 // Sendet die erste Erinnerungs-E-Mail nach Payment-Erstellung
 
-import { getSupabaseAdmin } from '~/server/utils/supabaseAdmin.ts'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail, generatePaymentReminderEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
