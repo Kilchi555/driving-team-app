@@ -1,6 +1,6 @@
 <template>
   <div>
-    <label class="block text-sm font-medium text-white mb-2 mt-2">
+    <label class="block text-sm font-medium text-gray-700 mb-2 mt-2">
      ⏱️ Dauer
     </label>
     
@@ -14,8 +14,8 @@
           'p-2 text-sm rounded border transition-colors',
           Number(modelValue) === Number(duration.value)
             ? props.isPastAppointment 
-              ? 'bg-green-400 text-black border-green-400 cursor-not-allowed' 
-              : 'bg-green-600 text-black border-green-600'
+              ? 'bg-green-400 text-white border-green-400 cursor-not-allowed' 
+              : 'bg-green-600 text-white border-green-600'
             : props.isPastAppointment
               ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
               : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -137,7 +137,7 @@ const totalPrice = computed(() => {
 
 const formattedDurations = computed(() => {
   // ✅ Verwende Props-Dauern falls verfügbar, sonst Composable
-  let durations = props.availableDurations || []
+  let durations: any = props.availableDurations || []
   
   // ✅ ROBUSTE BEHANDLUNG: Stelle sicher, dass wir immer ein Array haben
   if (typeof durations === 'string') {
@@ -147,7 +147,7 @@ const formattedDurations = computed(() => {
       durations = Array.isArray(parsed) ? parsed : [parsed]
     } catch {
       // Falls kein JSON, versuche Komma-getrennte Werte zu parsen
-      durations = durations.split(',').map((d: string) => parseInt(d.trim(), 10)).filter((d: number) => !isNaN(d))
+      durations = (durations as string).split(',').map((d: string) => parseInt(d.trim(), 10)).filter((d: number) => !isNaN(d))
     }
   } else if (!Array.isArray(durations)) {
     durations = [durations].filter(d => d !== null && d !== undefined)
