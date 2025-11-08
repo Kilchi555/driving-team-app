@@ -62,10 +62,18 @@
                     <div>Nächste Ausführung: {{ formatDateTime(job.nextRun) }}</div>
                   </div>
                 </div>
-                <div class="ml-4">
+                <div class="ml-4 flex flex-col items-end space-y-2">
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     Aktiv
                   </span>
+                  <button
+                    @click="runCronManually(job.path)"
+                    :disabled="runningCron === job.path"
+                    class="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <span v-if="runningCron === job.path">Läuft...</span>
+                    <span v-else>Manuell ausführen</span>
+                  </button>
                 </div>
               </div>
               
@@ -237,6 +245,7 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const status = ref<any>(null)
 const isTesting = ref(false)
+const runningCron = ref<string | null>(null)
 
 const loadStatus = async () => {
   isLoading.value = true
@@ -278,6 +287,35 @@ const testCronJob = async (jobKey: string) => {
     alert('❌ Fehler beim Testen des Cron Jobs:\n\n' + err.message)
   } finally {
     isTesting.value = false
+  }
+}
+
+const runCronManually = async (cronPath: string) => {
+  if (!cronPath) return
+  
+  runningCron.value = cronPath
+  
+  try {
+    console.log('🔄 Running cron job manually:', cronPath)
+    
+    const response = await $fetch(cronPath, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.CRON_SECRET || 'your-secret-here'}`
+      }
+    })
+    
+    console.log('✅ Cron job completed:', response)
+    
+    alert(`✅ Cron Job erfolgreich ausgeführt!\n\nPath: ${cronPath}\n\nErgebnis:\n${JSON.stringify(response, null, 2)}`)
+    
+    // Reload status to show updated data
+    await loadStatus()
+  } catch (err: any) {
+    console.error('❌ Error running cron job:', err)
+    alert(`❌ Fehler beim Ausführen des Cron Jobs:\n\nPath: ${cronPath}\n\nFehler: ${err.message || 'Unbekannter Fehler'}`)
+  } finally {
+    runningCron.value = null
   }
 }
 
