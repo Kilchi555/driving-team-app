@@ -596,45 +596,61 @@
             <div 
               v-for="appointment in pendingConfirmations" 
               :key="appointment.id"
-              class="border rounded-xl p-2 shadow-sm"
+              class="border rounded-xl p-4 shadow-sm"
               :class="isOverdue(appointment) ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-white'"
             >
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <!-- Left: Info -->
-                <div class="flex-1">
-                  <div class="flex items-start sm:items-center sm:space-x-2 mb-1">
-                    <div class="flex items-center text-gray-900 font-semibold">
-                      <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      {{ formatDateTime(appointment.start_time) }}
-                    </div>
-                    <span v-if="isOverdue(appointment)" class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-red-100 text-red-800 mt-1 sm:mt-0 ml-auto">
-                      Überfällig
-                    </span>
+              <div class="flex flex-col gap-3">
+                <!-- Header: Datum & Überfällig-Badge -->
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center text-gray-900 font-semibold">
+                    <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {{ formatDateTime(appointment.start_time) }}
                   </div>
-                  <div class="flex flex-wrap items-center text-sm text-gray-600 gap-x-3 gap-y-1">
-                    <span class="inline-flex items-center">
-                      <svg class="w-4 h-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
-                      </svg>
-                      {{ appointment.duration_minutes || 45 }} Minuten
-                    </span>
-                    <span class="inline-flex items-center">
-                      <svg class="w-4 h-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                      </svg>
-                      CHF {{ formatPrice(appointment.total_amount_rappen || 0) }}
-                    </span>
+                  <span v-if="isOverdue(appointment)" class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-red-100 text-red-800">
+                    Überfällig
+                  </span>
+                </div>
+
+                <!-- Details Grid -->
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                  <!-- Terminart -->
+                  <div class="flex items-center text-gray-600">
+                    <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span class="font-medium">{{ getEventTypeLabel(appointment.event_type_code) }}</span>
+                  </div>
+                  
+                  <!-- Dauer -->
+                  <div class="flex items-center text-gray-600">
+                    <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
+                    </svg>
+                    {{ appointment.duration_minutes || 45 }} Min
+                  </div>
+
+                  <!-- Preis -->
+                  <div class="flex items-center text-gray-900 font-semibold col-span-2">
+                    <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                    CHF {{ formatPrice(appointment.total_amount_rappen || 0) }}
                   </div>
                 </div>
 
-                <!-- Right: Action -->
+                <!-- Action Button -->
                 <button
                   @click="confirmAppointment(appointment)"
-                  class="w-full sm:w-auto sm:ml-4 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  :disabled="isConfirming"
+                  class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
-                  Jetzt bestätigen
+                  <svg v-if="isConfirming" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>{{ isConfirming ? 'Wird bestätigt...' : 'Jetzt bestätigen' }}</span>
                 </button>
               </div>
             </div>
@@ -812,6 +828,7 @@ const showReglementeModal = ref(false)
 const hasPaymentMethod = ref(false)
 const automaticPaymentHoursBefore = ref(24)
 const automaticAuthorizationHoursBefore = ref(168) // Standard: 1 Woche vor Termin
+const isConfirming = ref(false) // Loading state für Bestätigung
 
 // In CustomerDashboard.vue - vor dem Template:
 const isServerSide = process.server
@@ -1320,9 +1337,23 @@ const checkPaymentMethod = async () => {
   }
 }
 
+// Helper: Event Type Label
+const getEventTypeLabel = (code: string | null | undefined) => {
+  if (!code) return 'Fahrlektion'
+  const c = String(code).toLowerCase()
+  if (c.includes('exam') || c === 'prüfung') return 'Prüfung'
+  if (c.includes('theor')) return 'Theorielektion'
+  if (c.includes('lesson') || c === 'fahrlektion') return 'Fahrlektion'
+  return 'Fahrlektion'
+}
+
 // ✅ Confirm appointment and redirect directly to Wallee (skip extra confirmation page)
 const confirmAppointment = async (appointment: any) => {
+  if (isConfirming.value) return // Verhindere Doppelklick
+  
   try {
+    isConfirming.value = true
+    
     if (!appointment?.id) {
       alert('Fehler: Termin-ID fehlt')
       return
@@ -1575,6 +1606,8 @@ const confirmAppointment = async (appointment: any) => {
   } catch (err: any) {
     console.error('❌ Fehler beim Starten der Zahlung:', err)
     alert('Fehler beim Starten der Zahlung: ' + (err?.message || 'Unbekannter Fehler'))
+  } finally {
+    isConfirming.value = false
   }
 }
 
