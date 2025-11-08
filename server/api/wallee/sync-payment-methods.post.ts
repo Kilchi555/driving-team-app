@@ -235,10 +235,11 @@ export default defineEventHandler(async (event) => {
             user_id: userId,
             tenant_id: tenantId,
             payment_provider: 'wallee',
+            provider_payment_method_id: pm.wallee_token, // Token ID als provider method ID
             wallee_customer_id: walleeCustomerId,
             wallee_token: pm.wallee_token,
             display_name: pm.display_name,
-            payment_method_type: pm.payment_method_type,
+            payment_method_type: pm.payment_method_type || 'CARD', // NOT NULL - Default zu CARD
             is_active: true,
             is_default: savedTokens.length === 0, // Erste wird default
             metadata: {
