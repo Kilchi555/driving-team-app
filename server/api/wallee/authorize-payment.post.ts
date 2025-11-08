@@ -146,17 +146,24 @@ export default defineEventHandler(async (event) => {
       state: authorizedTransaction.state
     })
 
-    // ✅ Für Authorization: Transaction wird automatisch autorisiert
-    // Wir müssen nur warten, bis Wallee die Autorisierung verarbeitet hat
-    // Der State sollte zu AUTHORIZED wechseln
+    // ✅ Processiere die Transaction, um die Autorisierung zu starten
+    console.log('🔄 Processing transaction to authorize...')
     
-    // Optional: Warte kurz und hole den aktuellen State
-    await new Promise(resolve => setTimeout(resolve, 2000)) // 2 Sekunden warten
+    const processResponse = await transactionService.processWithoutUserInteraction(spaceId, authorizedTransaction.id as number)
+    const processedTransaction: any = processResponse.body
+    
+    console.log('✅ Transaction processed:', {
+      id: processedTransaction.id,
+      state: processedTransaction.state
+    })
+    
+    // Warte kurz und hole den finalen State
+    await new Promise(resolve => setTimeout(resolve, 2000))
     
     const updatedResponse = await transactionService.read(spaceId, authorizedTransaction.id as number)
     const updatedTransaction: any = updatedResponse.body
     
-    console.log('✅ Transaction state after authorization:', {
+    console.log('✅ Transaction state after processing:', {
       id: updatedTransaction.id,
       state: updatedTransaction.state
     })
