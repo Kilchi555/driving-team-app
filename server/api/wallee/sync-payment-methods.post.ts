@@ -40,10 +40,10 @@ export default defineEventHandler(async (event) => {
     
     const customers = await customerService.search(spaceId, {
       filter: {
-        customerId: {
-          value: walleeCustomerId,
-          operator: Wallee.model.CriteriaOperator.EQUALS
-        }
+        fieldName: 'customerId',
+        value: walleeCustomerId,
+        type: Wallee.model.EntityQueryFilterType.LEAF,
+        operator: Wallee.model.CriteriaOperator.EQUALS
       }
     })
 
@@ -65,18 +65,10 @@ export default defineEventHandler(async (event) => {
     try {
       const tokenSearchResult = await tokenService.search(spaceId, {
         filter: {
-          customerId: {
-            value: walleeCustomerId,
-            operator: Wallee.model.CriteriaOperator.EQUALS
-          },
-          state: {
-            value: Wallee.model.TokenState.ACTIVE,
-            operator: Wallee.model.CriteriaOperator.EQUALS
-          }
-        },
-        orderBy: {
-          field: 'createdOn',
-          direction: Wallee.model.SortOrder.DESC
+          fieldName: 'customerId',
+          value: walleeCustomerId,
+          type: Wallee.model.EntityQueryFilterType.LEAF,
+          operator: Wallee.model.CriteriaOperator.EQUALS
         }
       })
       
@@ -111,18 +103,10 @@ export default defineEventHandler(async (event) => {
       
       const transactions = await transactionService.search(spaceId, {
         filter: {
-          customerId: {
-            value: walleeCustomerId,
-            operator: Wallee.model.CriteriaOperator.EQUALS
-          },
-          state: {
-            value: Wallee.model.TransactionState.FULFILL,
-            operator: Wallee.model.CriteriaOperator.EQUALS
-          }
-        },
-        orderBy: {
-          field: 'createdOn',
-          direction: Wallee.model.SortOrder.DESC
+          fieldName: 'customerId',
+          value: walleeCustomerId,
+          type: Wallee.model.EntityQueryFilterType.LEAF,
+          operator: Wallee.model.CriteriaOperator.EQUALS
         }
       })
 
