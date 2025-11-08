@@ -3,7 +3,7 @@
 // ============================================
 // Sendet wiederholte E-Mails und SMS für unbestätigte Zahlungen
 
-import { getSupabaseAdmin } from '~/server/utils/supabaseAdmin'
+import { getSupabaseAdmin } from '~/server/utils/supabaseAdmin.ts'
 import { sendEmail, generatePaymentReminderEmail } from '~/server/utils/email'
 import { sendSMS, generatePaymentReminderSMS } from '~/server/utils/sms'
 
