@@ -1538,6 +1538,10 @@ const confirmAppointment = async (appointment: any) => {
       // Entferne den Termin aus der lokalen Liste der offenen Bestätigungen
       pendingConfirmations.value = pendingConfirmations.value.filter((a: any) => a.id !== appointment.id)
       showConfirmationModal.value = false
+      
+      // Lade Daten neu, um aktuelle Zahlungsinformationen anzuzeigen
+      await refreshData()
+      
       try {
         // @ts-ignore
         if (typeof showToast !== 'undefined' && typeof toastMessage !== 'undefined') {
