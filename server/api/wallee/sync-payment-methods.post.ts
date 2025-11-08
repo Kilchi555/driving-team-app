@@ -185,7 +185,7 @@ export default defineEventHandler(async (event) => {
 
       if (existing) {
         // Update existing
-        const { data: updated } = await supabase
+        const { data: updated, error: updateError } = await supabase
           .from('customer_payment_methods')
           .update({
             display_name: pm.display_name,
@@ -204,10 +204,14 @@ export default defineEventHandler(async (event) => {
           .select()
           .single()
 
-        savedTokens.push(updated)
+        if (updateError) {
+          console.error('❌ Error updating payment method:', updateError)
+        } else if (updated) {
+          savedTokens.push(updated)
+        }
       } else {
         // Insert new
-        const { data: inserted } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('customer_payment_methods')
           .insert({
             user_id: userId,
@@ -230,7 +234,11 @@ export default defineEventHandler(async (event) => {
           .select()
           .single()
 
-        savedTokens.push(inserted)
+        if (insertError) {
+          console.error('❌ Error inserting payment method:', insertError)
+        } else if (inserted) {
+          savedTokens.push(inserted)
+        }
       }
     }
 
