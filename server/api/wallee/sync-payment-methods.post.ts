@@ -260,9 +260,15 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     console.error('❌ Error syncing payment methods:', error)
+    console.error('Error details:', {
+      message: error.message,
+      statusCode: error.statusCode,
+      stack: error.stack
+    })
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: error.message || 'Failed to sync payment methods'
+      statusMessage: error.message || 'Failed to sync payment methods',
+      data: { originalError: error.message }
     })
   }
 })
