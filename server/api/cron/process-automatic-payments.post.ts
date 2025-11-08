@@ -1,7 +1,7 @@
 // server/api/cron/process-automatic-payments.post.ts
 // Scheduler für automatische Abbuchungen X Stunden vor Termin
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { Wallee } from 'wallee'
 import crypto from 'crypto'
 
@@ -112,7 +112,8 @@ export default defineEventHandler(async (event) => {
   }
   
   try {
-    const supabase = getSupabase()
+    // ✅ Use Admin client to bypass RLS for cron job
+    const supabase = getSupabaseAdmin()
     const now = new Date()
     
     // ✅ Schritt 1: Fällige Autorisierungen (scheduled_authorization_date <= now, noch nicht autorisiert)
