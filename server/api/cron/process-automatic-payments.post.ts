@@ -225,20 +225,6 @@ export default defineEventHandler(async (event) => {
     
     console.log(`📋 Found ${duePayments.length} due payment(s) to process`)
     
-    // ✅ WALLEE SDK KONFIGURATION
-    const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
-    const userId: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
-    const apiSecret: string = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
-    
-    const config = {
-      space_id: spaceId,
-      user_id: userId,
-      api_secret: apiSecret
-    }
-    
-    const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
-    const chargeService: Wallee.api.ChargeService = new Wallee.api.ChargeService(config)
-    
     const results = {
       success: 0,
       failed: 0,
@@ -252,11 +238,11 @@ export default defineEventHandler(async (event) => {
         
         const appointment = payment.appointments as any
         
-        // ✅ PRÜFUNG 1: Termin muss bestätigt sein
-        if (!appointment || appointment.status !== 'confirmed') {
+        // ✅ PRÜFUNG 1: Termin muss scheduled oder completed sein (nicht cancelled)
+        if (!appointment || (appointment.status !== 'scheduled' && appointment.status !== 'completed')) {
           const reason = !appointment 
             ? 'Termin nicht gefunden' 
-            : `Termin nicht bestätigt (Status: ${appointment.status})`
+            : `Termin nicht gültig (Status: ${appointment.status})`
           
           console.warn(`⚠️ Payment ${payment.id} skipped: ${reason}`)
           
