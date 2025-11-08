@@ -146,21 +146,27 @@ export default defineEventHandler(async (event) => {
       state: authorizedTransaction.state
     })
 
-    // ✅ Bestätige Transaction (Authorization)
-    const confirmResponse = await transactionService.confirm(spaceId, authorizedTransaction.id as number)
-    const confirmedTransaction: any = confirmResponse.body
-
-    console.log('✅ Transaction confirmed (authorized):', {
-      id: confirmedTransaction.id,
-      state: confirmedTransaction.state
+    // ✅ Für Authorization: Transaction wird automatisch autorisiert
+    // Wir müssen nur warten, bis Wallee die Autorisierung verarbeitet hat
+    // Der State sollte zu AUTHORIZED wechseln
+    
+    // Optional: Warte kurz und hole den aktuellen State
+    await new Promise(resolve => setTimeout(resolve, 2000)) // 2 Sekunden warten
+    
+    const updatedResponse = await transactionService.read(spaceId, authorizedTransaction.id as number)
+    const updatedTransaction: any = updatedResponse.body
+    
+    console.log('✅ Transaction state after authorization:', {
+      id: updatedTransaction.id,
+      state: updatedTransaction.state
     })
 
     // ✅ Update Payment in DB
     await supabase
       .from('payments')
       .update({
-        wallee_transaction_id: String(confirmedTransaction.id),
-        payment_status: 'authorized',
+        wallee_transaction_id: String(updatedTransaction.id),
+        payment_status: updatedTransaction.state === 'AUTHORIZED' ? 'authorized' : 'processing',
         payment_method: 'wallee',
         updated_at: new Date().toISOString()
       })
@@ -170,8 +176,8 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      transactionId: confirmedTransaction.id,
-      state: confirmedTransaction.state,
+      transactionId: updatedTransaction.id,
+      state: updatedTransaction.state,
       message: 'Payment authorized successfully'
     }
     
