@@ -63,10 +63,11 @@ export default defineEventHandler(async (event) => {
     console.log('📋 Transaction state:', transaction.state)
 
     // Prüfe ob Transaction im richtigen State ist
-    if (transaction.state !== 'AUTHORIZED') {
+    // FULFILL = Autorisiert und bereit für Capture
+    if (transaction.state !== 'AUTHORIZED' && transaction.state !== 'FULFILL') {
       throw createError({
         statusCode: 400,
-        statusMessage: `Transaction is not authorized (current state: ${transaction.state})`
+        statusMessage: `Transaction is not ready for capture (current state: ${transaction.state})`
       })
     }
 

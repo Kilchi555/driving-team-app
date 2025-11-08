@@ -1527,6 +1527,28 @@ const confirmAppointment = async (appointment: any) => {
             transactionId: authorizeResult.transactionId,
             scheduledPaymentDate: scheduledPayDate.toISOString()
           })
+
+          // ✅ Wenn Termin innerhalb der Capture-Frist ist, sofort capturen
+          if (diffHours < automaticPaymentHoursBeforeLocal) {
+            console.log('⚡ Appointment within capture window, capturing immediately...')
+            try {
+              const captureResult = await $fetch('/api/wallee/capture-payment', {
+                method: 'POST',
+                body: {
+                  paymentId: payment.id,
+                  transactionId: authorizeResult.transactionId
+                }
+              }) as { success?: boolean; error?: string }
+
+              if (captureResult.success) {
+                console.log('✅ Payment captured immediately')
+              } else {
+                console.error('❌ Immediate capture failed:', captureResult.error)
+              }
+            } catch (captureError: any) {
+              console.error('❌ Error capturing payment:', captureError)
+            }
+          }
         } catch (authError: any) {
           console.error('❌ Error authorizing payment (will rely on scheduled auth):', authError)
           // wir lassen scheduled_authorization_date stehen; Cron wird autorisieren
