@@ -1,109 +1,123 @@
 // server/api/wallee/void-payment.post.ts
-// Storniert eine autorisierte Wallee Transaction (provisorische Belastung wird zurückgegeben)
+// Storniert eine AUTHORIZED Transaktion (gibt die Reservierung frei)
+// Wird aufgerufen, wenn ein Termin mehr als 24h vor Start abgesagt wird
 
-import { getSupabase } from '~/utils/supabase'
 import { Wallee } from 'wallee'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
+  console.log('🚫 Wallee Void Payment...')
+  
   try {
-    console.log('🔙 Voiding authorized payment...')
-    
     const body = await readBody(event)
-    const { paymentId, transactionId, reason } = body
+    const { transactionId, paymentId } = body
 
-    if (!paymentId || !transactionId) {
+    if (!transactionId && !paymentId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required fields: paymentId, transactionId'
+        statusMessage: 'Either transactionId or paymentId is required'
       })
     }
 
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
+    let walleeTransactionId: string
 
-    // ✅ Load payment
-    const { data: payment, error: paymentError } = await supabase
-      .from('payments')
-      .select('id, appointment_id, payment_status, wallee_transaction_state')
-      .eq('id', paymentId)
-      .single()
+    // Hole Transaction ID aus Payment wenn nur paymentId gegeben
+    if (paymentId && !transactionId) {
+      const { data: payment, error } = await supabase
+        .from('payments')
+        .select('wallee_transaction_id')
+        .eq('id', paymentId)
+        .single()
 
-    if (paymentError || !payment) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Payment not found'
-      })
+      if (error || !payment?.wallee_transaction_id) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Payment not found or has no transaction ID'
+        })
+      }
+
+      walleeTransactionId = payment.wallee_transaction_id
+    } else {
+      walleeTransactionId = transactionId
     }
+
+    console.log('🔍 Voiding transaction:', walleeTransactionId)
 
     // ✅ WALLEE SDK KONFIGURATION
     const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
-    const userIdWallee: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
+    const userId: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
     const apiSecret: string = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
     
     const config = {
       space_id: spaceId,
-      user_id: userIdWallee,
+      user_id: userId,
       api_secret: apiSecret
     }
 
-    const voidService: Wallee.api.TransactionVoidService = new Wallee.api.TransactionVoidService(config)
+    // ✅ Hole Transaction von Wallee
+    const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
+    const transactionResponse = await transactionService.read(spaceId, parseInt(walleeTransactionId))
+    const transaction: any = transactionResponse.body
 
-    // ✅ Void the authorized transaction
-    console.log('📤 Voiding transaction:', transactionId)
+    console.log('📋 Transaction state:', transaction.state)
 
-    const voidResponse = await voidService.voidOnline(
-      spaceId,
-      parseInt(transactionId.toString())
-    )
-    
-    const voidedTransaction = voidResponse.body
-
-    console.log('✅ Transaction voided:', {
-      id: voidedTransaction.id,
-      state: voidedTransaction.state
-    })
-
-    // ✅ Update payment status
-    const updateData: any = {
-      payment_status: 'voided',
-      wallee_transaction_state: voidedTransaction.state,
-      refunded_at: new Date().toISOString(),
-      metadata: {
-        ...(payment.metadata || {}),
-        void: {
-          transaction_id: voidedTransaction.id?.toString(),
-          state: voidedTransaction.state,
-          voided_at: new Date().toISOString(),
-          reason: reason || 'Appointment cancelled more than 24h before start'
-        }
-      },
-      updated_at: new Date().toISOString()
+    // Prüfe ob Transaction im richtigen State ist
+    if (transaction.state !== 'AUTHORIZED') {
+      console.warn(`⚠️ Transaction is not authorized (current state: ${transaction.state}) - skipping void`)
+      return {
+        success: false,
+        message: `Transaction cannot be voided (current state: ${transaction.state})`,
+        transactionId: walleeTransactionId
+      }
     }
 
-    const { error: updateError } = await supabase
-      .from('payments')
-      .update(updateData)
-      .eq('id', paymentId)
+    // ✅ Erstelle Void
+    const transactionVoidService: Wallee.api.TransactionVoidService = 
+      new Wallee.api.TransactionVoidService(config)
 
-    if (updateError) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to update payment: ' + updateError.message
-      })
+    const voidResponse = await transactionVoidService.voidOnline(
+      spaceId,
+      parseInt(walleeTransactionId)
+    )
+    const voidResult: any = voidResponse.body
+
+    console.log('✅ Transaction voided:', {
+      id: voidResult.id,
+      state: voidResult.state
+    })
+
+    // ✅ Update Payment in DB
+    if (paymentId) {
+      await supabase
+        .from('payments')
+        .update({
+          payment_status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', paymentId)
+
+      console.log('✅ Payment marked as cancelled')
     }
 
     return {
       success: true,
-      transactionId: voidedTransaction.id,
-      state: voidedTransaction.state,
-      message: 'Payment voided successfully (provisional charge released)'
+      transactionId: walleeTransactionId,
+      voidId: voidResult.id,
+      state: voidResult.state,
+      message: 'Payment voided successfully'
     }
-
+    
   } catch (error: any) {
-    console.error('❌ Error voiding payment:', error)
+    console.error('❌ Void failed:', {
+      message: error.message,
+      statusCode: error.statusCode,
+      body: error.body
+    })
+    
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: error.message || 'Failed to void payment'
+      statusMessage: error.message || 'Void failed'
     })
   }
 })
-

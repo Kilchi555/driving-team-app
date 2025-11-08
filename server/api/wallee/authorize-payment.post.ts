@@ -1,205 +1,161 @@
 // server/api/wallee/authorize-payment.post.ts
-// Erstellt eine Wallee Transaction im AUTHORIZED Status (provisorische Belastung)
-// Die Zahlung wird später via Capture durchgeführt
+// Erstellt eine AUTHORIZED Wallee-Transaktion (provisorische Belastung)
+// Wird bei Terminbestätigung aufgerufen, wenn genug Zeit vor dem Termin ist
 
-import { getSupabase } from '~/utils/supabase'
 import { Wallee } from 'wallee'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
+  console.log('🔐 Wallee Authorization (Authorize & Capture)...')
+  
   try {
-    console.log('🔐 Authorizing payment (provisional charge)...')
-    
     const body = await readBody(event)
-    const { paymentId, userId, tenantId } = body
+    console.log('📨 Received authorization request:', body)
+    
+    const {
+      paymentId,
+      orderId,
+      amount,
+      currency = 'CHF',
+      customerEmail,
+      customerName,
+      description,
+      userId,
+      tenantId
+    } = body
 
-    if (!paymentId || !userId || !tenantId) {
+    // Validierung
+    if (!paymentId || !amount || !customerEmail) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required fields: paymentId, userId, tenantId'
-      })
-    }
-
-    const supabase = getSupabase()
-
-    // ✅ Load payment and appointment
-    const { data: payment, error: paymentError } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        appointment_id,
-        total_amount_rappen,
-        metadata,
-        appointments (
-          id,
-          title,
-          start_time,
-          event_type_code
-        ),
-        customer_payment_methods:payment_method_id (
-          id,
-          wallee_customer_id,
-          wallee_token_id
-        )
-      `)
-      .eq('id', paymentId)
-      .single()
-
-    if (paymentError || !payment) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Payment not found'
-      })
-    }
-
-    const paymentMethod = Array.isArray(payment.customer_payment_methods) 
-      ? payment.customer_payment_methods[0] 
-      : payment.customer_payment_methods
-
-    if (!paymentMethod || !paymentMethod.wallee_customer_id) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'No payment method or customer ID found'
+        statusMessage: 'Missing required fields: paymentId, amount, customerEmail'
       })
     }
 
     // ✅ WALLEE SDK KONFIGURATION
     const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
-    const userIdWallee: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
+    const walleeUserId: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
     const apiSecret: string = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
     
     const config = {
       space_id: spaceId,
-      user_id: userIdWallee,
+      user_id: walleeUserId,
       api_secret: apiSecret
     }
-
+    
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
+    
+    // Generiere Customer ID (pseudonym)
+    const customerId = userId && tenantId 
+      ? `dt-${tenantId}-${userId}`
+      : customerEmail.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()
 
-    // ✅ Prepare transaction data
-    const amount = payment.total_amount_rappen || 0
-    const amountInCHF = amount / 100
+    console.log('🔑 Customer ID:', customerId)
 
-    if (amount <= 0) {
+    // ✅ Erstelle Transaction mit Tokenization
+    const transactionData: any = {
+      lineItems: [{
+        name: description || 'Fahrlektion',
+        uniqueId: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+        sku: 'driving-lesson',
+        quantity: 1,
+        amountIncludingTax: amount,
+        type: Wallee.model.LineItemType.PRODUCT
+      }],
+      autoConfirmationEnabled: false, // ❗ WICHTIG: false für Authorization
+      currency: currency,
+      customerId: customerId,
+      merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      language: 'de-CH',
+      customerEmailAddress: customerEmail,
+      tokenizationEnabled: true
+    }
+
+    console.log('📤 Creating AUTHORIZED transaction...')
+    
+    const response = await transactionService.create(spaceId, transactionData)
+    const transaction: any = response.body
+    
+    console.log('✅ Transaction created:', {
+      id: transaction.id,
+      state: transaction.state
+    })
+
+    // ✅ Hole gespeicherte Payment Method (Token)
+    const supabase = getSupabaseAdmin()
+    const { data: paymentMethod } = await supabase
+      .from('customer_payment_methods')
+      .select('wallee_token, provider_payment_method_id')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!paymentMethod?.wallee_token) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Invalid amount'
+        statusMessage: 'No saved payment method found for user'
       })
     }
 
-    const appointment = Array.isArray(payment.appointments) 
-      ? payment.appointments[0] 
-      : payment.appointments
+    console.log('💳 Using saved payment method:', paymentMethod.wallee_token)
 
-    // Format description (lesson type + date/time)
-    const mapLessonType = (code: string | null | undefined) => {
-      if (!code) return 'Fahrlektion'
-      const c = String(code).toLowerCase()
-      if (c.includes('exam') || c === 'prüfung') return 'Prüfung inkl. WarmUp'
-      if (c.includes('theor')) return 'Theorielektion'
-      return 'Fahrlektion'
+    // ✅ Erstelle Transaction mit Token (für Authorization)
+    const transactionWithToken: any = {
+      ...transactionData,
+      token: parseInt(paymentMethod.wallee_token)
     }
 
-    const lessonType = mapLessonType(appointment?.event_type_code)
-    const startDate = appointment?.start_time 
-      ? new Date(appointment.start_time)
-      : new Date()
-    
-    const description = `${lessonType} • ${startDate.toLocaleDateString('de-CH', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    })}`
+    const authorizeResponse = await transactionService.create(spaceId, transactionWithToken)
+    const authorizedTransaction: any = authorizeResponse.body
 
-    // Create line item
-    const lineItem: Wallee.model.LineItemCreate = new Wallee.model.LineItemCreate()
-    lineItem.name = description
-    lineItem.uniqueId = `item-${payment.id}-${Date.now()}`
-    lineItem.sku = 'authorized-payment'
-    lineItem.quantity = 1
-    lineItem.amountIncludingTax = amountInCHF
-    lineItem.type = Wallee.model.LineItemType.PRODUCT
-
-    // ✅ Create transaction with autoConfirmationEnabled = false (Authorize only)
-    const transaction: Wallee.model.TransactionCreate = new Wallee.model.TransactionCreate()
-    transaction.lineItems = [lineItem]
-    transaction.autoConfirmationEnabled = false // ✅ WICHTIG: false = nur Authorize, nicht sofort abbuchen
-    transaction.currency = 'CHF'
-    transaction.customerId = paymentMethod.wallee_customer_id
-    transaction.merchantReference = `auth-${payment.id}-${Date.now()}`
-    transaction.language = 'de-CH'
-    transaction.tokenizationEnabled = false // Token bereits vorhanden
-
-    console.log('📤 Creating authorized transaction:', {
-      paymentId: payment.id,
-      amount: amountInCHF,
-      customerId: paymentMethod.wallee_customer_id,
-      autoConfirmationEnabled: false
+    console.log('✅ Transaction authorized:', {
+      id: authorizedTransaction.id,
+      state: authorizedTransaction.state
     })
 
-    // Create transaction
-    const createResponse = await transactionService.create(spaceId, transaction)
-    const walleeTransaction = createResponse.body
+    // ✅ Bestätige Transaction (Authorization)
+    const confirmResponse = await transactionService.confirm(spaceId, authorizedTransaction.id as number)
+    const confirmedTransaction: any = confirmResponse.body
 
-    console.log('✅ Transaction created:', {
-      id: walleeTransaction.id,
-      state: walleeTransaction.state
+    console.log('✅ Transaction confirmed (authorized):', {
+      id: confirmedTransaction.id,
+      state: confirmedTransaction.state
     })
 
-    // Wait a moment for async processing
-    await new Promise(resolve => setTimeout(resolve, 2000))
-
-    // Check final state
-    const statusResponse = await transactionService.read(spaceId, walleeTransaction.id as number)
-    const finalTransaction = statusResponse.body
-
-    console.log('📊 Final transaction state:', finalTransaction.state)
-
-    // ✅ Update payment with authorized transaction ID
-    const updateData: any = {
-      wallee_transaction_id: finalTransaction.id?.toString(),
-      wallee_transaction_state: finalTransaction.state,
-      payment_status: finalTransaction.state === Wallee.model.TransactionState.AUTHORIZED 
-        ? 'authorized' 
-        : 'pending',
-      metadata: {
-        ...(payment.metadata || {}),
-        authorization: {
-          transaction_id: finalTransaction.id?.toString(),
-          state: finalTransaction.state,
-          authorized_at: new Date().toISOString()
-        }
-      },
-      updated_at: new Date().toISOString()
-    }
-
-    const { error: updateError } = await supabase
+    // ✅ Update Payment in DB
+    await supabase
       .from('payments')
-      .update(updateData)
+      .update({
+        wallee_transaction_id: String(confirmedTransaction.id),
+        payment_status: 'authorized',
+        payment_method: 'wallee',
+        updated_at: new Date().toISOString()
+      })
       .eq('id', paymentId)
 
-    if (updateError) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to update payment: ' + updateError.message
-      })
-    }
+    console.log('✅ Payment updated with authorization')
 
     return {
       success: true,
-      transactionId: finalTransaction.id,
-      state: finalTransaction.state,
-      paymentStatus: updateData.payment_status,
-      message: 'Payment authorized successfully (provisional charge)'
+      transactionId: confirmedTransaction.id,
+      state: confirmedTransaction.state,
+      message: 'Payment authorized successfully'
     }
-
+    
   } catch (error: any) {
-    console.error('❌ Error authorizing payment:', error)
+    console.error('❌ Authorization failed:', {
+      message: error.message,
+      statusCode: error.statusCode,
+      body: error.body
+    })
+    
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: error.message || 'Failed to authorize payment'
+      statusMessage: error.message || 'Authorization failed'
     })
   }
 })
-

@@ -1589,9 +1589,15 @@ const confirmAppointment = async (appointment: any) => {
       return
     }
 
+    console.log('✅ Wallee transaction created:', {
+      transactionId: response.transactionId,
+      paymentId: payment?.id,
+      paymentUrl: response.paymentUrl
+    })
+
     // Verknüpfe Payment mit der Wallee-Transaktion, falls Payment existiert
     if (payment?.id && response.transactionId) {
-      await supabase
+      const { error: updateError } = await supabase
         .from('payments')
         .update({
           payment_method: 'wallee',
@@ -1599,9 +1605,21 @@ const confirmAppointment = async (appointment: any) => {
           updated_at: new Date().toISOString()
         })
         .eq('id', payment.id)
+      
+      if (updateError) {
+        console.error('❌ Failed to update payment with transaction ID:', updateError)
+      } else {
+        console.log('✅ Payment updated with transaction ID:', response.transactionId)
+      }
+    } else {
+      console.warn('⚠️ Cannot update payment - missing payment ID or transaction ID:', {
+        paymentId: payment?.id,
+        transactionId: response.transactionId
+      })
     }
 
     // Direkt zu Wallee weiterleiten
+    console.log('🔄 Redirecting to Wallee payment page...')
     window.location.href = response.paymentUrl
   } catch (err: any) {
     console.error('❌ Fehler beim Starten der Zahlung:', err)

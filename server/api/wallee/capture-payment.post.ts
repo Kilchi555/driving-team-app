@@ -1,148 +1,124 @@
 // server/api/wallee/capture-payment.post.ts
-// Captured eine autorisierte Wallee Transaction (endgültige Abbuchung)
+// Führt die finale Abbuchung einer AUTHORIZED Transaktion durch
+// Wird vom Cron-Job 24h vor dem Termin aufgerufen
 
-import { getSupabase } from '~/utils/supabase'
 import { Wallee } from 'wallee'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
+  console.log('💰 Wallee Capture Payment...')
+  
   try {
-    console.log('💰 Capturing authorized payment...')
-    
     const body = await readBody(event)
-    const { paymentId, transactionId } = body
+    const { transactionId, paymentId } = body
 
-    if (!paymentId || !transactionId) {
+    if (!transactionId && !paymentId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required fields: paymentId, transactionId'
+        statusMessage: 'Either transactionId or paymentId is required'
       })
     }
 
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
+    let walleeTransactionId: string
 
-    // ✅ Load payment
-    const { data: payment, error: paymentError } = await supabase
-      .from('payments')
-      .select('id, appointment_id, payment_status, wallee_transaction_state')
-      .eq('id', paymentId)
-      .single()
+    // Hole Transaction ID aus Payment wenn nur paymentId gegeben
+    if (paymentId && !transactionId) {
+      const { data: payment, error } = await supabase
+        .from('payments')
+        .select('wallee_transaction_id')
+        .eq('id', paymentId)
+        .single()
 
-    if (paymentError || !payment) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Payment not found'
-      })
+      if (error || !payment?.wallee_transaction_id) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Payment not found or has no transaction ID'
+        })
+      }
+
+      walleeTransactionId = payment.wallee_transaction_id
+    } else {
+      walleeTransactionId = transactionId
     }
 
-    if (payment.payment_status !== 'authorized') {
-      throw createError({
-        statusCode: 400,
-        statusMessage: `Payment is not in authorized status (current: ${payment.payment_status})`
-      })
-    }
+    console.log('🔍 Capturing transaction:', walleeTransactionId)
 
     // ✅ WALLEE SDK KONFIGURATION
     const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
-    const userIdWallee: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
+    const userId: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
     const apiSecret: string = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
     
     const config = {
       space_id: spaceId,
-      user_id: userIdWallee,
+      user_id: userId,
       api_secret: apiSecret
     }
 
+    // ✅ Hole Transaction von Wallee
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
+    const transactionResponse = await transactionService.read(spaceId, parseInt(walleeTransactionId))
+    const transaction: any = transactionResponse.body
 
-    // ✅ Capture transaction using processWithoutUserInteraction
-    // This method processes the transaction without requiring user interaction
-    console.log('📤 Capturing transaction:', transactionId)
+    console.log('📋 Transaction state:', transaction.state)
 
-    const processResponse = await transactionService.processWithoutUserInteraction(
-      spaceId,
-      parseInt(transactionId.toString())
-    )
-    
-    const capturedTransaction = processResponse.body
-
-    console.log('✅ Transaction captured:', {
-      id: capturedTransaction.id,
-      state: capturedTransaction.state
-    })
-
-    // Wait a moment for async processing
-    await new Promise(resolve => setTimeout(resolve, 2000))
-
-    // Check final state
-    const statusResponse = await transactionService.read(spaceId, parseInt(transactionId.toString()))
-    const finalTransaction = statusResponse.body
-
-    console.log('📊 Final transaction state after capture:', finalTransaction.state)
-
-    // ✅ Update payment status
-    const isCompleted = finalTransaction.state === Wallee.model.TransactionState.SUCCESSFUL ||
-                       finalTransaction.state === Wallee.model.TransactionState.FULFILL
-
-    const updateData: any = {
-      payment_status: isCompleted ? 'completed' : 'processing',
-      wallee_transaction_state: finalTransaction.state,
-      automatic_payment_processed: true,
-      automatic_payment_processed_at: new Date().toISOString(),
-      metadata: {
-        ...(payment.metadata || {}),
-        capture: {
-          transaction_id: finalTransaction.id?.toString(),
-          state: finalTransaction.state,
-          captured_at: new Date().toISOString()
-        }
-      },
-      updated_at: new Date().toISOString()
-    }
-
-    if (isCompleted) {
-      updateData.paid_at = new Date().toISOString()
-    }
-
-    const { error: updateError } = await supabase
-      .from('payments')
-      .update(updateData)
-      .eq('id', paymentId)
-
-    if (updateError) {
+    // Prüfe ob Transaction im richtigen State ist
+    if (transaction.state !== 'AUTHORIZED') {
       throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to update payment: ' + updateError.message
+        statusCode: 400,
+        statusMessage: `Transaction is not authorized (current state: ${transaction.state})`
       })
     }
 
-    // ✅ Update appointment if payment completed
-    if (isCompleted && payment.appointment_id) {
+    // ✅ Erstelle Completion (Capture)
+    const transactionCompletionService: Wallee.api.TransactionCompletionService = 
+      new Wallee.api.TransactionCompletionService(config)
+
+    const completionResponse = await transactionCompletionService.completeOnline(
+      spaceId,
+      parseInt(walleeTransactionId)
+    )
+    const completion: any = completionResponse.body
+
+    console.log('✅ Transaction captured:', {
+      id: completion.id,
+      state: completion.state
+    })
+
+    // ✅ Update Payment in DB
+    if (paymentId) {
       await supabase
-        .from('appointments')
+        .from('payments')
         .update({
-          is_paid: true,
-          payment_status: 'paid',
+          payment_status: 'completed',
+          paid_at: new Date().toISOString(),
+          automatic_payment_processed: true,
+          automatic_payment_processed_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
-        .eq('id', payment.appointment_id)
+        .eq('id', paymentId)
+
+      console.log('✅ Payment marked as completed')
     }
 
     return {
       success: true,
-      transactionId: finalTransaction.id,
-      state: finalTransaction.state,
-      paymentStatus: updateData.payment_status,
-      message: isCompleted 
-        ? 'Payment captured and completed successfully' 
-        : 'Payment capture initiated, processing...'
+      transactionId: walleeTransactionId,
+      completionId: completion.id,
+      state: completion.state,
+      message: 'Payment captured successfully'
     }
-
+    
   } catch (error: any) {
-    console.error('❌ Error capturing payment:', error)
+    console.error('❌ Capture failed:', {
+      message: error.message,
+      statusCode: error.statusCode,
+      body: error.body
+    })
+    
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: error.message || 'Failed to capture payment'
+      statusMessage: error.message || 'Capture failed'
     })
   }
 })
-
