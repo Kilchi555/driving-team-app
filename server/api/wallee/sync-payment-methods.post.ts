@@ -96,7 +96,7 @@ export default defineEventHandler(async (event) => {
     if (tokens.length > 0) {
       // Verwende Tokens von TokenService (beste Methode)
       paymentMethods = tokens.map(token => ({
-        wallee_token_id: token.id.toString(),
+        wallee_token: token.id.toString(),
         display_name: token.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 
                       (token.cardData?.lastFourDigits ? `Karte **** ${token.cardData.lastFourDigits}` : 'Gespeicherte Karte'),
         payment_method_type: token.paymentConnectorConfiguration?.paymentMethodConfiguration?.description || 
@@ -144,7 +144,7 @@ export default defineEventHandler(async (event) => {
             const cardData = transactionAny.paymentConnectorConfiguration?.cardData || {}
             
             paymentMethodsMap.set(pmId, {
-              wallee_token_id: pmId.toString(),
+              wallee_token: pmId.toString(),
               display_name: cardData.brand 
                 ? `${cardData.brand} **** ${cardData.last4 || '****'}`
                 : pmConfig.name || 'Gespeicherte Karte',
@@ -180,7 +180,7 @@ export default defineEventHandler(async (event) => {
         .from('customer_payment_methods')
         .select('id')
         .eq('wallee_customer_id', walleeCustomerId)
-        .eq('wallee_token_id', pm.wallee_token_id)
+        .eq('wallee_token', pm.wallee_token)
         .maybeSingle()
 
       if (existing) {
@@ -217,7 +217,7 @@ export default defineEventHandler(async (event) => {
             user_id: userId,
             tenant_id: tenantId,
             wallee_customer_id: walleeCustomerId,
-            wallee_token_id: pm.wallee_token_id,
+            wallee_token: pm.wallee_token,
             display_name: pm.display_name,
             payment_method_type: pm.payment_method_type,
             is_active: true,
