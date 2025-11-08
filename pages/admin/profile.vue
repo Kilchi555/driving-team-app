@@ -1243,6 +1243,166 @@
             </div>
           </div>
 
+          <!-- Reminder Settings -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Zahlungs-Erinnerungen</h2>
+            
+            <div class="space-y-6">
+              <!-- E-Mail Erinnerungen -->
+              <div class="border-b pb-6">
+                <h3 class="text-sm font-medium text-gray-900 mb-4">E-Mail Erinnerungen</h3>
+                
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Anzahl E-Mails
+                    </label>
+                    <input
+                      v-model.number="reminderSettings.reminder_email_count"
+                      type="number"
+                      min="0"
+                      max="10"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">
+                      Wie viele Erinnerungs-E-Mails sollen versendet werden?
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Intervall (Tage)
+                    </label>
+                    <input
+                      v-model.number="reminderSettings.reminder_email_interval_days"
+                      type="number"
+                      min="1"
+                      max="7"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">
+                      Alle wie viele Tage soll eine Erinnerung versendet werden?
+                    </p>
+                  </div>
+                </div>
+
+                <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div class="flex">
+                    <svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="text-sm text-blue-800">
+                      <strong>Beispiel:</strong> {{ reminderSettings.reminder_email_count }} E-Mails alle {{ reminderSettings.reminder_email_interval_days }} Tage = Erinnerungen über {{ reminderSettings.reminder_email_count * reminderSettings.reminder_email_interval_days }} Tage verteilt
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SMS Erinnerung -->
+              <div class="border-b pb-6">
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 class="text-sm font-medium text-gray-900">SMS als letzte Warnung</h3>
+                    <p class="text-xs text-gray-500 mt-1">Sende SMS nach allen E-Mails als finale Erinnerung</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      v-model="reminderSettings.reminder_sms_enabled"
+                      class="sr-only peer"
+                    />
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                <div v-if="reminderSettings.reminder_sms_enabled" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div class="flex">
+                    <svg class="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="text-sm text-yellow-800">
+                      <strong>Hinweis:</strong> SMS-Versand verursacht zusätzliche Kosten. SMS wird nur versendet, wenn alle E-Mails erfolglos waren.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Auto-Löschung -->
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 class="text-sm font-medium text-gray-900">Automatische Termin-Löschung</h3>
+                    <p class="text-xs text-gray-500 mt-1">Lösche unbestätigte Termine automatisch</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      v-model="reminderSettings.auto_delete_enabled"
+                      class="sr-only peer"
+                    />
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                  </label>
+                </div>
+
+                <div v-if="reminderSettings.auto_delete_enabled" class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Löschung nach (Stunden nach frühester Autorisierung)
+                    </label>
+                    <div class="flex items-center space-x-4">
+                      <input
+                        v-model.number="reminderSettings.auto_delete_hours_after_auth_deadline"
+                        type="number"
+                        min="24"
+                        max="168"
+                        step="24"
+                        class="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                      <span class="text-sm text-gray-700">Stunden</span>
+                      <span class="text-xs text-gray-500">({{ Math.round(reminderSettings.auto_delete_hours_after_auth_deadline / 24) }} Tage)</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                      Wenn der Termin nicht bestätigt wurde bis {{ Math.round(reminderSettings.auto_delete_hours_after_auth_deadline / 24) }} Tage nach der frühesten Autorisierung, wird er automatisch gelöscht
+                    </p>
+                  </div>
+
+                  <div class="flex items-center">
+                    <input
+                      type="checkbox"
+                      v-model="reminderSettings.notify_staff_on_auto_delete"
+                      class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                    />
+                    <label class="ml-2 text-sm text-gray-700">
+                      Mitarbeiter per E-Mail benachrichtigen bei Auto-Löschung
+                    </label>
+                  </div>
+
+                  <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="flex">
+                      <svg class="w-5 h-5 text-red-600 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                      </svg>
+                      <div class="text-sm text-red-800">
+                        <strong>Achtung:</strong> Gelöschte Termine können nicht wiederhergestellt werden. Der Kunde wird per E-Mail über die Löschung informiert.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Save Button -->
+            <div class="mt-6 flex justify-end">
+              <button
+                @click="saveReminderSettings"
+                :disabled="isSaving"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {{ isSaving ? 'Speichern...' : 'Einstellungen speichern' }}
+              </button>
+            </div>
+          </div>
+
         </div>
 
         <!-- Reglemente Tab -->
@@ -1374,23 +1534,15 @@ const paymentSettings = ref({
   cash_payment_visibility: 'staff_only'
 })
 
-// Reminder Settings
+// Reminder Settings (NEW: Payment Confirmation Reminders)
 const reminderSettings = ref({
-  is_enabled: false,
-  first_after_hours: 24,
-  second_after_hours: 48,
-  final_after_hours: 72,
-  first_email: true,
-  first_push: true,
-  first_sms: false,
-  second_email: true,
-  second_push: true,
-  second_sms: false,
-  final_email: false,
-  final_push: false,
-  final_sms: true,
-  auto_delete: true,
-  auto_delete_after_hours: 3
+  reminder_email_count: 3,
+  reminder_email_interval_days: 2,
+  reminder_sms_enabled: false,
+  reminder_sms_after_emails: true,
+  auto_delete_enabled: false,
+  auto_delete_hours_after_auth_deadline: 72,
+  notify_staff_on_auto_delete: true
 })
 
 // Template Settings
@@ -1733,9 +1885,11 @@ const loadReminderSettings = async (tenantId: string) => {
   try {
     const supabase = getSupabase()
     const { data, error } = await supabase
-      .from('reminder_settings')
-      .select('*')
+      .from('tenant_settings')
+      .select('setting_value')
       .eq('tenant_id', tenantId)
+      .eq('category', 'payment')
+      .eq('setting_key', 'reminder_settings')
       .maybeSingle()
     
     if (error && error.code !== 'PGRST116') {
@@ -1743,10 +1897,14 @@ const loadReminderSettings = async (tenantId: string) => {
       return
     }
     
-    if (data) {
+    if (data?.setting_value) {
+      const parsed = typeof data.setting_value === 'string' 
+        ? JSON.parse(data.setting_value)
+        : data.setting_value
+      
       reminderSettings.value = {
         ...reminderSettings.value,
-        ...data
+        ...parsed
       }
       console.log('✅ Reminder settings loaded:', reminderSettings.value)
     }
@@ -1761,27 +1919,30 @@ const saveReminderSettings = async () => {
     const tenantId = (authStore.userProfile as any)?.tenant_id
     if (!tenantId) {
       console.warn('No tenant_id for saving reminder settings')
+      showError('Fehler: Tenant ID nicht gefunden')
       return
     }
 
     console.log('💾 Saving reminder settings...')
-    showAutoSaving()
+    isSaving.value = true
 
     const supabase = getSupabase()
     
     // Check if settings exist
     const { data: existing } = await supabase
-      .from('reminder_settings')
+      .from('tenant_settings')
       .select('id')
       .eq('tenant_id', tenantId)
+      .eq('category', 'payment')
+      .eq('setting_key', 'reminder_settings')
       .maybeSingle()
     
     if (existing?.id) {
       // Update existing
       const { error } = await supabase
-        .from('reminder_settings')
+        .from('tenant_settings')
         .update({
-          ...reminderSettings.value,
+          setting_value: reminderSettings.value,
           updated_at: new Date().toISOString()
         })
         .eq('id', existing.id)
@@ -1790,21 +1951,27 @@ const saveReminderSettings = async () => {
     } else {
       // Insert new
       const { error } = await supabase
-        .from('reminder_settings')
+        .from('tenant_settings')
         .insert({
           tenant_id: tenantId,
-          ...reminderSettings.value,
-          created_at: new Date().toISOString()
+          category: 'payment',
+          setting_key: 'reminder_settings',
+          setting_type: 'json',
+          setting_value: reminderSettings.value,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
       
       if (error) throw error
     }
 
     console.log('✅ Reminder settings saved')
-    showAutoSaveSuccess('Gespeichert')
+    showSuccess('Erinnerungs-Einstellungen gespeichert')
   } catch (error: any) {
     console.error('Error saving reminder settings:', error)
-    showAutoSaveError('Speicherfehler')
+    showError('Fehler beim Speichern der Erinnerungs-Einstellungen')
+  } finally {
+    isSaving.value = false
   }
 }
 

@@ -116,6 +116,13 @@
             >
               Cron Status
             </NuxtLink>
+            <NuxtLink
+              to="/admin/payment-reminders"
+              class="block px-4 py-2 text-sm text-white rounded-md transition-colors"
+              :class="isActive('/admin/payment-reminders') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
+            >
+              Erinnerungen
+            </NuxtLink>
               <NuxtLink
                 to="/dashboard"
                 class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
@@ -263,6 +270,13 @@
                 :class="isActive('/admin/cron-status') ? 'bg-black bg-opacity-30' : ''"
               >
                 Cron Status
+              </NuxtLink>
+              <NuxtLink
+                to="/admin/payment-reminders"
+                class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                :class="isActive('/admin/payment-reminders') ? 'bg-black bg-opacity-30' : ''"
+              >
+                Erinnerungen
               </NuxtLink>
                 <NuxtLink
                   to="/dashboard"

@@ -338,12 +338,220 @@ export default defineEventHandler(async (event) => {
     
     console.log(`✅ Processing complete: ${results.success} success, ${results.failed} failed`)
     
+    // ============================================
+    // PHASE 3: Auto-Deletion of Unconfirmed Appointments
+    // ============================================
+    console.log('🗑️ Checking for appointments to auto-delete...')
+    
+    // Get all tenants with auto-delete enabled
+    const { data: autoDeleteSettings, error: autoDeleteError } = await supabase
+      .from('tenant_settings')
+      .select('tenant_id, setting_value')
+      .eq('category', 'payment')
+      .eq('setting_key', 'reminder_settings')
+    
+    if (autoDeleteError) {
+      console.error('❌ Error loading auto-delete settings:', autoDeleteError)
+    }
+    
+    let deletedCount = 0
+    const deleteResults: any[] = []
+    
+    if (autoDeleteSettings && autoDeleteSettings.length > 0) {
+      for (const setting of autoDeleteSettings) {
+        try {
+          const reminderSettings = typeof setting.setting_value === 'string'
+            ? JSON.parse(setting.setting_value)
+            : setting.setting_value
+          
+          if (!reminderSettings.auto_delete_enabled) {
+            continue
+          }
+          
+          const deleteHoursAfterAuth = reminderSettings.auto_delete_hours_after_auth_deadline || 72
+          const notifyStaff = reminderSettings.notify_staff_on_auto_delete !== false
+          
+          console.log(`🗑️ Tenant ${setting.tenant_id}: Auto-delete enabled (${deleteHoursAfterAuth}h after auth deadline)`)
+          
+          // Find appointments to delete
+          // scheduled_authorization_date + deleteHoursAfterAuth < now AND status = pending_confirmation
+          const deleteDeadline = new Date(now.getTime() - (deleteHoursAfterAuth * 60 * 60 * 1000))
+          
+          const { data: appointmentsToDelete, error: fetchDeleteError } = await supabase
+            .from('appointments')
+            .select(`
+              id,
+              user_id,
+              staff_id,
+              start_time,
+              end_time,
+              title,
+              status,
+              tenant_id,
+              users!appointments_user_id_fkey (
+                first_name,
+                last_name,
+                email
+              ),
+              staff:users!appointments_staff_id_fkey (
+                first_name,
+                last_name,
+                email
+              ),
+              payments (
+                id,
+                scheduled_authorization_date
+              )
+            `)
+            .eq('tenant_id', setting.tenant_id)
+            .eq('status', 'pending_confirmation')
+            .not('payments', 'is', null)
+          
+          if (fetchDeleteError) {
+            console.error(`❌ Error fetching appointments to delete for tenant ${setting.tenant_id}:`, fetchDeleteError)
+            continue
+          }
+          
+          if (!appointmentsToDelete || appointmentsToDelete.length === 0) {
+            console.log(`ℹ️ No appointments to check for deletion in tenant ${setting.tenant_id}`)
+            continue
+          }
+          
+          console.log(`📋 Checking ${appointmentsToDelete.length} pending appointments for tenant ${setting.tenant_id}`)
+          
+          for (const appointment of appointmentsToDelete) {
+            try {
+              const payment = Array.isArray(appointment.payments) 
+                ? appointment.payments[0]
+                : appointment.payments
+              
+              if (!payment || !payment.scheduled_authorization_date) {
+                continue
+              }
+              
+              const authDate = new Date(payment.scheduled_authorization_date)
+              const deletionDeadline = new Date(authDate.getTime() + (deleteHoursAfterAuth * 60 * 60 * 1000))
+              
+              if (now >= deletionDeadline) {
+                console.log(`🗑️ Deleting appointment ${appointment.id} (deadline passed: ${deletionDeadline.toISOString()})`)
+                
+                // Cancel appointment
+                const { error: cancelError } = await supabase
+                  .from('appointments')
+                  .update({
+                    status: 'cancelled',
+                    deleted_at: now.toISOString(),
+                    deletion_reason: `Automatisch storniert: Keine Bestätigung bis ${deletionDeadline.toLocaleString('de-CH')}`,
+                    cancellation_type: 'system',
+                    updated_at: now.toISOString()
+                  })
+                  .eq('id', appointment.id)
+                
+                if (cancelError) {
+                  console.error(`❌ Error cancelling appointment ${appointment.id}:`, cancelError)
+                  continue
+                }
+                
+                // Mark payment as failed
+                const { error: paymentError } = await supabase
+                  .from('payments')
+                  .update({
+                    payment_status: 'failed',
+                    metadata: {
+                      auto_deleted: true,
+                      deleted_at: now.toISOString(),
+                      reason: 'No confirmation received'
+                    },
+                    updated_at: now.toISOString()
+                  })
+                  .eq('id', payment.id)
+                
+                if (paymentError) {
+                  console.error(`❌ Error updating payment ${payment.id}:`, paymentError)
+                }
+                
+                // Send notifications
+                const user = Array.isArray(appointment.users) 
+                  ? appointment.users[0]
+                  : appointment.users
+                const staff = Array.isArray(appointment.staff)
+                  ? appointment.staff[0]
+                  : appointment.staff
+                
+                // Get tenant data
+                const { data: tenant } = await supabase
+                  .from('tenants')
+                  .select('name, contact_email, contact_phone')
+                  .eq('id', setting.tenant_id)
+                  .single()
+                
+                // Send customer notification
+                if (user && user.email) {
+                  try {
+                    await $fetch('/api/reminders/send-deletion-notification', {
+                      method: 'POST',
+                      body: {
+                        appointmentId: appointment.id,
+                        userId: appointment.user_id,
+                        tenantId: setting.tenant_id,
+                        type: 'customer'
+                      }
+                    })
+                    console.log(`✅ Customer notification sent for appointment ${appointment.id}`)
+                  } catch (notifError) {
+                    console.error(`⚠️ Error sending customer notification:`, notifError)
+                  }
+                }
+                
+                // Send staff notification
+                if (notifyStaff && staff && staff.email) {
+                  try {
+                    await $fetch('/api/reminders/send-deletion-notification', {
+                      method: 'POST',
+                      body: {
+                        appointmentId: appointment.id,
+                        staffId: appointment.staff_id,
+                        tenantId: setting.tenant_id,
+                        type: 'staff'
+                      }
+                    })
+                    console.log(`✅ Staff notification sent for appointment ${appointment.id}`)
+                  } catch (notifError) {
+                    console.error(`⚠️ Error sending staff notification:`, notifError)
+                  }
+                }
+                
+                deletedCount++
+                deleteResults.push({
+                  appointment_id: appointment.id,
+                  success: true
+                })
+              }
+            } catch (deleteError: any) {
+              console.error(`❌ Error deleting appointment ${appointment.id}:`, deleteError)
+              deleteResults.push({
+                appointment_id: appointment.id,
+                success: false,
+                error: deleteError.message
+              })
+            }
+          }
+        } catch (tenantError: any) {
+          console.error(`❌ Error processing auto-delete for tenant ${setting.tenant_id}:`, tenantError)
+        }
+      }
+    }
+    
+    console.log(`✅ Auto-deletion complete: ${deletedCount} appointments deleted`)
+    
     return {
       success: true,
       processed: results.success,
       failed: results.failed,
       total: duePayments.length,
-      errors: results.errors.length > 0 ? results.errors : undefined
+      deleted: deletedCount,
+      errors: results.errors.length > 0 ? results.errors : undefined,
+      deleteResults: deleteResults.length > 0 ? deleteResults : undefined
     }
     
   } catch (error: any) {
