@@ -1070,7 +1070,7 @@
                     <span class="text-xs text-gray-500">({{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage)</span>
                   </div>
                   <p class="text-xs text-gray-500 mt-1">
-                    Wenn der Kunde einen Termin bestätigt, der mehr als {{ paymentSettings.automatic_authorization_hours_before || 168 }} Stunden ({{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage) in der Zukunft liegt, wird der Betrag provisorisch reserviert. Bei kürzeren Zeiträumen erfolgt die sofortige Zahlung.
+                    Der Betrag wird frühestens {{ paymentSettings.automatic_authorization_hours_before || 168 }} Stunden ({{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage) vor dem Termin provisorisch reserviert. Bei Terminen, die weiter in der Zukunft liegen, wird die Reservierung automatisch zum richtigen Zeitpunkt durchgeführt.
                   </p>
                 </div>
 
@@ -1103,9 +1103,10 @@
                     <div class="text-sm text-blue-800">
                       <strong>So funktioniert's (Authorize & Capture):</strong>
                       <ul class="mt-2 list-disc list-inside space-y-1">
-                        <li><strong>Termin weit in der Zukunft (>{{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage):</strong> Betrag wird provisorisch reserviert, finale Abbuchung erfolgt {{ paymentSettings.automatic_payment_hours_before || 24 }}h vor Termin</li>
-                        <li><strong>Termin in naher Zukunft (<{{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage):</strong> Sofortige Zahlung bei Bestätigung</li>
-                        <li><strong>Stornierung >24h vor Termin:</strong> Reservierung wird automatisch freigegeben</li>
+                        <li><strong>Termin >{{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage entfernt:</strong> Reservierung erfolgt automatisch {{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage vor Termin, finale Abbuchung {{ paymentSettings.automatic_payment_hours_before || 24 }}h vor Termin</li>
+                        <li><strong>Termin <{{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage entfernt:</strong> Sofortige Reservierung bei Bestätigung, finale Abbuchung {{ paymentSettings.automatic_payment_hours_before || 24 }}h vor Termin</li>
+                        <li><strong>Termin <{{ paymentSettings.automatic_payment_hours_before || 24 }}h entfernt:</strong> Sofortige Reservierung UND Abbuchung bei Bestätigung</li>
+                        <li><strong>Stornierung >{{ paymentSettings.automatic_payment_hours_before || 24 }}h vor Termin:</strong> Reservierung wird automatisch freigegeben (kein Betrag abgebucht)</li>
                         <li>Der Kunde muss ein Zahlungsmittel hinterlegt haben</li>
                       </ul>
                     </div>
