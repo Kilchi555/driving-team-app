@@ -253,6 +253,9 @@ const loadStatus = async () => {
 
   try {
     const response = await $fetch('/api/admin/cron-status')
+    console.log('📊 Cron Status loaded:', response)
+    console.log('📊 Pending Payments:', response.pendingPayments)
+    console.log('📊 Payment Stats:', response.paymentStats)
     status.value = response
   } catch (err: any) {
     console.error('Error loading cron status:', err)

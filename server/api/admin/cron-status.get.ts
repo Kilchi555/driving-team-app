@@ -1,11 +1,12 @@
 // server/api/admin/cron-status.get.ts
 // Admin endpoint to check cron job status and execution history
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
-    const supabase = getSupabase()
+    // ✅ Use Admin client to bypass RLS
+    const supabase = getSupabaseAdmin()
     
     // Get current time
     const now = new Date()
@@ -26,23 +27,32 @@ export default defineEventHandler(async (event) => {
       console.warn('⚠️ cron_logs table may not exist:', err)
     }
     
-    // Check pending automatic payments
+    // Check pending automatic payments (authorized, waiting for capture)
+    // Zeige ALLE autorisierten Zahlungen mit scheduled_payment_date (auch zukünftige)
     const { data: pendingPayments, error: pendingError } = await supabase
       .from('payments')
-      .select('id, appointment_id, scheduled_payment_date, automatic_payment_processed, payment_status, created_at')
-      .eq('automatic_payment_consent', true)
+      .select('id, appointment_id, scheduled_payment_date, automatic_payment_processed, payment_status, created_at, wallee_transaction_id')
+      .eq('payment_status', 'authorized')
       .eq('automatic_payment_processed', false)
       .not('scheduled_payment_date', 'is', null)
-      .lte('scheduled_payment_date', now.toISOString())
     
-    // Check overdue payments (should have been processed but weren't)
+    // Check overdue payments (should have been captured but weren't)
     const { data: overduePayments, error: overdueError } = await supabase
       .from('payments')
-      .select('id, appointment_id, scheduled_payment_date, automatic_payment_processed, payment_status, created_at')
-      .eq('automatic_payment_consent', true)
+      .select('id, appointment_id, scheduled_payment_date, automatic_payment_processed, payment_status, created_at, wallee_transaction_id')
+      .eq('payment_status', 'authorized')
       .eq('automatic_payment_processed', false)
       .not('scheduled_payment_date', 'is', null)
       .lt('scheduled_payment_date', new Date(Date.now() - 60 * 60 * 1000).toISOString()) // 1 hour ago
+    
+    // Check payments waiting for authorization
+    const { data: waitingAuthPayments, error: waitingAuthError } = await supabase
+      .from('payments')
+      .select('id, appointment_id, scheduled_authorization_date, payment_status, created_at')
+      .eq('payment_status', 'pending')
+      .eq('automatic_payment_consent', true)
+      .not('scheduled_authorization_date', 'is', null)
+      .lte('scheduled_authorization_date', now.toISOString())
     
     // Get recent automatic payments that were processed
     const { data: processedPayments, error: processedError } = await supabase
@@ -55,11 +65,12 @@ export default defineEventHandler(async (event) => {
     // Count payments by status
     const { data: paymentStats, error: statsError } = await supabase
       .from('payments')
-      .select('payment_status, automatic_payment_processed')
+      .select('payment_status, automatic_payment_processed, automatic_payment_consent')
     
     const stats = {
       total: paymentStats?.length || 0,
       pending: paymentStats?.filter(p => p.payment_status === 'pending').length || 0,
+      authorized: paymentStats?.filter(p => p.payment_status === 'authorized').length || 0,
       completed: paymentStats?.filter(p => p.payment_status === 'completed').length || 0,
       withAutomaticConsent: paymentStats?.filter(p => (p as any).automatic_payment_consent === true).length || 0,
       processed: paymentStats?.filter(p => p.automatic_payment_processed === true).length || 0
@@ -72,10 +83,11 @@ export default defineEventHandler(async (event) => {
         'process-automatic-payments': {
           path: '/api/cron/process-automatic-payments',
           schedule: '0 * * * *', // Every hour
-          description: 'Processes automatic payments scheduled for the current time',
+          description: 'Captures authorized payments and authorizes pending payments',
           nextRun: getNextCronTime('0 * * * *'),
           pendingPayments: pendingPayments?.length || 0,
           overduePayments: overduePayments?.length || 0,
+          waitingAuth: waitingAuthPayments?.length || 0,
           recentProcessed: processedPayments?.length || 0
         },
         'sync-external-calendars': {
@@ -87,6 +99,7 @@ export default defineEventHandler(async (event) => {
       },
       pendingPayments: pendingPayments || [],
       overduePayments: overduePayments || [],
+      waitingAuthPayments: waitingAuthPayments || [],
       recentProcessedPayments: processedPayments || [],
       paymentStats: stats,
       cronLogs: cronLogs,
