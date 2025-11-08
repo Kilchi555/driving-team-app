@@ -174,7 +174,6 @@ export default defineEventHandler(async (event) => {
                   .from('appointments')
                   .update({
                     status: 'confirmed',
-                    is_paid: true,
                     payment_status: 'paid',
                     updated_at: new Date().toISOString()
                   })
@@ -321,7 +320,6 @@ export default defineEventHandler(async (event) => {
         const { error: appointmentError } = await supabase
           .from('appointments')
           .update({
-            is_paid: true,
             payment_status: 'paid',
             updated_at: new Date().toISOString()
           })
