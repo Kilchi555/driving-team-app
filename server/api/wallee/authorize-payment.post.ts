@@ -95,35 +95,6 @@ export default defineEventHandler(async (event) => {
 
     console.log('🔑 Customer ID:', customerId)
 
-    // ✅ Erstelle Transaction mit Tokenization
-    const transactionData: any = {
-      lineItems: [{
-        name: description || 'Fahrlektion',
-        uniqueId: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-        sku: 'driving-lesson',
-        quantity: 1,
-        amountIncludingTax: amount,
-        type: Wallee.model.LineItemType.PRODUCT
-      }],
-      autoConfirmationEnabled: false, // ❗ WICHTIG: false für Authorization
-      currency: currency,
-      customerId: customerId,
-      merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-      language: 'de-CH',
-      customerEmailAddress: customerEmail,
-      tokenizationEnabled: true
-    }
-
-    console.log('📤 Creating AUTHORIZED transaction...')
-    
-    const response = await transactionService.create(spaceId, transactionData)
-    const transaction: any = response.body
-    
-    console.log('✅ Transaction created:', {
-      id: transaction.id,
-      state: transaction.state
-    })
-
     // ✅ Hole gespeicherte Payment Method (Token)
     const { data: paymentMethod } = await supabase
       .from('customer_payment_methods')
@@ -146,15 +117,31 @@ export default defineEventHandler(async (event) => {
     console.log('💳 Using saved payment method:', paymentMethod.wallee_token)
 
     // ✅ Erstelle Transaction mit Token (für Authorization)
-    const transactionWithToken: any = {
-      ...transactionData,
-      token: parseInt(paymentMethod.wallee_token)
+    const transactionData: any = {
+      lineItems: [{
+        name: description || 'Fahrlektion',
+        uniqueId: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+        sku: 'driving-lesson',
+        quantity: 1,
+        amountIncludingTax: amount,
+        type: Wallee.model.LineItemType.PRODUCT
+      }],
+      autoConfirmationEnabled: false, // ❗ WICHTIG: false für Authorization
+      currency: currency,
+      customerId: customerId,
+      merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      language: 'de-CH',
+      customerEmailAddress: customerEmail,
+      token: parseInt(paymentMethod.wallee_token), // ✅ Token direkt bei Erstellung
+      tokenizationEnabled: false // Kein neues Token erstellen, bestehendes verwenden
     }
 
-    const authorizeResponse = await transactionService.create(spaceId, transactionWithToken)
+    console.log('📤 Creating AUTHORIZED transaction with token...')
+    
+    const authorizeResponse = await transactionService.create(spaceId, transactionData)
     const authorizedTransaction: any = authorizeResponse.body
 
-    console.log('✅ Transaction authorized:', {
+    console.log('✅ Transaction created:', {
       id: authorizedTransaction.id,
       state: authorizedTransaction.state
     })
