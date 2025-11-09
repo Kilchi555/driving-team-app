@@ -8,6 +8,16 @@ import { sendEmail, generatePaymentReminderEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
   try {
+    // Check if Resend is configured
+    if (!process.env.RESEND_API_KEY) {
+      console.log('ℹ️ Skipping reminder email: RESEND_API_KEY not configured')
+      return {
+        success: true,
+        message: 'Reminder skipped (email not configured)',
+        emailSent: false
+      }
+    }
+
     const body = await readBody(event)
     const { paymentId, userId, tenantId } = body
 

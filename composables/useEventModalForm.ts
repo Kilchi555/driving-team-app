@@ -1245,20 +1245,25 @@ const useEventModalForm = (currentUser?: any, refs?: {
       console.log('✅ Payment entry created:', payment.id)
       
       // ✅ NEW: Send first reminder email immediately after payment creation
-      try {
-        console.log('📧 Sending first payment confirmation reminder...')
-        const reminderResponse = await $fetch('/api/reminders/send-payment-confirmation', {
-          method: 'POST',
-          body: {
-            paymentId: payment.id,
-            userId: formData.value.user_id,
-            tenantId: userData?.tenant_id
-          }
-        })
-        console.log('✅ First reminder sent:', reminderResponse)
-      } catch (reminderError) {
-        console.error('⚠️ Error sending first reminder (non-critical):', reminderError)
-        // Non-critical - don't fail the payment creation
+      // Only if RESEND_API_KEY is configured
+      if (process.env.RESEND_API_KEY) {
+        try {
+          console.log('📧 Sending first payment confirmation reminder...')
+          const reminderResponse = await $fetch('/api/reminders/send-payment-confirmation', {
+            method: 'POST',
+            body: {
+              paymentId: payment.id,
+              userId: formData.value.user_id,
+              tenantId: userData?.tenant_id
+            }
+          })
+          console.log('✅ First reminder sent:', reminderResponse)
+        } catch (reminderError) {
+          console.error('⚠️ Error sending first reminder (non-critical):', reminderError)
+          // Non-critical - don't fail the payment creation
+        }
+      } else {
+        console.log('ℹ️ Skipping first reminder email (RESEND_API_KEY not configured)')
       }
       
       return payment
