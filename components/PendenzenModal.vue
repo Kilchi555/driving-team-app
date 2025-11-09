@@ -225,9 +225,9 @@
                 </div>
                 <div class="text-gray-900 font-medium">{{ appointment.users?.first_name }} {{ appointment.users?.last_name }}</div>
                 <div class="text-sm text-gray-600 mt-1">
-                  {{ new Date(appointment.start_time).toLocaleDateString('de-CH') }} • 
-                  {{ new Date(appointment.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }} - 
-                  {{ new Date(appointment.end_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }}
+                  {{ getAppointmentFormattedDate(appointment) }} • 
+                  {{ getAppointmentFormattedTime(appointment, 'start') }} - 
+                  {{ getAppointmentFormattedTime(appointment, 'end') }}
                 </div>
                 <div class="text-xs text-gray-500 mt-1">{{ appointment.title }}</div>
               </div>
@@ -501,6 +501,48 @@ const openReminderModal = async (appointment: any) => {
   currentReminderAppointment.value = appointment
   showReminderModal.value = true
   await loadReminderHistory(appointment.id)
+}
+
+const parseLocalDateTime = (dateTimeStr: string) => {
+  if (!dateTimeStr) return new Date()
+  const cleanStr = dateTimeStr.replace('+00:00', '').replace('+00', '').replace('Z', '').trim()
+  const [datePart, timePart = '00:00:00'] = cleanStr.includes('T')
+    ? cleanStr.split('T')
+    : cleanStr.split(' ')
+
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour = 0, minute = 0, second = 0] = timePart.split(':').map(Number)
+
+  return new Date(year, (month ?? 1) - 1, day ?? 1, hour, minute, second)
+}
+
+const formatLocalDate = (dateTimeStr: string) => {
+  const date = parseLocalDateTime(dateTimeStr)
+  return date.toLocaleDateString('de-CH', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
+
+const formatLocalTime = (dateTimeStr: string) => {
+  const date = parseLocalDateTime(dateTimeStr)
+  return date.toLocaleTimeString('de-CH', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const getAppointmentFormattedDate = (appointment: any) => {
+  return appointment?.formattedDate || formatLocalDate(appointment?.start_time)
+}
+
+const getAppointmentFormattedTime = (appointment: any, type: 'start' | 'end') => {
+  if (type === 'start') {
+    return appointment?.formattedStartTime || formatLocalTime(appointment?.start_time)
+  }
+  return appointment?.formattedEndTime || formatLocalTime(appointment?.end_time)
 }
 
 // ✅ NEU: Lade Erinnerungs-Historie
