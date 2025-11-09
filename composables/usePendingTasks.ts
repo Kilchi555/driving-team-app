@@ -48,6 +48,9 @@ export interface CriteriaEvaluationData {
   note: string;       // criteria_note
 }
 
+// Fälligkeits-Status für unbestätigte Termine
+export type DueStatus = 'overdue_past' | 'overdue_24h' | 'due' | 'upcoming'
+
 // SINGLETON PATTERN - Globaler reaktiver State
 const globalState = reactive({
   pendingAppointments: [] as PendingAppointment[],
@@ -65,9 +68,58 @@ const buttonClasses = computed(() =>
   ${pendingCount.value > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-green-500 hover:bg-green-600'}`
 )
 
-const buttonText = computed(() => 
-  `Pendenzen${pendingCount.value > 0 ? `(${pendingCount.value})` : '(0)'}${unconfirmedNext24hCount.value > 0 ? ` • Unbestätigt(${unconfirmedNext24hCount.value})` : ''}`
-)
+const buttonText = computed(() => {
+  const total = pendingCount.value + unconfirmedNext24hCount.value
+  return total > 0 ? `Pendenzen (${total})` : 'Pendenzen (0)'
+})
+
+// ✅ Hilfsfunktion: Berechne Fälligkeits-Status für unbestätigte Termine
+const calculateDueStatus = (appointment: PendingAppointment, authorizationWindowDays: number = 7): DueStatus => {
+  const now = new Date()
+  const startTime = parseLocalDateTime(appointment.start_time)
+  const authDeadline = new Date(startTime.getTime() - (authorizationWindowDays * 24 * 60 * 60 * 1000))
+  const hoursUntilStart = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+  
+  // Termin ist bereits vorbei
+  if (startTime < now) {
+    return 'overdue_past'
+  }
+  
+  // Weniger als 24h bis zum Termin
+  if (hoursUntilStart < 24) {
+    return 'overdue_24h'
+  }
+  
+  // Autorisierungs-Deadline ist abgelaufen (z.B. 1 Woche vor Termin)
+  if (now > authDeadline) {
+    return 'due'
+  }
+  
+  // Noch Zeit bis zur Deadline
+  return 'upcoming'
+}
+
+// ✅ Computed: Unbestätigte Termine mit Fälligkeits-Status und sortiert
+const unconfirmedWithStatus = computed(() => {
+  return globalState.unconfirmedNext24h.map(apt => ({
+    ...apt,
+    dueStatus: calculateDueStatus(apt)
+  })).sort((a, b) => {
+    // Sortierung: Überfälligste zuerst
+    const statusOrder: Record<DueStatus, number> = {
+      'overdue_past': 0,    // Termin vorbei (höchste Priorität)
+      'overdue_24h': 1,     // < 24h bis Termin
+      'due': 2,             // Autorisierungs-Deadline überschritten
+      'upcoming': 3         // Noch Zeit
+    }
+    
+    const orderDiff = statusOrder[a.dueStatus] - statusOrder[b.dueStatus]
+    if (orderDiff !== 0) return orderDiff
+    
+    // Bei gleichem Status: Ältere Termine zuerst
+    return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+  })
+})
 
 // Hilfsfunktion für formatierte Anzeige
 const getFormattedAppointment = (appointment: PendingAppointment) => {
@@ -478,6 +530,7 @@ export const usePendingTasks = () => {
     pendingCount,
     unconfirmedNext24h: computed(() => globalState.unconfirmedNext24h),
     unconfirmedNext24hCount,
+    unconfirmedWithStatus, // ✅ NEU: Mit Fälligkeits-Status
     buttonClasses,
     buttonText,
     isLoading: computed(() => globalState.isLoading),
@@ -490,6 +543,7 @@ export const usePendingTasks = () => {
     clearError,
     
     // Utilities
-    getFormattedAppointment
+    getFormattedAppointment,
+    calculateDueStatus // ✅ NEU: Export für manuelle Berechnung
   }
 }

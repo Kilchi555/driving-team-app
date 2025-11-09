@@ -44,7 +44,7 @@
             :class="['py-3 border-b-2 flex items-center space-x-2', activeTab === 'unconfirmed' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
             @click="activeTab = 'unconfirmed'"
           >
-            <span>Unbestätigt (24h)</span>
+            <span>Unbestätigt</span>
             <span v-if="unconfirmedNext24hCount > 0" class="ml-1 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800">{{ unconfirmedNext24hCount }}</span>
           </button>
         </div>
@@ -183,21 +183,51 @@
           </div>
         </div>
         <div v-else-if="activeTab === 'unconfirmed'" class="p-4 space-y-3">
+          <!-- Filter Dropdown -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Filter nach Status</label>
+            <select 
+              v-model="dueFilter" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            >
+              <option value="all">Alle ({{ unconfirmedWithStatus.length }})</option>
+              <option value="overdue_past">Termin vorbei ({{ unconfirmedWithStatus.filter(a => a.dueStatus === 'overdue_past').length }})</option>
+              <option value="overdue_24h">Überfällig < 24h ({{ unconfirmedWithStatus.filter(a => a.dueStatus === 'overdue_24h').length }})</option>
+              <option value="due">Fällig ({{ unconfirmedWithStatus.filter(a => a.dueStatus === 'due').length }})</option>
+            </select>
+          </div>
+
+          <!-- Termine Liste -->
+          <div v-if="filteredUnconfirmedAppointments.length === 0" class="text-center py-8 text-gray-500">
+            <p>Keine Termine mit diesem Status</p>
+          </div>
+          
           <div
-            v-for="appointment in formattedUnconfirmedAppointments"
+            v-for="appointment in filteredUnconfirmedAppointments"
             :key="appointment.id"
-            class="rounded-lg border p-4 hover:shadow-md transition-all relative border-red-300 bg-red-50"
+            :class="[
+              'rounded-lg border p-4 hover:shadow-md transition-all relative',
+              appointment.dueStatus === 'overdue_past' ? 'border-red-500 bg-red-50' :
+              appointment.dueStatus === 'overdue_24h' ? 'border-orange-400 bg-orange-50' :
+              appointment.dueStatus === 'due' ? 'border-yellow-400 bg-yellow-50' :
+              'border-green-300 bg-green-50'
+            ]"
           >
             <div class="flex items-start justify-between">
-              <div>
-                <div class="text-sm text-red-700 font-semibold mb-1">Nicht bestätigt</div>
-                <div class="text-gray-900 font-medium">{{ appointment.studentName }}</div>
-                <div class="text-sm text-gray-600 mt-1">
-                  {{ appointment.formattedDate }} • {{ appointment.formattedStartTime }} - {{ appointment.formattedEndTime }}
+              <div class="flex-1">
+                <div class="flex items-center space-x-2 mb-1">
+                  <span class="text-sm font-semibold text-gray-700">Nicht bestätigt</span>
+                  <span :class="['text-xs px-2 py-1 rounded-full font-medium', getDueStatusLabel(appointment.dueStatus).color]">
+                    {{ getDueStatusLabel(appointment.dueStatus).label }}
+                  </span>
                 </div>
-              </div>
-              <div>
-                <span class="text-xs px-2 py-1 rounded-full font-medium bg-red-100 text-red-800">⚠️ <span v-if="hoursUntil(appointment) < 24">< 24h</span><span v-else>24h</span></span>
+                <div class="text-gray-900 font-medium">{{ appointment.users?.first_name }} {{ appointment.users?.last_name }}</div>
+                <div class="text-sm text-gray-600 mt-1">
+                  {{ new Date(appointment.start_time).toLocaleDateString('de-CH') }} • 
+                  {{ new Date(appointment.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }} - 
+                  {{ new Date(appointment.end_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }}
+                </div>
+                <div class="text-xs text-gray-500 mt-1">{{ appointment.title }}</div>
               </div>
             </div>
           </div>
@@ -270,6 +300,7 @@ const {
   pendingCount,
   unconfirmedNext24h,
   unconfirmedNext24hCount,
+  unconfirmedWithStatus, // ✅ NEU: Mit Fälligkeits-Status
   isLoading,
   error,
   fetchPendingTasks,
@@ -284,6 +315,9 @@ const showEvaluationModal = ref(false)
 const selectedAppointment = ref<any>(null)
 const activeTab = ref<'bewertungen' | 'unconfirmed'>(props.defaultTab || 'bewertungen')
 
+// ✅ NEU: Filter für unbestätigte Termine
+const dueFilter = ref<'all' | 'due' | 'overdue_24h' | 'overdue_past'>('all')
+
 // Cash Payment Confirmation Modal
 const showCashPaymentModal = ref(false)
 const currentPayment = ref<any>(null)
@@ -296,6 +330,45 @@ const currentExamAppointment = ref<any>(null)
 const evaluationAppointments = computed(() => {
   return (formattedAppointments.value || []).filter((apt: any) => apt.status !== 'pending_confirmation')
 })
+
+// ✅ NEU: Gefilterte unbestätigte Termine
+const filteredUnconfirmedAppointments = computed(() => {
+  const appointments = unconfirmedWithStatus.value || []
+  
+  if (dueFilter.value === 'all') {
+    return appointments
+  }
+  
+  return appointments.filter(apt => {
+    if (dueFilter.value === 'due') {
+      // Nur "Fällig" (Autorisierungs-Deadline überschritten, aber noch > 24h)
+      return apt.dueStatus === 'due'
+    } else if (dueFilter.value === 'overdue_24h') {
+      // Nur "Überfällig < 24h"
+      return apt.dueStatus === 'overdue_24h'
+    } else if (dueFilter.value === 'overdue_past') {
+      // Nur "Überfällig nach Termin"
+      return apt.dueStatus === 'overdue_past'
+    }
+    return true
+  })
+})
+
+// ✅ Hilfsfunktion: Status-Label und Farbe
+const getDueStatusLabel = (status: string) => {
+  switch (status) {
+    case 'overdue_past':
+      return { label: 'Termin vorbei', color: 'text-red-700 bg-red-100' }
+    case 'overdue_24h':
+      return { label: '< 24h', color: 'text-orange-700 bg-orange-100' }
+    case 'due':
+      return { label: 'Fällig', color: 'text-yellow-700 bg-yellow-100' }
+    case 'upcoming':
+      return { label: 'Noch Zeit', color: 'text-green-700 bg-green-100' }
+    default:
+      return { label: 'Unbekannt', color: 'text-gray-700 bg-gray-100' }
+  }
+}
 
 // Computed: Formatierte unconfirmed appointments
 const formattedUnconfirmedAppointments = computed(() => {

@@ -286,6 +286,26 @@ export default defineEventHandler(async (event) => {
       newStatus: paymentStatus
     })
     
+    // ✅ WICHTIG: Verhindere Downgrade von 'completed' zu 'authorized'
+    // Wenn Payment bereits 'completed' ist und paid_at gesetzt ist, nicht überschreiben
+    const shouldUpdate = payments.some(p => {
+      if (p.payment_status === 'completed' && p.paid_at) {
+        console.log(`⏭️ Skipping update for payment ${p.id}: already completed and paid`)
+        return false
+      }
+      return true
+    })
+    
+    if (!shouldUpdate) {
+      console.log('✅ All payments already completed, skipping update')
+      return {
+        success: true,
+        message: 'Payments already completed',
+        transactionId,
+        paymentStatus: 'completed'
+      }
+    }
+    
     // Update ALL payments with this transaction ID
     const updateData: any = {
       payment_status: paymentStatus,
@@ -297,10 +317,12 @@ export default defineEventHandler(async (event) => {
       updateData.paid_at = new Date().toISOString()
     }
     
+    // ✅ Nur Payments updaten die noch nicht completed sind
     const { error: updateError } = await supabase
       .from('payments')
       .update(updateData)
       .eq('wallee_transaction_id', transactionId)
+      .neq('payment_status', 'completed') // Nicht überschreiben wenn bereits completed
     
     if (updateError) {
       console.error('❌ Error updating payments:', updateError)
