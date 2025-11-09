@@ -138,14 +138,14 @@
                     </span>
                     
                     <!-- Timeline Info direkt unter Status -->
-                    <div v-if="payment.payment_status === 'pending' && payment.scheduled_authorization_date" class="text-xs text-orange-600 font-medium">
-                      Bestätigung notwendig bis {{ formatPaymentTimeline(payment.scheduled_authorization_date) }}
+                    <div v-if="payment.payment_status === 'pending' && payment.scheduled_authorization_date" class="text-xs text-blue-600">
+                      Reservierung geplant: {{ formatPaymentTimeline(payment.scheduled_authorization_date) }}
                     </div>
                     <div v-else-if="payment.payment_status === 'pending' && !payment.scheduled_authorization_date" class="text-xs text-yellow-600">
-                      Bitte Termin bestätigen
+                      Warte auf Terminbestätigung
                     </div>
                     <div v-if="payment.payment_status === 'authorized' && payment.scheduled_payment_date" class="text-xs text-blue-600">
-                      Durchführung geplant: {{ formatPaymentTimeline(payment.scheduled_payment_date) }}
+                      Abbuchung geplant: {{ formatPaymentTimeline(payment.scheduled_payment_date) }}
                     </div>
                   </div>
                 </div>
@@ -480,7 +480,8 @@ const getPaymentMethodClass = (method: string): string => {
 
 const getStatusLabel = (status: string): string => {
   const labels: Record<string, string> = {
-    'pending': 'Offen',
+    'pending': 'Ausstehend',
+    'authorized': 'Reserviert',
     'completed': 'Bezahlt',
     'failed': 'Fehlgeschlagen',
     'cancelled': 'Storniert',
