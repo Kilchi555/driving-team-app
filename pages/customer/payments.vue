@@ -169,7 +169,8 @@
 
         <div v-else class="divide-y divide-gray-200">
           <div v-for="(payment, index) in filteredPayments" :key="payment.id" 
-               class="px-4 sm:px-6 py-4 sm:py-6 hover:bg-gray-50 transition-colors">
+               class="px-4 sm:px-6 py-4 sm:py-6 hover:bg-gray-50 transition-colors cursor-pointer"
+               @click="togglePaymentDetails(payment)">
             
             <!-- Payment Header -->
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 space-y-3 sm:space-y-0">
@@ -195,6 +196,16 @@
                   <div class="text-xs sm:text-sm text-gray-500">
                     {{ getPaymentMethodLabel(payment.payment_method) }}
                   </div>
+                  <!-- Expand Icon -->
+                  <svg 
+                    class="w-5 h-5 text-gray-400 transition-transform"
+                    :class="{ 'rotate-180': expandedPaymentId === payment.id }"
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
               </div>
             </div>
@@ -230,9 +241,80 @@
                 </div>
               </div>
             </div>
+
+            <!-- Expanded Payment Timeline (nur wenn expanded) -->
+            <div v-if="expandedPaymentId === payment.id" class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 class="text-sm font-semibold text-blue-900 mb-3 flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Zahlungs-Timeline
+              </h4>
+              
+              <div class="space-y-3">
+                <!-- Autorisierungs-Datum -->
+                <div v-if="payment.scheduled_authorization_date" class="flex items-start">
+                  <div class="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full" 
+                       :class="isDatePassed(payment.scheduled_authorization_date) ? 'bg-green-500' : 'bg-yellow-500'">
+                  </div>
+                  <div class="ml-3 flex-1">
+                    <div class="text-sm font-medium text-gray-900">
+                      {{ isDatePassed(payment.scheduled_authorization_date) ? '✓ Provisorisch reserviert' : 'Provisorische Reservierung' }}
+                    </div>
+                    <div class="text-xs text-gray-600">
+                      {{ formatPaymentTimeline(payment.scheduled_authorization_date) }}
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                      Der Betrag wird auf Ihrer Karte/Konto provisorisch blockiert
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Geplante Durchführung -->
+                <div v-if="payment.scheduled_payment_date" class="flex items-start">
+                  <div class="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full"
+                       :class="payment.payment_status === 'completed' ? 'bg-green-500' : 'bg-blue-500'">
+                  </div>
+                  <div class="ml-3 flex-1">
+                    <div class="text-sm font-medium text-gray-900">
+                      {{ payment.payment_status === 'completed' ? '✓ Zahlung durchgeführt' : 'Geplante Durchführung' }}
+                    </div>
+                    <div class="text-xs text-gray-600">
+                      {{ formatPaymentTimeline(payment.scheduled_payment_date) }}
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                      {{ payment.payment_status === 'completed' ? 'Betrag wurde final abgebucht' : 'Betrag wird final abgebucht' }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Fallback wenn keine Daten vorhanden -->
+                <div v-if="!payment.scheduled_authorization_date && !payment.scheduled_payment_date && payment.payment_status === 'pending'" class="text-sm text-gray-600">
+                  <div class="flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Zahlung noch nicht bestätigt. Bitte bestätigen Sie den Termin, um die Zahlung zu planen.
+                  </div>
+                </div>
+
+                <!-- Completed Status -->
+                <div v-if="payment.payment_status === 'completed' && payment.paid_at" class="flex items-start">
+                  <div class="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-green-500"></div>
+                  <div class="ml-3 flex-1">
+                    <div class="text-sm font-medium text-green-700">
+                      ✓ Zahlung abgeschlossen
+                    </div>
+                    <div class="text-xs text-gray-600">
+                      {{ formatPaymentTimeline(payment.paid_at) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <!-- Action Buttons -->
-            <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+            <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3" @click.stop>
               <button v-if="payment.payment_status === 'pending'"
                       @click="payIndividual(payment)"
                       :disabled="isProcessingPayment"
@@ -290,6 +372,7 @@ const showDetailsModal = ref(false)
 const showSettings = ref(false)
 const selectedPayment = ref<any>(null)
 const preferredPaymentMethod = ref<string | null>(null)
+const expandedPaymentId = ref<string | null>(null)
 
 // Computed properties
 const unpaidPayments = computed(() => 
@@ -555,6 +638,66 @@ const formatDate = (dateString: string): string => {
   })
 }
 
+const togglePaymentDetails = (payment: any) => {
+  if (expandedPaymentId.value === payment.id) {
+    expandedPaymentId.value = null
+  } else {
+    expandedPaymentId.value = payment.id
+  }
+}
+
+const formatPaymentTimeline = (dateString: string): string => {
+  if (!dateString) return '-'
+  
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = date.getTime() - now.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    
+    const formattedDate = date.toLocaleDateString('de-CH', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+    
+    const formattedTime = date.toLocaleTimeString('de-CH', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    
+    // Relative Zeit hinzufügen
+    let relativeTime = ''
+    if (diffMs < 0) {
+      relativeTime = ' (bereits erfolgt)'
+    } else if (diffDays === 0) {
+      if (diffHours === 0) {
+        relativeTime = ' (in weniger als 1 Stunde)'
+      } else {
+        relativeTime = ` (in ${diffHours} Stunden)`
+      }
+    } else if (diffDays === 1) {
+      relativeTime = ' (morgen)'
+    } else if (diffDays < 7) {
+      relativeTime = ` (in ${diffDays} Tagen)`
+    }
+    
+    return `${formattedDate}, ${formattedTime}${relativeTime}`
+  } catch (error) {
+    console.error('Error formatting payment timeline:', error)
+    return dateString
+  }
+}
+
+const isDatePassed = (dateString: string): boolean => {
+  if (!dateString) return false
+  const date = new Date(dateString)
+  const now = new Date()
+  return date < now
+}
+
 const getAppointmentTitle = (payment: any): string => {
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
   if (!appointment) return 'Fahrlektion'
@@ -671,6 +814,14 @@ onMounted(async () => {
 
 .transition-all {
   transition: all 0.3s ease-in-out;
+}
+
+.transition-transform {
+  transition: transform 0.3s ease-in-out;
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
 }
 
 /* Table hover effects */
