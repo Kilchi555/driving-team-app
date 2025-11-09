@@ -63,10 +63,11 @@ const globalState = reactive({
 const pendingCount = computed(() => globalState.pendingAppointments.length)
 const unconfirmedNext24hCount = computed(() => globalState.unconfirmedNext24h.length)
 
-const buttonClasses = computed(() =>
-  `text-white font-bold px-4 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200
-  ${pendingCount.value > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-green-500 hover:bg-green-600'}`
-)
+const buttonClasses = computed(() => {
+  const totalPending = pendingCount.value + unconfirmedNext24hCount.value
+  return `text-white font-bold px-4 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200
+  ${totalPending > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-green-500 hover:bg-green-600'}`
+})
 
 const buttonText = computed(() => {
   const total = pendingCount.value + unconfirmedNext24hCount.value
@@ -101,15 +102,19 @@ const calculateDueStatus = (appointment: PendingAppointment, authorizationWindow
 
 // ✅ Computed: Unbestätigte Termine mit Fälligkeits-Status und sortiert
 const unconfirmedWithStatus = computed(() => {
-  console.log('🔍 unconfirmedWithStatus computed called')
-  console.log('📊 Raw unconfirmed count:', globalState.unconfirmedNext24h.length)
-  
   const withStatus = globalState.unconfirmedNext24h.map(apt => {
-    const status = calculateDueStatus(apt)
-    console.log(`📅 Appointment ${apt.id}: ${apt.start_time} -> Status: ${status}`)
-    return {
-      ...apt,
-      dueStatus: status
+    try {
+      const status = calculateDueStatus(apt)
+      return {
+        ...apt,
+        dueStatus: status
+      }
+    } catch (error) {
+      console.error(`❌ Error calculating status for appointment ${apt.id}:`, error)
+      return {
+        ...apt,
+        dueStatus: 'upcoming' as DueStatus
+      }
     }
   }).sort((a, b) => {
     // Sortierung: Überfälligste zuerst
@@ -127,7 +132,6 @@ const unconfirmedWithStatus = computed(() => {
     return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   })
   
-  console.log('✅ unconfirmedWithStatus result:', withStatus.length)
   return withStatus
 })
 

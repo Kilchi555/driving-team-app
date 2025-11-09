@@ -12,9 +12,9 @@
               Pendenzen
               <span :class="[
                 'ml-2 px-2 py-1 rounded-full text-sm font-medium',
-                pendingCount > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                (pendingCount + unconfirmedNext24hCount) > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
               ]">
-                {{ pendingCount }}
+                {{ pendingCount + unconfirmedNext24hCount }}
               </span>
             </h1>
           </div>
@@ -72,7 +72,7 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="pendingCount === 0" class="flex items-center justify-center py-8">
+        <div v-else-if="pendingCount === 0 && unconfirmedNext24hCount === 0" class="flex items-center justify-center py-8">
           <div class="text-center px-4">
             <div class="text-6xl mb-4">🎉</div>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Pendenzen!</h3>
@@ -200,13 +200,15 @@
           <!-- Termine Liste -->
           <div v-if="filteredUnconfirmedAppointments.length === 0" class="text-center py-8 text-gray-500">
             <p>Keine Termine mit diesem Status</p>
+            <p class="text-xs mt-2">Filter: {{ dueFilter }}</p>
           </div>
           
           <div
             v-for="appointment in filteredUnconfirmedAppointments"
             :key="appointment.id"
+            @click="openReminderModal(appointment)"
             :class="[
-              'rounded-lg border p-4 hover:shadow-md transition-all relative',
+              'rounded-lg border p-4 hover:shadow-md transition-all relative cursor-pointer',
               appointment.dueStatus === 'overdue_past' ? 'border-red-500 bg-red-50' :
               appointment.dueStatus === 'overdue_24h' ? 'border-orange-400 bg-orange-50' :
               appointment.dueStatus === 'due' ? 'border-yellow-400 bg-yellow-50' :
@@ -266,6 +268,101 @@
     @close="showCashPaymentModal = false"
     @payment-confirmed="onCashPaymentConfirmed"
   />
+
+  <!-- Reminder Modal -->
+  <div v-if="showReminderModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+    <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <!-- Header -->
+      <div class="bg-blue-600 text-white p-4 flex items-center justify-between">
+        <h2 class="text-xl font-bold">Zahlungs-Erinnerungen</h2>
+        <button @click="showReminderModal = false" class="text-white hover:text-blue-200">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <!-- Termin Info -->
+        <div v-if="currentReminderAppointment" class="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h3 class="font-semibold text-gray-900 mb-2">{{ currentReminderAppointment.title }}</h3>
+          <div class="text-sm text-gray-600">
+            <p>Kunde: {{ currentReminderAppointment.users?.first_name }} {{ currentReminderAppointment.users?.last_name }}</p>
+            <p>Termin: {{ new Date(currentReminderAppointment.start_time).toLocaleDateString('de-CH') }} • 
+              {{ new Date(currentReminderAppointment.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }}</p>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="isLoadingReminders" class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p class="mt-2 text-gray-600">Lade Erinnerungen...</p>
+        </div>
+
+        <!-- Erinnerungs-Historie -->
+        <div v-else>
+          <h3 class="font-semibold text-gray-900 mb-4">Versendete Erinnerungen ({{ reminderHistory.length }})</h3>
+          
+          <div v-if="reminderHistory.length === 0" class="text-center py-8 text-gray-500">
+            <p>Noch keine Erinnerungen versendet</p>
+          </div>
+
+          <div v-else class="space-y-3">
+            <div
+              v-for="reminder in reminderHistory"
+              :key="reminder.id"
+              class="border rounded-lg p-4"
+              :class="reminder.status === 'sent' ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center space-x-2 mb-1">
+                    <span class="font-medium text-gray-900">
+                      {{ reminder.reminder_type === 'email' ? '📧 E-Mail' : '📱 SMS' }}
+                    </span>
+                    <span :class="[
+                      'text-xs px-2 py-1 rounded-full font-medium',
+                      reminder.status === 'sent' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    ]">
+                      {{ reminder.status === 'sent' ? 'Versendet' : 'Fehler' }}
+                    </span>
+                  </div>
+                  <p class="text-sm text-gray-600">
+                    {{ new Date(reminder.sent_at).toLocaleDateString('de-CH') }} • 
+                    {{ new Date(reminder.sent_at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }}
+                  </p>
+                  <p class="text-xs text-gray-500 mt-1">Erinnerung #{{ reminder.reminder_number }}</p>
+                  <p v-if="reminder.error_message" class="text-xs text-red-600 mt-1">{{ reminder.error_message }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="border-t p-4 bg-gray-50 flex justify-between items-center">
+        <button
+          @click="showReminderModal = false"
+          class="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+        >
+          Schliessen
+        </button>
+        <button
+          @click="sendManualReminder"
+          :disabled="isSendingReminder"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+        >
+          <svg v-if="isSendingReminder" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>{{ isSendingReminder ? 'Wird gesendet...' : 'Weitere Erinnerung senden' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -325,6 +422,13 @@ const currentPayment = ref<any>(null)
 // ✅ NEUE REFS FÜR EXAM RESULT
 const showExamResultModal = ref(false)
 const currentExamAppointment = ref<any>(null)
+
+// ✅ NEUE REFS FÜR REMINDER MODAL
+const showReminderModal = ref(false)
+const currentReminderAppointment = ref<any>(null)
+const reminderHistory = ref<any[]>([])
+const isLoadingReminders = ref(false)
+const isSendingReminder = ref(false)
 
 // Computed: Nur Bewertungen (ohne pending_confirmation)
 const evaluationAppointments = computed(() => {
@@ -390,6 +494,92 @@ const formattedUnconfirmedAppointments = computed(() => {
 const closeModal = () => {
   console.log('🔥 PendenzenModal closing...')
   emit('close')
+}
+
+// ✅ NEU: Erinnerungs-Modal öffnen
+const openReminderModal = async (appointment: any) => {
+  currentReminderAppointment.value = appointment
+  showReminderModal.value = true
+  await loadReminderHistory(appointment.id)
+}
+
+// ✅ NEU: Lade Erinnerungs-Historie
+const loadReminderHistory = async (appointmentId: string) => {
+  isLoadingReminders.value = true
+  try {
+    const supabase = getSupabase()
+    
+    // Hole Payment ID für diesen Termin
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('appointment_id', appointmentId)
+      .single()
+    
+    if (!payment) {
+      reminderHistory.value = []
+      return
+    }
+    
+    // Hole alle Erinnerungen für dieses Payment
+    const { data: reminders, error } = await supabase
+      .from('payment_reminders')
+      .select('*')
+      .eq('payment_id', payment.id)
+      .order('sent_at', { ascending: false })
+    
+    if (error) throw error
+    
+    reminderHistory.value = reminders || []
+  } catch (error: any) {
+    console.error('Error loading reminder history:', error)
+    reminderHistory.value = []
+  } finally {
+    isLoadingReminders.value = false
+  }
+}
+
+// ✅ NEU: Weitere Erinnerung senden
+const sendManualReminder = async () => {
+  if (!currentReminderAppointment.value) return
+  
+  isSendingReminder.value = true
+  try {
+    const supabase = getSupabase()
+    
+    // Hole Payment ID
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('appointment_id', currentReminderAppointment.value.id)
+      .single()
+    
+    if (!payment) {
+      alert('Keine Zahlung für diesen Termin gefunden')
+      return
+    }
+    
+    // Sende Erinnerung
+    const response = await $fetch('/api/reminders/send-payment-confirmation', {
+      method: 'POST',
+      body: {
+        paymentId: payment.id,
+        userId: currentReminderAppointment.value.user_id,
+        tenantId: props.currentUser.tenant_id
+      }
+    })
+    
+    console.log('✅ Manual reminder sent:', response)
+    alert('Erinnerung erfolgreich versendet!')
+    
+    // Aktualisiere Historie
+    await loadReminderHistory(currentReminderAppointment.value.id)
+  } catch (error: any) {
+    console.error('Error sending manual reminder:', error)
+    alert('Fehler beim Senden der Erinnerung: ' + error.message)
+  } finally {
+    isSendingReminder.value = false
+  }
 }
 
 // Hilfsfunktion für Student Category
