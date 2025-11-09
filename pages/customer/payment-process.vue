@@ -137,7 +137,7 @@
             </button>
             
             <button
-                @click="router.push('/customer-dashboard')"
+                @click="router.push('/customer/payments')"
               :disabled="isProcessing"
               class="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
