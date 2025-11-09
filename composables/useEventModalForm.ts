@@ -1246,15 +1246,19 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       // ✅ NEW: Send first reminder email immediately after payment creation
       try {
-        console.log('📧 Sending first payment confirmation reminder...')
-        const reminderResponse = await $fetch('/api/reminders/send-payment-confirmation', {
-          method: 'POST',
+        console.log('📧 Sending first payment confirmation reminder via Supabase function...')
+        const { data: reminderResponse, error: reminderError } = await supabase.functions.invoke('send-payment-reminder', {
           body: {
             paymentId: payment.id,
             userId: formData.value.user_id,
             tenantId: userData?.tenant_id
           }
         })
+
+        if (reminderError) {
+          throw reminderError
+        }
+
         console.log('✅ First reminder sent:', reminderResponse)
       } catch (reminderError) {
         console.error('⚠️ Error sending first reminder (non-critical):', reminderError)

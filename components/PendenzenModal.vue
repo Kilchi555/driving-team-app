@@ -559,16 +559,20 @@ const sendManualReminder = async () => {
       return
     }
     
-    // Sende Erinnerung
-    const response = await $fetch('/api/reminders/send-payment-confirmation', {
-      method: 'POST',
+    // Sende Erinnerung über Supabase Function
+    const { data: response, error: reminderError } = await supabase.functions.invoke('send-payment-reminder', {
       body: {
         paymentId: payment.id,
         userId: currentReminderAppointment.value.user_id,
-        tenantId: props.currentUser.tenant_id
+        tenantId: props.currentUser.tenant_id,
+        manual: true
       }
     })
-    
+
+    if (reminderError) {
+      throw reminderError
+    }
+
     console.log('✅ Manual reminder sent:', response)
     alert('Erinnerung erfolgreich versendet!')
     

@@ -165,13 +165,16 @@ E-Mail an Staff senden (optional)
 ## API-Endpunkte
 
 ### 1. Erste Erinnerung senden
-```
-POST /api/reminders/send-payment-confirmation
-Body: {
-  paymentId: string,
-  userId: string,
-  tenantId: string
-}
+Die erste Erinnerungs-E-Mail wird über die Supabase Edge Function `send-payment-reminder` verschickt.
+
+```ts
+const { data, error } = await supabase.functions.invoke('send-payment-reminder', {
+  body: {
+    paymentId: 'uuid',
+    userId: 'uuid',
+    tenantId: 'uuid'
+  }
+})
 ```
 
 ### 2. Löschungs-Benachrichtigung senden
