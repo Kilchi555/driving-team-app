@@ -293,7 +293,9 @@ const preferredPaymentMethod = ref<string | null>(null)
 
 // Computed properties
 const unpaidPayments = computed(() => 
-  customerPayments.value.filter(p => p.payment_status === 'pending' || !p.paid_at)
+  customerPayments.value.filter(p => 
+    p.payment_status === 'pending' || p.payment_status === 'authorized'
+  )
 )
 
 const paidPayments = computed(() => 
@@ -302,14 +304,8 @@ const paidPayments = computed(() =>
 
 const totalUnpaidAmount = computed(() => 
   unpaidPayments.value.reduce((sum, p) => {
-    let totalAmount = 0
-    if (p.total_amount_rappen) {
-      totalAmount += p.total_amount_rappen / 100
-    }
-    if (p.admin_fee_rappen) {
-      totalAmount += p.admin_fee_rappen / 100
-    }
-    return sum + totalAmount
+    // Nur total_amount_rappen verwenden (enthält bereits alles)
+    return sum + (p.total_amount_rappen / 100)
   }, 0)
 )
 
@@ -576,21 +572,27 @@ const getAppointmentDateTime = (payment: any): string => {
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
   if (!appointment || !appointment.start_time) return ''
   
-  const startDate = new Date(appointment.start_time)
+  // Parse als lokale Zeit (ohne UTC-Konvertierung)
+  const dateStr = appointment.start_time
+  const [datePart, timePart] = dateStr.split(' ')
+  const [year, month, day] = datePart.split('-')
+  const [hour, minute] = timePart.split(':')
+  
+  const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute))
   const duration = appointment.duration_minutes || 45
   
-  const dateStr = startDate.toLocaleDateString('de-CH', {
+  const formattedDate = startDate.toLocaleDateString('de-CH', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
   })
   
-  const timeStr = startDate.toLocaleTimeString('de-CH', {
+  const formattedTime = startDate.toLocaleTimeString('de-CH', {
     hour: '2-digit',
     minute: '2-digit'
   })
   
-  return `${dateStr}, ${timeStr} Uhr • ${duration} Min.`
+  return `${formattedDate}, ${formattedTime} Uhr • ${duration} Min.`
 }
 
 // Watch for user role changes
