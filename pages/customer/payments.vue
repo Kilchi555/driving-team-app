@@ -572,27 +572,65 @@ const getAppointmentDateTime = (payment: any): string => {
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
   if (!appointment || !appointment.start_time) return ''
   
-  // Parse als lokale Zeit (ohne UTC-Konvertierung)
-  const dateStr = appointment.start_time
-  const [datePart, timePart] = dateStr.split(' ')
-  const [year, month, day] = datePart.split('-')
-  const [hour, minute] = timePart.split(':')
-  
-  const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute))
-  const duration = appointment.duration_minutes || 45
-  
-  const formattedDate = startDate.toLocaleDateString('de-CH', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  })
-  
-  const formattedTime = startDate.toLocaleTimeString('de-CH', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-  
-  return `${formattedDate}, ${formattedTime} Uhr • ${duration} Min.`
+  try {
+    // Parse als lokale Zeit (ohne UTC-Konvertierung)
+    const dateStr = appointment.start_time.toString()
+    
+    // Handle different date formats
+    if (dateStr.includes('T')) {
+      // ISO format: 2025-11-08T15:00:00+00:00
+      const isoDate = new Date(dateStr)
+      const duration = appointment.duration_minutes || 45
+      
+      // Extract local components
+      const year = isoDate.getUTCFullYear()
+      const month = isoDate.getUTCMonth()
+      const day = isoDate.getUTCDate()
+      const hour = isoDate.getUTCHours()
+      const minute = isoDate.getUTCMinutes()
+      
+      const startDate = new Date(year, month, day, hour, minute)
+      
+      const formattedDate = startDate.toLocaleDateString('de-CH', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+      
+      const formattedTime = startDate.toLocaleTimeString('de-CH', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      
+      return `${formattedDate}, ${formattedTime} Uhr • ${duration} Min.`
+    } else {
+      // Space-separated format: 2025-11-08 15:00:00
+      const [datePart, timePart] = dateStr.split(' ')
+      if (!datePart || !timePart) return ''
+      
+      const [year, month, day] = datePart.split('-')
+      const [hour, minute] = timePart.split(':')
+      
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute))
+      const duration = appointment.duration_minutes || 45
+      
+      const formattedDate = startDate.toLocaleDateString('de-CH', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+      
+      const formattedTime = startDate.toLocaleTimeString('de-CH', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      
+      return `${formattedDate}, ${formattedTime} Uhr • ${duration} Min.`
+    }
+  } catch (error) {
+    console.error('Error parsing appointment date:', error, appointment.start_time)
+    return ''
+  }
 }
 
 // Watch for user role changes
