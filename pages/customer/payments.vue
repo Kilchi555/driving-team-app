@@ -56,56 +56,6 @@
     <!-- Main Content -->
     <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       
-      <!-- Payment Status Overview -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
-        
-        <!-- Offene Rechnungen -->
-        <div class="bg-white rounded-xl shadow-lg border relative"
-            :class="unpaidPayments.length > 0 ? 'border-red-200' : 'border-green-200'">
-          <div class="p-4 sm:p-6">
-            <div class="flex mb-2">
-              <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center mr-2 sm:mr-3"
-                  :class="unpaidPayments.length > 0 ? 'bg-red-100' : 'bg-green-100'">
-                <svg v-if="unpaidPayments.length > 0" class="h-5 w-5 sm:h-6 sm:w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <svg v-else class="h-5 w-5 sm:h-6 sm:w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 class="text-xs sm:text-sm font-medium text-gray-500">
-                {{ unpaidPayments.length > 0 ? 'Offene Rechnungen' : 'Zahlungsstatus' }}
-              </h3>
-            </div>
-            
-            <div v-if="unpaidPayments.length > 0">
-              <p class="text-2xl sm:text-3xl font-bold text-red-600">{{ unpaidPayments.length }}</p>
-              <p class="text-xs sm:text-sm text-red-500 mt-1">CHF {{ totalUnpaidAmount.toFixed(2) }}</p>
-            </div>
-            <div v-else>
-              <p class="text-2xl sm:text-3xl font-bold text-green-600">Alles bezahlt</p>
-              <p class="text-xs sm:text-sm text-green-500 mt-1">✓ Keine offenen Beträge</p>
-            </div>
-            
-            <!-- Action Button -->
-            <button
-              v-if="unpaidPayments.length > 0"
-              @click="payAllUnpaid"
-              :disabled="isProcessingPayment"
-              class="mt-3 sm:mt-4 w-full bg-red-500 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-red-600 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base"
-            >
-              <span v-if="isProcessingPayment" class="flex items-center justify-center">
-                <svg class="animate-spin -ml-1 mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Wird verarbeitet...
-              </span>
-              <span v-else>Alle bezahlen</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
       <!-- Payment List -->
       <div class="bg-white rounded-xl shadow-lg border border-gray-200">
