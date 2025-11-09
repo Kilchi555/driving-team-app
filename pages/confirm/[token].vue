@@ -173,6 +173,7 @@ const isConfirmed = ref(false)
 const isProcessing = ref(false)
 const automaticPaymentEnabled = ref(false)
 const automaticPaymentHoursBefore = ref(24)
+const automaticAuthorizationHoursBefore = ref(168) // Standard: 1 Woche vor Termin
 const paymentMethods = ref<any[]>([])
 const selectedPaymentMethodId = ref<string | null>(null)
 
@@ -246,6 +247,7 @@ const loadAppointment = async () => {
         
         automaticPaymentEnabled.value = settings.automatic_payment_enabled || false
         automaticPaymentHoursBefore.value = settings.automatic_payment_hours_before || 24
+        automaticAuthorizationHoursBefore.value = settings.automatic_authorization_hours_before || 168
       }
     }
 
@@ -320,6 +322,7 @@ const confirmAppointment = async () => {
     
     // ✅ Calculate scheduled payment date - automatisch aktiviert wenn automaticPaymentEnabled = true
     let scheduledPaymentDate: string | null = null
+    let scheduledAuthorizationDate: string | null = null
     let shouldProcessImmediately = false
     
     // ✅ Automatische Zahlung ist aktiviert wenn:
@@ -333,11 +336,17 @@ const confirmAppointment = async () => {
     if (willUseAutomaticPayment) {
       const appointmentDate = new Date(appointment.value.start_time)
       const hoursBefore = automaticPaymentHoursBefore.value || 24
+      const authHoursBefore = automaticAuthorizationHoursBefore.value || 168 // 1 Woche
       const now = new Date()
       
-      // Berechne theoretisches scheduled_payment_date
+      // Berechne theoretisches scheduled_payment_date (finale Abbuchung)
       const theoreticalScheduledDate = new Date(
         appointmentDate.getTime() - (hoursBefore * 60 * 60 * 1000)
+      )
+      
+      // Berechne scheduled_authorization_date (provisorische Belastung)
+      const theoreticalAuthDate = new Date(
+        appointmentDate.getTime() - (authHoursBefore * 60 * 60 * 1000)
       )
       
       // ✅ PROBLEM BEHOBEN: Wenn Bestätigung zu spät kommt (weniger als hoursBefore vor Termin)
@@ -347,17 +356,25 @@ const confirmAppointment = async () => {
         // Zahlung wäre bereits fällig gewesen → SOFORT verarbeiten
         shouldProcessImmediately = true
         scheduledPaymentDate = now.toISOString() // Setze auf jetzt für sofortige Verarbeitung
+        scheduledAuthorizationDate = now.toISOString()
       } else {
         // Normal: Zahlung ist in der Zukunft
         scheduledPaymentDate = theoreticalScheduledDate.toISOString()
+        // Authorization: entweder jetzt (wenn schon fällig) oder geplant
+        scheduledAuthorizationDate = theoreticalAuthDate < now 
+          ? now.toISOString() 
+          : theoreticalAuthDate.toISOString()
       }
       
-      console.log('💰 Scheduled payment date calculated:', {
+      console.log('💰 Scheduled payment dates calculated:', {
         appointmentDate: appointmentDate.toISOString(),
         hoursBefore,
+        authHoursBefore,
         theoreticalScheduledDate: theoreticalScheduledDate.toISOString(),
+        theoreticalAuthDate: theoreticalAuthDate.toISOString(),
         now: now.toISOString(),
-        finalScheduledDate: scheduledPaymentDate,
+        finalScheduledPaymentDate: scheduledPaymentDate,
+        finalScheduledAuthDate: scheduledAuthorizationDate,
         shouldProcessImmediately,
         isTooLate: theoreticalScheduledDate < now
       })
@@ -405,6 +422,7 @@ const confirmAppointment = async () => {
             automatic_payment_consent: true,
             automatic_payment_consent_at: new Date().toISOString(),
             scheduled_payment_date: scheduledPaymentDate,
+            scheduled_authorization_date: scheduledAuthorizationDate,
             automatic_payment_processed: false,
             updated_at: new Date().toISOString()
           }
@@ -454,6 +472,7 @@ const confirmAppointment = async () => {
           automatic_payment_consent: true,
           automatic_payment_consent_at: new Date().toISOString(),
           scheduled_payment_date: scheduledPaymentDate,
+          scheduled_authorization_date: scheduledAuthorizationDate,
           automatic_payment_processed: false,
           currency: 'CHF',
           description: `Automatische Zahlung für Termin: ${appointmentDetails.title || 'Fahrstunde'}`,
