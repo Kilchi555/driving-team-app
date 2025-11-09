@@ -2,7 +2,8 @@
 // Sendet Magic Link per E-Mail zur Geräte-Verifikation
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { sendEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -16,17 +17,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Supabase configuration missing'
-      })
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = getSupabaseAdmin()
 
     // Generiere Verifikations-Token
     const verificationToken = crypto.randomUUID()
@@ -54,72 +45,89 @@ export default defineEventHandler(async (event) => {
     const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
     const verificationLink = `${baseUrl}/verify-device/${verificationToken}`
 
-    // Versende E-Mail mit Magic Link (via Supabase Auth OTP)
+    // E-Mail HTML Template
+    const emailHtml = `
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geräte-Verifikation erforderlich</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #f8f9fa; border-radius: 10px; padding: 30px; margin-bottom: 20px;">
+    <h1 style="color: #2563eb; margin-top: 0;">Neues Gerät erkannt</h1>
+    
+    <p>Hallo,</p>
+    
+    <p>Ein neues Gerät wurde für Ihr Konto erkannt: <strong>${deviceName || 'Unbekanntes Gerät'}</strong></p>
+    
+    <div style="background-color: white; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 5px;">
+      <p style="margin: 5px 0;">Aus Sicherheitsgründen müssen Sie dieses Gerät bestätigen, bevor Sie sich anmelden können.</p>
+    </div>
+    
+    <p>Bitte bestätigen Sie dieses Gerät, indem Sie auf den folgenden Button klicken:</p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${verificationLink}" 
+         style="background-color: #2563eb; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+        Gerät jetzt bestätigen
+      </a>
+    </div>
+    
+    <p style="font-size: 14px; color: #666;">
+      Oder kopieren Sie diesen Link in Ihren Browser:<br>
+      <a href="${verificationLink}" style="color: #2563eb; word-break: break-all;">${verificationLink}</a>
+    </p>
+    
+    <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin: 20px 0;">
+      <p style="margin: 0; font-size: 14px; color: #856404;">
+        <strong>⏰ Wichtig:</strong> Dieser Link ist 24 Stunden gültig.
+      </p>
+    </div>
+    
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+    
+    <p style="font-size: 12px; color: #999;">
+      Wenn Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail bitte. Ihr Konto bleibt sicher.
+    </p>
+  </div>
+</body>
+</html>
+    `
+
+    // Versende E-Mail via Resend
     try {
-      const { error: emailError } = await supabase.auth.signInWithOtp({
-        email: userEmail,
-        options: {
-          emailRedirectTo: verificationLink,
-          data: {
-            device_id: deviceId,
-            device_name: deviceName || 'Neues Gerät',
-            verification_token: verificationToken
-          }
-        }
+      const emailResult = await sendEmail({
+        to: userEmail,
+        subject: 'Geräte-Verifikation erforderlich',
+        html: emailHtml
       })
 
-      if (emailError) {
-        console.error('Error sending OTP email:', emailError)
-        // Fallback: Direkter E-Mail-Versand via Edge Function falls OTP nicht funktioniert
-        throw emailError
+      console.log('✅ Device verification email sent:', emailResult.messageId)
+
+      return {
+        success: true,
+        message: 'Verification email sent',
+        verificationLink, // Für Testing/Debugging
+        expiresAt: expiresAt.toISOString()
       }
-    } catch (otpError: any) {
-      console.warn('OTP email failed, trying direct email service:', otpError.message)
+    } catch (emailError: any) {
+      console.error('❌ Error sending device verification email:', emailError)
       
-      // Fallback: Verwende Supabase Edge Function für E-Mail
-      // (Dieser Fallback kann später durch echte E-Mail-Service-Integration ersetzt werden)
-      const { error: emailFunctionError } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: userEmail,
-          subject: 'Geräte-Verifikation erforderlich',
-          html: `
-            <h2>Neues Gerät erkannt</h2>
-            <p>Ein neues Gerät wurde für Ihr Konto erkannt: <strong>${deviceName || 'Unbekanntes Gerät'}</strong></p>
-            <p>Bitte bestätigen Sie dieses Gerät, indem Sie auf den folgenden Link klicken:</p>
-            <p><a href="${verificationLink}" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Gerät bestätigen</a></p>
-            <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
-            <p>${verificationLink}</p>
-            <p><small>Dieser Link ist 24 Stunden gültig.</small></p>
-          `,
-          text: `
-Neues Gerät erkannt
-
-Ein neues Gerät wurde für Ihr Konto erkannt: ${deviceName || 'Unbekanntes Gerät'}
-
-Bitte bestätigen Sie dieses Gerät, indem Sie auf den folgenden Link klicken:
-${verificationLink}
-
-Dieser Link ist 24 Stunden gültig.
-          `
-        }
-      })
-
-      if (emailFunctionError) {
-        console.error('Email function error:', emailFunctionError)
-        // Auch wenn E-Mail fehlschlägt, geben wir den Token zurück
-        // Der User kann den Link manuell aufrufen
+      // Auch wenn E-Mail fehlschlägt, geben wir den Token zurück
+      // Der User kann den Link manuell aufrufen
+      return {
+        success: true,
+        message: 'Token created but email failed',
+        verificationLink,
+        expiresAt: expiresAt.toISOString(),
+        emailError: emailError.message
       }
-    }
-
-    return {
-      success: true,
-      message: 'Verification email sent',
-      verificationLink, // Für Testing/Debugging
-      expiresAt: expiresAt.toISOString()
     }
 
   } catch (error: any) {
-    console.error('Error in send-device-verification:', error)
+    console.error('❌ Error in send-device-verification:', error)
     throw createError({
       statusCode: error.statusCode || 500,
       statusMessage: error.message || 'Failed to send verification email'
