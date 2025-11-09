@@ -56,8 +56,8 @@ export default defineEventHandler(async (event) => {
       'CONFIRMED': 'processing',
       'PROCESSING': 'processing',
       'AUTHORIZED': 'authorized', // Provisorische Belastung
-      'FULFILL': 'authorized', // Autorisiert und bereit für Capture
-      'COMPLETED': 'completed', // Finale Abbuchung durchgeführt
+      'FULFILL': 'completed', // Wallee meldet erfolgreiche Belastung
+      'COMPLETED': 'completed', // Finale Abbuchung (Capture) durchgeführt
       'SUCCESSFUL': 'completed',
       'FAILED': 'failed',
       'CANCELED': 'cancelled',
