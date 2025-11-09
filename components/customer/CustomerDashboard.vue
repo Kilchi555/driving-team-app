@@ -109,83 +109,31 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         
         <!-- Zahlungsübersicht -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border" 
-             :class="unpaidAppointments.length > 0 ? 'border-yellow-100' : 'border-green-100'">
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-blue-100">
           <div class="p-6 h-full flex flex-col">
-            <div class="flex items-center mb-3">
-              <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
-                   :class="unpaidAppointments.length > 0 ? 'bg-yellow-100' : 'bg-green-100'">
-                <svg v-if="unpaidAppointments.length > 0" class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-                <svg v-else class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mr-3">
+                <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
               </div>
-              <h3 class="text-sm font-medium text-gray-500">
-                {{ unpaidAppointments.length > 0 ? 'Offene Zahlungen' : 'Zahlungsstatus' }}
+              <h3 class="text-lg font-semibold text-gray-900">
+                Meine Zahlungen
               </h3>
             </div>
             
-            <div class="flex-1">
-              <!-- Loading State für Zahlungsübersicht -->
+            <div class="flex-1 flex items-center justify-center">
+              <!-- Loading State -->
               <div v-if="paymentsLoading" class="text-center">
                 <LoadingLogo size="md" />
-                <p class="text-xs text-gray-500 mt-2">Rechnungen werden geladen...</p>
+                <p class="text-xs text-gray-500 mt-2">Wird geladen...</p>
               </div>
               
-              <!-- Zahlungsdaten anzeigen -->
-              <div v-else>
-                <div v-if="unpaidAppointments.length > 0">
-                  <p class="text-3xl font-bold text-yellow-600">{{ unpaidAppointments.length }}</p>
-                  <p class="text-xs text-red-500 mt-1">
-                    CHF {{ (totalUnpaidAmount / 100).toFixed(2) }} offen
-                  </p>
-                  
-                  <!-- Zahlungsdetails -->
-                  <div class="mt-3 space-y-2 text-xs">
-                    <div v-for="payment in unpaidAppointments.slice(0, 3)" :key="payment.id" class="border-t border-gray-100 pt-2">
-                      <div class="flex items-center justify-between mb-1">
-                        <span class="text-gray-600">CHF {{ ((payment.total_amount_rappen || 0) / 100).toFixed(2) }}</span>
-                        <span v-if="payment.automatic_payment_consent && payment.payment_method_id" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          ✓ Automatisch
-                        </span>
-                        <span v-else-if="payment.automatic_payment_consent && !payment.payment_method_id" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                          ⚠️ Einrichtung unvollständig
-                        </span>
-                        <span v-else class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          Manuell
-                        </span>
-                      </div>
-                      <!-- Automatische Zahlung aktiv -->
-                      <div v-if="payment.automatic_payment_consent && payment.payment_method_id && payment.scheduled_payment_date" class="text-gray-500 mt-1">
-                        Wird durchgeführt: {{ formatPaymentDate(payment.scheduled_payment_date) }}
-                      </div>
-                      <!-- Automatische Zahlung aktiviert, aber kein Zahlungsmittel -->
-                      <div v-else-if="payment.automatic_payment_consent && !payment.payment_method_id" class="text-orange-600 mt-1">
-                        Bitte Zahlungsmittel hinzufügen
-                      </div>
-                      <!-- Manuelle Zahlung -->
-                      <div v-else class="text-gray-500 mt-1">
-                        Automatische Zahlung nicht aktiviert
-                      </div>
-                    </div>
-                    <div v-if="unpaidAppointments.length > 3" class="text-gray-500 pt-1">
-                      + {{ unpaidAppointments.length - 3 }} weitere
-                    </div>
-                  </div>
-                  
-                  <!-- ✅ Zeige überfällige Zahlungen -->
-                  <p v-if="overduePayments.length > 0" class="text-xs text-red-700 font-semibold mt-2">
-                    ⚠️ {{ overduePayments.length }} {{ overduePayments.length === 1 ? 'überfällig' : 'überfällig' }}
-                  </p>
-                </div>
-                <div v-else>
-                  <p class="text-3xl font-bold text-green-600">✓ Bezahlt</p>
-                  <p class="text-xs text-green-500 mt-1">
-                    Alle {{ paidAppointments.length }} Rechnungen beglichen
-                  </p>
-                </div>
+              <!-- Content -->
+              <div v-else class="text-center">
+                <p class="text-gray-600 text-sm">
+                  Verwalten Sie Ihre Zahlungen und sehen Sie Ihren Zahlungsverlauf
+                </p>
               </div>
             </div>
             
@@ -193,15 +141,9 @@
               <button
                 @click="navigateToPayments"
                 :disabled="paymentsLoading"
-                :class="[
-                  'w-full px-3 py-2 rounded-lg transition-colors text-sm font-medium',
-                  unpaidAppointments.length > 0 
-                    ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
-                    : 'bg-green-500 text-white hover:bg-green-600',
-                  paymentsLoading ? 'opacity-50 cursor-not-allowed' : ''
-                ]"
+                class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {{ paymentsLoading ? 'Wird geladen...' : (unpaidAppointments.length > 0 ? 'Jetzt bezahlen' : 'Zahlungsverlauf') }}
+                Zur Übersicht
               </button>
             </div>
           </div>
