@@ -1041,14 +1041,8 @@ const getRatingColorPreview = (rating: number) => {
 // Navigation methods
 
 const navigateToPayments = async () => {
-  // Wenn offene Zahlungen vorhanden sind, direkt zum Payment-Prozess
-  if (unpaidAppointments.value.length > 0) {
-    const paymentIds = unpaidAppointments.value.map(p => p.id).join(',')
-    await navigateTo(`/customer/payment-process?payments=${paymentIds}`)
-  } else {
-    // Sonst zum Zahlungsverlauf
-    await navigateTo('/customer/payments')
-  }
+  // Immer zur Zahlungsübersicht
+  await navigateTo('/customer/payments')
 }
 
 const navigateToLessonBooking = async () => {
