@@ -198,11 +198,11 @@
             
             <!-- Action Buttons -->
             <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-              <button v-if="payment.payment_status === 'pending'"
+              <button v-if="payment.payment_status === 'pending' || payment.payment_status === 'authorized'"
                       @click="payIndividual(payment)"
                       :disabled="isProcessingPayment"
                       class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
-                {{ isProcessingPayment ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
+                {{ isProcessingPayment ? 'Verarbeitung...' : 'Freiwillig jetzt bezahlen' }}
               </button>
             </div>
           </div>
