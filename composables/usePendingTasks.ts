@@ -101,10 +101,17 @@ const calculateDueStatus = (appointment: PendingAppointment, authorizationWindow
 
 // ✅ Computed: Unbestätigte Termine mit Fälligkeits-Status und sortiert
 const unconfirmedWithStatus = computed(() => {
-  return globalState.unconfirmedNext24h.map(apt => ({
-    ...apt,
-    dueStatus: calculateDueStatus(apt)
-  })).sort((a, b) => {
+  console.log('🔍 unconfirmedWithStatus computed called')
+  console.log('📊 Raw unconfirmed count:', globalState.unconfirmedNext24h.length)
+  
+  const withStatus = globalState.unconfirmedNext24h.map(apt => {
+    const status = calculateDueStatus(apt)
+    console.log(`📅 Appointment ${apt.id}: ${apt.start_time} -> Status: ${status}`)
+    return {
+      ...apt,
+      dueStatus: status
+    }
+  }).sort((a, b) => {
     // Sortierung: Überfälligste zuerst
     const statusOrder: Record<DueStatus, number> = {
       'overdue_past': 0,    // Termin vorbei (höchste Priorität)
@@ -119,6 +126,9 @@ const unconfirmedWithStatus = computed(() => {
     // Bei gleichem Status: Ältere Termine zuerst
     return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   })
+  
+  console.log('✅ unconfirmedWithStatus result:', withStatus.length)
+  return withStatus
 })
 
 // Hilfsfunktion für formatierte Anzeige
@@ -421,14 +431,9 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     // WICHTIG: Globalen State komplett ersetzen (nicht mutieren)
     globalState.pendingAppointments = [...pending]
     
-    // Speichere zusätzlich unbestätigte Termine innerhalb der nächsten 24h
-    const now = new Date()
-    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-    globalState.unconfirmedNext24h = (unconfirmedAppointments || []).filter((apt: any) => {
-      if (!apt.start_time) return false
-      const start = new Date(apt.start_time)
-      return start >= now && start <= in24h
-    }).map((apt: any) => getFormattedAppointment(apt)) as any
+    // ✅ Speichere ALLE unbestätigten Termine (nicht nur nächste 24h)
+    // Die Filterung nach Fälligkeit erfolgt im Frontend via unconfirmedWithStatus
+    globalState.unconfirmedNext24h = (unconfirmedAppointments || []).map((apt: any) => getFormattedAppointment(apt)) as any
     
     console.log('📌 Unconfirmed next 24h:', globalState.unconfirmedNext24h.length)
     console.log('🔥 Global pending state updated, count:', pendingCount.value)
