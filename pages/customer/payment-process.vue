@@ -15,7 +15,7 @@
         </div>
 
             <button
-                @click="router.push('/customer-dashboard')"
+                @click="router.push('/customer/payments')"
               :disabled="isProcessing"
               class="mt-2 w-full border text-gray-500 py-2 px-4 hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
