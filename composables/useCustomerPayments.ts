@@ -82,6 +82,7 @@ export const useCustomerPayments = () => {
             automatic_payment_consent,
             automatic_payment_consent_at,
             scheduled_payment_date,
+            scheduled_authorization_date,
             payment_method_id,
             automatic_payment_processed,
             automatic_payment_processed_at,
