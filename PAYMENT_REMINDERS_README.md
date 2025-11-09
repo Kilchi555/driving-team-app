@@ -256,6 +256,7 @@ Body: {
 ```env
 RESEND_API_KEY=re_...
 RESEND_FROM_EMAIL=noreply@drivingteam.ch
+CUSTOMER_PORTAL_BASE_URL=https://simy.ch
 ```
 
 ### Twilio (SMS)

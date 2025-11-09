@@ -7,6 +7,8 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail, generatePaymentReminderEmail } from '~/server/utils/email'
 import { sendSMS, generatePaymentReminderSMS } from '~/server/utils/sms'
 
+const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://simy.ch').replace(/\/$/, '')
+
 export default defineEventHandler(async (event) => {
   try {
     // Verify Vercel Cron or Admin Auth
@@ -216,7 +218,7 @@ export default defineEventHandler(async (event) => {
                 })
                 const amount = (payment.total_amount_rappen / 100).toFixed(2)
                 const customerName = `${user.first_name} ${user.last_name}`
-                const dashboardLink = `https://${tenant.slug}.drivingteam.ch/customer-dashboard`
+                const dashboardLink = `${CUSTOMER_PORTAL_BASE_URL}/${tenant.slug}`
 
                 // Generate and send email
                 const emailHtml = generatePaymentReminderEmail({
@@ -323,7 +325,7 @@ export default defineEventHandler(async (event) => {
                 })
                 const amount = (payment.total_amount_rappen / 100).toFixed(2)
                 const customerName = `${user.first_name} ${user.last_name}`
-                const dashboardLink = `https://${tenant.slug}.drivingteam.ch/customer-dashboard`
+                const dashboardLink = `${CUSTOMER_PORTAL_BASE_URL}/${tenant.slug}`
 
                 // Generate and send SMS
                 const smsText = generatePaymentReminderSMS({

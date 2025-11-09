@@ -13,6 +13,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') ?? 'noreply@drivingteam.ch'
+const CUSTOMER_PORTAL_BASE_URL = (Deno.env.get('CUSTOMER_PORTAL_BASE_URL') ?? 'https://simy.ch').replace(/\/$/, '')
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error('❌ Missing Supabase configuration for edge function')
@@ -260,7 +261,7 @@ Deno.serve(async (req) => {
 
     const amount = (payment.total_amount_rappen / 100).toFixed(2)
     const customerName = `${user.first_name} ${user.last_name}`
-    const dashboardLink = `https://${tenant.slug}.drivingteam.ch/customer-dashboard`
+    const dashboardLink = `${CUSTOMER_PORTAL_BASE_URL}/${tenant.slug}`
 
     // Determine reminder number
     let reminderNumber = explicitReminder
