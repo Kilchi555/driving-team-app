@@ -29,7 +29,9 @@
     "nuxt": "^3.17.7",
     "pinia": "^2.2.6",
     "puppeteer": "^24.23.0",
+    "resend": "^6.4.2",
     "stripe": "^18.5.0",
+    "twilio": "^5.10.4",
     "wallee": "^4.7.0"
   },
   "devDependencies": {
