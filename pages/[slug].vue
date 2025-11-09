@@ -364,6 +364,44 @@ const handleLogin = async () => {
     
     // Check device security after successful login
     try {
+      // ✅ Skip device verification in development mode
+      const isDevelopment = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost'
+      if (isDevelopment) {
+        console.log('⚠️ Device verification skipped (development mode)')
+        // Continue with normal login flow
+        console.log('✅ Login completed, redirecting to dashboard...')
+        showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
+        
+        // Check if there's a redirect parameter first
+        const redirectUrl = route.query.redirect as string
+        if (redirectUrl) {
+          console.log('🔄 Redirecting to:', redirectUrl)
+          const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
+          let relativeUrl = decodeURIComponent(redirectUrl)
+          
+          if (relativeUrl.startsWith(baseUrl)) {
+            relativeUrl = relativeUrl.replace(baseUrl, '')
+          }
+          
+          console.log('🔄 Relative redirect URL:', relativeUrl)
+          router.push(relativeUrl)
+          return
+        }
+        
+        // Weiterleitung basierend auf Rolle (fallback)
+        const user = authStore.userProfile
+        if (user?.role === 'admin' || user?.role === 'tenant_admin') {
+          router.push('/admin')
+        } else if (user?.role === 'staff') {
+          router.push('/dashboard')
+        } else if (user?.role === 'client') {
+          router.push('/customer-dashboard')
+        } else {
+          router.push('/')
+        }
+        return
+      }
+      
       const user = authStore.userProfile as User
       if (user?.id) {
         console.log('🔒 Checking device security for user:', user.id)
