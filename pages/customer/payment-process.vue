@@ -392,7 +392,22 @@ const loadPaymentDetails = async () => {
                     hour: '2-digit',
                     minute: '2-digit'
                   })
-                  automaticPaymentMessage.value = `Diese Zahlung wird automatisch ${Math.round(hoursUntilPayment)} Stunden vor dem Termin (${appointmentDateStr}) abgebucht. Eine manuelle Zahlung ist nicht erforderlich, da der Termin noch mehr als ${automaticPaymentHoursBefore} Stunden entfernt ist.`
+                  
+                  // Rechne Stunden in Tage und Stunden um
+                  const totalHours = Math.round(hoursUntilPayment)
+                  const days = Math.floor(totalHours / 24)
+                  const hours = totalHours % 24
+                  
+                  let timeString = ''
+                  if (days > 0 && hours > 0) {
+                    timeString = `${days} ${days === 1 ? 'Tag' : 'Tagen'} und ${hours} ${hours === 1 ? 'Stunde' : 'Stunden'}`
+                  } else if (days > 0) {
+                    timeString = `${days} ${days === 1 ? 'Tag' : 'Tagen'}`
+                  } else {
+                    timeString = `${hours} ${hours === 1 ? 'Stunde' : 'Stunden'}`
+                  }
+                  
+                  automaticPaymentMessage.value = `Diese Zahlung wird automatisch in ${timeString} abgebucht. Eine manuelle Zahlung ist nicht erforderlich, da der Termin vom ${appointmentDateStr} noch mehr als ${automaticPaymentHoursBefore} Stunden entfernt ist.`
                 }
               }
             }
