@@ -595,11 +595,8 @@ const loadPaymentDetails = async () => {
 }
 
 const processPayment = async (success: boolean) => {
-  // ✅ PRÜFUNG: Blockiere wenn automatische Zahlung aktiv ist
-  if (automaticPaymentBlocked.value) {
-    alert(automaticPaymentMessage.value || 'Diese Zahlung wird automatisch verarbeitet. Eine manuelle Zahlung ist nicht erforderlich.')
-    return
-  }
+  // ✅ Erlaube freiwillige Zahlung auch wenn automatische Zahlung geplant ist
+  // Keine Blockierung mehr - Kunde kann selbst entscheiden
   
   isProcessing.value = true
   
@@ -607,27 +604,9 @@ const processPayment = async (success: boolean) => {
     console.log('🔄 Processing payment for IDs:', paymentIds.value)
     console.log('💰 Total amount:', totalAmount.value)
     
-    // ✅ ZUSÄTZLICHE PRÜFUNG: Validiere dass keine automatische Zahlung geplant ist
-    for (const payment of paymentDetails.value) {
-      if (payment.scheduled_payment_date && payment.payment_method === 'wallee' && !payment.automatic_payment_processed) {
-        const scheduledDate = new Date(payment.scheduled_payment_date)
-        const now = new Date()
-        
-        if (scheduledDate > now) {
-          const appointment = payment.appointments
-          if (appointment?.start_time) {
-            const appointmentStart = new Date(appointment.start_time)
-            const hoursUntilAppointment = (appointmentStart.getTime() - now.getTime()) / (1000 * 60 * 60)
-            
-            if (hoursUntilAppointment > 24) {
-              throw new Error(
-                `Eine automatische Zahlung ist bereits für diesen Termin geplant (${new Date(payment.scheduled_payment_date).toLocaleString('de-CH')}). ` +
-                `Die Zahlung erfolgt automatisch. Eine manuelle Zahlung ist nicht erforderlich.`
-              )
-            }
-          }
-        }
-      }
+    // Wenn automatische Zahlung geplant war, storniere sie (freiwillige Zahlung hat Vorrang)
+    if (automaticPaymentBlocked.value) {
+      console.log('💡 Voluntary early payment - automatic payment will be cancelled')
     }
     
     // Get current user
