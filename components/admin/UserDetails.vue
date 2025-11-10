@@ -609,6 +609,7 @@ interface UserDetails {
   tenant_id?: string | null
   tenant_name?: string | null
   deleted_at?: string | null
+  category?: string[] | string | null
 }
 
 interface AppointmentStats {
