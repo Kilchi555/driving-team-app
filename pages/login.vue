@@ -260,6 +260,9 @@ const handleLogout = async () => {
 
 // Lifecycle
 onMounted(async () => {
+  // Warte kurz damit Auth-State nach Logout vollständig gelöscht ist
+  await new Promise(resolve => setTimeout(resolve, 100))
+  
   // Prüfe ob bereits angemeldet
   if (isAuthenticated.value && !isLoading.value) {
     console.log('🔄 User already authenticated, redirecting...')
