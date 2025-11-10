@@ -228,6 +228,36 @@
           </div>
         </div>
 
+        <!-- Kategorien (nur für Rolle staff) -->
+        <div v-if="userDetails?.role === 'staff'" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Fahrkategorien</h3>
+            <button
+              @click="openCategoryModal"
+              class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+              Bearbeiten
+            </button>
+          </div>
+          <div class="p-6">
+            <div v-if="userDetails.category && userDetails.category.length > 0" class="flex flex-wrap gap-2">
+              <span
+                v-for="categoryCode in (Array.isArray(userDetails.category) ? userDetails.category : [userDetails.category])"
+                :key="categoryCode"
+                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+              >
+                {{ categoryCode }}
+              </span>
+            </div>
+            <div v-else class="text-sm text-gray-500">
+              Keine Kategorien zugewiesen
+            </div>
+          </div>
+        </div>
+
       <!-- Fahrlehrer & Verfügbarkeit (nur für Rolle staff) -->
       <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
         <div class="p-0">
@@ -489,6 +519,70 @@
       </div>
     </div>
 
+    <!-- Category Edit Modal -->
+    <div v-if="showCategoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click="showCategoryModal = false">
+      <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white" @click.stop>
+        <div class="mb-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">
+              Fahrkategorien bearbeiten
+            </h3>
+            <button @click="showCategoryModal = false" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <p class="text-sm text-gray-600 mb-4">
+            Wählen Sie die Fahrkategorien aus, die {{ displayName }} unterrichten kann:
+          </p>
+          
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <button
+              v-for="category in availableCategories"
+              :key="category.code"
+              @click="toggleCategory(category.code)"
+              :class="[
+                'flex items-center justify-center px-4 py-3 rounded-lg border-2 transition-all',
+                selectedCategories.includes(category.code)
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+              ]"
+            >
+              <span class="text-lg font-semibold">{{ category.code }}</span>
+            </button>
+          </div>
+          
+          <div v-if="availableCategories.length === 0" class="text-center py-8 text-gray-500">
+            Keine Kategorien verfügbar. Bitte erstellen Sie zuerst Kategorien unter Admin → Kategorien.
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-3">
+          <button
+            @click="showCategoryModal = false"
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            Abbrechen
+          </button>
+          <button
+            @click="saveCategories"
+            :disabled="isSaving"
+            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg v-if="isSaving" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            {{ isSaving ? 'Speichern...' : 'Speichern' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -570,6 +664,9 @@ const isSaving = ref(false)
 const isDeleting = ref(false)
 const successMessage = ref<string | null>(null)
 const auditLog = ref<any[]>([])
+const availableCategories = ref<any[]>([])
+const showCategoryModal = ref(false)
+const selectedCategories = ref<string[]>([])
 
 interface EditForm {
   first_name: string | null
@@ -708,6 +805,7 @@ const loadUserDetails = async () => {
         created_at,
         created_by,
         tenant_id,
+        category,
         tenants!inner(name)
       `)
       .eq('id', userId)
@@ -946,6 +1044,90 @@ const loadAuditLog = async () => {
 }
 
 // Lifecycle
+const loadCategories = async () => {
+  try {
+    if (!userDetails.value?.tenant_id) return
+    
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, code, color')
+      .eq('tenant_id', userDetails.value.tenant_id)
+      .eq('is_active', true)
+      .order('name')
+    
+    if (error) throw error
+    
+    availableCategories.value = data || []
+    
+    // Initialize selected categories from user data
+    if (userDetails.value.category) {
+      selectedCategories.value = Array.isArray(userDetails.value.category) 
+        ? userDetails.value.category 
+        : [userDetails.value.category]
+    }
+    
+    console.log('✅ Categories loaded:', data)
+  } catch (err) {
+    console.error('❌ Error loading categories:', err)
+  }
+}
+
+const openCategoryModal = () => {
+  // Initialize selected categories
+  if (userDetails.value?.category) {
+    selectedCategories.value = Array.isArray(userDetails.value.category) 
+      ? [...userDetails.value.category] 
+      : [userDetails.value.category]
+  } else {
+    selectedCategories.value = []
+  }
+  showCategoryModal.value = true
+}
+
+const saveCategories = async () => {
+  if (!userDetails.value) return
+  
+  isSaving.value = true
+  
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        category: selectedCategories.value.length > 0 ? selectedCategories.value : null
+      })
+      .eq('id', userId)
+    
+    if (error) throw error
+    
+    // Reload user details
+    await loadUserDetails()
+    await loadCategories()
+    
+    showCategoryModal.value = false
+    successMessage.value = 'Kategorien erfolgreich aktualisiert!'
+    
+    setTimeout(() => {
+      successMessage.value = null
+    }, 3000)
+    
+    console.log('✅ Categories saved successfully')
+  } catch (err) {
+    console.error('❌ Error saving categories:', err)
+    alert('Fehler beim Speichern der Kategorien')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const toggleCategory = (categoryCode: string) => {
+  const index = selectedCategories.value.indexOf(categoryCode)
+  if (index > -1) {
+    selectedCategories.value.splice(index, 1)
+  } else {
+    selectedCategories.value.push(categoryCode)
+  }
+}
+
 onMounted(async () => {
   try {
     await loadFeatures()
@@ -956,6 +1138,10 @@ onMounted(async () => {
       loadSystemActivities(),
       loadAuditLog()
     ])
+    // Load categories after user details are loaded
+    if (userDetails.value?.role === 'staff') {
+      await loadCategories()
+    }
   } catch (err) {
     console.error('❌ Error in onMounted:', err)
   } finally {
