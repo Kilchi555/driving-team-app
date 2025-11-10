@@ -117,10 +117,10 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
               <div class="flex-1">
-                <h4 class="font-semibold text-blue-900 mb-1">Automatische Zahlung aktiv</h4>
+                <h4 class="font-semibold text-blue-900 mb-1">Automatische Zahlung geplant</h4>
                 <p class="text-sm text-blue-800">{{ automaticPaymentMessage }}</p>
                 <p class="text-xs text-blue-700 mt-2">
-                  Die Zahlung erfolgt automatisch von Ihrem hinterlegten Zahlungsmittel. Sie müssen nichts weiter tun.
+                  Die Zahlung erfolgt automatisch von Ihrem hinterlegten Zahlungsmittel. Sie können aber auch freiwillig jetzt bezahlen.
                 </p>
               </div>
             </div>
@@ -130,10 +130,10 @@
           <div class="space-y-3">
             <button
               @click="processPayment(true)"
-              :disabled="isProcessing || automaticPaymentBlocked"
+              :disabled="isProcessing"
               class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {{ isProcessing ? 'Verarbeitung...' : automaticPaymentBlocked ? 'Automatische Zahlung aktiv' : `CHF ${totalAmount.toFixed(2)} bezahlen` }}
+              {{ isProcessing ? 'Verarbeitung...' : automaticPaymentBlocked ? `Freiwillig jetzt CHF ${totalAmount.toFixed(2)} bezahlen` : `CHF ${totalAmount.toFixed(2)} bezahlen` }}
             </button>
             
             <button
