@@ -159,6 +159,32 @@
                 <dt class="text-sm font-medium text-gray-500">Tenant</dt>
                 <dd class="mt-1 text-sm text-gray-900">{{ userDetails.tenant_name || 'Unbekannt' }}</dd>
               </div>
+              <div v-if="userDetails?.role === 'staff'" class="md:col-span-2">
+                <dt class="text-sm font-medium text-gray-500 mb-2 flex items-center justify-between">
+                  <span>Fahrkategorien</span>
+                  <button
+                    @click="openCategoryModal"
+                    class="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                  >
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Bearbeiten
+                  </button>
+                </dt>
+                <dd class="mt-1">
+                  <div v-if="userDetails.category && userDetails.category.length > 0" class="flex flex-wrap gap-1.5">
+                    <span
+                      v-for="categoryCode in (Array.isArray(userDetails.category) ? userDetails.category : [userDetails.category])"
+                      :key="categoryCode"
+                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                    >
+                      {{ categoryCode }}
+                    </span>
+                  </div>
+                  <span v-else class="text-sm text-gray-400">Keine Kategorien zugewiesen</span>
+                </dd>
+              </div>
             </div>
           </div>
         </div>
@@ -224,36 +250,6 @@
                 <dt class="text-sm font-medium text-gray-500">{{ info.label }}</dt>
                 <dd class="mt-1 text-sm text-gray-900">{{ info.value }}</dd>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Kategorien (nur für Rolle staff) -->
-        <div v-if="userDetails?.role === 'staff'" class="bg-white shadow rounded-lg overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Fahrkategorien</h3>
-            <button
-              @click="openCategoryModal"
-              class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-              </svg>
-              Bearbeiten
-            </button>
-          </div>
-          <div class="p-6">
-            <div v-if="userDetails.category && userDetails.category.length > 0" class="flex flex-wrap gap-2">
-              <span
-                v-for="categoryCode in (Array.isArray(userDetails.category) ? userDetails.category : [userDetails.category])"
-                :key="categoryCode"
-                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-              >
-                {{ categoryCode }}
-              </span>
-            </div>
-            <div v-else class="text-sm text-gray-500">
-              Keine Kategorien zugewiesen
             </div>
           </div>
         </div>
@@ -520,15 +516,15 @@
     </div>
 
     <!-- Category Edit Modal -->
-    <div v-if="showCategoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click="showCategoryModal = false">
-      <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white" @click.stop>
+    <div v-if="showCategoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 px-4" @click="showCategoryModal = false">
+      <div class="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white mb-4" @click.stop>
         <div class="mb-4">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">
+            <h3 class="text-base sm:text-lg leading-6 font-medium text-gray-900">
               Fahrkategorien bearbeiten
             </h3>
-            <button @click="showCategoryModal = false" class="text-gray-400 hover:text-gray-600">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button @click="showCategoryModal = false" class="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-2">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
@@ -536,42 +532,42 @@
         </div>
 
         <div class="mb-6">
-          <p class="text-sm text-gray-600 mb-4">
+          <p class="text-xs sm:text-sm text-gray-600 mb-4">
             Wählen Sie die Fahrkategorien aus, die {{ displayName }} unterrichten kann:
           </p>
           
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
             <button
               v-for="category in availableCategories"
               :key="category.code"
               @click="toggleCategory(category.code)"
               :class="[
-                'flex items-center justify-center px-4 py-3 rounded-lg border-2 transition-all',
+                'flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border-2 transition-all',
                 selectedCategories.includes(category.code)
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
               ]"
             >
-              <span class="text-lg font-semibold">{{ category.code }}</span>
+              <span class="text-base sm:text-lg font-semibold">{{ category.code }}</span>
             </button>
           </div>
           
-          <div v-if="availableCategories.length === 0" class="text-center py-8 text-gray-500">
+          <div v-if="availableCategories.length === 0" class="text-center py-6 sm:py-8 text-sm text-gray-500">
             Keine Kategorien verfügbar. Bitte erstellen Sie zuerst Kategorien unter Admin → Kategorien.
           </div>
         </div>
 
-        <div class="flex justify-end space-x-3">
+        <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
           <button
             @click="showCategoryModal = false"
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 order-2 sm:order-1"
           >
             Abbrechen
           </button>
           <button
             @click="saveCategories"
             :disabled="isSaving"
-            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
           >
             <svg v-if="isSaving" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
