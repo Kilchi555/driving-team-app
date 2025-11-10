@@ -139,13 +139,13 @@
                     
                     <!-- Timeline Info direkt unter Status -->
                     <div v-if="payment.payment_status === 'pending' && payment.scheduled_authorization_date" class="text-xs text-blue-600">
-                      Wird provisorisch belastet am {{ formatPaymentTimeline(payment.scheduled_authorization_date) }}
+                      Wird am {{ formatPaymentTimeline(payment.scheduled_authorization_date) }} provisorisch belastet.
                     </div>
                     <div v-else-if="payment.payment_status === 'pending' && !payment.scheduled_authorization_date" class="text-xs text-yellow-600">
                       Warte auf Terminbestätigung
                     </div>
                     <div v-if="payment.payment_status === 'authorized' && payment.scheduled_payment_date" class="text-xs text-blue-600">
-                      Wird final abgebucht am {{ formatPaymentTimeline(payment.scheduled_payment_date) }}
+                      Wird am {{ formatPaymentTimeline(payment.scheduled_payment_date) }} final abgebucht.
                     </div>
                   </div>
                 </div>

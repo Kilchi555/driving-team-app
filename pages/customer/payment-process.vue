@@ -256,35 +256,28 @@ const loadPaymentDetails = async () => {
           .single()
         
         if (userData?.tenant_id) {
-          // Lade automatische Zahlungs-Einstellungen (zwei separate Queries für bessere Kompatibilität)
-          const { data: enabledSetting } = await supabase
+          // Lade automatische Zahlungs-Einstellungen aus payment_settings
+          const { data: paymentSettings } = await supabase
             .from('tenant_settings')
             .select('setting_value')
             .eq('tenant_id', userData.tenant_id)
-            .eq('setting_key', 'automatic_payment_enabled')
-            .eq('is_active', true)
+            .eq('category', 'payment')
+            .eq('setting_key', 'payment_settings')
             .maybeSingle()
           
-          const { data: hoursSetting } = await supabase
-            .from('tenant_settings')
-            .select('setting_value')
-            .eq('tenant_id', userData.tenant_id)
-            .eq('setting_key', 'automatic_payment_hours_before')
-            .eq('is_active', true)
-            .maybeSingle()
-          
-          if (enabledSetting) {
-            automaticPaymentEnabled = enabledSetting.setting_value === true || enabledSetting.setting_value === 'true'
+          if (paymentSettings?.setting_value) {
+            const settings = typeof paymentSettings.setting_value === 'string'
+              ? JSON.parse(paymentSettings.setting_value)
+              : paymentSettings.setting_value
+            
+            automaticPaymentEnabled = !!settings?.automatic_payment_enabled
+            automaticPaymentHoursBefore = Number(settings?.automatic_payment_hours_before) || 24
+            
+            console.log('🔧 Automatic payment settings:', {
+              enabled: automaticPaymentEnabled,
+              hoursBefore: automaticPaymentHoursBefore
+            })
           }
-          
-          if (hoursSetting) {
-            automaticPaymentHoursBefore = Number(hoursSetting.setting_value) || 24
-          }
-          
-          console.log('🔧 Automatic payment settings:', {
-            enabled: automaticPaymentEnabled,
-            hoursBefore: automaticPaymentHoursBefore
-          })
         }
       }
     } catch (settingsError) {
