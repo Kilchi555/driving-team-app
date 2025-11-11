@@ -1,7 +1,8 @@
 // plugins/tenant-branding.client.ts
 // Client-side Plugin für automatisches Tenant-Branding
 export default defineNuxtPlugin(async () => {
-  const { $router } = useNuxtApp()
+  const nuxtApp = useNuxtApp()
+  const $router = nuxtApp.$router || null
   const { loadTenantBranding, loadTenantBrandingById } = useTenantBranding()
   const { setTenantThemeSettings, initializeTheme } = useUIStore()
 

@@ -4,7 +4,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] overflow-y-auto">
       
       <!-- Modal Header -->
-      <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+      <div class="sticky top-0 bg-white border-b px-2 py-2 flex justify-between items-center">
         <div class="flex items-center space-x-3">
           <!-- Exam Statistics Button -->
           <button

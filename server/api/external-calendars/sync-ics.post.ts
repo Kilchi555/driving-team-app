@@ -136,16 +136,26 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     }
 
     // Insert new busy times - alle Titel als "Privat" speichern
-    const busyTimes = windowEvents.map(event => ({
-      tenant_id: calendar.tenant_id,
-      staff_id: calendar.staff_id,
-      external_calendar_id: calendar_id,
-      external_event_id: ((event.uid || `event_${Date.now()}_${Math.random()}`) + '').slice(0, 255),
-      event_title: 'Privat', // Anonymisiert für Datenschutz
-      start_time: event.start,
-      end_time: event.end,
-      sync_source: 'ics'
-    }))
+    const busyTimes = windowEvents.map(event => {
+      // Konvertiere ISO-Format zu lokalem Format (YYYY-MM-DD HH:MM:SS)
+      const formatLocalTime = (isoStr: string) => {
+        // Falls bereits im richtigen Format, direkt zurückgeben
+        if (isoStr.includes(' ')) return isoStr
+        // Konvertiere "2025-11-12T08:00:00" zu "2025-11-12 08:00:00"
+        return isoStr.replace('T', ' ')
+      }
+      
+      return {
+        tenant_id: calendar.tenant_id,
+        staff_id: calendar.staff_id,
+        external_calendar_id: calendar_id,
+        external_event_id: ((event.uid || `event_${Date.now()}_${Math.random()}`) + '').slice(0, 255),
+        event_title: 'Privat', // Anonymisiert für Datenschutz
+        start_time: formatLocalTime(event.start),
+        end_time: formatLocalTime(event.end),
+        sync_source: 'ics'
+      }
+    })
 
     // Deduplicate by conflict key to avoid "ON CONFLICT ... cannot affect row a second time"
     const uniqueMap = new Map<string, typeof busyTimes[number]>()
@@ -295,7 +305,7 @@ function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?:
     return `${year}-${month}-${day}T00:00:00`
   }
 
-  // UTC format: 20231215T120000Z - KEINE Umrechnung mehr
+  // UTC format: 20231215T120000Z - Umrechnung in lokale Schweizer Zeit
   if (/^\d{8}T\d{6}Z$/.test(clean)) {
     const year = clean.substring(0, 4)
     const month = clean.substring(4, 6)
@@ -303,8 +313,25 @@ function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?:
     const hour = clean.substring(9, 11)
     const minute = clean.substring(11, 13)
     const second = clean.substring(13, 15)
-    // Speichere UTC-Zeit direkt ohne Umrechnung
-    return `${year}-${month}-${day}T${hour}:${minute}:${second}`
+    
+    // Parse als UTC Date
+    const utcDate = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`)
+    
+    // Konvertiere in lokale Schweizer Zeit (Europe/Zurich)
+    const localDateStr = utcDate.toLocaleString('en-CA', { 
+      timeZone: 'Europe/Zurich',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+    
+    // Format: "2025-11-12, 08:00:00" -> "2025-11-12T08:00:00"
+    const [datePart, timePart] = localDateStr.split(', ')
+    return `${datePart}T${timePart}`
   }
 
   // Local format without Z: 20231215T120000

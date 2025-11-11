@@ -2,13 +2,13 @@
 <template>
   <div v-if="isOnlineBookingEnabled" class="h-full flex flex-col">
     <!-- Header mit Add Button -->
-    <div class="bg-white border-b p-4">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-medium text-gray-900">Verfügbarkeit & Online-Terminbuchung</h2>
+    <div class="bg-white border-b p-3 sm:p-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h2 class="text-base sm:text-lg font-medium text-gray-900">Verfügbarkeit & Online-Terminbuchung</h2>
         <button 
           v-if="currentUser.role === 'admin'"
           @click="addNewStaff"
-          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base whitespace-nowrap"
         >
           + Neuer Fahrlehrer
         </button>
@@ -57,38 +57,12 @@
 
       <!-- Staff Grid -->
       <div v-else class="h-full overflow-y-auto">
-        <div class="p-4 space-y-6">
+        <div class="p-3 sm:p-4 space-y-4 sm:space-y-6">
           <div
             v-for="staff in staffList"
             :key="staff.id"
-            class="bg-white rounded-lg shadow-sm border p-6"
+            class="bg-white rounded-lg shadow-sm"
           >
-            <!-- Staff Header -->
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                  <span class="text-lg font-semibold text-gray-600">
-                    {{ staff.first_name.charAt(0) }}{{ staff.last_name.charAt(0) }}
-                  </span>
-                </div>
-                <div>
-                  <h3 class="text-lg font-semibold text-gray-900">
-                    {{ staff.first_name }} {{ staff.last_name }}
-                  </h3>
-                  <p class="text-sm text-gray-600">{{ staff.email }}</p>
-                </div>
-              </div>
-              
-              <!-- Status Badge -->
-              <span :class="[
-                'px-3 py-1 rounded-full text-sm font-medium',
-                staff.is_active 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-red-100 text-red-700'
-              ]">
-                {{ staff.is_active ? 'Aktiv' : 'Inaktiv' }}
-              </span>
-            </div>
 
             <!-- Verfügbarkeits-Einstellungen -->
             <div class="space-y-4">
@@ -111,149 +85,295 @@
                 </p>
               </div>
 
-              <!-- Pickup-Radius (nur wenn Pickup aktiviert) -->
-              <div v-if="staff.availability_mode !== 'standard'">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Pickup-Radius (Minuten)
-                </label>
+              <!-- Peak-Time Konfiguration (nur bei Pickup-Modus) - Pro Fahrlehrer -->
+              <div v-if="staff.availability_mode !== 'standard'" class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                <div class="flex items-center gap-2 mb-3">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <label class="block text-sm font-medium text-gray-900">
+                    Stosszeiten für {{ staff.first_name }}
+                  </label>
+                </div>
+                <p class="text-xs text-gray-600 mb-3">
+                  Definieren Sie die individuellen Stosszeiten für diesen Fahrlehrer. In diesen Zeiten wird bei der Pickup-Berechnung mit erhöhtem Verkehr gerechnet.
+                </p>
+                
+                <!-- Morgen-Stosszeit -->
+                <div class="mb-3">
+                  <label class="block text-xs font-medium text-gray-700 mb-2">Morgen (Mo-Fr)</label>
+                  <div class="flex items-center gap-2">
+                    <input 
+                      type="time" 
+                      v-model="staff.peak_time_morning_start"
+                      @change="updateStaffAvailability(staff)"
+                      class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <span class="text-xs text-gray-600">bis</span>
+                    <input 
+                      type="time" 
+                      v-model="staff.peak_time_morning_end"
+                      @change="updateStaffAvailability(staff)"
+                      class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                  </div>
+                </div>
+                
+                <!-- Abend-Stosszeit -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-2">Abend (Mo-Fr)</label>
+                  <div class="flex items-center gap-2">
+                    <input 
+                      type="time" 
+                      v-model="staff.peak_time_evening_start"
+                      @change="updateStaffAvailability(staff)"
+                      class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <span class="text-xs text-gray-600">bis</span>
+                    <input 
+                      type="time" 
+                      v-model="staff.peak_time_evening_end"
+                      @change="updateStaffAvailability(staff)"
+                      class="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                  </div>
+                </div>
+                
+                <p class="text-xs text-gray-500 mt-3">
+                  Standard: 07:00-09:00 und 17:00-19:00. Wochenenden sind immer Offpeak.
+                </p>
+              </div>
+              
+              <!-- Mindest-Vorlaufzeit für Buchungen -->
+              <div class="border border-green-200 rounded-lg p-4 bg-green-50">
+                <div class="flex items-center gap-2 mb-3">
+                  <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <label class="block text-sm font-medium text-gray-900">
+                    Mindest-Vorlaufzeit für Online-Buchungen
+                  </label>
+                </div>
+                <p class="text-xs text-gray-600 mb-3">
+                  Definieren Sie, wie viele Stunden im Voraus Kunden mindestens buchen müssen. Beispiel: Bei 8 Stunden können Kunden nur Termine buchen, die mindestens 8 Stunden in der Zukunft liegen.
+                </p>
+                
                 <div class="flex items-center gap-3">
                   <input 
                     type="number" 
-                    v-model="staff.pickup_radius_minutes"
+                    v-model.number="staff.minimum_booking_lead_time_hours"
                     @change="updateStaffAvailability(staff)"
-                    min="5" 
-                    max="60" 
-                    class="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    min="0"
+                    max="168"
+                    class="w-24 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
-                  <span class="text-sm text-gray-600">Minuten Fahrzeit</span>
+                  <span class="text-sm text-gray-700">Stunden im Voraus</span>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">
-                  Maximale Fahrzeit für Abholung von Kunden
+                
+                <p class="text-xs text-gray-500 mt-2">
+                  Empfohlen: 8-24 Stunden (Standard: 24 Stunden)
                 </p>
               </div>
 
-              <!-- Pickup pro Kategorie -->
-              <div v-if="staff.availability_mode !== 'standard'">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Pickup je Kategorie
-                </label>
-                <div class="space-y-2">
-                  <div 
-                    v-for="category in availableCategories" 
-                    :key="category.code"
-                    class="flex items-center justify-between gap-3 p-2 border border-gray-200 rounded-lg"
-                  >
-                    <div class="flex items-center gap-3">
-                      <span class="text-sm font-medium text-gray-800 w-24">{{ category.code }}</span>
-                      <label class="flex items-center gap-2 cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          :checked="getCategoryPickup(staff, category.code)?.pickup_enabled || false"
-                          @change="onCategoryToggle($event, staff, category.code)"
-                          class="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                        >
-                        <span class="text-sm text-gray-700">Pickup erlaubt</span>
-                      </label>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <input 
-                        type="number"
-                        :value="getCategoryPickup(staff, category.code)?.pickup_radius_minutes ?? staff.pickup_radius_minutes"
-                        @change="updateCategoryRadius(staff, category.code, ($event.target as HTMLInputElement).value)"
-                        :disabled="!(getCategoryPickup(staff, category.code)?.pickup_enabled)"
-                        min="5" max="60"
-                        class="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:text-gray-400"
-                      >
-                      <span class="text-xs text-gray-600">Min</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Locations pro Kategorie -->
+              <!-- Standorte des Fahrlehrers -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Standorte pro Kategorie
-                </label>
-                <div class="space-y-3">
+                <div class="flex items-center justify-between mb-3">
+                  <label class="block text-sm font-medium text-gray-700">
+                    Standorte
+                  </label>
+                  <button
+                    @click="openLocationModal(staff)"
+                    class="text-xs sm:text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Standort hinzufügen
+                  </button>
+                </div>
+                
+                <div v-if="staff.locations && staff.locations.length > 0" class="space-y-3">
                   <div 
                     v-for="location in staff.locations" 
                     :key="location.id"
-                    class="border border-gray-200 rounded-lg p-3"
+                    class="border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-gray-300 transition-colors"
                   >
-                    <div class="flex items-center justify-between mb-2">
-                      <h4 class="font-medium text-gray-900">{{ location.name }}</h4>
-                      <span class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
-                        {{ location.location_type }}
-                      </span>
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                      <div class="flex-1 min-w-0">
+                        <h4 class="font-medium text-gray-900 text-sm sm:text-base truncate">{{ location.name }}</h4>
+                        <p class="text-xs sm:text-sm text-gray-500 truncate">{{ location.address }}</p>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded whitespace-nowrap">
+                          {{ location.location_type }}
+                        </span>
+                        <button
+                          @click="openEditLocationModal(location)"
+                          class="text-blue-600 hover:text-blue-700 p-1"
+                          title="Standort bearbeiten"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                          </svg>
+                        </button>
+                        <button
+                          @click="removeLocation(staff, location)"
+                          class="text-red-600 hover:text-red-700 p-1"
+                          title="Standort entfernen"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                     
-                    <!-- Kategorie-Zuordnung -->
-                    <div class="space-y-2">
-                      <label class="text-sm text-gray-600">Verfügbar für Kategorien:</label>
-                      <div class="flex flex-wrap gap-2">
-                        <label 
-                          v-for="category in availableCategories" 
-                          :key="category.code"
-                          class="flex items-center gap-2 cursor-pointer"
-                        >
-                          <input 
-                            type="checkbox" 
-                            :value="category.code"
-                            v-model="location.available_categories"
-                            @change="updateLocationCategories(location)"
-                            class="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                          >
-                          <span class="text-sm text-gray-700">
-                            {{ category.code }} - {{ category.name }}
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <!-- Pickup-Einstellungen für Location -->
-                    <div v-if="staff.availability_mode !== 'standard'" class="mt-3 pt-3 border-t border-gray-100">
-                      <div class="flex items-center gap-3">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            v-model="location.pickup_enabled"
-                            @change="updateLocationPickup(location)"
-                            class="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                          >
-                          <span class="text-sm text-gray-700">Pickup an diesem Standort</span>
-                        </label>
-                      </div>
+                    <!-- Kategorien mit individuellen Pickup-Einstellungen -->
+                    <div v-if="getStaffCategories(staff).length > 0" class="space-y-3">
+                      <label class="text-xs sm:text-sm font-medium text-gray-700">Kategorien & Pickup-Einstellungen:</label>
                       
-                      <div v-if="location.pickup_enabled" class="mt-2">
-                        <label class="block text-sm text-gray-600 mb-1">
-                          Pickup-Radius für diesen Standort:
-                        </label>
-                        <div class="flex items-center gap-3">
-                          <input 
-                            type="number" 
-                            v-model="location.pickup_radius_minutes"
-                            @change="updateLocationPickup(location)"
-                            min="5" 
-                            max="60" 
-                            class="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                      <div class="space-y-2">
+                        <div 
+                          v-for="categoryCode in getStaffCategories(staff)" 
+                          :key="categoryCode"
+                          class="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                        >
+                          <!-- Kategorie aktivieren -->
+                          <div class="flex items-center justify-between mb-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                :value="categoryCode"
+                                v-model="location.available_categories"
+                                @change="updateLocationCategories(location)"
+                                class="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                              >
+                              <span class="text-sm font-medium text-gray-900">
+                                {{ categoryCode }}
+                              </span>
+                            </label>
+                          </div>
+                          
+                          <!-- Pickup-Einstellungen pro Kategorie (nur wenn Kategorie aktiv und Pickup-Modus aktiv) -->
+                          <div 
+                            v-if="location.available_categories?.includes(categoryCode) && staff.availability_mode !== 'standard'" 
+                            class="ml-6 space-y-2 pt-2 border-t border-gray-200"
                           >
-                          <span class="text-xs text-gray-600">Min</span>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                :checked="getLocationCategoryPickup(location, categoryCode)"
+                                @change="toggleLocationCategoryPickup(location, categoryCode, $event)"
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              >
+                              <span class="text-xs text-gray-700">Pickup für diese Kategorie</span>
+                            </label>
+                            
+                            <div v-if="getLocationCategoryPickup(location, categoryCode)" class="ml-6">
+                              <label class="block text-xs text-gray-600 mb-1">Pickup-Radius:</label>
+                              <div class="flex items-center gap-2">
+                                <input 
+                                  type="number" 
+                                  :value="getLocationCategoryPickupRadius(location, categoryCode)"
+                                  @change="updateLocationCategoryPickupRadius(location, categoryCode, ($event.target as HTMLInputElement).value)"
+                                  min="5" 
+                                  max="60" 
+                                  class="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                <span class="text-xs text-gray-600">Min</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
+                    <div v-else class="text-xs text-gray-500 italic">
+                      Keine Kategorien zugewiesen
+                    </div>
+                    
+                    <!-- Zeitfenster für diesen Standort -->
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                      <div class="flex items-center justify-between mb-3">
+                        <label class="text-xs sm:text-sm font-medium text-gray-700">
+                          Verfügbare Zeitfenster
+                        </label>
+                        <button
+                          @click="addTimeWindow(location)"
+                          class="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                        >
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                          </svg>
+                          Zeitfenster hinzufügen
+                        </button>
+                      </div>
+                      
+                      <div v-if="location.time_windows && location.time_windows.length > 0" class="space-y-2">
+                        <div 
+                          v-for="(window, idx) in location.time_windows" 
+                          :key="idx"
+                          class="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200"
+                        >
+                          <div class="flex-1 grid grid-cols-2 gap-2">
+                            <input 
+                              type="time" 
+                              v-model="window.start"
+                              @change="updateLocationTimeWindows(location)"
+                              class="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                            <input 
+                              type="time" 
+                              v-model="window.end"
+                              @change="updateLocationTimeWindows(location)"
+                              class="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                          </div>
+                          <div class="flex items-center gap-1">
+                            <label 
+                              v-for="day in [{n:1,l:'Mo'},{n:2,l:'Di'},{n:3,l:'Mi'},{n:4,l:'Do'},{n:5,l:'Fr'},{n:6,l:'Sa'},{n:0,l:'So'}]"
+                              :key="day.n"
+                              class="flex items-center"
+                            >
+                              <input 
+                                type="checkbox" 
+                                :value="day.n"
+                                v-model="window.days"
+                                @change="updateLocationTimeWindows(location)"
+                                class="sr-only"
+                              >
+                              <span 
+                                :class="[
+                                  'w-6 h-6 flex items-center justify-center text-xs rounded cursor-pointer transition-colors',
+                                  window.days?.includes(day.n) 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                ]"
+                              >
+                                {{ day.l }}
+                              </span>
+                            </label>
+                          </div>
+                          <button
+                            @click="removeTimeWindow(location, idx)"
+                            class="text-red-600 hover:text-red-700 p-1"
+                          >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <p v-else class="text-xs text-gray-500 italic">
+                        Keine Zeitfenster definiert - Standort ist immer verfügbar
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              <!-- Arbeitszeiten Button -->
-              <div class="pt-4 border-t border-gray-100">
-                <button 
-                  @click="editWorkingHours(staff)"
-                  class="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  📅 Arbeitszeiten bearbeiten
-                </button>
+                
+                <div v-else class="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg text-center">
+                  Noch keine Standorte zugewiesen. Klicken Sie auf "Standort hinzufügen" um einen Standort hinzuzufügen.
+                </div>
               </div>
             </div>
           </div>
@@ -322,6 +442,146 @@
         </div>
       </div>
     </div>
+
+    <!-- Add Location Modal -->
+    <div v-if="showAddLocationModal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div class="absolute inset-0 bg-black bg-opacity-50" @click="showAddLocationModal = false"></div>
+      
+      <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            Standort hinzufügen für {{ selectedStaffForLocation?.first_name }} {{ selectedStaffForLocation?.last_name }}
+          </h3>
+          
+          <form @submit.prevent="createLocation">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Standort-Name *</label>
+                <input 
+                  v-model="newLocation.name"
+                  type="text" 
+                  required
+                  placeholder="z.B. Hauptstandort Zürich"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Adresse *</label>
+                <input 
+                  v-model="newLocation.address"
+                  type="text" 
+                  required
+                  placeholder="z.B. Bahnhofstrasse 1, 8001 Zürich"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Standort-Typ *</label>
+                <select 
+                  v-model="newLocation.location_type"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="standard">Standard</option>
+                  <option value="pickup">Pickup</option>
+                  <option value="exam">Prüfung</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+              <button 
+                type="button"
+                @click="showAddLocationModal = false"
+                :disabled="isCreatingLocation"
+                class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Abbrechen
+              </button>
+              <button 
+                type="submit"
+                :disabled="isCreatingLocation"
+                class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
+              >
+                {{ isCreatingLocation ? 'Erstelle...' : 'Erstellen' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Location Modal -->
+    <div v-if="showEditLocationModal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div class="absolute inset-0 bg-black bg-opacity-50" @click="showEditLocationModal = false"></div>
+      
+      <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            Standort bearbeiten
+          </h3>
+          
+          <form @submit.prevent="updateLocation">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Standort-Name *</label>
+                <input 
+                  v-model="editLocation.name"
+                  type="text" 
+                  required
+                  placeholder="z.B. Hauptstandort Zürich"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Adresse *</label>
+                <input 
+                  v-model="editLocation.address"
+                  type="text" 
+                  required
+                  placeholder="z.B. Bahnhofstrasse 1, 8001 Zürich"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Standort-Typ *</label>
+                <select 
+                  v-model="editLocation.location_type"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="standard">Standard</option>
+                  <option value="pickup">Pickup</option>
+                  <option value="exam">Prüfung</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+              <button 
+                type="button"
+                @click="showEditLocationModal = false"
+                :disabled="isEditingLocation"
+                class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Abbrechen
+              </button>
+              <button 
+                type="submit"
+                :disabled="isEditingLocation"
+                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+              >
+                {{ isEditingLocation ? 'Speichere...' : 'Speichern' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
   <div v-else class="h-full flex items-center justify-center p-6">
     <div class="text-center max-w-md">
@@ -376,6 +636,24 @@ const newStaff = ref({
   email: ''
 })
 
+const showAddLocationModal = ref(false)
+const showEditLocationModal = ref(false)
+const isCreatingLocation = ref(false)
+const isEditingLocation = ref(false)
+const selectedStaffForLocation = ref<any>(null)
+const editingLocation = ref<any>(null)
+const newLocation = ref({
+  name: '',
+  address: '',
+  location_type: 'standard'
+})
+const editLocation = ref({
+  id: '',
+  name: '',
+  address: '',
+  location_type: 'standard'
+})
+
 // Optional Filter: Wenn in Detailansicht eines Staffs verwendet, nur diesen laden
 const staffIdFilter = computed<string | null>(() => {
   const id = (props as any)?.currentUser?.id
@@ -427,7 +705,8 @@ const loadStaff = async () => {
           last_name,
           email,
           is_active,
-          created_at
+          created_at,
+          category
         `)
         .eq('role', 'staff')
         .eq('tenant_id', tenantId)
@@ -444,7 +723,8 @@ const loadStaff = async () => {
           last_name,
           email,
           is_active,
-          created_at
+          created_at,
+          category
         `)
         .eq('role', 'staff')
         .eq('tenant_id', tenantId)
@@ -480,7 +760,7 @@ const loadStaff = async () => {
       console.warn('⚠️ Could not load availability settings:', availabilityError)
     }
 
-    // Load staff locations
+    // Load staff locations (exclude exam locations)
     const { data: locationsData, error: locationsError } = await supabase
       .from('locations')
       .select(`
@@ -491,10 +771,13 @@ const loadStaff = async () => {
         location_type,
         available_categories,
         pickup_enabled,
-        pickup_radius_minutes
+        pickup_radius_minutes,
+        category_pickup_settings,
+        time_windows
       `)
       .in('staff_id', staffData.map(s => s.id))
       .eq('is_active', true)
+      .neq('location_type', 'exam')
 
     if (locationsError) {
       console.warn('⚠️ Could not load locations:', locationsError)
@@ -527,12 +810,19 @@ const loadStaff = async () => {
         ...staff,
         availability_mode: availability?.availability_mode || 'standard',
         pickup_radius_minutes: availability?.pickup_radius_minutes || 10,
+        peak_time_morning_start: availability?.peak_time_morning_start || '07:00',
+        peak_time_morning_end: availability?.peak_time_morning_end || '09:00',
+        peak_time_evening_start: availability?.peak_time_evening_start || '17:00',
+        peak_time_evening_end: availability?.peak_time_evening_end || '19:00',
+        minimum_booking_lead_time_hours: availability?.minimum_booking_lead_time_hours || 24,
         category_pickup: categoryPickup,
         locations: locations.map(location => ({
           ...location,
           available_categories: location.available_categories || [],
           pickup_enabled: location.pickup_enabled || false,
-          pickup_radius_minutes: location.pickup_radius_minutes || 10
+          pickup_radius_minutes: location.pickup_radius_minutes || 10,
+          category_pickup_settings: location.category_pickup_settings || {},
+          time_windows: location.time_windows || []
         }))
       }
     })
@@ -549,64 +839,60 @@ const loadStaff = async () => {
   }
 }
 
-const getCategoryPickup = (staff: any, categoryCode: string) => {
-  const rows = staff.category_pickup as any[] | undefined
-  return rows?.find(r => r.category_code === categoryCode) || null
+const getStaffCategories = (staff: any): string[] => {
+  if (!staff.category) return []
+  return Array.isArray(staff.category) ? staff.category : [staff.category]
 }
 
-const ensureCategoryRow = async (staff: any, categoryCode: string) => {
-  const existing = getCategoryPickup(staff, categoryCode)
-  if (existing) return existing
-  const defaultRow = { staff_id: staff.id, category_code: categoryCode, pickup_enabled: false, pickup_radius_minutes: staff.pickup_radius_minutes || 10 }
-  // Optimistic local insert
-  staff.category_pickup = [...(staff.category_pickup || []), defaultRow]
-  return defaultRow
+// Time Windows Management
+const addTimeWindow = (location: any) => {
+  if (!location.time_windows) {
+    location.time_windows = []
+  }
+  location.time_windows.push({
+    start: '07:00',
+    end: '09:00',
+    days: [1, 2, 3, 4, 5] // Mo-Fr
+  })
 }
 
-const toggleCategoryPickup = async (staff: any, categoryCode: string, enabled: boolean) => {
+const removeTimeWindow = async (location: any, index: number) => {
+  location.time_windows.splice(index, 1)
+  await updateLocationTimeWindows(location)
+}
+
+const updateLocationTimeWindows = async (location: any) => {
   try {
-    const row = await ensureCategoryRow(staff, categoryCode)
-    row.pickup_enabled = enabled
+    console.log('🔄 Updating location time windows:', location.id)
+    
     const { error } = await supabase
-      .from('staff_category_availability')
-      .upsert({
-        staff_id: staff.id,
-        category_code: categoryCode,
-        pickup_enabled: enabled,
-        pickup_radius_minutes: row.pickup_radius_minutes || staff.pickup_radius_minutes || 10
+      .from('locations')
+      .update({
+        time_windows: location.time_windows || []
       })
+      .eq('id', location.id)
+
     if (error) throw error
+
+    // Show toast after 1 second delay
+    setTimeout(() => {
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Gespeichert',
+        message: `Zeitfenster für ${location.name} wurden aktualisiert.`
+      })
+    }, 1000)
+
+  } catch (err: any) {
+    console.error('❌ Error updating location time windows:', err)
     uiStore.addNotification({
-      type: 'success',
-      title: 'Gespeichert',
-      message: `Pickup für Kategorie ${categoryCode} ${enabled ? 'aktiviert' : 'deaktiviert'}.`
+      type: 'error',
+      title: 'Fehler',
+      message: 'Zeitfenster konnten nicht gespeichert werden.'
     })
-  } catch (err: any) {
-    console.error('❌ Error toggling category pickup:', err)
-    uiStore.addNotification({ type: 'error', title: 'Fehler', message: 'Kategorie-Pickup konnte nicht gespeichert werden.' })
   }
 }
 
-const updateCategoryRadius = async (staff: any, categoryCode: string, value: string | number) => {
-  try {
-    const radius = Math.max(5, Math.min(60, Number(value) || 10))
-    const row = await ensureCategoryRow(staff, categoryCode)
-    row.pickup_radius_minutes = radius
-    const { error } = await supabase
-      .from('staff_category_availability')
-      .upsert({
-        staff_id: staff.id,
-        category_code: categoryCode,
-        pickup_enabled: row.pickup_enabled || false,
-        pickup_radius_minutes: radius
-      })
-    if (error) throw error
-    uiStore.addNotification({ type: 'success', title: 'Radius gespeichert', message: `Pickup-Radius für ${categoryCode} aktualisiert.` })
-  } catch (err: any) {
-    console.error('❌ Error updating category radius:', err)
-    uiStore.addNotification({ type: 'error', title: 'Fehler', message: 'Pickup-Radius konnte nicht gespeichert werden.' })
-  }
-}
 
 const updateStaffAvailability = async (staff: any) => {
   try {
@@ -617,16 +903,26 @@ const updateStaffAvailability = async (staff: any) => {
       .upsert({
         staff_id: staff.id,
         availability_mode: staff.availability_mode,
-        pickup_radius_minutes: staff.pickup_radius_minutes
+        pickup_radius_minutes: staff.pickup_radius_minutes,
+        peak_time_morning_start: staff.peak_time_morning_start || '07:00',
+        peak_time_morning_end: staff.peak_time_morning_end || '09:00',
+        peak_time_evening_start: staff.peak_time_evening_start || '17:00',
+        peak_time_evening_end: staff.peak_time_evening_end || '19:00',
+        minimum_booking_lead_time_hours: staff.minimum_booking_lead_time_hours || 24
+      }, {
+        onConflict: 'staff_id'
       })
 
     if (error) throw error
 
-    uiStore.addNotification({
-      type: 'success',
-      title: 'Einstellungen gespeichert',
-      message: `Verfügbarkeitsmodus für ${staff.first_name} ${staff.last_name} wurde aktualisiert.`
-    })
+    // Show toast after 1 second delay
+    setTimeout(() => {
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Gespeichert',
+        message: `Einstellungen für ${staff.first_name} ${staff.last_name} wurden aktualisiert.`
+      })
+    }, 1000)
 
   } catch (err: any) {
     console.error('❌ Error updating staff availability:', err)
@@ -634,6 +930,224 @@ const updateStaffAvailability = async (staff: any) => {
       type: 'error',
       title: 'Fehler',
       message: 'Einstellungen konnten nicht gespeichert werden.'
+    })
+  }
+}
+
+const openLocationModal = (staff: any) => {
+  selectedStaffForLocation.value = staff
+  newLocation.value = {
+    name: '',
+    address: '',
+    location_type: 'standard'
+  }
+  showAddLocationModal.value = true
+}
+
+const openEditLocationModal = (location: any) => {
+  editingLocation.value = location
+  editLocation.value = {
+    id: location.id,
+    name: location.name,
+    address: location.address,
+    location_type: location.location_type
+  }
+  showEditLocationModal.value = true
+}
+
+const updateLocation = async () => {
+  if (!editingLocation.value) return
+  
+  isEditingLocation.value = true
+  
+  try {
+    const { error } = await supabase
+      .from('locations')
+      .update({
+        name: editLocation.value.name,
+        address: editLocation.value.address,
+        location_type: editLocation.value.location_type
+      })
+      .eq('id', editLocation.value.id)
+    
+    if (error) throw error
+    
+    // Update local state
+    editingLocation.value.name = editLocation.value.name
+    editingLocation.value.address = editLocation.value.address
+    editingLocation.value.location_type = editLocation.value.location_type
+    
+    alert(`Standort "${editLocation.value.name}" wurde erfolgreich aktualisiert!`)
+    
+    showEditLocationModal.value = false
+  } catch (err: any) {
+    console.error('❌ Error updating location:', err)
+    alert('Fehler: Standort konnte nicht aktualisiert werden.')
+  } finally {
+    isEditingLocation.value = false
+  }
+}
+
+const createLocation = async () => {
+  if (!selectedStaffForLocation.value) return
+  
+  isCreatingLocation.value = true
+  
+  try {
+    const authUser = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', authUser?.data?.user?.id)
+      .single()
+    const tenantId = userProfile?.tenant_id
+    
+    if (!tenantId) {
+      throw new Error('User has no tenant assigned')
+    }
+    
+    // Create location
+    const { data: newLocationData, error: locationError } = await supabase
+      .from('locations')
+      .insert({
+        name: newLocation.value.name,
+        address: newLocation.value.address,
+        location_type: newLocation.value.location_type,
+        staff_id: selectedStaffForLocation.value.id,
+        tenant_id: tenantId,
+        is_active: true,
+        available_categories: []
+      })
+      .select()
+      .single()
+    
+    if (locationError) throw locationError
+    
+    // Add to local state
+    if (!selectedStaffForLocation.value.locations) {
+      selectedStaffForLocation.value.locations = []
+    }
+    selectedStaffForLocation.value.locations.push(newLocationData)
+    
+    alert(`Standort "${newLocation.value.name}" wurde erfolgreich hinzugefügt!`)
+    
+    showAddLocationModal.value = false
+    newLocation.value = {
+      name: '',
+      address: '',
+      location_type: 'standard'
+    }
+  } catch (err: any) {
+    console.error('❌ Error creating location:', err)
+    alert('Fehler: Standort konnte nicht erstellt werden.')
+  } finally {
+    isCreatingLocation.value = false
+  }
+}
+
+const removeLocation = async (staff: any, location: any) => {
+  if (!confirm(`Möchten Sie den Standort "${location.name}" wirklich von diesem Fahrlehrer entfernen?`)) {
+    return
+  }
+  
+  try {
+    const { error } = await supabase
+      .from('locations')
+      .update({
+        staff_id: null,
+        is_active: false
+      })
+      .eq('id', location.id)
+    
+    if (error) throw error
+    
+    // Remove from local state
+    const index = staff.locations.findIndex((l: any) => l.id === location.id)
+    if (index > -1) {
+      staff.locations.splice(index, 1)
+    }
+    
+    console.log('✅ Location removed successfully')
+    alert(`Standort "${location.name}" wurde erfolgreich von ${staff.first_name} ${staff.last_name} entfernt.`)
+  } catch (err: any) {
+    console.error('❌ Error removing location:', err)
+    alert('Fehler: Standort konnte nicht entfernt werden.')
+  }
+}
+
+// Helper: Initialisiere category_pickup_settings wenn nicht vorhanden
+const ensureLocationCategoryPickupSettings = (location: any) => {
+  if (!location.category_pickup_settings) {
+    location.category_pickup_settings = {}
+  }
+  return location.category_pickup_settings
+}
+
+// Prüfe ob Pickup für eine Kategorie aktiviert ist
+const getLocationCategoryPickup = (location: any, categoryCode: string): boolean => {
+  const settings = location.category_pickup_settings || {}
+  return settings[categoryCode]?.enabled || false
+}
+
+// Hole Pickup-Radius für eine Kategorie
+const getLocationCategoryPickupRadius = (location: any, categoryCode: string): number => {
+  const settings = location.category_pickup_settings || {}
+  return settings[categoryCode]?.radius_minutes || 10
+}
+
+// Toggle Pickup für eine Kategorie
+const toggleLocationCategoryPickup = async (location: any, categoryCode: string, event: Event) => {
+  const enabled = (event.target as HTMLInputElement).checked
+  const settings = ensureLocationCategoryPickupSettings(location)
+  
+  if (!settings[categoryCode]) {
+    settings[categoryCode] = { enabled: false, radius_minutes: 10 }
+  }
+  settings[categoryCode].enabled = enabled
+  
+  await updateLocationCategoryPickupSettings(location)
+}
+
+// Update Pickup-Radius für eine Kategorie
+const updateLocationCategoryPickupRadius = async (location: any, categoryCode: string, value: string) => {
+  const settings = ensureLocationCategoryPickupSettings(location)
+  
+  if (!settings[categoryCode]) {
+    settings[categoryCode] = { enabled: true, radius_minutes: 10 }
+  }
+  settings[categoryCode].radius_minutes = parseInt(value) || 10
+  
+  await updateLocationCategoryPickupSettings(location)
+}
+
+// Speichere category_pickup_settings in DB
+const updateLocationCategoryPickupSettings = async (location: any) => {
+  try {
+    const { error } = await supabase
+      .from('locations')
+      .update({
+        category_pickup_settings: location.category_pickup_settings || {}
+      })
+      .eq('id', location.id)
+
+    if (error) throw error
+
+    console.log('✅ Location category pickup settings updated')
+    
+    // Show toast after 1 second delay
+    setTimeout(() => {
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Gespeichert',
+        message: `Pickup-Einstellungen für ${location.name} wurden aktualisiert.`
+      })
+    }, 1000)
+  } catch (err: any) {
+    console.error('❌ Error updating location category pickup settings:', err)
+    uiStore.addNotification({
+      type: 'error',
+      title: 'Fehler',
+      message: 'Pickup-Einstellungen konnten nicht gespeichert werden.'
     })
   }
 }
@@ -651,12 +1165,16 @@ const updateLocationCategories = async (location: any) => {
 
     if (error) throw error
 
-    uiStore.addNotification({
-      type: 'success',
-      title: 'Kategorien aktualisiert',
-      message: `Kategorie-Zuordnung für ${location.name} wurde gespeichert.`
-    })
-
+    console.log('✅ Location categories updated')
+    
+    // Show toast after 1 second delay
+    setTimeout(() => {
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Gespeichert',
+        message: `Kategorien für ${location.name} wurden aktualisiert.`
+      })
+    }, 1000)
   } catch (err: any) {
     console.error('❌ Error updating location categories:', err)
     uiStore.addNotification({
@@ -681,11 +1199,14 @@ const updateLocationPickup = async (location: any) => {
 
     if (error) throw error
 
-    uiStore.addNotification({
-      type: 'success',
-      title: 'Pickup-Einstellungen gespeichert',
-      message: `Pickup-Einstellungen für ${location.name} wurden aktualisiert.`
-    })
+    // Show toast after 1 second delay
+    setTimeout(() => {
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Gespeichert',
+        message: `Pickup-Einstellungen für ${location.name} wurden aktualisiert.`
+      })
+    }, 1000)
 
   } catch (err: any) {
     console.error('❌ Error updating location pickup:', err)
@@ -783,12 +1304,6 @@ const editWorkingHours = (staff: any) => {
 }
 
 // Typisierter Change-Handler für Checkbox (verhindert TS-Fehler mit $event.target)
-const onCategoryToggle = (event: Event, staff: any, categoryCode: string) => {
-  const input = event.target as HTMLInputElement | null
-  const enabled = !!(input && input.checked)
-  toggleCategoryPickup(staff, categoryCode, enabled)
-}
-
 // Lifecycle
 onMounted(async () => {
   // Lade Features um Prüfung durchführen zu können

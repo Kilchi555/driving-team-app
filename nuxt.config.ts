@@ -72,6 +72,7 @@ export default defineNuxtConfig({
     accountoApiKey: process.env.ACCOUNTO_API_KEY,
     accountoBaseUrl: process.env.ACCOUNTO_BASE_URL,
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY, // Server-side Google Maps API Key
     
     // Public keys (exposed to client-side)
     public: {

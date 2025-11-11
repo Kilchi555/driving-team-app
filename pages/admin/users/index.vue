@@ -82,9 +82,51 @@
     <div class="bg-white rounded-lg shadow-sm border mb-6">
       <div class="px-6 py-4 border-b border-gray-200">
         <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-          <h2 class="text-xl font-semibold text-gray-900">
-            Benutzer ({{ filteredUsers.length }})
-          </h2>
+          <div class="flex flex-col gap-2">
+            <h2 class="text-xl font-semibold text-gray-900">
+              Benutzer ({{ filteredUsers.length }})
+            </h2>
+            
+            <!-- Invitation Filter Toggle -->
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-600">Anzeigen:</span>
+              <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                <button
+                  @click="invitationFilter = 'users'"
+                  :class="[
+                    'px-3 py-1 text-xs font-medium rounded-md transition-colors',
+                    invitationFilter === 'users' 
+                      ? 'bg-white text-gray-900 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  ]"
+                >
+                  Nur Benutzer
+                </button>
+                <button
+                  @click="invitationFilter = 'all'"
+                  :class="[
+                    'px-3 py-1 text-xs font-medium rounded-md transition-colors',
+                    invitationFilter === 'all' 
+                      ? 'bg-white text-gray-900 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  ]"
+                >
+                  Alle
+                </button>
+                <button
+                  @click="invitationFilter = 'invitations'"
+                  :class="[
+                    'px-3 py-1 text-xs font-medium rounded-md transition-colors',
+                    invitationFilter === 'invitations' 
+                      ? 'bg-white text-gray-900 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  ]"
+                >
+                  Nur Einladungen
+                </button>
+              </div>
+            </div>
+          </div>
           
           <div class="flex flex-col sm:flex-row gap-3">
             <!-- Search -->
@@ -161,19 +203,52 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="user in filteredUsers" :key="user.id" class="hover:bg-gray-50 cursor-pointer" @click="navigateToUserDetails(user.id)">
+            <tr 
+              v-for="user in filteredUsers" 
+              :key="user.id" 
+              :class="[
+                'cursor-pointer transition-colors',
+                user.is_invitation 
+                  ? 'bg-gray-100 hover:bg-gray-150 opacity-70' 
+                  : 'hover:bg-gray-50'
+              ]"
+              @click="user.is_invitation ? null : navigateToUserDetails(user.id)"
+            >
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                    <span class="text-sm font-medium text-gray-600">
+                  <div 
+                    :class="[
+                      'w-10 h-10 rounded-full flex items-center justify-center',
+                      user.is_invitation ? 'bg-gray-300' : 'bg-gray-200'
+                    ]"
+                  >
+                    <span 
+                      :class="[
+                        'text-sm font-medium',
+                        user.is_invitation ? 'text-gray-500' : 'text-gray-600'
+                      ]"
+                    >
                       {{ getInitials(user.first_name, user.last_name) }}
                     </span>
                   </div>
                   <div>
-                    <div class="font-medium text-gray-900">
+                    <div 
+                      :class="[
+                        'font-medium',
+                        user.is_invitation ? 'text-gray-600' : 'text-gray-900'
+                      ]"
+                    >
                       {{ user.first_name }} {{ user.last_name }}
+                      <span v-if="user.is_invitation" class="text-xs text-gray-500 ml-2">(Eingeladen)</span>
                     </div>
-                    <div class="text-sm text-gray-500">{{ user.email }}</div>
+                    <div 
+                      :class="[
+                        'text-sm',
+                        user.is_invitation ? 'text-gray-500' : 'text-gray-500'
+                      ]"
+                    >
+                      {{ user.email }}
+                    </div>
                   </div>
                 </div>
               </td>
@@ -186,20 +261,55 @@
               </td>
 
               <td class="px-6 py-4">
-                <div class="text-sm text-gray-900">{{ user.phone || '-' }}</div>
-                <div class="text-xs text-gray-500">{{ user.preferred_payment_method || 'Nicht festgelegt' }}</div>
+                <div 
+                  :class="[
+                    'text-sm',
+                    user.is_invitation ? 'text-gray-500' : 'text-gray-900'
+                  ]"
+                >
+                  {{ user.phone || '-' }}
+                </div>
+                <div class="text-xs text-gray-500">
+                  {{ user.is_invitation ? 'Einladung ausstehend' : (user.preferred_payment_method || 'Nicht festgelegt') }}
+                </div>
               </td>
 
               <td class="px-6 py-4">
-                <span :class="user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                <span 
+                  v-if="user.is_invitation"
+                  :class="[
+                    'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                    user.invitation_status === 'expired' 
+                      ? 'bg-red-100 text-red-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  ]"
+                >
+                  {{ user.invitation_status === 'expired' ? 'Einladung abgelaufen' : 'Eingeladen' }}
+                </span>
+                <span 
+                  v-else
+                  :class="user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                >
                   {{ user.is_active ? 'Aktiv' : 'Inaktiv' }}
                 </span>
               </td>
 
               <td class="px-6 py-4">
-                <div class="text-sm text-gray-900">{{ currentTenant?.name || 'Unbekannt' }}</div>
-                <div class="text-xs text-gray-500">{{ currentTenant?.slug || 'Kein Slug' }}</div>
+                <div 
+                  :class="[
+                    'text-sm',
+                    user.is_invitation ? 'text-gray-500' : 'text-gray-900'
+                  ]"
+                >
+                  {{ currentTenant?.name || 'Unbekannt' }}
+                </div>
+                <div class="text-xs text-gray-500">
+                  {{ user.is_invitation && user.invitation_expires_at 
+                    ? `Läuft ab: ${formatExpiryDate(user.invitation_expires_at)}` 
+                    : (currentTenant?.slug || 'Kein Slug') 
+                  }}
+                </div>
               </td>
             </tr>
 
@@ -774,6 +884,9 @@ interface User {
   completed_appointments?: number
   unpaid_count?: number
   unpaid_amount?: number
+  is_invitation?: boolean
+  invitation_status?: 'pending' | 'expired'
+  invitation_expires_at?: string
 }
 
 // State
@@ -796,6 +909,7 @@ const selectedRole = ref('client')
 const selectedStatus = ref('')
 const showCreateUserModal = ref(false)
 const currentTenant = ref<any>(null)
+const invitationFilter = ref<'all' | 'users' | 'invitations'>('all')
 
 // (tabs defined above)
 
@@ -954,6 +1068,14 @@ const newUsersCount = computed(() => {
 const filteredUsers = computed(() => {
   let filtered = users.value
 
+  // Invitation filter
+  if (invitationFilter.value === 'users') {
+    filtered = filtered.filter(user => !user.is_invitation)
+  } else if (invitationFilter.value === 'invitations') {
+    filtered = filtered.filter(user => user.is_invitation)
+  }
+  // 'all' shows everything, no filter needed
+
   // Search filter
   if (searchTerm.value) {
     const search = searchTerm.value.toLowerCase()
@@ -1095,6 +1217,44 @@ const loadUsers = async () => {
     users.value = processedUsers
     console.log('✅ Users loaded:', users.value.length)
 
+    // Load pending staff invitations
+    const { data: invitationsData, error: invitationsError } = await supabase
+      .from('staff_invitations')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .in('status', ['pending', 'expired'])
+      .order('created_at', { ascending: false })
+
+    if (invitationsError) {
+      console.warn('Warning loading invitations:', invitationsError)
+    } else if (invitationsData && invitationsData.length > 0) {
+      console.log('✅ Invitations loaded:', invitationsData.length)
+      
+      // Convert invitations to User format
+      const invitationUsers = invitationsData.map(invitation => ({
+        id: invitation.id,
+        first_name: invitation.first_name,
+        last_name: invitation.last_name,
+        email: invitation.email,
+        phone: invitation.phone,
+        role: 'staff',
+        is_active: false,
+        created_at: invitation.created_at,
+        is_invitation: true,
+        invitation_status: invitation.status as 'pending' | 'expired',
+        invitation_expires_at: invitation.expires_at,
+        preferred_payment_method: null,
+        appointment_count: 0,
+        completed_appointments: 0,
+        unpaid_count: 0,
+        unpaid_amount: 0
+      }))
+      
+      // Add invitations to users list
+      users.value = [...users.value, ...invitationUsers]
+      console.log('✅ Total users (including invitations):', users.value.length)
+    }
+
   } catch (error: any) {
     console.error('❌ Error loading users:', error)
   } finally {
@@ -1188,6 +1348,19 @@ const getRoleBadgeClass = (user: User): string => {
 
 const navigateToUserDetails = (userId: string) => {
   useRouter().push(`/admin/users/${userId}`)
+}
+
+const formatExpiryDate = (dateString: string): string => {
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+  } catch {
+    return dateString
+  }
 }
 
 // Custom Dropdown Functions

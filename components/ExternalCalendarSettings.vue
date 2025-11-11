@@ -105,11 +105,11 @@
           <div v-if="newCalendar.provider === 'google'" class="bg-blue-50 p-3 rounded-lg">
             <p class="text-sm text-blue-800">
               <strong>Anleitung Google Calendar:</strong>
-              <br>1. Öffnen Sie Google Calendar
-              <br>2. Gehen Sie zu Einstellungen
-              <br>3. Wählen Sie Ihren Kalender aus
-              <br>4. Scrollen Sie zu "Kalender integrieren"
-              <br>5. Kopieren Sie die "Geheime Adresse im iCal-Format"
+              <br>1. Öffnen Sie Google Calendar im Browser.
+              <br>2. Gehen Sie zu den Einstellungen.
+              <br>3. Wählen Sie Ihren Kalender aus.
+              <br>4. Scrollen Sie zu "Kalender integrieren".
+              <br>5. Kopieren Sie die "Öffentliche Adresse im iCal-Format".
             </p>
           </div>
           

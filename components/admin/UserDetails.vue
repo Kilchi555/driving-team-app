@@ -3,37 +3,39 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <!-- Back Button & Header -->
-      <div class="mb-8">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-4">
-            <NuxtLink 
-              to="/admin/users" 
-              class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700"
-            >
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-              </svg>
-              Zurück zur Benutzerverwaltung
-            </NuxtLink>
-            
-            <div>
-              <h1 class="text-3xl font-bold text-gray-900">
-                👤 {{ displayName }}
-              </h1>
-              <p class="text-sm text-gray-500 mt-1">{{ roleLabel }}</p>
-            </div>
+      <div class="mb-6 sm:mb-8">
+        <!-- Back Link -->
+        <NuxtLink 
+          to="/admin/users" 
+          class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 mb-4"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Zurück zur Benutzerverwaltung
+        </NuxtLink>
+        
+        <!-- Header & Actions -->
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <!-- Title -->
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+              👤 {{ displayName }}
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">{{ roleLabel }}</p>
           </div>
           
           <!-- Action Buttons -->
-          <div class="flex space-x-3">        
+          <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">        
             <button
               @click="editUser"
-              class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
               </svg>
-              Bearbeiten
+              <span class="hidden sm:inline">Bearbeiten</span>
+              <span class="sm:hidden ml-2">Bearbeiten</span>
             </button>
             
             <!-- Status Toggle Button -->
@@ -41,40 +43,43 @@
               v-if="userDetails && canManageUser(userDetails as any)"
               @click="toggleUserStatus"
               :class="[
-                'inline-flex items-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2',
+                'inline-flex items-center justify-center px-3 sm:px-4 py-2 border rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2',
                 userDetails?.is_active 
                   ? 'border-yellow-300 text-yellow-700 bg-white hover:bg-yellow-50 focus:ring-yellow-500' 
                   : 'border-green-300 text-green-700 bg-white hover:bg-green-50 focus:ring-green-500'
               ]"
             >
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
               </svg>
-              {{ userDetails?.is_active ? 'Deaktivieren' : 'Aktivieren' }}
+              <span class="hidden sm:inline">{{ userDetails?.is_active ? 'Deaktivieren' : 'Aktivieren' }}</span>
+              <span class="sm:hidden ml-2">{{ userDetails?.is_active ? 'Deaktivieren' : 'Aktivieren' }}</span>
             </button>
 
             <!-- Soft Delete Button -->
             <button
               v-if="userDetails && canManageUser(userDetails as any) && !userDetails.deleted_at"
               @click="showDeleteConfirm = true"
-              class="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
-              Benutzer löschen
+              <span class="hidden sm:inline">Benutzer löschen</span>
+              <span class="sm:hidden ml-2">Löschen</span>
             </button>
 
             <!-- Restore Button -->
             <button
               v-if="userDetails && canRestoreUser(userDetails as any) && userDetails.deleted_at"
               @click="handleRestoreUser"
-              class="inline-flex items-center px-4 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
             >
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
-              Wiederherstellen
+              <span class="hidden sm:inline">Wiederherstellen</span>
+              <span class="sm:hidden ml-2">Wiederherstellen</span>
             </button>
           </div>
         </div>
@@ -160,18 +165,7 @@
                 <dd class="mt-1 text-sm text-gray-900">{{ userDetails.tenant_name || 'Unbekannt' }}</dd>
               </div>
               <div v-if="userDetails?.role === 'staff'" class="md:col-span-2">
-                <dt class="text-sm font-medium text-gray-500 mb-2 flex items-center justify-between">
-                  <span>Fahrkategorien</span>
-                  <button
-                    @click="openCategoryModal"
-                    class="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-                  >
-                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                    Bearbeiten
-                  </button>
-                </dt>
+                <dt class="text-sm font-medium text-gray-500 mb-2">Fahrkategorien</dt>
                 <dd class="mt-1">
                   <div v-if="userDetails.category && userDetails.category.length > 0" class="flex flex-wrap gap-1.5">
                     <span
@@ -256,8 +250,10 @@
 
       <!-- Fahrlehrer & Verfügbarkeit (nur für Rolle staff) -->
       <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
-        <div class="p-0">
-          <StaffTab :current-user="{ id: userDetails?.id }" :tenant-settings="{}" />
+        <div class="p-0 sm:p-0">
+          <div class="overflow-x-auto">
+            <StaffTab :current-user="{ id: userDetails?.id }" :tenant-settings="{}" />
+          </div>
         </div>
       </div>
 
@@ -415,6 +411,33 @@
             </div>
           </div>
 
+          <!-- Fahrkategorien (nur für Staff) -->
+          <div v-if="editForm.role === 'staff'" class="bg-gray-50 p-4 rounded-lg">
+            <h4 class="text-md font-medium text-gray-900 mb-4">Fahrkategorien</h4>
+            <p class="text-sm text-gray-600 mb-3">
+              Wählen Sie die Fahrkategorien aus, die dieser Fahrlehrer unterrichten kann:
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              <button
+                v-for="category in availableCategories"
+                :key="category.code"
+                type="button"
+                @click="toggleCategory(category.code)"
+                :class="[
+                  'flex items-center justify-center px-3 py-2 rounded-lg border-2 transition-all text-sm font-semibold',
+                  selectedCategories.includes(category.code)
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                ]"
+              >
+                {{ category.code }}
+              </button>
+            </div>
+            <div v-if="availableCategories.length === 0" class="text-center py-4 text-sm text-gray-500">
+              Keine Kategorien verfügbar. Bitte erstellen Sie zuerst Kategorien unter Admin → Kategorien.
+            </div>
+          </div>
+
           <!-- Erfolgsmeldung -->
           <div v-if="successMessage" class="bg-green-50 border border-green-200 rounded-md p-4">
             <div class="flex">
@@ -515,69 +538,6 @@
       </div>
     </div>
 
-    <!-- Category Edit Modal -->
-    <div v-if="showCategoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 px-4" @click="showCategoryModal = false">
-      <div class="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white mb-4" @click.stop>
-        <div class="mb-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-base sm:text-lg leading-6 font-medium text-gray-900">
-              Fahrkategorien bearbeiten
-            </h3>
-            <button @click="showCategoryModal = false" class="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-2">
-              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="mb-6">
-          <p class="text-xs sm:text-sm text-gray-600 mb-4">
-            Wählen Sie die Fahrkategorien aus, die {{ displayName }} unterrichten kann:
-          </p>
-          
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-            <button
-              v-for="category in availableCategories"
-              :key="category.code"
-              @click="toggleCategory(category.code)"
-              :class="[
-                'flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border-2 transition-all',
-                selectedCategories.includes(category.code)
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-              ]"
-            >
-              <span class="text-base sm:text-lg font-semibold">{{ category.code }}</span>
-            </button>
-          </div>
-          
-          <div v-if="availableCategories.length === 0" class="text-center py-6 sm:py-8 text-sm text-gray-500">
-            Keine Kategorien verfügbar. Bitte erstellen Sie zuerst Kategorien unter Admin → Kategorien.
-          </div>
-        </div>
-
-        <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-          <button
-            @click="showCategoryModal = false"
-            class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 order-2 sm:order-1"
-          >
-            Abbrechen
-          </button>
-          <button
-            @click="saveCategories"
-            :disabled="isSaving"
-            class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
-          >
-            <svg v-if="isSaving" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            {{ isSaving ? 'Speichern...' : 'Speichern' }}
-          </button>
-        </div>
-      </div>
-    </div>
 
   </div>
 </template>
@@ -662,7 +622,6 @@ const isDeleting = ref(false)
 const successMessage = ref<string | null>(null)
 const auditLog = ref<any[]>([])
 const availableCategories = ref<any[]>([])
-const showCategoryModal = ref(false)
 const selectedCategories = ref<string[]>([])
 
 interface EditForm {
@@ -902,6 +861,15 @@ const editUser = () => {
       role: userDetails.value.role,
       is_active: userDetails.value.is_active
     }
+    
+    // Initialize selected categories
+    if (userDetails.value.category) {
+      selectedCategories.value = Array.isArray(userDetails.value.category) 
+        ? [...userDetails.value.category] 
+        : [userDetails.value.category]
+    } else {
+      selectedCategories.value = []
+    }
   }
   
   // Öffne das Bearbeitungsmodal
@@ -915,16 +883,23 @@ const saveChanges = async () => {
   successMessage.value = null
   
   try {
+    const updateData: any = {
+      first_name: editForm.value.first_name,
+      last_name: editForm.value.last_name,
+      email: editForm.value.email,
+      phone: editForm.value.phone,
+      role: editForm.value.role,
+      is_active: editForm.value.is_active
+    }
+    
+    // Add categories if user is staff
+    if (editForm.value.role === 'staff') {
+      updateData.category = selectedCategories.value.length > 0 ? selectedCategories.value : null
+    }
+    
     const { error } = await supabase
       .from('users')
-      .update({
-        first_name: editForm.value.first_name,
-        last_name: editForm.value.last_name,
-        email: editForm.value.email,
-        phone: editForm.value.phone,
-        role: editForm.value.role,
-        is_active: editForm.value.is_active
-      })
+      .update(updateData)
       .eq('id', userId)
     
     if (error) throw error
@@ -933,6 +908,7 @@ const saveChanges = async () => {
     
     // Reload user details to get updated data
     await loadUserDetails()
+    await loadCategories()
     
     console.log('✅ User updated successfully')
     
@@ -1066,53 +1042,6 @@ const loadCategories = async () => {
     console.log('✅ Categories loaded:', data)
   } catch (err) {
     console.error('❌ Error loading categories:', err)
-  }
-}
-
-const openCategoryModal = () => {
-  // Initialize selected categories
-  if (userDetails.value?.category) {
-    selectedCategories.value = Array.isArray(userDetails.value.category) 
-      ? [...userDetails.value.category] 
-      : [userDetails.value.category]
-  } else {
-    selectedCategories.value = []
-  }
-  showCategoryModal.value = true
-}
-
-const saveCategories = async () => {
-  if (!userDetails.value) return
-  
-  isSaving.value = true
-  
-  try {
-    const { error } = await supabase
-      .from('users')
-      .update({
-        category: selectedCategories.value.length > 0 ? selectedCategories.value : null
-      })
-      .eq('id', userId)
-    
-    if (error) throw error
-    
-    // Reload user details
-    await loadUserDetails()
-    await loadCategories()
-    
-    showCategoryModal.value = false
-    successMessage.value = 'Kategorien erfolgreich aktualisiert!'
-    
-    setTimeout(() => {
-      successMessage.value = null
-    }, 3000)
-    
-    console.log('✅ Categories saved successfully')
-  } catch (err) {
-    console.error('❌ Error saving categories:', err)
-    alert('Fehler beim Speichern der Kategorien')
-  } finally {
-    isSaving.value = false
   }
 }
 

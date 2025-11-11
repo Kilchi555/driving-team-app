@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { validateTravelTimeBetweenAppointments, isWithinTimeWindows, extractPLZFromAddress } from '~/utils/travelTimeValidation'
 
 // Types
 interface Staff {
@@ -137,7 +138,8 @@ export const useAvailabilitySystem = () => {
       // Build queries with tenant filtering
       let staffQuery = supabase.from('users').select('id, first_name, last_name, role, is_active, category, preferred_location_id, preferred_duration, assigned_staff_ids, tenant_id').eq('role', 'staff')
       let categoriesQuery = supabase.from('categories').select('id, code, name, description, lesson_duration_minutes, is_active, tenant_id').eq('is_active', true)
-      let locationsQuery = supabase.from('locations').select('id, name, address, location_type, is_active, staff_id, category').eq('is_active', true).eq('location_type', 'standard')
+      let locationsQuery = supabase.from('locations').select('id, name, address, location_type, is_active, staff_id, category, time_windows').eq('is_active', true).eq('location_type', 'standard')
+      let availabilityQuery = supabase.from('staff_availability_settings').select('staff_id, minimum_booking_lead_time_hours')
       
       if (tenantId) {
         staffQuery = staffQuery.eq('tenant_id', tenantId)
@@ -148,18 +150,28 @@ export const useAvailabilitySystem = () => {
       const [
         { data: staffData, error: staffError },
         { data: categoriesData, error: categoriesError },
-        { data: locationsData, error: locationsError }
+        { data: locationsData, error: locationsError },
+        { data: availabilityData, error: availabilityError }
       ] = await Promise.all([
         staffQuery,
         categoriesQuery,
-        locationsQuery
+        locationsQuery,
+        availabilityQuery
       ])
 
       if (staffError) throw staffError
       if (categoriesError) throw categoriesError
       if (locationsError) throw locationsError
+      if (availabilityError) console.warn('⚠️ Could not load availability settings:', availabilityError)
 
-      staffCache.value = staffData || []
+      // Enrich staff data with minimum_booking_lead_time_hours
+      staffCache.value = (staffData || []).map(staff => {
+        const availability = availabilityData?.find(a => a.staff_id === staff.id)
+        return {
+          ...staff,
+          minimum_booking_lead_time_hours: availability?.minimum_booking_lead_time_hours || 24
+        }
+      })
       categoriesCache.value = categoriesData || []
       locationsCache.value = locationsData || []
 
@@ -292,38 +304,78 @@ export const useAvailabilitySystem = () => {
     }
   }
 
-  const loadAppointments = async (date: string, tenantId?: string) => {
+  const loadAppointments = async (date: string, tenantId?: string, skipFutureFilter = false) => {
     try {
-      console.log('🔄 Loading appointments for date:', date)
+      console.log('🔄 Loading appointments for date:', date, skipFutureFilter ? '(ALL appointments)' : '(future only)')
       
-      // Convert local date to UTC for proper filtering of UTC-stored external_busy_times
-      const localStart = new Date(`${date}T00:00:00`)
-      const localEnd = new Date(`${date}T23:59:59`)
-      const startOfDay = localStart.toISOString()
-      const endOfDay = localEnd.toISOString()
+      // Since DB stores times in local time, use local time strings for filtering
+      const startOfDay = `${date} 00:00:00`
+      const endOfDay = `${date} 23:59:59`
       
-      // Only load appointments that are at least 24 hours in the future
+      // Only load appointments that are at least 24 hours in the future (unless skipFutureFilter is true)
       const now = new Date()
-      const minFutureTime = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours from now
-      const minFutureTimeISO = minFutureTime.toISOString()
+      const minFutureTime = new Date(now.getTime() + 24 * 60 * 60 * 1000)
       
-      console.log('⏰ Time filters:', {
-        now: now.toISOString(),
-        minFutureTime: minFutureTimeISO,
+      // Format minFutureTime as local time string for DB comparison
+      const year = minFutureTime.getFullYear()
+      const month = String(minFutureTime.getMonth() + 1).padStart(2, '0')
+      const day = String(minFutureTime.getDate()).padStart(2, '0')
+      const hours = String(minFutureTime.getHours()).padStart(2, '0')
+      const minutes = String(minFutureTime.getMinutes()).padStart(2, '0')
+      const seconds = String(minFutureTime.getSeconds()).padStart(2, '0')
+      const minFutureTimeLocal = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+      
+      console.log('⏰ Time filters (local time):', {
+        now: now.toLocaleString('de-CH'),
+        minFutureTime: skipFutureFilter ? 'SKIPPED' : minFutureTimeLocal,
         date: date,
         startOfDay: startOfDay,
         endOfDay: endOfDay
       })
       
-      // Load internal appointments (only future appointments, at least 24h ahead)
-      const { data: appointments, error } = await supabase
+      // Load internal appointments
+      let query = supabase
         .from('appointments')
-        .select('id, staff_id, location_id, start_time, end_time, duration_minutes, status, type')
-        .gte('start_time', minFutureTimeISO) // Only future appointments
+        .select('id, staff_id, location_id, start_time, end_time, duration_minutes, status, type, custom_location_address')
         .in('status', ['confirmed', 'pending', 'completed', 'scheduled', 'booked'])
         .is('deleted_at', null)
+      
+      // Apply future filter only if not skipped (for travel-time validation we need ALL appointments)
+      if (skipFutureFilter) {
+        query = query.gte('start_time', startOfDay).lte('start_time', endOfDay)
+      } else {
+        query = query.gte('start_time', minFutureTimeLocal)
+      }
+      
+      const { data: appointments, error } = await query
 
       if (error) throw error
+      
+      // Load locations for these appointments to get addresses
+      const locationIds = [...new Set(appointments?.map(apt => apt.location_id).filter(Boolean))]
+      let locationAddressMap: Record<string, string> = {}
+      
+      if (locationIds.length > 0) {
+        const { data: locations, error: locError } = await supabase
+          .from('locations')
+          .select('id, address')
+          .in('id', locationIds)
+        
+        if (!locError && locations) {
+          locationAddressMap = locations.reduce((acc, loc) => {
+            acc[loc.id] = loc.address
+            return acc
+          }, {} as Record<string, string>)
+        }
+      }
+      
+      // Enrich appointments with location addresses
+      const enrichedAppointments = appointments?.map(apt => ({
+        ...apt,
+        locations: apt.location_id && locationAddressMap[apt.location_id] 
+          ? { address: locationAddressMap[apt.location_id] }
+          : undefined
+      }))
 
       // Load external busy times for the same date
       console.log('🛰️ Loading external busy times window:', { startOfDay, endOfDay })
@@ -334,7 +386,7 @@ export const useAvailabilitySystem = () => {
       
       if (!selectedTenantId) {
         console.warn('⚠️ No tenant ID provided for external busy times')
-        appointmentsCache.value = appointments || []
+        appointmentsCache.value = enrichedAppointments || []
         return
       }
       
@@ -343,7 +395,7 @@ export const useAvailabilitySystem = () => {
         .from('external_busy_times')
         .select('id, staff_id, start_time, end_time, event_title')
         .eq('tenant_id', selectedTenantId)
-        .gte('start_time', minFutureTimeISO) // Only future appointments
+        .gte('start_time', minFutureTimeLocal) // Only future appointments (local time)
 
       if (externalError) {
         console.warn('⚠️ Error loading external busy times (with date filters):', externalError)
@@ -356,7 +408,7 @@ export const useAvailabilitySystem = () => {
 
       // Combine internal appointments and external busy times
       const allAppointments = [
-        ...(appointments || []),
+        ...(enrichedAppointments || []),
         ...finalExternalBusyTimes.map(ext => ({
           id: ext.id,
           staff_id: ext.staff_id,
@@ -369,11 +421,20 @@ export const useAvailabilitySystem = () => {
         }))
       ]
 
-      appointmentsCache.value = allAppointments
+      // Merge with existing appointments instead of replacing
+      // This is important for travel-time validation which loads multiple dates
+      const existingAppointments = appointmentsCache.value.filter(apt => {
+        const aptDate = apt.start_time.split(' ')[0] // Extract YYYY-MM-DD
+        return aptDate !== date // Keep appointments from other dates
+      })
+      
+      appointmentsCache.value = [...existingAppointments, ...allAppointments]
       console.log('✅ Appointments loaded:', {
-        internal: appointments?.length || 0,
+        internal: enrichedAppointments?.length || 0,
         external: finalExternalBusyTimes.length,
-        total: allAppointments.length
+        total: allAppointments.length,
+        locationsLoaded: Object.keys(locationAddressMap).length,
+        cacheTotal: appointmentsCache.value.length
       })
 
     } catch (err: any) {
@@ -758,6 +819,10 @@ export const useAvailabilitySystem = () => {
     duration: number
     buffer: number
     existingAppointments: Appointment[]
+    locationTimeWindows?: Array<{ start: string; end: string; days: number[] }>
+    maxTravelTimeMinutes?: number
+    googleApiKey?: string
+    peakSettings?: any
   }): AvailableSlot[] => {
     const { workingHours, staff, location, date, duration: durationParam, buffer, existingAppointments } = params
     
@@ -859,7 +924,6 @@ export const useAvailabilitySystem = () => {
         slotsBlocked++
         console.log('❌ Slot conflict at', minutes, '-', slotEndMinutes, 'with buffer zones:', bufferZones)
       } else {
-        slotsGenerated++
         // Convert back to time string
         const startHour = Math.floor(minutes / 60)
         const startMin = minutes % 60
@@ -868,7 +932,24 @@ export const useAvailabilitySystem = () => {
         
         const startTime = `${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`
         const endTime = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`
+        const slotStartDateTime = new Date(`${date}T${startTime}:00`)
+        const slotEndDateTime = new Date(`${date}T${endTime}:00`)
         
+        // Check 1: Time Windows (if defined)
+        if (params.locationTimeWindows && params.locationTimeWindows.length > 0) {
+          if (!isWithinTimeWindows(slotStartDateTime, params.locationTimeWindows)) {
+            slotsBlocked++
+            console.log('❌ Slot outside time windows:', startTime)
+            continue
+          }
+        }
+        
+        // Check 2: Travel Time Validation (if enabled)
+        // Note: This is a synchronous function, so we can't use async validation here
+        // Travel time validation will be done in a separate pass or on the frontend
+        // For now, we'll add the slot and mark it with validation status
+        
+        slotsGenerated++
         slots.push({
           staff_id: staff.id,
           staff_name: `${staff.first_name} ${staff.last_name}`,
@@ -894,6 +975,251 @@ export const useAvailabilitySystem = () => {
     return slots
   }
 
+  /**
+   * Validates slots with travel time checks
+   * Filters out slots where the instructor can't travel in time
+   */
+  const validateSlotsWithTravelTime = async (
+    slots: AvailableSlot[],
+    staffId: string,
+    locationPLZ: string,
+    maxTravelTimeMinutes: number,
+    googleApiKey: string,
+    peakSettings?: any
+  ): Promise<AvailableSlot[]> => {
+    console.log(`🚗 Starting travel-time validation for ${slots.length} slots`)
+    const validSlots: AvailableSlot[] = []
+    
+    // Get only INTERNAL appointments (not external busy times) for this staff member
+    // External busy times don't have locations, so we can't calculate travel time
+    const staffAppointments = appointmentsCache.value
+      .filter(apt => 
+        apt.staff_id === staffId && 
+        apt.type !== 'external' && // Exclude external busy times
+        apt.location_id // Must have a location
+      )
+      .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    
+    console.log(`📅 Found ${staffAppointments.length} internal appointments for staff (excluding ${appointmentsCache.value.filter(apt => apt.staff_id === staffId).length - staffAppointments.length} external busy times)`)
+    
+    // If no appointments, all slots are valid
+    if (staffAppointments.length === 0) {
+      console.log('✅ No existing appointments with locations, all slots valid')
+      return slots
+    }
+    
+    // Helper function to parse local time strings correctly
+    const parseLocalTime = (timeStr: string | undefined): Date => {
+      if (!timeStr) {
+        console.warn('⚠️ parseLocalTime received undefined/null, returning current time')
+        return new Date()
+      }
+      
+      // Handle both formats: "2025-11-11 09:00:00" (local) and "2025-11-11T09:00:00.000Z" (ISO)
+      const normalized = timeStr.replace('T', ' ').split('.')[0] // Remove milliseconds and Z
+      const [datePart, timePart] = normalized.split(' ')
+      
+      if (!datePart || !timePart) {
+        console.warn('⚠️ parseLocalTime received invalid format:', timeStr)
+        return new Date(timeStr) // Fallback to default Date parsing
+      }
+      
+      const [year, month, day] = datePart.split('-').map(Number)
+      const [hours, minutes, seconds] = timePart.split(':').map(Number)
+      return new Date(year, month - 1, day, hours, minutes, seconds || 0)
+    }
+    
+    // Create a set of slots that need validation (only slots adjacent to appointments)
+    const slotsToValidate = new Set<string>()
+    
+    for (const appointment of staffAppointments) {
+      const aptStart = parseLocalTime(appointment.start_time)
+      const aptEnd = parseLocalTime(appointment.end_time)
+      
+      // Find slots that are directly before or after this appointment
+      slots.forEach(slot => {
+        const slotStart = parseLocalTime(slot.start_time)
+        const slotEnd = parseLocalTime(slot.end_time)
+        
+        // Slot is directly before appointment (slot ends when/before appointment starts)
+        if (slotEnd <= aptStart && slotEnd.getTime() > aptStart.getTime() - 4 * 60 * 60 * 1000) {
+          slotsToValidate.add(slot.id)
+        }
+        
+        // Slot is directly after appointment (slot starts when/after appointment ends)
+        if (slotStart >= aptEnd && slotStart.getTime() < aptEnd.getTime() + 4 * 60 * 60 * 1000) {
+          slotsToValidate.add(slot.id)
+        }
+      })
+    }
+    
+    console.log(`🎯 Only ${slotsToValidate.size} slots need travel-time validation (adjacent to appointments)`)
+    console.log('🎯 Slots to validate:', Array.from(slotsToValidate).map(id => {
+      const slot = slots.find(s => s.id === id)
+      return slot ? `${slot.start_time} (${slot.location_name})` : id
+    }))
+    
+    // Step 1: Collect all unique PLZ pairs that need to be fetched
+    const plzPairsNeeded = new Set<string>()
+    const slotValidationData: Array<{
+      slot: AvailableSlot
+      previousAppointment: any
+      nextAppointment: any
+      prevPLZ: string | null
+      nextPLZ: string | null
+    }> = []
+    
+    for (const slot of slots) {
+      if (!slotsToValidate.has(slot.id)) {
+        validSlots.push(slot)
+        continue
+      }
+      
+      const slotStart = parseLocalTime(slot.start_time)
+      const slotEnd = parseLocalTime(slot.end_time)
+      
+      const previousAppointment = staffAppointments
+        .filter(apt => parseLocalTime(apt.end_time) <= slotStart)
+        .pop()
+      
+      const nextAppointment = staffAppointments
+        .find(apt => parseLocalTime(apt.start_time) >= slotEnd)
+      
+      let prevPLZ: string | null = null
+      let nextPLZ: string | null = null
+      
+      // Extract PLZ from previous appointment
+      if (previousAppointment) {
+        const prevAddress = previousAppointment.custom_location_address || previousAppointment.locations?.address
+        if (prevAddress) {
+          prevPLZ = extractPLZFromAddress(prevAddress)
+          if (prevPLZ && prevPLZ !== locationPLZ) {
+            plzPairsNeeded.add(`${prevPLZ}|${locationPLZ}`)
+          }
+        }
+      }
+      
+      // Extract PLZ from next appointment
+      if (nextAppointment) {
+        const nextAddress = nextAppointment.custom_location_address || nextAppointment.locations?.address
+        if (nextAddress) {
+          nextPLZ = extractPLZFromAddress(nextAddress)
+          if (nextPLZ && nextPLZ !== locationPLZ) {
+            plzPairsNeeded.add(`${locationPLZ}|${nextPLZ}`)
+          }
+        }
+      }
+      
+      slotValidationData.push({
+        slot,
+        previousAppointment,
+        nextAppointment,
+        prevPLZ,
+        nextPLZ
+      })
+    }
+    
+    console.log(`📍 Need to fetch ${plzPairsNeeded.size} unique PLZ pairs for validation`)
+    console.log(`📍 PLZ pairs:`, Array.from(plzPairsNeeded))
+    console.log(`📍 Staff appointments found:`, staffAppointments.length, staffAppointments.map(a => ({
+      start: a.start_time,
+      end: a.end_time,
+      location_id: a.location_id,
+      custom_address: a.custom_location_address,
+      address: a.locations?.address
+    })))
+    
+    // Step 2: Batch fetch all travel times at once
+    const travelTimeCache = new Map<string, number>()
+    
+    if (plzPairsNeeded.size > 0) {
+      const fetchPromises = Array.from(plzPairsNeeded).map(async (pairKey) => {
+        const [fromPLZ, toPLZ] = pairKey.split('|')
+        try {
+          const response = await $fetch<{ travelTime: number }>('/api/pickup/check-distance', {
+            method: 'POST',
+            body: {
+              fromPLZ,
+              toPLZ,
+              appointmentTime: new Date().toISOString()
+            },
+            timeout: 15000 // Increased timeout to 15 seconds
+          })
+          travelTimeCache.set(pairKey, response.travelTime)
+          console.log(`✅ Fetched ${fromPLZ} -> ${toPLZ}: ${response.travelTime} min`)
+        } catch (error: any) {
+          console.warn(`⚠️ Could not fetch ${fromPLZ} -> ${toPLZ} (${error?.message || 'timeout'}), skipping travel-time check for this pair`)
+          // Don't add to cache - slots will be considered valid if we can't verify travel time
+        }
+      })
+      
+      await Promise.all(fetchPromises)
+      
+      if (travelTimeCache.size === 0 && plzPairsNeeded.size > 0) {
+        console.warn('⚠️ No travel times could be fetched - all slots will be considered valid')
+      } else {
+        console.log(`✅ Batch fetched ${travelTimeCache.size}/${plzPairsNeeded.size} travel times`)
+      }
+    }
+    
+    // Step 3: Validate all slots using cached travel times
+    for (const data of slotValidationData) {
+      const { slot, previousAppointment, nextAppointment, prevPLZ, nextPLZ } = data
+      const slotStart = parseLocalTime(slot.start_time)
+      const slotEnd = parseLocalTime(slot.end_time)
+      
+      let isValid = true
+      let reason = ''
+      
+      // Check previous appointment travel time
+      if (previousAppointment && prevPLZ && prevPLZ !== locationPLZ) {
+        const pairKey = `${prevPLZ}|${locationPLZ}`
+        const travelTime = travelTimeCache.get(pairKey)
+        
+        if (travelTime !== undefined) {
+          const timeDiffMinutes = (slotStart.getTime() - parseLocalTime(previousAppointment.end_time).getTime()) / 1000 / 60
+          const requiredTime = travelTime + 5 // 5 min buffer
+          
+          if (timeDiffMinutes < requiredTime) {
+            isValid = false
+            reason = `Nicht genug Zeit vom vorherigen Termin (${Math.round(timeDiffMinutes)} Min verfügbar, ${requiredTime} Min benötigt)`
+          } else if (travelTime > maxTravelTimeMinutes) {
+            isValid = false
+            reason = `Zu weit vom vorherigen Termin entfernt (${travelTime} Min, max ${maxTravelTimeMinutes} Min)`
+          }
+        }
+      }
+      
+      // Check next appointment travel time
+      if (isValid && nextAppointment && nextPLZ && nextPLZ !== locationPLZ) {
+        const pairKey = `${locationPLZ}|${nextPLZ}`
+        const travelTime = travelTimeCache.get(pairKey)
+        
+        if (travelTime !== undefined) {
+          const timeDiffMinutes = (parseLocalTime(nextAppointment.start_time).getTime() - slotEnd.getTime()) / 1000 / 60
+          const requiredTime = travelTime + 5 // 5 min buffer
+          
+          if (timeDiffMinutes < requiredTime) {
+            isValid = false
+            reason = `Nicht genug Zeit zum nächsten Termin (${Math.round(timeDiffMinutes)} Min verfügbar, ${requiredTime} Min benötigt)`
+          } else if (travelTime > maxTravelTimeMinutes) {
+            isValid = false
+            reason = `Zu weit zum nächsten Termin entfernt (${travelTime} Min, max ${maxTravelTimeMinutes} Min)`
+          }
+        }
+      }
+      
+      if (isValid) {
+        validSlots.push(slot)
+      } else {
+        console.log('❌ Slot blocked by travel time:', slot.start_time, reason)
+      }
+    }
+    
+    console.log(`✅ Travel-time validation complete: ${validSlots.length}/${slots.length} slots valid`)
+    return validSlots
+  }
+
   const clearCache = () => {
     staffCache.value = []
     categoriesCache.value = []
@@ -903,6 +1229,11 @@ export const useAvailabilitySystem = () => {
     staffLocationsCache.value = []
     appointmentsCache.value = []
     availableSlots.value = []
+  }
+  
+  const clearAppointmentsCache = () => {
+    appointmentsCache.value = []
+    console.log('🗑️ Appointments cache cleared')
   }
 
   return {
@@ -924,6 +1255,8 @@ export const useAvailabilitySystem = () => {
     loadStaffCapabilities,
     loadWorkingHours,
     loadAppointments,
-    clearCache
+    validateSlotsWithTravelTime,
+    clearCache,
+    clearAppointmentsCache
   }
 }
