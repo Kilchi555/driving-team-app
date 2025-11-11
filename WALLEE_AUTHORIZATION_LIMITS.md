@@ -75,17 +75,15 @@ const authDate = new Date(
 )
 ```
 
-### Option 3: Zwei-Stufen-Prozess (BESTE LÖSUNG)
+### Option 3: Zwei-Stufen-Prozess (NICHT EMPFOHLEN)
 
-1. **Sofortige Mini-Authorization (CHF 1.00)**
-   - Validiert Zahlungsmittel
-   - Wird sofort storniert
-   - Keine Hold-Time
+**Warum nicht:**
+- ❌ CHF 1.00 Validierung prüft NICHT ob genug Geld vorhanden ist
+- ❌ Erste echte Zahlung validiert bereits das Zahlungsmittel
+- ❌ Token wird nach erster Zahlung gespeichert
+- ❌ Redundant und unnötige Komplexität
 
-2. **Finale Authorization kurz vor Termin (48-72h)**
-   - Voller Betrag
-   - Kurze Hold-Time
-   - Hohe Erfolgsrate
+**Fazit:** Die erste Zahlung ist bereits die Validierung!
 
 ## 🚀 Quick Fix für Production
 
