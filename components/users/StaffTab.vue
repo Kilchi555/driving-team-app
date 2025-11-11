@@ -469,6 +469,7 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Adresse *</label>
                 <input 
+                  ref="newLocationAddressInput"
                   v-model="newLocation.address"
                   type="text" 
                   required
@@ -539,6 +540,7 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Adresse *</label>
                 <input 
+                  ref="editLocationAddressInput"
                   v-model="editLocation.address"
                   type="text" 
                   required
@@ -593,11 +595,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useFeatures } from '~/composables/useFeatures'
+import { useRuntimeConfig } from '#app'
 
 // Props
 const props = defineProps<{
@@ -653,6 +656,12 @@ const editLocation = ref({
   address: '',
   location_type: 'standard'
 })
+
+// Google Places Autocomplete refs
+const newLocationAddressInput = ref<HTMLInputElement | null>(null)
+const editLocationAddressInput = ref<HTMLInputElement | null>(null)
+let newLocationAutocomplete: any = null
+let editLocationAutocomplete: any = null
 
 // Optional Filter: Wenn in Detailansicht eines Staffs verwendet, nur diesen laden
 const staffIdFilter = computed<string | null>(() => {
@@ -934,7 +943,134 @@ const updateStaffAvailability = async (staff: any) => {
   }
 }
 
-const openLocationModal = (staff: any) => {
+// Google Maps Script Loading
+let googleMapsLoaded = false
+let googleMapsLoadingPromise: Promise<void> | null = null
+
+const loadGoogleMapsScript = (): Promise<void> => {
+  if (googleMapsLoaded && typeof (window as any).google !== 'undefined') {
+    return Promise.resolve()
+  }
+
+  if (googleMapsLoadingPromise) {
+    return googleMapsLoadingPromise
+  }
+
+  googleMapsLoadingPromise = new Promise((resolve, reject) => {
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
+    if (existingScript) {
+      googleMapsLoaded = true
+      resolve()
+      return
+    }
+
+    const config = useRuntimeConfig()
+    const apiKey = config.public.googleMapsApiKey
+
+    if (!apiKey) {
+      reject(new Error('Google Maps API key not found'))
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`
+    script.async = true
+    script.defer = true
+
+    script.onload = () => {
+      googleMapsLoaded = true
+      resolve()
+    }
+
+    script.onerror = () => {
+      googleMapsLoadingPromise = null
+      reject(new Error('Failed to load Google Maps script'))
+    }
+
+    document.head.appendChild(script)
+  })
+
+  return googleMapsLoadingPromise
+}
+
+// Google Places Autocomplete initialization
+const initializeNewLocationAutocomplete = async () => {
+  try {
+    await loadGoogleMapsScript()
+    
+    if (!newLocationAddressInput.value) {
+      console.warn('New location address input not found')
+      return
+    }
+    
+    // Destroy existing autocomplete if any
+    if (newLocationAutocomplete) {
+      (window as any).google.maps.event.clearInstanceListeners(newLocationAddressInput.value)
+    }
+    
+    // Create new autocomplete instance
+    newLocationAutocomplete = new (window as any).google.maps.places.Autocomplete(
+      newLocationAddressInput.value,
+      {
+        types: ['address'],
+        componentRestrictions: { country: 'ch' },
+        fields: ['formatted_address', 'address_components', 'geometry']
+      }
+    )
+    
+    // Listen for place selection
+    newLocationAutocomplete.addListener('place_changed', () => {
+      const place = newLocationAutocomplete?.getPlace()
+      if (place?.formatted_address) {
+        newLocation.value.address = place.formatted_address
+      }
+    })
+    
+    console.log('✅ Google Places Autocomplete initialized for new location')
+  } catch (error) {
+    console.error('❌ Error initializing Google Places Autocomplete:', error)
+  }
+}
+
+const initializeEditLocationAutocomplete = async () => {
+  try {
+    await loadGoogleMapsScript()
+    
+    if (!editLocationAddressInput.value) {
+      console.warn('Edit location address input not found')
+      return
+    }
+    
+    // Destroy existing autocomplete if any
+    if (editLocationAutocomplete) {
+      (window as any).google.maps.event.clearInstanceListeners(editLocationAddressInput.value)
+    }
+    
+    // Create new autocomplete instance
+    editLocationAutocomplete = new (window as any).google.maps.places.Autocomplete(
+      editLocationAddressInput.value,
+      {
+        types: ['address'],
+        componentRestrictions: { country: 'ch' },
+        fields: ['formatted_address', 'address_components', 'geometry']
+      }
+    )
+    
+    // Listen for place selection
+    editLocationAutocomplete.addListener('place_changed', () => {
+      const place = editLocationAutocomplete?.getPlace()
+      if (place?.formatted_address) {
+        editLocation.value.address = place.formatted_address
+      }
+    })
+    
+    console.log('✅ Google Places Autocomplete initialized for edit location')
+  } catch (error) {
+    console.error('❌ Error initializing Google Places Autocomplete:', error)
+  }
+}
+
+const openLocationModal = async (staff: any) => {
   selectedStaffForLocation.value = staff
   newLocation.value = {
     name: '',
@@ -942,9 +1078,13 @@ const openLocationModal = (staff: any) => {
     location_type: 'standard'
   }
   showAddLocationModal.value = true
+  
+  // Initialize Google Places Autocomplete after modal is rendered
+  await nextTick()
+  initializeNewLocationAutocomplete()
 }
 
-const openEditLocationModal = (location: any) => {
+const openEditLocationModal = async (location: any) => {
   editingLocation.value = location
   editLocation.value = {
     id: location.id,
@@ -953,6 +1093,10 @@ const openEditLocationModal = (location: any) => {
     location_type: location.location_type
   }
   showEditLocationModal.value = true
+  
+  // Initialize Google Places Autocomplete after modal is rendered
+  await nextTick()
+  initializeEditLocationAutocomplete()
 }
 
 const updateLocation = async () => {
