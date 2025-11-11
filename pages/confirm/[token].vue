@@ -354,9 +354,10 @@ const confirmAppointment = async () => {
       
       if (theoreticalScheduledDate < now) {
         // Zahlung wäre bereits fällig gewesen → SOFORT verarbeiten
+        // ✅ WICHTIG: Bei kurzfristigen Terminen KEINE Authorization Hold, sondern sofortige Zahlung!
         shouldProcessImmediately = true
-        scheduledPaymentDate = now.toISOString() // Setze auf jetzt für sofortige Verarbeitung
-        scheduledAuthorizationDate = now.toISOString()
+        scheduledPaymentDate = null // Keine geplante Zahlung, wird sofort durchgeführt
+        scheduledAuthorizationDate = null // Keine Authorization Hold nötig
       } else {
         // Normal: Zahlung ist in der Zukunft
         scheduledPaymentDate = theoreticalScheduledDate.toISOString()
@@ -397,7 +398,8 @@ const confirmAppointment = async () => {
     if (updateError) throw updateError
 
     // ✅ Erstelle/Update Payment-Record - automatische Zahlung ist immer aktiviert wenn automaticPaymentEnabled = true
-    if (willUseAutomaticPayment && scheduledPaymentDate) {
+    // ODER wenn sofortige Zahlung erforderlich ist (shouldProcessImmediately)
+    if (willUseAutomaticPayment && (scheduledPaymentDate || shouldProcessImmediately)) {
       try {
         // ✅ PRÜFUNG: Prüfe ob bereits ein Payment mit anderer Zahlungsmethode existiert
         const { data: existingPayment } = await supabase
@@ -503,33 +505,38 @@ const confirmAppointment = async () => {
 
         // ✅ SOFORTIGE VERARBEITUNG: Wenn Bestätigung zu spät kommt (< hoursBefore vor Termin)
         if (shouldProcessImmediately) {
-          console.log('⚡ Processing payment immediately...')
+          console.log('⚡ Immediate payment required - redirecting to payment...')
           
-          try {
-            // Rufe API auf, um Zahlung sofort zu verarbeiten
-            const immediateResult = await $fetch('/api/payments/process-immediate', {
-              method: 'POST',
-              body: {
-                paymentId: paymentData.id
+          // Prüfe ob bereits ein Token vorhanden ist
+          if (selectedPaymentMethodId.value) {
+            // Token vorhanden → Verarbeite sofort mit gespeichertem Token
+            try {
+              const immediateResult = await $fetch('/api/payments/process-immediate', {
+                method: 'POST',
+                body: {
+                  paymentId: paymentData.id
+                }
+              }) as { success?: boolean; error?: string }
+
+              if (immediateResult.success) {
+                console.log('✅ Immediate payment processed successfully:', immediateResult)
+                alert('Termin bestätigt! Die Zahlung wurde sofort verarbeitet.')
+                return // Fertig!
+              } else {
+                console.warn('⚠️ Immediate payment processing returned:', immediateResult)
               }
-            }) as { success?: boolean; error?: string }
-
-            if (immediateResult.success) {
-              console.log('✅ Immediate payment processed successfully:', immediateResult)
-              
-              // Zeige Erfolgsmeldung
-              alert('Termin bestätigt! Die Zahlung wurde sofort verarbeitet, da die Bestätigung weniger als ' + 
-                    (automaticPaymentHoursBefore.value || 24) + ' Stunden vor dem Termin erfolgte.')
-            } else {
-              console.warn('⚠️ Immediate payment processing returned:', immediateResult)
-              alert('Termin bestätigt. Die Zahlung wird in Kürze verarbeitet.')
+            } catch (immediateErr: any) {
+              console.error('❌ Error processing immediate payment:', immediateErr)
             }
-
-          } catch (immediateErr: any) {
-            console.error('❌ Error processing immediate payment:', immediateErr)
-            // Nicht kritisch - Payment wurde erstellt, wird später via Cron verarbeitet
-            alert('Termin bestätigt. Die automatische Zahlung wird in Kürze verarbeitet.')
           }
+          
+          // Kein Token oder Fehler → Leite zur normalen Zahlungsseite weiter
+          console.log('💳 Redirecting to payment page for immediate payment...')
+          
+          // Leite zur Payment-Seite weiter (wird dort sofort verarbeitet)
+          const tenantSlug = window.location.pathname.split('/')[1] || ''
+          window.location.href = `/${tenantSlug}/customer/payment-process?payment_id=${paymentData.id}&immediate=true`
+          return // Wichtig: Verhindere weitere Ausführung
         }
 
       } catch (paymentErr: any) {
