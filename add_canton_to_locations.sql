@@ -1,4 +1,4 @@
--- Add canton, city, and postal_code columns to locations table
+-- Add canton, city, postal_code, and updated_at columns to locations table
 -- These fields are useful for better location management and filtering
 
 -- Add canton column (e.g., ZH, BE, LU, etc.)
@@ -13,10 +13,15 @@ ADD COLUMN IF NOT EXISTS city VARCHAR(255);
 ALTER TABLE locations
 ADD COLUMN IF NOT EXISTS postal_code VARCHAR(10);
 
+-- Add updated_at column for tracking changes
+ALTER TABLE locations
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
 -- Add comments for documentation
 COMMENT ON COLUMN locations.canton IS 'Swiss canton abbreviation (e.g., ZH, BE, LU)';
 COMMENT ON COLUMN locations.city IS 'City name';
 COMMENT ON COLUMN locations.postal_code IS 'Postal code (PLZ)';
+COMMENT ON COLUMN locations.updated_at IS 'Timestamp of last update';
 
 -- Create index for faster filtering by canton
 CREATE INDEX IF NOT EXISTS idx_locations_canton ON locations(canton);
@@ -25,6 +30,18 @@ CREATE INDEX IF NOT EXISTS idx_locations_canton ON locations(canton);
 CREATE INDEX IF NOT EXISTS idx_locations_postal_code ON locations(postal_code);
 
 -- Optional: Add check constraint for canton (only valid Swiss cantons)
+-- Drop existing constraint if it exists, then recreate
+DO $$ 
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'check_valid_canton' 
+    AND conrelid = 'locations'::regclass
+  ) THEN
+    ALTER TABLE locations DROP CONSTRAINT check_valid_canton;
+  END IF;
+END $$;
+
 ALTER TABLE locations
 ADD CONSTRAINT check_valid_canton 
 CHECK (
