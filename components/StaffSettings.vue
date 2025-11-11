@@ -4,7 +4,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] overflow-y-auto">
       
       <!-- Modal Header -->
-      <div class="sticky top-0 bg-white border-b px-2 py-2 flex justify-between items-center">
+      <div class="sticky top-0 bg-white border-b px-4 py-2 flex justify-between items-center">
         <div class="flex items-center space-x-3">
           <!-- Exam Statistics Button -->
           <button
@@ -33,7 +33,7 @@
       </div>
 
       <!-- Modal Content -->
-      <div class="p-6 space-y-4">
+      <div class="p-4 space-y-2">
         
         <!-- Loading State -->
         <div v-if="isLoading" class="space-y-4">
@@ -51,7 +51,7 @@
         </div>
 
         <!-- Accordion Sections -->
-        <div v-if="!isLoading" class="space-y-3">
+        <div v-if="!isLoading" class="space-y-2">
 
         <!-- Externe Kalender Einstellungen -->
         <div class="border border-gray-200 rounded-lg">
@@ -270,11 +270,11 @@
               <span class="text-gray-600 font-bold">{{ openSections.worktime ? '−' : '+' }}</span>
             </button>
             
-            <div v-if="openSections.worktime" class="px-4 pb-4 border-t border-gray-100">
+            <div v-if="openSections.worktime" class="px-2 pb-4 border-t border-gray-100">
               <div class="space-y-4 mt-4">
                 
                 <!-- Info Text -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
                   <p class="text-sm text-blue-800">
                     💡 <strong>Arbeitszeiten:</strong> Sie können mehrere Arbeitszeit-Blöcke pro Tag erstellen (z.B. Vormittag und Nachmittag mit Mittagspause). Nicht-Arbeitszeiten werden automatisch als "gesperrt" im Kalender angezeigt.
                   </p>
@@ -285,7 +285,7 @@
                   <div
                     v-for="day in weekdays"
                     :key="day.value"
-                    class="border border-gray-200 rounded-lg p-4"
+                    class="border border-gray-200 rounded-lg p-2"
                   >
                     <!-- Wochentag Header -->
                     <div class="flex items-center justify-between mb-3">
@@ -308,7 +308,7 @@
                       <div
                         v-for="(block, blockIndex) in workingDayForm[day.value].blocks"
                         :key="blockIndex"
-                        class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
+                        class="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg"
                       >
                         <!-- Start Zeit -->
                         <div class="flex-1">
