@@ -106,10 +106,13 @@
             <p class="text-sm text-blue-800">
               <strong>Anleitung Google Calendar:</strong>
               <br>1. Öffnen Sie Google Calendar im Browser.
-              <br>2. Gehen Sie zu den Einstellungen.
-              <br>3. Wählen Sie Ihren Kalender aus.
-              <br>4. Scrollen Sie zu "Kalender integrieren".
-              <br>5. Kopieren Sie die "Öffentliche Adresse im iCal-Format".
+              <br>2. Gehen Sie zu den Einstellungen (Zahnrad).
+              <br>3. Wählen Sie Ihren Kalender aus (links).
+              <br>4. Scrollen Sie zu "Zugriffsberechtigungen für Termine".
+              <br>5. ✅ <strong>WICHTIG:</strong> Aktivieren Sie "Öffentlich freigeben".
+              <br>6. Scrollen Sie weiter zu "Kalender integrieren".
+              <br>7. Kopieren Sie die "Geheime Adresse im iCal-Format".
+              <br><span class="text-xs">Die URL muss /private-XXX/ enthalten!</span>
             </p>
           </div>
           
@@ -181,6 +184,34 @@
     <div v-if="success" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
       <p class="text-sm text-green-800 break-words">{{ success }}</p>
     </div>
+
+    <!-- Debug Log (sichtbar auf Mobile) -->
+    <div v-if="debugLogs.length > 0" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded-md">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs font-semibold text-gray-700">Debug-Log (für Support)</p>
+        <button 
+          @click="clearDebugLogs" 
+          class="text-xs text-gray-600 hover:text-gray-800 underline"
+        >
+          Löschen
+        </button>
+      </div>
+      <div class="space-y-1 max-h-60 overflow-y-auto">
+        <div 
+          v-for="(log, index) in debugLogs" 
+          :key="index"
+          class="text-xs font-mono break-words"
+          :class="{
+            'text-red-700': log.type === 'error',
+            'text-green-700': log.type === 'success',
+            'text-blue-700': log.type === 'info',
+            'text-gray-700': log.type === 'log'
+          }"
+        >
+          <span class="text-gray-500">{{ log.timestamp }}</span> {{ log.message }}
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -203,6 +234,33 @@ const newCalendar = ref({
   calendar_name: '',
   ics_url: ''
 })
+
+// Debug Logs (sichtbar auf Mobile)
+interface DebugLog {
+  timestamp: string
+  message: string
+  type: 'log' | 'info' | 'success' | 'error'
+}
+
+const debugLogs = ref<DebugLog[]>([])
+
+const addDebugLog = (message: string, type: 'log' | 'info' | 'success' | 'error' = 'log') => {
+  const timestamp = new Date().toLocaleTimeString('de-CH', { 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit' 
+  })
+  debugLogs.value.push({ timestamp, message, type })
+  
+  // Limitiere auf 50 Logs
+  if (debugLogs.value.length > 50) {
+    debugLogs.value.shift()
+  }
+}
+
+const clearDebugLogs = () => {
+  debugLogs.value = []
+}
 
 // Computed
 const canConnect = computed(() => {
@@ -315,16 +373,24 @@ const syncCalendar = async (calendarId: string) => {
   success.value = null
 
   try {
+    addDebugLog('🔄 Starte Synchronisation...', 'info')
     console.log('🔄 Starting calendar sync for:', calendarId)
+    
     const calendar = externalCalendars.value.find(c => c.id === calendarId)
-    if (!calendar) throw new Error('Kalender nicht gefunden')
+    if (!calendar) {
+      addDebugLog('❌ Kalender nicht gefunden', 'error')
+      throw new Error('Kalender nicht gefunden')
+    }
 
+    addDebugLog(`📅 Kalender: ${calendar.calendar_name}`, 'info')
     console.log('📅 Calendar found:', calendar.calendar_name, 'ICS URL:', calendar.ics_url ? 'Yes' : 'No')
 
     // Fallback: Wenn eine ICS-URL vorhanden ist, immer darüber synchronisieren
     if (calendar.ics_url) {
       // Sync ICS calendar
+      addDebugLog('🌐 Rufe API auf...', 'info')
       console.log('🌐 Fetching from API: /api/external-calendars/sync-ics')
+      
       const response = await $fetch<{ success: boolean, imported_events?: number, message?: string, error?: string }>('/api/external-calendars/sync-ics', {
         method: 'POST',
         body: {
@@ -333,16 +399,21 @@ const syncCalendar = async (calendarId: string) => {
         }
       })
 
+      addDebugLog(`📡 API Antwort: ${JSON.stringify(response)}`, 'info')
       console.log('📡 API Response:', response)
 
       if (response.success) {
-        success.value = `Kalender synchronisiert! ${response.imported_events || 0} Termine importiert.`
+        const successMsg = `Kalender synchronisiert! ${response.imported_events || 0} Termine importiert.`
+        success.value = successMsg
+        addDebugLog(`✅ ${successMsg}`, 'success')
         console.log('✅ Sync successful, reloading calendars...')
         await loadExternalCalendars()
+        addDebugLog('✅ Kalender neu geladen', 'success')
         console.log('✅ Calendars reloaded')
       } else {
         // Zeige detaillierten Fehler vom Server an
         const errorMsg = `${response.message}${response.error ? ' - ' + response.error : ''}`
+        addDebugLog(`❌ Sync fehlgeschlagen: ${errorMsg}`, 'error')
         console.error('❌ Sync failed:', errorMsg)
         error.value = errorMsg
         return
@@ -350,19 +421,23 @@ const syncCalendar = async (calendarId: string) => {
     } else {
       // TODO: Optional: OAuth-Flow implementieren
       const errorMsg = 'Bitte eine ICS-URL hinterlegen, OAuth-Sync ist noch nicht aktiv'
+      addDebugLog(`❌ ${errorMsg}`, 'error')
       console.error('❌', errorMsg)
       throw new Error(errorMsg)
     }
   } catch (err: any) {
+    const errorMsg = err?.data?.message || err?.message || 'Fehler beim Synchronisieren'
+    addDebugLog(`❌ Fehler: ${errorMsg}`, 'error')
     console.error('❌ Sync error:', err)
     console.error('❌ Error details:', {
       message: err?.message,
       data: err?.data,
       statusCode: err?.statusCode
     })
-    error.value = (err?.data?.message || err?.message || 'Fehler beim Synchronisieren')
+    error.value = errorMsg
   } finally {
     isSyncing.value = false
+    addDebugLog('🏁 Sync abgeschlossen', 'info')
     console.log('🏁 Sync process completed')
   }
 }

@@ -35,11 +35,18 @@
 1. Gehe zu **Google Calendar** (calendar.google.com)
 2. Klicke auf **Einstellungen** (Zahnrad oben rechts)
 3. Wähle deinen **Kalender** aus (links)
-4. Scrolle zu **"Kalender integrieren"**
-5. Kopiere die **"Geheime Adresse im iCal-Format"**
+4. Scrolle zu **"Zugriffsberechtigungen für Termine"**
+5. ✅ **WICHTIG:** Aktiviere das Kästchen **"Öffentlich freigeben"**
+6. Scrolle weiter zu **"Kalender integrieren"**
+7. Kopiere die **"Geheime Adresse im iCal-Format"**
    - Muss so aussehen: `https://calendar.google.com/calendar/ical/DEINE_EMAIL/private-XXX/basic.ics`
    - **Wichtig:** Muss `/private-XXX/` enthalten!
-6. Füge die URL in der App ein (Kalender trennen → neu verbinden)
+8. Füge die URL in der App ein (Kalender trennen → neu verbinden)
+
+**Sicherheit:**
+- Auch wenn "öffentlich freigeben" aktiviert ist, ist der Kalender **nicht** öffentlich sichtbar
+- Die URL enthält einen geheimen Token (`/private-XXX/`)
+- Nur wer diese URL kennt, kann den Kalender sehen
 
 #### Problem B: "0 events imported"
 **Grund:** Keine Termine im nächsten Jahr
