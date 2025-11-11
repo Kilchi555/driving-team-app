@@ -315,12 +315,16 @@ const syncCalendar = async (calendarId: string) => {
   success.value = null
 
   try {
+    console.log('🔄 Starting calendar sync for:', calendarId)
     const calendar = externalCalendars.value.find(c => c.id === calendarId)
     if (!calendar) throw new Error('Kalender nicht gefunden')
+
+    console.log('📅 Calendar found:', calendar.calendar_name, 'ICS URL:', calendar.ics_url ? 'Yes' : 'No')
 
     // Fallback: Wenn eine ICS-URL vorhanden ist, immer darüber synchronisieren
     if (calendar.ics_url) {
       // Sync ICS calendar
+      console.log('🌐 Fetching from API: /api/external-calendars/sync-ics')
       const response = await $fetch<{ success: boolean, imported_events?: number, message?: string, error?: string }>('/api/external-calendars/sync-ics', {
         method: 'POST',
         body: {
@@ -329,23 +333,37 @@ const syncCalendar = async (calendarId: string) => {
         }
       })
 
+      console.log('📡 API Response:', response)
+
       if (response.success) {
-        success.value = `Kalender synchronisiert! ${response.imported_events} Termine importiert.`
+        success.value = `Kalender synchronisiert! ${response.imported_events || 0} Termine importiert.`
+        console.log('✅ Sync successful, reloading calendars...')
         await loadExternalCalendars()
+        console.log('✅ Calendars reloaded')
       } else {
         // Zeige detaillierten Fehler vom Server an
-        error.value = `${response.message}${response.error ? ' - ' + response.error : ''}`
+        const errorMsg = `${response.message}${response.error ? ' - ' + response.error : ''}`
+        console.error('❌ Sync failed:', errorMsg)
+        error.value = errorMsg
         return
       }
     } else {
       // TODO: Optional: OAuth-Flow implementieren
-      throw new Error('Bitte eine ICS-URL hinterlegen, OAuth-Sync ist noch nicht aktiv')
+      const errorMsg = 'Bitte eine ICS-URL hinterlegen, OAuth-Sync ist noch nicht aktiv'
+      console.error('❌', errorMsg)
+      throw new Error(errorMsg)
     }
   } catch (err: any) {
-    console.error('Sync error:', err)
+    console.error('❌ Sync error:', err)
+    console.error('❌ Error details:', {
+      message: err?.message,
+      data: err?.data,
+      statusCode: err?.statusCode
+    })
     error.value = (err?.data?.message || err?.message || 'Fehler beim Synchronisieren')
   } finally {
     isSyncing.value = false
+    console.log('🏁 Sync process completed')
   }
 }
 
