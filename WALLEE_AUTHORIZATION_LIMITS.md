@@ -6,13 +6,15 @@ Wallee/Kreditkarten haben Limits, wie lange eine Zahlung "reserviert" (authorize
 
 ## Limits nach Zahlungsmittel
 
-| Zahlungsmittel | Max. Authorization Hold Time |
-|----------------|------------------------------|
-| Visa/Mastercard | **7 Tage** |
-| American Express | 30 Tage |
-| Twint | Sofort (kein Hold) |
-| PostFinance | Sofort (kein Hold) |
-| PayPal | 29 Tage |
+| Zahlungsmittel | Max. Authorization Hold Time | Quelle |
+|----------------|------------------------------|--------|
+| Visa/Mastercard | **5 Tage** ⚠️ | Wallee Standard (Nov 2025) |
+| American Express | 30 Tage | Kartenorganisation |
+| Twint | Sofort (kein Hold) | Direktzahlung |
+| PostFinance | Sofort (kein Hold) | Direktzahlung |
+| PayPal | 29 Tage | PayPal Policy |
+
+**⚠️ WICHTIG:** Die tatsächliche Gültigkeitsdauer wird von Wallee/Kartenorganisationen festgelegt und kann **NICHT** angepasst werden!
 
 ## Aktuelles Problem
 
@@ -38,6 +40,8 @@ Wallee/Kreditkarten haben Limits, wie lange eine Zahlung "reserviert" (authorize
 
 ### Option 1: Reduziere Authorization Hold Time (EMPFOHLEN)
 
+**⚠️ KRITISCH:** Da Wallee nur **5 Tage** Authorization Hold erlaubt, musst du die Zeit deutlich reduzieren!
+
 **Setze `automaticAuthorizationHoursBefore` auf max. 72 Stunden (3 Tage):**
 
 ```sql
@@ -53,12 +57,14 @@ AND tenant_id = '64259d68-195a-4c68-8875-f1b44d962830';
 ```
 
 **Vorteile:**
-- ✅ Sicher innerhalb aller Kreditkarten-Limits
-- ✅ Reduziert Risiko von "Authorization Expired" Fehlern
-- ✅ Bessere Erfolgsrate
+- ✅ **Sicher innerhalb des 5-Tage-Limits** (3 Tage + 1 Tag Capture = 4 Tage total)
+- ✅ Reduziert Risiko von "Authorization Expired" Fehlern drastisch
+- ✅ Bessere Erfolgsrate bei Wallee-Transaktionen
+- ✅ Funktioniert zuverlässig mit Visa/Mastercard
 
 **Nachteile:**
 - ⚠️ Kunde kann theoretisch bis 3 Tage vor Termin absagen ohne Gebühr
+- ⚠️ Kürzere "Sicherheitsperiode" für die Reservierung
 
 ### Option 2: Dynamische Authorization (KOMPLEX)
 
@@ -154,10 +160,29 @@ LIMIT 10;
 | `INSUFFICIENT_FUNDS` | Nicht genug Geld | Kunde informieren |
 | `CARD_DECLINED` | Karte abgelehnt | Andere Zahlungsmethode |
 
+## 🔍 Kann man die Authorization-Dauer anpassen?
+
+**Antwort: NEIN ❌**
+
+Nach Recherche (Nov 2025) ist klar:
+
+1. **Wallee:** Kann die Dauer NICHT anpassen
+2. **Kartenorganisationen:** Legen die Limits fest (Visa/Mastercard = 5 Tage)
+3. **Payment Processor:** Kann die Dauer nicht verlängern
+4. **Merchant:** Hat KEINE Kontrolle über die Authorization-Dauer
+
+**Quellen:**
+- Wallee Dokumentation: "Authorization period is determined by payment processor and issuing bank"
+- Wallee Support: +41 (0) 44 505 13 60 (für individuelle Anfragen)
+- Standard: 5 Tage für Visa/Mastercard (nicht konfigurierbar)
+
+**Fazit:** Die einzige Lösung ist, die Authorization **später** zu machen (näher am Termin), damit sie nicht abläuft!
+
 ## 🎯 Action Items
 
-1. ✅ **Sofort**: Reduziere `automatic_authorization_hours_before` auf 72h
+1. ✅ **SOFORT**: Reduziere `automatic_authorization_hours_before` auf **72h** (3 Tage)
 2. 📊 **Monitoring**: Überwache Erfolgsrate der Authorizations
-3. 🔄 **Optional**: Implementiere Zwei-Stufen-Prozess für bessere UX
+3. 🔄 **Optional**: Implementiere dynamische Authorization (max. 5 Tage vor Capture)
 4. 📧 **Kommunikation**: Informiere Kunden über Zahlungszeitpunkt
+5. ⚠️ **Wichtig**: Aktualisiere bestehende `pending` Payments mit zu langen Hold-Times
 
