@@ -11,13 +11,15 @@ SELECT
 FROM tenant_settings
 WHERE setting_key = 'payment_settings';
 
--- Step 2: Update to 72 hours (3 days)
+-- Step 2: Add/Update automatic_authorization_hours_before to 72 hours (3 days)
+-- This will add the field if it doesn't exist, or update it if it does
 UPDATE tenant_settings
 SET 
   setting_value = jsonb_set(
     setting_value::jsonb,
     '{automatic_authorization_hours_before}',
-    '72'::jsonb
+    '72'::jsonb,
+    true  -- create_if_missing = true
   ),
   updated_at = NOW()
 WHERE setting_key = 'payment_settings';

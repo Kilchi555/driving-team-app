@@ -1061,16 +1061,19 @@
                       v-model.number="paymentSettings.automatic_authorization_hours_before"
                       type="number"
                       min="24"
-                      max="720"
+                      max="120"
                       step="24"
                       class="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="168"
+                      placeholder="72"
                     />
                     <span class="text-sm text-gray-700">Stunden vor dem Termin</span>
-                    <span class="text-xs text-gray-500">({{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage)</span>
+                    <span class="text-xs text-gray-500">({{ Math.round((paymentSettings.automatic_authorization_hours_before || 72) / 24) }} Tage)</span>
                   </div>
                   <p class="text-xs text-gray-500 mt-1">
-                    Der Betrag wird frühestens {{ paymentSettings.automatic_authorization_hours_before || 168 }} Stunden ({{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage) vor dem Termin provisorisch reserviert. Bei Terminen, die weiter in der Zukunft liegen, wird die Reservierung automatisch zum richtigen Zeitpunkt durchgeführt.
+                    Der Betrag wird frühestens {{ paymentSettings.automatic_authorization_hours_before || 72 }} Stunden ({{ Math.round((paymentSettings.automatic_authorization_hours_before || 72) / 24) }} Tage) vor dem Termin provisorisch reserviert. Bei Terminen, die weiter in der Zukunft liegen, wird die Reservierung automatisch zum richtigen Zeitpunkt durchgeführt.
+                  </p>
+                  <p class="text-xs text-red-600 mt-1">
+                    ⚠️ <strong>Wichtig:</strong> Wallee/Kreditkarten erlauben max. 5 Tage (120h) Authorization Hold. Empfohlen: 72h (3 Tage)
                   </p>
                 </div>
 
@@ -1529,7 +1532,7 @@ const sessionSettings = ref({
 const paymentSettings = ref({
   automatic_payment_enabled: false,
   automatic_payment_hours_before: 24,
-  automatic_authorization_hours_before: 168, // 7 Tage
+  automatic_authorization_hours_before: 72, // 3 Tage (max 5 Tage wegen Wallee)
   cash_payments_enabled: true,
   cash_payment_visibility: 'staff_only'
 })
