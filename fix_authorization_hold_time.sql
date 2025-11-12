@@ -5,8 +5,8 @@
 -- Step 1: Show current settings
 SELECT 
   tenant_id,
-  setting_value->>'automatic_authorization_hours_before' as current_auth_hours,
-  setting_value->>'automatic_payment_hours_before' as payment_hours,
+  setting_value::jsonb->>'automatic_authorization_hours_before' as current_auth_hours,
+  setting_value::jsonb->>'automatic_payment_hours_before' as payment_hours,
   setting_value
 FROM tenant_settings
 WHERE setting_key = 'payment_settings';
@@ -25,8 +25,8 @@ WHERE setting_key = 'payment_settings';
 -- Step 3: Verify update
 SELECT 
   tenant_id,
-  setting_value->>'automatic_authorization_hours_before' as new_auth_hours,
-  setting_value->>'automatic_payment_hours_before' as payment_hours,
+  setting_value::jsonb->>'automatic_authorization_hours_before' as new_auth_hours,
+  setting_value::jsonb->>'automatic_payment_hours_before' as payment_hours,
   updated_at
 FROM tenant_settings
 WHERE setting_key = 'payment_settings';
