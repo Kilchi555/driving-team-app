@@ -2105,10 +2105,11 @@ const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) =
       // 3. Admin-Fee aus pricing_rules Tabelle holen
       const { data: pricingRule, error: pricingError } = await supabase
         .from('pricing_rules')
-        .select('admin_fee_rappen')
+        .select('admin_fee_rappen, admin_fee_applies_from')
         .eq('category_code', categoryCode)
         .eq('is_active', true)
-        .single()
+        .limit(1)
+        .maybeSingle()
 
       if (pricingError) {
         console.error('❌ Error loading pricing rule:', pricingError)
@@ -2125,7 +2126,8 @@ const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) =
       console.log('✅ Admin fee calculated:', {
         appointmentCount,
         adminFeeRappen,
-        adminFeeChf
+        adminFeeChf,
+        appliesFrom: pricingRule?.admin_fee_applies_from
       })
     } else {
       calculatedAdminFee.value = 0

@@ -400,14 +400,15 @@ const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDa
           title: '',
           start: `${dateStr}T00:00`,
           end: `${dateStr}T23:59`,
-          backgroundColor: '#9ca3af', // Grau für nicht verfügbare Tage
+          backgroundColor: '#f3f4f6', // Helles Grau (durchklickbar)
           borderColor: 'transparent',
           textColor: 'transparent',
           display: 'background',
           classNames: ['non-working-hours-block'],
           extendedProps: {
             type: 'non_working_hours',
-            isNonWorkingHours: true
+            isNonWorkingHours: true,
+            isClickThrough: true
           }
         })
       } 
@@ -424,14 +425,15 @@ const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDa
             title: '',
             start: startTime,
             end: endTime,
-            backgroundColor: '#9ca3af', // Grau für Nicht-Arbeitszeit
+            backgroundColor: '#f3f4f6', // Helles Grau (durchklickbar)
             borderColor: 'transparent',
             textColor: 'transparent',
             display: 'background',
             classNames: ['non-working-hours-block'],
             extendedProps: {
               type: 'non_working_hours',
-              isNonWorkingHours: true
+              isNonWorkingHours: true,
+              isClickThrough: true
             }
           })
         })
@@ -505,14 +507,15 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
         title: '',
         start: new Date(currentDate).toISOString().split('T')[0] + 'T00:00:00',
         end: workStart.toISOString().replace('Z', ''), // Entferne Z für lokale Zeit
-        backgroundColor: '#9ca3af', // Dunkelgrau für Nicht-Arbeitszeit
+        backgroundColor: '#f3f4f6', // Helles Grau (durchklickbar)
         borderColor: 'transparent',
         textColor: 'transparent',
         display: 'background',
         classNames: ['non-working-hours-block'],
         extendedProps: {
           type: 'non_working_hours',
-          isNonWorkingHours: true
+          isNonWorkingHours: true,
+          isClickThrough: true
         }
       }
       workingHoursEvents.push(beforeEvent)
@@ -521,7 +524,7 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
       // KEIN weisser Event nötig - Kalender-Hintergrund ist bereits weiß
       // Nur graue Events für Nicht-Arbeitszeiten erstellen
       
-      // Block nach Arbeitsende (Arbeitsende bis 23:59) - DUNKELGRAU
+      // Block nach Arbeitsende (Arbeitsende bis 23:59) - HELLES GRAU
       if (workEnd.getHours() < 23 || (workEnd.getHours() === 23 && workEnd.getMinutes() < 59)) {
         const dayEnd = new Date(currentDate)
         dayEnd.setHours(23, 59, 59, 999)
@@ -531,14 +534,15 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
           title: '',
           start: workEnd.toISOString().replace('Z', ''), // Entferne Z für lokale Zeit
           end: dayEnd.toISOString().replace('Z', ''), // Entferne Z für lokale Zeit
-          backgroundColor: '#9ca3af', // Dunkelgrau für Nicht-Arbeitszeit
+          backgroundColor: '#f3f4f6', // Helles Grau (durchklickbar)
           borderColor: 'transparent',
           textColor: 'transparent',
           display: 'background',
           classNames: ['non-working-hours-block'],
           extendedProps: {
             type: 'non_working_hours',
-            isNonWorkingHours: true
+            isNonWorkingHours: true,
+            isClickThrough: true
           }
         }
         workingHoursEvents.push(afterEvent)
@@ -554,14 +558,15 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
         title: '',
         start: new Date(currentDate).toISOString().split('T')[0] + 'T00:00:00',
         end: new Date(currentDate).toISOString().split('T')[0] + 'T23:59:59',
-        backgroundColor: '#e5e7eb', // Hellgrau für inaktive Tage
+        backgroundColor: '#f3f4f6', // Helles Grau (durchklickbar)
         borderColor: 'transparent',
         textColor: 'transparent',
         display: 'background',
         classNames: ['non-working-hours-block'],
         extendedProps: {
           type: 'non_working_hours',
-          isNonWorkingHours: true
+          isNonWorkingHours: true,
+          isClickThrough: true
         }
       }
       workingHoursEvents.push(fullDayEvent)
@@ -698,14 +703,16 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
         title: busy.event_title || 'Privat',
         start: startTime,
         end: endTime,
-        backgroundColor: '#9333ea', // Purple color for external events
-        borderColor: '#7e22ce',
-        textColor: '#ffffff',
-        display: 'block', // Explizit als Block anzeigen (nicht background)
+        backgroundColor: '#e9d5ff', // Helles Lila (durchklickbar)
+        borderColor: 'transparent',
+        textColor: '#9333ea',
+        display: 'background', // Als Hintergrund, damit durchklickbar
+        classNames: ['external-busy-block'],
         extendedProps: {
           type: 'external_busy',
           external_event_id: busy.external_event_id,
-          sync_source: busy.sync_source
+          sync_source: busy.sync_source,
+          isClickThrough: true // Marker für durchklickbar
         }
       }
     })
@@ -2279,11 +2286,20 @@ defineExpose({
 }
 
 /* === NICHT-ARBEITSZEITEN BLÖCKE (grau für blockierte Zeit) === */
-/* Nicht-Arbeitszeit-Blöcke (dunkel/hellgrau hinterlegt) */
+/* Nicht-Arbeitszeit-Blöcke (hellgrau hinterlegt, durchklickbar) */
 .non-working-hours-block {
-  opacity: 1.0 !important; /* Volle Deckkraft für klare Farben */
-  pointer-events: none !important;
+  opacity: 0.5 !important; /* Halbtransparent für dezente Darstellung */
+  pointer-events: none !important; /* Durchklickbar */
   z-index: 0 !important; /* Niedrigere z-index damit Termine darüber erscheinen */
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* External Busy Times (helles Lila, durchklickbar) */
+.external-busy-block {
+  opacity: 0.4 !important; /* Noch dezenter */
+  pointer-events: none !important; /* Durchklickbar */
+  z-index: 0 !important;
   border: none !important;
   box-shadow: none !important;
 }
@@ -2312,7 +2328,14 @@ defineExpose({
 
 /* Nicht-Arbeitszeit-Block Hover-Effekt deaktivieren */
 .non-working-hours-block:hover {
-  opacity: 1.0 !important;
+  opacity: 0.5 !important; /* Bleibt gleich beim Hover */
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* External Busy Block Hover-Effekt deaktivieren */
+.external-busy-block:hover {
+  opacity: 0.4 !important; /* Bleibt gleich beim Hover */
   transform: none !important;
   box-shadow: none !important;
 }
