@@ -168,7 +168,13 @@
                       Abgesagt von
                     </th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Absage-Datum
+                      Arztzeugnis
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Aktionen
                     </th>
                   </tr>
                 </thead>
@@ -189,7 +195,58 @@
                       {{ cancellation.cancelled_by }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {{ formatDateTime(cancellation.cancelled_at) }}
+                      <div v-if="cancellation.medical_certificate_url" class="flex items-center space-x-2">
+                        <span class="text-green-600">✓</span>
+                        <a 
+                          :href="cancellation.medical_certificate_url" 
+                          target="_blank"
+                          class="text-blue-600 hover:text-blue-800 underline text-xs"
+                        >
+                          Ansehen
+                        </a>
+                      </div>
+                      <span v-else class="text-gray-400">-</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                      <span 
+                        v-if="cancellation.medical_certificate_status === 'uploaded' || cancellation.medical_certificate_status === 'pending'"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                      >
+                        Prüfung ausstehend
+                      </span>
+                      <span 
+                        v-else-if="cancellation.medical_certificate_status === 'approved'"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                      >
+                        Genehmigt
+                      </span>
+                      <span 
+                        v-else-if="cancellation.medical_certificate_status === 'rejected'"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                      >
+                        Abgelehnt
+                      </span>
+                      <span v-else class="text-gray-400">-</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                      <div 
+                        v-if="cancellation.medical_certificate_url && (cancellation.medical_certificate_status === 'uploaded' || cancellation.medical_certificate_status === 'pending')"
+                        class="flex space-x-2"
+                      >
+                        <button
+                          @click="approveCertificate(cancellation)"
+                          class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                        >
+                          Genehmigen
+                        </button>
+                        <button
+                          @click="openRejectModal(cancellation)"
+                          class="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                        >
+                          Ablehnen
+                        </button>
+                      </div>
+                      <span v-else class="text-gray-400">-</span>
                     </td>
                   </tr>
                 </tbody>
@@ -255,51 +312,86 @@
                 💡 <strong>Tipp:</strong> Klicken Sie auf eine Zeile zum Bearbeiten
               </p>
             </div>
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50">
-                <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Typ
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Aktionen
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
-                <tr 
-                  v-for="reason in sortedCancellationReasons" 
-                  :key="reason.id"
-                  @click="editReason(reason)"
-                  class="hover:bg-blue-50 hover:shadow-sm cursor-pointer transition-all duration-200"
-                >
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {{ reason.name_de }}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span :class="[
-                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                      reason.cancellation_type === 'student' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-blue-100 text-blue-800'
-                    ]">
-                      {{ reason.cancellation_type === 'student' ? '👨‍🎓 Schüler' : '👨‍🏫 Fahrlehrer' }}
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      @click.stop="deleteReason(reason)"
-                      class="text-red-600 hover:text-red-900 hover:bg-red-100 px-3 py-1 rounded transition-colors duration-200"
-                    >
-                      🗑️ Löschen
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Typ
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Spezialregeln
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Aktionen
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr 
+                    v-for="reason in sortedCancellationReasons" 
+                    :key="reason.id"
+                    @click="editReason(reason)"
+                    class="hover:bg-blue-50 hover:shadow-sm cursor-pointer transition-all duration-200"
+                  >
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {{ reason.name_de }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span :class="[
+                        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                        reason.cancellation_type === 'student' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      ]">
+                        {{ reason.cancellation_type === 'student' ? '👨‍🎓 Schüler' : '👨‍🏫 Fahrlehrer' }}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="flex flex-wrap gap-1">
+                        <!-- Medical Certificate Required -->
+                        <span 
+                          v-if="(reason as any).requires_proof" 
+                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800"
+                          title="Arztzeugnis erforderlich"
+                        >
+                          🏥 Arztzeugnis
+                        </span>
+                        
+                        <!-- Staff = Always Free -->
+                        <span 
+                          v-if="reason.cancellation_type === 'staff'" 
+                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
+                          title="Fahrlehrer-Absage: Immer kostenlos für Kunde"
+                        >
+                          💚 Immer kostenlos
+                        </span>
+                        
+                        <!-- Student = Policy Rules -->
+                        <span 
+                          v-else-if="reason.cancellation_type === 'student' && !(reason as any).requires_proof"
+                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800"
+                          title="Schüler-Absage: Policy-Regeln gelten (>24h = 0%, <24h = 100%)"
+                        >
+                          ⏰ Policy-Regeln
+                        </span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        @click.stop="deleteReason(reason)"
+                        class="text-red-600 hover:text-red-900 hover:bg-red-100 px-3 py-1 rounded transition-colors duration-200"
+                      >
+                        🗑️ Löschen
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -311,47 +403,170 @@
     </div>
 
     <!-- Add/Edit Modal -->
-    <div v-if="showAddModal || editingReason" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+    <div v-if="showAddModal || editingReason" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div class="bg-white rounded-lg p-6 max-w-2xl w-full my-8 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
-          {{ editingReason ? 'Grund bearbeiten' : 'Neuer Grund' }}
+          {{ editingReason ? 'Absage-Grund bearbeiten' : 'Neuer Absage-Grund' }}
         </h3>
         
-        <form @submit.prevent="saveReason" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Name (Deutsch)</label>
-            <input
-              v-model="reasonForm.name_de"
-              type="text"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="z.B. Krankheit"
-            />
+        <form @submit.prevent="saveReason" class="space-y-6">
+          <!-- Basic Info -->
+          <div class="space-y-4">
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+              <input
+                v-model="reasonForm.name_de"
+                type="text"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="z.B. Krankheit"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Typ *</label>
+              <select
+                v-model="reasonForm.cancellation_type"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="student">👨‍🎓 Schüler</option>
+                <option value="staff">👨‍🏫 Fahrlehrer</option>
+              </select>
+              
+              <!-- Dynamic Info based on Type -->
+              <div class="mt-2 bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
+                <p class="text-xs text-blue-800">
+                  <strong>Automatische Regelung:</strong>
+                  <span v-if="reasonForm.cancellation_type === 'staff'"> Fahrlehrer-Gründe sind immer kostenlos für Kunde</span>
+                  <span v-else> Schüler-Gründe folgen Policy-Regeln (>24h = 0%, <24h = 100%)</span>
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung (optional)</label>
+              <textarea
+                v-model="reasonForm.description_de"
+                rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Interne Notiz..."
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Medical Certificate -->
+          <div class="space-y-4">            
+            <div class="flex items-start space-x-3">
+              <input
+                v-model="reasonForm.requires_proof"
+                type="checkbox"
+                id="requires_proof"
+                class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <div class="flex-1">
+                <label for="requires_proof" class="text-sm font-medium text-gray-700 cursor-pointer">
+                  Arztzeugnis erforderlich
+                </label>
+                <p class="text-xs text-gray-500 mt-1">
+                  Kunde kann Arztzeugnis hochladen für Kostenerstattung
+                </p>
+              </div>
+            </div>
+
+            <div v-if="reasonForm.requires_proof" class="pl-7 space-y-4 border-l-2 border-blue-200">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung für Kunde</label>
+                <input
+                  v-model="reasonForm.proof_description"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="z.B. Arztzeugnis erforderlich"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Anleitung für Kunde</label>
+                <textarea
+                  v-model="reasonForm.proof_instructions"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="z.B. Für eine vollständige Kostenerstattung reichen Sie bitte innerhalb von 7 Tagen..."
+                ></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Upload-Frist (Tage)</label>
+                <input
+                  v-model.number="reasonForm.proof_deadline_days"
+                  type="number"
+                  min="1"
+                  max="90"
+                  class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="7"
+                />
+                <p class="text-xs text-gray-500 mt-1">
+                  Anzahl Tage nach Stornierung für Upload
+                </p>
+              </div>
+            </div>
           </div>
           
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Typ</label>
-            <select
-              v-model="reasonForm.cancellation_type"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="student">👨‍🎓 Schüler</option>
-              <option value="staff">👨‍🏫 Fahrlehrer</option>
-            </select>
-          </div>
-          
-          <div class="flex space-x-3">
+          <div class="flex space-x-3 pt-4 border-t">
             <button
               type="submit"
               :disabled="isLoadingReasons"
-              class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium"
             >
               {{ isLoadingReasons ? 'Speichere...' : 'Speichern' }}
             </button>
             <button
               type="button"
               @click="cancelEdit"
+              class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 font-medium"
+            >
+              Abbrechen
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Reject Modal -->
+    <div v-if="showRejectModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+          Arztzeugnis ablehnen
+        </h3>
+        
+        <p class="text-sm text-gray-600 mb-4">
+          Warum wird das Arztzeugnis abgelehnt?
+        </p>
+        
+        <form @submit.prevent="submitRejection" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ablehnungsgrund</label>
+            <textarea
+              v-model="rejectionReason"
+              rows="4"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="z.B. Dokument nicht lesbar, falsches Datum, etc."
+            ></textarea>
+          </div>
+          
+          <div class="flex space-x-3">
+            <button
+              type="submit"
+              :disabled="isProcessing"
+              class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
+            >
+              {{ isProcessing ? 'Verarbeite...' : 'Ablehnen' }}
+            </button>
+            <button
+              type="button"
+              @click="closeRejectModal"
               class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
             >
               Abbrechen
@@ -412,13 +627,34 @@ const sortedCancellationReasons = computed(() => {
 // State
 const activeTab = ref('stats')
 const showAddModal = ref(false)
-const editingReason = ref(null)
-const reasonForm = ref({
+const editingReason = ref<any>(null)
+const reasonForm = ref<{
+  name_de: string
+  code: string
+  description_de: string
+  cancellation_type: 'student' | 'staff'
+  sort_order: number
+  requires_proof: boolean
+  proof_description: string | null
+  proof_instructions: string | null
+  proof_deadline_days: number
+}>({
   name_de: '',
   code: '',
   description_de: '',
-  sort_order: 0
+  cancellation_type: 'student',
+  sort_order: 0,
+  requires_proof: false,
+  proof_description: null,
+  proof_instructions: null,
+  proof_deadline_days: 7
 })
+
+// Medical Certificate Review State
+const showRejectModal = ref(false)
+const selectedCancellation = ref<any>(null)
+const rejectionReason = ref('')
+const isProcessing = ref(false)
 
 // Computed
 const isLoading = computed(() => isLoadingStats.value || isLoadingReasons.value)
@@ -432,11 +668,18 @@ const loadStats = async () => {
   }
 }
 
-const editReason = (reason) => {
+const editReason = (reason: any) => {
   editingReason.value = reason
   reasonForm.value = {
     name_de: reason.name_de,
-    cancellation_type: reason.cancellation_type
+    code: reason.code,
+    cancellation_type: reason.cancellation_type,
+    description_de: reason.description_de || '',
+    sort_order: reason.sort_order || 0,
+    requires_proof: reason.requires_proof || false,
+    proof_description: reason.proof_description || '',
+    proof_instructions: reason.proof_instructions || '',
+    proof_deadline_days: reason.proof_deadline_days || 7
   }
 }
 
@@ -445,7 +688,14 @@ const cancelEdit = () => {
   editingReason.value = null
   reasonForm.value = {
     name_de: '',
-    cancellation_type: 'student'
+    code: '',
+    description_de: '',
+    cancellation_type: 'student',
+    sort_order: 0,
+    requires_proof: false,
+    proof_description: null,
+    proof_instructions: null,
+    proof_deadline_days: 7
   }
 }
 
@@ -470,17 +720,23 @@ const generateUniqueCode = (name: string, existingReasons: any[]) => {
 
 const saveReason = async () => {
   try {
-    // Generiere eindeutigen Code
-    const uniqueCode = generateUniqueCode(
-      reasonForm.value.name_de, 
-      allCancellationReasons.value
-    )
+    // Generiere eindeutigen Code nur wenn neu
+    const uniqueCode = editingReason.value 
+      ? editingReason.value.code 
+      : generateUniqueCode(reasonForm.value.name_de, allCancellationReasons.value)
     
-    const reasonData = {
+    // Clean up data: convert empty strings to null for optional fields
+    const reasonData: any = {
       ...reasonForm.value,
       code: uniqueCode,
-      description_de: '',
-      sort_order: 0,
+      description_de: reasonForm.value.description_de || '',
+      // Staff reasons are always free (0%), student reasons follow policy rules (null)
+      ignore_time_rules: reasonForm.value.cancellation_type === 'staff',
+      force_charge_percentage: reasonForm.value.cancellation_type === 'staff' ? 0 : null,
+      force_credit_hours: true, // Always credit hours - managed by policy
+      proof_description: reasonForm.value.requires_proof ? (reasonForm.value.proof_description || null) : null,
+      proof_instructions: reasonForm.value.requires_proof ? (reasonForm.value.proof_instructions || null) : null,
+      proof_deadline_days: reasonForm.value.requires_proof ? (reasonForm.value.proof_deadline_days || 7) : 7,
       is_active: true
     }
     
@@ -505,7 +761,7 @@ const saveReason = async () => {
   }
 }
 
-const toggleReasonStatus = async (reason) => {
+const toggleReasonStatus = async (reason: any) => {
   try {
     await updateCancellationReason(reason.id, { is_active: !reason.is_active })
   } catch (error) {
@@ -513,7 +769,7 @@ const toggleReasonStatus = async (reason) => {
   }
 }
 
-const deleteReason = async (reason) => {
+const deleteReason = async (reason: any) => {
   if (confirm(`Möchten Sie den Grund "${reason.name_de}" wirklich löschen?`)) {
     try {
       await deleteCancellationReason(reason.id)
@@ -566,6 +822,77 @@ onMounted(async () => {
     fetchAllCancellationReasons()
   ])
 })
+
+// Medical Certificate Functions
+const approveCertificate = async (cancellation: any) => {
+  if (!confirm(`Arztzeugnis für "${cancellation.title}" genehmigen?\n\nDer Kunde erhält den vollen Betrag als Guthaben gutgeschrieben.`)) {
+    return
+  }
+
+  try {
+    isProcessing.value = true
+    
+    const response = await $fetch('/api/medical-certificate/approve', {
+      method: 'POST',
+      body: {
+        appointmentId: cancellation.id,
+        adminComment: 'Genehmigt durch Admin'
+      }
+    })
+
+    alert('Arztzeugnis genehmigt! Kunde erhält Guthaben.')
+    
+    // Reload stats
+    await loadStats()
+  } catch (error: any) {
+    console.error('Error approving certificate:', error)
+    alert(`Fehler beim Genehmigen: ${error.message || 'Unbekannter Fehler'}`)
+  } finally {
+    isProcessing.value = false
+  }
+}
+
+const openRejectModal = (cancellation: any) => {
+  selectedCancellation.value = cancellation
+  rejectionReason.value = ''
+  showRejectModal.value = true
+}
+
+const closeRejectModal = () => {
+  showRejectModal.value = false
+  selectedCancellation.value = null
+  rejectionReason.value = ''
+}
+
+const submitRejection = async () => {
+  if (!selectedCancellation.value || !rejectionReason.value.trim()) {
+    return
+  }
+
+  try {
+    isProcessing.value = true
+    
+    const response = await $fetch('/api/medical-certificate/reject', {
+      method: 'POST',
+      body: {
+        appointmentId: selectedCancellation.value.id,
+        notes: rejectionReason.value
+      }
+    })
+
+    alert('Arztzeugnis abgelehnt. Kunde wurde benachrichtigt.')
+    
+    closeRejectModal()
+    
+    // Reload stats
+    await loadStats()
+  } catch (error: any) {
+    console.error('Error rejecting certificate:', error)
+    alert(`Fehler beim Ablehnen: ${error.message || 'Unbekannter Fehler'}`)
+  } finally {
+    isProcessing.value = false
+  }
+}
 
 // Hilfsfunktionen
 const formatDate = (dateString: string) => {

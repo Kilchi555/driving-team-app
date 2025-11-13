@@ -351,7 +351,7 @@
                   <td class="px-6 py-4 whitespace-nowrap">
                     <select 
                       :value="getCourseStatus(course)" 
-                      @change="updateCourseStatus(course, ($event.target as HTMLSelectElement)?.value)"
+                      @change="handleStatusChange($event, course)"
                       @click.stop
                       :class="getStatusBadgeClass(course)"
                       class="px-2 py-1 text-xs font-medium rounded-full border-0 bg-transparent cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1400,6 +1400,128 @@
               class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
             >
               {{ isCanceling ? 'Absage...' : 'Kurs absagen' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Change Modal -->
+    <div v-if="showStatusChangeModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="closeStatusChangeModal">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-2xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-xl font-bold text-gray-900">Kurs-Status ändern</h2>
+        </div>
+        
+        <div class="px-6 py-4 space-y-6">
+          <!-- Course Info -->
+          <div v-if="statusChangeCourse" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="font-semibold text-blue-800 mb-2">{{ statusChangeCourse.name }}</h3>
+            <div class="flex items-center space-x-4 text-sm">
+              <div class="flex items-center space-x-2">
+                <span class="text-blue-700">Von:</span>
+                <span :class="getStatusBadgeClass({ status: oldStatus })" class="px-2 py-1 rounded-full text-xs font-medium">
+                  {{ getStatusText({ status: oldStatus }) }}
+                </span>
+              </div>
+              <span class="text-blue-700">→</span>
+              <div class="flex items-center space-x-2">
+                <span class="text-blue-700">Zu:</span>
+                <span :class="getStatusBadgeClass({ status: newStatus })" class="px-2 py-1 rounded-full text-xs font-medium">
+                  {{ getStatusText({ status: newStatus }) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Options based on status change -->
+          <div class="space-y-4">
+            <!-- Always show notification option -->
+            <div class="flex items-start space-x-3">
+              <input
+                v-model="statusChangeOptions.notifyParticipants"
+                type="checkbox"
+                id="notifyParticipants"
+                class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <div class="flex-1">
+                <label for="notifyParticipants" class="text-sm font-medium text-gray-700 cursor-pointer">
+                  Teilnehmer per E-Mail informieren
+                </label>
+                <p class="text-xs text-gray-500 mt-1">
+                  Alle eingeschriebenen Teilnehmer erhalten eine Benachrichtigung über die Statusänderung
+                </p>
+              </div>
+            </div>
+
+            <!-- Landing Page option -->
+            <div class="flex items-start space-x-3">
+              <input
+                v-model="statusChangeOptions.updateLandingPage"
+                type="checkbox"
+                id="updateLandingPage"
+                class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <div class="flex-1">
+                <label for="updateLandingPage" class="text-sm font-medium text-gray-700 cursor-pointer">
+                  Status auf Landing Page aktualisieren
+                </label>
+                <p class="text-xs text-gray-500 mt-1">
+                  Sichtbarkeit und Status des Kurses auf der öffentlichen Seite anpassen
+                </p>
+              </div>
+            </div>
+
+            <!-- Additional fields for cancelled status -->
+            <div v-if="newStatus === 'cancelled'" class="border-t border-gray-200 pt-4 space-y-4">
+              <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p class="text-sm text-red-800">
+                  <strong>Hinweis:</strong> Bei Stornierung werden alle Kurstermine abgesagt und Zahlungen erstattet.
+                </p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Nachricht an Teilnehmer (optional)
+                </label>
+                <textarea
+                  v-model="statusChangeOptions.customMessage"
+                  rows="4"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="z.B. Der Kurs muss leider aufgrund unvorhergesehener Umstände abgesagt werden..."
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- Info for other statuses -->
+            <div v-else-if="newStatus === 'published'" class="bg-green-50 border border-green-200 rounded-lg p-3">
+              <p class="text-sm text-green-800">
+                <strong>Veröffentlichung:</strong> Der Kurs wird öffentlich sichtbar und Buchungen werden ermöglicht.
+              </p>
+            </div>
+
+            <div v-else-if="newStatus === 'completed'" class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p class="text-sm text-blue-800">
+                <strong>Abschluss:</strong> Der Kurs wird als abgeschlossen markiert. Keine weiteren Buchungen möglich.
+              </p>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex space-x-3 pt-4 border-t">
+            <button
+              @click="closeStatusChangeModal"
+              :disabled="isCanceling"
+              class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors disabled:opacity-50"
+            >
+              Abbrechen
+            </button>
+            <button
+              @click="confirmStatusChange"
+              :disabled="isCanceling"
+              class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+            >
+              {{ isCanceling ? 'Ändere Status...' : 'Status ändern' }}
             </button>
           </div>
         </div>
@@ -3846,6 +3968,18 @@ const isCanceling = ref(false)
 const notifyByEmail = ref(true)
 const notifyBySMS = ref(false)
 
+// Status Change Modal
+const showStatusChangeModal = ref(false)
+const statusChangeCourse = ref<any>(null)
+const oldStatus = ref('')
+const newStatus = ref('')
+const statusChangeOptions = ref({
+  notifyParticipants: true,
+  updateLandingPage: true,
+  cancellationReasonId: null as string | null,
+  customMessage: ''
+})
+
 // Create Category Modal
 const showCreateCategoryModal = ref(false)
 const showEditCategoryModal = ref(false)
@@ -5154,27 +5288,108 @@ const editCourse = (course: any) => {
   showCreateCourseModal.value = true
 }
 
-const updateCourseStatus = async (course: any, newStatus: string) => {
-  try {
-    const { error } = await getSupabase()
-      .from('courses')
-      .update({ 
-        status: newStatus,
-        status_changed_at: new Date().toISOString(),
-        status_changed_by: currentUser.value.id
-      })
-      .eq('id', course.id)
+const handleStatusChange = (event: Event, course: any) => {
+  const target = event.target as HTMLSelectElement
+  const newStatusValue = target.value
+  
+  console.log('🔄 Status change triggered:', { 
+    oldStatus: course.status, 
+    newStatus: newStatusValue,
+    courseName: course.name 
+  })
+  
+  // If same status, do nothing
+  if (newStatusValue === course.status) {
+    console.log('⚠️ Same status selected, ignoring')
+    return
+  }
+  
+  // Reset dropdown to old value immediately (will be updated after confirmation)
+  target.value = course.status
+  
+  // Open modal
+  updateCourseStatus(course, newStatusValue)
+}
 
-    if (error) throw error
+const updateCourseStatus = async (course: any, newStatusValue: string) => {
+  console.log('📋 Opening status change modal...')
+  
+  // Open modal for confirmation and options
+  statusChangeCourse.value = course
+  oldStatus.value = course.status
+  newStatus.value = newStatusValue
+  
+  // Reset options
+  statusChangeOptions.value = {
+    notifyParticipants: true,
+    updateLandingPage: true,
+    cancellationReasonId: null,
+    customMessage: ''
+  }
+  
+  showStatusChangeModal.value = true
+  
+  console.log('✅ Modal state set:', {
+    showStatusChangeModal: showStatusChangeModal.value,
+    oldStatus: oldStatus.value,
+    newStatus: newStatus.value
+  })
+}
+
+const confirmStatusChange = async () => {
+  if (!statusChangeCourse.value) return
+  
+  try {
+    isCanceling.value = true
+    
+    const updateData: any = {
+      status: newStatus.value,
+      status_changed_at: new Date().toISOString(),
+      status_changed_by: currentUser.value.id
+    }
+    
+    // If changing to cancelled, add cancellation fields
+    if (newStatus.value === 'cancelled') {
+      updateData.cancelled_at = new Date().toISOString()
+      updateData.cancelled_by = currentUser.value.id
+      
+      // TODO: Cancel all course appointments
+      // TODO: Refund/credit payments
+    }
+    
+    const { error: updateError } = await getSupabase()
+      .from('courses')
+      .update(updateData)
+      .eq('id', statusChangeCourse.value.id)
+
+    if (updateError) throw updateError
 
     // Update local course object
-    course.status = newStatus
-    success.value = `Kurs-Status auf "${getStatusText({ status: newStatus })}" geändert!`
+    statusChangeCourse.value.status = newStatus.value
+    
+    // TODO: If notifyParticipants is true, send emails
+    // TODO: If updateLandingPage is true, update visibility
+    
+    success.value = `Kurs-Status auf "${getStatusText({ status: newStatus.value })}" geändert!`
+    showStatusChangeModal.value = false
+    statusChangeCourse.value = null
+    
+    // Reload courses to refresh data
+    await loadCourses()
     
   } catch (err: any) {
     console.error('Error updating course status:', err)
     error.value = `Fehler beim Status-Update: ${err.message}`
+  } finally {
+    isCanceling.value = false
   }
+}
+
+const closeStatusChangeModal = () => {
+  showStatusChangeModal.value = false
+  statusChangeCourse.value = null
+  oldStatus.value = ''
+  newStatus.value = ''
 }
 
 const cancelCourse = (course: any) => {

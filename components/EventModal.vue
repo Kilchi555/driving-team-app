@@ -3481,6 +3481,13 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     // ✅ SCHRITT 2: Soft Delete des Appointments mit Absage-Grund
     console.log('🗑️ Soft deleting appointment with cancellation reason')
     
+    // Get the cancellation reason to check if medical certificate is required
+    const { data: reasonData } = await supabase
+      .from('cancellation_reasons')
+      .select('requires_proof')
+      .eq('id', cancellationReasonId)
+      .single()
+    
     // Prepare update data with policy information
     const updateData: any = {
       status: status,
@@ -3489,6 +3496,13 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       cancellation_reason_id: cancellationReasonId,
       cancellation_type: cancellationType,
       deleted_by: props.currentUser?.id
+    }
+
+    // ✅ Set medical certificate status if required
+    if (reasonData?.requires_proof) {
+      updateData.medical_certificate_status = 'pending'
+      updateData.original_charge_percentage = cancellationPolicyResult.value?.calculation?.chargePercentage || 100
+      console.log('📄 Medical certificate required - status set to pending')
     }
 
     // Add policy information if available
@@ -3603,6 +3617,11 @@ const confirmCancellationWithReason = async () => {
   
   // ✅ SCHRITT 2: Absage-Grund Modal schließen
   showCancellationReasonModal.value = false
+  
+  // ✅ NEU: Prüfe ob Arztzeugnis erforderlich ist (nur logging, Kunde lädt später hoch)
+  if (selectedReason.requires_proof) {
+    console.log('📄 Medical certificate required for this reason - customer can upload later')
+  }
   
   // ✅ SCHRITT 3: Prüfe ob Bezahlnachfrage nötig ist
   const appointmentTime = new Date(props.eventData.start || props.eventData.start_time)

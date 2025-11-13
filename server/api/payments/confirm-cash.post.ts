@@ -2,6 +2,7 @@
 // ✅ Bestätigt Cash-Zahlungen nach der Bewertung
 
 import { getSupabase } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface ConfirmCashRequest {
   paymentId: string
@@ -70,12 +71,12 @@ export default defineEventHandler(async (event): Promise<ConfirmCashResponse> =>
       .from('payments')
       .update({
         payment_status: 'completed',
-        paid_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        paid_at: toLocalTimeString(new Date()),
+        updated_at: toLocalTimeString(new Date()),
         metadata: {
           ...payment.metadata,
           cash_confirmed_by: body.confirmedBy,
-          cash_confirmed_at: new Date().toISOString(),
+          cash_confirmed_at: toLocalTimeString(new Date()),
           notes: body.notes
         }
       })
@@ -92,7 +93,7 @@ export default defineEventHandler(async (event): Promise<ConfirmCashResponse> =>
         .update({
           payment_status: 'paid',
           is_paid: true,
-          updated_at: new Date().toISOString()
+          updated_at: toLocalTimeString(new Date())
         })
         .eq('id', payment.appointment_id)
 
@@ -112,11 +113,11 @@ export default defineEventHandler(async (event): Promise<ConfirmCashResponse> =>
           status: 'completed',
           metadata: {
             confirmed_by: body.confirmedBy,
-            confirmed_at: new Date().toISOString(),
+            confirmed_at: toLocalTimeString(new Date()),
             notes: body.notes,
             action: 'cash_confirmation'
           },
-          created_at: new Date().toISOString()
+          created_at: toLocalTimeString(new Date())
         })
 
       if (historyError) {

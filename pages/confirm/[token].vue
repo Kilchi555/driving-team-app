@@ -46,6 +46,36 @@
           </dl>
         </div>
 
+        <!-- Payment Details (Products & Discounts) -->
+        <div v-if="paymentItems && paymentItems.length > 0" class="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+          <h3 class="text-md font-semibold text-gray-900 mb-3">Leistungen & Produkte</h3>
+          <div class="space-y-2">
+            <div 
+              v-for="item in paymentItems" 
+              :key="item.id"
+              class="flex justify-between items-center text-sm"
+            >
+              <div class="flex-1">
+                <span class="text-gray-900">{{ item.item_name }}</span>
+                <span v-if="item.quantity > 1" class="text-gray-500 ml-1">({{ item.quantity }}x)</span>
+                <span v-if="item.description" class="block text-xs text-gray-500">{{ item.description }}</span>
+              </div>
+              <span 
+                class="text-gray-900 font-medium"
+                :class="{ 'text-red-600': item.item_type === 'discount' }"
+              >
+                {{ item.item_type === 'discount' ? '-' : '' }}CHF {{ formatPrice(Math.abs(item.total_price_rappen)) }}
+              </span>
+            </div>
+          </div>
+          
+          <!-- Total -->
+          <div class="border-t border-gray-200 mt-3 pt-3 flex justify-between items-center">
+            <span class="font-semibold text-gray-900">Total</span>
+            <span class="text-lg font-bold text-gray-900">CHF {{ formatPrice(appointment.total_amount_rappen) }}</span>
+          </div>
+        </div>
+
         <!-- Payment Information -->
         <div v-if="automaticPaymentEnabled" class="border-2 border-blue-200 rounded-lg p-4 mb-6 bg-blue-50">
           <h3 class="text-lg font-semibold text-gray-900 mb-3">Zahlung</h3>
@@ -176,6 +206,7 @@ const automaticPaymentHoursBefore = ref(24)
 const automaticAuthorizationHoursBefore = ref(168) // Standard: 1 Woche vor Termin
 const paymentMethods = ref<any[]>([])
 const selectedPaymentMethodId = ref<string | null>(null)
+const paymentItems = ref<any[]>([])
 
 const loadAppointment = async () => {
   try {
@@ -204,12 +235,23 @@ const loadAppointment = async () => {
     let totalAmountRappen = 0
     const { data: paymentData } = await supabase
       .from('payments')
-      .select('total_amount_rappen')
+      .select('id, total_amount_rappen')
       .eq('appointment_id', appointmentData.id)
       .maybeSingle()
     
     if (paymentData?.total_amount_rappen) {
       totalAmountRappen = paymentData.total_amount_rappen
+      
+      // ✅ Lade Payment Items (Produkte, Rabatte, etc.)
+      const { data: items } = await supabase
+        .from('payment_items')
+        .select('*')
+        .eq('payment_id', paymentData.id)
+        .order('created_at', { ascending: true })
+      
+      if (items) {
+        paymentItems.value = items
+      }
     } else {
       // Falls kein Payment existiert, berechne basierend auf Pricing Rules
       // Fallback: 85 CHF für eine Fahrstunde

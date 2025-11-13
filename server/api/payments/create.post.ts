@@ -3,6 +3,7 @@
 
 import { getSupabase } from '~/utils/supabase'
 import { routeRequiresFeatureFlag, validateFeatureAccess } from '~/utils/featureFlags'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface PaymentRequest {
   appointmentId?: string
@@ -258,7 +259,7 @@ async function updatePaymentWithWalleeId(paymentId: string, walleeTransactionId:
     .from('payments')
     .update({
       wallee_transaction_id: walleeTransactionId,
-      updated_at: new Date().toISOString()
+      updated_at: toLocalTimeString(new Date())
     })
     .eq('id', paymentId)
 
@@ -276,7 +277,7 @@ async function updatePaymentStatus(paymentId: string, status: string): Promise<v
     .from('payments')
     .update({
       payment_status: status,
-      updated_at: new Date().toISOString()
+      updated_at: toLocalTimeString(new Date())
     })
     .eq('id', paymentId)
 

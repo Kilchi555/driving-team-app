@@ -31,6 +31,8 @@ export interface CancellationStatsData {
     reason_name: string
     cancelled_by: string
     cancelled_at: string
+    medical_certificate_url?: string | null
+    medical_certificate_status?: string | null
   }>
 }
 
@@ -72,6 +74,8 @@ export const useCancellationStats = () => {
           cancellation_reason_id,
           cancellation_type,
           tenant_id,
+          medical_certificate_url,
+          medical_certificate_status,
           cancellation_reasons!inner(
             id,
             name_de,
@@ -230,7 +234,9 @@ export const useCancellationStats = () => {
           cancelled_by: user 
             ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unbekannt'
             : 'Unbekannt',
-          cancelled_at: cancellation.deleted_at
+          cancelled_at: cancellation.deleted_at,
+          medical_certificate_url: cancellation.medical_certificate_url,
+          medical_certificate_status: cancellation.medical_certificate_status
         }
       })
 

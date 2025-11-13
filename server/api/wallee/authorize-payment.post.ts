@@ -4,6 +4,7 @@
 
 import { Wallee } from 'wallee'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 export default defineEventHandler(async (event) => {
   console.log('🔐 Wallee Authorization (Authorize & Capture)...')
@@ -177,7 +178,7 @@ export default defineEventHandler(async (event) => {
         wallee_transaction_id: String(updatedTransaction.id),
         payment_status: updatedTransaction.state === 'AUTHORIZED' ? 'authorized' : 'processing',
         payment_method: 'wallee',
-        updated_at: new Date().toISOString()
+        updated_at: toLocalTimeString(new Date())
       })
       .eq('id', paymentId)
 

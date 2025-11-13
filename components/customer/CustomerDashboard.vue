@@ -582,6 +582,55 @@
                   </div>
                 </div>
 
+                <!-- Payment Details (Produkte & Rabatte) -->
+                <div v-if="hasPaymentDetails(appointment)" class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+                  <div class="space-y-1.5">
+                    <!-- Methode 1: payment_items (neu) -->
+                    <template v-if="appointment.payment_items && appointment.payment_items.length > 0">
+                      <div 
+                        v-for="item in appointment.payment_items" 
+                        :key="item.id"
+                        class="flex justify-between items-center"
+                      >
+                        <div class="flex-1">
+                          <span class="text-gray-700">{{ item.item_name }}</span>
+                          <span v-if="item.quantity > 1" class="text-gray-500 text-xs ml-1">({{ item.quantity }}x)</span>
+                        </div>
+                        <span 
+                          class="text-gray-900 font-medium text-xs"
+                          :class="{ 'text-red-600': item.item_type === 'discount' }"
+                        >
+                          {{ item.item_type === 'discount' ? '-' : '' }}CHF {{ formatPrice(Math.abs(item.total_price_rappen)) }}
+                        </span>
+                      </div>
+                    </template>
+                    
+                    <!-- Methode 2: Direkte Spalten (alt, Fallback) -->
+                    <template v-else>
+                      <div v-if="getPaymentField(appointment, 'lesson_price_rappen') > 0" class="flex justify-between items-center">
+                        <span class="text-gray-700">{{ getEventTypeLabel(appointment.event_type_code) }}</span>
+                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'lesson_price_rappen')) }}</span>
+                      </div>
+                      <div v-if="getPaymentField(appointment, 'admin_fee_rappen') > 0" class="flex justify-between items-center">
+                        <span class="text-gray-700">Verwaltungsgebühr</span>
+                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'admin_fee_rappen')) }}</span>
+                      </div>
+                      <div v-if="getPaymentField(appointment, 'products_price_rappen') > 0" class="flex justify-between items-center">
+                        <span class="text-gray-700">Produkte</span>
+                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'products_price_rappen')) }}</span>
+                      </div>
+                      <div v-if="getPaymentField(appointment, 'discount_amount_rappen') > 0" class="flex justify-between items-center">
+                        <span class="text-gray-700">Rabatt</span>
+                        <span class="text-red-600 font-medium text-xs">- CHF {{ formatPrice(getPaymentField(appointment, 'discount_amount_rappen')) }}</span>
+                      </div>
+                    </template>
+                  </div>
+                  <div class="border-t border-gray-300 mt-2 pt-2 flex justify-between items-center">
+                    <span class="font-semibold text-gray-900 text-xs">Total</span>
+                    <span class="font-bold text-gray-900 text-sm">CHF {{ formatPrice(appointment.total_amount_rappen || 0) }}</span>
+                  </div>
+                </div>
+
                 <!-- Action Button -->
                 <button
                   @click="confirmAppointment(appointment)"
@@ -1190,7 +1239,7 @@ const loadPendingConfirmations = async () => {
     if (appointmentIds.length > 0) {
       const { data, error: paymentsError } = await supabase
         .from('payments')
-        .select('id, appointment_id, total_amount_rappen, payment_method, payment_status')
+        .select('id, appointment_id, total_amount_rappen, payment_method, payment_status, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen')
         .in('appointment_id', appointmentIds)
       
       if (paymentsError) {
@@ -1209,6 +1258,26 @@ const loadPendingConfirmations = async () => {
         }
         paymentsMap.get(payment.appointment_id).push(payment)
       })
+    }
+
+    // ✅ Lade payment_items für alle payments
+    const paymentItemsMap = new Map()
+    if (paymentsData && paymentsData.length > 0) {
+      const paymentIds = paymentsData.map(p => p.id)
+      const { data: itemsData } = await supabase
+        .from('payment_items')
+        .select('*')
+        .in('payment_id', paymentIds)
+        .order('created_at', { ascending: true })
+      
+      if (itemsData) {
+        itemsData.forEach(item => {
+          if (!paymentItemsMap.has(item.payment_id)) {
+            paymentItemsMap.set(item.payment_id, [])
+          }
+          paymentItemsMap.get(item.payment_id).push(item)
+        })
+      }
     }
 
     // Load tenant payment settings for automatic payment hours (from payment_settings JSON)
@@ -1238,11 +1307,18 @@ const loadPendingConfirmations = async () => {
     pendingConfirmations.value = confirmationsData.map(apt => {
       const payments = paymentsMap.get(apt.id) || []
       const payment = payments.length > 0 ? payments[0] : null
+      const items = payment ? paymentItemsMap.get(payment.id) || [] : []
       
       return {
         ...apt,
         total_amount_rappen: payment?.total_amount_rappen || 0,
-        payments: payments // Include for compatibility
+        payments: payments, // Include for compatibility
+        payment_items: items, // ✅ Neu: Payment items hinzufügen
+        // ✅ Direkte Payment-Felder für Fallback
+        lesson_price_rappen: payment?.lesson_price_rappen || 0,
+        admin_fee_rappen: payment?.admin_fee_rappen || 0,
+        products_price_rappen: payment?.products_price_rappen || 0,
+        discount_amount_rappen: payment?.discount_amount_rappen || 0
       }
     })
 
@@ -1292,6 +1368,29 @@ const getEventTypeLabel = (code: string | null | undefined) => {
   if (c.includes('theor')) return 'Theorielektion'
   if (c.includes('lesson') || c === 'fahrlektion') return 'Fahrlektion'
   return 'Fahrlektion'
+}
+
+// Helper: Check if appointment has payment details to show
+const hasPaymentDetails = (appointment: any) => {
+  // Methode 1: payment_items existieren
+  if (appointment.payment_items && appointment.payment_items.length > 0) {
+    return true
+  }
+  
+  // Methode 2: Direkte Payment-Felder existieren (Fallback)
+  if (appointment.lesson_price_rappen > 0 ||
+      appointment.admin_fee_rappen > 0 ||
+      appointment.products_price_rappen > 0 ||
+      appointment.discount_amount_rappen > 0) {
+    return true
+  }
+  
+  return false
+}
+
+// Helper: Get payment field value
+const getPaymentField = (appointment: any, fieldName: string) => {
+  return appointment[fieldName] || 0
 }
 
 // ✅ Confirm appointment and redirect directly to Wallee (skip extra confirmation page)

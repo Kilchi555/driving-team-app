@@ -126,6 +126,44 @@ export default defineEventHandler(async (event) => {
       } else {
         paymentId = payment.id
         console.log('✅ Payment created:', payment.id)
+        
+        // ✅ Erstelle payment_items für dieses Payment
+        const paymentItems = []
+        
+        // Fahrlektion als Item
+        paymentItems.push({
+          payment_id: payment.id,
+          item_type: 'service',
+          item_name: type || 'Fahrlektion',
+          quantity: 1,
+          unit_price_rappen: lessonPrice,
+          total_price_rappen: lessonPrice,
+          description: `${duration_minutes || 45} Minuten`
+        })
+        
+        // Admin Fee als Item (falls vorhanden)
+        if (adminFee > 0) {
+          paymentItems.push({
+            payment_id: payment.id,
+            item_type: 'service',
+            item_name: 'Verwaltungsgebühr',
+            quantity: 1,
+            unit_price_rappen: adminFee,
+            total_price_rappen: adminFee,
+            description: null
+          })
+        }
+        
+        // Items in DB speichern
+        const { error: itemsError } = await supabase
+          .from('payment_items')
+          .insert(paymentItems)
+        
+        if (itemsError) {
+          console.error('Error creating payment items:', itemsError)
+        } else {
+          console.log('✅ Payment items created:', paymentItems.length)
+        }
       }
     }
 

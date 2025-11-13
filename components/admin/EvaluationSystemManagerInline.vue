@@ -117,13 +117,13 @@
                         <h5 class="font-medium text-gray-900">{{ criteria.name }}</h5>
                         <p class="text-sm text-gray-500">{{ criteria.description }}</p>
                         <!-- Educational content indicators (stacked on small screens) -->
-                        <div v-if="criteria.educational_content && (criteria.educational_content.title || (criteria.educational_content.sections && criteria.educational_content.sections.length > 0))" class="mt-1 flex items-center gap-2 md:hidden">
-                          <span v-if="criteria.educational_content.title || criteria.educational_content.sections?.some(s => s.text && s.text.length > 0)"
+                        <div v-if="hasEducationalContent(criteria, drivingCat.code).hasText || hasEducationalContent(criteria, drivingCat.code).hasImages" class="mt-1 flex items-center gap-2 md:hidden">
+                          <span v-if="hasEducationalContent(criteria, drivingCat.code).hasText"
                                 class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200"
                                 title="Lerntext vorhanden">
                             📄 <span class="ml-1">Text</span>
                           </span>
-                          <span v-if="criteria.educational_content.sections?.some(s => s.images && s.images.length > 0)"
+                          <span v-if="hasEducationalContent(criteria, drivingCat.code).hasImages"
                                 class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
                                 title="Bilder vorhanden">
                             🖼️ <span class="ml-1">Bilder</span>
@@ -133,13 +133,13 @@
                     </div>
                     <div class="flex items-center space-x-2">
                       <!-- Educational content indicators (inline on md+ screens) -->
-                      <div v-if="criteria.educational_content && (criteria.educational_content.title || (criteria.educational_content.sections && criteria.educational_content.sections.length > 0))" class="hidden md:flex items-center gap-2 mr-2">
-                        <span v-if="criteria.educational_content.title || criteria.educational_content.sections?.some(s => s.text && s.text.length > 0)"
+                      <div v-if="hasEducationalContent(criteria, drivingCat.code).hasText || hasEducationalContent(criteria, drivingCat.code).hasImages" class="hidden md:flex items-center gap-2 mr-2">
+                        <span v-if="hasEducationalContent(criteria, drivingCat.code).hasText"
                               class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200"
                               title="Lerntext vorhanden">
                           📄 <span class="ml-1">Text</span>
                         </span>
-                        <span v-if="criteria.educational_content.sections?.some(s => s.images && s.images.length > 0)"
+                        <span v-if="hasEducationalContent(criteria, drivingCat.code).hasImages"
                               class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
                               title="Bilder vorhanden">
                           🖼️ <span class="ml-1">Bilder</span>
@@ -742,8 +742,51 @@
           </div>
         </div>
 
+        <!-- Fahrkategorie-Tabs -->
+        <div v-if="editingEducationalContent.driving_categories && editingEducationalContent.driving_categories.length > 0" class="border-b border-gray-200 bg-gray-50">
+          <nav class="flex space-x-2 px-6 overflow-x-auto">
+            <button
+              @click="switchEducationalDrivingCategory('_default')"
+              :class="[
+                'py-3 px-4 border-b-2 font-medium text-sm whitespace-nowrap',
+                editingEducationalDrivingCategory === '_default'
+                  ? 'border-blue-500 text-blue-600 bg-white'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ]"
+            >
+              📄 Standard
+            </button>
+            <button
+              v-for="categoryCode in editingEducationalContent.driving_categories"
+              :key="categoryCode"
+              @click="switchEducationalDrivingCategory(categoryCode)"
+              :class="[
+                'py-3 px-4 border-b-2 font-medium text-sm whitespace-nowrap',
+                editingEducationalDrivingCategory === categoryCode
+                  ? 'border-blue-500 text-blue-600 bg-white'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ]"
+            >
+              {{ drivingCategories.find(dc => dc.code === categoryCode)?.name || categoryCode }}
+            </button>
+          </nav>
+        </div>
+
         <div class="p-6">
           <div class="space-y-6">
+            <!-- Info über aktuelle Fahrkategorie -->
+            <div v-if="editingEducationalContent.driving_categories && editingEducationalContent.driving_categories.length > 0" class="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <p class="text-sm text-blue-800">
+                <strong>{{ editingEducationalDrivingCategory === '_default' ? '📄 Standard' : (drivingCategories.find(dc => dc.code === editingEducationalDrivingCategory)?.name || editingEducationalDrivingCategory) }}</strong>
+                <span v-if="editingEducationalDrivingCategory === '_default'">
+                  - Dieser Inhalt wird als Fallback verwendet, wenn keine spezifische Version für eine Fahrkategorie existiert.
+                </span>
+                <span v-else>
+                  - Dieser Inhalt wird nur für diese Fahrkategorie angezeigt. Felder leer lassen = Standard-Version wird verwendet.
+                </span>
+              </p>
+            </div>
+
             <!-- Haupttitel -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -1054,6 +1097,13 @@ interface EducationalSection {
   categories?: string[] // Fahrkategorien, für die dieser Abschnitt sichtbar ist
 }
 
+interface EducationalContentByCategory {
+  [key: string]: { // key is driving category code or '_default'
+    title: string
+    sections: EducationalSection[]
+  }
+}
+
 const educationalContentForm = ref<{
   title: string
   sections: EducationalSection[]
@@ -1061,6 +1111,9 @@ const educationalContentForm = ref<{
   title: '',
   sections: []
 })
+
+// New: Current editing driving category in educational content editor
+const editingEducationalDrivingCategory = ref<string>('_default')
 
 // Image upload state
 const isUploadingImage = ref(false)
@@ -1655,13 +1708,70 @@ const getCriteriaForCategory = (categoryId: string) => {
     .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
 }
 
+// Helper function to get educational content for a driving category
+const getEducationalContentForDrivingCategory = (criteria: any, drivingCategory: string) => {
+  if (!criteria.educational_content) return null
+  
+  const content = criteria.educational_content as any
+  
+  // New structure: Check for driving category specific content
+  if (content[drivingCategory]) {
+    return content[drivingCategory]
+  }
+  
+  // Fallback to _default
+  if (content._default) {
+    return content._default
+  }
+  
+  // Old structure: Return as is
+  if (content.title || content.sections) {
+    return content
+  }
+  
+  return null
+}
+
+// Helper function to check if criteria has educational content (text/images) for driving category
+const hasEducationalContent = (criteria: any, drivingCategory: string) => {
+  const content = getEducationalContentForDrivingCategory(criteria, drivingCategory)
+  if (!content) return { hasText: false, hasImages: false }
+  
+  const hasText = !!(content.title || content.sections?.some((s: any) => s.text && s.text.length > 0))
+  const hasImages = !!(content.sections?.some((s: any) => s.images && s.images.length > 0))
+  
+  return { hasText, hasImages }
+}
+
 // Helper function to get criteria for a specific category and driving category
 const getCriteriaForCategoryAndDrivingCategory = (categoryId: string, drivingCategory: string) => {
-  return criteria.value.filter(c => 
-    c.category_id === categoryId && 
-    c.driving_categories && 
-    c.driving_categories.includes(drivingCategory)
-  )
+  // Get the category object to check both code and name
+  const category = drivingCategories.value.find(dc => dc.code === drivingCategory)
+  
+  // Create array of possible matches (code and name variations)
+  const possibleMatches = [drivingCategory]
+  if (category?.name && category.name !== drivingCategory) {
+    possibleMatches.push(category.name)
+  }
+  // Special case: "Boot" category might have criteria stored as "Motorboot"
+  if (drivingCategory === 'Boot') {
+    possibleMatches.push('Motorboot')
+  }
+  
+  const filtered = criteria.value.filter(c => {
+    if (c.category_id !== categoryId || !c.driving_categories) {
+      return false
+    }
+    
+    // Check if criteria's driving_categories includes any of the possible matches
+    const matches = c.driving_categories.some(dc => possibleMatches.includes(dc))
+    
+    return matches
+  })
+  
+  console.log(`📊 getCriteriaForCategoryAndDrivingCategory(${categoryId}, ${drivingCategory}):`, filtered.length, 'criteria found')
+  
+  return filtered
 }
 
 // Helper function to get category name by ID
@@ -2111,17 +2221,35 @@ const deleteScale = async (id: string) => {
 // Educational Content Methods
 const openEducationalContentModal = (criteria: Criteria) => {
   editingEducationalContent.value = criteria
+  editingEducationalDrivingCategory.value = '_default'
   
-  // Load existing content
+  // Load existing content - handle both old and new structure
   if (criteria.educational_content) {
-    educationalContentForm.value = {
-      title: criteria.educational_content.title || '',
-      sections: (criteria.educational_content.sections || []).map((s: any) => ({
-        title: s?.title || '',
-        text: s?.text || '',
-        images: s?.images || [],
-        categories: s?.categories || []
-      }))
+    const content = criteria.educational_content as any
+    
+    // Check if it's the new structure (has _default key)
+    if (content._default) {
+      // New structure: Load _default content initially
+      educationalContentForm.value = {
+        title: content._default.title || '',
+        sections: (content._default.sections || []).map((s: any) => ({
+          title: s?.title || '',
+          text: s?.text || '',
+          images: s?.images || [],
+          categories: s?.categories || []
+        }))
+      }
+    } else {
+      // Old structure: Load directly (will be migrated on save)
+      educationalContentForm.value = {
+        title: content.title || '',
+        sections: (content.sections || []).map((s: any) => ({
+          title: s?.title || '',
+          text: s?.text || '',
+          images: s?.images || [],
+          categories: s?.categories || []
+        }))
+      }
     }
   } else {
     educationalContentForm.value = {
@@ -2138,6 +2266,7 @@ const openEducationalContentModal = (criteria: Criteria) => {
 
 const closeEducationalContentModal = () => {
   editingEducationalContent.value = null
+  editingEducationalDrivingCategory.value = '_default'
   educationalContentForm.value = {
     title: '',
     sections: []
@@ -2146,6 +2275,50 @@ const closeEducationalContentModal = () => {
   sectionPendingFiles.value.clear()
   sectionImageInputs.value.clear()
   currentUploadingSection.value = null
+}
+
+// Switch between driving categories in educational content editor
+const switchEducationalDrivingCategory = (categoryCode: string) => {
+  if (!editingEducationalContent.value) return
+  
+  const content = editingEducationalContent.value.educational_content as any
+  
+  editingEducationalDrivingCategory.value = categoryCode
+  
+  // Load content for selected category
+  if (content && content[categoryCode]) {
+    educationalContentForm.value = {
+      title: content[categoryCode].title || '',
+      sections: (content[categoryCode].sections || []).map((s: any) => ({
+        title: s?.title || '',
+        text: s?.text || '',
+        images: s?.images || [],
+        categories: s?.categories || []
+      }))
+    }
+  } else if (content && content._default) {
+    // Fallback to _default if category-specific content doesn't exist
+    educationalContentForm.value = {
+      title: content._default.title || '',
+      sections: (content._default.sections || []).map((s: any) => ({
+        title: s?.title || '',
+        text: s?.text || '',
+        images: s?.images || [],
+        categories: s?.categories || []
+      }))
+    }
+  } else {
+    // No content yet - start fresh
+    educationalContentForm.value = {
+      title: '',
+      sections: []
+    }
+  }
+  
+  // Reset image previews for the new category
+  sectionImagePreviews.value.clear()
+  sectionPendingFiles.value.clear()
+  sectionImageInputs.value.clear()
 }
 
 const addSection = () => {
@@ -2352,16 +2525,37 @@ const saveEducationalContent = async () => {
       })
     )
     
-    // Prepare educational_content JSON
-    const educationalContent = {
+    // Prepare educational_content for current driving category
+    const currentCategoryContent = {
       title: educationalContentForm.value.title || null,
       sections: processedSections.filter(s => s.title || s.text || s.images)
     }
     
-    // Only save if there's content
-    const contentToSave = (educationalContent.title || educationalContent.sections.length > 0)
-      ? educationalContent
-      : null
+    // Load existing content structure
+    let existingContent = editingEducationalContent.value.educational_content as any || {}
+    
+    // Ensure it has the new structure
+    if (!existingContent._default && (existingContent.title || existingContent.sections)) {
+      // Migrate old structure to new: move existing content to _default
+      existingContent = {
+        _default: existingContent
+      }
+    }
+    
+    // Update content for current driving category
+    const categoryKey = editingEducationalDrivingCategory.value
+    existingContent[categoryKey] = currentCategoryContent
+    
+    // Clean up empty categories
+    Object.keys(existingContent).forEach(key => {
+      const cat = existingContent[key]
+      if (!cat.title && (!cat.sections || cat.sections.length === 0)) {
+        delete existingContent[key]
+      }
+    })
+    
+    // Only save if there's any content
+    const contentToSave = Object.keys(existingContent).length > 0 ? existingContent : null
     
     // Update criteria in database
     const { error: updateError } = await supabase

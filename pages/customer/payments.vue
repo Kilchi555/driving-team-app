@@ -119,33 +119,48 @@
 
         <div v-else class="divide-y divide-gray-200">
           <div v-for="(payment, index) in filteredPayments" :key="payment.id" 
-               class="px-4 sm:px-6 py-4 sm:py-6 hover:bg-gray-50 transition-colors">
+               class="px-4 sm:px-6 py-4 sm:py-6 hover:bg-gray-50 transition-colors relative">
+            
+            <!-- Cancel Button (oben rechts) -->
+            <button 
+              v-if="canCancelAppointment(payment)"
+              @click="openCancellationModal(payment)"
+              :disabled="isProcessingPayment"
+              class="absolute top-3 right-3 px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors disabled:opacity-50"
+            >
+              Absagen
+            </button>
             
             <!-- Payment Header -->
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 space-y-3 sm:space-y-0">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 space-y-3 sm:space-y-0 pr-16">
               <div class="flex-1">
                 <div class="flex flex-col space-y-2 mb-2">
                   <span class="text-xs sm:text-sm text-gray-500">Position {{ index + 1 }} von {{ filteredPayments.length }}</span>
                   
                   <!-- Status Badge mit Timeline-Info -->
                   <div class="flex flex-col space-y-1">
-                    <span :class="getStatusClass(payment.payment_status)" 
+                    <span :class="getStatusClass(payment)" 
                           class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit">
-                      {{ getStatusLabel(payment.payment_status) }}
+                      {{ getStatusLabel(payment) }}
                       <span v-if="payment.payment_status === 'completed' && payment.paid_at" class="ml-2 text-xs font-normal">
                         am {{ formatDateTime(payment.paid_at) }}
                       </span>
                     </span>
                     
-                    <!-- Timeline Info direkt unter Status -->
-                    <div v-if="payment.payment_status === 'pending' && payment.scheduled_authorization_date" class="text-xs text-blue-600">
-                      Wird am {{ formatPaymentTimeline(payment.scheduled_authorization_date) }} provisorisch belastet.
-                    </div>
-                    <div v-else-if="payment.payment_status === 'pending' && !payment.scheduled_authorization_date" class="text-xs text-yellow-600">
-                      Warte auf Terminbestätigung
-                    </div>
-                    <div v-if="payment.payment_status === 'authorized' && payment.scheduled_payment_date" class="text-xs text-blue-600">
-                      Wird am {{ formatPaymentTimeline(payment.scheduled_payment_date) }} final abgebucht.
+                    <!-- Timeline Info direkt unter Status (nur wenn nicht storniert) -->
+                    <template v-if="!isAppointmentCancelled(payment)">
+                      <div v-if="payment.payment_status === 'pending' && payment.scheduled_authorization_date" class="text-xs text-blue-600">
+                        Wird am {{ formatPaymentTimeline(payment.scheduled_authorization_date) }} provisorisch belastet.
+                      </div>
+                      <div v-else-if="payment.payment_status === 'pending' && !payment.scheduled_authorization_date" class="text-xs text-yellow-600">
+                        Warte auf Terminbestätigung
+                      </div>
+                      <div v-if="payment.payment_status === 'authorized' && payment.scheduled_payment_date" class="text-xs text-blue-600">
+                        Wird am {{ formatPaymentTimeline(payment.scheduled_payment_date) }} final abgebucht.
+                      </div>
+                    </template>
+                    <div v-else :class="getCancellationMessageClass(payment)" class="text-xs font-medium">
+                      {{ getCancellationMessage(payment) }}
                     </div>
                   </div>
                 </div>
@@ -197,9 +212,8 @@
             </div>
             
             <!-- Action Buttons -->
-            <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-              <button v-if="payment.payment_status === 'pending' || payment.payment_status === 'authorized'"
-                      @click="payIndividual(payment)"
+            <div v-if="payment.payment_status === 'pending' || payment.payment_status === 'authorized'" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+              <button @click="payIndividual(payment)"
                       :disabled="isProcessingPayment"
                       class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
                 {{ isProcessingPayment ? 'Verarbeitung...' : 'Freiwillig jetzt bezahlen' }}
@@ -209,6 +223,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Cancellation Modal -->
+    <CustomerCancellationModal
+      :is-visible="showCancellationModal"
+      :appointment="selectedAppointment"
+      :payment="selectedPayment"
+      @close="closeCancellationModal"
+      @cancelled="onAppointmentCancelled"
+    />
   </div>
 </template>
 
@@ -219,6 +242,7 @@ import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
+import CustomerCancellationModal from '~/components/customer/CustomerCancellationModal.vue'
 
 
 // Components (these would need to be created)
@@ -256,6 +280,8 @@ const showSettings = ref(false)
 const selectedPayment = ref<any>(null)
 const preferredPaymentMethod = ref<string | null>(null)
 const expandedPaymentId = ref<string | null>(null)
+const showCancellationModal = ref(false)
+const selectedAppointment = ref<any>(null)
 
 // Computed properties
 const unpaidPayments = computed(() => 
@@ -478,7 +504,14 @@ const getPaymentMethodClass = (method: string): string => {
   return classes[method] || 'bg-gray-100 text-gray-800'
 }
 
-const getStatusLabel = (status: string): string => {
+const getStatusLabel = (payment: any): string => {
+  // Check appointment status first
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  if (appointment?.status === 'cancelled') {
+    return 'Storniert'
+  }
+  
+  // Otherwise use payment status
   const labels: Record<string, string> = {
     'pending': 'Ausstehend',
     'authorized': 'Reserviert',
@@ -487,18 +520,26 @@ const getStatusLabel = (status: string): string => {
     'cancelled': 'Storniert',
     'refunded': 'Rückerstattet'
   }
-  return labels[status] || status
+  return labels[payment.payment_status] || payment.payment_status
 }
 
-const getStatusClass = (status: string): string => {
+const getStatusClass = (payment: any): string => {
+  // Check appointment status first
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  if (appointment?.status === 'cancelled') {
+    return 'bg-gray-100 text-gray-800'
+  }
+  
+  // Otherwise use payment status
   const classes: Record<string, string> = {
     'pending': 'bg-yellow-100 text-yellow-800',
+    'authorized': 'bg-blue-100 text-blue-800',
     'completed': 'bg-green-100 text-green-800',
     'failed': 'bg-red-100 text-red-800',
     'cancelled': 'bg-gray-100 text-gray-800',
     'refunded': 'bg-orange-100 text-orange-800'
   }
-  return classes[status] || 'bg-gray-100 text-gray-800'
+  return classes[payment.payment_status] || 'bg-gray-100 text-gray-800'
 }
 
 const formatDateTime = (dateString: string): string => {
@@ -580,6 +621,126 @@ const isDatePassed = (dateString: string): boolean => {
   const date = new Date(dateString)
   const now = new Date()
   return date < now
+}
+
+const isAppointmentCancelled = (payment: any): boolean => {
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  return appointment?.status === 'cancelled'
+}
+
+const getCancellationMessage = (payment: any): string => {
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  if (!appointment) return 'Termin storniert'
+  
+  const chargePercentage = appointment.cancellation_charge_percentage ?? 100
+  const medicalCertStatus = appointment.medical_certificate_status
+  const hasUpload = appointment.medical_certificate_url
+  
+  // Medical Certificate - wenn hochgeladen
+  if ((medicalCertStatus === 'uploaded' || medicalCertStatus === 'pending') && hasUpload) {
+    return 'Wird geprüft'
+  }
+  
+  // Medical Certificate - approved
+  if (medicalCertStatus === 'approved') {
+    if (payment.payment_status === 'completed') {
+      return 'Als Guthaben gutgeschrieben'
+    }
+    return 'Kostenlos storniert (Arztzeugnis genehmigt)'
+  }
+  
+  // Medical Certificate - rejected
+  if (medicalCertStatus === 'rejected') {
+    return `Arztzeugnis abgelehnt - ${chargePercentage}% verrechnet`
+  }
+  
+  // Standard Cancellation - No Upload
+  if (chargePercentage === 0) {
+    if (payment.payment_status === 'completed') {
+      return 'Rückerstattet'
+    } else if (payment.payment_status === 'authorized') {
+      return 'Reservierung aufgehoben'
+    }
+    return 'Kostenlos storniert'
+  } else if (chargePercentage === 100) {
+    // Show reason based on payment status
+    if (payment.payment_status === 'completed') {
+      return 'Kostenpflichtig (zu spät storniert)'
+    } else if (payment.payment_status === 'authorized') {
+      return 'Kostenpflichtig (zu spät storniert)'
+    }
+    return 'Kostenpflichtig (zu spät storniert)'
+  } else {
+    return `${chargePercentage}% Stornogebühr (zu spät storniert)`
+  }
+}
+
+const getCancellationMessageClass = (payment: any): string => {
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  if (!appointment) return 'text-gray-600'
+  
+  const chargePercentage = appointment.cancellation_charge_percentage ?? 100
+  const medicalCertStatus = appointment.medical_certificate_status
+  
+  // Green for free/refunded
+  if (chargePercentage === 0 || medicalCertStatus === 'approved') {
+    return 'text-green-600'
+  }
+  
+  // Yellow for pending review
+  if (medicalCertStatus === 'pending' || medicalCertStatus === 'uploaded') {
+    return 'text-yellow-600'
+  }
+  
+  // Red for charged
+  if (chargePercentage === 100 || medicalCertStatus === 'rejected') {
+    return 'text-red-600'
+  }
+  
+  // Orange for partial
+  return 'text-orange-600'
+}
+
+const canCancelAppointment = (payment: any): boolean => {
+  // Can cancel if appointment exists and is not already cancelled
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  if (!appointment) return false
+  
+  const now = new Date()
+  const appointmentTime = new Date(appointment.start_time)
+  
+  // Can cancel if appointment hasn't happened yet or is within 48h after
+  const hoursAfter = (now.getTime() - appointmentTime.getTime()) / (1000 * 60 * 60)
+  
+  return appointment.status !== 'cancelled' && 
+         appointment.status !== 'completed' &&
+         hoursAfter < 48 // Can cancel up to 48h after appointment
+}
+
+const openCancellationModal = (payment: any) => {
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  selectedAppointment.value = appointment
+  selectedPayment.value = payment
+  showCancellationModal.value = true
+}
+
+const closeCancellationModal = () => {
+  showCancellationModal.value = false
+  selectedAppointment.value = null
+  selectedPayment.value = null
+}
+
+const onAppointmentCancelled = async (appointmentId: string) => {
+  console.log('✅ Appointment cancelled:', appointmentId)
+  
+  // Close modal first
+  closeCancellationModal()
+  
+  // Show success message first
+  alert('Termin erfolgreich abgesagt')
+  
+  // Reload page to get fresh data
+  window.location.reload()
 }
 
 const getAppointmentTitle = (payment: any): string => {

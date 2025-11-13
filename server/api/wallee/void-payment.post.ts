@@ -4,6 +4,7 @@
 
 import { Wallee } from 'wallee'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
 export default defineEventHandler(async (event) => {
   console.log('🚫 Wallee Void Payment...')
@@ -93,7 +94,7 @@ export default defineEventHandler(async (event) => {
         .from('payments')
         .update({
           payment_status: 'cancelled',
-          updated_at: new Date().toISOString()
+          updated_at: toLocalTimeString(new Date())
         })
         .eq('id', paymentId)
 
