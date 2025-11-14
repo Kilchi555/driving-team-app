@@ -1170,6 +1170,7 @@ interface Appointment {
   is_paid: boolean
   status: string
   type: string
+  payment_status?: string // ✅ Wichtig für Failed Payments Filter!
   payment_method?: string
   payment_method_name?: string
   total_amount?: number
@@ -1333,7 +1334,15 @@ const paymentMethodClass = computed(() => {
 const totalAppointments = computed(() => appointments.value.filter(apt => !apt.deleted_at).length)
 const paidAppointments = computed(() => appointments.value.filter(apt => apt.is_paid && !apt.deleted_at).length)
 const unpaidAppointments = computed(() => appointments.value.filter(apt => !apt.is_paid && apt.payment_status !== 'failed' && !apt.deleted_at).length)
-const failedAppointments = computed(() => appointments.value.filter(apt => apt.payment_status === 'failed' && !apt.deleted_at).length)
+const failedAppointments = computed(() => {
+  const failed = appointments.value.filter(apt => apt.payment_status === 'failed' && !apt.deleted_at)
+  console.log('🔴 DEBUG failedAppointments computed:', {
+    totalAppointments: appointments.value.length,
+    failedCount: failed.length,
+    failedIds: failed.map(f => ({ id: f.id, status: f.payment_status, title: f.title }))
+  })
+  return failed.length
+})
 const deletedAppointments = computed(() => appointments.value.filter(apt => !!apt.deleted_at).length)
 const hasUnpaidAppointments = computed(() => unpaidAppointments.value > 0)
 const hasCompanyBilling = computed(() => !!companyBillingAddress.value || !!(userDetails.value?.default_company_billing_address_id))
@@ -1555,6 +1564,12 @@ const loadUserAppointments = async () => {
     // Kombiniere Termine mit Zahlungsinformationen
     const processedAppointments = []
     
+    console.log('🔍 DEBUG - Total payments loaded:', paymentsData.length)
+    console.log('🔍 DEBUG - Payments by status:', paymentsData.reduce((acc: any, p: any) => {
+      acc[p.payment_status] = (acc[p.payment_status] || 0) + 1
+      return acc
+    }, {}))
+    
     for (const appointment of (appointmentsData || [])) {
       const payment = paymentsData.find(p => p.appointment_id === appointment.id)
       const isPaid = payment?.payment_status === 'completed'
@@ -1562,6 +1577,15 @@ const loadUserAppointments = async () => {
       // Merge Zahlungsstatus und Methode in Termin-Datensatz
       ;(appointment as any).payment_status = payment?.payment_status || 'pending'
       ;(appointment as any).payment_method = payment?.payment_method || 'pending'
+      
+      if (payment?.payment_status === 'failed') {
+        console.log('🔴 DEBUG - Found failed payment:', {
+          appointmentId: appointment.id,
+          appointmentTitle: appointment.title,
+          paymentStatus: payment.payment_status,
+          paymentId: payment.id
+        })
+      }
       
       // Verwende echte Daten aus der Datenbank
       const lessonPrice = payment ? (payment.lesson_price_rappen || 0) / 100 : 0
@@ -1697,6 +1721,7 @@ const loadUserAppointments = async () => {
         is_paid: isPaid,
         status: appointment.status || 'pending',
         type: appointment.type || 'driving_lesson',
+        payment_status: payment?.payment_status || 'pending', // ✅ KRITISCH: payment_status hinzufügen!
         payment_method: payment?.payment_method,
         payment_method_name: payment?.payment_method ? getPaymentMethodLabel(payment.payment_method) : '',
         total_amount: payment ? (payment.total_amount_rappen || 0) / 100 : 0,
@@ -1728,6 +1753,13 @@ const loadUserAppointments = async () => {
     appointments.value = processedAppointments
 
     console.log('✅ Appointments with payment methods loaded:', appointments.value.length)
+    console.log('🔴 DEBUG - Appointments with failed status:', 
+      appointments.value.filter(a => a.payment_status === 'failed').map(a => ({
+        id: a.id,
+        title: a.title,
+        payment_status: a.payment_status
+      }))
+    )
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     console.error('❌ Error loading appointments:', err)
