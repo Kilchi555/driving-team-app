@@ -4,7 +4,6 @@
 
 import { Wallee } from 'wallee'
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { toLocalTimeString } from '~/utils/dateUtils'
 
 export default defineEventHandler(async (event) => {
   console.log('💰 Wallee Capture Payment...')
@@ -93,10 +92,10 @@ export default defineEventHandler(async (event) => {
         .from('payments')
         .update({
           payment_status: 'completed',
-          paid_at: toLocalTimeString(new Date()),
+          paid_at: new Date().toISOString(),
           automatic_payment_processed: true,
-          automatic_payment_processed_at: toLocalTimeString(new Date()),
-          updated_at: toLocalTimeString(new Date())
+          automatic_payment_processed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .eq('id', paymentId)
 

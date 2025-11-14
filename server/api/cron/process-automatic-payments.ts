@@ -4,7 +4,6 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { Wallee } from 'wallee'
 import crypto from 'crypto'
-import { toLocalTimeString } from '~/utils/dateUtils'
 
 export default defineEventHandler(async (event) => {
   console.log('🔄 Processing automatic payments...')
@@ -142,7 +141,7 @@ export default defineEventHandler(async (event) => {
             // Clear scheduled_authorization_date (optional)
             await supabase
               .from('payments')
-              .update({ scheduled_authorization_date: null, updated_at: toLocalTimeString(new Date()) })
+              .update({ scheduled_authorization_date: null, updated_at: new Date().toISOString() })
               .eq('id', p.id)
             console.log('✅ Authorized payment', p.id)
           } catch (e: any) {
@@ -447,10 +446,10 @@ export default defineEventHandler(async (event) => {
                   .from('appointments')
                   .update({
                     status: 'cancelled',
-                    deleted_at: toLocalTimeString(now),
+                    deleted_at: now.toISOString(),
                     deletion_reason: `Automatisch storniert: Keine Bestätigung bis ${deletionDeadline.toLocaleString('de-CH')}`,
                     cancellation_type: 'system',
-                    updated_at: toLocalTimeString(now)
+                    updated_at: now.toISOString()
                   })
                   .eq('id', appointment.id)
                 
@@ -466,10 +465,10 @@ export default defineEventHandler(async (event) => {
                     payment_status: 'failed',
                     metadata: {
                       auto_deleted: true,
-                      deleted_at: toLocalTimeString(now),
+                      deleted_at: now.toISOString(),
                       reason: 'No confirmation received'
                     },
-                    updated_at: toLocalTimeString(now)
+                    updated_at: now.toISOString()
                   })
                   .eq('id', payment.id)
                 
@@ -582,10 +581,10 @@ async function markPaymentAsProcessed(
   
   const updateData: any = {
     automatic_payment_processed: true,
-    automatic_payment_processed_at: toLocalTimeString(new Date()),
+    automatic_payment_processed_at: new Date().toISOString(),
     payment_status: 'completed',
-    paid_at: toLocalTimeString(new Date()),
-    updated_at: toLocalTimeString(new Date())
+    paid_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   }
   
   if (walleeTransactionId) {
@@ -625,7 +624,7 @@ async function markPaymentAsProcessed(
       .update({
         is_paid: true,
         payment_status: 'paid',
-        updated_at: toLocalTimeString(new Date())
+        updated_at: new Date().toISOString()
       })
       .eq('id', paymentData.appointment_id)
   }
@@ -655,7 +654,7 @@ async function markPaymentAsFailed(paymentId: string, reason: string) {
     .update({
       payment_status: 'failed',
       metadata: metadata,
-      updated_at: toLocalTimeString(new Date())
+      updated_at: new Date().toISOString()
     })
     .eq('id', paymentId)
   

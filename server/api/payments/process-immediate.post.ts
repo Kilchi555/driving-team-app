@@ -4,7 +4,6 @@
 
 import { getSupabase } from '~/utils/supabase'
 import { Wallee } from 'wallee'
-import { toLocalTimeString } from '~/utils/dateUtils'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -206,19 +205,19 @@ export default defineEventHandler(async (event) => {
         .from('payments')
         .update({
           automatic_payment_processed: true,
-          automatic_payment_processed_at: toLocalTimeString(new Date()),
+          automatic_payment_processed_at: new Date().toISOString(),
           payment_status: 'completed',
-          paid_at: toLocalTimeString(new Date()),
+          paid_at: new Date().toISOString(),
           wallee_transaction_id: walleeTransaction.id?.toString(),
           metadata: {
             ...payment.metadata,
             immediate_payment_processed: {
-              processed_at: toLocalTimeString(new Date()),
+              processed_at: new Date().toISOString(),
               wallee_state: finalTransaction.state,
               wallee_transaction_id: walleeTransaction.id?.toString()
             }
           },
-          updated_at: toLocalTimeString(new Date())
+          updated_at: new Date().toISOString()
         })
         .eq('id', payment.id)
 
@@ -229,7 +228,7 @@ export default defineEventHandler(async (event) => {
           .update({
             is_paid: true,
             payment_status: 'paid',
-            updated_at: toLocalTimeString(new Date())
+            updated_at: new Date().toISOString()
           })
           .eq('id', payment.appointment_id)
       }
@@ -255,10 +254,10 @@ export default defineEventHandler(async (event) => {
             immediate_payment_processing: {
               wallee_transaction_id: walleeTransaction.id?.toString(),
               state: finalTransaction.state,
-              started_at: toLocalTimeString(new Date())
+              started_at: new Date().toISOString()
             }
           },
-          updated_at: toLocalTimeString(new Date())
+          updated_at: new Date().toISOString()
         })
         .eq('id', payment.id)
 
@@ -280,12 +279,12 @@ export default defineEventHandler(async (event) => {
           metadata: {
             ...payment.metadata,
             immediate_payment_failed: {
-              failed_at: toLocalTimeString(new Date()),
+              failed_at: new Date().toISOString(),
               reason: `Wallee state: ${finalTransaction.state}`,
               wallee_transaction_id: walleeTransaction.id?.toString()
             }
           },
-          updated_at: toLocalTimeString(new Date())
+          updated_at: new Date().toISOString()
         })
         .eq('id', payment.id)
 
