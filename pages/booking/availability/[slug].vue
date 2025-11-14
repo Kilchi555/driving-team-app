@@ -99,13 +99,14 @@
         <!-- Step 2: Lesson Duration Selection -->
         <div v-if="currentStep === 2" class="bg-white shadow rounded-lg p-4">
           <div class="text-center mb-6">
-            <h2 class="text-xl sm:text-2xl	font-bold text-gray-900 mb-2">Wie lange soll die Fahrlektion dauern?</h2>
-            <p class="text-sm sm:text-base text-gray-600">
-              Kategorie <span class="font-semibold">{{ selectedCategory?.name }}</span>
-            </p>
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wie lange soll die Fahrlektion dauern?</h2>
+            <p class="text-sm sm:text-base text-gray-600">{{ selectedCategory?.name }}</p>
           </div>
           
-          <div :class="`grid ${getGridClasses(durationOptions.length)} gap-3`">
+          <div
+            v-if="durationOptions.length"
+            :class="`grid ${getGridClasses(durationOptions.length)} gap-3`"
+          >
             <button
               v-for="duration in durationOptions"
               :key="duration"
@@ -115,31 +116,35 @@
             >
               <div class="flex items-center justify-between">
                 <div>
-                  <div class="text-2xl font-bold text-gray-900">{{ duration }} <span class="text-base font-medium">Min.</span></div>
+                  <div class="text-2xl font-bold text-gray-900">
+                    {{ duration }} <span class="text-base font-medium">Min.</span>
+                  </div>
                   <p class="text-xs sm:text-sm text-gray-600 mt-1">
                     {{ duration >= 60 ? `${Math.round((duration / 60) * 10) / 10} Stunden` : 'Ideal für fokussiertes Lernen' }}
                   </p>
                 </div>
-                <div class="text-xl">
-                  {{ selectedDuration === duration ? '✅' : '⏱️' }}
-                </div>
+                <span
+                  class="inline-flex items-center justify-center rounded-full px-2 py-1 text-xs font-semibold"
+                  :class="selectedDuration === duration ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'"
+                >
+                  {{ selectedDuration === duration ? 'Ausgewählt' : 'Jetzt wählen' }}
+                </span>
               </div>
             </button>
           </div>
           
-          <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+          <div v-else class="text-center py-6">
+            <p class="text-sm text-gray-600">
+              Für diese Kategorie sind noch keine Lektion-Dauern hinterlegt. Bitte kontaktieren Sie die Fahrschule.
+            </p>
+          </div>
+          
+          <div class="mt-6 text-center">
             <button 
               @click="goBackToStep(1)"
               class="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
             >
               ← Zurück zur Kategorie
-            </button>
-            <button 
-              @click="confirmDurationSelection"
-              :disabled="!selectedDuration"
-              class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Weiter zum Standort →
             </button>
           </div>
         </div>
@@ -1275,12 +1280,6 @@ const parseDurationValues = (raw: any): number[] => {
 const selectDurationOption = (duration: number) => {
   selectedDuration.value = duration
   filters.value.duration_minutes = duration
-}
-
-const confirmDurationSelection = () => {
-  if (!selectedDuration.value) return
-  
-  filters.value.duration_minutes = selectedDuration.value
   currentStep.value = 3
 }
 
@@ -1289,8 +1288,8 @@ const selectCategory = async (category: any) => {
   filters.value.category_code = category.code
   
   durationOptions.value = parseDurationValues(category.lesson_duration_minutes)
-  selectedDuration.value = durationOptions.value[0] || 45
-  filters.value.duration_minutes = selectedDuration.value || 45
+  selectedDuration.value = null
+  filters.value.duration_minutes = 45
   
   // Reset pickup state
   pickupPLZ.value = ''
