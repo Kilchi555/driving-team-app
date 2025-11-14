@@ -1435,72 +1435,86 @@ const loadUserAppointments = async () => {
       paymentsData = payments || []
     }
 
-    // OPTIMIZATION: Batch load all products and discounts at once
+    // OPTIMIZATION: Batch load all products and discounts at once using payment_items
     let allProducts: any[] = []
     let allDiscounts: any[] = []
     
     if (appointmentIds.length > 0) {
-      // ✅ Lade Produkte genau wie in useProductSelection.ts - mit verschachtelter Relation
-      // Lade product_sales mit product_sale_items und products für alle appointments
-      const { data: productSalesData, error: productSalesError } = await supabase
-        .from('product_sales')
-        .select(`
-          id,
-          appointment_id,
-          product_sale_items (
+      // Zuerst: Payment IDs für alle Appointments finden
+      const paymentIds = paymentsData.map(p => p.id).filter(Boolean)
+      
+      if (paymentIds.length > 0) {
+        // ✅ Lade ALLE payment_items (Produkte UND Rabatte) in einer Abfrage
+        const { data: paymentItemsData, error: paymentItemsError } = await supabase
+          .from('payment_items')
+          .select(`
             id,
+            payment_id,
+            item_type,
+            product_id,
+            discount_id,
             quantity,
             unit_price_rappen,
             total_price_rappen,
+            description,
             products (
               id,
               name,
               description
+            ),
+            discounts (
+              id,
+              code,
+              description
             )
-          )
-        `)
-        .in('appointment_id', appointmentIds)
-      
-      if (!productSalesError && productSalesData) {
-        // Verarbeite alle product_sales und sammle die Produkte
-        productSalesData.forEach((sale: any) => {
-          if (sale.product_sale_items && sale.product_sale_items.length > 0) {
-            sale.product_sale_items.forEach((item: any) => {
+          `)
+          .in('payment_id', paymentIds)
+        
+        if (!paymentItemsError && paymentItemsData) {
+          // Erstelle Payment-zu-Appointment Mapping
+          const paymentToAppointment = new Map<string, string>()
+          paymentsData.forEach(p => {
+            if (p.id && p.appointment_id) {
+              paymentToAppointment.set(p.id, p.appointment_id)
+            }
+          })
+          
+          // Verarbeite payment_items und trenne Produkte und Rabatte
+          paymentItemsData.forEach((item: any) => {
+            const appointmentId = paymentToAppointment.get(item.payment_id)
+            if (!appointmentId) return
+            
+            if (item.item_type === 'product') {
               const productData = item.products
-              const productName = productData?.name || 'Unbekanntes Produkt'
+              const productName = productData?.name || item.description || 'Unbekanntes Produkt'
               
               allProducts.push({
-                appointment_id: sale.appointment_id,
+                appointment_id: appointmentId,
                 id: item.id,
                 quantity: item.quantity,
                 unit_price_rappen: item.unit_price_rappen,
                 total_price_rappen: item.total_price_rappen,
-                product_id: productData?.id,
+                product_id: item.product_id,
                 products: { name: productName }
               })
-            })
-          }
-        })
-        
-        console.log('✅ Loaded products from product_sales with nested relations:', allProducts.length, 'items')
-      } else if (productSalesError) {
-        console.warn('⚠️ Error loading product_sales:', productSalesError)
-      }
-
-      // Load all discounts for all appointments in one query
-      const { data: discountsData, error: discountsError } = await supabase
-        .from('discounts')
-        .select(`
-          appointment_id,
-          id,
-          amount_rappen,
-          discount_type,
-          reason
-        `)
-        .in('appointment_id', appointmentIds)
-      
-      if (!discountsError && discountsData) {
-        allDiscounts = discountsData
+            } else if (item.item_type === 'discount') {
+              const discountData = item.discounts
+              const discountReason = discountData?.description || item.description || 'Rabatt'
+              
+              allDiscounts.push({
+                appointment_id: appointmentId,
+                id: item.id,
+                amount_rappen: Math.abs(item.total_price_rappen || 0), // Rabatte sind negativ gespeichert
+                discount_type: discountData?.code || 'custom',
+                reason: discountReason
+              })
+            }
+          })
+          
+          console.log('✅ Loaded from payment_items:', allProducts.length, 'products,', allDiscounts.length, 'discounts')
+        } else if (paymentItemsError) {
+          console.warn('⚠️ Error loading payment_items:', paymentItemsError)
+        }
       }
     }
 
@@ -1558,47 +1572,38 @@ const loadUserAppointments = async () => {
           }).filter(p => p.name !== 'Unbekanntes Produkt') // Filtere ungültige Produkte heraus
         } else {
           console.warn('⚠️ No products found in batch load for appointment', appointment.id, 'but hasProducts is true')
-          // Fallback: Versuche Produktnamen direkt zu laden
-            // Schritt 1: Finde product_sales für dieses appointment
-            const { data: fallbackSales, error: fallbackSalesError } = await supabase
-              .from('product_sales')
-              .select('id')
-              .eq('appointment_id', appointment.id)
-          
-          if (!fallbackSalesError && fallbackSales && fallbackSales.length > 0) {
-            const fallbackSaleIds = fallbackSales.map(s => s.id)
-            
-            // Schritt 2: Lade product_sale_items
+          // Fallback: Versuche payment_items direkt zu laden
+          if (payment?.id) {
             const { data: fallbackItems, error: fallbackItemsError } = await supabase
-              .from('product_sale_items')
-              .select('id, product_sale_id, product_id, quantity, unit_price_rappen, total_price_rappen')
-              .in('product_sale_id', fallbackSaleIds)
+              .from('payment_items')
+              .select(`
+                id,
+                item_type,
+                product_id,
+                quantity,
+                unit_price_rappen,
+                total_price_rappen,
+                description,
+                products (
+                  id,
+                  name
+                )
+              `)
+              .eq('payment_id', payment.id)
+              .eq('item_type', 'product')
             
             if (!fallbackItemsError && fallbackItems && fallbackItems.length > 0) {
-              // Schritt 3: Lade Produktnamen
-              const fallbackProductIds = fallbackItems.map((item: any) => item.product_id).filter(Boolean)
-              let fallbackProductNamesMap: Record<string, string> = {}
-              
-              if (fallbackProductIds.length > 0) {
-                const { data: fallbackProducts, error: fallbackProductsError } = await supabase
-                  .from('products')
-                  .select('id, name')
-                  .in('id', fallbackProductIds)
+              products = fallbackItems.map((item: any) => {
+                const productData = item.products
+                const productName = productData?.name || item.description || 'Unbekanntes Produkt'
                 
-                if (!fallbackProductsError && fallbackProducts) {
-                  fallbackProducts.forEach(p => {
-                    fallbackProductNamesMap[p.id] = p.name
-                  })
+                return {
+                  name: productName,
+                  price: (item.total_price_rappen || 0) / 100,
+                  quantity: item.quantity || 1,
+                  total_price: (item.total_price_rappen || 0) / 100
                 }
-              }
-              
-              // Schritt 4: Erstelle products Array
-              products = fallbackItems.map((item: any) => ({
-                name: fallbackProductNamesMap[item.product_id] || 'Unbekanntes Produkt',
-                price: (item.total_price_rappen || 0) / 100,
-                quantity: item.quantity || 1,
-                total_price: (item.total_price_rappen || 0) / 100
-              })).filter(p => p.name !== 'Unbekanntes Produkt')
+              }).filter(p => p.name !== 'Unbekanntes Produkt')
               
               if (products.length > 0) {
                 console.log('✅ Loaded products from fallback query:', products)
