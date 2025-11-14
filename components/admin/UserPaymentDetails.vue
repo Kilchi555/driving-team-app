@@ -2121,6 +2121,90 @@ const resetPaymentStatusAction = async (appointment: Appointment) => {
   }
 }
 
+// Reset Failed Payment and resend confirmation email
+const resetFailedPayment = async (appointment: Appointment) => {
+  if (!appointment.id) return
+  
+  showConfirmation(
+    'Fehlgeschlagene Zahlung zurücksetzen',
+    `Möchtest du die Zahlung für "${appointment.title}" zurücksetzen und eine neue Bestätigungs-Email an den Kunden senden?`,
+    () => resetFailedPaymentAction(appointment)
+  )
+}
+
+const resetFailedPaymentAction = async (appointment: Appointment) => {
+  if (!appointment.id) return
+  
+  isUpdatingPayment.value = true
+  try {
+    const supabase = getSupabase()
+    
+    // 1. Find payment for this appointment
+    const payment = await findPaymentForAppointment(appointment.id)
+    
+    if (!payment) {
+      throw new Error('No payment found for this appointment')
+    }
+    
+    // 2. Reset payment status to pending
+    const { error: paymentError } = await supabase
+      .from('payments')
+      .update({
+        payment_status: 'pending',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', payment.id)
+    
+    if (paymentError) throw paymentError
+    
+    // 3. Reset appointment status to pending_confirmation
+    const { error: appointmentError } = await supabase
+      .from('appointments')
+      .update({
+        status: 'pending_confirmation',
+        is_paid: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', appointment.id)
+    
+    if (appointmentError) throw appointmentError
+    
+    // 4. Send confirmation email via API
+    try {
+      await $fetch('/api/appointments/resend-confirmation', {
+        method: 'POST',
+        body: {
+          appointmentId: appointment.id
+        }
+      })
+      console.log('✅ Confirmation email sent')
+    } catch (emailError) {
+      console.warn('⚠️ Failed to send confirmation email:', emailError)
+      // Don't throw - payment reset is still successful
+    }
+    
+    // 5. Refresh data
+    await refreshData()
+    
+    // Success message
+    showSuccessToast(
+      '✅ Zahlung zurückgesetzt',
+      `Die Zahlung für "${appointment.title}" wurde zurückgesetzt und eine neue Bestätigungs-Email wurde versendet.`
+    )
+    
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    console.error('❌ Error resetting failed payment:', err)
+    
+    showErrorToast(
+      '❌ Fehler aufgetreten',
+      `Fehler beim Zurücksetzen der Zahlung: ${errorMessage}`
+    )
+  } finally {
+    isUpdatingPayment.value = false
+  }
+}
+
 const deleteAppointment = async (appointment: Appointment) => {
   if (!appointment.id) return
   
@@ -2273,6 +2357,11 @@ const getButtonAction = (appointment: Appointment) => {
     return restoreAppointment(appointment)
   }
   
+  // Check for failed payment
+  if (appointment.payment_status === 'failed') {
+    return resetFailedPayment(appointment)
+  }
+  
   if (appointment.is_paid) {
     return resetPaymentStatus(appointment)
   } else {
@@ -2283,6 +2372,10 @@ const getButtonAction = (appointment: Appointment) => {
 const getButtonText = (appointment: Appointment) => {
   if (appointmentFilter.value === 'deleted') {
     return 'Wiederherstellen'
+  }
+  
+  if (appointment.payment_status === 'failed') {
+    return 'Neu senden'
   }
   
   if (appointment.is_paid) {
@@ -2299,6 +2392,10 @@ const getButtonClass = (appointment: Appointment) => {
     return `${baseClasses} text-green-700 bg-green-100 hover:bg-green-200 focus:ring-green-500`
   }
   
+  if (appointment.payment_status === 'failed') {
+    return `${baseClasses} text-blue-700 bg-blue-100 hover:bg-blue-200 focus:ring-blue-500`
+  }
+  
   if (appointment.is_paid) {
     return `${baseClasses} text-orange-700 bg-orange-100 hover:bg-orange-200 focus:ring-orange-500`
   } else {
@@ -2309,6 +2406,10 @@ const getButtonClass = (appointment: Appointment) => {
 const getButtonTitle = (appointment: Appointment) => {
   if (appointmentFilter.value === 'deleted') {
     return 'Termin wiederherstellen'
+  }
+  
+  if (appointment.payment_status === 'failed') {
+    return 'Zahlung zurücksetzen und Bestätigungs-Email erneut senden'
   }
   
   if (appointment.is_paid) {
