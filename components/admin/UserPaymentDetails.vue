@@ -2208,70 +2208,17 @@ const resetFailedPaymentAction = async (appointment: Appointment) => {
   
   isUpdatingPayment.value = true
   try {
-    const supabaseAdmin = getSupabaseAdmin() // ✅ Admin client für RLS bypass
+    // Call API endpoint to reset payment (server-side with admin access)
+    const result = await $fetch('/api/payments/reset-failed', {
+      method: 'POST',
+      body: {
+        appointmentId: appointment.id
+      }
+    })
     
-    // 1. Find payment for this appointment
-    const { data: payment, error: findError } = await supabaseAdmin
-      .from('payments')
-      .select('*')
-      .eq('appointment_id', appointment.id)
-      .single()
+    console.log('✅ Payment reset result:', result)
     
-    if (findError || !payment) {
-      console.error('❌ Payment find error:', findError)
-      throw new Error('No payment found for this appointment')
-    }
-    
-    console.log('✅ Found payment:', payment.id, 'with status:', payment.payment_status)
-    
-    // 2. Reset payment status to pending
-    const { error: paymentError } = await supabaseAdmin
-      .from('payments')
-      .update({
-        payment_status: 'pending',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', payment.id)
-    
-    if (paymentError) {
-      console.error('❌ Payment update error:', paymentError)
-      throw paymentError
-    }
-    
-    console.log('✅ Payment status reset to pending')
-    
-    // 3. Reset appointment status to pending_confirmation
-    const { error: appointmentError } = await supabaseAdmin
-      .from('appointments')
-      .update({
-        status: 'pending_confirmation',
-        is_paid: false,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', appointment.id)
-    
-    if (appointmentError) {
-      console.error('❌ Appointment update error:', appointmentError)
-      throw appointmentError
-    }
-    
-    console.log('✅ Appointment status reset to pending_confirmation')
-    
-    // 4. Send confirmation email via API
-    try {
-      await $fetch('/api/appointments/resend-confirmation', {
-        method: 'POST',
-        body: {
-          appointmentId: appointment.id
-        }
-      })
-      console.log('✅ Confirmation email sent')
-    } catch (emailError) {
-      console.warn('⚠️ Failed to send confirmation email:', emailError)
-      // Don't throw - payment reset is still successful
-    }
-    
-    // 5. Refresh data
+    // Refresh data
     await refreshData()
     
     // Success message
@@ -2280,8 +2227,8 @@ const resetFailedPaymentAction = async (appointment: Appointment) => {
       `Die Zahlung für "${appointment.title}" wurde zurückgesetzt und eine neue Bestätigungs-Email wurde versendet.`
     )
     
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+  } catch (err: any) {
+    const errorMessage = err?.data?.message || err?.message || 'Unknown error'
     console.error('❌ Error resetting failed payment:', err)
     
     showErrorToast(
