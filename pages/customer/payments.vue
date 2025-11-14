@@ -243,6 +243,7 @@ import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import CustomerCancellationModal from '~/components/customer/CustomerCancellationModal.vue'
+import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
 
 
 // Components (these would need to be created)
@@ -544,16 +545,19 @@ const getStatusClass = (payment: any): string => {
 
 const formatDateTime = (dateString: string): string => {
   if (!dateString) return '-'
-  // UTC-Zeit aus DB in lokale Zeit (Europe/Zurich) konvertieren
-  return new Date(dateString).toLocaleString('de-CH', {
+  // Use central utility function that properly converts UTC to Europe/Zurich
+  const formatted = formatDateTimeUtil(dateString)
+  
+  // Format: "14.11.2025, 12:02" -> Add weekday prefix
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return formatted
+  
+  const weekday = date.toLocaleDateString('de-CH', { 
     weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Zurich'
+    timeZone: 'Europe/Zurich' 
   })
+  
+  return `${weekday}, ${formatted}`
 }
 
 const formatDate = (dateString: string): string => {
