@@ -774,6 +774,16 @@
       </div>
     </div>
   </div>
+
+  <!-- Toast Notification -->
+  <Toast
+    :show="showToast"
+    :type="toastType"
+    :title="toastTitle"
+    :message="toastMessage"
+    :duration="4000"
+    @close="showToast = false"
+  />
   
 </template>
 
@@ -820,6 +830,20 @@ const hasPaymentMethod = ref(false)
 const automaticPaymentHoursBefore = ref(24)
 const automaticAuthorizationHoursBefore = ref(168) // Standard: 1 Woche vor Termin
 const confirmingAppointments = ref<Set<string>>(new Set()) // Loading state per appointment ID
+
+// Toast Notification State
+const showToast = ref(false)
+const toastType = ref<'success' | 'error' | 'warning' | 'info'>('success')
+const toastTitle = ref('')
+const toastMessage = ref('')
+
+// Toast Helper Function
+const displayToast = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string = '') => {
+  toastType.value = type
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+}
 
 // In CustomerDashboard.vue - vor dem Template:
 const isServerSide = process.server
@@ -959,7 +983,7 @@ const processPendingPayments = async () => {
     await navigateTo(`/customer/payment-process?payments=${paymentIds}`)
   } catch (err) {
     console.error('❌ Error processing pending payments:', err)
-    alert('Fehler beim Weiterleiten zur Zahlung.')
+    displayToast('error', 'Fehler', 'Fehler beim Weiterleiten zur Zahlung.')
   }
 }
 
@@ -1403,7 +1427,8 @@ const confirmAppointment = async (appointment: any) => {
     confirmingAppointments.value.add(appointment.id)
     
     if (!appointment?.id) {
-      alert('Fehler: Termin-ID fehlt')
+      displayToast('error', 'Fehler', 'Termin-ID fehlt')
+      confirmingAppointments.value.delete(appointment.id)
       return
     }
 
@@ -1417,7 +1442,8 @@ const confirmAppointment = async (appointment: any) => {
       .single()
 
     if (!userDb) {
-      alert('Fehler: Benutzer nicht gefunden')
+      displayToast('error', 'Fehler', 'Benutzer nicht gefunden')
+      confirmingAppointments.value.delete(appointment.id)
       return
     }
 
@@ -1431,7 +1457,8 @@ const confirmAppointment = async (appointment: any) => {
 
     const amountRappen = payment?.total_amount_rappen || 0
     if (!amountRappen || amountRappen <= 0) {
-      alert('Fehler: Betrag für den Termin nicht gefunden')
+      displayToast('error', 'Fehler', 'Betrag für den Termin nicht gefunden')
+      confirmingAppointments.value.delete(appointment.id)
       return
     }
 
@@ -1614,12 +1641,12 @@ const confirmAppointment = async (appointment: any) => {
       
       // Zeige Erfolgs-Benachrichtigung
       const message = shouldProcessImmediately
-        ? 'Termin bestätigt! Die Zahlung wurde sofort abgebucht.'
+        ? 'Die Zahlung wurde sofort abgebucht.'
         : shouldAuthorizeNow
-          ? 'Termin bestätigt! Der Betrag wurde provisorisch reserviert und wird 24h vor dem Termin abgebucht.'
-          : `Termin bestätigt! Die Karte wird ${automaticAuthorizationHoursBeforeLocal/24} Tage vor dem Termin reserviert, Abbuchung ${automaticPaymentHoursBeforeLocal}h vorher.`
+          ? 'Der Betrag wurde provisorisch reserviert und wird 24h vor dem Termin abgebucht.'
+          : `Die Karte wird ${automaticAuthorizationHoursBeforeLocal/24} Tage vor dem Termin reserviert, Abbuchung ${automaticPaymentHoursBeforeLocal}h vorher.`
       
-      alert(message)
+      displayToast('success', 'Termin bestätigt!', message)
       return
     }
 
@@ -1667,7 +1694,8 @@ const confirmAppointment = async (appointment: any) => {
 
     if (!response?.success || !response.paymentUrl) {
       console.error('Create transaction failed:', response)
-      alert('Zahlung konnte nicht gestartet werden. Bitte später erneut versuchen.')
+      displayToast('error', 'Fehler', 'Zahlung konnte nicht gestartet werden. Bitte später erneut versuchen.')
+      confirmingAppointments.value.delete(appointment.id)
       return
     }
 
@@ -1705,7 +1733,7 @@ const confirmAppointment = async (appointment: any) => {
     window.location.href = response.paymentUrl
   } catch (err: any) {
     console.error('❌ Fehler beim Starten der Zahlung:', err)
-    alert('Fehler beim Starten der Zahlung: ' + (err?.message || 'Unbekannter Fehler'))
+    displayToast('error', 'Fehler beim Starten der Zahlung', err?.message || 'Unbekannter Fehler')
   } finally {
     confirmingAppointments.value.delete(appointment.id)
   }
