@@ -591,12 +591,14 @@ const formatPaymentTimeline = (dateString: string): string => {
       weekday: 'short',
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'Europe/Zurich'
     })
     
     const formattedTime = date.toLocaleTimeString('de-CH', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Europe/Zurich'
     })
     
     // Relative Zeit hinzufügen
@@ -618,7 +620,7 @@ const formatPaymentTimeline = (dateString: string): string => {
     return `${formattedDate}, ${formattedTime}${relativeTime}`
   } catch (error) {
     console.error('Error formatting payment timeline:', error)
-    return dateString
+    return new Date(dateString).toLocaleString('de-CH', { timeZone: 'Europe/Zurich' })
   }
 }
 
