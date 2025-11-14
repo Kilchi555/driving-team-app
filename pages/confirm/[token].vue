@@ -203,7 +203,7 @@ const isConfirmed = ref(false)
 const isProcessing = ref(false)
 const automaticPaymentEnabled = ref(false)
 const automaticPaymentHoursBefore = ref(24)
-const automaticAuthorizationHoursBefore = ref(168) // Standard: 1 Woche vor Termin
+const automaticAuthorizationHoursBefore = ref(120) // Standard: 5 Tage vor Termin (Wallee Maximum)
 const paymentMethods = ref<any[]>([])
 const selectedPaymentMethodId = ref<string | null>(null)
 const paymentItems = ref<any[]>([])
@@ -289,7 +289,9 @@ const loadAppointment = async () => {
         
         automaticPaymentEnabled.value = settings.automatic_payment_enabled || false
         automaticPaymentHoursBefore.value = settings.automatic_payment_hours_before || 24
-        automaticAuthorizationHoursBefore.value = settings.automatic_authorization_hours_before || 168
+        // Wallee akzeptiert maximal 120 Stunden (5 Tage) Authorization Hold
+        const authHours = settings.automatic_authorization_hours_before || 120
+        automaticAuthorizationHoursBefore.value = Math.min(authHours, 120) // Cap bei 120
       }
     }
 
@@ -378,7 +380,7 @@ const confirmAppointment = async () => {
     if (willUseAutomaticPayment) {
       const appointmentDate = new Date(appointment.value.start_time)
       const hoursBefore = automaticPaymentHoursBefore.value || 24
-      const authHoursBefore = automaticAuthorizationHoursBefore.value || 168 // 1 Woche
+      const authHoursBefore = Math.min(automaticAuthorizationHoursBefore.value || 120, 120) // Max 5 Tage (Wallee Limit)
       const now = new Date()
       
       // Berechne theoretisches scheduled_payment_date (finale Abbuchung)

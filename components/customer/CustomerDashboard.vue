@@ -1296,7 +1296,9 @@ const loadPendingConfirmations = async () => {
             ? JSON.parse(paymentSettings.setting_value) 
             : paymentSettings.setting_value
           automaticPaymentHoursBefore.value = Number(settings?.automatic_payment_hours_before) || 24
-          automaticAuthorizationHoursBefore.value = Number(settings?.automatic_authorization_hours_before) || 168
+          // Wallee akzeptiert maximal 120 Stunden (5 Tage) Authorization Hold
+          const authHours = Number(settings?.automatic_authorization_hours_before) || 120
+          automaticAuthorizationHoursBefore.value = Math.min(authHours, 120)
         }
       } catch (e) {
         console.warn('⚠️ Konnte Payment Settings nicht laden für Stunden:', e)
@@ -1451,7 +1453,9 @@ const confirmAppointment = async (appointment: any) => {
           : paymentSettings.setting_value
         automaticPaymentEnabledLocal = !!settings?.automatic_payment_enabled
         automaticPaymentHoursBeforeLocal = Number(settings?.automatic_payment_hours_before) || 24
-        automaticAuthorizationHoursBeforeLocal = Number(settings?.automatic_authorization_hours_before) || 168
+        // Wallee akzeptiert maximal 120 Stunden (5 Tage) Authorization Hold
+        const authHours = Number(settings?.automatic_authorization_hours_before) || 120
+        automaticAuthorizationHoursBeforeLocal = Math.min(authHours, 120)
         
         console.log('✅ Payment settings loaded:', {
           automatic_payment_enabled: automaticPaymentEnabledLocal,
