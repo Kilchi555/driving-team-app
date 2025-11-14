@@ -149,6 +149,24 @@
                   </button>
                 </div>
                 
+                <div v-else-if="appointmentFilter === 'failed'">
+                  <!-- Aktionen für fehlgeschlagene Zahlungen -->
+                  <button
+                    :disabled="isUpdatingPayment"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    @click="resendAllSelectedConfirmations"
+                  >
+                    <svg v-if="isUpdatingPayment" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+                    <svg v-else class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    Alle neu senden
+                  </button>
+                </div>
+                
                 <div v-else>
                   <!-- Aktionen für aktive Termine -->
                   <button
@@ -737,7 +755,7 @@ class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
               </h3>
               
               <!-- Filter Buttons -->
-              <div class="flex space-x-2">
+              <div class="flex flex-wrap gap-2">
                 <button
                   :class="[
                     'px-3 py-1 text-sm rounded-md font-medium',
@@ -747,18 +765,7 @@ class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                   ]"
                   @click="appointmentFilter = 'all'"
                 >
-                  Alle
-                </button>
-                <button
-                  :class="[
-                    'px-3 py-1 text-sm rounded-md font-medium',
-                    appointmentFilter === 'unpaid' 
-                      ? 'bg-red-100 text-red-800' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  ]"
-                  @click="appointmentFilter = 'unpaid'"
-                >
-                  Unbezahlt
+                  Alle ({{ totalAppointments }})
                 </button>
                 <button
                   :class="[
@@ -769,18 +776,41 @@ class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                   ]"
                   @click="appointmentFilter = 'paid'"
                 >
-                  Bezahlt
+                  Bezahlt ({{ paidAppointments }})
+                </button>
+                <button
+                  :class="[
+                    'px-3 py-1 text-sm rounded-md font-medium',
+                    appointmentFilter === 'unpaid' 
+                      ? 'bg-yellow-100 text-yellow-800' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ]"
+                  @click="appointmentFilter = 'unpaid'"
+                >
+                  Unbezahlt ({{ unpaidAppointments }})
+                </button>
+                <button
+                  v-if="failedAppointments > 0"
+                  :class="[
+                    'px-3 py-1 text-sm rounded-md font-medium',
+                    appointmentFilter === 'failed' 
+                      ? 'bg-red-100 text-red-800' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ]"
+                  @click="appointmentFilter = 'failed'"
+                >
+                  ❌ Fehlgeschlagen ({{ failedAppointments }})
                 </button>
                 <button
                   :class="[
                     'px-3 py-1 text-sm rounded-md font-medium',
                     appointmentFilter === 'deleted' 
-                      ? 'bg-red-100 text-red-800' 
+                      ? 'bg-gray-100 text-gray-800' 
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   ]"
                   @click="appointmentFilter = 'deleted'"
                 >
-                  🗑️ Gelöscht
+                  🗑️ Gelöscht ({{ deletedAppointments }})
                 </button>
               </div>
             </div>
@@ -833,10 +863,10 @@ v-for="appointment in filteredAppointments" :key="appointment.id"
                       appointment.is_paid ? 'bg-green-50' : 'bg-white',
                       isAppointmentSelectable(appointment) ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
                     ]"
-                    @click="(appointmentFilter === 'deleted' || !appointment.is_paid) && isAppointmentSelectable(appointment) && toggleAppointmentSelection(appointment.id)">
+                    @click="(appointmentFilter === 'deleted' || appointmentFilter === 'failed' || !appointment.is_paid) && isAppointmentSelectable(appointment) && toggleAppointmentSelection(appointment.id)">
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <input
-                      v-if="(appointmentFilter === 'deleted' || !appointment.is_paid) && isAppointmentSelectable(appointment)"
+                      v-if="(appointmentFilter === 'deleted' || appointmentFilter === 'failed' || !appointment.is_paid) && isAppointmentSelectable(appointment)"
                       type="checkbox"
                       :checked="selectedAppointments.includes(appointment.id)"
                       class="rounded border-gray-300 text-green-600 focus:ring-green-500"
@@ -1216,7 +1246,7 @@ const error = ref<string | null>(null)
 const userDetails = ref<UserDetails | null>(null)
 const appointments = ref<Appointment[]>([])
 const companyBillingAddress = ref<CompanyBillingAddress | null>(null)
-const appointmentFilter = ref<'all' | 'paid' | 'unpaid' | 'deleted'>('all')
+const appointmentFilter = ref<'all' | 'paid' | 'unpaid' | 'failed' | 'deleted'>('all')
 const isUpdatingPayment = ref(false)
 const selectedAppointments = ref<string[]>([])
 const showSelectedAppointmentsDetails = ref(false)
@@ -1302,7 +1332,9 @@ const paymentMethodClass = computed(() => {
 // Statistics computed properties
 const totalAppointments = computed(() => appointments.value.filter(apt => !apt.deleted_at).length)
 const paidAppointments = computed(() => appointments.value.filter(apt => apt.is_paid && !apt.deleted_at).length)
-const unpaidAppointments = computed(() => appointments.value.filter(apt => !apt.is_paid && !apt.deleted_at).length)
+const unpaidAppointments = computed(() => appointments.value.filter(apt => !apt.is_paid && apt.payment_status !== 'failed' && !apt.deleted_at).length)
+const failedAppointments = computed(() => appointments.value.filter(apt => apt.payment_status === 'failed' && !apt.deleted_at).length)
+const deletedAppointments = computed(() => appointments.value.filter(apt => !!apt.deleted_at).length)
 const hasUnpaidAppointments = computed(() => unpaidAppointments.value > 0)
 const hasCompanyBilling = computed(() => !!companyBillingAddress.value || !!(userDetails.value?.default_company_billing_address_id))
 
@@ -1340,7 +1372,9 @@ const filteredAppointments = computed(() => {
     case 'paid':
       return appointments.value.filter(apt => apt.is_paid && !apt.deleted_at)
     case 'unpaid':
-      return appointments.value.filter(apt => !apt.is_paid && !apt.deleted_at)
+      return appointments.value.filter(apt => !apt.is_paid && apt.payment_status !== 'failed' && !apt.deleted_at)
+    case 'failed':
+      return appointments.value.filter(apt => apt.payment_status === 'failed' && !apt.deleted_at)
     case 'deleted':
       return appointments.value.filter(apt => apt.deleted_at)
     default:
@@ -2208,6 +2242,55 @@ const resetFailedPaymentAction = async (appointment: Appointment) => {
   } finally {
     isUpdatingPayment.value = false
   }
+}
+
+// Batch reset failed payments for all selected appointments
+const resendAllSelectedConfirmations = async () => {
+  if (selectedAppointments.value.length === 0) return
+  
+  showConfirmation(
+    'Alle fehlgeschlagenen Zahlungen zurücksetzen',
+    `Möchtest du ${selectedAppointments.value.length} fehlgeschlagene Zahlungen zurücksetzen und neue Bestätigungs-Emails versenden?`,
+    async () => {
+      isUpdatingPayment.value = true
+      let successCount = 0
+      let errorCount = 0
+      
+      try {
+        for (const appointmentId of selectedAppointments.value) {
+          const appointment = appointments.value.find(apt => apt.id === appointmentId)
+          if (!appointment) continue
+          
+          try {
+            await resetFailedPaymentAction(appointment)
+            successCount++
+          } catch (err) {
+            console.error(`Error resetting payment for ${appointmentId}:`, err)
+            errorCount++
+          }
+        }
+        
+        // Clear selection
+        selectedAppointments.value = []
+        
+        // Show summary
+        if (errorCount === 0) {
+          showSuccessToast(
+            '✅ Alle Zahlungen zurückgesetzt',
+            `${successCount} fehlgeschlagene Zahlungen wurden erfolgreich zurückgesetzt.`
+          )
+        } else {
+          showErrorToast(
+            '⚠️ Teilweise erfolgreich',
+            `${successCount} Zahlungen zurückgesetzt, ${errorCount} fehlgeschlagen.`
+          )
+        }
+        
+      } finally {
+        isUpdatingPayment.value = false
+      }
+    }
+  )
 }
 
 const deleteAppointment = async (appointment: Appointment) => {
