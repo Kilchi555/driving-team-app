@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
 
     // ✅ Update Payment in DB
     if (paymentId) {
-      await supabase
+      const { error: updateError } = await supabase
         .from('payments')
         .update({
           payment_status: 'completed',
@@ -99,7 +99,15 @@ export default defineEventHandler(async (event) => {
         })
         .eq('id', paymentId)
 
-      console.log('✅ Payment marked as completed')
+      if (updateError) {
+        console.error('❌ Failed to update payment in database:', updateError)
+        throw createError({
+          statusCode: 500,
+          statusMessage: `Payment captured in Wallee but DB update failed: ${updateError.message}`
+        })
+      }
+
+      console.log('✅ Payment marked as completed in database')
     }
 
     return {
