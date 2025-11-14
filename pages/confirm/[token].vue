@@ -186,7 +186,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { navigateTo } from '#app'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
 
 definePageMeta({
   layout: false
@@ -297,8 +297,18 @@ const loadAppointment = async () => {
 
     // Load customer payment methods if automatic payment is enabled
     // ✅ WICHTIG: Lade Wallee-Token aus unserer Datenbank (keine sensiblen Daten!)
+    console.log('🔍 Payment settings check:', {
+      automaticPaymentEnabled: automaticPaymentEnabled.value,
+      userId: appointmentData.user_id,
+      willLoadMethods: automaticPaymentEnabled.value && appointmentData.user_id
+    })
     if (automaticPaymentEnabled.value && appointmentData.user_id) {
       await loadPaymentMethods(appointmentData.user_id)
+    } else {
+      console.warn('⚠️ Payment methods NOT loaded:', {
+        automaticPaymentEnabled: automaticPaymentEnabled.value,
+        hasUserId: !!appointmentData.user_id
+      })
     }
 
     // ✅ Done loading
@@ -316,7 +326,8 @@ const loadAppointment = async () => {
 
 const loadPaymentMethods = async (userId: string) => {
   try {
-    const supabase = getSupabase()
+    // ✅ WICHTIG: Admin-Client verwenden, da Confirm-Seite ohne Login aufgerufen wird
+    const supabase = getSupabaseAdmin()
     const { data, error: methodsError } = await supabase
       .from('customer_payment_methods')
       .select('*')
@@ -326,7 +337,7 @@ const loadPaymentMethods = async (userId: string) => {
       .order('created_at', { ascending: false })
 
     if (methodsError) {
-      console.warn('Error loading payment methods:', methodsError)
+      console.warn('❌ Error loading payment methods:', methodsError)
       return
     }
 
@@ -346,7 +357,7 @@ const loadPaymentMethods = async (userId: string) => {
       methods: paymentMethods.value.map(m => ({ id: m.id, display_name: m.display_name, is_default: m.is_default }))
     })
   } catch (err) {
-    console.error('Error loading payment methods:', err)
+    console.error('❌ Error loading payment methods:', err)
   }
 }
 
@@ -549,7 +560,11 @@ const confirmAppointment = async () => {
 
         // ✅ SOFORTIGE VERARBEITUNG: Wenn Bestätigung zu spät kommt (< hoursBefore vor Termin)
         if (shouldProcessImmediately) {
-          console.log('⚡ Immediate payment required - redirecting to payment...')
+          console.log('⚡ Immediate payment required - checking payment methods...', {
+            hasPaymentMethods: paymentMethods.value.length > 0,
+            selectedPaymentMethodId: selectedPaymentMethodId.value,
+            allMethods: paymentMethods.value.map(m => ({ id: m.id, name: m.display_name }))
+          })
           
           // Prüfe ob bereits ein Token vorhanden ist
           if (selectedPaymentMethodId.value) {
