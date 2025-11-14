@@ -2208,17 +2208,24 @@ const resetFailedPaymentAction = async (appointment: Appointment) => {
   
   isUpdatingPayment.value = true
   try {
-    const supabase = getSupabase()
+    const supabaseAdmin = getSupabaseAdmin() // ✅ Admin client für RLS bypass
     
     // 1. Find payment for this appointment
-    const payment = await findPaymentForAppointment(appointment.id)
+    const { data: payment, error: findError } = await supabaseAdmin
+      .from('payments')
+      .select('*')
+      .eq('appointment_id', appointment.id)
+      .single()
     
-    if (!payment) {
+    if (findError || !payment) {
+      console.error('❌ Payment find error:', findError)
       throw new Error('No payment found for this appointment')
     }
     
+    console.log('✅ Found payment:', payment.id, 'with status:', payment.payment_status)
+    
     // 2. Reset payment status to pending
-    const { error: paymentError } = await supabase
+    const { error: paymentError } = await supabaseAdmin
       .from('payments')
       .update({
         payment_status: 'pending',
@@ -2226,10 +2233,15 @@ const resetFailedPaymentAction = async (appointment: Appointment) => {
       })
       .eq('id', payment.id)
     
-    if (paymentError) throw paymentError
+    if (paymentError) {
+      console.error('❌ Payment update error:', paymentError)
+      throw paymentError
+    }
+    
+    console.log('✅ Payment status reset to pending')
     
     // 3. Reset appointment status to pending_confirmation
-    const { error: appointmentError } = await supabase
+    const { error: appointmentError } = await supabaseAdmin
       .from('appointments')
       .update({
         status: 'pending_confirmation',
@@ -2238,7 +2250,12 @@ const resetFailedPaymentAction = async (appointment: Appointment) => {
       })
       .eq('id', appointment.id)
     
-    if (appointmentError) throw appointmentError
+    if (appointmentError) {
+      console.error('❌ Appointment update error:', appointmentError)
+      throw appointmentError
+    }
+    
+    console.log('✅ Appointment status reset to pending_confirmation')
     
     // 4. Send confirmation email via API
     try {
