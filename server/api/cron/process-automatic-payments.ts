@@ -1,7 +1,7 @@
 // server/api/cron/process-automatic-payments.post.ts
 // Scheduler für automatische Abbuchungen X Stunden vor Termin
 
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabaseAdmin, getSupabase } from '~/utils/supabase'
 import { Wallee } from 'wallee'
 import crypto from 'crypto'
 
@@ -11,8 +11,11 @@ export default defineEventHandler(async (event) => {
   // ✅ SICHERHEIT: Vercel Cron oder Admin-Auth
   try {
     // 1. Prüfe ob Request von Vercel Cron kommt (use node.req.headers for better compatibility)
-    const vercelCronHeader = event.node.req.headers['x-vercel-cron']
-    const isVercelCron = !!vercelCronHeader
+    const headerMap = event.node.req.headers
+    const vercelCronHeader =
+      headerMap['x-vercel-cron'] ??
+      headerMap['x-vercel-cron'.toLowerCase()]
+    const isVercelCron = !!vercelCronHeader || event.node.req.headers['user-agent'] === 'vercel-cron/1.0'
     
     if (isVercelCron) {
       console.log('✅ Vercel Cron request detected (trusted)')
