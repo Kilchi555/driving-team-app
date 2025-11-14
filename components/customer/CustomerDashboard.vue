@@ -781,7 +781,7 @@
     :type="toastType"
     :title="toastTitle"
     :message="toastMessage"
-    :duration="4000"
+    :duration="5000"
     @close="showToast = false"
   />
   
