@@ -10,15 +10,15 @@ export default defineEventHandler(async (event) => {
   
   // ✅ SICHERHEIT: Vercel Cron oder Admin-Auth
   try {
-    // 1. Prüfe ob Request von Vercel Cron kommt
-    const vercelCronHeader = getHeader(event, 'x-vercel-cron')
+    // 1. Prüfe ob Request von Vercel Cron kommt (use node.req.headers for better compatibility)
+    const vercelCronHeader = event.node.req.headers['x-vercel-cron']
     const isVercelCron = !!vercelCronHeader
     
     if (isVercelCron) {
       console.log('✅ Vercel Cron request detected (trusted)')
     } else {
       // 2. Für manuelle Aufrufe: Prüfe ob User eingeloggt und Admin ist
-      const authHeader = getHeader(event, 'authorization')
+      const authHeader = event.node.req.headers['authorization']
       const token = authHeader?.replace('Bearer ', '')
       
       if (!token) {
@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // 2. Vercel Signature Validierung (optional, falls konfiguriert)
-    const vercelSignature = getHeader(event, 'x-vercel-signature')
+    const vercelSignature = event.node.req.headers['x-vercel-signature']
     const vercelWebhookSecret = process.env.VERCEL_WEBHOOK_SECRET
     
     if (vercelWebhookSecret) {
