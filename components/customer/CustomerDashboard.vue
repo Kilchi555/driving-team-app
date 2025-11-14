@@ -1495,27 +1495,34 @@ const confirmAppointment = async (appointment: any) => {
     }
 
     // ✅ Entscheide: automatische Zahlung planen oder sofortige Zahlung
-    // Regel: Automatische Zahlung NUR wenn:
+    // Regel: Automatische Zahlung mit Token wenn:
     // 1. Automatische Zahlung aktiviert ist
     // 2. Ein gespeichertes Zahlungsmittel (Token) vorhanden ist
-    // 3. Genug Stunden vor Termin (≥ configured hours)
+    // → ENTWEDER: Genug Zeit → Schedule für später
+    // → ODER: Zu wenig Zeit → Sofort authorize + capture
     // SONST: Weiterleitung zu Wallee (Token wird erstellt/gespeichert)
     const startDate = new Date(appointment.start_time)
     const now = new Date()
     const diffHours = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60))
-    const canScheduleAutomatic = automaticPaymentEnabledLocal && !!defaultMethodId && diffHours >= automaticPaymentHoursBeforeLocal
+    
+    // ✅ NEU: Wenn Token vorhanden, IMMER mit Token verarbeiten (entweder scheduled oder immediate)
+    const hasToken = automaticPaymentEnabledLocal && !!defaultMethodId
+    const shouldProcessImmediately = hasToken && diffHours < automaticPaymentHoursBeforeLocal
+    const canScheduleAutomatic = hasToken && diffHours >= automaticPaymentHoursBeforeLocal
     
     console.log('🔍 Automatic payment decision:', {
       automaticPaymentEnabled: automaticPaymentEnabledLocal,
       hasDefaultMethod: !!defaultMethodId,
       diffHours: diffHours,
       requiredHours: automaticPaymentHoursBeforeLocal,
+      hasToken: hasToken,
+      shouldProcessImmediately: shouldProcessImmediately,
       canScheduleAutomatic: canScheduleAutomatic,
       appointmentStart: appointment.start_time,
-      decision: canScheduleAutomatic 
-        ? '✅ Automatische Zahlung geplant' 
-        : defaultMethodId 
-          ? '⚠️ Zu wenig Stunden vor Termin → Weiterleitung zu Wallee'
+      decision: shouldProcessImmediately
+        ? '⚡ Token vorhanden + zu wenig Zeit → Sofort authorize + capture'
+        : canScheduleAutomatic 
+          ? '✅ Token vorhanden + genug Zeit → Automatische Zahlung geplant' 
           : '💳 Kein Token vorhanden → Weiterleitung zu Wallee (Token wird erstellt)'
     })
 
@@ -1525,12 +1532,14 @@ const confirmAppointment = async (appointment: any) => {
       .update({ status: 'scheduled', updated_at: new Date().toISOString() })
       .eq('id', appointment.id)
 
-    if (canScheduleAutomatic && payment?.id) {
+    // ✅ NEU: Wenn Token vorhanden, IMMER mit Token verarbeiten
+    if (hasToken && payment?.id) {
       // ✅ Plane automatische Zahlung 24h (oder konfiguriert) vor Termin
       const scheduledPayDate = new Date(startDate.getTime() - automaticPaymentHoursBeforeLocal * 60 * 60 * 1000)
       // ✅ Bestimme frühesten Autorisierungszeitpunkt (z. B. 1 Woche vorher)
       const authDueDate = new Date(startDate.getTime() - automaticAuthorizationHoursBeforeLocal * 60 * 60 * 1000)
-      const shouldAuthorizeNow = now >= authDueDate
+      // ✅ NEU: Bei Immediate Processing IMMER sofort authorize
+      const shouldAuthorizeNow = shouldProcessImmediately || now >= authDueDate
 
       await supabase
         .from('payments')
@@ -1609,9 +1618,11 @@ const confirmAppointment = async (appointment: any) => {
           // @ts-ignore
           showToast.value = true
           // @ts-ignore
-          toastMessage.value = shouldAuthorizeNow
-            ? 'Termin bestätigt. Der Betrag wurde provisorisch reserviert und 24h vor dem Termin abgebucht.'
-            : `Termin bestätigt. Die Karte wird ${automaticAuthorizationHoursBeforeLocal/24} Tage vor dem Termin reserviert, Abbuchung ${automaticPaymentHoursBeforeLocal}h vorher.`
+          toastMessage.value = shouldProcessImmediately
+            ? 'Termin bestätigt. Die Zahlung wurde sofort abgebucht.'
+            : shouldAuthorizeNow
+              ? 'Termin bestätigt. Der Betrag wurde provisorisch reserviert und 24h vor dem Termin abgebucht.'
+              : `Termin bestätigt. Die Karte wird ${automaticAuthorizationHoursBeforeLocal/24} Tage vor dem Termin reserviert, Abbuchung ${automaticPaymentHoursBeforeLocal}h vorher.`
         }
       } catch {}
       return
