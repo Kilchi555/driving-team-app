@@ -78,11 +78,18 @@
               :key="category.id"
               @click="selectCategory(category)"
               class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-200 transform active:translate-y-0.5"
-              :style="getInteractiveCardStyle(selectedCategory?.id === category.id)"
+              :style="getInteractiveCardStyle(
+                selectedCategory?.id === category.id || hoveredCategoryId === category.id,
+                hoveredCategoryId === category.id
+              )"
+              @mouseenter="hoveredCategoryId = category.id"
+              @mouseleave="hoveredCategoryId = null"
             >
               <div class="text-center">
                 <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4 transition-colors border"
-                     :style="getInteractiveBadgeStyle(selectedCategory?.id === category.id)">
+                     :style="getInteractiveBadgeStyle(
+                       selectedCategory?.id === category.id || hoveredCategoryId === category.id
+                     )">
                   <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ category.code }}</span>
                 </div>
                 <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ category.name }}</h3>
@@ -118,7 +125,12 @@
               :key="duration"
               @click="selectDurationOption(duration)"
               class="rounded-2xl p-4 sm:p-5 text-left transition-all duration-200 transform active:translate-y-0.5"
-              :style="getDurationButtonStyle(selectedDuration === duration)"
+              :style="getDurationButtonStyle(
+                selectedDuration === duration || hoveredDuration === duration,
+                hoveredDuration === duration
+              )"
+              @mouseenter="hoveredDuration = duration"
+              @mouseleave="hoveredDuration = null"
             >
               <div class="flex items-center justify-between">
                 <div>
@@ -170,7 +182,12 @@
                 :key="location.id"
                 @click="selectLocation(location)"
                 class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 transition-all duration-200 transform active:translate-y-0.5"
-                :style="getInteractiveCardStyle(selectedLocation?.id === location.id && !selectedLocation?.isPickup)"
+                :style="getInteractiveCardStyle(
+                  (selectedLocation?.id === location.id && !selectedLocation?.isPickup) || hoveredLocationId === location.id,
+                  hoveredLocationId === location.id
+                )"
+                @mouseenter="hoveredLocationId = location.id"
+                @mouseleave="hoveredLocationId = null"
               >
                 <div class="flex items-start space-x-2 sm:space-x-3 md:space-x-4">
                   <div class="flex-1 min-w-0">
@@ -272,12 +289,19 @@
               :key="instructor.id"
               @click="selectInstructor(instructor)"
               class="group cursor-pointer rounded-2xl p-4 sm:p-5 md:p-6 transition-all duration-200 transform active:translate-y-0.5"
-              :style="getInteractiveCardStyle(selectedInstructor?.id === instructor.id)"
+              :style="getInteractiveCardStyle(
+                selectedInstructor?.id === instructor.id || hoveredInstructorId === instructor.id,
+                hoveredInstructorId === instructor.id
+              )"
+              @mouseenter="hoveredInstructorId = instructor.id"
+              @mouseleave="hoveredInstructorId = null"
             >
               <div class="flex items-start space-x-3 sm:space-x-4">
                 <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center flex-shrink-0 border"
-                     :style="getInteractiveBadgeStyle(selectedInstructor?.id === instructor.id)">
-                  <span class="text-sm sm:text-base md:text-xl font-bold text-purple-600">
+                     :style="getInteractiveBadgeStyle(
+                       selectedInstructor?.id === instructor.id || hoveredInstructorId === instructor.id
+                     )">
+                  <span class="text-sm sm:text-base md:text-xl font-bold" :style="{ color: getBrandPrimary() }">
                     {{ instructor.first_name.charAt(0) }}{{ instructor.last_name.charAt(0) }}
                   </span>
                 </div>
@@ -368,10 +392,16 @@
                   v-for="slot in day.slots"
                   :key="slot.id"
                   @click="selectTimeSlot(slot)"
-                  class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-lg border-2 border-green-200 bg-green-50 text-green-800 hover:border-green-400 hover:bg-green-100 transition-all duration-200"
+                  class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-all duration-200 transform active:translate-y-0.5"
+                  :style="getInteractiveCardStyle(
+                    selectedSlot?.id === slot.id || hoveredSlotId === slot.id,
+                    hoveredSlotId === slot.id
+                  )"
+                  @mouseenter="hoveredSlotId = slot.id"
+                  @mouseleave="hoveredSlotId = null"
                 >
-                  <div class="font-medium text-xs sm:text-sm">{{ slot.time_formatted }}</div>
-                  <div class="text-xs text-green-600">{{ slot.duration_minutes }} Min.</div>
+                  <div class="font-medium text-xs sm:text-sm text-gray-900">{{ slot.time_formatted }}</div>
+                  <div class="text-xs text-gray-600">{{ slot.duration_minutes }} Min.</div>
                 </button>
               </div>
             </div>
@@ -818,6 +848,13 @@ const durationOptions = ref<number[]>([])
 const selectedDuration = ref<number | null>(null)
 const currentWeek = ref(1)
 const maxWeek = ref(4)
+
+// Hover states for interactive cards
+const hoveredCategoryId = ref<string | null>(null)
+const hoveredDuration = ref<number | null>(null)
+const hoveredLocationId = ref<string | null>(null)
+const hoveredInstructorId = ref<string | null>(null)
+const hoveredSlotId = ref<string | null>(null)
 
 // Pickup state
 const pickupPLZ = ref('')
@@ -1266,7 +1303,7 @@ const parseDurationValues = (raw: any): number[] => {
   return [45]
 }
 
-const getInteractiveCardStyle = (isSelected: boolean) => {
+const getInteractiveCardStyle = (isSelected: boolean, isHover = false) => {
   const primary = getBrandPrimary()
   const lightBase = lightenColor(primary, 0.9)
   const lightAccent = lightenColor(primary, 0.8)
@@ -1278,6 +1315,7 @@ const getInteractiveCardStyle = (isSelected: boolean) => {
     boxShadow: isSelected
       ? `0 12px 28px ${withAlpha(primary, 0.32)}, inset 0 1px 0 rgba(255,255,255,0.8)`
       : `0 8px 18px ${withAlpha(primary, 0.15)}, inset 0 1px 0 rgba(255,255,255,0.9)`,
+    transform: isHover || isSelected ? 'translateY(-3px)' : 'translateY(0)',
     transition: 'all 0.18s ease'
   }
 }
@@ -1320,7 +1358,8 @@ const selectDurationOption = async (duration: number) => {
   currentStep.value = 3
 }
 
-const getDurationButtonStyle = (isSelected: boolean) => getInteractiveCardStyle(isSelected)
+const getDurationButtonStyle = (isSelected: boolean, isHover = false) => 
+  getInteractiveCardStyle(isSelected, isHover)
 
 const getDurationBadgeStyle = (isSelected: boolean) => getInteractiveBadgeStyle(isSelected)
 
