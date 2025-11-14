@@ -711,12 +711,12 @@ const canCancelAppointment = (payment: any): boolean => {
   const now = new Date()
   const appointmentTime = new Date(appointment.start_time)
   
-  // Can cancel if appointment hasn't happened yet or is within 48h after
-  const hoursAfter = (now.getTime() - appointmentTime.getTime()) / (1000 * 60 * 60)
+  // Can only cancel future appointments
+  const isFutureAppointment = appointmentTime > now
   
   return appointment.status !== 'cancelled' && 
          appointment.status !== 'completed' &&
-         hoursAfter < 48 // Can cancel up to 48h after appointment
+         isFutureAppointment
 }
 
 const openCancellationModal = (payment: any) => {
