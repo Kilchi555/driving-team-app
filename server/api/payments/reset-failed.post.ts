@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
     console.log('✅ Payment status reset to pending')
 
     // 3. Reset appointment status to pending_confirmation
-    const { error: appointmentError } = await supabase
+    const { data: updatedAppointment, error: appointmentError } = await supabase
       .from('appointments')
       .update({
         status: 'pending_confirmation',
@@ -62,16 +62,24 @@ export default defineEventHandler(async (event) => {
         updated_at: new Date().toISOString()
       })
       .eq('id', appointmentId)
+      .select()
 
     if (appointmentError) {
-      console.error('❌ Appointment update error:', appointmentError)
+      console.error('❌ Appointment update error:', {
+        error: appointmentError,
+        code: appointmentError.code,
+        message: appointmentError.message,
+        details: appointmentError.details,
+        hint: appointmentError.hint,
+        appointmentId
+      })
       throw createError({
         statusCode: 500,
-        statusMessage: 'Failed to update appointment status'
+        statusMessage: `Failed to update appointment status: ${appointmentError.message || 'Unknown error'}`
       })
     }
 
-    console.log('✅ Appointment status reset to pending_confirmation')
+    console.log('✅ Appointment status reset to pending_confirmation:', updatedAppointment)
 
     // 4. Send confirmation email via API
     try {
