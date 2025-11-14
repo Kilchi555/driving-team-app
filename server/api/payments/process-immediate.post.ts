@@ -80,7 +80,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (appointment.status !== 'confirmed') {
+    // Erlaubt: 'confirmed' oder 'scheduled' (beide bedeuten bestätigt)
+    if (appointment.status !== 'confirmed' && appointment.status !== 'scheduled') {
       throw createError({
         statusCode: 400,
         statusMessage: `Appointment not confirmed (Status: ${appointment.status}). Payment cannot be processed.`
