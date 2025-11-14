@@ -119,13 +119,25 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ Invitation created:', invitation.id)
 
-    // Generate invitation link (prefer deployment host, fallback to env/domain)
+    // Generate invitation link
+    // Priority: 1. Environment variable, 2. Production domain (simy.ch), 3. Request host
+    const envBase = process.env.NUXT_PUBLIC_BASE_URL || process.env.BASE_URL
     const forwardedHost = getHeader(event, 'x-forwarded-host')
     const host = forwardedHost || getHeader(event, 'host')
     const proto = getHeader(event, 'x-forwarded-proto') || 'https'
-    const envBase = process.env.NUXT_PUBLIC_BASE_URL || process.env.BASE_URL
-    const baseUrl = envBase || (host ? `${proto}://${host}` : 'https://www.simy.ch')
-    // Use canonical register route
+    
+    // Prefer production URL over localhost
+    let baseUrl: string
+    if (envBase) {
+      baseUrl = envBase
+    } else if (host && !host.includes('localhost')) {
+      // Use request host only if it's NOT localhost
+      baseUrl = `${proto}://${host}`
+    } else {
+      // Default to production domain
+      baseUrl = 'https://www.simy.ch'
+    }
+    
     const inviteLink = `${baseUrl}/register-staff?token=${token}`
 
     // Get tenant info for branding using service role
