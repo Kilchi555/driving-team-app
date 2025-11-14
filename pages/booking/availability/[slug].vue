@@ -44,26 +44,22 @@
               <template v-for="(step, index) in bookingSteps" :key="step.id">
                 <div class="flex items-center">
                   <div
-                    :class="[
-                      'w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold',
-                      currentStep >= step.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-                    ]"
+                    class="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold border"
+                    :style="getStepCircleStyle(step.id)"
                   >
                     {{ step.id }}
                   </div>
                   <span
-                    :class="[
-                      'ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:block',
-                      currentStep >= step.id ? 'text-blue-600' : 'text-gray-500'
-                    ]"
+                    class="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:block"
+                    :style="getStepLabelStyle(step.id)"
                   >
                     {{ step.label }}
                   </span>
                 </div>
                 <div
                   v-if="index < bookingSteps.length - 1"
-                  class="w-4 sm:w-8 h-0.5"
-                  :class="currentStep > step.id ? 'bg-blue-600' : 'bg-gray-200'"
+                  class="w-4 sm:w-8 h-0.5 rounded-full"
+                  :style="getStepConnectorStyle(step.id)"
                 ></div>
               </template>
             </div>
@@ -1272,26 +1268,48 @@ const parseDurationValues = (raw: any): number[] => {
 
 const getInteractiveCardStyle = (isSelected: boolean) => {
   const primary = getBrandPrimary()
-  const lightBase = lightenColor(primary, 0.82)
-  const lightAccent = lightenColor(primary, 0.72)
+  const lightBase = lightenColor(primary, 0.9)
+  const lightAccent = lightenColor(primary, 0.8)
   return {
     borderColor: isSelected ? primary : withAlpha(primary, 0.25),
     background: isSelected
-      ? `linear-gradient(145deg, ${lightAccent}, ${withAlpha(primary, 0.1)})`
-      : `linear-gradient(145deg, ${lightBase}, ${lightenColor(primary, 0.9)})`,
+      ? `linear-gradient(145deg, ${lightAccent}, ${withAlpha(primary, 0.15)})`
+      : `linear-gradient(145deg, ${lightBase}, ${lightenColor(primary, 0.95)})`,
     boxShadow: isSelected
-      ? `0 15px 35px ${withAlpha(primary, 0.3)}, inset 0 1px 0 rgba(255,255,255,0.7)`
-      : `0 10px 25px ${withAlpha(primary, 0.18)}, inset 0 1px 0 rgba(255,255,255,0.9)`,
-    transition: 'all 0.2s ease'
+      ? `0 12px 28px ${withAlpha(primary, 0.32)}, inset 0 1px 0 rgba(255,255,255,0.8)`
+      : `0 8px 18px ${withAlpha(primary, 0.15)}, inset 0 1px 0 rgba(255,255,255,0.9)`,
+    transition: 'all 0.18s ease'
   }
 }
 
 const getInteractiveBadgeStyle = (isSelected: boolean) => {
   const primary = getBrandPrimary()
   return {
-    borderColor: isSelected ? primary : withAlpha(primary, 0.2),
+    borderColor: isSelected ? primary : withAlpha(primary, 0.25),
     color: isSelected ? primary : '#1f2937',
-    backgroundColor: isSelected ? withAlpha(primary, 0.15) : lightenColor(primary, 0.9)
+    backgroundColor: isSelected ? withAlpha(primary, 0.18) : lightenColor(primary, 0.93)
+  }
+}
+
+const getStepCircleStyle = (stepId: number) => {
+  const primary = getBrandPrimary()
+  const active = currentStep.value >= stepId
+  return active
+    ? { backgroundColor: primary, color: '#fff', borderColor: primary }
+    : { backgroundColor: lightenColor(primary, 0.93), color: '#4b5563', borderColor: withAlpha(primary, 0.2) }
+}
+
+const getStepLabelStyle = (stepId: number) => {
+  const primary = getBrandPrimary()
+  return {
+    color: currentStep.value >= stepId ? primary : '#6b7280'
+  }
+}
+
+const getStepConnectorStyle = (stepId: number) => {
+  const primary = getBrandPrimary()
+  return {
+    backgroundColor: currentStep.value > stepId ? primary : lightenColor(primary, 0.9)
   }
 }
 
