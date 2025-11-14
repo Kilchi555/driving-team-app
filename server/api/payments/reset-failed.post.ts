@@ -54,11 +54,11 @@ export default defineEventHandler(async (event) => {
     console.log('✅ Payment status reset to pending')
 
     // 3. Reset appointment status to pending_confirmation
+    // Note: is_paid is NOT a column in appointments table, it's computed from payment status
     const { data: updatedAppointment, error: appointmentError } = await supabase
       .from('appointments')
       .update({
         status: 'pending_confirmation',
-        is_paid: false,
         updated_at: new Date().toISOString()
       })
       .eq('id', appointmentId)
