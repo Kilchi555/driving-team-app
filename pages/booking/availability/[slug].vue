@@ -41,45 +41,31 @@
         <div class="bg-white shadow rounded-lg p-4 mb-6">
           <div class="flex items-center justify-center">
             <div class="flex items-center space-x-2 sm:space-x-4">
-              <div class="flex items-center">
-                <div :class="['w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold', 
-                  currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600']">
-                  1
+              <template v-for="(step, index) in bookingSteps" :key="step.id">
+                <div class="flex items-center">
+                  <div
+                    :class="[
+                      'w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold',
+                      currentStep >= step.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                    ]"
+                  >
+                    {{ step.id }}
+                  </div>
+                  <span
+                    :class="[
+                      'ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:block',
+                      currentStep >= step.id ? 'text-blue-600' : 'text-gray-500'
+                    ]"
+                  >
+                    {{ step.label }}
+                  </span>
                 </div>
-                <span :class="['ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:block', currentStep >= 1 ? 'text-blue-600' : 'text-gray-500']">
-                  Kategorie
-                </span>
-              </div>
-              <div class="w-4 sm:w-8 h-0.5 bg-gray-200"></div>
-              <div class="flex items-center">
-                <div :class="['w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold', 
-                  currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600']">
-                  2
-                </div>
-                <span :class="['ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:block', currentStep >= 2 ? 'text-blue-600' : 'text-gray-500']">
-                  Standort
-                </span>
-              </div>
-              <div class="w-4 sm:w-8 h-0.5 bg-gray-200"></div>
-              <div class="flex items-center">
-                <div :class="['w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold', 
-                  currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600']">
-                  3
-                </div>
-                <span :class="['ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:block', currentStep >= 3 ? 'text-blue-600' : 'text-gray-500']">
-                  Fahrlehrer
-                </span>
-              </div>
-              <div class="w-4 sm:w-8 h-0.5 bg-gray-200"></div>
-              <div class="flex items-center">
-                <div :class="['w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold', 
-                  currentStep >= 4 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600']">
-                  4
-                </div>
-                <span :class="['ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:block', currentStep >= 4 ? 'text-blue-600' : 'text-gray-500']">
-                  Termin
-                </span>
-              </div>
+                <div
+                  v-if="index < bookingSteps.length - 1"
+                  class="w-4 sm:w-8 h-0.5"
+                  :class="currentStep > step.id ? 'bg-blue-600' : 'bg-gray-200'"
+                ></div>
+              </template>
             </div>
           </div>
         </div>
@@ -110,8 +96,56 @@
           </div>
         </div>
 
-        <!-- Step 2: Location Selection -->
-        <div v-if="currentStep === 2" class="bg-white shadow rounded-lg p-4 sm:p-6">
+        <!-- Step 2: Lesson Duration Selection -->
+        <div v-if="currentStep === 2" class="bg-white shadow rounded-lg p-4">
+          <div class="text-center mb-6">
+            <h2 class="text-xl sm:text-2xl	font-bold text-gray-900 mb-2">Wie lange soll die Fahrlektion dauern?</h2>
+            <p class="text-sm sm:text-base text-gray-600">
+              Kategorie <span class="font-semibold">{{ selectedCategory?.name }}</span>
+            </p>
+          </div>
+          
+          <div :class="`grid ${getGridClasses(durationOptions.length)} gap-3`">
+            <button
+              v-for="duration in durationOptions"
+              :key="duration"
+              @click="selectDurationOption(duration)"
+              class="rounded-xl border-2 p-4 sm:p-5 transition-all duration-200 text-left"
+              :class="selectedDuration === duration ? 'border-blue-500 bg-blue-50 shadow' : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-2xl font-bold text-gray-900">{{ duration }} <span class="text-base font-medium">Min.</span></div>
+                  <p class="text-xs sm:text-sm text-gray-600 mt-1">
+                    {{ duration >= 60 ? `${Math.round((duration / 60) * 10) / 10} Stunden` : 'Ideal für fokussiertes Lernen' }}
+                  </p>
+                </div>
+                <div class="text-xl">
+                  {{ selectedDuration === duration ? '✅' : '⏱️' }}
+                </div>
+              </div>
+            </button>
+          </div>
+          
+          <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+            <button 
+              @click="goBackToStep(1)"
+              class="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+            >
+              ← Zurück zur Kategorie
+            </button>
+            <button 
+              @click="confirmDurationSelection"
+              :disabled="!selectedDuration"
+              class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Weiter zum Standort →
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Location Selection -->
+        <div v-if="currentStep === 3" class="bg-white shadow rounded-lg p-4 sm:p-6">
           <div class="text-center mb-6">
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Standort</h2>
             <div class="mt-2 text-xs sm:text-sm text-blue-600">
@@ -210,17 +244,17 @@
           </div>
           
           <div class="mt-6 text-center">
-            <button 
-              @click="goBackToStep(1)"
-              class="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
-            >
-              ← Zurück zur Kategorie-Auswahl
-            </button>
+                <button
+                  @click="goBackToStep(2)"
+                  class="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+                >
+                  ← Zurück zur Dauer-Auswahl
+                </button>
           </div>
         </div>
 
-        <!-- Step 3: Instructor Selection -->
-        <div v-if="currentStep === 3" class="bg-white shadow rounded-lg p-4">
+        <!-- Step 4: Instructor Selection -->
+        <div v-if="currentStep === 4" class="bg-white shadow rounded-lg p-4">
           <div class="text-center mb-6">
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie Ihren Fahrlehrer</h2>
             <p class="text-sm sm:text-base text-gray-600">Wer soll Ihre Fahrstunde durchführen?</p>
@@ -259,7 +293,7 @@
           
           <div class="mt-6 text-center">
             <button 
-              @click="goBackToStep(2)"
+              @click="goBackToStep(3)"
               class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
             >
               ← Zurück zur Standort-Auswahl
@@ -267,8 +301,8 @@
           </div>
         </div>
 
-        <!-- Step 4: Time Slot Selection -->
-        <div v-if="currentStep === 4" class="bg-white shadow rounded-lg p-4">
+        <!-- Step 5: Time Slot Selection -->
+        <div v-if="currentStep === 5" class="bg-white shadow rounded-lg p-4">
           <div class="text-center mb-6">
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Termin</h2>
             <p class="text-sm sm:text-base text-gray-600">Wann möchten Sie Ihre Fahrstunde haben?</p>
@@ -350,7 +384,7 @@
           
           <div class="mt-6 text-center">
             <button 
-              @click="goBackToStep(3)"
+              @click="goBackToStep(4)"
               class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
             >
               ← Zurück zur Fahrlehrer-Auswahl
@@ -358,8 +392,8 @@
           </div>
         </div>
 
-        <!-- Step 5: Pickup Address (nur wenn Pickup gewählt) -->
-        <div v-if="currentStep === 5 && selectedLocation?.isPickup" class="bg-white shadow rounded-lg p-4 sm:p-6">
+        <!-- Step 6: Pickup Address (nur wenn Pickup gewählt) -->
+        <div v-if="currentStep === 6 && selectedLocation?.isPickup" class="bg-white shadow rounded-lg p-4 sm:p-6">
           <div class="text-center mb-6">
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Pickup-Adresse angeben</h2>
             <p class="text-sm sm:text-base text-gray-600">Wo sollen wir Sie abholen?</p>
@@ -456,7 +490,7 @@
           <!-- Navigation -->
           <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <button 
-              @click="goBackToStep(4)"
+              @click="goBackToStep(5)"
               :disabled="isCreatingBooking"
               class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -474,8 +508,8 @@
           </div>
         </div>
 
-        <!-- Step 5: Direct Confirmation (wenn kein Pickup) -->
-        <div v-if="currentStep === 5 && !selectedLocation?.isPickup" class="bg-white shadow rounded-lg p-4 sm:p-6">
+        <!-- Step 6: Direct Confirmation (wenn kein Pickup) -->
+        <div v-if="currentStep === 6 && !selectedLocation?.isPickup" class="bg-white shadow rounded-lg p-4 sm:p-6">
           <div class="text-center mb-6">
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Buchung bestätigen</h2>
             <p class="text-sm sm:text-base text-gray-600">Bitte überprüfen Sie Ihre Angaben</p>
@@ -516,7 +550,7 @@
           <!-- Navigation -->
           <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <button 
-              @click="goBackToStep(4)"
+              @click="goBackToStep(5)"
               :disabled="isCreatingBooking"
               class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -539,8 +573,9 @@
           <h3 class="text-lg font-medium text-blue-800 mb-2">ℹ️ System-Informationen</h3>
           <div class="text-sm text-blue-700 space-y-1">
             <p><strong>Fahrschule:</strong> {{ currentTenant?.name || 'Nicht geladen' }}</p>
-            <p><strong>Aktueller Schritt:</strong> {{ currentStep }} von 5</p>
+            <p><strong>Aktueller Schritt:</strong> {{ currentStep }} von {{ bookingSteps.length }}</p>
             <p><strong>Gewählte Kategorie:</strong> {{ selectedCategory?.code || 'Keine' }}</p>
+            <p><strong>Dauer:</strong> {{ selectedDuration ? `${selectedDuration} Min.` : 'Keine Auswahl' }}</p>
             <p><strong>Gewählter Standort:</strong> {{ selectedLocation?.name || 'Keiner' }}</p>
             <p><strong>Gewählter Fahrlehrer:</strong> {{ selectedInstructor ? `${selectedInstructor.first_name} ${selectedInstructor.last_name}` : 'Keiner' }}</p>
           </div>
@@ -788,6 +823,8 @@ const selectedInstructor = ref<any>(null)
 const availableLocations = ref<any[]>([])
 const availableInstructors = ref<any[]>([])
 const availableTimeSlots = ref<any[]>([])
+const durationOptions = ref<number[]>([])
+const selectedDuration = ref<number | null>(null)
 const currentWeek = ref(1)
 const maxWeek = ref(4)
 
@@ -824,6 +861,20 @@ const isPickupAvailableForCategory = computed(() => {
     const categoryCode = selectedCategory.value.code
     return categoryPickupSettings[categoryCode]?.enabled === true
   })
+})
+
+const bookingSteps = computed(() => {
+  return [
+    { id: 1, label: 'Kategorie' },
+    { id: 2, label: 'Dauer' },
+    { id: 3, label: 'Standort' },
+    { id: 4, label: 'Fahrlehrer' },
+    { id: 5, label: 'Termin' },
+    { 
+      id: 6, 
+      label: selectedLocation.value?.isPickup ? 'Adresse' : 'Bestätigung' 
+    }
+  ]
 })
 
 const canSearch = computed(() => {
@@ -1180,10 +1231,66 @@ const getWeeksForLocation = (location: any) => {
 }
 
 // New flow methods
+const parseDurationValues = (raw: any): number[] => {
+  if (!raw && raw !== 0) return [45]
+  
+  const normalizeArray = (arr: any[]): number[] => {
+    return arr
+      .map((value) => {
+        const num = Number(value)
+        return Number.isFinite(num) ? num : null
+      })
+      .filter((value): value is number => value !== null)
+  }
+  
+  if (Array.isArray(raw)) {
+    const values = normalizeArray(raw)
+    return values.length ? values : [45]
+  }
+  
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        const values = normalizeArray(parsed)
+        if (values.length) return values
+      }
+    } catch {
+      // Fallback: treat as comma separated string
+      const values = normalizeArray(raw.split(','))
+      if (values.length) return values
+    }
+    
+    const num = Number(raw)
+    if (Number.isFinite(num)) return [num]
+  }
+  
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return [raw]
+  }
+  
+  return [45]
+}
+
+const selectDurationOption = (duration: number) => {
+  selectedDuration.value = duration
+  filters.value.duration_minutes = duration
+}
+
+const confirmDurationSelection = () => {
+  if (!selectedDuration.value) return
+  
+  filters.value.duration_minutes = selectedDuration.value
+  currentStep.value = 3
+}
+
 const selectCategory = async (category: any) => {
   selectedCategory.value = category
   filters.value.category_code = category.code
-  filters.value.duration_minutes = category.lesson_duration_minutes || 45
+  
+  durationOptions.value = parseDurationValues(category.lesson_duration_minutes)
+  selectedDuration.value = durationOptions.value[0] || 45
+  filters.value.duration_minutes = selectedDuration.value || 45
   
   // Reset pickup state
   pickupPLZ.value = ''
@@ -1370,12 +1477,12 @@ const selectLocation = (location: any) => {
   // Get instructors available at this location
   availableInstructors.value = location.available_staff || []
   
-  currentStep.value = 3
+  currentStep.value = 4
 }
 
 const selectInstructor = async (instructor: any) => {
   selectedInstructor.value = instructor
-  currentStep.value = 4 // Wechsle zu Step 4, um Loading-State zu zeigen
+  currentStep.value = 5 // Wechsel zu Termin-Auswahl (inkl. Loading-State)
   
   // Generate time slots for this specific instructor-location combination
   await generateTimeSlotsForSpecificCombination()
@@ -1655,8 +1762,8 @@ const selectTimeSlot = (slot: any) => {
   selectedSlot.value = slot
   console.log('✅ Time slot selected:', slot)
   
-  // Go to Step 5 (Address input for pickup or confirmation)
-  currentStep.value = 5
+  // Go to final confirmation step (Pickup-Adresse oder Zusammenfassung)
+  currentStep.value = 6
   
   // Initialize Google Places Autocomplete for pickup address
   if (selectedLocation.value?.isPickup) {
@@ -1973,6 +2080,14 @@ const goBackToStep = (step: number) => {
   currentStep.value = step
   
   // Reset subsequent selections
+  if (step < 6) {
+    selectedSlot.value = null
+    pickupAddress.value = ''
+    pickupAddressDetails.value = null
+  }
+  if (step < 5) {
+    selectedSlot.value = null
+  }
   if (step < 4) {
     selectedInstructor.value = null
     availableTimeSlots.value = []
@@ -1982,9 +2097,15 @@ const goBackToStep = (step: number) => {
     availableInstructors.value = []
   }
   if (step < 2) {
+    selectedDuration.value = null
+    filters.value.duration_minutes = 45
+    durationOptions.value = []
+  }
+  if (step < 1) {
     selectedCategory.value = null
     availableLocations.value = []
     availableStaff.value = []
+    filters.value.category_code = ''
   }
 }
 
