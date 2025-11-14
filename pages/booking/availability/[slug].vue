@@ -81,12 +81,12 @@
               v-for="category in categories" 
               :key="category.id"
               @click="selectCategory(category)"
-              class="group cursor-pointer rounded-xl p-3 sm:p-4 md:p-6 hover:shadow-lg transition-all duration-200 border-2"
-              :style="getCategoryCardStyle(category)"
+              class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-200 transform active:translate-y-0.5"
+              :style="getInteractiveCardStyle(selectedCategory?.id === category.id)"
             >
               <div class="text-center">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4 transition-colors"
-                     :style="getCategoryBadgeStyle(category)">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4 transition-colors border"
+                     :style="getInteractiveBadgeStyle(selectedCategory?.id === category.id)">
                   <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ category.code }}</span>
                 </div>
                 <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ category.name }}</h3>
@@ -173,13 +173,14 @@
                 v-for="location in availableLocations" 
                 :key="location.id"
                 @click="selectLocation(location)"
-                class="group cursor-pointer bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-3 sm:p-4 md:p-5 lg:p-6 hover:border-green-400 hover:shadow-lg transition-all duration-200"
+                class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 transition-all duration-200 transform active:translate-y-0.5"
+                :style="getInteractiveCardStyle(selectedLocation?.id === location.id && !selectedLocation?.isPickup)"
               >
                 <div class="flex items-start space-x-2 sm:space-x-3 md:space-x-4">
                   <div class="flex-1 min-w-0">
                     <h3 class="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-900 mb-1 truncate">{{ location.name }}</h3>
                     <p v-if="location.address" class="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 line-clamp-2">{{ location.address }}</p>
-                    <div class="text-xs text-green-600 font-medium">
+                    <div class="text-xs font-medium" :style="{ color: getBrandPrimary() }">
                       {{ location.available_staff?.length || 0 }} Fahrlehrer
                     </div>
                   </div>
@@ -274,10 +275,12 @@
               v-for="instructor in availableInstructors" 
               :key="instructor.id"
               @click="selectInstructor(instructor)"
-              class="group cursor-pointer bg-gradient-to-br from-purple-50 to-violet-50 border-2 border-purple-200 rounded-xl p-4 sm:p-5 md:p-6 hover:border-purple-400 hover:shadow-lg transition-all duration-200"
+              class="group cursor-pointer rounded-2xl p-4 sm:p-5 md:p-6 transition-all duration-200 transform active:translate-y-0.5"
+              :style="getInteractiveCardStyle(selectedInstructor?.id === instructor.id)"
             >
               <div class="flex items-start space-x-3 sm:space-x-4">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors flex-shrink-0">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center flex-shrink-0 border"
+                     :style="getInteractiveBadgeStyle(selectedInstructor?.id === instructor.id)">
                   <span class="text-sm sm:text-base md:text-xl font-bold text-purple-600">
                     {{ instructor.first_name.charAt(0) }}{{ instructor.last_name.charAt(0) }}
                   </span>
@@ -573,20 +576,6 @@
             </button>
           </div>
         </div>
-
-        <!-- System Info -->
-        <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
-          <h3 class="text-lg font-medium text-blue-800 mb-2">ℹ️ System-Informationen</h3>
-          <div class="text-sm text-blue-700 space-y-1">
-            <p><strong>Fahrschule:</strong> {{ currentTenant?.name || 'Nicht geladen' }}</p>
-            <p><strong>Aktueller Schritt:</strong> {{ currentStep }} von {{ bookingSteps.length }}</p>
-            <p><strong>Gewählte Kategorie:</strong> {{ selectedCategory?.code || 'Keine' }}</p>
-            <p><strong>Dauer:</strong> {{ selectedDuration ? `${selectedDuration} Min.` : 'Keine Auswahl' }}</p>
-            <p><strong>Gewählter Standort:</strong> {{ selectedLocation?.name || 'Keiner' }}</p>
-            <p><strong>Gewählter Fahrlehrer:</strong> {{ selectedInstructor ? `${selectedInstructor.first_name} ${selectedInstructor.last_name}` : 'Keiner' }}</p>
-          </div>
-        </div>
-
       </div>
     </div>
   </div>
@@ -1237,6 +1226,9 @@ const getWeeksForLocation = (location: any) => {
 }
 
 // New flow methods
+const buttonPressDelay = 180
+const waitForPressEffect = () => new Promise(resolve => setTimeout(resolve, buttonPressDelay))
+
 const parseDurationValues = (raw: any): number[] => {
   if (!raw && raw !== 0) return [45]
   
@@ -1278,34 +1270,41 @@ const parseDurationValues = (raw: any): number[] => {
   return [45]
 }
 
-const selectDurationOption = (duration: number) => {
-  selectedDuration.value = duration
-  filters.value.duration_minutes = duration
-  currentStep.value = 3
-}
-
-const getDurationButtonStyle = (isSelected: boolean) => {
+const getInteractiveCardStyle = (isSelected: boolean) => {
   const primary = getBrandPrimary()
-  const baseShadow = isSelected ? withAlpha(primary, 0.35) : 'rgba(15, 23, 42, 0.08)'
+  const lightBase = lightenColor(primary, 0.82)
+  const lightAccent = lightenColor(primary, 0.72)
   return {
     borderColor: isSelected ? primary : withAlpha(primary, 0.25),
     background: isSelected
-      ? `linear-gradient(145deg, ${withAlpha(primary, 0.12)}, ${withAlpha(primary, 0.05)})`
-      : 'linear-gradient(145deg, #ffffff, #f9fafb)',
-    boxShadow: `0 10px 25px ${baseShadow}, inset 0 1px 0 rgba(255,255,255,0.6)`,
-    transform: isSelected ? 'translateY(-2px)' : 'translateY(0)',
+      ? `linear-gradient(145deg, ${lightAccent}, ${withAlpha(primary, 0.1)})`
+      : `linear-gradient(145deg, ${lightBase}, ${lightenColor(primary, 0.9)})`,
+    boxShadow: isSelected
+      ? `0 15px 35px ${withAlpha(primary, 0.3)}, inset 0 1px 0 rgba(255,255,255,0.7)`
+      : `0 10px 25px ${withAlpha(primary, 0.18)}, inset 0 1px 0 rgba(255,255,255,0.9)`,
     transition: 'all 0.2s ease'
   }
 }
 
-const getDurationBadgeStyle = (isSelected: boolean) => {
+const getInteractiveBadgeStyle = (isSelected: boolean) => {
   const primary = getBrandPrimary()
   return {
-    borderColor: isSelected ? primary : withAlpha(primary, 0.3),
-    color: isSelected ? primary : '#4b5563',
-    backgroundColor: isSelected ? withAlpha(primary, 0.15) : '#f3f4f6'
+    borderColor: isSelected ? primary : withAlpha(primary, 0.2),
+    color: isSelected ? primary : '#1f2937',
+    backgroundColor: isSelected ? withAlpha(primary, 0.15) : lightenColor(primary, 0.9)
   }
 }
+
+const selectDurationOption = async (duration: number) => {
+  selectedDuration.value = duration
+  filters.value.duration_minutes = duration
+  await waitForPressEffect()
+  currentStep.value = 3
+}
+
+const getDurationButtonStyle = (isSelected: boolean) => getInteractiveCardStyle(isSelected)
+
+const getDurationBadgeStyle = (isSelected: boolean) => getInteractiveBadgeStyle(isSelected)
 
 const selectCategory = async (category: any) => {
   selectedCategory.value = category
@@ -1351,7 +1350,8 @@ const selectCategory = async (category: any) => {
       available_staff: allStaffForLocation
     }
   })
-  
+
+  await waitForPressEffect()
   currentStep.value = 2
 }
 
@@ -1481,7 +1481,7 @@ const extractPLZFromAddress = (address: string): string | null => {
 }
 
 // Select pickup option and proceed
-const selectPickupOption = () => {
+const selectPickupOption = async () => {
   if (!selectedPickupLocation.value) return
   
   // Set the location as selected and proceed to instructor selection
@@ -1491,20 +1491,22 @@ const selectPickupOption = () => {
     pickupPLZ: pickupPLZ.value
   }
   
-  selectLocation(selectedLocation.value)
+  await selectLocation(selectedLocation.value)
 }
 
-const selectLocation = (location: any) => {
+const selectLocation = async (location: any) => {
   selectedLocation.value = location
   
   // Get instructors available at this location
   availableInstructors.value = location.available_staff || []
   
+  await waitForPressEffect()
   currentStep.value = 4
 }
 
 const selectInstructor = async (instructor: any) => {
   selectedInstructor.value = instructor
+  await waitForPressEffect()
   currentStep.value = 5 // Wechsel zu Termin-Auswahl (inkl. Loading-State)
   
   // Generate time slots for this specific instructor-location combination
@@ -1781,11 +1783,12 @@ const generateTimeSlotsForSpecificCombination = async () => {
   }
 }
 
-const selectTimeSlot = (slot: any) => {
+const selectTimeSlot = async (slot: any) => {
   selectedSlot.value = slot
   console.log('✅ Time slot selected:', slot)
   
   // Go to final confirmation step (Pickup-Adresse oder Zusammenfassung)
+  await waitForPressEffect()
   currentStep.value = 6
   
   // Initialize Google Places Autocomplete for pickup address
@@ -2273,35 +2276,24 @@ const getBrandSecondary = (fallback = '#374151') => {
   return isValid ? hex : fallback
 }
 
+const lightenColor = (hex: string, amount: number) => {
+  if (!/^#([0-9a-fA-F]{6})$/.test(hex)) return hex
+  const clamp = (value: number) => Math.min(255, Math.max(0, value))
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const newR = clamp(Math.round(r + (255 - r) * amount))
+  const newG = clamp(Math.round(g + (255 - g) * amount))
+  const newB = clamp(Math.round(b + (255 - b) * amount))
+  return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`
+}
+
 const withAlpha = (hex: string, alpha: number) => {
   // Convert #RRGGBB to rgba
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
-
-const getCategoryCardStyle = (category: any) => {
-  const base = getBrandPrimary()
-  return {
-    background: `linear-gradient(135deg, ${withAlpha(base, 0.08)} 0%, ${withAlpha(base, 0.15)} 100%)`,
-    borderColor: withAlpha(base, 0.35)
-  }
-}
-
-const getCategoryBadgeStyle = (category: any) => {
-  const base = getBrandSecondary()
-  return {
-    backgroundColor: withAlpha(base, 0.18),
-    border: `2px solid ${withAlpha(base, 0.5)}`
-  }
-}
-
-const getCategoryTextStyle = (category: any) => {
-  const base = getBrandSecondary()
-  return {
-    color: base
-  }
 }
 
 // New availability logic functions
