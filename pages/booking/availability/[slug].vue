@@ -98,9 +98,19 @@
 
         <!-- Step 2: Lesson Duration Selection -->
         <div v-if="currentStep === 2" class="bg-white shadow rounded-lg p-4">
-          <div class="text-center mb-6">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wie lange soll die Fahrlektion dauern?</h2>
-            <p class="text-sm sm:text-base text-gray-600">{{ selectedCategory?.name }}</p>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+            <div>
+              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 2</p>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
+                Dauer wählen für {{ selectedCategory?.name }}
+              </h2>
+            </div>
+            <button 
+              @click="goBackToStep(1)"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
+            >
+              ← Zurück
+            </button>
           </div>
           
           <div
@@ -111,8 +121,8 @@
               v-for="duration in durationOptions"
               :key="duration"
               @click="selectDurationOption(duration)"
-              class="rounded-xl border-2 p-4 sm:p-5 transition-all duration-200 text-left"
-              :class="selectedDuration === duration ? 'border-blue-500 bg-blue-50 shadow' : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'"
+              class="rounded-2xl p-4 sm:p-5 text-left transition-all duration-200 transform active:translate-y-0.5"
+              :style="getDurationButtonStyle(selectedDuration === duration)"
             >
               <div class="flex items-center justify-between">
                 <div>
@@ -120,15 +130,15 @@
                     {{ duration }} <span class="text-base font-medium">Min.</span>
                   </div>
                   <p class="text-xs sm:text-sm text-gray-600 mt-1">
-                    {{ duration >= 60 ? `${Math.round((duration / 60) * 10) / 10} Stunden` : 'Ideal für fokussiertes Lernen' }}
+                    {{ duration >= 60 ? `${Math.round((duration / 60) * 10) / 10} Stunden` : 'Fokussiertes Training' }}
                   </p>
                 </div>
-                <span
-                  class="inline-flex items-center justify-center rounded-full px-2 py-1 text-xs font-semibold"
-                  :class="selectedDuration === duration ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'"
+                <div 
+                  class="rounded-full px-3 py-1 text-xs font-semibold border"
+                  :style="getDurationBadgeStyle(selectedDuration === duration)"
                 >
                   {{ selectedDuration === duration ? 'Ausgewählt' : 'Jetzt wählen' }}
-                </span>
+                </div>
               </div>
             </button>
           </div>
@@ -137,15 +147,6 @@
             <p class="text-sm text-gray-600">
               Für diese Kategorie sind noch keine Lektion-Dauern hinterlegt. Bitte kontaktieren Sie die Fahrschule.
             </p>
-          </div>
-          
-          <div class="mt-6 text-center">
-            <button 
-              @click="goBackToStep(1)"
-              class="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
-            >
-              ← Zurück zur Kategorie
-            </button>
           </div>
         </div>
 
@@ -158,8 +159,37 @@
             </div>
           </div>
           
+          <!-- Standard Locations -->
+          <div>
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              <h3 class="text-xs sm:text-sm font-medium text-gray-700">Oder wählen Sie einen festen Standort:</h3>
+            </div>
+            <div :class="`grid ${getGridClasses(availableLocations.length)} gap-3 sm:gap-4`">
+              <div 
+                v-for="location in availableLocations" 
+                :key="location.id"
+                @click="selectLocation(location)"
+                class="group cursor-pointer bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-3 sm:p-4 md:p-5 lg:p-6 hover:border-green-400 hover:shadow-lg transition-all duration-200"
+              >
+                <div class="flex items-start space-x-2 sm:space-x-3 md:space-x-4">
+                  <div class="flex-1 min-w-0">
+                    <h3 class="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-900 mb-1 truncate">{{ location.name }}</h3>
+                    <p v-if="location.address" class="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 line-clamp-2">{{ location.address }}</p>
+                    <div class="text-xs text-green-600 font-medium">
+                      {{ location.available_staff?.length || 0 }} Fahrlehrer
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <!-- Pickup Option (wenn verfügbar) -->
-          <div v-if="isPickupAvailableForCategory" class="mb-6 p-3 sm:p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+          <div v-if="isPickupAvailableForCategory" class="mt-6 p-3 sm:p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
             <div class="flex flex-col sm:flex-row items-start gap-3">
               <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,35 +242,6 @@
                       >
                         Mit Pickup fortfahren →
                       </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Standard Locations -->
-          <div>
-            <div class="flex items-center gap-2 mb-3">
-              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
-              <h3 class="text-xs sm:text-sm font-medium text-gray-700">Oder wählen Sie einen festen Standort:</h3>
-            </div>
-            <div :class="`grid ${getGridClasses(availableLocations.length)} gap-3 sm:gap-4`">
-              <div 
-                v-for="location in availableLocations" 
-                :key="location.id"
-                @click="selectLocation(location)"
-                class="group cursor-pointer bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-3 sm:p-4 md:p-5 lg:p-6 hover:border-green-400 hover:shadow-lg transition-all duration-200"
-              >
-                <div class="flex items-start space-x-2 sm:space-x-3 md:space-x-4">
-                  <div class="flex-1 min-w-0">
-                    <h3 class="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-900 mb-1 truncate">{{ location.name }}</h3>
-                    <p v-if="location.address" class="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 line-clamp-2">{{ location.address }}</p>
-                    <div class="text-xs text-green-600 font-medium">
-                      {{ location.available_staff?.length || 0 }} Fahrlehrer
                     </div>
                   </div>
                 </div>
@@ -1281,6 +1282,29 @@ const selectDurationOption = (duration: number) => {
   selectedDuration.value = duration
   filters.value.duration_minutes = duration
   currentStep.value = 3
+}
+
+const getDurationButtonStyle = (isSelected: boolean) => {
+  const primary = getBrandPrimary()
+  const baseShadow = isSelected ? withAlpha(primary, 0.35) : 'rgba(15, 23, 42, 0.08)'
+  return {
+    borderColor: isSelected ? primary : withAlpha(primary, 0.25),
+    background: isSelected
+      ? `linear-gradient(145deg, ${withAlpha(primary, 0.12)}, ${withAlpha(primary, 0.05)})`
+      : 'linear-gradient(145deg, #ffffff, #f9fafb)',
+    boxShadow: `0 10px 25px ${baseShadow}, inset 0 1px 0 rgba(255,255,255,0.6)`,
+    transform: isSelected ? 'translateY(-2px)' : 'translateY(0)',
+    transition: 'all 0.2s ease'
+  }
+}
+
+const getDurationBadgeStyle = (isSelected: boolean) => {
+  const primary = getBrandPrimary()
+  return {
+    borderColor: isSelected ? primary : withAlpha(primary, 0.3),
+    color: isSelected ? primary : '#4b5563',
+    backgroundColor: isSelected ? withAlpha(primary, 0.15) : '#f3f4f6'
+  }
 }
 
 const selectCategory = async (category: any) => {
