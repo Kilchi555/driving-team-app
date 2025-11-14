@@ -544,13 +544,15 @@ const getStatusClass = (payment: any): string => {
 
 const formatDateTime = (dateString: string): string => {
   if (!dateString) return '-'
-  return new Date(dateString).toLocaleDateString('de-CH', {
+  // UTC-Zeit aus DB in lokale Zeit (Europe/Zurich) konvertieren
+  return new Date(dateString).toLocaleString('de-CH', {
     weekday: 'short',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'Europe/Zurich'
   })
 }
 

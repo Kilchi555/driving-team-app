@@ -38,7 +38,8 @@ export const formatDate = (dateString: string | null | undefined): string => {
     return date.toLocaleDateString('de-CH', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'Europe/Zurich'
     })
   } catch (error) {
     console.warn('Error formatting date:', dateString, error)
@@ -48,27 +49,28 @@ export const formatDate = (dateString: string | null | undefined): string => {
 
 /**
  * Formatiert eine Zeit als lokale Zeit (de-CH)
- * Extrahiert Zeit direkt aus dem String ohne Date-Objekt
+ * Konvertiert UTC-Zeiten aus der DB zu lokaler Zeit (Europe/Zurich) für die Anzeige
  */
 export const formatTime = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Keine Zeit'
   
   try {
-    // Debug: Log the actual string format
-    console.log('formatTime input:', dateString)
+    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
+    const date = new Date(dateString)
     
-    // Sehr flexibler Regex für verschiedene Formate
-    const match = dateString.match(/(\d{4})-(\d{2})-(\d{2}).*?(\d{2}):(\d{2})/)
-    
-    if (!match) {
-      console.warn('No regex match for dateString:', dateString)
+    // Prüfe ob das Datum gültig ist
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date:', dateString)
       return 'Ungültige Zeit'
     }
     
-    const [, year, month, day, hour, minute] = match
-    
-    // Format als de-CH: HH:MM
-    return `${hour}:${minute}`
+    // Format als de-CH: HH:MM mit expliziter Zeitzone Europe/Zurich
+    return date.toLocaleTimeString('de-CH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Europe/Zurich'
+    })
   } catch (error) {
     console.warn('Error formatting time:', dateString, error)
     return 'Zeit Fehler'
@@ -77,27 +79,30 @@ export const formatTime = (dateString: string | null | undefined): string => {
 
 /**
  * Formatiert Datum und Zeit zusammen
- * Extrahiert Zeit direkt aus dem String ohne Date-Objekt
+ * Konvertiert UTC-Zeiten aus der DB zu lokaler Zeit (Europe/Zurich) für die Anzeige
  */
 export const formatDateTime = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Kein Datum/Zeit'
   
   try {
-    // Debug: Log the actual string format
-    console.log('formatDateTime input:', dateString)
+    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
+    const date = new Date(dateString)
     
-    // Sehr flexibler Regex für verschiedene Formate
-    const match = dateString.match(/(\d{4})-(\d{2})-(\d{2}).*?(\d{2}):(\d{2})/)
-    
-    if (!match) {
-      console.warn('No regex match for dateString:', dateString)
+    // Prüfe ob das Datum gültig ist
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date:', dateString)
       return 'Ungültiges Datum/Zeit'
     }
     
-    const [, year, month, day, hour, minute] = match
-    
-    // Format als de-CH: DD.MM.YYYY, HH:MM
-    return `${day}.${month}.${year}, ${hour}:${minute}`
+    // Format als de-CH: DD.MM.YYYY, HH:MM mit expliziter Zeitzone Europe/Zurich
+    return date.toLocaleString('de-CH', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Zurich'
+    })
   } catch (error) {
     console.warn('Error formatting dateTime:', dateString, error)
     return 'Datum/Zeit Fehler'
