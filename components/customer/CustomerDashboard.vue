@@ -1612,19 +1612,14 @@ const confirmAppointment = async (appointment: any) => {
       // Lade Daten neu, um aktuelle Zahlungsinformationen anzuzeigen
       await refreshData()
       
-      try {
-        // @ts-ignore
-        if (typeof showToast !== 'undefined' && typeof toastMessage !== 'undefined') {
-          // @ts-ignore
-          showToast.value = true
-          // @ts-ignore
-          toastMessage.value = shouldProcessImmediately
-            ? 'Termin bestätigt. Die Zahlung wurde sofort abgebucht.'
-            : shouldAuthorizeNow
-              ? 'Termin bestätigt. Der Betrag wurde provisorisch reserviert und 24h vor dem Termin abgebucht.'
-              : `Termin bestätigt. Die Karte wird ${automaticAuthorizationHoursBeforeLocal/24} Tage vor dem Termin reserviert, Abbuchung ${automaticPaymentHoursBeforeLocal}h vorher.`
-        }
-      } catch {}
+      // Zeige Erfolgs-Benachrichtigung
+      const message = shouldProcessImmediately
+        ? 'Termin bestätigt! Die Zahlung wurde sofort abgebucht.'
+        : shouldAuthorizeNow
+          ? 'Termin bestätigt! Der Betrag wurde provisorisch reserviert und wird 24h vor dem Termin abgebucht.'
+          : `Termin bestätigt! Die Karte wird ${automaticAuthorizationHoursBeforeLocal/24} Tage vor dem Termin reserviert, Abbuchung ${automaticPaymentHoursBeforeLocal}h vorher.`
+      
+      alert(message)
       return
     }
 
