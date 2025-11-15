@@ -2884,51 +2884,16 @@ const sendDirectEmail = async () => {
   try {
     console.log('📧 Sending invoice via direct email...')
     
-    // Sammle alle ausgewählten Termine
-    const selectedAppointmentData = selectedAppointments.value.map(appointmentId => {
-      const appointment = getAppointmentById(appointmentId)
-      if (!appointment) return null
-      
-      return {
-        id: appointment.id,
-        title: appointment.title,
-        start_time: appointment.start_time,
-        duration_minutes: appointment.duration_minutes,
-        amount: calculateAppointmentAmount(appointment)
-      }
-    }).filter((apt): apt is NonNullable<typeof apt> => apt !== null)
-    
-    if (selectedAppointmentData.length === 0) {
-      throw new Error('Keine gültigen Termine gefunden')
-    }
-    
-    // Rechnungsdaten für E-Mail vorbereiten
-    const invoiceData = {
-      appointments: selectedAppointmentData,
-      customerName: `${userDetails.value?.first_name || ''} ${userDetails.value?.last_name || ''}`.trim(),
-      totalAmount: selectedAppointmentsTotal.value,
-      billingAddress: companyBillingAddress.value,
-      emailData: {
-        email: invoiceEmail.value || companyBillingAddress.value?.email || userDetails.value?.email || '',
-        subject: invoiceSubject.value,
-        message: invoiceMessage.value
-      }
-    }
-    
-    console.log('📋 Direct email invoice data prepared:', invoiceData)
-    
-    // TODO: Hier würde die direkte E-Mail-Versand-Logik implementiert
-    // Für den Moment simulieren wir den E-Mail-Versand
-    
-    // Simuliere E-Mail-Versand
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Verwende den Settlement Email Endpoint direkt
+    await updateAppointmentsToInvoiced(selectedAppointments.value)
     
     const totalAmount = formatCurrency(selectedAppointmentsTotal.value)
     const appointmentCount = selectedAppointments.value.length
+    const email = invoiceEmail.value || companyBillingAddress.value?.email || userDetails.value?.email || ''
     
     showSuccessToast(
       '✅ E-Mail erfolgreich versendet',
-      `Anzahl Termine: ${appointmentCount}\nGesamtbetrag: ${totalAmount}\n\nDie Rechnung wurde direkt an ${invoiceData.emailData.email} gesendet.`
+      `Anzahl Termine: ${appointmentCount}\nGesamtbetrag: ${totalAmount}\n\nDie Rechnung wurde direkt an ${email} gesendet.`
     )
     
     // Modal schließen und Auswahl aufheben
@@ -2939,6 +2904,9 @@ const sendDirectEmail = async () => {
     invoiceEmail.value = ''
     invoiceSubject.value = ''
     invoiceMessage.value = ''
+    
+    // Daten aktualisieren
+    await refreshData()
     
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
