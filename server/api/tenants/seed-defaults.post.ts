@@ -1,3 +1,5 @@
+import { getSupabase } from '~/utils/supabase'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -112,8 +114,8 @@ export default defineEventHandler(async (event) => {
 
     const existingCatCodes = new Set((existingCats || []).map((c: any) => c.code))
     const categoriesToInsert = (defaults.categories || [])
-      .filter((c) => overwrite_existing ? true : !existingCatCodes.has(c.code))
-      .map((c) => ({ ...c, tenant_id }))
+      .filter((c: any) => overwrite_existing ? true : !existingCatCodes.has(c.code))
+      .map((c: any) => ({ ...c, tenant_id }))
 
     if (categoriesToInsert.length > 0) {
       const { error: catInsertErr } = await supabase.from('categories').insert(categoriesToInsert)
@@ -130,8 +132,8 @@ export default defineEventHandler(async (event) => {
 
     const existingEtCodes = new Set((existingEts || []).map((e: any) => e.code))
     const eventTypesToInsert = (defaults.eventTypes || [])
-      .filter((e) => overwrite_existing ? true : !existingEtCodes.has(e.code))
-      .map((e, idx) => ({
+      .filter((e: any) => overwrite_existing ? true : !existingEtCodes.has(e.code))
+      .map((e: any, idx: number) => ({
         tenant_id,
         code: e.code,
         name: e.name,
