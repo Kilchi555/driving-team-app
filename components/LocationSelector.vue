@@ -337,7 +337,7 @@ const loadStandardLocations = async () => {
 
     let query = supabase
       .from('locations')
-      .select('id, name, address, latitude, longitude, location_type, staff_id')
+      .select('id, name, address, latitude, longitude, location_type, staff_ids')
       .eq('location_type', 'standard')
       .eq('is_active', true)
       .order('name')
@@ -348,14 +348,11 @@ const loadStandardLocations = async () => {
 
     // ✅ ADMIN & STAFF FILTER: Admins sehen alle Tenant-Locations, Staff nur ihre eigenen
     if (props.currentStaffId) {
-      // Staff: Lade staff-spezifische UND globale Tenant-Locations
-      query = query.or(`staff_id.eq.${props.currentStaffId},staff_id.is.null`)
-      console.log('🔍 Loading staff-specific OR global tenant locations for staff:', props.currentStaffId)
+      // Staff: Lade alle Tenant-Locations (zeige nur die, wo der Staff registriert ist)
+      console.log('🔍 Loading tenant locations for staff:', props.currentStaffId)
     } else {
-      // Admin oder kein Staff: Lade ALLE Tenant-Locations (staff-spezifische UND globale)
-      // Admins sollten alle Standorte des Tenants sehen können
+      // Admin oder kein Staff: Lade ALLE Tenant-Locations
       console.log('🔍 Loading ALL tenant locations (admin access or no staff specified)')
-      // Kein zusätzlicher staff_id Filter - lädt alle Locations des Tenants
     }
 
     const { data, error: fetchError } = await query
@@ -374,7 +371,7 @@ const loadStandardLocations = async () => {
       currentStaffId: props.currentStaffId,
       isAdmin: !props.currentStaffId,
       locationsCount: data?.length,
-      locations: data?.map(l => ({ id: l.id, name: l.name, staff_id: l.staff_id, address: l.address }))
+      locations: data?.map(l => ({ id: l.id, name: l.name, staff_ids: l.staff_ids, address: l.address }))
     })
     
   } catch (err: any) {

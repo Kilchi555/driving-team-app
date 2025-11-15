@@ -192,29 +192,33 @@ const loadExamLocations = async () => {
   try {
     const supabase = getSupabase()
     
-    // 1. Alle verfügbaren globalen Prüfungsstandorte laden
+    // 1. Alle verfügbaren globalen Prüfungsstandorte laden (tenant_id ist null)
     const { data: allLocations, error: locationsError } = await supabase
       .from('locations')
       .select('*')
       .eq('location_type', 'exam')
-      .is('staff_id', null)
+      .is('tenant_id', null)
       .eq('is_active', true)
       .order('name')
 
     if (locationsError) throw locationsError
     availableExamLocations.value = allLocations || []
     
-    // 2. Staff-spezifische Exam-Preferences laden (GENAU WIE IN STAFFSETTINGS)
-    const { data: staffPreferences, error: staffError } = await supabase
+    // 2. Staff-spezifische Exam-Preferences laden (wo currentStaffId in staff_ids array ist)
+    const { data: allExamLocations, error: allExamError } = await supabase
       .from('locations')
       .select('*')
       .eq('location_type', 'exam')
-      .eq('staff_id', props.currentStaffId)
       .eq('is_active', true)
       .order('name')
 
-    if (staffError) throw staffError
-    staffExamLocations.value = staffPreferences || []
+    if (allExamError) throw allExamError
+    
+    // Filter: nur die, wo currentStaffId in staff_ids ist
+    staffExamLocations.value = (allExamLocations || []).filter((loc: any) => {
+      const staffIds = loc.staff_ids || []
+      return Array.isArray(staffIds) && staffIds.includes(props.currentStaffId)
+    })
 
     console.log('✅ Exam locations loaded for selector:', {
       available: availableExamLocations.value.length,

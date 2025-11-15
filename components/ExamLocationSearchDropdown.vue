@@ -332,7 +332,7 @@ const loadAllExamLocations = async () => {
       .from('locations')
       .select('*')
       .eq('location_type', 'exam')
-      .is('staff_id', null) // Global locations
+      .is('tenant_id', null) // Global locations (no tenant assigned)
       .eq('is_active', true)
       .order('name')
 
@@ -350,7 +350,7 @@ const loadAllExamLocations = async () => {
       // Check total locations in table
       const { data: allLocationsCheck, error: checkError } = await supabase
         .from('locations')
-        .select('id, name, location_type, staff_id, is_active')
+        .select('id, name, location_type, staff_ids, is_active')
         .limit(10)
       
       if (checkError) {
@@ -374,13 +374,18 @@ const loadSelectedLocations = async () => {
   try {
     const supabase = getSupabase()
     
-    // Load staff-specific exam location preferences
-    const { data: staffLocations, error } = await supabase
+    // Load staff-specific exam location preferences (where currentStaffId is in staff_ids)
+    const { data: allExamLocs, error } = await supabase
       .from('locations')
       .select('*')
       .eq('location_type', 'exam')
-      .eq('staff_id', props.currentStaffId)
       .eq('is_active', true)
+    
+    // Filter: nur die, wo currentStaffId in staff_ids ist
+    const staffLocations = (allExamLocs || []).filter((loc: any) => {
+      const staffIds = loc.staff_ids || []
+      return Array.isArray(staffIds) && staffIds.includes(props.currentStaffId)
+    })
 
     if (error) throw error
 
@@ -409,11 +414,11 @@ const addLocation = async (location: ExamLocation) => {
   try {
     const supabase = getSupabase()
     
-    // Add to staff preferences
+    // Add to staff preferences by creating new location with staff_ids array
     const { error } = await supabase
       .from('locations')
       .insert({
-        staff_id: props.currentStaffId,
+        staff_ids: [props.currentStaffId],
         name: location.name,
         address: location.address,
         location_type: 'exam',
@@ -439,16 +444,33 @@ const removeLocation = async (location: ExamLocation) => {
   try {
     const supabase = getSupabase()
     
-    // Find and remove from database
-    const { error } = await supabase
+    // Find the location and remove staff_id from staff_ids array
+    const { data: locationsToUpdate, error: findError } = await supabase
       .from('locations')
-      .delete()
-      .eq('staff_id', props.currentStaffId)
+      .select('*')
       .eq('name', location.name)
       .eq('address', location.address)
       .eq('location_type', 'exam')
 
-    if (error) throw error
+    if (findError) throw findError
+
+    // Update staff_ids array for each location found
+    for (const loc of locationsToUpdate || []) {
+      const staffIds = (loc.staff_ids || []).filter((id: string) => id !== props.currentStaffId)
+      
+      // If no staff left, delete the location; otherwise update staff_ids
+      if (staffIds.length === 0) {
+        await supabase
+          .from('locations')
+          .delete()
+          .eq('id', loc.id)
+      } else {
+        await supabase
+          .from('locations')
+          .update({ staff_ids: staffIds })
+          .eq('id', loc.id)
+      }
+    }
 
     // Remove from local state
     const index = selectedLocations.value.findIndex(selected => 
@@ -530,7 +552,8 @@ const addNewLocation = async () => {
       postal_code: newLocationForm.value.postal_code.trim() || null,
       location_type: 'exam',
       is_active: true,
-      staff_id: null, // Global location
+      staff_ids: [], // Global location (empty array = no specific staff)
+      tenant_id: null, // Global location (no tenant assigned)
       created_at: new Date().toISOString()
     }
 

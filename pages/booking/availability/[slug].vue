@@ -1063,28 +1063,39 @@ const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
     const locationPromises = availableStaff.value.map(async (staff) => {
       try {
         // Get ONLY standard locations where this staff can teach
+        // Load all tenant locations and filter by staff_ids array
         const { data: staffLocations, error: slError } = await supabase
           .from('locations')
           .select('*, category_pickup_settings, time_windows')
-          .eq('staff_id', staff.id)
           .eq('is_active', true)
           .eq('location_type', 'standard')
+          .eq('tenant_id', currentTenant.value?.id || '')
         
         if (slError) {
           console.error(`❌ Error loading locations for ${staff.first_name}:`, slError)
           return { staffId: staff.id, locations: [] }
         }
         
-        // Filter locations: only include locations where the selected category is available
+        // Filter locations: only include if staff is registered AND category is available
         const filteredLocations = (staffLocations || []).filter((location: any) => {
+          // Check if staff is registered at this location
+          const staffIds = location.staff_ids || []
+          const isStaffRegistered = Array.isArray(staffIds) && staffIds.includes(staff.id)
+          
+          // Check if category is available
           const availableCategories = location.available_categories || []
           const hasCategory = availableCategories.includes(filters.value.category_code)
+          
+          if (!isStaffRegistered) {
+            console.log(`⏭️ Skipping location ${location.name} for ${staff.first_name} - staff not registered`)
+            return false
+          }
           
           if (!hasCategory) {
             console.log(`⏭️ Skipping location ${location.name} for ${staff.first_name} - category ${filters.value.category_code} not available`)
           }
           
-          return hasCategory
+          return hasCategory && isStaffRegistered
         })
         
         console.log(`✅ Loaded ${filteredLocations.length}/${staffLocations?.length || 0} locations for ${staff.first_name} ${staff.last_name} (category: ${filters.value.category_code})`)

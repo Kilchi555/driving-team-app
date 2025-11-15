@@ -207,22 +207,29 @@
             </button>
             
             <div v-if="openSections.locations" class="px-4 pb-4 border-t border-gray-100">
-              <div class="space-y-3 mt-3">
-                <!-- Aktuelle Standorte -->
-                <div v-if="myLocations.length > 0">
-                  <div class="text-sm font-medium text-gray-800 mb-2">Ihre Standorte:</div>
+              <div class="space-y-4 mt-3">
+                <!-- Info Box -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p class="text-sm text-blue-800">
+                    💡 <strong>Treffpunkte:</strong> Wählen Sie alle Standorte des Tenants aus, an denen Sie unterrichten möchten.
+                  </p>
+                </div>
+
+                <!-- Ihre registrierten Standorte -->
+                <div v-if="registeredLocations.length > 0">
+                  <div class="text-sm font-medium text-gray-800 mb-2">✅ Ihre registrierten Standorte:</div>
                   <div class="space-y-2">
                     <div 
-                      v-for="location in myLocations" 
+                      v-for="location in registeredLocations" 
                       :key="location.id"
-                      class="flex justify-between items-center p-2 bg-gray-50 rounded text-sm"
+                      class="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded text-sm"
                     >
                       <div>
                         <div class="font-medium text-gray-900">{{ location.name }}</div>
                         <div class="text-gray-700 text-xs">{{ location.address }}</div>
                       </div>
                       <button
-                        @click="removeLocation(location.id)"
+                        @click="toggleLocationAssignment(location.id)"
                         class="text-red-600 hover:text-red-800 text-xs font-medium"
                       >
                         Entfernen
@@ -231,30 +238,32 @@
                   </div>
                 </div>
 
-                <!-- Neuen Standort hinzufügen -->
-                <div class="border-t pt-3">
-                  <div class="text-sm font-medium text-gray-800 mb-2">Neuen Standort hinzufügen:</div>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input
-                      v-model="newLocationName"
-                      type="text"
-                      placeholder="Name (z.B. Bahnhof Zürich)"
-                      class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                <!-- Verfügbare Standorte zum Hinzufügen -->
+                <div v-if="availableLocationsForSignup.length > 0">
+                  <div class="text-sm font-medium text-gray-800 mb-2">➕ Verfügbare Standorte:</div>
+                  <div class="space-y-2">
+                    <div 
+                      v-for="location in availableLocationsForSignup" 
+                      :key="location.id"
+                      class="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded text-sm"
                     >
-                    <input
-                      v-model="newLocationAddress"
-                      type="text"
-                      placeholder="Adresse"
-                      class="px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
+                      <div>
+                        <div class="font-medium text-gray-900">{{ location.name }}</div>
+                        <div class="text-gray-700 text-xs">{{ location.address }}</div>
+                      </div>
+                      <button
+                        @click="toggleLocationAssignment(location.id)"
+                        class="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                      >
+                        Hinzufügen
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    @click="addLocation"
-                    :disabled="!newLocationName || !newLocationAddress"
-                    class="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Hinzufügen
-                  </button>
+                </div>
+
+                <!-- Keine verfügbaren Standorte -->
+                <div v-if="availableLocationsForSignup.length === 0 && registeredLocations.length === 0" class="text-center py-4">
+                  <p class="text-sm text-gray-500">Keine Standorte verfügbar</p>
                 </div>
               </div>
             </div>
@@ -651,6 +660,7 @@ const monthlyStats = ref({
 const availableCategories = ref<any[]>([])
 const selectedCategories = ref<number[]>([])
 const myLocations = ref<any[]>([])
+const allTenantLocations = ref<any[]>([]) // Alle Standard-Standorte des Tenants
 const categoryDurations = ref<Record<string, number[]>>({})
 
 // Working Hours Management
@@ -683,6 +693,20 @@ const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const filteredCategoriesForDurations = computed(() => {
   return availableCategories.value.filter(cat => 
     selectedCategories.value.includes(cat.id)
+  )
+})
+
+// Registered Locations (wo Staff bereits eintragen ist)
+const registeredLocations = computed(() => {
+  return allTenantLocations.value.filter(loc => 
+    loc.staff_ids && Array.isArray(loc.staff_ids) && loc.staff_ids.includes(props.currentUser?.id)
+  )
+})
+
+// Available Locations (wo Staff sich noch eintragen kann)
+const availableLocationsForSignup = computed(() => {
+  return allTenantLocations.value.filter(loc => 
+    !loc.staff_ids || !Array.isArray(loc.staff_ids) || !loc.staff_ids.includes(props.currentUser?.id)
   )
 })
 
@@ -1045,7 +1069,7 @@ const addLocation = async () => {
       .insert({
         name: newLocationName.value,
         address: newLocationAddress.value,
-        staff_id: props.currentUser.id,
+        staff_ids: [props.currentUser.id], // Use staff_ids array, with current user as initial staff
         tenant_id: props.currentUser.tenant_id,
         location_type: 'standard' // Standard-Treffpunkte, nicht Exam Locations
       })
@@ -1054,6 +1078,8 @@ const addLocation = async () => {
 
     if (error) throw error
 
+    // Add to allTenantLocations and myLocations
+    allTenantLocations.value.push(data)
     myLocations.value.push(data)
     newLocationName.value = ''
     newLocationAddress.value = ''
@@ -1075,7 +1101,7 @@ const addExamLocation = async () => {
     const { data, error } = await supabase
       .from('locations') // 👈 Tabelle auf 'locations' geändert
       .insert({
-        staff_id: props.currentUser.id,
+        staff_ids: [props.currentUser.id], // Use staff_ids array instead of staff_id
         tenant_id: props.currentUser.tenant_id,
         name: newExamLocation.value.name,
         address: newExamLocation.value.address,
@@ -1105,6 +1131,54 @@ const addExamLocation = async () => {
   }
 }
 
+
+// Toggle Location Assignment (Hinzufügen/Entfernen)
+const toggleLocationAssignment = async (locationId: string) => {
+  try {
+    const supabase = getSupabase()
+    const staffId = props.currentUser?.id
+
+    // Finde die Location
+    const location = allTenantLocations.value.find(loc => loc.id === locationId)
+    if (!location) {
+      throw new Error('Location nicht gefunden')
+    }
+
+    // Aktuelle staff_ids (Array oder leer)
+    let currentStaffIds = Array.isArray(location.staff_ids) ? [...location.staff_ids] : []
+
+    // Toggle: hinzufügen oder entfernen
+    if (currentStaffIds.includes(staffId)) {
+      // Entfernen
+      currentStaffIds = currentStaffIds.filter(id => id !== staffId)
+      console.log(`🔥 Removing staff ${staffId} from location ${locationId}`)
+    } else {
+      // Hinzufügen
+      currentStaffIds.push(staffId)
+      console.log(`🔥 Adding staff ${staffId} to location ${locationId}`)
+    }
+
+    // Update in Datenbank
+    const { error } = await supabase
+      .from('locations')
+      .update({ staff_ids: currentStaffIds })
+      .eq('id', locationId)
+
+    if (error) throw error
+
+    // Optimistic Update in UI
+    const locationIndex = allTenantLocations.value.findIndex(loc => loc.id === locationId)
+    if (locationIndex >= 0) {
+      allTenantLocations.value[locationIndex].staff_ids = currentStaffIds
+    }
+
+    console.log('✅ Location assignment updated successfully')
+
+  } catch (err: any) {
+    console.error('❌ Error in toggleLocationAssignment:', err)
+    error.value = `Fehler: ${err.message}`
+  }
+}
 
 const removeLocation = async (locationId: string) => {
   try {
@@ -1171,15 +1245,18 @@ const loadData = async () => {
     if (categoriesError) throw categoriesError
     availableCategories.value = categories || []
 
-    // Standard Standorte laden (nur standard locations, nicht exam locations)
-    const { data: locations, error: locationsError } = await supabase
+    // Alle Standard-Standorte des Tenants laden (mit allen staff_ids)
+    const { data: allLocations, error: allLocationsError } = await supabase
       .from('locations')
       .select('*')
-      .eq('staff_id', props.currentUser.id)
-      .eq('location_type', 'standard') // Nur Standard Locations, keine Exam Locations
+      .eq('tenant_id', props.currentUser.tenant_id)
+      .eq('location_type', 'standard') // Nur Standard Locations, keine Exam/Prüfungs Locations
 
-    if (locationsError) throw locationsError
-    myLocations.value = locations || []
+    if (allLocationsError) throw allLocationsError
+    allTenantLocations.value = allLocations || []
+
+    // myLocations für Backward-Compatibility (wird nicht mehr verwendet)
+    myLocations.value = registeredLocations.value
 
     // Zugewiesene Kategorien laden (temporär deaktiviert - Tabelle existiert nicht)
     // TODO: Implementiere staff_categories Tabelle oder alternative Lösung

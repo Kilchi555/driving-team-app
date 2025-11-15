@@ -770,11 +770,12 @@ const loadStaff = async () => {
     }
 
     // Load staff locations (exclude exam locations)
+    // Note: We load ALL locations for the tenant and filter by staff_ids array on the frontend
     const { data: locationsData, error: locationsError } = await supabase
       .from('locations')
       .select(`
         id,
-        staff_id,
+        staff_ids,
         name,
         address,
         location_type,
@@ -782,9 +783,10 @@ const loadStaff = async () => {
         pickup_enabled,
         pickup_radius_minutes,
         category_pickup_settings,
-        time_windows
+        time_windows,
+        tenant_id
       `)
-      .in('staff_id', staffData.map(s => s.id))
+      .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .neq('location_type', 'exam')
 
