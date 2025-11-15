@@ -68,26 +68,34 @@ interface TenantAssets {
 }
 
 async function loadTenantAssets(tenant: any): Promise<TenantAssets> {
-  if (!tenant?.logo_url) {
+  // Try logo_square_url first, then logo_url, then logo_wide_url
+  const logoUrl = tenant?.logo_square_url || tenant?.logo_url || tenant?.logo_wide_url
+  
+  if (!logoUrl) {
+    console.warn('⚠️ No logo URL found in tenant data')
     return { logoSrc: null, logoDataUrl: null }
   }
 
   try {
-    const logoRes = await fetch(tenant.logo_url)
+    console.log('📷 Loading logo from:', logoUrl)
+    const logoRes = await fetch(logoUrl)
     if (logoRes.ok) {
       const logoBuffer = await logoRes.arrayBuffer()
       const logoBase64 = Buffer.from(logoBuffer).toString('base64')
       const logoMime = logoRes.headers.get('content-type') || 'image/png'
+      console.log('✅ Logo loaded successfully')
       return {
-        logoSrc: tenant.logo_url,
+        logoSrc: logoUrl,
         logoDataUrl: `data:${logoMime};base64,${logoBase64}`
       }
+    } else {
+      console.warn('⚠️ Logo fetch failed:', logoRes.status)
     }
   } catch (logoErr) {
     console.warn('⚠️ Could not load logo:', logoErr)
   }
 
-  return { logoSrc: tenant.logo_url, logoDataUrl: null }
+  return { logoSrc: logoUrl, logoDataUrl: null }
 }
 
 async function loadPaymentContext(payment: any, supabase: any, translateFn: any): Promise<PaymentContext> {
@@ -118,6 +126,9 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
         staff:users!appointments_staff_id_fkey (
           first_name,
           last_name
+        ),
+        event_types!appointments_event_type_code_fkey (
+          name
         )
       `)
       .eq('id', payment.appointment_id)
@@ -212,7 +223,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     appointmentInfo: {
       eventTypeLabel: eventTypeTranslated,
       statusLabel: statusTranslated,
-      eventTypeCode: appointment?.event_type_code || '',
+      eventTypeCode: appointment?.event_types?.name || appointment?.event_type_code || '',
       staffFirstName: appointment?.staff?.first_name || '',
       categoryCode: appointment?.type || '',
       date: appointmentDate,
@@ -374,6 +385,10 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
     })
     .join('')
 
+  // Calculate lesson count as total duration / 45 minutes per lesson
+  const totalDuration = sorted.reduce((sum, ctx) => sum + ctx.appointmentInfo.duration, 0)
+  const lessonCount = (totalDuration / 45).toFixed(1)
+
   return `
     <div class="doc">
       ${renderHeader(customer, 'receipt.generatedOn', new Date().toLocaleDateString('de-CH'), tenant, assets, translateFn)}
@@ -382,7 +397,7 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
         <div class="section-title">${translateFn('receipt.lessonsOverview')}</div>
         <div class="row">
           <div class="label">${translateFn('receipt.lessonCount')}</div>
-          <div class="value">${sorted.length}</div>
+          <div class="value">${lessonCount}</div>
         </div>
         <div class="row">
           <div class="label">${translateFn('receipt.period')}</div>
