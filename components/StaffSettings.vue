@@ -209,52 +209,139 @@
             <div v-if="openSections.locations" class="px-4 pb-4 border-t border-gray-100">
               <div class="space-y-4 mt-4">
 
-                <!-- Dropdown zum Hinzufügen von Standorten -->
-                <div class="space-y-2">
-                  <label class="block text-sm font-medium text-gray-700">Standort hinzufügen:</label>
-                  <select 
-                    @change="(e: any) => {
-                      const locationId = e.target.value
-                      if (locationId) {
-                        toggleLocationAssignment(locationId)
-                        e.target.value = ''
-                      }
-                    }"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                <!-- Tabs: Existierende vs Neue Standorte -->
+                <div class="flex gap-2 border-b border-gray-200">
+                  <button
+                    @click="locationTab = 'existing'"
+                    :class="[
+                      'px-4 py-2 text-sm font-medium border-b-2 transition',
+                      locationTab === 'existing'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ]"
                   >
-                    <option value="">-- Wählen Sie einen Standort --</option>
-                    <option v-for="location in availableLocationsForSignup" :key="location.id" :value="location.id">
-                      {{ location.name }} ({{ location.address }})
-                    </option>
-                  </select>
+                    📍 Existierende Standorte
+                  </button>
+                  <button
+                    @click="locationTab = 'new'"
+                    :class="[
+                      'px-4 py-2 text-sm font-medium border-b-2 transition',
+                      locationTab === 'new'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ]"
+                  >
+                    ➕ Neuen Standort erstellen
+                  </button>
                 </div>
 
-                <!-- Ihre registrierten Standorte -->
-                <div v-if="registeredLocations.length > 0">
-                  <div class="text-sm font-medium text-gray-800 mb-3">✅ Ihre Standorte:</div>
+                <!-- Tab 1: Existierende Standorte -->
+                <div v-if="locationTab === 'existing'" class="space-y-3">
+                  <!-- Dropdown zum Hinzufügen von Standorten -->
                   <div class="space-y-2">
-                    <div 
-                      v-for="location in registeredLocations" 
-                      :key="location.id"
-                      class="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm hover:bg-blue-100 transition"
+                    <label class="block text-sm font-medium text-gray-700">Standort hinzufügen:</label>
+                    <select 
+                      @change="(e: any) => {
+                        const locationId = e.target.value
+                        if (locationId) {
+                          toggleLocationAssignment(locationId)
+                          e.target.value = ''
+                        }
+                      }"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <div class="flex-1">
-                        <div class="font-medium text-gray-900">{{ location.name }}</div>
-                        <div class="text-gray-600 text-xs">{{ location.address }}</div>
-                      </div>
-                      <button
-                        @click="toggleLocationAssignment(location.id)"
-                        class="ml-2 px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded text-xs font-medium"
+                      <option value="">-- Wählen Sie einen Standort --</option>
+                      <option v-for="location in availableLocationsForSignup" :key="location.id" :value="location.id">
+                        {{ location.name }} ({{ location.address }})
+                      </option>
+                    </select>
+                  </div>
+
+                  <!-- Ihre registrierten Standorte -->
+                  <div v-if="registeredLocations.length > 0">
+                    <div class="text-sm font-medium text-gray-800 mb-3">✅ Ihre Standorte:</div>
+                    <div class="space-y-2">
+                      <div 
+                        v-for="location in registeredLocations" 
+                        :key="location.id"
+                        class="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm hover:bg-blue-100 transition"
                       >
-                        Entfernen
-                      </button>
+                        <div class="flex-1">
+                          <div class="font-medium text-gray-900">{{ location.name }}</div>
+                          <div class="text-gray-600 text-xs">{{ location.address }}</div>
+                        </div>
+                        <button
+                          @click="toggleLocationAssignment(location.id)"
+                          class="ml-2 px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded text-xs font-medium"
+                        >
+                          Entfernen
+                        </button>
+                      </div>
                     </div>
+                  </div>
+
+                  <!-- Keine Standorte -->
+                  <div v-if="registeredLocations.length === 0" class="text-center py-6 text-gray-500">
+                    <p class="text-sm">Keine Standorte ausgewählt</p>
                   </div>
                 </div>
 
-                <!-- Keine Standorte -->
-                <div v-if="registeredLocations.length === 0" class="text-center py-6 text-gray-500">
-                  <p class="text-sm">Keine Standorte ausgewählt</p>
+                <!-- Tab 2: Neuen Standort erstellen -->
+                <div v-if="locationTab === 'new'" class="space-y-4">
+                  <!-- Name -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Standortname *</label>
+                    <input
+                      v-model="newLocationForm.name"
+                      type="text"
+                      placeholder="z.B. Baslerstrasse 145"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <!-- Address -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Adresse *</label>
+                    <input
+                      v-model="newLocationForm.address"
+                      type="text"
+                      placeholder="z.B. 8048 Zürich"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <!-- Available Categories -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Verfügbare Kategorien:</label>
+                    <div class="space-y-2">
+                      <label v-for="cat in availableCategories" :key="cat.id" class="flex items-center">
+                        <input
+                          type="checkbox"
+                          :value="cat.code"
+                          v-model="newLocationForm.available_categories"
+                          class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span class="ml-2 text-sm text-gray-700">{{ cat.name }} ({{ cat.code }})</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Buttons -->
+                  <div class="flex gap-3 pt-2">
+                    <button
+                      @click="resetLocationForm"
+                      class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-sm"
+                    >
+                      Zurücksetzen
+                    </button>
+                    <button
+                      @click="createNewLocation"
+                      :disabled="!newLocationForm.name || !newLocationForm.address || newLocationForm.available_categories.length === 0"
+                      class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                    >
+                      Erstellen & Hinzufügen
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -675,7 +762,15 @@ const isSavingWorkingHours = ref(false)
 // New Location
 const newLocationName = ref('')
 const newLocationAddress = ref('')
-const locationsKey = ref(0);
+const locationsKey = ref(0)
+const locationTab = ref<'existing' | 'new'>('existing')
+
+// New Location Form
+const newLocationForm = ref({
+  name: '',
+  address: '',
+  available_categories: [] as string[]
+})
 
 // Constants
 const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
@@ -1126,6 +1221,59 @@ const addExamLocation = async () => {
   }
 }
 
+
+// Create new location
+const createNewLocation = async () => {
+  if (!props.currentUser?.tenant_id || !newLocationForm.value.name || !newLocationForm.value.address) {
+    alert('Bitte füllen Sie alle erforderlichen Felder aus')
+    return
+  }
+
+  try {
+    const supabase = getSupabase()
+    
+    // Create new location with current staff_id in staff_ids array
+    const { data, error } = await supabase
+      .from('locations')
+      .insert({
+        name: newLocationForm.value.name,
+        address: newLocationForm.value.address,
+        staff_ids: [props.currentUser.id], // Add current staff to the location
+        tenant_id: props.currentUser.tenant_id,
+        available_categories: newLocationForm.value.available_categories,
+        location_type: 'standard',
+        is_active: true
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    // Add to local state
+    allTenantLocations.value.push(data)
+    
+    // Reset form
+    resetLocationForm()
+    
+    // Switch back to existing tab
+    locationTab.value = 'existing'
+    
+    console.log('✅ Location created successfully:', data)
+  } catch (err: any) {
+    console.error('❌ Error creating location:', err)
+    error.value = `Fehler beim Erstellen: ${err.message}`
+    alert(`Fehler: ${err.message}`)
+  }
+}
+
+// Reset location form
+const resetLocationForm = () => {
+  newLocationForm.value = {
+    name: '',
+    address: '',
+    available_categories: []
+  }
+}
 
 // Toggle Location Assignment (Hinzufügen/Entfernen)
 const toggleLocationAssignment = async (locationId: string) => {
