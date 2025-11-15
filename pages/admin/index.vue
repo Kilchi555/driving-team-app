@@ -11,6 +11,9 @@
     <!-- Main Dashboard Content -->
     <div v-else class="space-y-4 sm:space-y-6">
 
+      <!-- Pendenzen Section (full width) -->
+      <AdminPendencies />
+
       <!-- Alle Widgets in 4 Spalten -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <!-- Umsätze -->
@@ -584,6 +587,7 @@ import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString, formatDate } from '~/utils/dateUtils'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import AdminPendencies from '~/components/admin/AdminPendencies.vue'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useAuthStore } from '~/stores/auth'
 
