@@ -882,7 +882,7 @@ v-for="appointment in filteredAppointments" :key="appointment.id"
                   </td>
                   <td class="px-6 py-4 text-sm text-gray-900">
                     <div class="max-w-xs">
-                      <div class="truncate font-medium">{{ appointment.event_type_code ? getEventTypeLabel(appointment.event_type_code) : 'Fahrstunde' }}</div>
+                      <div class="truncate font-medium">{{ appointment.event_type_code ? getEventTypeLabel(appointment.event_type_code) : 'Lektion' }}</div>
                       <div class="text-xs text-gray-600 truncate">Mit {{ appointment.staff?.first_name || 'Unknown' }} • {{ appointment.type }}</div>
                     </div>
                   </td>
