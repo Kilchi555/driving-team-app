@@ -207,30 +207,44 @@
             </button>
             
             <div v-if="openSections.locations" class="px-4 pb-4 border-t border-gray-100">
-              <div class="space-y-4 mt-3">
-                <!-- Info Box -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p class="text-sm text-blue-800">
-                    💡 <strong>Treffpunkte:</strong> Wählen Sie alle Standorte des Tenants aus, an denen Sie unterrichten möchten.
-                  </p>
+              <div class="space-y-4 mt-4">
+
+                <!-- Dropdown zum Hinzufügen von Standorten -->
+                <div class="space-y-2">
+                  <label class="block text-sm font-medium text-gray-700">Standort hinzufügen:</label>
+                  <select 
+                    @change="(e: any) => {
+                      const locationId = e.target.value
+                      if (locationId) {
+                        toggleLocationAssignment(locationId)
+                        e.target.value = ''
+                      }
+                    }"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">-- Wählen Sie einen Standort --</option>
+                    <option v-for="location in availableLocationsForSignup" :key="location.id" :value="location.id">
+                      {{ location.name }} ({{ location.address }})
+                    </option>
+                  </select>
                 </div>
 
                 <!-- Ihre registrierten Standorte -->
                 <div v-if="registeredLocations.length > 0">
-                  <div class="text-sm font-medium text-gray-800 mb-2">✅ Ihre registrierten Standorte:</div>
+                  <div class="text-sm font-medium text-gray-800 mb-3">✅ Ihre Standorte:</div>
                   <div class="space-y-2">
                     <div 
                       v-for="location in registeredLocations" 
                       :key="location.id"
-                      class="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded text-sm"
+                      class="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm hover:bg-blue-100 transition"
                     >
-                      <div>
+                      <div class="flex-1">
                         <div class="font-medium text-gray-900">{{ location.name }}</div>
-                        <div class="text-gray-700 text-xs">{{ location.address }}</div>
+                        <div class="text-gray-600 text-xs">{{ location.address }}</div>
                       </div>
                       <button
                         @click="toggleLocationAssignment(location.id)"
-                        class="text-red-600 hover:text-red-800 text-xs font-medium"
+                        class="ml-2 px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded text-xs font-medium"
                       >
                         Entfernen
                       </button>
@@ -238,32 +252,9 @@
                   </div>
                 </div>
 
-                <!-- Verfügbare Standorte zum Hinzufügen -->
-                <div v-if="availableLocationsForSignup.length > 0">
-                  <div class="text-sm font-medium text-gray-800 mb-2">➕ Verfügbare Standorte:</div>
-                  <div class="space-y-2">
-                    <div 
-                      v-for="location in availableLocationsForSignup" 
-                      :key="location.id"
-                      class="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded text-sm"
-                    >
-                      <div>
-                        <div class="font-medium text-gray-900">{{ location.name }}</div>
-                        <div class="text-gray-700 text-xs">{{ location.address }}</div>
-                      </div>
-                      <button
-                        @click="toggleLocationAssignment(location.id)"
-                        class="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                      >
-                        Hinzufügen
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Keine verfügbaren Standorte -->
-                <div v-if="availableLocationsForSignup.length === 0 && registeredLocations.length === 0" class="text-center py-4">
-                  <p class="text-sm text-gray-500">Keine Standorte verfügbar</p>
+                <!-- Keine Standorte -->
+                <div v-if="registeredLocations.length === 0" class="text-center py-6 text-gray-500">
+                  <p class="text-sm">Keine Standorte ausgewählt</p>
                 </div>
               </div>
             </div>
@@ -797,29 +788,33 @@ const loadExamLocations = async () => {
     const supabase = getSupabase();
     const staffId = props.currentUser.id;
 
-    // 1. Alle verfügbaren globalen Prüfungsstandorte laden (die der Mitarbeiter wählen kann)
+    // 1. Alle verfügbaren globalen Prüfungsstandorte laden (tenant_id = null, staff_ids = empty/null)
     const { data: allLocations, error: locationsError } = await supabase
       .from('locations')
       .select('*')
       .eq('location_type', 'exam')
-      .is('staff_id', null) // Nur Standorte ohne Mitarbeiter-ID
+      .is('tenant_id', null) // Global locations (no tenant assigned)
       .eq('is_active', true)
       .order('name');
 
     if (locationsError) throw locationsError;
     availableExamLocations.value = allLocations || [];
 
-    // 2. Die spezifischen Präferenzen des aktuellen Mitarbeiters laden
-    const { data: staffPreferences, error: staffPreferencesError } = await supabase
+    // 2. Die spezifischen Präferenzen des aktuellen Mitarbeiters laden (where staffId is in staff_ids)
+    const { data: allExamLocations, error: allExamError } = await supabase
       .from('locations')
       .select('*')
       .eq('location_type', 'exam')
-      .eq('staff_id', staffId)
       .eq('is_active', true)
       .order('name');
 
-    if (staffPreferencesError) throw staffPreferencesError;
-    staffExamLocations.value = staffPreferences || [];
+    if (allExamError) throw allExamError;
+    
+    // Filter: nur die, wo staffId im staff_ids Array ist
+    staffExamLocations.value = (allExamLocations || []).filter((loc: any) => {
+      const staffIds = loc.staff_ids || []
+      return Array.isArray(staffIds) && staffIds.includes(staffId)
+    });
 
       console.log('✅ Prüfungsstandorte geladen:', {
       verfügbar: availableExamLocations.value.length,
