@@ -344,15 +344,15 @@
                     <div class="space-y-6">
                       <!-- Rechnungsübersicht -->
                       <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-4">
-                          <h4 class="text-base font-medium text-gray-900">Rechnungsübersicht</h4>
-                          <span class="text-lg font-semibold text-green-600">
-                            Gesamtbetrag: {{ formatCurrency(selectedAppointmentsTotal) }}
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                          <h4 class="text-sm sm:text-base font-medium text-gray-900">Rechnungsübersicht</h4>
+                          <span class="text-base sm:text-lg font-semibold text-green-600">
+                            {{ formatCurrency(selectedAppointmentsTotal) }}
                           </span>
                         </div>
                         
-                        <div class="text-sm text-gray-600 mb-3">
-                          {{ selectedAppointments.length }} Termin{{ selectedAppointments.length > 1 ? 'e' : '' }} ausgewählt
+                        <div class="text-xs sm:text-sm text-gray-600 mb-3">
+                          {{ selectedAppointments.length }} Termin{{ selectedAppointments.length > 1 ? 'e' : '' }}
                         </div>
                         
                         <!-- Verrechnete Lektionen mit detaillierter Preisaufschlüsselung -->
@@ -361,34 +361,34 @@
                             <div 
                               v-for="appointmentId in selectedAppointments" 
                               :key="appointmentId"
-                              class="bg-white border border-gray-200 rounded-md p-3"
+                              class="bg-white border border-gray-200 rounded-md p-2 sm:p-3"
                             >
                               <div class="space-y-2">
                                 <!-- Haupttermin -->
-                                <div class="flex items-center justify-between">
-                                  <div class="flex-1">
-                                    <h5 class="text-sm font-medium text-gray-900">
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                  <div class="flex-1 min-w-0">
+                                    <h5 class="text-xs sm:text-sm font-medium text-gray-900 truncate">
                                       {{ getAppointmentById(appointmentId)?.title || 'Fahrstunde' }}
                                     </h5>
-                                    <div class="text-xs text-gray-500">
+                                    <div class="text-xs text-gray-500 truncate">
                                       {{ formatDate(getAppointmentById(appointmentId)?.start_time) }} - {{ formatTime(getAppointmentById(appointmentId)?.start_time) }}
-                                      <span class="mx-2">•</span>
-                                      {{ getAppointmentById(appointmentId)?.duration_minutes }} Minuten
+                                      <span class="mx-1">•</span>
+                                      {{ getAppointmentById(appointmentId)?.duration_minutes }}min
                                     </div>
                                   </div>
-                                  <div class="text-right">
-                                    <div class="text-sm font-semibold text-green-600">
+                                  <div class="text-right whitespace-nowrap">
+                                    <div class="text-xs sm:text-sm font-semibold text-green-600">
                                       {{ formatCurrency(calculateAppointmentAmount(getAppointmentById(appointmentId) || {} as Appointment)) }}
                                     </div>
                                   </div>
                                 </div>
                                 
                                 <!-- Detaillierte Preisaufschlüsselung -->
-                                <div class="border-t border-gray-100 pt-2 space-y-1">
+                                <div class="border-t border-gray-100 pt-1 space-y-0.5 text-xs">
                                   <!-- Lektion-Preis -->
                                   <div
 v-if="(getAppointmentById(appointmentId)?.lesson_price || 0) > 0" 
-                                       class="flex justify-between text-xs">
+                                       class="flex justify-between">
                                     <span class="text-gray-600">Lektion:</span>
                                     <span class="text-gray-800">{{ formatCurrency(getAppointmentById(appointmentId)?.lesson_price || 0) }}</span>
                                   </div>
@@ -396,19 +396,19 @@ v-if="(getAppointmentById(appointmentId)?.lesson_price || 0) > 0"
                                   <!-- Admin-Fee -->
                                   <div
 v-if="(getAppointmentById(appointmentId)?.admin_fee || 0) > 0" 
-                                       class="flex justify-between text-xs">
-                                    <span class="text-gray-600">Admin-Pauschale:</span>
+                                       class="flex justify-between">
+                                    <span class="text-gray-600">Admin:</span>
                                     <span class="text-gray-800">{{ formatCurrency(getAppointmentById(appointmentId)?.admin_fee || 0) }}</span>
                                   </div>
                                   
                                   <!-- Einzelne Produkte auflisten -->
                                   <div
 v-if="getAppointmentById(appointmentId)?.products && (getAppointmentById(appointmentId)?.products || []).length > 0" 
-                                       class="space-y-1">
+                                       class="space-y-0.5">
                                     <div
 v-for="product in (getAppointmentById(appointmentId)?.products || [])" :key="product?.name || 'unknown'" 
-                                         class="flex justify-between text-xs">
-                                      <span class="text-gray-600">{{ product?.name || 'Unbekanntes Produkt' }}</span>
+                                         class="flex justify-between">
+                                      <span class="text-gray-600 truncate">{{ product?.name || 'Produkt' }}</span>
                                       <span class="text-gray-800">{{ formatCurrency(product?.price || 0) }}</span>
                                     </div>
                                   </div>
@@ -416,8 +416,8 @@ v-for="product in (getAppointmentById(appointmentId)?.products || [])" :key="pro
                                   <!-- Rabatte -->
                                   <div
 v-if="(getAppointmentById(appointmentId)?.discount_amount || 0) > 0" 
-                                       class="flex justify-between text-xs text-green-600">
-                                    <span>Rabatte:</span>
+                                       class="flex justify-between text-green-600">
+                                    <span>Rabatt:</span>
                                     <span>-{{ formatCurrency(getAppointmentById(appointmentId)?.discount_amount || 0) }}</span>
                                   </div>
                                 </div>
@@ -428,66 +428,66 @@ v-if="(getAppointmentById(appointmentId)?.discount_amount || 0) > 0"
                       </div>
                       
                       <!-- Rechnungsadresse -->
-                      <div class="bg-gray-50 rounded-lg p-4">
-                        <h4 class="text-base font-medium text-gray-900 mb-3">Rechnungsadresse</h4>
+                      <div class="bg-gray-50 rounded-lg p-3 sm:p-4">
+                        <h4 class="text-sm sm:text-base font-medium text-gray-900 mb-2">Rechnungsadresse</h4>
                         
                         <div v-if="companyBillingAddress" class="space-y-2">
-                          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
+                          <div class="grid grid-cols-1 gap-3 text-xs sm:text-sm">
+                            <div class="break-words">
                               <span class="font-medium text-gray-600">{{ companyBillingAddress.company_name }}</span><br>
                               <span class="text-gray-600">{{ companyBillingAddress.contact_person }}</span><br>
                               <span class="text-gray-600">{{ companyBillingAddress.street }} {{ companyBillingAddress.street_number || '' }}</span><br>
                               <span class="text-gray-600">{{ companyBillingAddress.zip }} {{ companyBillingAddress.city }}</span>
                             </div>
-                            <div>
+                            <div class="break-words">
                               <span class="font-medium text-gray-600">E-Mail: </span>
                               <span class="text-gray-600">{{ companyBillingAddress.email }}</span><br>
                               <span v-if="companyBillingAddress.phone" class="font-medium text-gray-600">Telefon: </span>
                               <a v-if="companyBillingAddress.phone" :href="`tel:${companyBillingAddress.phone}`" class="text-blue-600 hover:text-blue-800">{{ companyBillingAddress.phone }}</a><br>
-                              <span v-if="companyBillingAddress.vat_number" class="font-medium text-gray-600">MwSt-Nr: </span> 
+                              <span v-if="companyBillingAddress.vat_number" class="font-medium text-gray-600">MwSt: </span> 
                               <span v-if="companyBillingAddress.vat_number" class="text-gray-600">{{ companyBillingAddress.vat_number }}</span>
                             </div>
                           </div>
                         </div>
                         
-                        <div v-else class="text-sm text-gray-600">
-                          <p class="mb-2">Keine Firmenrechnungsadresse hinterlegt.</p>
-                          <p>Die Rechnung wird an die persönliche E-Mail-Adresse gesendet: <span class="font-medium">{{ displayEmail }}</span></p>
+                        <div v-else class="text-xs sm:text-sm text-gray-600 break-words">
+                          <p class="mb-1">Keine Firmenrechnungsadresse hinterlegt.</p>
+                          <p>Die Rechnung wird an: <span class="font-medium">{{ displayEmail }}</span></p>
                         </div>
                       </div>
                       
                       <!-- E-Mail-Versand -->
-                      <div class="bg-gray-50 rounded-lg p-4">
-                        <h4 class="text-base font-medium text-gray-900 mb-3">E-Mail-Versand</h4>
+                      <div class="bg-gray-50 rounded-lg p-3 sm:p-4">
+                        <h4 class="text-sm sm:text-base font-medium text-gray-900 mb-2">E-Mail-Versand</h4>
                         
-                        <div class="space-y-3">
+                        <div class="space-y-2">
                           <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail-Adresse</label>
+                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">E-Mail</label>
                             <input
                               v-model="invoiceEmail"
                               type="email"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                               :placeholder="companyBillingAddress?.email || displayEmail"
                             >
                           </div>
                           
                           <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Betreff (optional)</label>
+                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Betreff (optional)</label>
                             <input
                               v-model="invoiceSubject"
                               type="text"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                               placeholder="Rechnung für Fahrstunden"
                             >
                           </div>
                           
                           <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nachricht (optional)</label>
+                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nachricht (optional)</label>
                             <textarea
                               v-model="invoiceMessage"
-                              rows="3"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="Sehr geehrte Damen und Herren, anbei erhalten Sie die Rechnung für die durchgeführten Fahrstunden..."
+                              rows="2"
+                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                              placeholder="Ihre Nachricht..."
                             />
                           </div>
                         </div>
