@@ -12,6 +12,7 @@ interface SettleEmailData {
   amount: string
   invoiceNumber?: string
   tenantName: string
+  pdfUrl?: string
 }
 
 function generateSettlementEmail(data: SettleEmailData): string {
@@ -41,6 +42,15 @@ function generateSettlementEmail(data: SettleEmailData): string {
     </div>
     
     <p>Vielen Dank für Ihre Nutzung unserer Dienste!</p>
+
+    ${data.pdfUrl ? `
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.pdfUrl}" 
+         style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+        📄 Quittung herunterladen
+      </a>
+    </div>
+    ` : ''}
     
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
     
@@ -169,25 +179,28 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ Appointments marked as verrechnet:', appointmentIds)
 
-    // 6. Generate PDF receipt if invoiceNumber is provided
-    let pdfBuffer: Buffer | undefined
+    // 6. Generate and upload PDF to Supabase Storage
+    let pdfUrl: string | undefined
 
     if (invoiceNumber && appointmentIds.length > 0) {
       try {
         console.log('🔄 Generating PDF receipt...')
-        const pdfResult = await $fetch('/api/payments/receipt', {
-          method: 'POST',
-          body: {
-            paymentIds: [], // Empty - we'll use appointmentIds instead
-            appointmentIds // Pass appointment IDs to generate receipt
-          }
-        })
+        
+        // Get payment IDs for PDF generation
+        const paymentIds = payments.map(p => p.id).filter(Boolean)
+        
+        if (paymentIds.length > 0) {
+          const pdfResult = await $fetch('/api/payments/receipt', {
+            method: 'POST',
+            body: {
+              paymentIds
+            }
+          })
 
-        if (pdfResult?.pdfUrl) {
-          // Fetch PDF from URL
-          const pdfUrlContent = await fetch(pdfResult.pdfUrl)
-          pdfBuffer = Buffer.from(await pdfUrlContent.arrayBuffer())
-          console.log('✅ PDF generated, size:', pdfBuffer.length, 'bytes')
+          if (pdfResult?.pdfUrl) {
+            console.log('✅ PDF generated:', pdfResult.pdfUrl)
+            pdfUrl = pdfResult.pdfUrl
+          }
         }
       } catch (pdfError) {
         console.warn('⚠️ Failed to generate PDF:', pdfError)
@@ -197,7 +210,7 @@ export default defineEventHandler(async (event) => {
 
     // 7. Send settlement email to customer
     try {
-      const emailsToSend: Array<{ to: string; subject: string; html: string; attachments?: any[] }> = []
+      const emailsToSend: Array<{ to: string; subject: string; html: string }> = []
 
       for (const appointment of appointments) {
         const payment = payments.find(p => p.appointment_id === appointment.id)
@@ -220,24 +233,14 @@ export default defineEventHandler(async (event) => {
           staffName,
           amount,
           invoiceNumber,
-          tenantName
+          tenantName,
+          pdfUrl
         })
 
         const emailData: any = {
           to: appointment.users?.email || '',
           subject: `Termin verrechnet - ${tenantName}`,
           html: emailHtml
-        }
-
-        // Add PDF attachment if available
-        if (pdfBuffer) {
-          emailData.attachments = [
-            {
-              filename: `Quittung_${invoiceNumber || 'Termin'}.pdf`,
-              content: pdfBuffer,
-              contentType: 'application/pdf'
-            }
-          ]
         }
 
         emailsToSend.push(emailData)
@@ -263,8 +266,7 @@ export default defineEventHandler(async (event) => {
         success: true,
         message: `${appointmentIds.length} appointments marked as settled`,
         emailsSent: successCount,
-        emailsFailed: failureCount,
-        pdfAttached: !!pdfBuffer
+        emailsFailed: failureCount
       }
     } catch (emailError) {
       console.warn('⚠️ Failed to send settlement emails:', emailError)
@@ -274,8 +276,7 @@ export default defineEventHandler(async (event) => {
         message: `${appointmentIds.length} appointments marked as settled`,
         emailsSent: 0,
         emailsFailed: appointmentIds.length,
-        emailError: 'Failed to send emails',
-        pdfAttached: !!pdfBuffer
+        emailError: 'Failed to send emails'
       }
     }
   } catch (error: any) {
