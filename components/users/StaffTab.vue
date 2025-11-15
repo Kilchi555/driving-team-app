@@ -855,8 +855,8 @@ const loadStaff = async () => {
 }
 
 const getStaffCategories = (staff: any): string[] => {
-  if (!staff.category) return []
-  return Array.isArray(staff.category) ? staff.category : [staff.category]
+  // Return all available categories so they can be selected for this location
+  return availableCategories.value.map((cat: any) => cat.code)
 }
 
 // Time Windows Management
