@@ -126,9 +126,6 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
         staff:users!appointments_staff_id_fkey (
           first_name,
           last_name
-        ),
-        event_types!appointments_event_type_code_fkey (
-          name
         )
       `)
       .eq('id', payment.appointment_id)
@@ -223,7 +220,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     appointmentInfo: {
       eventTypeLabel: eventTypeTranslated,
       statusLabel: statusTranslated,
-      eventTypeCode: appointment?.event_types?.name || appointment?.event_type_code || '',
+      eventTypeCode: appointment?.event_type_code || '',
       staffFirstName: appointment?.staff?.first_name || '',
       categoryCode: appointment?.type || '',
       date: appointmentDate,
@@ -385,10 +382,6 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
     })
     .join('')
 
-  // Calculate lesson count as total duration / 45 minutes per lesson
-  const totalDuration = sorted.reduce((sum, ctx) => sum + ctx.appointmentInfo.duration, 0)
-  const lessonCount = (totalDuration / 45).toFixed(1)
-
   return `
     <div class="doc">
       ${renderHeader(customer, 'receipt.generatedOn', new Date().toLocaleDateString('de-CH'), tenant, assets, translateFn)}
@@ -397,7 +390,7 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
         <div class="section-title">${translateFn('receipt.lessonsOverview')}</div>
         <div class="row">
           <div class="label">${translateFn('receipt.lessonCount')}</div>
-          <div class="value">${lessonCount}</div>
+          <div class="value">${sorted.length}</div>
         </div>
         <div class="row">
           <div class="label">${translateFn('receipt.period')}</div>
