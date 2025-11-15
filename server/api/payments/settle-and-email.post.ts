@@ -65,8 +65,10 @@ function generateSettlementEmail(data: SettleEmailData): string {
 
 export default defineEventHandler(async (event) => {
   try {
+    console.log('🔄 settle-and-email.post called')
     const body = await readBody(event)
     const { appointmentIds, invoiceNumber } = body
+    console.log('📋 Received:', { appointmentIds, invoiceNumber })
 
     if (!appointmentIds || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
       throw createError({
@@ -75,6 +77,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    console.log(`✅ Processing ${appointmentIds.length} appointments`)
     const supabase = getSupabaseAdmin()
 
     // 1. Fetch appointment details for all appointments
@@ -271,6 +274,8 @@ export default defineEventHandler(async (event) => {
 
       for (const emailData of emailsToSend) {
         try {
+          console.log('📧 Sending email to:', emailData.to, 'Subject:', emailData.subject)
+          
           const { data: emailResult, error: emailError } = await serviceSupabase.functions.invoke('send-email', {
             body: {
               to: emailData.to,
@@ -282,14 +287,14 @@ export default defineEventHandler(async (event) => {
           })
 
           if (emailError) {
-            console.error('❌ Failed to send email to', emailData.to, ':', emailError)
+            console.error('❌ Failed to send email to', emailData.to, ':', JSON.stringify(emailError))
             failureCount++
           } else {
-            console.log('✅ Email sent to', emailData.to, ':', emailResult)
+            console.log('✅ Email sent successfully to', emailData.to, 'Result:', JSON.stringify(emailResult))
             successCount++
           }
         } catch (emailError) {
-          console.error('❌ Failed to send email to', emailData.to, ':', emailError)
+          console.error('❌ Exception sending email to', emailData.to, ':', JSON.stringify(emailError))
           failureCount++
         }
       }
