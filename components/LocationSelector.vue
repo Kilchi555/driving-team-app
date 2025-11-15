@@ -359,7 +359,16 @@ const loadStandardLocations = async () => {
 
     if (fetchError) throw fetchError
     
-    standardLocations.value = (data || []).map(item => ({
+    // Filter locations: if staff is specified, only show locations where staff is registered
+    let filteredLocations = data || []
+    if (props.currentStaffId) {
+      filteredLocations = filteredLocations.filter(l => {
+        const staffIds = l.staff_ids || []
+        return Array.isArray(staffIds) && staffIds.includes(props.currentStaffId)
+      })
+    }
+    
+    standardLocations.value = filteredLocations.map(item => ({
       ...item,
       address: item.address || '',
       source: 'standard' as const

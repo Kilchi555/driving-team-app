@@ -211,12 +211,11 @@
 
                 <!-- Header mit Button -->
                 <div class="flex justify-between items-center">
-                  <h4 class="text-sm font-medium text-gray-800">Ihre Standorte:</h4>
                   <button
                     @click="showNewLocationModal = true"
-                    class="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700"
+                    class="px-4 py-2 text-md font-medium bg-blue-600 text-white rounded hover:bg-blue-700"
                   >
-                    ➕ Neuen Standort erstellen
+                    + Neuer Standort
                   </button>
                 </div>
 
