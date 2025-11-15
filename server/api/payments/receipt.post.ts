@@ -383,7 +383,7 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
 
       const lessonsDetails = [
         ctx.appointmentInfo.eventTypeCode,
-        ctx.appointmentInfo.staffFirstName,
+        ctx.appointmentInfo.staffFirstName ? `Mit ${ctx.appointmentInfo.staffFirstName}` : '',
         ctx.appointmentInfo.categoryCode ? `Kategorie ${ctx.appointmentInfo.categoryCode}` : ''
       ].filter(Boolean).join(' - ')
 

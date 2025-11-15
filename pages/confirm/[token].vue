@@ -548,7 +548,7 @@ const confirmAppointment = async () => {
           scheduled_authorization_date: scheduledAuthorizationDate,
           automatic_payment_processed: false,
           currency: 'CHF',
-          description: `Automatische Zahlung für Termin: ${appointmentDetails.title || 'Fahrstunde'}`,
+          description: `${appointment.value.event_type_code || 'Termin'} - Mit ${appointmentDetails.staff_first_name || 'Fahrlehrer'} - Kategorie ${appointment.value.type || 'Offen'}`,
           metadata: {
             confirmation_token: appointment.value.confirmation_token,
             confirmed_at: new Date().toISOString(),
@@ -715,7 +715,7 @@ const processImmediatePaymentWithTokenization = async () => {
         currency: 'CHF',
         customerEmail: (appointment.value.users as any)?.email || '',
         customerName: `${(appointment.value.users as any)?.first_name || ''} ${(appointment.value.users as any)?.last_name || ''}`.trim(),
-        description: `Termin: ${appointment.value.title || 'Fahrstunde'}`,
+        description: `${appointment.value.event_type_code || 'Termin'} - Mit ${appointmentDetails.staff_first_name || 'Fahrlehrer'} - Kategorie ${appointment.value.type || 'Offen'}`,
         successUrl: `${window.location.origin}/confirm/${token}?payment=success`,
         failedUrl: `${window.location.origin}/confirm/${token}?payment=failed`,
         // Für pseudonyme Customer-ID
