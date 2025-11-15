@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-8">
+  <div class="min-h-screen bg-gray-50 py-4">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <!-- Back Button & Header -->
@@ -160,10 +160,6 @@
                 <dt class="text-sm font-medium text-gray-500">Letzte Anmeldung</dt>
                 <dd class="mt-1 text-sm text-gray-900">Nicht verfügbar</dd>
               </div>
-              <div v-if="userDetails?.tenant_id">
-                <dt class="text-sm font-medium text-gray-500">Tenant</dt>
-                <dd class="mt-1 text-sm text-gray-900">{{ userDetails.tenant_name || 'Unbekannt' }}</dd>
-              </div>
               <div v-if="userDetails?.role === 'staff'" class="md:col-span-2">
                 <dt class="text-sm font-medium text-gray-500 mb-2">Fahrkategorien</dt>
                 <dd class="mt-1">
@@ -233,57 +229,6 @@
           </div>
         </div>
       </div>
-
-        <!-- System-Aktivitäten -->
-        <div class="bg-white shadow rounded-lg overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">System-Aktivitäten</h3>
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div v-for="(activity, index) in systemActivities" :key="index" class="flex items-center space-x-3">
-                <div class="flex-shrink-0">
-                  <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm text-gray-900">{{ activity.description }}</p>
-                  <p class="text-xs text-gray-500">{{ formatDate(activity.timestamp) }}</p>
-                </div>
-              </div>
-              <div v-if="systemActivities.length === 0" class="text-center py-4">
-                <p class="text-sm text-gray-500">Keine System-Aktivitäten verfügbar</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Einstellungen & Präferenzen -->
-        <div class="bg-white shadow rounded-lg overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Einstellungen & Präferenzen</h3>
-          </div>
-          <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Sprache</dt>
-                <dd class="mt-1 text-sm text-gray-900">Deutsch</dd>
-              </div>
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Zeitzone</dt>
-                <dd class="mt-1 text-sm text-gray-900">Europe/Zurich</dd>
-              </div>
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Email-Benachrichtigungen</dt>
-                <dd class="mt-1 text-sm text-gray-900">Standard</dd>
-              </div>
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Push-Benachrichtigungen</dt>
-                <dd class="mt-1 text-sm text-gray-900">Standard</dd>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
 

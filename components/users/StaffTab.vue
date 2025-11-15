@@ -814,7 +814,11 @@ const loadStaff = async () => {
     // Combine data
     const enrichedStaff = (staffData || []).map(staff => {
       const availability = availabilityData?.find(a => a.staff_id === staff.id)
-      const locations = locationsData?.filter(l => l.staff_id === staff.id) || []
+      // Filter locations where staff_id is in staff_ids array
+      const locations = locationsData?.filter(l => {
+        const staffIds = l.staff_ids || []
+        return Array.isArray(staffIds) && staffIds.includes(staff.id)
+      }) || []
       const categoryPickup = staffCategoryAvailability.value[staff.id] || []
       
       return {
