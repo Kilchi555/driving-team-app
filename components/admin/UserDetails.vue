@@ -229,6 +229,14 @@
           </div>
         </div>
       </div>
+
+      <!-- Device Manager (nur für Rolle staff) -->
+      <div v-if="userDetails?.role === 'staff'" class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="p-6 sm:p-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">📱 Geräte-Verwaltung</h3>
+          <DeviceManager />
+        </div>
+      </div>
       </div>
     </div>
 
@@ -470,6 +478,7 @@ import { useRoute } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAdminHierarchy } from '~/composables/useAdminHierarchy'
 import StaffTab from '~/components/users/StaffTab.vue'
+import DeviceManager from '~/components/DeviceManager.vue'
 import { useFeatures } from '~/composables/useFeatures'
 
 // Types

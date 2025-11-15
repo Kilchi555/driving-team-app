@@ -153,23 +153,6 @@
           </div>
         </div>
 
-        <!-- Device Manager -->
-        <div class="border border-gray-200 rounded-lg">
-          <button
-            @click="toggleSection('deviceManager')"
-            class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
-          >
-            <span class="font-medium text-gray-900">📱 Geräte-Verwaltung</span>
-            <span class="text-gray-600 font-bold">{{ openSections.deviceManager ? '−' : '+' }}</span>
-          </button>
-          
-          <div v-if="openSections.deviceManager" class="px-4 pb-4 border-t border-gray-100">
-            <div class="mt-4">
-              <DeviceManager />
-            </div>
-          </div>
-        </div>
-       
         <!-- 6. Prüfungsstandorte -->
         <div class="border border-gray-200 rounded-lg">
           <button
@@ -620,7 +603,6 @@ import { toLocalTimeString } from '~/utils/dateUtils'
 import ExamLocationSearchDropdown from './ExamLocationSearchDropdown.vue'
 import StaffExamStatistics from './StaffExamStatistics.vue'
 import StaffCashBalance from './StaffCashBalance.vue'
-import DeviceManager from './DeviceManager.vue'
 import { useStaffWorkingHours, WEEKDAYS, type WorkingDayForm, type WorkingHourBlock } from '~/composables/useStaffWorkingHours'
 import { useTenant } from '~/composables/useTenant'
 import { useTenantBranding } from '~/composables/useTenantBranding'
