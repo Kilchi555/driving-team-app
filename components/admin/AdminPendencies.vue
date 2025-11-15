@@ -348,16 +348,28 @@ const toggleStatus = async (pendency: Pendency) => {
 
 const savePendency = async () => {
   // Validate required fields
-  if (!currentUser.value?.tenant_id) {
-    alert('Tenant ID fehlt')
-    return
-  }
   if (!formData.value.title || formData.value.title.trim() === '') {
     alert('Bitte geben Sie einen Titel ein')
     return
   }
   if (!formData.value.due_date) {
     alert('Bitte wählen Sie ein Fälligkeitsdatum')
+    return
+  }
+
+  // Wait for currentUser if not loaded yet
+  let tenantId = currentUser.value?.tenant_id
+  if (!tenantId) {
+    // Retry a few times
+    for (let i = 0; i < 5; i++) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      tenantId = currentUser.value?.tenant_id
+      if (tenantId) break
+    }
+  }
+
+  if (!tenantId) {
+    alert('Tenant ID konnte nicht geladen werden. Bitte melden Sie sich ab und erneut an.')
     return
   }
 
@@ -370,7 +382,7 @@ const savePendency = async () => {
     } else {
       await createPendency({
         ...formData.value,
-        tenant_id: currentUser.value.tenant_id
+        tenant_id: tenantId
       } as any)
     }
     closeModals()
