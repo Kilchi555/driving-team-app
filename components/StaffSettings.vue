@@ -1378,10 +1378,11 @@ const loadData = async () => {
 
     console.log('🔥 Loading staff settings data...')
 
-    // Kategorien laden
+    // Kategorien laden (nur für aktuellen Tenant)
     const { data: categories, error: categoriesError } = await supabase
       .from('categories')
       .select('*')
+      .eq('tenant_id', props.currentUser.tenant_id)
       .eq('is_active', true)
       .order('name')
 
