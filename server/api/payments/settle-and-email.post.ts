@@ -169,9 +169,35 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ Appointments marked as verrechnet:', appointmentIds)
 
-    // 6. Send settlement email to customer
+    // 6. Generate PDF receipt if invoiceNumber is provided
+    let pdfBuffer: Buffer | undefined
+
+    if (invoiceNumber && appointmentIds.length > 0) {
+      try {
+        console.log('🔄 Generating PDF receipt...')
+        const pdfResult = await $fetch('/api/payments/receipt', {
+          method: 'POST',
+          body: {
+            paymentIds: [], // Empty - we'll use appointmentIds instead
+            appointmentIds // Pass appointment IDs to generate receipt
+          }
+        })
+
+        if (pdfResult?.pdfUrl) {
+          // Fetch PDF from URL
+          const pdfUrlContent = await fetch(pdfResult.pdfUrl)
+          pdfBuffer = Buffer.from(await pdfUrlContent.arrayBuffer())
+          console.log('✅ PDF generated, size:', pdfBuffer.length, 'bytes')
+        }
+      } catch (pdfError) {
+        console.warn('⚠️ Failed to generate PDF:', pdfError)
+        // Continue without PDF - don't fail the entire process
+      }
+    }
+
+    // 7. Send settlement email to customer
     try {
-      const emailsToSend: Array<{ to: string; subject: string; html: string }> = []
+      const emailsToSend: Array<{ to: string; subject: string; html: string; attachments?: any[] }> = []
 
       for (const appointment of appointments) {
         const payment = payments.find(p => p.appointment_id === appointment.id)
@@ -197,11 +223,24 @@ export default defineEventHandler(async (event) => {
           tenantName
         })
 
-        emailsToSend.push({
+        const emailData: any = {
           to: appointment.users?.email || '',
           subject: `Termin verrechnet - ${tenantName}`,
           html: emailHtml
-        })
+        }
+
+        // Add PDF attachment if available
+        if (pdfBuffer) {
+          emailData.attachments = [
+            {
+              filename: `Quittung_${invoiceNumber || 'Termin'}.pdf`,
+              content: pdfBuffer,
+              contentType: 'application/pdf'
+            }
+          ]
+        }
+
+        emailsToSend.push(emailData)
       }
 
       // Send all emails
@@ -224,7 +263,8 @@ export default defineEventHandler(async (event) => {
         success: true,
         message: `${appointmentIds.length} appointments marked as settled`,
         emailsSent: successCount,
-        emailsFailed: failureCount
+        emailsFailed: failureCount,
+        pdfAttached: !!pdfBuffer
       }
     } catch (emailError) {
       console.warn('⚠️ Failed to send settlement emails:', emailError)
@@ -234,7 +274,8 @@ export default defineEventHandler(async (event) => {
         message: `${appointmentIds.length} appointments marked as settled`,
         emailsSent: 0,
         emailsFailed: appointmentIds.length,
-        emailError: 'Failed to send emails'
+        emailError: 'Failed to send emails',
+        pdfAttached: !!pdfBuffer
       }
     }
   } catch (error: any) {

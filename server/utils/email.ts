@@ -16,23 +16,41 @@ function getResendClient() {
   return resendClient
 }
 
+interface Attachment {
+  filename: string
+  content: Buffer | string
+  contentType?: string
+}
+
 interface SendEmailOptions {
   to: string
   subject: string
   html: string
   from?: string
+  attachments?: Attachment[]
 }
 
-export async function sendEmail({ to, subject, html, from }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, from, attachments }: SendEmailOptions) {
   try {
     const resend = getResendClient()
     
-    const { data, error } = await resend.emails.send({
+    const emailParams: any = {
       from: from || process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch',
       to,
       subject,
       html
-    })
+    }
+
+    // Add attachments if provided
+    if (attachments && attachments.length > 0) {
+      emailParams.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: typeof att.content === 'string' ? Buffer.from(att.content, 'utf-8') : att.content,
+        contentType: att.contentType || 'application/octet-stream'
+      }))
+    }
+    
+    const { data, error } = await resend.emails.send(emailParams)
 
     if (error) {
       console.error('❌ Resend error:', error)
