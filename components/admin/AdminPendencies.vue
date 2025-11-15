@@ -164,7 +164,8 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Fällig am *</label>
             <input
-              v-model="formData.due_date"
+              :value="formatDatetimeLocal(formData.due_date)"
+              @input="(e: any) => formData.due_date = new Date(e.target.value).toISOString()"
               type="datetime-local"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
@@ -186,7 +187,8 @@
             <div v-if="formData.recurrence_type !== 'keine'">
               <label class="block text-sm font-medium text-gray-700 mb-1">Wiederholung endet am</label>
               <input
-                v-model="formData.recurrence_end_date"
+                :value="formatDateLocal(formData.recurrence_end_date)"
+                @input="(e: any) => formData.recurrence_end_date = e.target.value ? new Date(e.target.value).toISOString() : undefined"
                 type="date"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -403,6 +405,36 @@ watch(() => showNewModal.value, (newVal) => {
     showEditModal.value = true
   }
 })
+
+// Format ISO datetime to datetime-local format (yyyy-MM-ddThh:mm)
+const formatDatetimeLocal = (dateString: any) => {
+  if (!dateString) return ''
+  try {
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  } catch {
+    return ''
+  }
+}
+
+// Format ISO datetime to date format (yyyy-MM-dd)
+const formatDateLocal = (dateString: any) => {
+  if (!dateString) return ''
+  try {
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  } catch {
+    return ''
+  }
+}
 
 import { watch } from 'vue'
 </script>
