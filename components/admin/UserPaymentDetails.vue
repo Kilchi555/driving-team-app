@@ -3097,26 +3097,22 @@ const generateInvoicePDF = async (invoiceData: InvoiceData): Promise<PDFResult> 
   }
 }
 
-// Hilfsfunktion: Termine auf "verrechnet" setzen
-const updateAppointmentsToInvoiced = async (appointmentIds: string[], _invoiceId: string) => {
+// Hilfsfunktion: Termine auf "verrechnet" setzen und Email versenden
+const updateAppointmentsToInvoiced = async (appointmentIds: string[], invoiceNumber?: string) => {
   try {
-    console.log('🔄 Updating appointments to invoiced:', appointmentIds)
+    console.log('🔄 Settling appointments and sending emails:', appointmentIds)
     
-    // Alle ausgewählten Termine auf "verrechnet" setzen
-    const { error: updateError } = await supabase
-      .from('appointments')
-      .update({ 
-        status: 'verrechnet',
-        updated_at: new Date().toISOString()
-      })
-      .in('id', appointmentIds)
+    // Verwende neuen Endpoint der Emails versendet
+    const result = await $fetch('/api/payments/settle-and-email', {
+      method: 'POST',
+      body: {
+        appointmentIds,
+        invoiceNumber
+      }
+    })
     
-    if (updateError) {
-      console.error('❌ Error updating appointments:', updateError)
-      throw new Error('Fehler beim Aktualisieren der Termine')
-    }
-    
-    console.log('✅ Appointments updated to invoiced successfully')
+    console.log('✅ Appointments settled and emails sent:', result)
+    return result
     
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
