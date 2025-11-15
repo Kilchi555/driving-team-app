@@ -13,14 +13,87 @@ async function getPuppeteer() {
 
 interface ReceiptRequest { paymentId?: string; paymentIds?: string[] }
 
-async function generateReceiptHTML(payment: any, supabase: any, tenant: any, primary: string, secondary: string, translateFn: any) {
-  // Load appointment details separately
+interface ProductInfo {
+  name: string
+  description?: string
+  quantity: number
+  totalCHF: number
+}
+
+interface CustomerInfo {
+  name: string
+  address: string
+  email: string
+  phone: string
+}
+
+interface AppointmentInfo {
+  eventTypeLabel: string
+  statusLabel: string
+  date: string
+  time: string
+  duration: number
+  isCancelled: boolean
+  cancellationDate: string
+  cancellationReason: string
+  isCharged: boolean
+}
+
+interface AmountBreakdown {
+  lesson: number
+  adminFee: number
+  productsTotal: number
+  discount: number
+  total: number
+}
+
+interface PaymentContext {
+  payment: any
+  appointment: any
+  products: ProductInfo[]
+  customer: CustomerInfo
+  paymentDate: string
+  appointmentInfo: AppointmentInfo
+  appointmentTitle: string
+  appointmentTimestamp: number | null
+  amounts: AmountBreakdown
+}
+
+interface TenantAssets {
+  logoSrc: string | null
+  logoDataUrl: string | null
+}
+
+async function loadTenantAssets(tenant: any): Promise<TenantAssets> {
+  if (!tenant?.logo_url) {
+    return { logoSrc: null, logoDataUrl: null }
+  }
+
+  try {
+    const logoRes = await fetch(tenant.logo_url)
+    if (logoRes.ok) {
+      const logoBuffer = await logoRes.arrayBuffer()
+      const logoBase64 = Buffer.from(logoBuffer).toString('base64')
+      const logoMime = logoRes.headers.get('content-type') || 'image/png'
+      return {
+        logoSrc: tenant.logo_url,
+        logoDataUrl: `data:${logoMime};base64,${logoBase64}`
+      }
+    }
+  } catch (logoErr) {
+    console.warn('⚠️ Could not load logo:', logoErr)
+  }
+
+  return { logoSrc: tenant.logo_url, logoDataUrl: null }
+}
+
+async function loadPaymentContext(payment: any, supabase: any, translateFn: any): Promise<PaymentContext> {
   let appointment: any = null
   let user: any = null
-  let products: Array<{ name: string; description?: string; quantity: number; unit_price_rappen: number; total_price_rappen: number; }> = []
-  
+  let products: ProductInfo[] = []
+
   if (payment.appointment_id) {
-    const { data: appointmentData, error: aErr } = await supabase
+    const { data: appointmentData } = await supabase
       .from('appointments')
       .select(`
         id,
@@ -41,43 +114,45 @@ async function generateReceiptHTML(payment: any, supabase: any, tenant: any, pri
         user_id
       `)
       .eq('id', payment.appointment_id)
-      .single()
-    
-    if (!aErr && appointmentData) {
-      appointment = appointmentData
-      
-      // Load user details (including language)
-      if (appointment.user_id) {
-        const { data: userData, error: uErr } = await supabase
-          .from('users')
-          .select('first_name, last_name, email, phone, street, street_nr, zip, city, language')
-          .eq('id', appointment.user_id)
-          .single()
-        
-        if (!uErr && userData) {
-          user = userData
-        }
-      }
-    }
+      .maybeSingle()
 
-    // Load products via discount_sales -> product_sales chain (optional)
+    if (appointmentData) {
+      appointment = appointmentData
+    }
+  }
+
+  const userId = appointment?.user_id || payment.user_id
+  if (userId) {
+    const { data: userData } = await supabase
+      .from('users')
+      .select('first_name, last_name, email, phone, street, street_nr, zip, city')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (userData) {
+      user = userData
+    }
+  }
+
+  if (payment.appointment_id) {
     try {
       const { data: discountSale } = await supabase
         .from('discount_sales')
         .select('id')
         .eq('appointment_id', payment.appointment_id)
         .maybeSingle()
+
       if (discountSale?.id) {
         const { data: ps } = await supabase
           .from('product_sales')
           .select(`id, quantity, unit_price_rappen, total_price_rappen, products ( name, description )`)
           .eq('product_sale_id', discountSale.id)
+
         products = (ps || []).map((row: any) => ({
           name: row.products?.name || 'Produkt',
           description: row.products?.description || '',
           quantity: row.quantity || 1,
-          unit_price_rappen: row.unit_price_rappen || 0,
-          total_price_rappen: row.total_price_rappen || 0
+          totalCHF: (row.total_price_rappen || 0) / 100
         }))
       }
     } catch (productErr) {
@@ -85,133 +160,292 @@ async function generateReceiptHTML(payment: any, supabase: any, tenant: any, pri
     }
   }
 
-  // Build customer name
-  const customerName = user 
-    ? `${user.first_name || ''} ${user.last_name || ''}`.trim() 
-    : 'Kunde'
-
-  // Build customer address
-  const customerAddress = []
+  const customerName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Kunde' : 'Kunde'
+  const addressParts = []
   if (user?.street && user?.street_nr) {
-    customerAddress.push(`${user.street} ${user.street_nr}`)
+    addressParts.push(`${user.street} ${user.street_nr}`)
   }
   if (user?.zip && user?.city) {
-    customerAddress.push(`${user.zip} ${user.city}`)
-  }
-  const customerFullAddress = customerAddress.join(', ')
-
-  const customerEmail = user?.email || ''
-  const customerPhone = user?.phone || ''
-
-  // Build tenant address
-  const tenantAddress = []
-  if (tenant?.address) {
-    tenantAddress.push(tenant.address)
-  }
-  const fullAddress = tenantAddress.join(', ')
-
-  const companyName = tenant?.legal_company_name || tenant?.name || 'Unternehmen'
-  const tenantEmail = tenant?.email || ''
-  const tenantPhone = tenant?.phone || ''
-
-  // Load logo
-  let logoSrc = null
-  let logoDataUrl = null
-  if (tenant?.logo_url) {
-    logoSrc = tenant.logo_url
-    try {
-      const logoRes = await fetch(logoSrc)
-      if (logoRes.ok) {
-        const logoBuffer = await logoRes.arrayBuffer()
-        const logoBase64 = Buffer.from(logoBuffer).toString('base64')
-        const logoMime = logoRes.headers.get('content-type') || 'image/png'
-        logoDataUrl = `data:${logoMime};base64,${logoBase64}`
-      }
-    } catch (logoErr) {
-      console.warn('⚠️ Could not load logo:', logoErr)
-    }
+    addressParts.push(`${user.zip} ${user.city}`)
   }
 
-  // Calculate amounts
   const lesson = (payment.lesson_price_rappen || 0) / 100
   const adminFee = (payment.admin_fee_rappen || 0) / 100
   const discountAmount = (payment.discount_amount_rappen || 0) / 100
-  const amount = lesson + adminFee - discountAmount + (products.reduce((sum, p) => sum + (p.total_price_rappen / 100), 0))
+  const productsTotal = products.reduce((sum, p) => sum + p.totalCHF, 0)
+  const total = lesson + adminFee + productsTotal - discountAmount
 
-  // Format appointment details
-  const appointmentDate = appointment && appointment.start_time 
-    ? new Date(appointment.start_time).toLocaleDateString('de-CH')
-    : ''
-  const appointmentTime = appointment && appointment.start_time
-    ? new Date(appointment.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
-    : ''
+  const appointmentDateObj = appointment?.start_time ? new Date(appointment.start_time) : null
+  const appointmentDate = appointmentDateObj ? appointmentDateObj.toLocaleDateString('de-CH') : ''
+  const appointmentTime = appointmentDateObj ? appointmentDateObj.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) : ''
   const appointmentDuration = appointment?.duration_minutes || 0
+  const appointmentTitle = appointment?.title || payment.description || translateFn('eventType.lesson')
+  const appointmentTimestamp = appointmentDateObj ? appointmentDateObj.getTime() : null
 
-  // Translate appointment details using the provided translateFn function
-  const eventTypeTranslated = appointment ? translateFn(`eventType.${appointment.event_type_code || 'lesson'}`) : ''
-  const statusTranslated = appointment ? translateFn(`status.${appointment.status || 'pending'}`) : ''
+  const eventTypeKey = appointment?.event_type_code || appointment?.type || 'lesson'
+  const eventTypeTranslated = translateFn(`eventType.${eventTypeKey}`)
+  const statusKey = appointment?.status || payment.payment_status || 'pending'
+  const statusTranslated = translateFn(`status.${statusKey}`)
   const isCancelled = appointment && (appointment.status === 'cancelled' || appointment.deleted_at)
-  const cancellationDate = appointment && appointment.deleted_at ? new Date(appointment.deleted_at).toLocaleDateString('de-CH') : '-'
-  const cancellationReason = appointment ? (appointment.deletion_reason || appointment.cancellation_type || appointment.cancellation_reason_id || '-') : '-'
-  const isCharged = appointment && (Number(appointment.cancellation_charge_percentage || 0) > 0 || appointment.cancellation_policy_applied)
+  const cancellationDate = appointment?.deleted_at ? new Date(appointment.deleted_at).toLocaleDateString('de-CH') : '-'
+  const cancellationReason = appointment?.deletion_reason || appointment?.cancellation_type || appointment?.cancellation_reason_id || '-'
+  const isCharged = appointment ? (Number(appointment.cancellation_charge_percentage || 0) > 0 || appointment.cancellation_policy_applied) : false
+
+  return {
+    payment,
+    appointment,
+    products,
+    customer: {
+      name: customerName,
+      address: addressParts.join(', '),
+      email: user?.email || '',
+      phone: user?.phone || ''
+    },
+    paymentDate: new Date(payment.paid_at || payment.created_at).toLocaleDateString('de-CH'),
+    appointmentInfo: {
+      eventTypeLabel: eventTypeTranslated,
+      statusLabel: statusTranslated,
+      date: appointmentDate,
+      time: appointmentTime,
+      duration: appointmentDuration,
+      isCancelled: Boolean(isCancelled),
+      cancellationDate,
+      cancellationReason,
+      isCharged
+    },
+    appointmentTitle,
+    appointmentTimestamp,
+    amounts: {
+      lesson,
+      adminFee,
+      productsTotal,
+      discount: discountAmount,
+      total
+    }
+  }
+}
+
+function renderHeader(customer: CustomerInfo, dateLabelKey: string, dateValue: string, tenant: any, assets: TenantAssets, translateFn: any) {
+  const companyName = tenant?.legal_company_name || tenant?.name || 'Unternehmen'
+  const tenantAddress = tenant?.address || ''
+  const tenantEmail = tenant?.contact_email || tenant?.email || ''
+  const tenantPhone = tenant?.contact_phone || tenant?.phone || ''
+
+  return `
+    <div class="header">
+      <div class="header-left">
+        <div class="title">${translateFn('receipt.title')}</div>
+        <div style="margin-top:12px;">
+          <div class="label">${translateFn('receipt.customer')}</div>
+          <div class="value">${customer.name}</div>
+          ${customer.address ? `<div class="address-left">${customer.address}</div>` : ''}
+          ${(customer.email || customer.phone) ? `<div class="contact-left">${customer.email || ''}${customer.email && customer.phone ? '<br/>' : ''}${customer.phone || ''}</div>` : ''}
+          <div style="margin-top:8px;">
+            <div class="label">${translateFn(dateLabelKey)}</div>
+            <div class="value" style="display:inline;">${dateValue}</div>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        ${assets.logoSrc ? `<img class="logo" src="${assets.logoDataUrl || assets.logoSrc}" alt="Logo"/>` : ''}
+        ${companyName ? `<div class="value">${companyName}</div>` : ''}
+        ${tenantAddress ? `<div class="address">${tenantAddress}</div>` : ''}
+        ${(tenantEmail || tenantPhone) ? `<div class="contact">${tenantEmail || ''}${tenantEmail && tenantPhone ? '<br/>' : ''}${tenantPhone || ''}</div>` : ''}
+      </div>
+    </div>
+  `
+}
+
+function renderSingleReceipt(context: PaymentContext, tenant: any, assets: TenantAssets, translateFn: any) {
+  const { products, customer, paymentDate, appointmentInfo, amounts } = context
 
   return `
     <div class="doc" style="page-break-after: always;">
-      <div class="header">
-        <div class="header-left">
-          <div class="title">${translateFn('receipt.title')}</div>
-          <div style="margin-top:12px;">
-            <div class="label">${translateFn('receipt.customer')}</div>
-            <div class="value">${customerName}</div>
-            ${customerFullAddress ? `<div class="address-left">${customerFullAddress}</div>` : ''}
-            ${customerEmail || customerPhone ? `<div class="contact-left">${customerEmail ? customerEmail : ''}${customerEmail && customerPhone ? '<br/>' : ''}${customerPhone ? customerPhone : ''}</div>` : ''}
-            <div style="margin-top:8px;">
-              <div class="label">${translateFn('receipt.date')}</div>
-              <div class="value" style="display:inline;">${new Date(payment.paid_at || payment.created_at).toLocaleDateString('de-CH')}</div>
-            </div>
-          </div>
-        </div>
-        <div class="header-right">
-          ${logoSrc ? `<img class="logo" src="${logoDataUrl || logoSrc}" alt="Logo"/>` : ''}
-          ${companyName ? `<div class="value">${companyName}</div>` : ''}
-          ${fullAddress ? `<div class="address">${fullAddress}</div>` : ''}
-          ${tenantEmail || tenantPhone ? `<div class="contact">${tenantEmail ? tenantEmail : ''}${tenantEmail && tenantPhone ? '<br/>' : ''}${tenantPhone ? tenantPhone : ''}</div>` : ''}
-        </div>
-      </div>
+      ${renderHeader(customer, 'receipt.date', paymentDate, tenant, assets, translateFn)}
       
       <div class="section">
         <div class="section-title">${translateFn('receipt.costBreakdown')}</div>
-        ${appointment ? `
         <div class="row">
           <div class="label">
-            ${eventTypeTranslated} - ${statusTranslated} - ${appointmentDate} ${appointmentTime} - ${appointmentDuration} ${translateFn('receipt.minutes')}
-            ${isCancelled ? `<br/><span style=\"font-size:12px; color:#6b7280;\">${translateFn('receipt.cancelled')}: ${cancellationDate} | ${translateFn('receipt.reason')}: ${cancellationReason} | ${translateFn('receipt.charged')}: ${isCharged ? translateFn('receipt.yes') : translateFn('receipt.no')}</span>` : ''}
+            ${appointmentInfo.eventTypeLabel} - ${appointmentInfo.statusLabel} - ${appointmentInfo.date} ${appointmentInfo.time} - ${appointmentInfo.duration} ${translateFn('receipt.minutes')}
+            ${appointmentInfo.isCancelled ? `<br/><span style="font-size:12px; color:#6b7280;">${translateFn('receipt.cancelled')}: ${appointmentInfo.cancellationDate} | ${translateFn('receipt.reason')}: ${appointmentInfo.cancellationReason} | ${translateFn('receipt.charged')}: ${appointmentInfo.isCharged ? translateFn('receipt.yes') : translateFn('receipt.no')}</span>` : ''}
           </div>
-          <div class="value">CHF ${lesson.toFixed(2)}</div>
+          <div class="value">CHF ${amounts.lesson.toFixed(2)}</div>
         </div>
-        ` : `
-        <div class="row"><div class="label">${translateFn('receipt.baseAmount')}</div><div class="value">CHF ${lesson.toFixed(2)}</div></div>
-        `}
-        <div class="row"><div class="label">${translateFn('receipt.adminFee')}</div><div class="value">CHF ${adminFee.toFixed(2)}</div></div>
+        <div class="row"><div class="label">${translateFn('receipt.adminFee')}</div><div class="value">CHF ${amounts.adminFee.toFixed(2)}</div></div>
         ${products && products.length > 0 ? products.map(p => `
-        <div class="row">
-          <div class="label">${p.name} × ${p.quantity}</div>
-          <div class="value">CHF ${(Number(p.total_price_rappen || 0)/100).toFixed(2)}</div>
-        </div>
+          <div class="row">
+            <div class="label">${p.name} × ${p.quantity}</div>
+            <div class="value">CHF ${p.totalCHF.toFixed(2)}</div>
+          </div>
         `).join('') : ''}
-        ${Number(payment.discount_amount_rappen || 0) > 0 ? `
-          <div class="row" style=\"color:#059669;\">
+        ${amounts.discount > 0 ? `
+          <div class="row" style="color:#059669;">
             <div class="label">${translateFn('receipt.discount')}</div>
-            <div class="value">- CHF ${(Number(payment.discount_amount_rappen)/100).toFixed(2)}</div>
+            <div class="value">- CHF ${amounts.discount.toFixed(2)}</div>
           </div>
         ` : ''}
-        <div class="row" style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb;"><div class="label">${translateFn('receipt.totalAmount')}</div><div class="amount">CHF ${amount.toFixed(2)}</div></div>
+        <div class="row" style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb;">
+          <div class="label">${translateFn('receipt.totalAmount')}</div>
+          <div class="amount">CHF ${amounts.total.toFixed(2)}</div>
+        </div>
       </div>
       
       <div class="section">
-        <div class="muted">${translateFn('receipt.footer', { email: tenantEmail || 'den Support' })}</div>
+        <div class="muted">${translateFn('receipt.footer', { email: tenant?.contact_email || 'den Support' })}</div>
       </div>
     </div>
+  `
+}
+
+function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: TenantAssets, translateFn: any) {
+  const customer = contexts[0].customer
+  const sorted = [...contexts].sort((a, b) => {
+    const tsA = a.appointmentTimestamp ?? new Date(a.payment.paid_at || a.payment.created_at).getTime()
+    const tsB = b.appointmentTimestamp ?? new Date(b.payment.paid_at || b.payment.created_at).getTime()
+    return tsA - tsB
+  })
+
+  const timestamps = sorted
+    .map(ctx => ctx.appointmentTimestamp ?? new Date(ctx.payment.paid_at || ctx.payment.created_at).getTime())
+    .filter(Boolean)
+
+  const period =
+    timestamps.length > 0
+      ? `${new Date(Math.min(...timestamps)).toLocaleDateString('de-CH')} – ${new Date(Math.max(...timestamps)).toLocaleDateString('de-CH')}`
+      : '-'
+
+  const summary = sorted.reduce(
+    (acc, ctx) => {
+      acc.lesson += ctx.amounts.lesson
+      acc.adminFee += ctx.amounts.adminFee
+      acc.products += ctx.amounts.productsTotal
+      acc.discount += ctx.amounts.discount
+      acc.total += ctx.amounts.total
+      return acc
+    },
+    { lesson: 0, adminFee: 0, products: 0, discount: 0, total: 0 }
+  )
+
+  const lessonsTable = sorted
+    .map(ctx => {
+      const meta: string[] = []
+      if (ctx.appointmentInfo.statusLabel) meta.push(ctx.appointmentInfo.statusLabel)
+      if (ctx.appointmentInfo.isCancelled) {
+        meta.push(`${translateFn('receipt.cancelled')}: ${ctx.appointmentInfo.cancellationDate}`)
+      }
+      if (ctx.amounts.adminFee > 0) {
+        meta.push(`${translateFn('receipt.adminFee')}: CHF ${ctx.amounts.adminFee.toFixed(2)}`)
+      }
+      if (ctx.products.length > 0) {
+        const productList = ctx.products.map(p => `${p.name} (${p.quantity}×)`).join(', ')
+        meta.push(`${translateFn('receipt.products')}: ${productList} – CHF ${ctx.amounts.productsTotal.toFixed(2)}`)
+      }
+      if (ctx.amounts.discount > 0) {
+        meta.push(`${translateFn('receipt.discount')}: - CHF ${ctx.amounts.discount.toFixed(2)}`)
+      }
+
+      return `
+        <tr>
+          <td>
+            <div class="lesson-title">${ctx.appointmentTitle}</div>
+            <div class="lesson-meta">${ctx.appointmentInfo.eventTypeLabel}</div>
+            ${meta.length > 0 ? `<div class="lesson-meta">${meta.join('<br/>')}</div>` : ''}
+          </td>
+          <td>${ctx.appointmentInfo.date} ${ctx.appointmentInfo.time}</td>
+          <td>${ctx.appointmentInfo.duration} ${translateFn('receipt.minutes')}</td>
+          <td class="amount">CHF ${ctx.amounts.total.toFixed(2)}</td>
+        </tr>
+      `
+    })
+    .join('')
+
+  return `
+    <div class="doc">
+      ${renderHeader(customer, 'receipt.generatedOn', new Date().toLocaleDateString('de-CH'), tenant, assets, translateFn)}
+      
+      <div class="section">
+        <div class="section-title">${translateFn('receipt.lessonsOverview')}</div>
+        <div class="row">
+          <div class="label">${translateFn('receipt.lessonCount')}</div>
+          <div class="value">${sorted.length}</div>
+        </div>
+        <div class="row">
+          <div class="label">${translateFn('receipt.period')}</div>
+          <div class="value">${period}</div>
+        </div>
+        <table class="lesson-table">
+          <thead>
+            <tr>
+              <th>${translateFn('receipt.table.header.service')}</th>
+              <th>${translateFn('receipt.table.header.datetime')}</th>
+              <th>${translateFn('receipt.table.header.duration')}</th>
+              <th>${translateFn('receipt.table.header.amount')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lessonsTable}
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">${translateFn('receipt.summary')}</div>
+        <div class="row"><div class="label">${translateFn('receipt.totalLessons')}</div><div class="value">CHF ${summary.lesson.toFixed(2)}</div></div>
+        <div class="row"><div class="label">${translateFn('receipt.totalAdminFees')}</div><div class="value">CHF ${summary.adminFee.toFixed(2)}</div></div>
+        <div class="row"><div class="label">${translateFn('receipt.totalProducts')}</div><div class="value">CHF ${summary.products.toFixed(2)}</div></div>
+        <div class="row"><div class="label">${translateFn('receipt.totalDiscounts')}</div><div class="value">- CHF ${summary.discount.toFixed(2)}</div></div>
+        <div class="row" style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb;">
+          <div class="label">${translateFn('receipt.totalAmount')}</div>
+          <div class="amount">CHF ${summary.total.toFixed(2)}</div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="muted">${translateFn('receipt.footer', { email: tenant?.contact_email || 'den Support' })}</div>
+      </div>
+    </div>
+  `
+}
+
+function wrapHtml(body: string, primary: string, secondary: string) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8" />
+      <style>
+        :root { --primary:${primary}; --secondary:${secondary}; }
+        body { font-family: Arial, sans-serif; color:#111827; margin:0; }
+        .doc { max-width:720px; margin:24px auto; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
+        .header { display:flex; align-items:flex-start; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #e5e7eb; background:linear-gradient(90deg,#fff,#f9fafb); }
+        .header-left { display:flex; flex-direction:column; gap:8px; }
+        .header-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+        .logo { height:60px; width:auto; object-fit:contain; max-width:150px; }
+        .title { font-size:24px; font-weight:800; color:var(--primary); }
+        .subtitle { font-size:14px; color:var(--secondary); margin-top:2px; }
+        .address { font-size:12px; color:#6b7280; line-height:1.3; text-align:right; }
+        .contact { font-size:12px; color:#6b7280; line-height:1.3; text-align:right; }
+        .address-left { font-size:12px; color:#6b7280; line-height:1.3; text-align:left; }
+        .contact-left { font-size:12px; color:#6b7280; line-height:1.3; text-align:left; }
+        .section { padding:20px 24px; border-top:1px solid #f3f4f6; }
+        .section-title { font-size:16px; font-weight:600; color:var(--primary); margin-bottom:12px; }
+        .row { display:flex; justify-content:space-between; margin:8px 0; font-size:14px; }
+        .label { color:#6b7280; font-weight:500; }
+        .value { font-weight:600; }
+        .amount { font-weight:700; color:var(--primary); font-size:18px; }
+        .muted { color:#6b7280; font-size:12px; line-height:1.4; }
+        .lesson-table { width:100%; border-collapse:collapse; margin-top:16px; }
+        .lesson-table th { text-align:left; font-size:13px; padding:10px; background:#f1f5f9; color:#475569; border-bottom:1px solid #e2e8f0; }
+        .lesson-table td { font-size:13px; padding:12px 10px; border-bottom:1px solid #e5e7eb; vertical-align:top; }
+        .lesson-title { font-weight:600; color:#111827; }
+        .lesson-meta { font-size:12px; color:#6b7280; margin-top:4px; }
+      </style>
+    </head>
+    <body>
+      ${body}
+    </body>
+    </html>
   `
 }
 
@@ -283,13 +517,29 @@ export default defineEventHandler(async (event) => {
         'receipt.discount': 'Rabatt',
         'receipt.totalAmount': 'Gesamtbetrag',
         'receipt.minutes': 'Minuten',
+        'receipt.products': 'Produkte',
         'receipt.cancelled': 'Storniert',
         'receipt.reason': 'Grund',
         'receipt.charged': 'Berechnet',
         'receipt.yes': 'Ja',
         'receipt.no': 'Nein',
         'receipt.footer': `Bei Fragen wenden Sie sich bitte an ${tenant?.contact_email || 'den Support'}.`,
+        'receipt.lessonsOverview': 'Lektionsübersicht',
+        'receipt.summary': 'Zusammenfassung',
+        'receipt.lessonCount': 'Anzahl Lektionen',
+        'receipt.period': 'Zeitraum',
+        'receipt.totalLessons': 'Total Lektionen',
+        'receipt.totalAdminFees': 'Total Administrationsgebühren',
+        'receipt.totalProducts': 'Total Produkte',
+        'receipt.totalDiscounts': 'Total Rabatte',
+        'receipt.generatedOn': 'Erstellt am',
+        'receipt.table.header.service': 'Leistung',
+        'receipt.table.header.datetime': 'Datum & Zeit',
+        'receipt.table.header.duration': 'Dauer',
+        'receipt.table.header.amount': 'Betrag',
         'eventType.lesson': 'Fahrlektion',
+        'status.pending': 'Ausstehend',
+        'status.authorized': 'Reserviert',
         'status.scheduled': 'Geplant',
         'status.completed': 'Abgeschlossen',
         'status.cancelled': 'Storniert'
@@ -302,55 +552,16 @@ export default defineEventHandler(async (event) => {
       return value
     }
 
-    // Generate HTML for each payment
-    const receiptHTMLs = await Promise.all(
-      payments.map(payment => generateReceiptHTML(payment, supabase, tenant, primary, secondary, translateFn))
+    const tenantAssets = await loadTenantAssets(tenant)
+    const contexts = await Promise.all(
+      payments.map(payment => loadPaymentContext(payment, supabase, translateFn))
     )
 
-    // Combine all receipts into one HTML document
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8" />
-        <style>
-          :root { --primary:${primary}; --secondary:${secondary}; }
-          body { font-family: Arial, sans-serif; color:#111827; margin:0; }
-          .doc { max-width:720px; margin:24px auto; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
-          .header { display:flex; align-items:flex-start; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #e5e7eb; background:linear-gradient(90deg,#fff,#f9fafb); }
-          .header-left { display:flex; flex-direction:column; gap:8px; }
-          .header-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
-          .logo { height:60px; width:auto; object-fit:contain; max-width:150px; }
-          .title { font-size:24px; font-weight:800; color:var(--primary); }
-          .subtitle { font-size:14px; color:var(--secondary); margin-top:2px; }
-          .address { font-size:12px; color:#6b7280; line-height:1.3; text-align:right; }
-          .contact { font-size:12px; color:#6b7280; line-height:1.3; text-align:right; }
-          .address-left { font-size:12px; color:#6b7280; line-height:1.3; text-align:left; }
-          .contact-left { font-size:12px; color:#6b7280; line-height:1.3; text-align:left; }
-          .section { padding:20px 24px; border-top:1px solid #f3f4f6; }
-          .section-title { font-size:16px; font-weight:600; color:var(--primary); margin-bottom:12px; }
-          .row { display:flex; justify-content:space-between; margin:8px 0; font-size:14px; }
-          .label { color:#6b7280; font-weight:500; }
-          .value { font-weight:600; }
-          .amount { font-weight:700; color:var(--primary); font-size:18px; }
-          .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-          .muted { color:#6b7280; font-size:12px; line-height:1.4; }
-          .appointment-details { background:#f8fafc; border-radius:8px; padding:16px; margin:12px 0; }
-          .customer-info { background:#f0f9ff; border-radius:8px; padding:16px; margin:12px 0; }
-        </style>
-      </head>
-      <body>
-        ${receiptHTMLs.join('')}
-      </body>
-    </html>
-    `
+    const bodyHtml = contexts.length === 1
+      ? renderSingleReceipt(contexts[0], tenant, tenantAssets, translateFn)
+      : renderCombinedReceipt(contexts, tenant, tenantAssets, translateFn)
 
-    // Remove the last page-break
-    const finalHtml = html.replace(/style="page-break-after: always;">/g, (match, offset) => {
-      // If this is the last occurrence, remove it
-      const lastIndex = html.lastIndexOf(match)
-      return offset === lastIndex ? '>' : match
-    })
+    const finalHtml = wrapHtml(bodyHtml, primary, secondary)
 
     console.log('📄 Generating PDF with Puppeteer...')
     

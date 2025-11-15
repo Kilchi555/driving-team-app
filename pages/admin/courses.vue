@@ -5344,8 +5344,8 @@ const confirmStatusChange = async () => {
     
     const updateData: any = {
       status: newStatus.value,
-      status_changed_at: new Date().toISOString(),
-      status_changed_by: currentUser.value.id
+        status_changed_at: new Date().toISOString(),
+        status_changed_by: currentUser.value.id
     }
     
     // If changing to cancelled, add cancellation fields

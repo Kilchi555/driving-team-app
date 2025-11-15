@@ -2230,14 +2230,14 @@ const openEducationalContentModal = (criteria: Criteria) => {
     // Check if it's the new structure (has _default key)
     if (content._default) {
       // New structure: Load _default content initially
-      educationalContentForm.value = {
+    educationalContentForm.value = {
         title: content._default.title || '',
         sections: (content._default.sections || []).map((s: any) => ({
-          title: s?.title || '',
-          text: s?.text || '',
-          images: s?.images || [],
-          categories: s?.categories || []
-        }))
+        title: s?.title || '',
+        text: s?.text || '',
+        images: s?.images || [],
+        categories: s?.categories || []
+      }))
       }
     } else {
       // Old structure: Load directly (will be migrated on save)

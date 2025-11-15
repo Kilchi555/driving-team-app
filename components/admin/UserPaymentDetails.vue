@@ -1490,8 +1490,8 @@ const loadUserAppointments = async () => {
         // ✅ Lade ALLE payment_items (Produkte UND Rabatte) in einer Abfrage
         const { data: paymentItemsData, error: paymentItemsError } = await supabase
           .from('payment_items')
-          .select(`
-            id,
+        .select(`
+          id,
             payment_id,
             item_type,
             product_id,
@@ -1509,10 +1509,10 @@ const loadUserAppointments = async () => {
               id,
               code,
               description
-            )
-          `)
+          )
+        `)
           .in('payment_id', paymentIds)
-        
+      
         if (!paymentItemsError && paymentItemsData) {
           // Erstelle Payment-zu-Appointment Mapping
           const paymentToAppointment = new Map<string, string>()
@@ -1550,10 +1550,10 @@ const loadUserAppointments = async () => {
                 amount_rappen: Math.abs(item.total_price_rappen || 0), // Rabatte sind negativ gespeichert
                 discount_type: discountData?.code || 'custom',
                 reason: discountReason
-              })
-            }
-          })
-          
+            })
+          }
+        })
+        
           console.log('✅ Loaded from payment_items:', allProducts.length, 'products,', allDiscounts.length, 'discounts')
         } else if (paymentItemsError) {
           console.warn('⚠️ Error loading payment_items:', paymentItemsError)
@@ -1657,9 +1657,9 @@ const loadUserAppointments = async () => {
                 
                 return {
                   name: productName,
-                  price: (item.total_price_rappen || 0) / 100,
-                  quantity: item.quantity || 1,
-                  total_price: (item.total_price_rappen || 0) / 100
+                price: (item.total_price_rappen || 0) / 100,
+                quantity: item.quantity || 1,
+                total_price: (item.total_price_rappen || 0) / 100
                 }
               }).filter(p => p.name !== 'Unbekanntes Produkt')
               

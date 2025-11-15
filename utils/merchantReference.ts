@@ -1,0 +1,93 @@
+export interface MerchantReferenceDetails {
+  appointmentId?: string | null
+  eventTypeCode?: string | null
+  categoryCode?: string | null
+  categoryName?: string | null
+  staffName?: string | null
+  startTime?: string | Date | null
+  durationMinutes?: number | null
+  fallback?: string | null
+}
+
+const MAX_LENGTH = 190
+const FALLBACK_PREFIX = 'REF'
+
+const sanitize = (value?: string | null): string | undefined => {
+  if (!value) return undefined
+  return value
+    .toString()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toUpperCase()
+}
+
+const shortenId = (value?: string | null, length = 8): string | undefined => {
+  if (!value) return undefined
+  return value.replace(/[^a-f0-9]/gi, '').substring(0, length).toUpperCase()
+}
+
+const formatStartTime = (value?: string | Date | null): string | undefined => {
+  if (!value) return undefined
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return undefined
+
+  const formatter = new Intl.DateTimeFormat('de-CH', {
+    timeZone: 'Europe/Zurich',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+
+  const parts = formatter.formatToParts(date).reduce<Record<string, string>>((acc, part) => {
+    if (part.type !== 'literal') {
+      acc[part.type] = part.value
+    }
+    return acc
+  }, {})
+
+  const { year, month, day, hour, minute } = parts
+  if (!year || !month || !day || !hour || !minute) return undefined
+
+  return `${year}${month}${day}-${hour}${minute}`
+}
+
+export const buildMerchantReference = (details: MerchantReferenceDetails = {}): string => {
+  const segments: string[] = []
+
+  const shortAppointmentId = shortenId(details.appointmentId)
+  if (shortAppointmentId) segments.push(`${shortAppointmentId}`)
+
+  const typeLabel = sanitize(details.eventTypeCode)
+  if (typeLabel) segments.push(`${typeLabel}`)
+
+  const categoryLabel = sanitize(details.categoryName || details.categoryCode)
+  if (categoryLabel) segments.push(`${categoryLabel}`)
+
+  const staffLabel = sanitize(details.staffName)
+  if (staffLabel) segments.push(`${staffLabel}`)
+
+  const startLabel = formatStartTime(details.startTime)
+  if (startLabel) segments.push(`${startLabel}`)
+
+  if (details.durationMinutes && details.durationMinutes > 0) {
+    segments.push(`${Math.round(details.durationMinutes)}MIN`)
+  }
+
+  const fallback = sanitize(details.fallback) || `${FALLBACK_PREFIX}-${Date.now().toString(36).toUpperCase()}`
+  segments.push(fallback.startsWith(`${FALLBACK_PREFIX}-`) ? fallback : `${FALLBACK_PREFIX}-${fallback}`)
+
+  if (segments.length === 0) {
+    return `${FALLBACK_PREFIX}-${Date.now().toString(36).toUpperCase()}`
+  }
+
+  const joined = segments.join('|')
+  return joined.length <= MAX_LENGTH ? joined : joined.substring(0, MAX_LENGTH)
+}
+
+

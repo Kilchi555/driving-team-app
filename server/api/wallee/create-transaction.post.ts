@@ -2,6 +2,7 @@
 // ✅ OFFIZIELLES WALLEE SDK
 
 import { Wallee } from 'wallee'
+import { buildMerchantReference } from '~/utils/merchantReference'
 
 export default defineEventHandler(async (event) => {
   console.log('🚀 Wallee Transaction Creation (SDK)...')
@@ -25,7 +26,8 @@ export default defineEventHandler(async (event) => {
       isTokenizationOnly,
       // Neu: pseudonyme IDs statt E-Mail-basiert
       userId: requestUserId,
-      tenantId: requestTenantId
+      tenantId: requestTenantId,
+      merchantReferenceDetails
     } = body
 
     // Validierung der erforderlichen Felder
@@ -93,7 +95,11 @@ export default defineEventHandler(async (event) => {
     
     // Generate unique merchant reference for this transaction
     const timestamp = Date.now()
-    const shortMerchantRef = `order-${timestamp}-${Math.random().toString(36).substr(2, 9)}`
+    const fallbackMerchantRef = `order-${timestamp}-${Math.random().toString(36).substr(2, 9)}`
+    const shortMerchantRef = buildMerchantReference({
+      ...(merchantReferenceDetails || {}),
+      fallback: fallbackMerchantRef
+    })
     
     console.log('🔑 Transaction IDs generated:', { 
       customerId: shortCustomerId,

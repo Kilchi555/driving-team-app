@@ -99,6 +99,14 @@ export default defineEventHandler(async (event) => {
       const appointmentDate = new Date(start_time)
       const scheduledPaymentDate = new Date(appointmentDate)
       scheduledPaymentDate.setHours(scheduledPaymentDate.getHours() - hoursBeforePayment)
+      // Runde auf die nächste volle Stunde auf (Cron läuft zur vollen Stunde)
+      // Wenn nicht genau auf der vollen Stunde, dann aufrunden
+      if (scheduledPaymentDate.getMinutes() > 0 || scheduledPaymentDate.getSeconds() > 0) {
+        scheduledPaymentDate.setHours(scheduledPaymentDate.getHours() + 1)
+      }
+      scheduledPaymentDate.setMinutes(0)
+      scheduledPaymentDate.setSeconds(0)
+      scheduledPaymentDate.setMilliseconds(0)
 
       const { data: payment, error: paymentError } = await supabase
         .from('payments')

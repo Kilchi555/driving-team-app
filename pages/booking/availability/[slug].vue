@@ -1640,25 +1640,14 @@ const generateTimeSlotsForSpecificCombination = async () => {
               console.log('📅 Creating slot for today:', slotTime.toLocaleString('de-DE'), 'Current time:', new Date().toLocaleString('de-DE'))
             }
             
-            // Format times as local time strings (same format as appointments in DB)
-            const formatLocalTime = (date: Date) => {
-              const year = date.getFullYear()
-              const month = String(date.getMonth() + 1).padStart(2, '0')
-              const day = String(date.getDate()).padStart(2, '0')
-              const hours = String(date.getHours()).padStart(2, '0')
-              const minutes = String(date.getMinutes()).padStart(2, '0')
-              const seconds = String(date.getSeconds()).padStart(2, '0')
-              return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
-            }
-            
             timeSlots.push({
               id: `${selectedInstructor.value.id}-${selectedLocation.value.id}-${slotTime.getTime()}`,
               staff_id: selectedInstructor.value.id,
               staff_name: `${selectedInstructor.value.first_name} ${selectedInstructor.value.last_name}`,
               location_id: selectedLocation.value.id,
               location_name: selectedLocation.value.name,
-              start_time: formatLocalTime(slotTime),
-              end_time: formatLocalTime(endTime),
+              start_time: slotTime.toISOString(),
+              end_time: endTime.toISOString(),
               duration_minutes: duration,
               is_available: true, // Will be updated after batch check
               week_number: week + 1,

@@ -5,6 +5,7 @@
 import { Wallee } from 'wallee'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { buildMerchantReference } from '~/utils/merchantReference'
 
 export default defineEventHandler(async (event) => {
   console.log('🔐 Wallee Authorization (Authorize & Capture)...')
@@ -42,7 +43,13 @@ export default defineEventHandler(async (event) => {
           id,
           title,
           start_time,
-          event_type_code
+          event_type_code,
+          type,
+          duration_minutes,
+          staff:users!appointments_staff_id_fkey (
+            first_name,
+            last_name
+          )
         )
       `)
       .eq('id', paymentId)
@@ -74,7 +81,22 @@ export default defineEventHandler(async (event) => {
     const customerName = `${user.first_name || ''} ${user.last_name || ''}`.trim()
     const description = payment.description || 'Fahrlektion'
     const currency = 'CHF'
-    const orderId = `appointment-${payment.appointment_id}-${Date.now()}`
+    const appointmentDetails = Array.isArray(payment.appointments)
+      ? payment.appointments[0]
+      : payment.appointments
+
+    const staffName = appointmentDetails?.staff
+      ? `${appointmentDetails.staff.first_name || ''} ${appointmentDetails.staff.last_name || ''}`.trim()
+      : undefined
+
+    const orderId = buildMerchantReference({
+      appointmentId: payment.appointment_id,
+      eventTypeCode: appointmentDetails?.event_type_code,
+      categoryCode: appointmentDetails?.type,
+      staffName,
+      startTime: appointmentDetails?.start_time,
+      durationMinutes: appointmentDetails?.duration_minutes
+    })
 
     // ✅ WALLEE SDK KONFIGURATION
     const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')

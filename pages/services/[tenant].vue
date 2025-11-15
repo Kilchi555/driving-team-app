@@ -5,9 +5,7 @@
       <!-- Header -->
       <div class="bg-gray-100 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <h1 class="text-2xl font-bold text-gray-700">Service auswählen</h1>
-          <p class="text-gray-600 mt-2">Wählen Sie den gewünschten Service für {{ tenantName }}</p>
-          <p class="text-sm text-gray-500 mt-1">Debug: Slug = {{ tenantSlug }}</p>
+          <h1 class="text-2xl font-bold text-gray-700">Dienstleistung von {{ tenantName }} auswählen</h1>
         </div>
       </div>
       
@@ -33,12 +31,7 @@
               <div class="text-4xl">🚗</div>
               <div class="flex-1">
                 <h3 class="text-xl font-semibold text-gray-900 group-hover:text-blue-700">Fahrlektionen</h3>
-                <p class="text-gray-600 mt-1">Praktische Fahrstunden für alle Führerschein-Kategorien</p>
-                <div class="mt-2 text-sm text-gray-500">
-                  • Lernfahrausweis erforderlich<br>
-                  • Praktische Ausbildung<br>
-                  • Verschiedene Kategorien verfügbar
-                </div>
+                <p class="text-gray-600 mt-1">Praktische Fahrlektionen für alle Kategorien</p>
               </div>
               <div class="text-2xl text-gray-400 group-hover:text-blue-500">→</div>
             </div>
@@ -53,12 +46,7 @@
               <div class="text-4xl">📚</div>
               <div class="flex-1">
                 <h3 class="text-xl font-semibold text-gray-900 group-hover:text-green-700">Theorielektionen</h3>
-                <p class="text-gray-600 mt-1">Theoretische Ausbildung für die Führerscheinprüfung</p>
-                <div class="mt-2 text-sm text-gray-500">
-                  • Kein Lernfahrausweis erforderlich<br>
-                  • Theoretische Ausbildung<br>
-                  • Vorbereitung auf die Prüfung
-                </div>
+                <p class="text-gray-600 mt-1">Theorelektionen für effizientes Lernen</p>
               </div>
               <div class="text-2xl text-gray-400 group-hover:text-green-500">→</div>
             </div>
@@ -73,12 +61,7 @@
               <div class="text-4xl">💬</div>
               <div class="flex-1">
                 <h3 class="text-xl font-semibold text-gray-900 group-hover:text-purple-700">Beratung</h3>
-                <p class="text-gray-600 mt-1">Persönliche Beratung zu Führerschein und Ausbildung</p>
-                <div class="mt-2 text-sm text-gray-500">
-                  • Individuelle Beratung<br>
-                  • Fragen zur Ausbildung<br>
-                  • Planung der Fahrstunden
-                </div>
+                <p class="text-gray-600 mt-1">Persönliche Beratung zur Fahrausbildung</p>
               </div>
               <div class="text-2xl text-gray-400 group-hover:text-purple-500">→</div>
             </div>

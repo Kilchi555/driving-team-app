@@ -95,6 +95,12 @@
             <p class="text-xs text-yellow-600 mb-4">
               Bitte klicken Sie auf den Link in Ihrer E-Mail, um das Gerät zu bestätigen. Der Link ist 24 Stunden gültig.
             </p>
+            <p
+              v-if="deviceVerificationWarning"
+              class="text-xs text-red-600 mb-4"
+            >
+              {{ deviceVerificationWarning }}
+            </p>
             <div class="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 @click="requiresDeviceVerification = false"
@@ -104,9 +110,11 @@
               </button>
               <button
                 @click="resendVerificationEmail"
-                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                :disabled="resendingVerification"
+                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Link erneut senden
+                <span v-if="resendingVerification">Sende...</span>
+                <span v-else>Link erneut senden</span>
               </button>
             </div>
           </div>
@@ -272,6 +280,7 @@ interface VerificationResponse {
   verificationLink?: string
   expiresAt?: string
   error?: string
+  emailError?: string
 }
 
 // Reserved routes that should not be caught by the slug route
@@ -329,6 +338,9 @@ const handleLogin = async () => {
 
   isLoading.value = true
   loginError.value = null
+  deviceVerificationWarning.value = null
+  pendingDeviceId.value = null
+  pendingAuthUserId.value = null
 
   try {
     console.log('🔑 Starting login attempt for:', loginForm.value.email)
@@ -470,6 +482,14 @@ const handleLogin = async () => {
                 })
                 
                 if (verificationResponse.success) {
+                  pendingDeviceId.value = deviceId
+                  pendingAuthUserId.value = authUserId
+                  pendingVerificationEmail.value = user.email
+                  pendingDeviceName.value = deviceName
+                  deviceVerificationWarning.value = verificationResponse.emailError
+                    ? 'E-Mail konnte nicht zugestellt werden. Bitte prüfen Sie Ihren Spam-Ordner oder senden Sie den Link erneut.'
+                    : null
+                  
                   // ✅ LOGOUT: User muss Gerät erst verifizieren
                   console.log('🔒 Logging out user - device verification required')
                   await supabase.auth.signOut()
@@ -482,8 +502,6 @@ const handleLogin = async () => {
                   
                   // Setze Flag für Verifikations-Pending Modal
                   requiresDeviceVerification.value = true
-                  pendingVerificationEmail.value = user.email
-                  pendingDeviceName.value = deviceName
                   
                   // ✅ KRITISCH: Verhindere Login-Redirect - User muss warten
                   return // Exit early - Login nicht abschließen
@@ -492,6 +510,11 @@ const handleLogin = async () => {
                 }
               } catch (verificationError: any) {
                 console.error('❌ Error sending verification email:', verificationError)
+                pendingDeviceId.value = deviceId
+                pendingAuthUserId.value = authUserId
+                pendingVerificationEmail.value = user.email
+                pendingDeviceName.value = deviceName
+                deviceVerificationWarning.value = 'E-Mail konnte nicht versendet werden. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.'
                 
                 // Fallback: Zeige manuellen Link (für Testing)
                 showError(
@@ -517,6 +540,11 @@ const handleLogin = async () => {
               
               // Gerät existiert aber ist nicht verifiziert - sende erneut Verifikations-Link
               try {
+                pendingDeviceId.value = existingDevice.id
+                pendingAuthUserId.value = authUserId
+                pendingVerificationEmail.value = user.email
+                pendingDeviceName.value = existingDevice.device_name || 'Unbekanntes Gerät'
+                
                 const verificationResponse = await $fetch<VerificationResponse>('/api/admin/send-device-verification', {
                   method: 'POST',
                   body: {
@@ -535,11 +563,14 @@ const handleLogin = async () => {
                     `Ihr Gerät muss noch verifiziert werden. Wir haben einen Verifikations-Link an ${user.email} gesendet.`
                   )
                   requiresDeviceVerification.value = true
-                  pendingVerificationEmail.value = user.email
+                  deviceVerificationWarning.value = verificationResponse.emailError
+                    ? 'E-Mail konnte nicht zugestellt werden. Bitte prüfen Sie Ihren Spam-Ordner oder senden Sie den Link erneut.'
+                    : null
                   return // Verhindere Login
                 }
               } catch (verificationError) {
                 console.error('Error re-sending verification:', verificationError)
+                deviceVerificationWarning.value = 'E-Mail konnte nicht versendet werden. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.'
               }
             }
           } else {
@@ -563,6 +594,11 @@ const handleLogin = async () => {
                 
                 // Gerät existiert aber nicht verifiziert - sende Verifikations-Link
                 try {
+                  pendingDeviceId.value = device.id
+                  pendingAuthUserId.value = authUserId
+                  pendingVerificationEmail.value = user.email
+                  pendingDeviceName.value = device.device_name || 'Unbekanntes Gerät'
+                  
                   const verificationResponse = await $fetch<VerificationResponse>('/api/admin/send-device-verification', {
                     method: 'POST',
                     body: {
@@ -581,12 +617,14 @@ const handleLogin = async () => {
                       `Ihr Gerät muss noch verifiziert werden. Wir haben einen Verifikations-Link an ${user.email} gesendet.`
                     )
                     requiresDeviceVerification.value = true
-                    pendingVerificationEmail.value = user.email
-                    pendingDeviceName.value = device.device_name || 'Unbekanntes Gerät'
+                    deviceVerificationWarning.value = verificationResponse.emailError
+                      ? 'E-Mail konnte nicht zugestellt werden. Bitte prüfen Sie Ihren Spam-Ordner oder senden Sie den Link erneut.'
+                      : null
                     return // Verhindere Login
                   }
                 } catch (verificationError) {
                   console.error('Error sending verification:', verificationError)
+                  deviceVerificationWarning.value = 'E-Mail konnte nicht versendet werden. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.'
                 }
               }
               
@@ -675,55 +713,38 @@ const handleLogout = async () => {
 }
 
 const resendVerificationEmail = async () => {
-  if (!pendingVerificationEmail.value) return
+  if (!pendingVerificationEmail.value || !pendingDeviceId.value || !pendingAuthUserId.value) {
+    showError('Fehler', 'Keine Geräteinformationen vorhanden. Bitte melden Sie sich erneut an.')
+    return
+  }
   
   try {
-    isLoading.value = true
+    resendingVerification.value = true
     
-    // Finde Gerät für User
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) {
-      showError('Fehler', 'Bitte melden Sie sich erneut an.')
-      return
-    }
-    
-    // Finde unverifiziertes Gerät
-    const { data: devices } = await supabase
-      .from('user_devices')
-      .select('*')
-      .eq('user_id', authUser.id)
-      .is('verified_at', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-    
-    if (!devices || devices.length === 0) {
-      showError('Fehler', 'Kein Gerät zum Verifizieren gefunden.')
-      return
-    }
-    
-    const device = devices[0]
-    
-    // Sende Verifikations-Link erneut
     const response = await $fetch<VerificationResponse>('/api/admin/send-device-verification', {
       method: 'POST',
       body: {
-        userId: authUser.id,
-        deviceId: device.id,
+        userId: pendingAuthUserId.value,
+        deviceId: pendingDeviceId.value,
         userEmail: pendingVerificationEmail.value,
-        deviceName: device.device_name || 'Unbekanntes Gerät'
+        deviceName: pendingDeviceName.value || 'Unbekanntes Gerät'
       }
     })
     
     if (response.success) {
       showSuccess('E-Mail gesendet', `Verifikations-Link wurde erneut an ${pendingVerificationEmail.value} gesendet.`)
+      deviceVerificationWarning.value = response.emailError
+        ? 'E-Mail konnte nicht zugestellt werden. Bitte prüfen Sie Ihren Spam-Ordner oder versuchen Sie es erneut.'
+        : null
     } else {
-      showError('Fehler', 'Link konnte nicht gesendet werden.')
+      showError('Fehler', response?.error || 'Link konnte nicht gesendet werden.')
     }
   } catch (error: any) {
     console.error('Error resending verification:', error)
-    showError('Fehler', error.message || 'Link konnte nicht gesendet werden.')
+    showError('Fehler', error?.message || 'Link konnte nicht gesendet werden.')
+    deviceVerificationWarning.value = 'E-Mail konnte nicht versendet werden. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.'
   } finally {
-    isLoading.value = false
+    resendingVerification.value = false
   }
 }
 
@@ -792,6 +813,10 @@ const showPassword = ref(false)
 const requiresDeviceVerification = ref(false)
 const pendingVerificationEmail = ref<string | null>(null)
 const pendingDeviceName = ref<string | null>(null)
+const pendingDeviceId = ref<string | null>(null)
+const pendingAuthUserId = ref<string | null>(null)
+const resendingVerification = ref(false)
+const deviceVerificationWarning = ref<string | null>(null)
 
 const loginForm = ref({
   email: '',

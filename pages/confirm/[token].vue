@@ -187,6 +187,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { navigateTo } from '#app'
 import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
+import { buildMerchantReference } from '~/utils/merchantReference'
 
 definePageMeta({
   layout: false
@@ -404,10 +405,25 @@ const confirmAppointment = async () => {
         appointmentDate.getTime() - (authHoursBefore * 60 * 60 * 1000)
       )
       
+      // Runde auf die nächste volle Stunde auf (Cron läuft zur vollen Stunde)
+      const roundToNextFullHour = (date: Date) => {
+        const rounded = new Date(date)
+        if (rounded.getMinutes() > 0 || rounded.getSeconds() > 0) {
+          rounded.setHours(rounded.getHours() + 1)
+        }
+        rounded.setMinutes(0)
+        rounded.setSeconds(0)
+        rounded.setMilliseconds(0)
+        return rounded
+      }
+      
+      const roundedScheduledDate = roundToNextFullHour(theoreticalScheduledDate)
+      const roundedAuthDate = roundToNextFullHour(theoreticalAuthDate)
+      
       // ✅ PROBLEM BEHOBEN: Wenn Bestätigung zu spät kommt (weniger als hoursBefore vor Termin)
       // → Zahlung wird SOFORT ausgelöst, nicht später
       
-      if (theoreticalScheduledDate < now) {
+      if (roundedScheduledDate < now) {
         // Zahlung wäre bereits fällig gewesen → SOFORT verarbeiten
         // ✅ WICHTIG: Bei kurzfristigen Terminen KEINE Authorization Hold, sondern sofortige Zahlung!
         shouldProcessImmediately = true
@@ -415,11 +431,11 @@ const confirmAppointment = async () => {
         scheduledAuthorizationDate = null // Keine Authorization Hold nötig
       } else {
         // Normal: Zahlung ist in der Zukunft
-        scheduledPaymentDate = theoreticalScheduledDate.toISOString()
+        scheduledPaymentDate = roundedScheduledDate.toISOString()
         // Authorization: entweder jetzt (wenn schon fällig) oder geplant
-        scheduledAuthorizationDate = theoreticalAuthDate < now 
+        scheduledAuthorizationDate = roundedAuthDate < now 
           ? now.toISOString() 
-          : theoreticalAuthDate.toISOString()
+          : roundedAuthDate.toISOString()
       }
       
       console.log('💰 Scheduled payment dates calculated:', {
@@ -679,10 +695,22 @@ const processImmediatePaymentWithTokenization = async () => {
     
     // ✅ Erstelle Wallee-Transaktion mit Tokenization für sofortige Zahlung
     type WalleeResponse = { success?: boolean; paymentUrl?: string; transactionId?: number | string; error?: string }
+    const staffName = appointment.value.staff
+      ? `${appointment.value.staff.first_name || ''} ${appointment.value.staff.last_name || ''}`.trim()
+      : appointment.value.staff_name || ''
+    const merchantReferenceDetails = {
+      appointmentId: appointment.value.id,
+      eventTypeCode: appointment.value.event_type_code || appointment.value.appointment_type || appointment.value.type,
+      categoryCode: appointment.value.type,
+      categoryName: appointment.value.category_name,
+      staffName,
+      startTime: appointment.value.start_time,
+      durationMinutes: appointment.value.duration_minutes
+    }
     const response = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
       method: 'POST',
       body: {
-        orderId: `appointment-${appointment.value.id}-${Date.now()}`,
+        orderId: buildMerchantReference(merchantReferenceDetails),
         amount: appointment.value.total_amount_rappen / 100, // Von Rappen zu CHF
         currency: 'CHF',
         customerEmail: (appointment.value.users as any)?.email || '',
@@ -694,7 +722,8 @@ const processImmediatePaymentWithTokenization = async () => {
         userId: (appointment.value.users as any)?.id,
         tenantId: appointment.value.tenant_id,
         tokenizationEnabled: true, // ✅ WICHTIG: Tokenization aktivieren
-        isTokenizationOnly: false // ✅ Echte Zahlung, nicht nur Tokenization
+        isTokenizationOnly: false, // ✅ Echte Zahlung, nicht nur Tokenization
+        merchantReferenceDetails
       }
     })
     

@@ -543,42 +543,39 @@
             >
               <div class="flex flex-col gap-3">
                 <!-- Header: Datum & Überfällig-Badge -->
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center text-gray-900 font-semibold">
-                    <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="flex items-center justify-between text-sm">
+                  <div class="flex items-center text-gray-900 font-semibold gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    {{ formatDateTime(appointment.start_time) }}
+                    <span>{{ formatDateTime(appointment.start_time) }}</span>
+                    <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
+                    </svg>
+                    <span class="text-gray-600">{{ appointment.duration_minutes || 45 }} Min</span>
                   </div>
-                  <span v-if="isOverdue(appointment)" class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-red-100 text-red-800">
+                  <span v-if="isOverdue(appointment)" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-800 flex-shrink-0">
                     Überfällig
                   </span>
                 </div>
 
                 <!-- Details Grid -->
                 <div class="grid grid-cols-2 gap-2 text-sm">
-                  <!-- Terminart -->
+
+                  <!-- Fahrlehrer -->
                   <div class="flex items-center text-gray-600">
                     <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A4 4 0 018 17h8a4 4 0 012.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <span class="font-medium">{{ getEventTypeLabel(appointment.event_type_code) }}</span>
-                  </div>
-                  
-                  <!-- Dauer -->
-                  <div class="flex items-center text-gray-600">
-                    <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
-                    </svg>
-                    {{ appointment.duration_minutes || 45 }} Min
+                    <span class="font-medium">Mit {{ getInstructorName(appointment) }}</span>
                   </div>
 
-                  <!-- Preis -->
-                  <div class="flex items-center text-gray-900 font-semibold col-span-2">
+                  <!-- Kategorie -->
+                  <div class="flex items-center text-gray-600">
                     <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
                     </svg>
-                    CHF {{ formatPrice(appointment.total_amount_rappen || 0) }}
+                    <span class="font-medium">{{ getCategoryLabel(appointment) }}</span>
                   </div>
                 </div>
 
@@ -781,7 +778,7 @@
     :type="toastType"
     :title="toastTitle"
     :message="toastMessage"
-    :duration="3000"
+    :duration="2000"
     @close="showToast = false"
   />
   
@@ -796,6 +793,7 @@ console.log('🔍 Process server:', process.server)
 import { ref, computed, onMounted, watch } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { getSupabase } from '~/utils/supabase'
+import { buildMerchantReference } from '~/utils/merchantReference'
 import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
 import EvaluationsOverviewModal from './EvaluationsOverviewModal.vue'
@@ -1236,7 +1234,11 @@ const loadPendingConfirmations = async () => {
         status,
         confirmation_token,
         type,
-        event_type_code
+        event_type_code,
+        staff:users!appointments_staff_id_fkey (
+          first_name,
+          last_name
+        )
       `)
       .eq('user_id', userData.id)
       .eq('status', 'pending_confirmation')
@@ -1254,6 +1256,30 @@ const loadPendingConfirmations = async () => {
       console.log('✅ No pending confirmations found')
       return
     }
+
+    // ✅ Lade Kategorien separat basierend auf type (z.B. "B")
+    const categoryCodes = [...new Set(confirmationsData.map(apt => apt.type).filter(Boolean))]
+    let categoriesMap = new Map()
+    if (categoryCodes.length > 0) {
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('code, name')
+        .in('code', categoryCodes)
+        .eq('tenant_id', userData.tenant_id)
+      
+      if (!categoriesError && categoriesData) {
+        categoriesData.forEach(cat => {
+          categoriesMap.set(cat.code, cat)
+        })
+      }
+    }
+
+    // Merge categories into appointments
+    confirmationsData.forEach(apt => {
+      if (apt.type && categoriesMap.has(apt.type)) {
+        (apt as any).categories = categoriesMap.get(apt.type)
+      }
+    })
 
     // ✅ DANACH: Lade Payments für diese Appointments separat
     const appointmentIds = confirmationsData.map(apt => apt.id)
@@ -1394,6 +1420,25 @@ const getEventTypeLabel = (code: string | null | undefined) => {
   if (c.includes('theor')) return 'Theorielektion'
   if (c.includes('lesson') || c === 'fahrlektion') return 'Fahrlektion'
   return 'Fahrlektion'
+}
+
+const getInstructorName = (appointment: any) => {
+  if (!appointment) return 'Wird zugewiesen'
+  const staff = appointment.staff
+  if (staff && staff.first_name) {
+    return staff.first_name
+  }
+  if (appointment.staff_name) {
+    return appointment.staff_name.split(' ')[0]
+  }
+  return 'Wird zugewiesen'
+}
+
+const getCategoryLabel = (appointment: any) => {
+  if (!appointment) return 'Kategorie offen'
+  if (appointment.categories?.name) return appointment.categories.name
+  if (appointment.type) return `Kategorie ${appointment.type}`
+  return 'Kategorie offen'
 }
 
 // Helper: Check if appointment has payment details to show
@@ -1565,17 +1610,33 @@ const confirmAppointment = async (appointment: any) => {
       const scheduledPayDate = new Date(startDate.getTime() - automaticPaymentHoursBeforeLocal * 60 * 60 * 1000)
       // ✅ Bestimme frühesten Autorisierungszeitpunkt (z. B. 1 Woche vorher)
       const authDueDate = new Date(startDate.getTime() - automaticAuthorizationHoursBeforeLocal * 60 * 60 * 1000)
+      
+      // Runde auf die nächste volle Stunde auf (Cron läuft zur vollen Stunde)
+      const roundToNextFullHour = (date: Date) => {
+        const rounded = new Date(date)
+        if (rounded.getMinutes() > 0 || rounded.getSeconds() > 0) {
+          rounded.setHours(rounded.getHours() + 1)
+        }
+        rounded.setMinutes(0)
+        rounded.setSeconds(0)
+        rounded.setMilliseconds(0)
+        return rounded
+      }
+      
+      const roundedPayDate = roundToNextFullHour(scheduledPayDate)
+      const roundedAuthDate = roundToNextFullHour(authDueDate)
+      
       // ✅ NEU: Bei Immediate Processing IMMER sofort authorize
-      const shouldAuthorizeNow = shouldProcessImmediately || now >= authDueDate
+      const shouldAuthorizeNow = shouldProcessImmediately || now >= roundedAuthDate
 
       await supabase
         .from('payments')
         .update({
           automatic_payment_consent: true,
           automatic_payment_consent_at: new Date().toISOString(),
-          scheduled_payment_date: scheduledPayDate.toISOString(),
+          scheduled_payment_date: roundedPayDate.toISOString(),
           // speichere geplanten Autorisierungszeitpunkt, wenn noch nicht fällig
-          scheduled_authorization_date: shouldAuthorizeNow ? new Date().toISOString() : authDueDate.toISOString(),
+          scheduled_authorization_date: shouldAuthorizeNow ? new Date().toISOString() : roundedAuthDate.toISOString(),
           payment_method_id: defaultMethodId,
           payment_method: 'wallee',
           updated_at: new Date().toISOString()
@@ -1641,10 +1702,10 @@ const confirmAppointment = async (appointment: any) => {
       
       // Zeige Erfolgs-Benachrichtigung
       const message = shouldProcessImmediately
-        ? 'Die Zahlung wurde sofort abgebucht.'
+        ? 'Die Zahlung wurde abgebucht.'
         : shouldAuthorizeNow
           ? 'Der Betrag wurde provisorisch reserviert und wird 24h vor dem Termin abgebucht.'
-          : `Die Karte wird ${automaticAuthorizationHoursBeforeLocal/24} Tage vor dem Termin reserviert, Abbuchung ${automaticPaymentHoursBeforeLocal}h vorher.`
+          : `Der Betrag wird ${automaticAuthorizationHoursBeforeLocal/24} Tage vor dem Termin reserviert, Abbuchung ${automaticPaymentHoursBeforeLocal}h vorher.`
       
       displayToast('success', 'Termin bestätigt!', message)
       return
@@ -1674,8 +1735,20 @@ const confirmAppointment = async (appointment: any) => {
       return `${d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
     }
     const summaryLabel = `${mapLessonType(appointment.event_type_code || appointment.type)} • ${formatSummaryDate(appointment.start_time)}`
+    const staffName = appointment.staff
+      ? `${appointment.staff.first_name || ''} ${appointment.staff.last_name || ''}`.trim()
+      : appointment.staff_name || ''
+    const merchantReferenceDetails = {
+      appointmentId: appointment.id,
+      eventTypeCode: appointment.event_type_code || appointment.appointment_type || appointment.type,
+      categoryCode: appointment.type,
+      categoryName: appointment.category_name,
+      staffName,
+      startTime: appointment.start_time,
+      durationMinutes: appointment.duration_minutes
+    }
     type WalleeResponse = { success?: boolean; paymentUrl?: string; transactionId?: number | string; error?: string }
-    const orderId = `appointment-${appointment.id}-${Date.now()}`
+    const orderId = buildMerchantReference(merchantReferenceDetails)
 
     const response = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
       method: 'POST',
@@ -1688,7 +1761,8 @@ const confirmAppointment = async (appointment: any) => {
         tenantId: userDb.tenant_id,
         description: summaryLabel,
         successUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`,
-        failedUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`
+        failedUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`,
+        merchantReferenceDetails
       }
     })
 

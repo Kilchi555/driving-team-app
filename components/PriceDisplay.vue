@@ -262,15 +262,9 @@
               <!-- Status Badge -->
               <span :class="[
                 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
-                existingPayment?.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
-                existingPayment?.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                existingPayment?.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
-                'bg-gray-100 text-gray-800'
+                paymentStatusBadge.class
               ]">
-                {{ existingPayment?.payment_status === 'completed' ? 'Bezahlt' :
-                   existingPayment?.payment_status === 'pending' ? 'Ausstehend' : 
-                   existingPayment?.payment_status === 'failed' ? 'Fehlgeschlagen' :
-                   'Unbekannt' }}
+                {{ paymentStatusBadge.label }}
               </span>
               
               <!-- Bezahldatum falls vorhanden -->
@@ -1392,6 +1386,27 @@ const shouldShowSavedBillingAddress = computed(() => {
   })
   
   return result
+})
+
+// ✅ NEU: Einheitliche Labels + Farben für Payment-Status
+const paymentStatusBadge = computed(() => {
+  const status = (existingPayment.value?.payment_status || '').toLowerCase()
+
+  const statusMap: Record<string, { label: string; class: string }> = {
+    completed: { label: 'Bezahlt', class: 'bg-green-100 text-green-800' },
+    pending: { label: 'Ausstehend', class: 'bg-yellow-100 text-yellow-800' },
+    failed: { label: 'Fehlgeschlagen', class: 'bg-red-100 text-red-800' },
+    authorized: { label: 'Autorisiert', class: 'bg-blue-100 text-blue-800' },
+    refunded: { label: 'Rückerstattet', class: 'bg-green-100 text-green-800' },
+    refunding: { label: 'Rückerstattung läuft', class: 'bg-yellow-100 text-yellow-800' },
+    voided: { label: 'Storniert', class: 'bg-gray-200 text-gray-800' }
+  }
+
+  if (!status) {
+    return { label: 'Keine Zahlung', class: 'bg-gray-100 text-gray-800' }
+  }
+
+  return statusMap[status] || { label: 'Unbekannt', class: 'bg-gray-100 text-gray-800' }
 })
 
 // Computed für Rechnungsform-Validierung

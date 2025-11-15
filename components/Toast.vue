@@ -10,7 +10,7 @@
   >
     <div
       v-if="show"
-      class="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 max-w-2xl w-full mx-4 bg-white shadow-2xl rounded-xl pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden"
+      class="fixed top-8 left-1/2 -translate-x-1/2 z-50 max-w-2xl w-11/12 bg-white shadow-2xl rounded-xl pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden"
     >
       <div class="p-6">
         <div class="flex items-start">
@@ -102,10 +102,20 @@ const close = () => {
   emit('close')
 }
 
-// Auto-close after duration
-if (props.duration > 0) {
-  setTimeout(() => {
-    close()
-  }, props.duration)
-}
+// Auto-close after duration using watch
+import { watch } from 'vue'
+
+let timeoutId = null
+
+watch(() => props.show, (newVal) => {
+  if (newVal && props.duration > 0) {
+    // Clear any existing timeout
+    if (timeoutId) clearTimeout(timeoutId)
+    
+    // Set new timeout
+    timeoutId = setTimeout(() => {
+      close()
+    }, props.duration)
+  }
+})
 </script>
