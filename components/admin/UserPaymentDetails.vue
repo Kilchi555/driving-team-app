@@ -883,7 +883,7 @@ v-for="appointment in filteredAppointments" :key="appointment.id"
                   <td class="px-6 py-4 text-sm text-gray-900">
                     <div class="max-w-xs">
                       <div class="truncate font-medium">{{ appointment.event_type_code ? getEventTypeLabel(appointment.event_type_code) : 'Lektion' }}</div>
-                      <div class="text-xs text-gray-600 truncate">Mit {{ appointment.staff?.first_name || 'Unknown' }} • {{ appointment.category || 'N/A' }}</div>
+                      <div class="text-xs text-gray-600 truncate">Mit {{ appointment.staff?.first_name || 'Unknown' }} • {{ appointment.type || 'N/A' }}</div>
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -1202,7 +1202,6 @@ interface Appointment {
   payment_status?: string
   // Neue Felder für Titel-Anzeige
   event_type_code?: string
-  category?: string
   staff_id?: string
   staff?: {
     first_name?: string
@@ -1496,7 +1495,6 @@ const loadUserAppointments = async () => {
         type,
         deleted_at,
         event_type_code,
-        category,
         staff_id
       `)
       .eq('user_id', userId)
@@ -1787,7 +1785,6 @@ const loadUserAppointments = async () => {
         status: appointment.status || 'pending',
         type: appointment.type || 'driving_lesson',
         event_type_code: appointment.event_type_code,
-        category: appointment.category,
         staff_id: appointment.staff_id,
         staff: appointment.staff,
         payment_status: payment?.payment_status || 'pending', // ✅ KRITISCH: payment_status hinzufügen!
