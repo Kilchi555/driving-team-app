@@ -206,21 +206,6 @@
           </div>
         </div>
 
-        <!-- Spezifische Informationen (je nach Rolle) -->
-        <div v-if="roleSpecificInfo.length > 0" class="bg-white shadow rounded-lg overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">{{ roleSpecificTitle }}</h3>
-          </div>
-          <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div v-for="(info, index) in roleSpecificInfo" :key="index">
-                <dt class="text-sm font-medium text-gray-500">{{ info.label }}</dt>
-                <dd class="mt-1 text-sm text-gray-900">{{ info.value }}</dd>
-              </div>
-            </div>
-          </div>
-        </div>
-
       <!-- Fahrlehrer & Verfügbarkeit (nur für Rolle staff) -->
       <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
         <div class="p-0 sm:p-0">

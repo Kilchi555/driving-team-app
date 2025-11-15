@@ -833,7 +833,7 @@ class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                     Datum & Zeit
                   </th>
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Titel
+                    Termin
                   </th>
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Dauer
@@ -881,7 +881,10 @@ v-for="appointment in filteredAppointments" :key="appointment.id"
                     </div>
                   </td>
                   <td class="px-6 py-4 text-sm text-gray-900">
-                    <div class="max-w-xs truncate">{{ appointment.title }}</div>
+                    <div class="max-w-xs">
+                      <div class="truncate font-medium">{{ getEventTypeLabel(appointment.event_type_code) }}</div>
+                      <div class="text-xs text-gray-600 truncate">Mit {{ appointment.staff?.first_name || 'Unknown' }} • {{ appointment.type }}</div>
+                    </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {{ appointment.duration_minutes }}min
@@ -1197,6 +1200,13 @@ interface Appointment {
   discount_amount?: number
   // Zahlungsstatus aus payments
   payment_status?: string
+  // Neue Felder für Titel-Anzeige
+  event_type_code?: string
+  staff_id?: string
+  staff?: {
+    first_name?: string
+    last_name?: string
+  }
 }
 
 interface CompanyBillingAddress {
@@ -1253,6 +1263,7 @@ const selectedAppointments = ref<string[]>([])
 const showSelectedAppointmentsDetails = ref(false)
 const showInvoiceModal = ref(false)
 const isCreatingInvoice = ref(false)
+const eventTypes = ref<any[]>([])
 
 const invoiceEmail = ref('')
 const invoiceSubject = ref('')
@@ -1392,6 +1403,26 @@ const filteredAppointments = computed(() => {
 })
 
 // Methods
+const loadEventTypes = async (tenantId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('event_types')
+      .select('code, name')
+      .eq('tenant_id', tenantId)
+    
+    if (error) throw error
+    eventTypes.value = data || []
+  } catch (err) {
+    console.warn('Could not load event types:', err)
+  }
+}
+
+const getEventTypeLabel = (code?: string): string => {
+  if (!code) return 'Unbekannt'
+  const eventType = eventTypes.value.find(et => et.code === code)
+  return eventType?.name || code
+}
+
 const refreshData = async () => {
   await Promise.all([
     loadUserDetails(),
@@ -1424,7 +1455,8 @@ const loadUserDetails = async () => {
         role,
         preferred_payment_method,
         default_company_billing_address_id,
-        is_active
+        is_active,
+        tenant_id
       `)
       .eq('id', userId)
       .single()
@@ -1435,6 +1467,11 @@ const loadUserDetails = async () => {
 
     userDetails.value = data
     console.log('✅ User details loaded:', data)
+
+    // Load event types for this tenant
+    if (data?.tenant_id) {
+      await loadEventTypes(data.tenant_id)
+    }
 
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
@@ -1456,7 +1493,13 @@ const loadUserAppointments = async () => {
         duration_minutes,
         status,
         type,
-        deleted_at
+        deleted_at,
+        event_type_code,
+        staff_id,
+        staff (
+          first_name,
+          last_name
+        )
       `)
       .eq('user_id', userId)
       .order('start_time', { ascending: false })

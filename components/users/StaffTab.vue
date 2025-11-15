@@ -5,13 +5,6 @@
     <div class="bg-white border-b p-3 sm:p-4">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 class="text-base sm:text-lg font-medium text-gray-900">Verfügbarkeit & Online-Terminbuchung</h2>
-        <button 
-          v-if="currentUser.role === 'admin'"
-          @click="addNewStaff"
-          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base whitespace-nowrap"
-        >
-          + Neuer Fahrlehrer
-        </button>
       </div>
     </div>
 
