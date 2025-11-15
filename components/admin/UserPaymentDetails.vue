@@ -1495,16 +1495,36 @@ const loadUserAppointments = async () => {
         type,
         deleted_at,
         event_type_code,
-        staff_id,
-        staff (
-          first_name,
-          last_name
-        )
+        staff_id
       `)
       .eq('user_id', userId)
       .order('start_time', { ascending: false })
 
     if (appointmentsError) throw appointmentsError
+
+    // Lade Staff-Informationen separat
+    const staffIds = appointmentsData?.map(apt => apt.staff_id).filter(Boolean) || []
+    const staffMap = new Map<string, any>()
+    
+    if (staffIds.length > 0) {
+      const { data: staffData, error: staffError } = await supabase
+        .from('users')
+        .select('id, first_name, last_name')
+        .in('id', staffIds)
+      
+      if (!staffError && staffData) {
+        staffData.forEach(staff => {
+          staffMap.set(staff.id, staff)
+        })
+      }
+    }
+
+    // Füge Staff-Infos in Appointments ein
+    appointmentsData?.forEach((apt: any) => {
+      if (apt.staff_id && staffMap.has(apt.staff_id)) {
+        apt.staff = staffMap.get(apt.staff_id)
+      }
+    })
 
     // Lade Zahlungen für diese Termine mit allen Preis-Details
     const appointmentIds = appointmentsData?.map(apt => apt.id) || []
