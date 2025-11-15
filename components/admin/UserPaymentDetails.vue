@@ -198,9 +198,10 @@
                   :key="appointmentId"
                   class="flex items-center justify-between p-2 bg-gray-50 rounded-md text-sm"
                 >
-                  <span class="text-gray-700">
-                    {{ getAppointmentById(appointmentId)?.title || 'Unbekannter Termin' }}
-                  </span>
+                  <div class="text-gray-700">
+                    <div class="font-medium">{{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : 'Lektion' }}</div>
+                    <div class="text-xs text-gray-600">Mit {{ getAppointmentById(appointmentId)?.staff?.first_name || 'Unknown' }} • {{ getAppointmentById(appointmentId)?.type || 'N/A' }}</div>
+                  </div>
                   <span class="text-gray-500">
                     {{ formatCurrency(calculateAppointmentAmount(getAppointmentById(appointmentId) || {} as Appointment)) }}
                   </span>
@@ -254,11 +255,12 @@
                             <div class="flex items-center justify-between">
                               <div class="flex-1">
                                 <h4 class="text-sm font-medium text-gray-900">
-                                  {{ getAppointmentById(appointmentId)?.title || 'Unbekannter Termin' }}
+                                  {{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : 'Lektion' }}
                                 </h4>
                                 <div class="mt-1 text-sm text-gray-500">
+                                  <div>Mit {{ getAppointmentById(appointmentId)?.staff?.first_name || 'Unknown' }} • {{ getAppointmentById(appointmentId)?.type || 'N/A' }}</div>
                                   <div>{{ formatDate(getAppointmentById(appointmentId)?.start_time) }} - {{ formatTime(getAppointmentById(appointmentId)?.start_time) }}</div>
-                                  <div>{{ getAppointmentById(appointmentId)?.duration_minutes }} Minuten</div>
+                                  <div>{{ getAppointmentById(appointmentId)?.duration_minutes }}min</div>
                                 </div>
                               </div>
                                                               <div class="text-right">
@@ -368,9 +370,11 @@
                                 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                                   <div class="flex-1 min-w-0">
                                     <h5 class="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                                      {{ getAppointmentById(appointmentId)?.title || 'Fahrstunde' }}
+                                      {{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : 'Lektion' }}
                                     </h5>
                                     <div class="text-xs text-gray-500 truncate">
+                                      Mit {{ getAppointmentById(appointmentId)?.staff?.first_name || 'Unknown' }} • {{ getAppointmentById(appointmentId)?.type || 'N/A' }}
+                                      <span class="mx-1">•</span>
                                       {{ formatDate(getAppointmentById(appointmentId)?.start_time) }} - {{ formatTime(getAppointmentById(appointmentId)?.start_time) }}
                                       <span class="mx-1">•</span>
                                       {{ getAppointmentById(appointmentId)?.duration_minutes }}min
