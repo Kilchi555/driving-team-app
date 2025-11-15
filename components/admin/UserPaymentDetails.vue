@@ -1412,21 +1412,14 @@ const loadEventTypes = async (tenantId: string) => {
     
     if (error) throw error
     eventTypes.value = data || []
-    console.log('✅ Event types loaded:', eventTypes.value)
   } catch (err) {
-    console.warn('❌ Could not load event types:', err)
+    console.warn('Could not load event types:', err)
   }
 }
 
 const getEventTypeLabel = (code?: string): string => {
-  if (!code) {
-    console.warn('🔴 getEventTypeLabel: No code provided')
-    return 'Unbekannt'
-  }
+  if (!code) return 'Unbekannt'
   const eventType = eventTypes.value.find(et => et.code === code)
-  if (!eventType) {
-    console.warn('🔴 getEventTypeLabel: Code not found in eventTypes:', code, 'Available:', eventTypes.value.map(et => et.code))
-  }
   return eventType?.name || code
 }
 
@@ -1511,7 +1504,6 @@ const loadUserAppointments = async () => {
 
     // Lade Staff-Informationen separat
     const staffIds = appointmentsData?.map(apt => apt.staff_id).filter(Boolean) || []
-    console.log('📋 Staff IDs to load:', staffIds)
     const staffMap = new Map<string, any>()
     
     if (staffIds.length > 0) {
@@ -1519,8 +1511,6 @@ const loadUserAppointments = async () => {
         .from('users')
         .select('id, first_name, last_name')
         .in('id', staffIds)
-      
-      console.log('✅ Staff data loaded:', staffData, 'Error:', staffError)
       
       if (!staffError && staffData) {
         staffData.forEach(staff => {
@@ -1533,9 +1523,6 @@ const loadUserAppointments = async () => {
     appointmentsData?.forEach((apt: any) => {
       if (apt.staff_id && staffMap.has(apt.staff_id)) {
         apt.staff = staffMap.get(apt.staff_id)
-        console.log('✅ Staff mapped for appointment:', apt.id, apt.staff)
-      } else {
-        console.warn('⚠️ Staff not found for appointment:', apt.id, 'staff_id:', apt.staff_id)
       }
     })
 
