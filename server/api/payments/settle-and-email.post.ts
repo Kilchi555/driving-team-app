@@ -185,12 +185,15 @@ export default defineEventHandler(async (event) => {
     // 6. Generate and upload PDF to Supabase Storage
     let pdfUrl: string | undefined
 
-    if (invoiceNumber && appointmentIds.length > 0) {
+    // Always generate PDF if we have payments (not just when invoiceNumber is provided)
+    if (appointmentIds.length > 0) {
       try {
         console.log('🔄 Generating PDF receipt...')
         
         // Get payment IDs for PDF generation
         const paymentIds = payments.map(p => p.id).filter(Boolean)
+        
+        console.log('📝 Payment IDs for PDF:', paymentIds)
         
         if (paymentIds.length > 0) {
           const pdfResult = await $fetch('/api/payments/receipt', {
@@ -200,13 +203,19 @@ export default defineEventHandler(async (event) => {
             }
           })
 
+          console.log('📊 PDF Result:', JSON.stringify(pdfResult))
+          
           if (pdfResult?.pdfUrl) {
             console.log('✅ PDF generated:', pdfResult.pdfUrl)
             pdfUrl = pdfResult.pdfUrl
+          } else if (pdfResult?.success === false) {
+            console.warn('⚠️ PDF generation returned false:', pdfResult.error)
           }
+        } else {
+          console.warn('⚠️ No payment IDs found for PDF generation')
         }
       } catch (pdfError) {
-        console.warn('⚠️ Failed to generate PDF:', pdfError)
+        console.warn('⚠️ Failed to generate PDF:', JSON.stringify(pdfError))
         // Continue without PDF - don't fail the entire process
       }
     }
