@@ -183,29 +183,6 @@
           </div>
         </div>
 
-        <!-- Rolle & Berechtigungen -->
-        <div class="bg-white shadow rounded-lg overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Rolle & Berechtigungen</h3>
-          </div>
-          <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Aktuelle Rolle</dt>
-                <dd class="mt-1 text-sm text-gray-900">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="roleClass">
-                    {{ roleLabel }}
-                  </span>
-                </dd>
-              </div>
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Zugriff auf</dt>
-                <dd class="mt-1 text-sm text-gray-900">{{ rolePermissions }}</dd>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Aktivitäten & Termine -->
         <div class="bg-white shadow rounded-lg overflow-hidden">
           <div class="px-6 py-4 border-b border-gray-200">
