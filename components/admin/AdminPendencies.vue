@@ -347,8 +347,17 @@ const toggleStatus = async (pendency: Pendency) => {
 }
 
 const savePendency = async () => {
-  if (!currentUser.value?.tenant_id || !formData.value.title || !formData.value.due_date) {
-    alert('Bitte füllen Sie alle erforderlichen Felder aus')
+  // Validate required fields
+  if (!currentUser.value?.tenant_id) {
+    alert('Tenant ID fehlt')
+    return
+  }
+  if (!formData.value.title || formData.value.title.trim() === '') {
+    alert('Bitte geben Sie einen Titel ein')
+    return
+  }
+  if (!formData.value.due_date) {
+    alert('Bitte wählen Sie ein Fälligkeitsdatum')
     return
   }
 
@@ -383,20 +392,28 @@ const deletePendencyConfirm = async () => {
   }
 }
 
-const closeModals = () => {
-  showNewModal.value = false
-  showEditModal.value = false
-  editingPendency.value = null
+const resetForm = () => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(10, 0, 0, 0)
+  
   formData.value = {
     title: '',
     description: '',
     status: 'pendent',
     priority: 'mittel',
     category: 'sonstiges',
-    due_date: new Date().toISOString(),
+    due_date: tomorrow.toISOString(),
     recurrence_type: 'keine',
     notes: ''
   }
+}
+
+const closeModals = () => {
+  showNewModal.value = false
+  showEditModal.value = false
+  editingPendency.value = null
+  resetForm()
 }
 
 // Watch for new modal
