@@ -228,67 +228,85 @@
                       </div>
                     </div>
                     
-                    <!-- Kategorien mit individuellen Pickup-Einstellungen -->
-                    <div v-if="getStaffCategories(staff).length > 0" class="space-y-3">
-                      <label class="text-xs sm:text-sm font-medium text-gray-700">Kategorien & Pickup-Einstellungen:</label>
-                      
-                      <div class="space-y-2">
+                    <!-- Kategorien mit Schiebereglern -->
+                    <div v-if="getStaffCategories(staff).length > 0" class="mt-3">
+                      <label class="text-xs font-medium text-gray-700 block mb-2">Kategorien:</label>
+                      <div class="flex flex-wrap gap-2">
                         <div 
                           v-for="categoryCode in getStaffCategories(staff)" 
                           :key="categoryCode"
-                          class="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                          class="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-full hover:border-gray-300 transition-colors"
                         >
-                          <!-- Kategorie aktivieren -->
-                          <div class="flex items-center justify-between mb-2">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                :value="categoryCode"
-                                v-model="location.available_categories"
-                                @change="updateLocationCategories(location)"
-                                class="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                              >
-                              <span class="text-sm font-medium text-gray-900">
-                                {{ categoryCode }}
-                              </span>
-                            </label>
-                          </div>
-                          
-                          <!-- Pickup-Einstellungen pro Kategorie (nur wenn Kategorie aktiv und Pickup-Modus aktiv) -->
-                          <div 
-                            v-if="location.available_categories?.includes(categoryCode) && staff.availability_mode !== 'standard'" 
-                            class="ml-6 space-y-2 pt-2 border-t border-gray-200"
+                          <span class="text-xs font-medium text-gray-700">{{ categoryCode }}</span>
+                          <!-- Toggle Switch -->
+                          <button
+                            @click="location.available_categories?.includes(categoryCode) ? location.available_categories.splice(location.available_categories.indexOf(categoryCode), 1) : (location.available_categories = [...(location.available_categories || []), categoryCode]); updateLocationCategories(location)"
+                            :class="[
+                              'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
+                              location.available_categories?.includes(categoryCode) 
+                                ? 'bg-green-600' 
+                                : 'bg-gray-300'
+                            ]"
                           >
-                            <label class="flex items-center gap-2 cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                :checked="getLocationCategoryPickup(location, categoryCode)"
-                                @change="toggleLocationCategoryPickup(location, categoryCode, $event)"
-                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              >
-                              <span class="text-xs text-gray-700">Pickup für diese Kategorie</span>
-                            </label>
-                            
-                            <div v-if="getLocationCategoryPickup(location, categoryCode)" class="ml-6">
-                              <label class="block text-xs text-gray-600 mb-1">Pickup-Radius:</label>
-                              <div class="flex items-center gap-2">
-                                <input 
-                                  type="number" 
-                                  :value="getLocationCategoryPickupRadius(location, categoryCode)"
-                                  @change="updateLocationCategoryPickupRadius(location, categoryCode, ($event.target as HTMLInputElement).value)"
-                                  min="5" 
-                                  max="60" 
-                                  class="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                <span class="text-xs text-gray-600">Min</span>
-                              </div>
-                            </div>
+                            <span
+                              :class="[
+                                'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                                location.available_categories?.includes(categoryCode) 
+                                  ? 'translate-x-4' 
+                                  : 'translate-x-0.5'
+                              ]"
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Pickup-Einstellungen (nur wenn Pickup-Modus aktiv) -->
+                      <div 
+                        v-if="staff.availability_mode !== 'standard' && location.available_categories?.length > 0"
+                        class="mt-3 pt-3 border-t border-gray-200"
+                      >
+                        <label class="text-xs font-medium text-gray-700 block mb-2">Pickup-Einstellungen:</label>
+                        <div class="space-y-2">
+                          <div 
+                            v-for="categoryCode in location.available_categories" 
+                            :key="`pickup-${categoryCode}`"
+                            class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg"
+                          >
+                            <span class="text-xs font-medium text-gray-700 w-8">{{ categoryCode }}</span>
+                            <!-- Pickup Toggle -->
+                            <button
+                              @click="toggleLocationCategoryPickup(location, categoryCode, { target: { checked: !getLocationCategoryPickup(location, categoryCode) } } as any)"
+                              :class="[
+                                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
+                                getLocationCategoryPickup(location, categoryCode) 
+                                  ? 'bg-blue-600' 
+                                  : 'bg-gray-300'
+                              ]"
+                            >
+                              <span
+                                :class="[
+                                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                                  getLocationCategoryPickup(location, categoryCode) 
+                                    ? 'translate-x-4' 
+                                    : 'translate-x-0.5'
+                                ]"
+                              />
+                            </button>
+                            <!-- Radius Input (nur wenn Pickup aktiv) -->
+                            <input 
+                              v-if="getLocationCategoryPickup(location, categoryCode)"
+                              type="number" 
+                              :value="getLocationCategoryPickupRadius(location, categoryCode)"
+                              @change="updateLocationCategoryPickupRadius(location, categoryCode, ($event.target as HTMLInputElement).value)"
+                              min="5" 
+                              max="60" 
+                              class="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Min"
+                            >
+                            <span v-if="getLocationCategoryPickup(location, categoryCode)" class="text-xs text-gray-600">Min</span>
                           </div>
                         </div>
                       </div>
-                    </div>
-                    <div v-else class="text-xs text-gray-500 italic">
-                      Keine Kategorien zugewiesen
                     </div>
                     
                     <!-- Zeitfenster für diesen Standort -->
