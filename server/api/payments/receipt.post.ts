@@ -102,6 +102,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   let appointment: any = null
   let user: any = null
   let products: ProductInfo[] = []
+  let eventTypeName = ''
 
   if (payment.appointment_id) {
     const { data: appointmentData } = await supabase
@@ -133,6 +134,24 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
 
     if (appointmentData) {
       appointment = appointmentData
+      
+      // Load event type name separately if event_type_code exists
+      if (appointmentData.event_type_code) {
+        try {
+          const { data: eventTypeData } = await supabase
+            .from('event_types')
+            .select('name')
+            .eq('code', appointmentData.event_type_code)
+            .eq('tenant_id', payment.tenant_id)
+            .maybeSingle()
+          
+          if (eventTypeData?.name) {
+            eventTypeName = eventTypeData.name
+          }
+        } catch (err) {
+          console.warn('⚠️ Could not load event type name:', err)
+        }
+      }
     }
   }
 
@@ -220,7 +239,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     appointmentInfo: {
       eventTypeLabel: eventTypeTranslated,
       statusLabel: statusTranslated,
-      eventTypeCode: appointment?.event_type_code || '',
+      eventTypeCode: eventTypeName || appointment?.event_type_code || '',
       staffFirstName: appointment?.staff?.first_name || '',
       categoryCode: appointment?.type || '',
       date: appointmentDate,
