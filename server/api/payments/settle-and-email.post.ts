@@ -2,7 +2,7 @@
 // Mark appointments as settled ("verrechnet") and send confirmation email to customer
 
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { sendEmail } from '~/server/utils/email'
+import { getHeader } from 'h3'
 
 interface SettleEmailData {
   customerName: string
@@ -246,14 +246,48 @@ export default defineEventHandler(async (event) => {
         emailsToSend.push(emailData)
       }
 
-      // Send all emails
+      // Send all emails via Supabase Edge Function (same as staff invitations)
       let successCount = 0
       let failureCount = 0
 
+      // Create service role client for edge function invocation
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      
+      if (!serviceRoleKey) {
+        console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not configured for edge function')
+        // Continue without email sending
+        return {
+          success: true,
+          message: `${appointmentIds.length} appointments marked as settled`,
+          emailsSent: 0,
+          emailsFailed: appointmentIds.length,
+          emailError: 'Service not configured'
+        }
+      }
+      
+      const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+
       for (const emailData of emailsToSend) {
         try {
-          await sendEmail(emailData)
-          successCount++
+          const { data: emailResult, error: emailError } = await serviceSupabase.functions.invoke('send-email', {
+            body: {
+              to: emailData.to,
+              subject: emailData.subject,
+              html: emailData.html,
+              body: emailData.html.replace(/<[^>]*>/g, '') // Strip HTML tags for plain text
+            },
+            method: 'POST'
+          })
+
+          if (emailError) {
+            console.error('❌ Failed to send email to', emailData.to, ':', emailError)
+            failureCount++
+          } else {
+            console.log('✅ Email sent to', emailData.to, ':', emailResult)
+            successCount++
+          }
         } catch (emailError) {
           console.error('❌ Failed to send email to', emailData.to, ':', emailError)
           failureCount++
