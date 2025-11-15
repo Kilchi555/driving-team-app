@@ -225,7 +225,7 @@
       <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
         <div class="p-0 sm:p-0">
           <div class="overflow-x-auto">
-            <StaffTab :current-user="{ id: userDetails?.id }" :tenant-settings="{}" />
+            <StaffTab :current-user="{ id: userDetails?.id, role: 'admin' }" :tenant-settings="{}" />
           </div>
         </div>
       </div>
