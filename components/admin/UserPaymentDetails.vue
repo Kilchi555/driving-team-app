@@ -1784,6 +1784,9 @@ const loadUserAppointments = async () => {
         is_paid: isPaid,
         status: appointment.status || 'pending',
         type: appointment.type || 'driving_lesson',
+        event_type_code: appointment.event_type_code,
+        staff_id: appointment.staff_id,
+        staff: appointment.staff,
         payment_status: payment?.payment_status || 'pending', // ✅ KRITISCH: payment_status hinzufügen!
         payment_method: payment?.payment_method,
         payment_method_name: payment?.payment_method ? getPaymentMethodLabel(payment.payment_method) : '',
