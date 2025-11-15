@@ -30,6 +30,9 @@ interface CustomerInfo {
 interface AppointmentInfo {
   eventTypeLabel: string
   statusLabel: string
+  eventTypeCode: string
+  staffFirstName: string
+  categoryCode: string
   date: string
   time: string
   duration: number
@@ -111,7 +114,11 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
         cancellation_charge_percentage,
         cancellation_credit_hours,
         cancellation_policy_applied,
-        user_id
+        user_id,
+        staff:users!appointments_staff_id_fkey (
+          first_name,
+          last_name
+        )
       `)
       .eq('id', payment.appointment_id)
       .maybeSingle()
@@ -205,6 +212,9 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     appointmentInfo: {
       eventTypeLabel: eventTypeTranslated,
       statusLabel: statusTranslated,
+      eventTypeCode: appointment?.event_type_code || '',
+      staffFirstName: appointment?.staff?.first_name || '',
+      categoryCode: appointment?.type || '',
       date: appointmentDate,
       time: appointmentTime,
       duration: appointmentDuration,
@@ -267,12 +277,12 @@ function renderSingleReceipt(context: PaymentContext, tenant: any, assets: Tenan
         <div class="section-title">${translateFn('receipt.costBreakdown')}</div>
         <div class="row">
           <div class="label">
-            ${appointmentInfo.eventTypeLabel} - ${appointmentInfo.statusLabel} - ${appointmentInfo.date} ${appointmentInfo.time} - ${appointmentInfo.duration} ${translateFn('receipt.minutes')}
+            ${appointmentInfo.eventTypeLabel} - ${appointmentInfo.date} ${appointmentInfo.time} - ${appointmentInfo.duration} ${translateFn('receipt.minutes')}
             ${appointmentInfo.isCancelled ? `<br/><span style="font-size:12px; color:#6b7280;">${translateFn('receipt.cancelled')}: ${appointmentInfo.cancellationDate} | ${translateFn('receipt.reason')}: ${appointmentInfo.cancellationReason} | ${translateFn('receipt.charged')}: ${appointmentInfo.isCharged ? translateFn('receipt.yes') : translateFn('receipt.no')}</span>` : ''}
           </div>
           <div class="value">CHF ${amounts.lesson.toFixed(2)}</div>
         </div>
-        <div class="row"><div class="label">${translateFn('receipt.adminFee')}</div><div class="value">CHF ${amounts.adminFee.toFixed(2)}</div></div>
+        ${amounts.adminFee > 0 ? `<div class="row"><div class="label">${translateFn('receipt.adminFee')}</div><div class="value">CHF ${amounts.adminFee.toFixed(2)}</div></div>` : ''}
         ${products && products.length > 0 ? products.map(p => `
           <div class="row">
             <div class="label">${p.name} × ${p.quantity}</div>
@@ -330,7 +340,6 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
   const lessonsTable = sorted
     .map(ctx => {
       const meta: string[] = []
-      if (ctx.appointmentInfo.statusLabel) meta.push(ctx.appointmentInfo.statusLabel)
       if (ctx.appointmentInfo.isCancelled) {
         meta.push(`${translateFn('receipt.cancelled')}: ${ctx.appointmentInfo.cancellationDate}`)
       }
@@ -345,11 +354,16 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
         meta.push(`${translateFn('receipt.discount')}: - CHF ${ctx.amounts.discount.toFixed(2)}`)
       }
 
+      const lessonsDetails = [
+        ctx.appointmentInfo.eventTypeCode,
+        ctx.appointmentInfo.staffFirstName,
+        ctx.appointmentInfo.categoryCode
+      ].filter(Boolean).join(' - ')
+
       return `
         <tr>
           <td>
-            <div class="lesson-title">${ctx.appointmentTitle}</div>
-            <div class="lesson-meta">${ctx.appointmentInfo.eventTypeLabel}</div>
+            <div class="lesson-title">${lessonsDetails}</div>
             ${meta.length > 0 ? `<div class="lesson-meta">${meta.join('<br/>')}</div>` : ''}
           </td>
           <td>${ctx.appointmentInfo.date} ${ctx.appointmentInfo.time}</td>
@@ -392,9 +406,9 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
       <div class="section">
         <div class="section-title">${translateFn('receipt.summary')}</div>
         <div class="row"><div class="label">${translateFn('receipt.totalLessons')}</div><div class="value">CHF ${summary.lesson.toFixed(2)}</div></div>
-        <div class="row"><div class="label">${translateFn('receipt.totalAdminFees')}</div><div class="value">CHF ${summary.adminFee.toFixed(2)}</div></div>
-        <div class="row"><div class="label">${translateFn('receipt.totalProducts')}</div><div class="value">CHF ${summary.products.toFixed(2)}</div></div>
-        <div class="row"><div class="label">${translateFn('receipt.totalDiscounts')}</div><div class="value">- CHF ${summary.discount.toFixed(2)}</div></div>
+        ${summary.adminFee > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalAdminFees')}</div><div class="value">CHF ${summary.adminFee.toFixed(2)}</div></div>` : ''}
+        ${summary.products > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalProducts')}</div><div class="value">CHF ${summary.products.toFixed(2)}</div></div>` : ''}
+        ${summary.discount > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalDiscounts')}</div><div class="value">- CHF ${summary.discount.toFixed(2)}</div></div>` : ''}
         <div class="row" style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb;">
           <div class="label">${translateFn('receipt.totalAmount')}</div>
           <div class="amount">CHF ${summary.total.toFixed(2)}</div>
