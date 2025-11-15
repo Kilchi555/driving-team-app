@@ -632,12 +632,43 @@ export default defineEventHandler(async (event) => {
       
       console.log('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
       
-      setHeader(event, 'Content-Type', 'application/pdf')
+      // Upload PDF to Supabase Storage
       const filename = payments.length === 1 
-        ? `Quittung_${payments[0].id}.pdf`
+        ? `Quittung_${payments[0].id}_${new Date().toISOString().split('T')[0]}.pdf`
         : `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
-      setHeader(event, 'Content-Disposition', `attachment; filename="${filename}"`)
-      return send(event, pdfBuffer)
+      
+      const filepath = `receipts/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${filename}`
+      
+      console.log('📤 Uploading PDF to Supabase Storage:', filepath)
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(filepath, pdfBuffer, {
+          contentType: 'application/pdf',
+          upsert: true
+        })
+      
+      if (uploadError) {
+        console.error('❌ PDF upload to storage failed:', uploadError)
+        throw new Error(`PDF upload failed: ${uploadError.message}`)
+      }
+      
+      console.log('✅ PDF uploaded successfully:', uploadData)
+      
+      // Get public URL for the PDF
+      const { data: publicData } = supabase.storage
+        .from('receipts')
+        .getPublicUrl(filepath)
+      
+      const pdfUrl = publicData?.publicUrl
+      console.log('📄 PDF public URL:', pdfUrl)
+      
+      // Return success with URL for email sending
+      return {
+        success: true,
+        pdfUrl,
+        filename
+      }
     } catch (pdfError: any) {
       console.error('❌ PDF generation error:', pdfError)
       if (browser) {
