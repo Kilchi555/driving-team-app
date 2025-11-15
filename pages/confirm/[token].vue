@@ -259,12 +259,32 @@ const loadAppointment = async () => {
       totalAmountRappen = 8500
     }
 
+    // Load event type name if event_type_code exists
+    let eventTypeName = appointmentData.event_type_code
+    if (appointmentData.event_type_code) {
+      try {
+        const { data: eventTypeData } = await supabase
+          .from('event_types')
+          .select('name')
+          .eq('code', appointmentData.event_type_code)
+          .eq('tenant_id', appointmentData.tenant_id)
+          .maybeSingle()
+        
+        if (eventTypeData?.name) {
+          eventTypeName = eventTypeData.name
+        }
+      } catch (err) {
+        console.warn('⚠️ Could not load event type name:', err)
+      }
+    }
+
     appointment.value = {
       ...appointmentData,
       staff_name: appointmentData.staff 
         ? `${appointmentData.staff.first_name} ${appointmentData.staff.last_name}`
         : null,
-      total_amount_rappen: totalAmountRappen
+      total_amount_rappen: totalAmountRappen,
+      event_type_name: eventTypeName
     }
 
     // Load tenant payment settings
@@ -548,7 +568,7 @@ const confirmAppointment = async () => {
           scheduled_authorization_date: scheduledAuthorizationDate,
           automatic_payment_processed: false,
           currency: 'CHF',
-          description: `${appointment.value.event_type_code || 'Termin'} - Mit ${appointmentDetails.staff_first_name || 'Fahrlehrer'} - Kategorie ${appointment.value.type || 'Offen'}`,
+          description: `${(appointment.value as any).event_type_name || appointment.value.event_type_code || 'Termin'} - Mit ${appointmentDetails.staff_first_name || 'Fahrlehrer'} - Kategorie ${appointment.value.type || 'Offen'}`,
           metadata: {
             confirmation_token: appointment.value.confirmation_token,
             confirmed_at: new Date().toISOString(),
@@ -715,7 +735,7 @@ const processImmediatePaymentWithTokenization = async () => {
         currency: 'CHF',
         customerEmail: (appointment.value.users as any)?.email || '',
         customerName: `${(appointment.value.users as any)?.first_name || ''} ${(appointment.value.users as any)?.last_name || ''}`.trim(),
-        description: `${appointment.value.event_type_code || 'Termin'} - Mit ${appointmentDetails.staff_first_name || 'Fahrlehrer'} - Kategorie ${appointment.value.type || 'Offen'}`,
+        description: `${(appointment.value as any).event_type_name || appointment.value.event_type_code || 'Termin'} - Mit ${appointmentDetails.staff_first_name || 'Fahrlehrer'} - Kategorie ${appointment.value.type || 'Offen'}`,
         successUrl: `${window.location.origin}/confirm/${token}?payment=success`,
         failedUrl: `${window.location.origin}/confirm/${token}?payment=failed`,
         // Für pseudonyme Customer-ID
