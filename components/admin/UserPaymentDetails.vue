@@ -2884,8 +2884,77 @@ const sendDirectEmail = async () => {
   try {
     console.log('📧 Sending invoice via direct email...')
     
-    // Verwende den Settlement Email Endpoint direkt
-    await updateAppointmentsToInvoiced(selectedAppointments.value)
+    // Sammle alle ausgewählten Termine
+    const selectedAppointmentData = selectedAppointments.value.map(appointmentId => {
+      const appointment = getAppointmentById(appointmentId)
+      if (!appointment) return null
+      
+      return {
+        id: appointment.id,
+        title: appointment.title,
+        start_time: appointment.start_time,
+        duration_minutes: appointment.duration_minutes,
+        amount: calculateAppointmentAmount(appointment)
+      }
+    }).filter((apt): apt is NonNullable<typeof apt> => apt !== null)
+    
+    if (selectedAppointmentData.length === 0) {
+      throw new Error('Keine gültigen Termine gefunden')
+    }
+    
+    // Rechnungsdaten für Datenbank vorbereiten
+    const invoiceFormData = {
+      user_id: userDetails.value?.id || '',
+      staff_id: undefined,
+      appointment_id: undefined,
+      billing_type: (companyBillingAddress.value ? 'company' : 'individual') as 'company' | 'individual',
+      billing_company_name: companyBillingAddress.value?.company_name || undefined,
+      billing_contact_person: companyBillingAddress.value?.contact_person || undefined,
+      billing_email: invoiceEmail.value || companyBillingAddress.value?.email || userDetails.value?.email || '',
+      billing_street: companyBillingAddress.value?.street || undefined,
+      billing_street_number: companyBillingAddress.value?.street_number || undefined,
+      billing_zip: companyBillingAddress.value?.zip || undefined,
+      billing_city: companyBillingAddress.value?.city || undefined,
+      billing_country: 'CH',
+      billing_vat_number: companyBillingAddress.value?.vat_number || undefined,
+      subtotal_rappen: selectedAppointmentsTotal.value,
+      vat_rate: 7.70,
+      discount_amount_rappen: 0,
+      notes: invoiceMessage.value || undefined,
+      internal_notes: `Direkt verrechnet aus UserPaymentDetails für ${selectedAppointments.value.length} Termine`
+    }
+    
+    // Rechnungspositionen vorbereiten
+    const invoiceItems = selectedAppointmentData.map((appointment, index) => ({
+      product_name: appointment.title || 'Fahrstunde',
+      product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
+      appointment_id: appointment.id,
+      appointment_title: appointment.title,
+      appointment_date: appointment.start_time,
+      appointment_duration_minutes: appointment.duration_minutes,
+      quantity: 1,
+      unit_price_rappen: appointment.amount,
+      vat_rate: 7.70,
+      sort_order: index,
+      notes: `Termin: ${appointment.title}`
+    }))
+    
+    console.log('📋 Invoice data prepared for database:', { invoiceFormData, invoiceItems })
+    
+    // Rechnung in Datenbank erstellen
+    const { createInvoice } = useInvoices()
+    const result = await createInvoice(invoiceFormData, invoiceItems)
+    
+    if (result.error) {
+      throw new Error(result.error)
+    }
+    
+    console.log('✅ Invoice created in database:', result.invoice_number)
+    
+    // Alle ausgewählten Termine auf "verrechnet" setzen und Settlement Email versenden
+    if (result.data) {
+      await updateAppointmentsToInvoiced(selectedAppointments.value, result.data.id)
+    }
     
     const totalAmount = formatCurrency(selectedAppointmentsTotal.value)
     const appointmentCount = selectedAppointments.value.length
@@ -2893,7 +2962,7 @@ const sendDirectEmail = async () => {
     
     showSuccessToast(
       '✅ E-Mail erfolgreich versendet',
-      `Anzahl Termine: ${appointmentCount}\nGesamtbetrag: ${totalAmount}\n\nDie Rechnung wurde direkt an ${email} gesendet.`
+      `Rechnungsnummer: ${result.invoice_number}\nAnzahl Termine: ${appointmentCount}\nGesamtbetrag: ${totalAmount}\n\nDie Rechnung wurde in der Datenbank gespeichert und per E-Mail an ${email} versendet.`
     )
     
     // Modal schließen und Auswahl aufheben
