@@ -182,6 +182,50 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ Appointments marked as verrechnet:', appointmentIds)
 
+    // 5b. Void Wallee transactions and update payment method to invoice
+    console.log('💳 Voiding Wallee transactions and updating payment method...')
+    for (const payment of payments) {
+      try {
+        if (payment.wallee_transaction_id) {
+          console.log(`🔄 Processing Wallee transaction ${payment.wallee_transaction_id}...`)
+          
+          // Void the transaction in Wallee
+          const walleeResponse = await $fetch(`https://app-wallee.com/api/transaction/void`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json;charset=utf-8',
+              'Authorization': `Basic ${btoa(`${process.env.WALLEE_USER_ID}:${process.env.WALLEE_API_SECRET}`)}`
+            },
+            body: {
+              spaceId: process.env.WALLEE_SPACE_ID,
+              id: payment.wallee_transaction_id
+            }
+          })
+          
+          console.log(`✅ Wallee transaction ${payment.wallee_transaction_id} voided`)
+        }
+        
+        // Update payment to invoice method and mark as invoiced
+        const { error: paymentUpdateError } = await supabase
+          .from('payments')
+          .update({
+            payment_method: 'invoice',
+            payment_status: 'invoiced',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', payment.id)
+        
+        if (paymentUpdateError) {
+          console.error(`❌ Error updating payment ${payment.id}:`, paymentUpdateError)
+        } else {
+          console.log(`✅ Payment ${payment.id} updated: method='invoice', status='invoiced'`)
+        }
+      } catch (err) {
+        console.error(`❌ Error processing Wallee transaction ${payment.wallee_transaction_id}:`, err)
+        // Continue processing other payments
+      }
+    }
+
     // 6. Generate and upload PDF to Supabase Storage
     let pdfUrl: string | undefined
 
