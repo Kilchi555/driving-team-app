@@ -332,10 +332,10 @@
 
         <!-- Rechnungsadresse Form - nur wenn Formular angezeigt werden soll -->
         <div v-if="shouldShowBillingAddressForm" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="flex justify-between items-center mb-3">
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 gap-2">
               <h5 class="text-sm font-medium text-gray-700">Rechnungsadresse</h5>
               
-              <!-- Toggle: Gleich wie Kundenadresse -->
+              <!-- Toggle: Gleich wie Kundenadresse (mobil unterhalb, desktop rechts) -->
               <div class="flex items-center space-x-2">
                 <button
                   type="button"
