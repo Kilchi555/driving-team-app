@@ -1156,7 +1156,7 @@ v-if="(appointment.discount_amount || 0) > 0"
                           <!-- Dropdown Menu -->
                           <div
                             v-if="openInvoiceMenu === appointment.id"
-                            class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                            class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999]"
                             @click.stop
                           >
                             <button
