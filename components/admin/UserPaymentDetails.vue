@@ -1153,49 +1153,56 @@ v-if="(appointment.discount_amount || 0) > 0"
                             Optionen
                           </button>
                           
-                          <!-- Dropdown Menu -->
-                          <div
-                            v-if="openInvoiceMenu === appointment.id"
-                            class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999]"
-                            @click.stop
-                          >
-                            <button
-                              class="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-100 border-b border-gray-200 flex items-center"
-                              @click="downloadInvoice(appointment)"
+                          <!-- Dropdown Menu - Teleported to body to avoid table clipping -->
+                          <Teleport v-if="openInvoiceMenu === appointment.id" to="body">
+                            <div
+                              class="fixed bg-white border border-gray-200 rounded-lg shadow-xl z-[9999] w-48"
+                              :style="{
+                                top: $event?.target?.getBoundingClientRect?.()?.bottom + 'px' || 'auto',
+                                left: 'auto',
+                                right: '20px'
+                              }"
+                              @click.stop
+                              @click="openInvoiceMenu = null"
                             >
-                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                              </svg>
-                              Herunterladen
-                            </button>
-                            <button
-                              class="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-100 border-b border-gray-200 flex items-center"
-                              @click="resendInvoice(appointment)"
-                            >
-                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                              </svg>
-                              Erneut senden
-                            </button>
-                            <button
-                              class="w-full text-left px-4 py-2 text-xs text-blue-700 hover:bg-blue-50 border-b border-gray-200 flex items-center"
-                              @click="switchToCash(appointment)"
-                            >
-                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                              </svg>
-                              Zu Bar bezahlt
-                            </button>
-                            <button
-                              class="w-full text-left px-4 py-2 text-xs text-green-700 hover:bg-green-50 border-b border-gray-200 flex items-center"
-                              @click="switchToOnlinePayment(appointment)"
-                            >
-                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h10m4 0a1 1 0 11-2 0 1 1 0 012 0z"/>
-                              </svg>
-                              Zu Online-Zahlung
-                            </button>
-                          </div>
+                              <button
+                                class="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-100 border-b border-gray-200 flex items-center"
+                                @click="downloadInvoice(appointment)"
+                              >
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                                Herunterladen
+                              </button>
+                              <button
+                                class="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-100 border-b border-gray-200 flex items-center"
+                                @click="resendInvoice(appointment)"
+                              >
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                Erneut senden
+                              </button>
+                              <button
+                                class="w-full text-left px-4 py-2 text-xs text-blue-700 hover:bg-blue-50 border-b border-gray-200 flex items-center"
+                                @click="switchToCash(appointment)"
+                              >
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Zu Bar bezahlt
+                              </button>
+                              <button
+                                class="w-full text-left px-4 py-2 text-xs text-green-700 hover:bg-green-50 border-b border-gray-200 flex items-center"
+                                @click="switchToOnlinePayment(appointment)"
+                              >
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h10m4 0a1 1 0 11-2 0 1 1 0 012 0z"/>
+                                </svg>
+                                Zu Online-Zahlung
+                              </button>
+                            </div>
+                          </Teleport>
                         </div>
                       </template>
                     </div>
