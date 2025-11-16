@@ -762,23 +762,27 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
 
 // ✅ NEU: Watcher für Toggle - füllt Formular mit Kundendaten wenn ON
 watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
-  if (isOn && studentBillingAddress.value) {
-    console.log('✅ Toggle ON - filling form with customer billing address')
-    invoiceData.value = {
-      company_name: studentBillingAddress.value.company_name || '',
-      contact_person: studentBillingAddress.value.contact_person || '',
-      email: studentBillingAddress.value.email || '',
-      phone: studentBillingAddress.value.phone || '',
-      street: studentBillingAddress.value.street || '',
-      street_number: studentBillingAddress.value.street_number || '',
-      zip: studentBillingAddress.value.zip || '',
-      city: studentBillingAddress.value.city || '',
-      country: studentBillingAddress.value.country || 'Schweiz',
-      vat_number: studentBillingAddress.value.vat_number || '',
-      company_register_number: studentBillingAddress.value.company_register_number || '',
-      notes: studentBillingAddress.value.notes || ''
+  if (isOn) {
+    if (studentBillingAddress.value) {
+      console.log('✅ Toggle ON - filling form with customer billing address')
+      invoiceData.value = {
+        company_name: studentBillingAddress.value.company_name || '',
+        contact_person: studentBillingAddress.value.contact_person || '',
+        email: studentBillingAddress.value.email || '',
+        phone: studentBillingAddress.value.phone || '',
+        street: studentBillingAddress.value.street || '',
+        street_number: studentBillingAddress.value.street_number || '',
+        zip: studentBillingAddress.value.zip || '',
+        city: studentBillingAddress.value.city || '',
+        country: studentBillingAddress.value.country || 'Schweiz',
+        vat_number: studentBillingAddress.value.vat_number || '',
+        company_register_number: studentBillingAddress.value.company_register_number || '',
+        notes: studentBillingAddress.value.notes || ''
+      }
+    } else {
+      console.log('⚠️ Toggle ON but no customer billing address found')
     }
-  } else if (!isOn) {
+  } else {
     console.log('✅ Toggle OFF - clearing form')
     invoiceData.value = {
       company_name: '',
