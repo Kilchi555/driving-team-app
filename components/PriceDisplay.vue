@@ -329,11 +329,36 @@
           </div>
         </div>
         
-        <!-- ✅ NEU: Gespeicherte Rechnungsadresse anzeigen -->
+        <!-- ✅ NEU: Gespeicherte Rechnungsadresse anzeigen mit Toggle -->
         <div v-if="shouldShowSavedBillingAddress" class="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-          <div class="flex justify-between items-start mb-2">
-            <h5 class="text-sm font-medium text-gray-700">Gespeicherte Rechnungsadresse</h5>
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <h5 class="text-sm font-medium text-gray-700 mb-2">Rechnungsadresse</h5>
+              
+              <!-- Toggle Switch -->
+              <div class="flex items-center space-x-2">
+                <span class="text-xs sm:text-sm font-medium" :class="useCustomBillingAddressInModal ? 'text-gray-500' : 'text-gray-900'">Gespeichert</span>
+                <button
+                  type="button"
+                  @click="useCustomBillingAddressInModal = !useCustomBillingAddressInModal"
+                  :class="[
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                    useCustomBillingAddressInModal ? 'bg-blue-600' : 'bg-gray-300'
+                  ]"
+                >
+                  <span
+                    :class="[
+                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                      useCustomBillingAddressInModal ? 'translate-x-6' : 'translate-x-1'
+                    ]"
+                  />
+                </button>
+                <span class="text-xs sm:text-sm font-medium" :class="useCustomBillingAddressInModal ? 'text-gray-900' : 'text-gray-500'">Ändern</span>
+              </div>
+            </div>
+            
             <button 
+              v-if="!useCustomBillingAddressInModal"
               @click="startEditingBillingAddress"
               class="text-sm text-blue-600 hover:text-blue-800 font-medium"
             >
@@ -341,34 +366,70 @@
             </button>
           </div>
           
-          <!-- Student Billing Address anzeigen -->
-          <div v-if="studentBillingAddress" class="text-sm text-gray-600 whitespace-pre-line">
-            <div v-if="studentBillingAddress.company_name" class="font-medium">{{ studentBillingAddress.company_name }}</div>
-            <div v-if="studentBillingAddress.contact_person">{{ studentBillingAddress.contact_person }}</div>
-            <div v-if="studentBillingAddress.email">{{ studentBillingAddress.email }}</div>
-            <div v-if="studentBillingAddress.phone">{{ studentBillingAddress.phone }}</div>
-            <div v-if="studentBillingAddress.street && studentBillingAddress.street_number">
-              {{ studentBillingAddress.street }} {{ studentBillingAddress.street_number }}
+          <!-- Gespeicherte Adresse anzeigen wenn Toggle OFF -->
+          <div v-if="!useCustomBillingAddressInModal" class="space-y-3">
+            <!-- Student Billing Address anzeigen -->
+            <div v-if="studentBillingAddress" class="text-sm text-gray-600 whitespace-pre-line">
+              <div v-if="studentBillingAddress.company_name" class="font-medium">{{ studentBillingAddress.company_name }}</div>
+              <div v-if="studentBillingAddress.contact_person">{{ studentBillingAddress.contact_person }}</div>
+              <div v-if="studentBillingAddress.email">{{ studentBillingAddress.email }}</div>
+              <div v-if="studentBillingAddress.phone">{{ studentBillingAddress.phone }}</div>
+              <div v-if="studentBillingAddress.street && studentBillingAddress.street_number">
+                {{ studentBillingAddress.street }} {{ studentBillingAddress.street_number }}
+              </div>
+              <div v-if="studentBillingAddress.zip && studentBillingAddress.city">
+                {{ studentBillingAddress.zip }} {{ studentBillingAddress.city }}
+              </div>
+              <div v-if="studentBillingAddress.country">{{ studentBillingAddress.country }}</div>
             </div>
-            <div v-if="studentBillingAddress.zip && studentBillingAddress.city">
-              {{ studentBillingAddress.zip }} {{ studentBillingAddress.city }}
+            
+            <!-- Fallback: Existing Payment Billing Address -->
+            <div v-else-if="existingPayment?.company_billing_address" class="text-sm text-gray-600">
+              <div v-if="existingPayment.company_billing_address.company_name" class="font-medium">{{ existingPayment.company_billing_address.company_name }}</div>
+              <div v-if="existingPayment.company_billing_address.contact_person">{{ existingPayment.company_billing_address.contact_person }}</div>
+              <div v-if="existingPayment.company_billing_address.email">{{ existingPayment.company_billing_address.email }}</div>
+              <div v-if="existingPayment.company_billing_address.phone">{{ existingPayment.company_billing_address.phone }}</div>
+              <div v-if="existingPayment.company_billing_address.street && existingPayment.company_billing_address.street_number">
+                {{ existingPayment.company_billing_address.street }} {{ existingPayment.company_billing_address.street_number }}
+              </div>
+              <div v-if="existingPayment.company_billing_address.zip && existingPayment.company_billing_address.city">
+                {{ existingPayment.company_billing_address.zip }} {{ existingPayment.company_billing_address.city }}
+              </div>
+              <div v-if="existingPayment.company_billing_address.country">{{ existingPayment.company_billing_address.country }}</div>
             </div>
-            <div v-if="studentBillingAddress.country">{{ studentBillingAddress.country }}</div>
           </div>
           
-          <!-- Fallback: Existing Payment Billing Address -->
-          <div v-else-if="existingPayment?.company_billing_address" class="text-sm text-gray-600">
-            <div v-if="existingPayment.company_billing_address.company_name" class="font-medium">{{ existingPayment.company_billing_address.company_name }}</div>
-            <div v-if="existingPayment.company_billing_address.contact_person">{{ existingPayment.company_billing_address.contact_person }}</div>
-            <div v-if="existingPayment.company_billing_address.email">{{ existingPayment.company_billing_address.email }}</div>
-            <div v-if="existingPayment.company_billing_address.phone">{{ existingPayment.company_billing_address.phone }}</div>
-            <div v-if="existingPayment.company_billing_address.street && existingPayment.company_billing_address.street_number">
-              {{ existingPayment.company_billing_address.street }} {{ existingPayment.company_billing_address.street_number }}
+          <!-- Ändern: Custom Rechnungsadresse Form wenn Toggle ON -->
+          <div v-else class="space-y-3">
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Firmenname (optional)</label>
+              <input
+                v-model="customBillingDataModal.company_name"
+                type="text"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Firmenname"
+              >
             </div>
-            <div v-if="existingPayment.company_billing_address.zip && existingPayment.company_billing_address.city">
-              {{ existingPayment.company_billing_address.zip }} {{ existingPayment.company_billing_address.city }}
+            
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Kontaktperson *</label>
+              <input
+                v-model="customBillingDataModal.contact_person"
+                type="text"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Vorname Nachname"
+              >
             </div>
-            <div v-if="existingPayment.company_billing_address.country">{{ existingPayment.company_billing_address.country }}</div>
+            
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
+              <input
+                v-model="customBillingDataModal.email"
+                type="email"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="email@beispiel.ch"
+              >
+            </div>
           </div>
         </div>
 
@@ -623,6 +684,12 @@ const isLoadingPayment = ref(false)
 const studentBillingAddress = ref<any>(null)
 const isLoadingStudentBilling = ref(false)
 const isEditingBillingAddress = ref(false)
+const useCustomBillingAddressInModal = ref(false)
+const customBillingDataModal = ref({
+  company_name: '',
+  contact_person: '',
+  email: ''
+})
 
 // ✅ NEU: Company Billing Address ID (wird gesetzt, wenn Rechnungsadresse gespeichert wird)
 const savedCompanyBillingAddressId = ref<string | null>(null)
@@ -761,6 +828,15 @@ onMounted(async () => {
 watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId: string) => {
   if (newStudentId && newStudentId !== oldStudentId) {
     console.log('👤 Student changed, loading billing address for:', newStudentId)
+    
+    // Reset Toggle und Custom Data
+    useCustomBillingAddressInModal.value = false
+    customBillingDataModal.value = {
+      company_name: '',
+      contact_person: '',
+      email: ''
+    }
+    
     await loadStudentBillingAddressData(newStudentId)
     
     // ✅ Fallback: Falls keine direkte Student Billing Address gefunden
