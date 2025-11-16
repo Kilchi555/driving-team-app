@@ -1140,8 +1140,7 @@ v-if="(appointment.discount_amount || 0) > 0"
                         <!-- Invoice Actions (for invoiced payments) -->
                         <div v-if="appointment.payment_status === 'invoiced'" class="relative">
                           <button
-                            :disabled="isUpdatingPayment"
-                            class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-purple-700 bg-purple-100 hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50"
+                            class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-purple-700 bg-purple-100 hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                             title="Rechnung Optionen"
                             @click="toggleInvoiceMenu(appointment.id)"
                           >
