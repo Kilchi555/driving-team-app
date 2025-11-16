@@ -393,6 +393,18 @@ const loadAllData = async () => {
 
     // ✅ Verwende das neue useCustomerPayments Composable
     await loadCustomerPayments()
+    
+    // Debug: Log all payments with paid_at field
+    console.log('📋 All customer payments after loading:')
+    customerPayments.value.forEach((p, idx) => {
+      console.log(`Payment ${idx + 1}:`, {
+        id: p.id,
+        payment_status: p.payment_status,
+        paid_at: p.paid_at,
+        created_at: p.created_at,
+        hasPaymentDate: !!p.paid_at
+      })
+    })
 
   } catch (err: any) {
     console.error('❌ Error loading data:', err)

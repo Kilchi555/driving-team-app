@@ -141,7 +141,14 @@ export const useCustomerPayments = () => {
         lesson_price: p.lesson_price_rappen / 100,
         admin_fee: p.admin_fee_rappen / 100,
         total: p.total_amount_rappen / 100,
-        status: p.payment_status
+        status: p.payment_status,
+        paid_at: p.paid_at
+      })))
+      console.log('📋 Full payment details with paid_at:', allPayments.map(p => ({
+        id: p.id,
+        payment_status: p.payment_status,
+        paid_at: p.paid_at,
+        created_at: p.created_at
       })))
       payments.value = allPayments
 

@@ -952,50 +952,51 @@ v-if="(appointment.discount_amount || 0) > 0"
                       </div>
                     </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
+                  <td class="px-6 py-4">
                     <!-- Einheitlicher Badge: payment_status hat Priorität, sonst is_paid -->
-                    <span
-                      v-if="appointment.payment_status"
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                      :class="[
-                        appointment.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
-                        appointment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        appointment.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      ]"
-                    >
-                      <svg 
-                        v-if="appointment.payment_status === 'completed'" 
-                        class="w-3 h-3 mr-1" 
-                        fill="currentColor" 
-                        viewBox="0 0 20 20"
+                    <div class="flex flex-col space-y-1">
+                      <span
+                        v-if="appointment.payment_status"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit"
+                        :class="[
+                          appointment.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
+                          appointment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          appointment.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        ]"
                       >
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                      </svg>
-                      <svg 
-                        v-else-if="appointment.payment_status === 'pending' || appointment.payment_status === 'failed'" 
-                        class="w-3 h-3 mr-1" 
-                        fill="currentColor" 
-                        viewBox="0 0 20 20"
+                        <svg 
+                          v-if="appointment.payment_status === 'completed'" 
+                          class="w-3 h-3 mr-1" 
+                          fill="currentColor" 
+                          viewBox="0 0 20 20"
+                        >
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <svg 
+                          v-else-if="appointment.payment_status === 'pending' || appointment.payment_status === 'failed'" 
+                          class="w-3 h-3 mr-1" 
+                          fill="currentColor" 
+                          viewBox="0 0 20 20"
+                        >
+                          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        {{
+                          appointment.payment_status === 'completed' ? 'Bezahlt' :
+                          appointment.payment_status === 'pending' ? 'Ausstehend' :
+                          appointment.payment_status === 'failed' ? 'Fehlgeschlagen' :
+                          appointment.payment_status
+                        }}
+                      </span>
+                      <!-- Fallback auf is_paid wenn kein payment_status vorhanden -->
+                      <span 
+                        v-else-if="appointment.is_paid" 
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit"
                       >
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                      </svg>
-                      {{
-                        appointment.payment_status === 'completed' ? 'Bezahlt' :
-                        appointment.payment_status === 'pending' ? 'Ausstehend' :
-                        appointment.payment_status === 'failed' ? 'Fehlgeschlagen' :
-                        appointment.payment_status
-                      }}
-                    </span>
-                    <!-- Fallback auf is_paid wenn kein payment_status vorhanden -->
-                    <span 
-                      v-else-if="appointment.is_paid" 
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                    >
-                      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                      </svg>
-                      Bezahlt
+                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        Bezahlt
                     </span>
                     <span 
                       v-else 
@@ -1006,6 +1007,15 @@ v-if="(appointment.discount_amount || 0) > 0"
                       </svg>
                       Offen
                     </span>
+                    
+                    <!-- Payment date/time for completed and invoiced payments -->
+                    <span 
+                      v-if="(appointment.payment_status === 'completed' || appointment.payment_status === 'invoiced') && appointment.paid_at" 
+                      class="text-xs text-gray-600 mt-1 block"
+                    >
+                      am {{ formatPaymentDateTime(appointment.paid_at) }}
+                    </span>
+                    </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div class="flex space-x-2">
@@ -1178,6 +1188,8 @@ interface Appointment {
   payment_method?: string
   payment_method_name?: string
   total_amount?: number
+  paid_at?: string
+  created_at?: string
   deleted_at?: string | null
   // Neue Felder für Produkte und Rabatte
   has_products?: boolean
@@ -1234,6 +1246,8 @@ interface Payment {
   admin_fee_rappen?: number
   products_price_rappen?: number
   discount_amount_rappen?: number
+  paid_at?: string
+  created_at?: string
 }
 
 interface InvoiceData {
@@ -1657,6 +1671,11 @@ const loadUserAppointments = async () => {
       const productsPrice = payment ? (payment.products_price_rappen || 0) / 100 : 0
       const discountAmount = payment ? (payment.discount_amount_rappen || 0) / 100 : 0
       
+      // Debug: Log paid_at for each payment
+      if (payment) {
+        console.log(`📅 Payment ${payment.id} - Status: ${payment.payment_status}, paid_at: ${payment.paid_at}`)
+      }
+      
       // Bestimme ob Produkte oder Rabatte vorhanden sind
       const hasProducts = productsPrice > 0
       const hasDiscounts = discountAmount > 0
@@ -1792,6 +1811,8 @@ const loadUserAppointments = async () => {
         payment_method: payment?.payment_method,
         payment_method_name: payment?.payment_method ? getPaymentMethodLabel(payment.payment_method) : '',
         total_amount: payment ? (payment.total_amount_rappen || 0) / 100 : 0,
+        paid_at: payment?.paid_at,
+        created_at: payment?.created_at,
         deleted_at: appointment.deleted_at,
         // Neue Felder für Produkte und Rabatte
         has_products: hasProducts,
@@ -1993,6 +2014,32 @@ const formatTime = (dateString: string | null | undefined): string => {
   } catch (error) {
     console.warn('Error formatting time:', dateString, error)
     return 'Zeit Fehler'
+  }
+}
+
+const formatPaymentDateTime = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-'
+  
+  try {
+    const date = new Date(dateString)
+    
+    const formattedDate = date.toLocaleDateString('de-CH', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Europe/Zurich'
+    })
+    
+    const formattedTime = date.toLocaleTimeString('de-CH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Zurich'
+    })
+    
+    return `${formattedDate}, ${formattedTime} Uhr`
+  } catch (error) {
+    console.error('Error formatting payment date time:', error)
+    return dateString
   }
 }
 
