@@ -1122,6 +1122,20 @@ v-if="(appointment.discount_amount || 0) > 0"
                           </svg>
                           {{ getButtonText(appointment) }}
                         </button>
+                        
+                        <!-- Convert to Online Payment Button (for cash/invoice payments) -->
+                        <button
+                          v-if="appointment.payment_status === 'pending' && appointment.payment_method !== 'wallee'"
+                          :disabled="isConvertingToOnline"
+                          class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                          title="Zu Online-Zahlung konvertieren"
+                          @click="convertAppointmentToOnline(appointment)"
+                        >
+                          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h10m4 0a1 1 0 11-2 0 1 1 0 012 0z"/>
+                          </svg>
+                          Online
+                        </button>
                       </template>
                     </div>
                   </td>
@@ -1337,6 +1351,7 @@ const appointments = ref<Appointment[]>([])
 const companyBillingAddress = ref<CompanyBillingAddress | null>(null)
 const appointmentFilter = ref<'all' | 'paid' | 'unpaid' | 'failed' | 'deleted'>('all')
 const isUpdatingPayment = ref(false)
+const isConvertingToOnline = ref(false)
 const selectedAppointments = ref<string[]>([])
 const showSelectedAppointmentsDetails = ref(false)
 const showInvoiceModal = ref(false)
@@ -2592,6 +2607,43 @@ const restoreAppointment = async (appointment: Appointment) => {
     )
   } finally {
     isUpdatingPayment.value = false
+  }
+}
+
+const convertAppointmentToOnline = async (appointment: Appointment) => {
+  if (!appointment.id || !userDetails.value?.id) return
+  
+  isConvertingToOnline.value = true
+  
+  try {
+    console.log('🔄 Converting payment to online:', appointment.id)
+    
+    const result = await $fetch('/api/payments/convert-to-online', {
+      method: 'POST',
+      body: {
+        paymentId: appointment.id,
+        customerEmail: userDetails.value?.email
+      }
+    })
+    
+    console.log('✅ Payment converted to online:', result)
+    
+    showSuccessToast(
+      '✅ Zahlung konvertiert',
+      `Die Zahlung wurde erfolgreich zu Online-Zahlung konvertiert. Zahlungslink wurde per E-Mail versendet.`
+    )
+    
+    // Reload appointments
+    await loadUserAppointments()
+    
+  } catch (err: any) {
+    console.error('❌ Error converting payment to online:', err)
+    showErrorToast(
+      '❌ Fehler aufgetreten',
+      `Fehler beim Konvertieren der Zahlung: ${err.data?.statusMessage || err.message}`
+    )
+  } finally {
+    isConvertingToOnline.value = false
   }
 }
 
