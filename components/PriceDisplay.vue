@@ -1371,16 +1371,13 @@ const showExistingPaymentInfo = computed(() => {
 const shouldShowBillingAddressForm = computed(() => {
   const isInvoiceSelected = selectedPaymentMethod.value === 'invoice'
   const hasPaymentSelection = showPaymentSelection.value
-  const hasNoSavedAddress = !studentBillingAddress.value && !existingPayment.value?.company_billing_address
-  const isExplicitlyEditing = isEditingBillingAddress.value
   
-  const result = isInvoiceSelected && hasPaymentSelection && (hasNoSavedAddress || isExplicitlyEditing)
+  // Formular soll IMMER angezeigt werden wenn Rechnung ausgewählt ist
+  const result = isInvoiceSelected && hasPaymentSelection
   
   console.log('📝 shouldShowBillingAddressForm check:', {
     isInvoiceSelected,
     hasPaymentSelection,
-    hasNoSavedAddress,
-    isExplicitlyEditing,
     result
   })
   
