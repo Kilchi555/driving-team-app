@@ -958,16 +958,32 @@ const totalUnpaidAmount = computed(() => {
 
 const refreshData = async () => {
   isLoading.value = true
+  error.value = null
   try {
-    await Promise.all([
+    const results = await Promise.allSettled([
       loadAllData(),
       loadPayments(),
       loadPendingConfirmations(),
       checkPaymentMethod()
     ])
-    console.log('✅ Data refreshed')
-  } catch (err) {
-    console.error('❌ Refresh failed:', err)
+    
+    // Check results for errors
+    const failed = results.filter((r, idx) => {
+      if (r.status === 'rejected') {
+        console.error(`❌ Refresh task ${idx} failed:`, r.reason)
+        return true
+      }
+      return false
+    })
+    
+    if (failed.length > 0) {
+      console.warn(`⚠️ ${failed.length} refresh task(s) failed, but continuing`)
+    } else {
+      console.log('✅ Data refreshed successfully')
+    }
+  } catch (err: any) {
+    console.error('❌ Critical refresh error:', err)
+    error.value = `Fehler beim Aktualisieren: ${err.message}`
   } finally {
     isLoading.value = false
   }
@@ -1675,11 +1691,30 @@ const confirmAppointment = async (appointment: any) => {
 
               if (captureResult.success) {
                 console.log('✅ Payment captured immediately')
+                
+                // Cleanup after capture success
+                pendingConfirmations.value = pendingConfirmations.value.filter((a: any) => a.id !== appointment.id)
+                showConfirmationModal.value = false
+                confirmingAppointments.value.delete(appointment.id)
+                
+                // Reload data
+                try {
+                  await refreshData()
+                } catch (refreshErr) {
+                  console.error('⚠️ Failed to refresh data after capture:', refreshErr)
+                }
+                
+                displayToast('success', 'Termin bestätigt!', 'Die Zahlung wurde abgebucht.')
+                return
               } else {
                 console.error('❌ Immediate capture failed:', captureResult.error)
+                throw new Error(captureResult.error || 'Capture failed')
               }
             } catch (captureError: any) {
               console.error('❌ Error capturing payment:', captureError)
+              displayToast('error', 'Fehler', `Zahlung konnte nicht eingezogen werden: ${captureError.message}`)
+              confirmingAppointments.value.delete(appointment.id)
+              return
             }
           }
         } catch (authError: any) {
@@ -1693,9 +1728,14 @@ const confirmAppointment = async (appointment: any) => {
       // Entferne den Termin aus der lokalen Liste der offenen Bestätigungen
       pendingConfirmations.value = pendingConfirmations.value.filter((a: any) => a.id !== appointment.id)
       showConfirmationModal.value = false
+      confirmingAppointments.value.delete(appointment.id)
       
       // Lade Daten neu, um aktuelle Zahlungsinformationen anzuzeigen
-      await refreshData()
+      try {
+        await refreshData()
+      } catch (refreshErr) {
+        console.error('⚠️ Failed to refresh data after confirmation:', refreshErr)
+      }
       
       // Zeige Erfolgs-Benachrichtigung
       const message = shouldProcessImmediately
