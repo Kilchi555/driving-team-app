@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
     // 2. Fetch payment details for calculating amounts
     const { data: payments, error: paymentsError } = await supabase
       .from('payments')
-      .select('appointment_id, total_amount_rappen')
+      .select('id, appointment_id, total_amount_rappen')
       .in('appointment_id', appointmentIds)
 
     if (paymentsError) {
