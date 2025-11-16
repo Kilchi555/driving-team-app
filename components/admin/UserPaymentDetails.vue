@@ -1108,7 +1108,9 @@ v-if="(appointment.discount_amount || 0) > 0"
                       
                       <template v-else>
                         <!-- Dynamischer Button basierend auf Filter und Zahlungsstatus -->
+                        <!-- Hidden for 'verrechnet' (invoiced) - shown via Invoice Actions instead -->
                         <button
+                          v-if="appointment.status !== 'verrechnet'"
                           :disabled="isUpdatingPayment"
                           :class="getButtonClass(appointment)"
                           :title="getButtonTitle(appointment)"
@@ -1124,8 +1126,9 @@ v-if="(appointment.discount_amount || 0) > 0"
                         </button>
                         
                         <!-- Convert to Online Payment Button (for cash/invoice payments) -->
+                        <!-- Hidden for 'verrechnet' - use Invoice Actions instead -->
                         <button
-                          v-if="appointment.payment_status === 'pending' && appointment.payment_method !== 'wallee'"
+                          v-if="appointment.payment_status === 'pending' && appointment.payment_method !== 'wallee' && appointment.status !== 'verrechnet'"
                           :disabled="isConvertingToOnline"
                           class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                           title="Zu Online-Zahlung konvertieren"
@@ -1137,8 +1140,8 @@ v-if="(appointment.discount_amount || 0) > 0"
                           Online
                         </button>
                         
-                        <!-- Invoice Actions (for invoiced payments) -->
-                        <div v-if="appointment.payment_status === 'invoiced'" class="relative">
+                        <!-- Invoice Actions (for invoiced/settled payments) -->
+                        <div v-if="appointment.status === 'verrechnet'" class="relative">
                           <button
                             class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-purple-700 bg-purple-100 hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                             title="Rechnung Optionen"
