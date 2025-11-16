@@ -329,15 +329,15 @@
           </div>
         </div>
         
-        <!-- ✅ NEU: Gespeicherte Rechnungsadresse anzeigen mit Toggle -->
-        <div v-if="shouldShowSavedBillingAddress" class="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+        <!-- ✅ NEU: Rechnungsadresse Toggle - immer wenn Rechnung ausgewählt -->
+        <div v-if="selectedPaymentMethod === 'invoice'" class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
           <div class="flex justify-between items-start mb-3">
             <div>
               <h5 class="text-sm font-medium text-gray-700 mb-2">Rechnungsadresse</h5>
               
               <!-- Toggle Switch -->
               <div class="flex items-center space-x-2">
-                <span class="text-xs sm:text-sm font-medium" :class="useCustomBillingAddressInModal ? 'text-gray-500' : 'text-gray-900'">Gespeichert</span>
+                <span class="text-xs sm:text-sm font-medium" :class="useCustomBillingAddressInModal ? 'text-gray-500' : 'text-gray-900'">Kundenadresse</span>
                 <button
                   type="button"
                   @click="useCustomBillingAddressInModal = !useCustomBillingAddressInModal"
@@ -353,12 +353,12 @@
                     ]"
                   />
                 </button>
-                <span class="text-xs sm:text-sm font-medium" :class="useCustomBillingAddressInModal ? 'text-gray-900' : 'text-gray-500'">Ändern</span>
+                <span class="text-xs sm:text-sm font-medium" :class="useCustomBillingAddressInModal ? 'text-gray-900' : 'text-gray-500'">Rechnungsadresse</span>
               </div>
             </div>
             
             <button 
-              v-if="!useCustomBillingAddressInModal"
+              v-if="!useCustomBillingAddressInModal && (studentBillingAddress || existingPayment?.company_billing_address)"
               @click="startEditingBillingAddress"
               class="text-sm text-blue-600 hover:text-blue-800 font-medium"
             >
@@ -1449,17 +1449,17 @@ const shouldShowSavedBillingAddress = computed(() => {
   
   const result = isInvoiceSelected && (hasStudentBilling || hasExistingPaymentBilling) && isNotEditing
   
-  console.log('🔍 shouldShowSavedBillingAddress check:', {
-    isInvoiceSelected,
-    hasStudentBilling,
-    hasExistingPaymentBilling,
-    isNotEditing,
-    existingPaymentData: existingPayment.value ? {
-      company_billing_address_id: existingPayment.value.company_billing_address_id,
-      hasCompanyBillingAddress: !!existingPayment.value.company_billing_address
-    } : null,
-    result
-  })
+  if (isInvoiceSelected) {
+    console.log('🔍 shouldShowSavedBillingAddress check (INVOICE SELECTED):', {
+      isInvoiceSelected,
+      hasStudentBilling,
+      studentBillingAddress: studentBillingAddress.value,
+      hasExistingPaymentBilling,
+      existingPaymentBilling: existingPayment.value?.company_billing_address,
+      isNotEditing,
+      result
+    })
+  }
   
   return result
 })
