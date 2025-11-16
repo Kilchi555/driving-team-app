@@ -216,11 +216,21 @@
             </div>
             
             <!-- Action Buttons -->
-            <div v-if="payment.payment_status === 'pending' || payment.payment_status === 'authorized'" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-              <button @click="payIndividual(payment)"
+            <div v-if="payment.payment_status === 'pending'" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+              <!-- Jetzt bezahlen Button (for cash/invoice payments) -->
+              <button v-if="payment.payment_method !== 'wallee'"
+                      @click="payIndividual(payment)"
                       :disabled="isProcessingPayment"
                       class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
-                {{ isProcessingPayment ? 'Verarbeitung...' : 'Freiwillig jetzt bezahlen' }}
+                {{ isProcessingPayment ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
+              </button>
+              
+              <!-- Zu Online-Zahlung Button (for cash/invoice payments) -->
+              <button v-if="payment.payment_method !== 'wallee'"
+                      @click="convertToOnline(payment)"
+                      :disabled="isConvertingToOnline"
+                      class="bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
+                {{ isConvertingToOnline ? 'Konvertiert...' : 'Zu Online-Zahlung' }}
               </button>
             </div>
           </div>
@@ -278,6 +288,7 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const isProcessingPayment = ref(false)
 const isProcessingReceipt = ref(false)
+const isConvertingToOnline = ref(false)
 const statusFilter = ref('all')
 const methodFilter = ref('all')
 const showDetailsModal = ref(false)
@@ -443,6 +454,38 @@ const payIndividual = async (payment: any) => {
     alert('Fehler beim Initialisieren der Zahlung. Bitte versuchen Sie es erneut.')
   } finally {
     isProcessingPayment.value = false
+  }
+}
+
+const convertToOnline = async (payment: any) => {
+  if (!payment || !payment.id) return
+  
+  isConvertingToOnline.value = true
+  
+  try {
+    console.log('🔄 Converting payment to online:', payment.id)
+    
+    const result = await $fetch('/api/payments/convert-to-online', {
+      method: 'POST',
+      body: {
+        paymentId: payment.id,
+        customerEmail: currentUser.value?.email
+      }
+    })
+    
+    console.log('✅ Payment converted to online:', result)
+    
+    // Show success message with payment link
+    alert(`✅ Zahlung wurde zu Online-Zahlung konvertiert!\n\nZahlungslink wurde per E-Mail versendet.\n\nLink: ${result.payment.paymentLink}`)
+    
+    // Reload payments
+    await loadAllData()
+    
+  } catch (err: any) {
+    console.error('❌ Error converting payment to online:', err)
+    alert('Fehler beim Konvertieren der Zahlung: ' + (err.data?.statusMessage || err.message))
+  } finally {
+    isConvertingToOnline.value = false
   }
 }
 
