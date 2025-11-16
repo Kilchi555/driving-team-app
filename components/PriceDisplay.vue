@@ -1069,7 +1069,7 @@ const loadBillingAddressFromExistingPayments = async (studentId: string) => {
         email: userData.email || '',
         phone: userData.phone || '',
         street: userData.street || '',
-        street_number: userData.street_number || '',
+        street_number: userData.street_nr || '',
         zip: userData.zip || '',
         city: userData.city || '',
         country: userData.country || 'Schweiz',
