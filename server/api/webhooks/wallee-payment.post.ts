@@ -286,25 +286,43 @@ export default defineEventHandler(async (event) => {
       newStatus: paymentStatus
     })
     
-    // ✅ WICHTIG: Verhindere Downgrade von 'completed' zu 'authorized'
-    // Wenn Payment bereits 'completed' ist und paid_at gesetzt ist, nicht überschreiben
-    const shouldUpdate = payments.some(p => {
-      if (p.payment_status === 'completed' && p.paid_at) {
-        console.log(`⏭️ Skipping update for payment ${p.id}: already completed and paid`)
-        return false
-      }
-      return true
-    })
+    // ✅ WICHTIG: Verhindere Downgrade zu schlechteren Status
+    // Status Priorität: completed > authorized > processing > confirmed > pending > failed/cancelled
+    const statusPriority: Record<string, number> = {
+      'completed': 5,
+      'authorized': 4,
+      'processing': 3,
+      'confirmed': 2,
+      'pending': 1,
+      'failed': 0,
+      'cancelled': 0
+    }
     
-    if (!shouldUpdate) {
-      console.log('✅ All payments already completed, skipping update')
+    const newStatusPriority = statusPriority[paymentStatus] ?? -1
+    const shouldUpdatePayment = (currentStatus: string) => {
+      const currentPriority = statusPriority[currentStatus] ?? -1
+      const shouldUpdate = newStatusPriority >= currentPriority
+      
+      if (!shouldUpdate) {
+        console.log(`⏭️ Ignoring status downgrade: ${currentStatus} (${currentPriority}) -> ${paymentStatus} (${newStatusPriority})`)
+      }
+      return shouldUpdate
+    }
+    
+    // Filter payments that should be updated
+    const paymentsToUpdate = payments.filter(p => shouldUpdatePayment(p.payment_status))
+    
+    if (paymentsToUpdate.length === 0) {
+      console.log('✅ All payments have better or equal status, skipping update')
       return {
         success: true,
-        message: 'Payments already completed',
+        message: 'Payments status not downgraded',
         transactionId,
-        paymentStatus: 'completed'
+        paymentStatus
       }
     }
+    
+    console.log(`📝 Will update ${paymentsToUpdate.length}/${payments.length} payments`)
     
     // Update ALL payments with this transaction ID
     const updateData: any = {
@@ -317,26 +335,31 @@ export default defineEventHandler(async (event) => {
       updateData.paid_at = new Date().toISOString()
     }
     
-    // ✅ Nur Payments updaten die noch nicht completed sind
-    const { error: updateError } = await supabase
-      .from('payments')
-      .update(updateData)
-      .eq('wallee_transaction_id', transactionId)
-      .neq('payment_status', 'completed') // Nicht überschreiben wenn bereits completed
-    
-    if (updateError) {
-      console.error('❌ Error updating payments:', updateError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to update payments'
-      })
+    // Update nur die Payments die aktualisiert werden sollen (keine Downgrades)
+    if (paymentsToUpdate.length > 0) {
+      const paymentIdsToUpdate = paymentsToUpdate.map(p => p.id)
+      
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update(updateData)
+        .in('id', paymentIdsToUpdate)
+      
+      if (updateError) {
+        console.error('❌ Error updating payments:', updateError)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to update payments'
+        })
+      }
+      
+      console.log(`✅ ${paymentsToUpdate.length} payment(s) updated to status: ${paymentStatus}`)
     }
     
-    console.log('✅ All payment statuses updated successfully')
-    
-    // Update ALL appointments if payment completed
-    if (paymentStatus === 'completed') {
-      const appointmentIds = payments
+    // Update appointments ONLY if payments were actually updated AND (completed or authorized)
+    // ✅ NUR 'completed' oder 'authorized' = Zahlung wurde tatsächlich verarbeitet
+    // 'processing' oder 'pending' oder 'confirmed' = Noch nicht fertig, daher Termin noch NICHT bestätigen
+    if ((paymentStatus === 'completed' || paymentStatus === 'authorized') && paymentsToUpdate.length > 0) {
+      const appointmentIds = paymentsToUpdate
         .filter(p => p.appointment_id)
         .map(p => p.appointment_id)
       
@@ -344,7 +367,7 @@ export default defineEventHandler(async (event) => {
         const { error: appointmentError } = await supabase
           .from('appointments')
           .update({
-            status: 'confirmed',
+            status: paymentStatus === 'completed' ? 'confirmed' : 'scheduled',
             updated_at: new Date().toISOString()
           })
           .in('id', appointmentIds)
@@ -352,7 +375,7 @@ export default defineEventHandler(async (event) => {
         if (appointmentError) {
           console.error('❌ Error updating appointments:', appointmentError)
         } else {
-          console.log('✅ All appointments marked as paid:', appointmentIds.length)
+          console.log(`✅ ${appointmentIds.length} appointment(s) updated to status: ${paymentStatus === 'completed' ? 'confirmed' : 'scheduled'}`)
         }
       }
     }

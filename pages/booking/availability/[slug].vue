@@ -42,27 +42,27 @@
           <div class="flex items-center justify-center">
             <div class="flex items-center space-x-2 sm:space-x-4">
               <template v-for="(step, index) in bookingSteps" :key="step.id">
-                <div class="flex items-center">
+              <div class="flex items-center">
                   <div
                     class="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold border"
                     :style="getStepCircleStyle(step.id)"
                   >
                     {{ step.id }}
-                  </div>
+                </div>
                   <span
                     class="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:block"
                     :style="getStepLabelStyle(step.id)"
                   >
                     {{ step.label }}
-                  </span>
-                </div>
+                </span>
+              </div>
                 <div
                   v-if="index < bookingSteps.length - 1"
                   class="w-4 sm:w-8 h-0.5 rounded-full"
                   :style="getStepConnectorStyle(step.id)"
                 ></div>
               </template>
-            </div>
+                </div>
           </div>
         </div>
 
@@ -264,12 +264,12 @@
           </div>
           
           <div class="mt-6 text-center">
-                <button
+            <button 
                   @click="goBackToStep(2)"
-                  class="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
-                >
+              class="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+            >
                   ← Zurück zur Dauer-Auswahl
-                </button>
+            </button>
           </div>
         </div>
 
@@ -1418,7 +1418,7 @@ const selectCategory = async (category: any) => {
       available_staff: allStaffForLocation
     }
   })
-
+  
   await waitForPressEffect()
   currentStep.value = 2
 }

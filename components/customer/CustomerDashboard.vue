@@ -1598,11 +1598,8 @@ const confirmAppointment = async (appointment: any) => {
           : '💳 Kein Token vorhanden → Weiterleitung zu Wallee (Token wird erstellt)'
     })
 
-    // Setze Termin direkt auf 'scheduled' (Bestätigung erfolgt jetzt)
-    await supabase
-      .from('appointments')
-      .update({ status: 'scheduled', updated_at: new Date().toISOString() })
-      .eq('id', appointment.id)
+    // ℹ️ NICHT den Status zu 'scheduled' setzen - das erfolgt erst nach erfolgreicher Zahlung via Webhook
+    // Der Termin bleibt auf 'pending_confirmation' bis der Webhook von Wallee kommt
 
     // ✅ NEU: Wenn Token vorhanden, IMMER mit Token verarbeiten
     if (hasToken && payment?.id) {
