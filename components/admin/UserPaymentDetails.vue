@@ -1792,7 +1792,8 @@ const loadUserAppointments = async () => {
     
     for (const appointment of (appointmentsData || [])) {
       const payment = paymentsData.find(p => p.appointment_id === appointment.id)
-      const isPaid = payment?.payment_status === 'completed'
+      // ✅ isPaid should be true for both 'completed' AND 'invoiced' payments
+      const isPaid = payment?.payment_status === 'completed' || payment?.payment_status === 'invoiced'
       
       // Merge Zahlungsstatus und Methode in Termin-Datensatz
       ;(appointment as any).payment_status = payment?.payment_status || 'pending'
