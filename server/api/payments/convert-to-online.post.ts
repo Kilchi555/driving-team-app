@@ -2,7 +2,6 @@
 // Convert a payment from pending (cash/invoice) back to online payment
 
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { createWalleeTransaction } from '~/server/utils/wallee'
 
 interface ConvertToOnlineRequest {
   paymentId: string
@@ -83,32 +82,48 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 4. Create new Wallee transaction
+    // 4. Create new Wallee transaction via internal API
     const appointment = payment.appointments
-    const newWalleeResult = await createWalleeTransaction(
-      payment.tenant_id,
-      payment.user_id,
-      Math.round(payment.total_amount_rappen / 100 * 100), // Amount in cents
-      `${payment.appointments?.title || 'Fahrstunde'}`,
-      payment.id,
-      payment.description
-    )
+    
+    try {
+      const walleeTransactionResult = await $fetch('/api/wallee/create-transaction', {
+        method: 'POST',
+        body: {
+          orderId: payment.id,
+          amount: payment.total_amount_rappen, // Already in Rappen
+          currency: payment.currency || 'CHF',
+          customerEmail: email,
+          customerName: customer?.first_name || 'Customer',
+          description: payment.description || `${payment.appointments?.title || 'Fahrstunde'}`,
+          userId: payment.user_id,
+          tenantId: payment.tenant_id
+        }
+      })
 
-    if (!newWalleeResult.success || !newWalleeResult.transactionId) {
+      if (!walleeTransactionResult || !walleeTransactionResult.transactionId || !walleeTransactionResult.paymentPageUrl) {
+        throw new Error('Failed to get Wallee transaction response')
+      }
+
+      console.log('✅ New Wallee transaction created:', {
+        transactionId: walleeTransactionResult.transactionId,
+        paymentPageUrl: walleeTransactionResult.paymentPageUrl
+      })
+    } catch (walleeErr: any) {
+      console.error('❌ Error creating Wallee transaction:', walleeErr)
       throw createError({
         statusCode: 500,
-        statusMessage: 'Failed to create new Wallee transaction'
+        statusMessage: `Failed to create Wallee transaction: ${walleeErr.message}`
       })
     }
-
-    console.log('✅ New Wallee transaction created:', newWalleeResult.transactionId)
+    
+    const newWalleeResult = walleeTransactionResult
 
     // 5. Update payment with new transaction info
     const { error: updateError } = await supabase
       .from('payments')
       .update({
         payment_method: 'wallee',
-        payment_status: 'pending_authorization',
+        payment_status: 'pending',
         wallee_transaction_id: newWalleeResult.transactionId,
         updated_at: new Date().toISOString()
       })
@@ -139,7 +154,7 @@ export default defineEventHandler(async (event) => {
     const customerName = customer?.first_name || 'Kunde'
 
     // 8. Send email with payment link
-    if (email && newWalleeResult.paymentLink) {
+    if (email && newWalleeResult.paymentPageUrl) {
       const emailHtml = `
 <!DOCTYPE html>
 <html lang="de">
@@ -164,7 +179,7 @@ export default defineEventHandler(async (event) => {
     </div>
     
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${newWalleeResult.paymentLink}" 
+      <a href="${newWalleeResult.paymentPageUrl}" 
          style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
         💳 Jetzt bezahlen
       </a>
@@ -185,7 +200,7 @@ export default defineEventHandler(async (event) => {
             email,
             subject: `Zahlung erforderlich - ${tenant?.name || 'Fahrstunde'}`,
             html: emailHtml,
-            paymentLink: newWalleeResult.paymentLink
+            paymentLink: newWalleeResult.paymentPageUrl
           }
         })
         console.log('✅ Payment link email sent to:', email)
@@ -199,10 +214,10 @@ export default defineEventHandler(async (event) => {
       success: true,
       payment: {
         id: payment.id,
-        payment_status: 'pending_authorization',
+        payment_status: 'pending',
         payment_method: 'wallee',
         wallee_transaction_id: newWalleeResult.transactionId,
-        paymentLink: newWalleeResult.paymentLink
+        paymentLink: newWalleeResult.paymentPageUrl
       },
       message: 'Payment converted to online payment successfully'
     }
