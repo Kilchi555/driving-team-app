@@ -1046,25 +1046,11 @@ const loadBillingAddressFromExistingPayments = async (studentId: string) => {
     console.log('🔍 Fallback: Loading billing address from existing payments for student:', studentId)
     
     const supabase = getSupabase()
-    const { data: paymentData, error } = await supabase
+    
+    // Step 1: Get the payment with company_billing_address_id
+    const { data: paymentData, error: paymentError } = await supabase
       .from('payments')
-      .select(`
-        company_billing_address_id,
-        company_billing_address:company_billing_addresses!company_billing_address_id (
-          id,
-          company_name,
-          contact_person,
-          email,
-          phone,
-          street,
-          street_number,
-          zip,
-          city,
-          country,
-          vat_number,
-          notes
-        )
-      `)
+      .select('company_billing_address_id')
       .eq('user_id', studentId)
       .eq('payment_method', 'invoice')
       .not('company_billing_address_id', 'is', null)
@@ -1072,18 +1058,35 @@ const loadBillingAddressFromExistingPayments = async (studentId: string) => {
       .limit(1)
       .single()
 
-    if (error) {
-      if (error.code === 'PGRST116') {
+    if (paymentError) {
+      if (paymentError.code === 'PGRST116') {
         console.log('💡 No existing invoice payments with billing address found')
         return null
       }
-      throw error
+      throw paymentError
     }
 
-    if (paymentData?.company_billing_address) {
-      studentBillingAddress.value = paymentData.company_billing_address
-      console.log('✅ Billing address loaded from existing payment:', paymentData.company_billing_address)
-      return paymentData.company_billing_address
+    if (!paymentData?.company_billing_address_id) {
+      console.log('💡 Payment found but no billing address ID')
+      return null
+    }
+
+    // Step 2: Load the billing address separately (avoids RLS join issues)
+    const { data: billingAddress, error: billingError } = await supabase
+      .from('company_billing_addresses')
+      .select('*')
+      .eq('id', paymentData.company_billing_address_id)
+      .single()
+
+    if (billingError) {
+      console.warn('⚠️ Error loading billing address:', billingError)
+      return null
+    }
+
+    if (billingAddress) {
+      studentBillingAddress.value = billingAddress
+      console.log('✅ Billing address loaded from existing payment:', billingAddress)
+      return billingAddress
     }
     
     return null
