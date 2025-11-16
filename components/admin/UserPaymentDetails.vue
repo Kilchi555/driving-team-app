@@ -1145,7 +1145,7 @@ v-if="(appointment.discount_amount || 0) > 0"
                           <button
                             class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-purple-700 bg-purple-100 hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                             title="Rechnung Optionen"
-                            @click="toggleInvoiceMenu(appointment.id)"
+                            @click="toggleInvoiceMenu(appointment.id, $event as MouseEvent)"
                           >
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2m0 7a1 1 0 110-2 1 1 0 010 2m0 7a1 1 0 110-2 1 1 0 010 2"/>
@@ -1158,9 +1158,8 @@ v-if="(appointment.discount_amount || 0) > 0"
                             <div
                               class="fixed bg-white border border-gray-200 rounded-lg shadow-xl z-[9999] w-48"
                               :style="{
-                                top: $event?.target?.getBoundingClientRect?.()?.bottom + 'px' || 'auto',
-                                left: 'auto',
-                                right: '20px'
+                                top: invoiceMenuPosition?.top ? invoiceMenuPosition.top + 'px' : 'auto',
+                                right: invoiceMenuPosition?.right ? invoiceMenuPosition.right + 'px' : '20px'
                               }"
                               @click.stop
                               @click="openInvoiceMenu = null"
@@ -1421,6 +1420,7 @@ const appointmentFilter = ref<'all' | 'paid' | 'unpaid' | 'failed' | 'deleted'>(
 const isUpdatingPayment = ref(false)
 const isConvertingToOnline = ref(false)
 const openInvoiceMenu = ref<string | null>(null)
+const invoiceMenuPosition = ref<{ top: number; right: number } | null>(null)
 const selectedAppointments = ref<string[]>([])
 const showSelectedAppointmentsDetails = ref(false)
 const showInvoiceModal = ref(false)
@@ -2726,8 +2726,21 @@ const convertAppointmentToOnline = async (appointment: Appointment) => {
 }
 
 // Invoice Management Functions
-const toggleInvoiceMenu = (appointmentId: string) => {
-  openInvoiceMenu.value = openInvoiceMenu.value === appointmentId ? null : appointmentId
+const toggleInvoiceMenu = (appointmentId: string, event?: MouseEvent) => {
+  if (openInvoiceMenu.value === appointmentId) {
+    openInvoiceMenu.value = null
+    invoiceMenuPosition.value = null
+  } else {
+    openInvoiceMenu.value = appointmentId
+    // Calculate position of dropdown based on button click
+    if (event && event.target instanceof HTMLElement) {
+      const rect = event.target.getBoundingClientRect()
+      invoiceMenuPosition.value = {
+        top: Math.round(rect.bottom + window.scrollY + 5),
+        right: Math.round(window.innerWidth - rect.right)
+      }
+    }
+  }
 }
 
 const downloadInvoice = async (appointment: Appointment) => {
