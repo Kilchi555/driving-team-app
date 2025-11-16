@@ -56,7 +56,30 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 3. If there's an existing Wallee transaction, void it
+    // 3. Get customer and tenant info first (needed for Wallee transaction and email)
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('name, primary_color')
+      .eq('id', payment.tenant_id)
+      .single()
+
+    const { data: customer } = await supabase
+      .from('users')
+      .select('first_name, email')
+      .eq('id', payment.user_id)
+      .single()
+
+    const email = customerEmail || customer?.email
+    const customerName = customer?.first_name || 'Kunde'
+
+    if (!email) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Customer email not found'
+      })
+    }
+
+    // 4. If there's an existing Wallee transaction, void it
     if (payment.wallee_transaction_id) {
       console.log(`🔄 Voiding existing Wallee transaction: ${payment.wallee_transaction_id}`)
       try {
@@ -82,7 +105,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 4. Create new Wallee transaction via internal API
+    // 5. Create new Wallee transaction via internal API
     const appointment = payment.appointments
     
     try {
@@ -134,26 +157,9 @@ export default defineEventHandler(async (event) => {
       throw updateError
     }
 
-    console.log('✅ Payment updated to pending_authorization with new transaction')
+    console.log('✅ Payment updated to pending with new transaction')
 
-    // 6. Get tenant info for email
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('name, primary_color')
-      .eq('id', payment.tenant_id)
-      .single()
-
-    // 7. Get customer info for email
-    const { data: customer } = await supabase
-      .from('users')
-      .select('first_name, email')
-      .eq('id', payment.user_id)
-      .single()
-
-    const email = customerEmail || customer?.email
-    const customerName = customer?.first_name || 'Kunde'
-
-    // 8. Send email with payment link
+    // 6. Send email with payment link
     if (email && newWalleeResult.paymentPageUrl) {
       const emailHtml = `
 <!DOCTYPE html>
