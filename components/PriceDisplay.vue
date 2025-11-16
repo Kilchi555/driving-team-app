@@ -342,13 +342,13 @@
                   @click="useCustomBillingAddressInModal = !useCustomBillingAddressInModal"
                   :class="[
                     'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                    useCustomBillingAddressInModal ? 'bg-gray-300' : 'bg-blue-600'
+                    useCustomBillingAddressInModal ? 'bg-blue-600' : 'bg-gray-300'
                   ]"
                 >
                   <span
                     :class="[
                       'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                      useCustomBillingAddressInModal ? 'translate-x-1' : 'translate-x-6'
+                      useCustomBillingAddressInModal ? 'translate-x-6' : 'translate-x-1'
                     ]"
                   />
                 </button>
