@@ -107,9 +107,10 @@ export default defineEventHandler(async (event) => {
 
     // 5. Create new Wallee transaction via internal API
     const appointment = payment.appointments
+    let walleeTransactionResult: any
     
     try {
-      const walleeTransactionResult = await $fetch('/api/wallee/create-transaction', {
+      walleeTransactionResult = await $fetch('/api/wallee/create-transaction', {
         method: 'POST',
         body: {
           orderId: payment.id,
