@@ -2510,10 +2510,22 @@ const deleteAppointmentAction = async (appointment: Appointment) => {
   
   isUpdatingPayment.value = true
   try {
+    // Get current user
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const { data: businessUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', authUser?.id)
+      .single()
+    
     // Soft-Delete: Markiere den Termin als gelöscht
     const { error: softDeleteError } = await supabase
       .from('appointments')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ 
+        deleted_at: new Date().toISOString(),
+        deleted_by: businessUser?.id,
+        deletion_reason: 'Manual deletion from admin panel'
+      })
       .eq('id', appointment.id)
     
     if (softDeleteError) throw softDeleteError
@@ -2599,18 +2611,34 @@ const executeHardDelete = async (appointment: Appointment) => {
   
   isUpdatingPayment.value = true
   try {
-    // Lösche zuerst alle zugehörigen Zahlungen
+    // Get current user
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const { data: businessUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', authUser?.id)
+      .single()
+    
+    // Soft-Delete payments associated with this appointment
     const { error: deletePaymentsError } = await supabase
       .from('payments')
-      .delete()
+      .update({
+        deleted_at: new Date().toISOString(),
+        deleted_by: businessUser?.id,
+        deletion_reason: 'Appointment permanently deleted from admin panel'
+      })
       .eq('appointment_id', appointment.id)
     
     if (deletePaymentsError) throw deletePaymentsError
     
-    // Lösche dann den Termin selbst
+    // Soft-Delete the appointment itself
     const { error: deleteAppointmentError } = await supabase
       .from('appointments')
-      .delete()
+      .update({
+        deleted_at: new Date().toISOString(),
+        deleted_by: businessUser?.id,
+        deletion_reason: 'Permanent deletion from admin panel'
+      })
       .eq('id', appointment.id)
     
     if (deleteAppointmentError) throw deleteAppointmentError
