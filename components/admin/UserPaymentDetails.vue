@@ -1013,7 +1013,7 @@ v-if="(appointment.discount_amount || 0) > 0"
                       v-if="getPaymentStatusTimestamp(appointment)" 
                       class="text-xs text-gray-600 mt-1 block"
                     >
-                      am {{ formatPaymentDateTime(getPaymentStatusTimestamp(appointment)) }}
+                      {{ appointment.payment_status === 'pending' ? 'seit' : 'am' }} {{ formatPaymentDateTime(getPaymentStatusTimestamp(appointment)) }}
                     </span>
                     </div>
                   </td>
