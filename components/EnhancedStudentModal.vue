@@ -620,13 +620,10 @@
                 :class="[
                   'rounded-lg p-4 border transition-all',
                   payment.appointments?.status === 'cancelled'
-                    ? 'border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed'
-                    : payment.payment_status !== 'completed' 
-                      ? 'border-gray-200 cursor-pointer hover:shadow-md hover:border-blue-400' 
-                      : 'border-gray-200 opacity-75'
+                    ? 'border-gray-300 bg-gray-100 opacity-60'
+                    : 'border-gray-200'
                 ]"
                 :style="payment.appointments?.status !== 'cancelled' ? { backgroundColor: primaryColor + '15' } : {}"
-                @click="payment.appointments?.status !== 'cancelled' ? markPaymentAsCashPaid(payment) : null"
               >
                 <div class="flex justify-between items-start mb-2">
                   <div class="flex-1">
@@ -793,6 +790,27 @@
                        payment.payment_method === 'wallee' ? 'Online' :
                        payment.payment_method }}
                   </span>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div v-if="payment.payment_status === 'pending' && payment.appointments?.status !== 'cancelled'" class="mt-4 pt-4 border-t border-gray-200 flex gap-2">
+                  <!-- Bar Bezahlt Button -->
+                  <button
+                    @click="markPaymentAsCashPaid(payment)"
+                    class="flex-1 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition-colors"
+                  >
+                    💰 Bar bezahlt
+                  </button>
+                  
+                  <!-- Zu Online-Zahlung Button -->
+                  <button
+                    @click="convertPaymentToOnline(payment)"
+                    :disabled="isConvertingToOnline"
+                    class="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                  >
+                    <span v-if="!isConvertingToOnline">💳 Online-Zahlung</span>
+                    <span v-else>Wird konvertiert...</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1246,6 +1264,7 @@ const confirmDialogData = ref({
   cancelText: 'Abbrechen'
 })
 const pendingPaymentAction = ref<(() => Promise<void>) | null>(null)
+const isConvertingToOnline = ref(false)
 
 // Hilfsfunktion: Prüft ob ein Termin eine Prüfung ist
 const isExam = (lesson: any) => {
@@ -1603,6 +1622,38 @@ const markPaymentAsCashPaid = async (payment: any) => {
   } catch (err: any) {
     console.error('❌ Error in markPaymentAsCashPaid:', err)
     alert('Fehler: ' + err.message)
+  }
+}
+
+// Convert payment from cash/invoice to online payment
+const convertPaymentToOnline = async (payment: any) => {
+  if (!payment || !payment.id) return
+  
+  try {
+    isConvertingToOnline.value = true
+    console.log('🔄 Converting payment to online:', payment.id)
+    
+    const result = await $fetch('/api/payments/convert-to-online', {
+      method: 'POST',
+      body: {
+        paymentId: payment.id,
+        customerEmail: selectedStudent.value?.email
+      }
+    })
+    
+    console.log('✅ Payment converted to online:', result)
+    
+    // Show success message
+    alert(`✅ Zahlung konvertiert!\n\nZahlungslink wurde per E-Mail versendet.\n\nLink: ${result.payment.paymentLink}`)
+    
+    // Reload payments
+    await loadPayments()
+    
+  } catch (err: any) {
+    console.error('❌ Error converting payment to online:', err)
+    alert('Fehler beim Konvertieren der Zahlung: ' + (err.data?.statusMessage || err.message))
+  } finally {
+    isConvertingToOnline.value = false
   }
 }
 
