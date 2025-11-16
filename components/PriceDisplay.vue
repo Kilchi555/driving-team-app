@@ -762,27 +762,25 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
 
 // ✅ NEU: Watcher für Toggle - füllt Formular mit Kundendaten wenn ON
 watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
-  if (isOn) {
-    if (studentBillingAddress.value) {
-      console.log('✅ Toggle ON - filling form with customer billing address')
-      invoiceData.value = {
-        company_name: studentBillingAddress.value.company_name || '',
-        contact_person: studentBillingAddress.value.contact_person || '',
-        email: studentBillingAddress.value.email || '',
-        phone: studentBillingAddress.value.phone || '',
-        street: studentBillingAddress.value.street || '',
-        street_number: studentBillingAddress.value.street_number || '',
-        zip: studentBillingAddress.value.zip || '',
-        city: studentBillingAddress.value.city || '',
-        country: studentBillingAddress.value.country || 'Schweiz',
-        vat_number: studentBillingAddress.value.vat_number || '',
-        company_register_number: studentBillingAddress.value.company_register_number || '',
-        notes: studentBillingAddress.value.notes || ''
-      }
-    } else {
-      console.log('⚠️ Toggle ON but no customer billing address found')
+  console.log('🔄 Toggle watcher triggered, isOn:', isOn)
+  
+  if (isOn && studentBillingAddress.value) {
+    console.log('✅ Toggle ON - filling form with customer billing address')
+    invoiceData.value = {
+      company_name: studentBillingAddress.value.company_name || '',
+      contact_person: studentBillingAddress.value.contact_person || '',
+      email: studentBillingAddress.value.email || '',
+      phone: studentBillingAddress.value.phone || '',
+      street: studentBillingAddress.value.street || '',
+      street_number: studentBillingAddress.value.street_number || '',
+      zip: studentBillingAddress.value.zip || '',
+      city: studentBillingAddress.value.city || '',
+      country: studentBillingAddress.value.country || 'Schweiz',
+      vat_number: studentBillingAddress.value.vat_number || '',
+      company_register_number: studentBillingAddress.value.company_register_number || '',
+      notes: studentBillingAddress.value.notes || ''
     }
-  } else {
+  } else if (!isOn) {
     console.log('✅ Toggle OFF - clearing form')
     invoiceData.value = {
       company_name: '',
@@ -1042,60 +1040,51 @@ const selectPaymentMethod = (method: string) => {
   }
 }
 
-// ✅ NEU: Load billing address from existing payments (fallback method)
+// ✅ NEU: Load customer data from users table (fallback method)
 const loadBillingAddressFromExistingPayments = async (studentId: string) => {
   if (!studentId) return null
   
   try {
-    console.log('🔍 Fallback: Loading billing address from existing payments for student:', studentId)
+    console.log('🔍 Loading customer data from users table for student:', studentId)
     
     const supabase = getSupabase()
     
-    // Step 1: Get the payment with company_billing_address_id
-    const { data: paymentData, error: paymentError } = await supabase
-      .from('payments')
-      .select('company_billing_address_id')
-      .eq('user_id', studentId)
-      .eq('payment_method', 'invoice')
-      .not('company_billing_address_id', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (paymentError) {
-      if (paymentError.code === 'PGRST116') {
-        console.log('💡 No existing invoice payments with billing address found')
-        return null
-      }
-      throw paymentError
-    }
-
-    if (!paymentData?.company_billing_address_id) {
-      console.log('💡 Payment found but no billing address ID')
-      return null
-    }
-
-    // Step 2: Load the billing address separately (avoids RLS join issues)
-    const { data: billingAddress, error: billingError } = await supabase
-      .from('company_billing_addresses')
+    // Load user data to use as billing address
+    const { data: userData, error: userError } = await supabase
+      .from('users')
       .select('*')
-      .eq('id', paymentData.company_billing_address_id)
+      .eq('id', studentId)
       .single()
 
-    if (billingError) {
-      console.warn('⚠️ Error loading billing address:', billingError)
+    if (userError) {
+      console.warn('⚠️ Error loading user data:', userError)
       return null
     }
 
-    if (billingAddress) {
+    if (userData) {
+      // Map user data to billing address format
+      const billingAddress = {
+        company_name: userData.company_name || '',
+        contact_person: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
+        email: userData.email || '',
+        phone: userData.phone || '',
+        street: userData.street || '',
+        street_number: userData.street_number || '',
+        zip: userData.zip || '',
+        city: userData.city || '',
+        country: userData.country || 'Schweiz',
+        vat_number: userData.vat_number || '',
+        notes: ''
+      }
+      
       studentBillingAddress.value = billingAddress
-      console.log('✅ Billing address loaded from existing payment:', billingAddress)
+      console.log('✅ Billing address loaded from user data:', billingAddress)
       return billingAddress
     }
     
     return null
   } catch (error) {
-    console.error('❌ Error loading billing address from payments:', error)
+    console.error('❌ Error loading customer data:', error)
     return null
   }
 }
