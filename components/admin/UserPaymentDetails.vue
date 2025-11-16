@@ -1008,12 +1008,12 @@ v-if="(appointment.discount_amount || 0) > 0"
                       Offen
                     </span>
                     
-                    <!-- Payment date/time for completed and invoiced payments -->
+                    <!-- Payment date/time for all statuses with timestamps -->
                     <span 
-                      v-if="(appointment.payment_status === 'completed' || appointment.payment_status === 'invoiced') && appointment.paid_at" 
+                      v-if="getPaymentStatusTimestamp(appointment)" 
                       class="text-xs text-gray-600 mt-1 block"
                     >
-                      am {{ formatPaymentDateTime(appointment.paid_at) }}
+                      am {{ formatPaymentDateTime(getPaymentStatusTimestamp(appointment)) }}
                     </span>
                     </div>
                   </td>
@@ -1189,7 +1189,10 @@ interface Appointment {
   payment_method_name?: string
   total_amount?: number
   paid_at?: string
+  refunded_at?: string
   created_at?: string
+  updated_at?: string
+  scheduled_authorization_date?: string
   deleted_at?: string | null
   // Neue Felder für Produkte und Rabatte
   has_products?: boolean
@@ -1247,7 +1250,10 @@ interface Payment {
   products_price_rappen?: number
   discount_amount_rappen?: number
   paid_at?: string
+  refunded_at?: string
   created_at?: string
+  updated_at?: string
+  scheduled_authorization_date?: string
 }
 
 interface InvoiceData {
@@ -1812,7 +1818,10 @@ const loadUserAppointments = async () => {
         payment_method_name: payment?.payment_method ? getPaymentMethodLabel(payment.payment_method) : '',
         total_amount: payment ? (payment.total_amount_rappen || 0) / 100 : 0,
         paid_at: payment?.paid_at,
+        refunded_at: payment?.refunded_at,
         created_at: payment?.created_at,
+        updated_at: payment?.updated_at,
+        scheduled_authorization_date: payment?.scheduled_authorization_date,
         deleted_at: appointment.deleted_at,
         // Neue Felder für Produkte und Rabatte
         has_products: hasProducts,
@@ -2040,6 +2049,28 @@ const formatPaymentDateTime = (dateString: string | null | undefined): string =>
   } catch (error) {
     console.error('Error formatting payment date time:', error)
     return dateString
+  }
+}
+
+const getPaymentStatusTimestamp = (appointment: any): string | null => {
+  // Get the appropriate timestamp field based on payment status
+  if (!appointment.payment_status) return null
+  
+  switch (appointment.payment_status) {
+    case 'completed':
+      return appointment.paid_at || null
+    case 'invoiced':
+      return appointment.paid_at || null
+    case 'refunded':
+      return appointment.refunded_at || appointment.paid_at || null
+    case 'failed':
+      return appointment.updated_at || null
+    case 'authorized':
+      return appointment.scheduled_authorization_date || appointment.updated_at || null
+    case 'pending':
+      return appointment.created_at || null
+    default:
+      return null
   }
 }
 
