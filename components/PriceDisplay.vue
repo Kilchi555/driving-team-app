@@ -356,8 +356,8 @@
               </div>
             </div>
             
-            <!-- Zeige Formular nur wenn Toggle OFF -->
-            <div v-if="!useCustomBillingAddressInModal" class="space-y-3">
+            <!-- Formular - immer sichtbar -->
+            <div class="space-y-3">
               <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Firmenname</label>
                 <input
@@ -512,7 +512,6 @@
             </div>
             </div>
           </div>
-      </div>
     </div>
   </div>
 </template>
@@ -760,6 +759,43 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
     }
   }
 }, { immediate: false })
+
+// ✅ NEU: Watcher für Toggle - füllt Formular mit Kundendaten wenn ON
+watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
+  if (isOn && studentBillingAddress.value) {
+    console.log('✅ Toggle ON - filling form with customer billing address')
+    invoiceData.value = {
+      company_name: studentBillingAddress.value.company_name || '',
+      contact_person: studentBillingAddress.value.contact_person || '',
+      email: studentBillingAddress.value.email || '',
+      phone: studentBillingAddress.value.phone || '',
+      street: studentBillingAddress.value.street || '',
+      street_number: studentBillingAddress.value.street_number || '',
+      zip: studentBillingAddress.value.zip || '',
+      city: studentBillingAddress.value.city || '',
+      country: studentBillingAddress.value.country || 'Schweiz',
+      vat_number: studentBillingAddress.value.vat_number || '',
+      company_register_number: studentBillingAddress.value.company_register_number || '',
+      notes: studentBillingAddress.value.notes || ''
+    }
+  } else if (!isOn) {
+    console.log('✅ Toggle OFF - clearing form')
+    invoiceData.value = {
+      company_name: '',
+      contact_person: '',
+      email: '',
+      phone: '',
+      street: '',
+      street_number: '',
+      zip: '',
+      city: '',
+      country: 'Schweiz',
+      vat_number: '',
+      company_register_number: '',
+      notes: ''
+    }
+  }
+})
 
 // ✅ NEUE METHODE: Lade verfügbare Gutscheine
 const loadAvailableDiscounts = async () => {
