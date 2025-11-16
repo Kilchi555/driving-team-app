@@ -3052,6 +3052,9 @@ const sendDirectEmail = async () => {
     invoiceSubject.value = ''
     invoiceMessage.value = ''
     
+    // Reload appointments to refresh the status from database
+    await loadUserAppointments()
+    
     // Daten aktualisieren
     await refreshData()
     
