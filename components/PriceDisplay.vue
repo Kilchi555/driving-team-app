@@ -571,6 +571,7 @@ const emit = defineEmits<{
   'product-added': [product: any]
   'payment-method-changed': [method: string]
   'invoice-address-saved': [address: any]
+  'billing-address-id-saved': [addressId: string] // ✅ NEU: Emit der gespeicherten Adress-ID
 
   'update:selectedPaymentMethod': [value: string] // ✅ NEU: v-model emit für payment method
 }>()
@@ -1524,6 +1525,11 @@ const saveInvoiceAddress = async () => {
         
         // Emit an Parent Component
         emit('invoice-address-saved', result.data)
+        
+        // ✅ NEU: Emit der Adress-ID für Settlement
+        if (result.data?.id) {
+          emit('billing-address-id-saved', result.data.id)
+        }
         
         // ✅ NEU: Update studentBillingAddress und exit edit mode
         studentBillingAddress.value = result.data

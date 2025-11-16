@@ -67,8 +67,8 @@ export default defineEventHandler(async (event) => {
   try {
     console.log('🔄 settle-and-email.post called')
     const body = await readBody(event)
-    const { appointmentIds, invoiceNumber } = body
-    console.log('📋 Received:', { appointmentIds, invoiceNumber })
+    const { appointmentIds, invoiceNumber, companyBillingAddressId } = body
+    console.log('📋 Received:', { appointmentIds, invoiceNumber, companyBillingAddressId })
 
     if (!appointmentIds || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
       throw createError({
@@ -211,6 +211,7 @@ export default defineEventHandler(async (event) => {
           .update({
             payment_method: 'invoice',
             payment_status: 'invoiced',
+            company_billing_address_id: companyBillingAddressId || null,
             updated_at: new Date().toISOString()
           })
           .eq('id', payment.id)

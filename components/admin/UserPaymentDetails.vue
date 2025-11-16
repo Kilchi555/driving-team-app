@@ -3101,7 +3101,7 @@ const sendDirectEmail = async () => {
     
     // Alle ausgewählten Termine auf "verrechnet" setzen und Settlement Email versenden
     if (result.data) {
-      await updateAppointmentsToInvoiced(selectedAppointments.value, result.data.id)
+      await updateAppointmentsToInvoiced(selectedAppointments.value, result.data.id, companyBillingAddress.value?.id)
     }
     
     const totalAmount = formatCurrency(selectedAppointmentsTotal.value)
@@ -3219,7 +3219,7 @@ const createInvoiceInDatabase = async () => {
     
     // Alle ausgewählten Termine auf "verrechnet" setzen
     if (result.data) {
-      await updateAppointmentsToInvoiced(selectedAppointments.value, result.data.id)
+      await updateAppointmentsToInvoiced(selectedAppointments.value, result.data.id, companyBillingAddress.value?.id)
     }
     
     // PDF generieren und herunterladen
@@ -3295,7 +3295,7 @@ const generateInvoicePDF = async (invoiceData: InvoiceData): Promise<PDFResult> 
 }
 
 // Hilfsfunktion: Termine auf "verrechnet" setzen und Email versenden
-const updateAppointmentsToInvoiced = async (appointmentIds: string[], invoiceNumber?: string) => {
+const updateAppointmentsToInvoiced = async (appointmentIds: string[], invoiceNumber?: string, companyBillingAddressId?: string) => {
   try {
     console.log('🔄 Settling appointments and sending emails:', appointmentIds)
     
@@ -3304,7 +3304,8 @@ const updateAppointmentsToInvoiced = async (appointmentIds: string[], invoiceNum
       method: 'POST',
       body: {
         appointmentIds,
-        invoiceNumber
+        invoiceNumber,
+        companyBillingAddressId
       }
     })
     
