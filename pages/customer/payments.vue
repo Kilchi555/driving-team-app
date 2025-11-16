@@ -139,13 +139,17 @@
                   
                   <!-- Status Badge mit Timeline-Info -->
                   <div class="flex flex-col space-y-1">
-                    <span :class="getStatusClass(payment)" 
-                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit">
-                      {{ getStatusLabel(payment) }}
-                      <span v-if="payment.payment_status === 'completed' && payment.paid_at" class="ml-2 text-xs font-normal">
-                        am {{ formatDateTime(payment.paid_at) }}
+                    <div class="flex flex-col">
+                      <span :class="getStatusClass(payment)" 
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit">
+                        {{ getStatusLabel(payment) }}
                       </span>
-                    </span>
+                      <!-- Show payment date/time for completed, invoiced, or refunded -->
+                      <span v-if="(payment.payment_status === 'completed' || payment.payment_status === 'invoiced' || payment.payment_status === 'refunded') && payment.paid_at" 
+                            class="text-xs text-gray-600 mt-1">
+                        am {{ formatPaymentDate(payment.paid_at) }}
+                      </span>
+                    </div>
                     
                     <!-- Timeline Info direkt unter Status (nur wenn nicht storniert) -->
                     <template v-if="!isAppointmentCancelled(payment)">
@@ -541,6 +545,31 @@ const getStatusClass = (payment: any): string => {
     'refunded': 'bg-orange-100 text-orange-800'
   }
   return classes[payment.payment_status] || 'bg-gray-100 text-gray-800'
+}
+
+const formatPaymentDate = (dateString: string): string => {
+  if (!dateString) return '-'
+  
+  try {
+    const date = new Date(dateString)
+    const formattedDate = date.toLocaleDateString('de-CH', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Europe/Zurich'
+    })
+    
+    const formattedTime = date.toLocaleTimeString('de-CH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Zurich'
+    })
+    
+    return `${formattedDate}, ${formattedTime} Uhr`
+  } catch (error) {
+    console.error('Error formatting payment date:', error)
+    return dateString
+  }
 }
 
 const formatDateTime = (dateString: string): string => {
