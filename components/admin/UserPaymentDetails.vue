@@ -428,12 +428,36 @@ v-if="(getAppointmentById(appointmentId)?.discount_amount || 0) > 0"
                         </div>
                       </div>
                       
-                      <!-- Rechnungsadresse -->
+                      <!-- Rechnungsadresse Toggle -->
                       <div class="bg-gray-50 rounded-lg p-3 sm:p-4">
-                        <h4 class="text-sm sm:text-base font-medium text-gray-900 mb-2">Rechnungsadresse</h4>
+                        <div class="flex items-center justify-between mb-4">
+                          <h4 class="text-sm sm:text-base font-medium text-gray-900">Rechnungsadresse</h4>
+                          
+                          <!-- Toggle Switch -->
+                          <div class="flex items-center space-x-2">
+                            <span class="text-xs sm:text-sm font-medium" :class="useCustomBillingAddress ? 'text-gray-500' : 'text-gray-900'">Kundenadresse</span>
+                            <button
+                              type="button"
+                              @click="useCustomBillingAddress = !useCustomBillingAddress"
+                              :class="[
+                                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                                useCustomBillingAddress ? 'bg-blue-600' : 'bg-gray-300'
+                              ]"
+                            >
+                              <span
+                                :class="[
+                                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                                  useCustomBillingAddress ? 'translate-x-6' : 'translate-x-1'
+                                ]"
+                              />
+                            </button>
+                            <span class="text-xs sm:text-sm font-medium" :class="useCustomBillingAddress ? 'text-gray-900' : 'text-gray-500'">Rechnungsadresse</span>
+                          </div>
+                        </div>
                         
-                        <div v-if="companyBillingAddress" class="space-y-2">
-                          <div class="grid grid-cols-1 gap-3 text-xs sm:text-sm">
+                        <!-- Kundenadresse View -->
+                        <div v-if="!useCustomBillingAddress" class="space-y-2">
+                          <div v-if="companyBillingAddress" class="grid grid-cols-1 gap-3 text-xs sm:text-sm">
                             <div class="break-words">
                               <span class="font-medium text-gray-600">{{ companyBillingAddress.company_name }}</span><br>
                               <span class="text-gray-600">{{ companyBillingAddress.contact_person }}</span><br>
@@ -449,11 +473,44 @@ v-if="(getAppointmentById(appointmentId)?.discount_amount || 0) > 0"
                               <span v-if="companyBillingAddress.vat_number" class="text-gray-600">{{ companyBillingAddress.vat_number }}</span>
                             </div>
                           </div>
+                          
+                          <div v-else class="text-xs sm:text-sm text-gray-600 break-words">
+                            <p class="mb-1">Keine Firmenrechnungsadresse hinterlegt.</p>
+                            <p>Die Rechnung wird an: <span class="font-medium">{{ displayEmail }}</span></p>
+                          </div>
                         </div>
                         
-                        <div v-else class="text-xs sm:text-sm text-gray-600 break-words">
-                          <p class="mb-1">Keine Firmenrechnungsadresse hinterlegt.</p>
-                          <p>Die Rechnung wird an: <span class="font-medium">{{ displayEmail }}</span></p>
+                        <!-- Custom Rechnungsadresse View -->
+                        <div v-else class="space-y-3">
+                          <div>
+                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Firmenname (optional)</label>
+                            <input
+                              v-model="customBillingCompanyName"
+                              type="text"
+                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Firmenname"
+                            >
+                          </div>
+                          
+                          <div>
+                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Kontaktperson *</label>
+                            <input
+                              v-model="customBillingContactPerson"
+                              type="text"
+                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Vorname Nachname"
+                            >
+                          </div>
+                          
+                          <div>
+                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
+                            <input
+                              v-model="customBillingEmail"
+                              type="email"
+                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="email@beispiel.ch"
+                            >
+                          </div>
                         </div>
                       </div>
                       
@@ -468,7 +525,7 @@ v-if="(getAppointmentById(appointmentId)?.discount_amount || 0) > 0"
                               v-model="invoiceEmail"
                               type="email"
                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              :placeholder="companyBillingAddress?.email || displayEmail"
+                              :placeholder="useCustomBillingAddress ? customBillingEmail || 'email@beispiel.ch' : (companyBillingAddress?.email || displayEmail)"
                             >
                           </div>
                           
@@ -1289,6 +1346,10 @@ const eventTypes = ref<any[]>([])
 const invoiceEmail = ref('')
 const invoiceSubject = ref('')
 const invoiceMessage = ref('')
+const useCustomBillingAddress = ref(false)
+const customBillingCompanyName = ref('')
+const customBillingContactPerson = ref('')
+const customBillingEmail = ref('')
 
 // Toast State
 const showToast = ref(false)
@@ -2847,6 +2908,11 @@ const invoiceSelectedAppointments = async () => {
     console.log('🔄 Creating invoice for selected appointments:', selectedAppointments.value.length)
     
     // Setze Standardwerte für E-Mail-Felder
+    useCustomBillingAddress.value = false
+    customBillingCompanyName.value = ''
+    customBillingContactPerson.value = ''
+    customBillingEmail.value = ''
+    
     invoiceEmail.value = companyBillingAddress.value?.email || displayEmail.value
     invoiceSubject.value = `Rechnung für ${selectedAppointments.value.length} Fahrstunde${selectedAppointments.value.length > 1 ? 'n' : ''}`
     invoiceMessage.value = `Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie die Rechnung für die durchgeführten Fahrstunden.\n\nMit freundlichen Grüßen\nIhr Driving Team`
@@ -2941,6 +3007,10 @@ const sendToAccounto = async () => {
     selectedAppointments.value = []
     
     // E-Mail-Felder zurücksetzen
+    useCustomBillingAddress.value = false
+    customBillingCompanyName.value = ''
+    customBillingContactPerson.value = ''
+    customBillingEmail.value = ''
     invoiceEmail.value = ''
     invoiceSubject.value = ''
     invoiceMessage.value = ''
@@ -3048,6 +3118,10 @@ const sendDirectEmail = async () => {
     selectedAppointments.value = []
     
     // E-Mail-Felder zurücksetzen
+    useCustomBillingAddress.value = false
+    customBillingCompanyName.value = ''
+    customBillingContactPerson.value = ''
+    customBillingEmail.value = ''
     invoiceEmail.value = ''
     invoiceSubject.value = ''
     invoiceMessage.value = ''
@@ -3168,6 +3242,10 @@ const createInvoiceInDatabase = async () => {
     selectedAppointments.value = []
     
     // E-Mail-Felder zurücksetzen
+    useCustomBillingAddress.value = false
+    customBillingCompanyName.value = ''
+    customBillingContactPerson.value = ''
+    customBillingEmail.value = ''
     invoiceEmail.value = ''
     invoiceSubject.value = ''
     invoiceMessage.value = ''
@@ -3482,6 +3560,10 @@ const prepareForPrint = async () => {
     selectedAppointments.value = []
     
     // E-Mail-Felder zurücksetzen
+    useCustomBillingAddress.value = false
+    customBillingCompanyName.value = ''
+    customBillingContactPerson.value = ''
+    customBillingEmail.value = ''
     invoiceEmail.value = ''
     invoiceSubject.value = ''
     invoiceMessage.value = ''
