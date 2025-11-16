@@ -1530,7 +1530,15 @@ const selectedAppointmentsTotal = computed(() => {
 
 // Prüfen ob ein Termin auswählbar ist
 const isAppointmentSelectable = (appointment: Appointment) => {
-  return appointment.status !== 'verrechnet' && appointment.status !== 'paid'
+  // Appointments are selectable EXCEPT when:
+  // 1. They're marked as verrechnet/paid in appointment status
+  // 2. OR they have a payment_status that's already completed/invoiced
+  // But we still want invoice action buttons visible for invoiced payments!
+  const hasInvoicedPayment = appointment.payment_status === 'invoiced'
+  const isNotSelectableByStatus = appointment.status === 'verrechnet' || appointment.status === 'paid'
+  
+  // If it's invoiced, it's still selectable for actions, just not for checkboxes
+  return hasInvoicedPayment || !isNotSelectableByStatus
 }
 
 const totalUnpaidAmount = computed(() => {
