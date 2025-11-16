@@ -62,25 +62,25 @@ export const getSupabase = (): SupabaseClient => {
     
     if (process.server) {
       // Server-side: use environment variables directly
-      supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-      supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVueWphZXRlYm5hZXhhZmxweW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzOTc0NjAsImV4cCI6MjA2NTk3MzQ2MH0.GH3W1FzpogOG-iTWNv8ckt-TkqboCiB9RYGFlGUzLnU'
+      supabaseUrl = process.env.SUPABASE_URL || ''
+      supabaseKey = process.env.SUPABASE_ANON_KEY || ''
     } else {
       // Client-side: try to get from window object or fallback to environment variables
       try {
         // Check if we're in a browser environment with runtime config
         if (typeof window !== 'undefined' && (window as any).__NUXT__?.config) {
           const config = (window as any).__NUXT__.config
-          supabaseUrl = config.public?.supabaseUrl || 'https://unyjaetebnaexaflpyoc.supabase.co'
-          supabaseKey = config.public?.supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVueWphZXRlYm5hZXhhZmxweW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzOTc0NjAsImV4cCI6MjA2NTk3MzQ2MH0.GH3W1FzpogOG-iTWNv8ckt-TkqboCiB9RYGFlGUzLnU'
+          supabaseUrl = config.public?.supabaseUrl || ''
+          supabaseKey = config.public?.supabaseAnonKey || ''
         } else {
           // Fallback to environment variables
-          supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-          supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVueWphZXRlYm5hZXhhZmxweW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzOTc0NjAsImV4cCI6MjA2NTk3MzQ2MH0.GH3W1FzpogOG-iTWNv8ckt-TkqboCiB9RYGFlGUzLnU'
+          supabaseUrl = process.env.SUPABASE_URL || ''
+          supabaseKey = process.env.SUPABASE_ANON_KEY || ''
         }
       } catch (error) {
         // Fallback to environment variables if anything fails
-        supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-        supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVueWphZXRlYm5hZXhhZmxweW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzOTc0NjAsImV4cCI6MjA2NTk3MzQ2MH0.GH3W1FzpogOG-iTWNv8ckt-TkqboCiB9RYGFlGUzLnU'
+        supabaseUrl = process.env.SUPABASE_URL || ''
+        supabaseKey = process.env.SUPABASE_ANON_KEY || ''
       }
     }
     
