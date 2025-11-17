@@ -207,7 +207,8 @@ const startCountdown = () => {
 const redirectToDashboard = () => {
   if (countdownInterval) clearInterval(countdownInterval)
   if (statusCheckInterval) clearInterval(statusCheckInterval)
-  router.push('/customer-dashboard')
+  // Force a hard page reload to ensure data is fresh from the server
+  window.location.href = '/customer-dashboard'
 }
 
 onMounted(() => {
