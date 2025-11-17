@@ -2739,14 +2739,14 @@ const toggleInvoiceMenuWithPosition = (appointmentId: string, event: MouseEvent)
   if (shouldOpen) {
     openInvoiceMenu.value = appointmentId
     
-    // Calculate position based on button location
+    // Calculate position based on button location (fixed positioning, so use viewport coords)
     if (event.currentTarget instanceof HTMLElement) {
       const rect = event.currentTarget.getBoundingClientRect()
       invoiceMenuPosition.value = {
-        top: Math.round(rect.bottom + window.scrollY + 5),
+        top: Math.round(rect.bottom + 5), // rect.bottom is already in viewport coords for fixed positioning
         right: Math.round(window.innerWidth - rect.right)
       }
-      console.log('📍 Invoice menu opened at position:', invoiceMenuPosition.value)
+      console.log('📍 Invoice menu opened at position:', {top: rect.bottom + 5, right: window.innerWidth - rect.right})
     } else {
       invoiceMenuPosition.value = {
         top: 100,
