@@ -1745,7 +1745,6 @@ const confirmAppointment = async (appointment: any) => {
 
       // ✅ Confirm appointment immediately (authorization successful = appointment confirmed)
       try {
-        console.log('🔄 Attempting to confirm appointment:', appointment.id)
         const confirmResult = await $fetch('/api/appointments/confirm', {
           method: 'POST',
           body: {
@@ -1753,7 +1752,6 @@ const confirmAppointment = async (appointment: any) => {
           }
         }) as { success?: boolean; error?: string }
         
-        console.log('📝 Confirm result:', confirmResult)
         if (!confirmResult.success) {
           console.error('⚠️ Could not confirm appointment:', confirmResult.error)
         } else {
