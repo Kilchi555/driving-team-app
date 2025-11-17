@@ -2617,34 +2617,7 @@ const deleteAppointmentAction = async (appointment: Appointment) => {
       .single()
     
     // Soft-Delete: Markiere die zugehörige Zahlung als gelöscht
-    // Aber zunächst laden wir die Zahlungen, um zu sehen, ob eine Rechnung damit verknüpft ist
-    const { data: payments, error: paymentsFetchError } = await supabase
-      .from('payments')
-      .select('id, invoice_number')
-      .eq('appointment_id', appointment.id)
-    
-    if (paymentsFetchError) throw paymentsFetchError
-    
-    // Wenn es eine Rechnung gibt, auch diese löschen
-    if (payments && payments.length > 0) {
-      for (const payment of payments) {
-        if (payment.invoice_number) {
-          // Soft-Delete die Rechnung
-          const { error: invoiceDeleteError } = await supabase
-            .from('invoices')
-            .update({
-              deleted_at: new Date().toISOString(),
-              deleted_by: businessUser?.id,
-              deletion_reason: 'Associated appointment deleted from admin panel'
-            })
-            .eq('invoice_number', payment.invoice_number)
-          
-          if (invoiceDeleteError) console.error('⚠️ Could not delete invoice:', invoiceDeleteError)
-        }
-      }
-    }
-    
-    // Jetzt die Zahlung selbst soft-deleten
+    // Hinweis: Die Rechnung bleibt bestehen, wird aber aktualisiert (stornierte Payments anzeigen, Total neu berechnen)
     const { error: deletePaymentsError } = await supabase
       .from('payments')
       .update({
@@ -2676,8 +2649,8 @@ const deleteAppointmentAction = async (appointment: Appointment) => {
     
     // Schöne Erfolgsmeldung
     showSuccessToast(
-      '🗑️ Termin, Zahlung und Rechnung gelöscht',
-      `Der Termin "${appointment.title}", die Zahlung und eventuell zugehörige Rechnung wurden erfolgreich gelöscht. Du kannst sie im "Gelöscht"-Filter wiederherstellen.`
+      '🗑️ Termin und Zahlung gelöscht',
+      `Der Termin "${appointment.title}" und die Zahlung wurden erfolgreich gelöscht. Falls eine Rechnung vorhanden ist, wird diese aktualisiert (stornierte Payments anzeigen, Total neu berechnen).`
     )
     
   } catch (err: unknown) {
