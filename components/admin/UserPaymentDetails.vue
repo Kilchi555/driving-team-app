@@ -2616,6 +2616,18 @@ const deleteAppointmentAction = async (appointment: Appointment) => {
       .eq('auth_user_id', authUser?.id)
       .single()
     
+    // Soft-Delete: Markiere die zugehörige Zahlung als gelöscht
+    const { error: deletePaymentsError } = await supabase
+      .from('payments')
+      .update({
+        deleted_at: new Date().toISOString(),
+        deleted_by: businessUser?.id,
+        deletion_reason: 'Appointment deleted from admin panel'
+      })
+      .eq('appointment_id', appointment.id)
+    
+    if (deletePaymentsError) throw deletePaymentsError
+    
     // Soft-Delete: Markiere den Termin als gelöscht
     const { error: softDeleteError } = await supabase
       .from('appointments')
@@ -2636,8 +2648,8 @@ const deleteAppointmentAction = async (appointment: Appointment) => {
     
     // Schöne Erfolgsmeldung
     showSuccessToast(
-      '🗑️ Termin gelöscht',
-      `Der Termin "${appointment.title}" wurde erfolgreich gelöscht. Du kannst ihn im "Gelöscht"-Filter wiederherstellen.`
+      '🗑️ Termin und Zahlung gelöscht',
+      `Der Termin "${appointment.title}" und die zugehörige Zahlung wurden erfolgreich gelöscht. Du kannst sie im "Gelöscht"-Filter wiederherstellen.`
     )
     
   } catch (err: unknown) {
