@@ -2727,30 +2727,35 @@ const convertAppointmentToOnline = async (appointment: Appointment) => {
 
 // Invoice Management Functions
 const toggleInvoiceMenu = (appointmentId: string, event?: MouseEvent) => {
+  event?.stopPropagation()
   console.log('🔄 toggleInvoiceMenu called:', appointmentId, 'current:', openInvoiceMenu.value)
   
-  if (openInvoiceMenu.value === appointmentId) {
-    openInvoiceMenu.value = null
-    invoiceMenuPosition.value = null
-  } else {
+  // Always open/toggle the menu for this appointment
+  const shouldOpen = openInvoiceMenu.value !== appointmentId
+  
+  if (shouldOpen) {
     openInvoiceMenu.value = appointmentId
     console.log('✅ openInvoiceMenu set to:', appointmentId)
     
     // Calculate position of dropdown based on button click
-    if (event && event.target instanceof HTMLElement) {
-      const rect = event.target.getBoundingClientRect()
+    if (event && event.currentTarget instanceof HTMLElement) {
+      const rect = event.currentTarget.getBoundingClientRect()
       invoiceMenuPosition.value = {
         top: Math.round(rect.bottom + window.scrollY + 5),
         right: Math.round(window.innerWidth - rect.right)
       }
       console.log('📍 Position calculated:', invoiceMenuPosition.value)
     } else {
-      console.log('⚠️ No event or target found, using default position')
+      console.log('⚠️ No event or currentTarget found, using default position')
       invoiceMenuPosition.value = {
-        top: 0,
+        top: 100,
         right: 20
       }
     }
+  } else {
+    openInvoiceMenu.value = null
+    invoiceMenuPosition.value = null
+    console.log('❌ Menu closed')
   }
 }
 
