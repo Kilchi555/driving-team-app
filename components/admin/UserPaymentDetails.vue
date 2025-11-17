@@ -2762,12 +2762,25 @@ const toggleInvoiceMenuWithPosition = (appointmentId: string, event: MouseEvent)
 const downloadInvoice = async (appointment: Appointment) => {
   openInvoiceMenu.value = null
   try {
-    console.log('📥 Downloading invoice for appointment:', appointment.id)
+    // Find the payment record for this appointment
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('appointment_id', appointment.id)
+      .single()
+    
+    if (paymentError || !payment) {
+      console.error('❌ Payment not found for appointment:', appointment.id)
+      showErrorToast('Fehler', 'Zahlung nicht gefunden')
+      return
+    }
+    
+    console.log('📥 Generating PDF for payment:', payment.id)
     
     const result = await $fetch('/api/payments/receipt', {
       method: 'POST',
       body: {
-        paymentIds: [appointment.id]
+        paymentIds: [payment.id]
       }
     })
     
