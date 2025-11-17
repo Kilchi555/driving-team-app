@@ -317,76 +317,70 @@
               </div>
               <div class="flex items-center justify-between mb-4">
                 <h4 class="text-base font-medium text-gray-900">Rechnungsübersicht</h4>
-                <span class="text-lg font-semibold text-green-600">
-                  Gesamtbetrag: {{ fallbackPayment ? formatCurrency(fallbackPayment.total_amount_rappen) : formatCurrency(invoice.total_amount_rappen) }}
-                </span>
+                <div>
+                  <!-- Zeige Total ohne stornierte Payments wenn es gelöschte Payments gibt -->
+                  <div v-if="allInvoicePayments.some(p => p.deleted_at)" class="text-right">
+                    <div class="text-xs text-gray-500 mb-1">Gesamtbetrag (ohne storniert):</div>
+                    <span class="text-lg font-semibold text-green-600">
+                      {{ formatCurrency(totalExcludingCancelled) }}
+                    </span>
+                  </div>
+                  <!-- Standard-Total -->
+                  <div v-else>
+                    <span class="text-lg font-semibold text-green-600">
+                      Gesamtbetrag: {{ fallbackPayment ? formatCurrency(fallbackPayment.total_amount_rappen) : formatCurrency(invoice.total_amount_rappen) }}
+                    </span>
+                  </div>
+                </div>
               </div>
               
               <!-- Verrechnete Lektionen mit detaillierter Preisaufschlüsselung -->
               <div class="max-h-64 overflow-y-auto">
                 <div class="space-y-2">
-                                    <!-- Appointments -->
-                  <div v-if="fallbackPayment">
-                    
-                    <!-- Lektion aus payments Tabelle -->
-                    <div class="bg-white border border-gray-200 rounded-md p-3">
-                      <div class="space-y-2">
-                        <!-- Haupttermin -->
-                        <div class="flex items-center justify-between">
-                          <div class="flex-1">
-                                       <!-- Event Type Name, Kategorie und Type -->
-                            <div class="text-md font-semibold text-gray-600 mb-1">
-                              <h4>{{ appointmentEventTypeName || 'Termin' }} Kategorie {{ appointmentType }}</h4>
+                  <!-- ✅ Alle Payments der Rechnung anzeigen (inkl. gelöschte/stornierte) -->
+                  <div v-if="allInvoicePayments.length > 0">
+                    <div v-for="payment in allInvoicePayments" :key="payment.id">
+                      <!-- Gelöschtes/Storniertes Payment -->
+                      <div v-if="payment.deleted_at" class="bg-gray-100 border border-gray-300 rounded-md p-3 opacity-60">
+                        <div class="flex items-center space-x-2 mb-2">
+                          <span class="text-xs font-semibold px-2 py-1 bg-red-100 text-red-700 rounded">Storniert</span>
+                        </div>
+                        <div class="space-y-2">
+                          <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                              <div class="text-md font-semibold text-gray-500 mb-1 line-through">
+                                <h4>{{ payment.description || 'Termin' }}</h4>
+                              </div>
+                              <div class="text-xs text-gray-500">
+                                Gelöscht am: {{ new Date(payment.deleted_at).toLocaleDateString('de-CH') }}
+                              </div>
                             </div>
-                            
-                            <div class="text-xs text-gray-500">
-                              {{ appointmentStartTime ? appointmentStartTime.substring(0, 10).split('-').reverse().join('.') : 'Kein Datum' }} - {{ appointmentStartTime ? appointmentStartTime.substring(11, 16) : 'Keine Zeit' }}
-                              <span class="mx-2">•</span>
-                              {{ parsedMetadata?.duration_minutes || 195 }} Minuten
-                            </div>
-                          </div>
-                          <div class="text-right flex items-center space-x-2">
-                            <div class="text-sm font-semibold text-green-600">
-                              {{ formatCurrency(fallbackPayment.total_amount_rappen) }}
+                            <div class="text-right">
+                              <div class="text-sm font-semibold text-gray-500 line-through">
+                                {{ formatCurrency(payment.total_amount_rappen) }}
+                              </div>
                             </div>
                           </div>
                         </div>
-                        
-                        <!-- Detaillierte Preisaufschlüsselung -->
-                        <div class="border-t border-gray-100 pt-2 space-y-1">
-                          <!-- Lektion-Preis -->
-                          <div class="flex justify-between text-xs">
-                            <span class="text-gray-600">Lektion:</span>
-                            <span class="text-gray-800">
-                              {{ formatCurrency(fallbackPayment.lesson_price_rappen) }}
-                            </span>
-                          </div>
-                          
-                          <!-- Admin-Fee (falls vorhanden) -->
-                          <div
-                            v-if="fallbackPayment.admin_fee_rappen > 0" 
-                            class="flex justify-between text-xs">
-                            <span class="text-gray-600">Admin-Pauschale:</span>
-                            <span class="text-gray-800">{{ formatCurrency(fallbackPayment.admin_fee_rappen) }}</span>
-                          </div>
-                          
-                          <!-- Produkte (falls vorhanden) -->
-                          <div
-                            v-if="fallbackPayment.products_price_rappen > 0" 
-                            class="space-y-1">
-                            <!-- Produkte direkt aus payments Tabelle -->
-                            <div class="flex justify-between text-xs">
-                              <span class="text-gray-500">Produkte:</span>
-                              <span class="text-gray-600">{{ formatCurrency(fallbackPayment.products_price_rappen) }}</span>
+                      </div>
+                      
+                      <!-- Aktives Payment -->
+                      <div v-else class="bg-white border border-gray-200 rounded-md p-3">
+                        <div class="space-y-2">
+                          <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                              <div class="text-md font-semibold text-gray-600 mb-1">
+                                <h4>{{ payment.description || 'Termin' }}</h4>
+                              </div>
+                              <div class="text-xs text-gray-500">
+                                Erstellt: {{ new Date(payment.created_at).toLocaleDateString('de-CH') }}
+                              </div>
                             </div>
-                          </div>
-                          
-                          <!-- Rabatte (falls vorhanden) -->
-                          <div
-                            v-if="fallbackPayment.discount_amount_rappen > 0" 
-                            class="flex justify-between text-xs text-green-600">
-                            <span>Rabatt:</span>
-                            <span>- {{ formatCurrency(fallbackPayment.discount_amount_rappen) }}</span>
+                            <div class="text-right">
+                              <div class="text-sm font-semibold text-green-600">
+                                {{ formatCurrency(payment.total_amount_rappen) }}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -577,6 +571,8 @@ const isLoadingDetails = ref(false)
   const appointmentType = ref<string | null>(null)
   const appointmentEventTypeName = ref<string | null>(null)
   const customerData = ref<any | null>(null)
+  const allInvoicePayments = ref<any[]>([])  // Alle Payments (inkl. gelöschte) für diese Rechnung
+  const totalExcludingCancelled = ref(0)  // Total ohne stornierte Payments
 
 // Edit mode state
 const isEditing = ref(false)
@@ -605,6 +601,36 @@ const closeModal = () => {
   emit('close')
 }
 
+// ✅ Lade alle Payments für diese Rechnung (inkl. gelöschte, zur Anzeige als "storniert")
+const loadInvoicePayments = async () => {
+  if (!props.invoice?.invoice_number) return;
+  
+  try {
+    const { getSupabase } = await import('~/utils/supabase');
+    const supabase = getSupabase();
+    
+    // Lade ALLE Payments mit dieser invoice_number (auch gelöschte)
+    const { data: payments, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('invoice_number', props.invoice.invoice_number)
+      .order('created_at', { ascending: true });
+    
+    if (!error && payments) {
+      allInvoicePayments.value = payments;
+      
+      // Berechne Total nur aus aktiven (nicht gelöschten) Payments
+      totalExcludingCancelled.value = payments
+        .filter(p => !p.deleted_at)
+        .reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0);
+      
+      console.log('✅ Invoice payments loaded:', payments.length, 'Total excluding cancelled:', totalExcludingCancelled.value);
+    }
+  } catch (err) {
+    console.error('⚠️ Error loading invoice payments:', err);
+  }
+}
+
 // Lade detaillierte Daten wenn das Modal geöffnet wird
 const loadDetailedData = async () => {
   // Initialisiere editedInvoice wenn das Modal geöffnet wird
@@ -619,6 +645,9 @@ const loadDetailedData = async () => {
   isLoadingDetails.value = true;
   
   try {
+    // ✅ Lade alle Payments für diese Rechnung
+    await loadInvoicePayments();
+    
     // Lade immer das neueste Payment per user_id, da die appointment_id möglicherweise nicht übereinstimmt
     if (props.invoice.user_id) {
       try {
