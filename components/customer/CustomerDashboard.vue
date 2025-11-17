@@ -1743,6 +1743,24 @@ const confirmAppointment = async (appointment: any) => {
         console.log('⏳ Authorization scheduled at', authDueDate.toISOString(), '; capture scheduled at', scheduledPayDate.toISOString())
       }
 
+      // ✅ Confirm appointment immediately (authorization successful = appointment confirmed)
+      try {
+        const confirmResult = await $fetch('/api/appointments/confirm', {
+          method: 'POST',
+          body: {
+            appointmentId: appointment.id
+          }
+        }) as { success?: boolean; error?: string }
+        
+        if (!confirmResult.success) {
+          console.error('⚠️ Could not confirm appointment:', confirmResult.error)
+        } else {
+          console.log('✅ Appointment confirmed after authorization')
+        }
+      } catch (err) {
+        console.error('⚠️ Error confirming appointment:', err)
+      }
+
       // Entferne den Termin aus der lokalen Liste der offenen Bestätigungen
       pendingConfirmations.value = pendingConfirmations.value.filter((a: any) => a.id !== appointment.id)
       showConfirmationModal.value = false
