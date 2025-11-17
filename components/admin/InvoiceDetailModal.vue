@@ -938,6 +938,49 @@ const metadataProducts = computed(() => {
   return parsedMetadata.value.products || [];
 });
 
+// Neue Funktion: Lade ALLE Zahlungen für eine Rechnung (inkl. gelöschte)
+const loadAllInvoicePayments = async (invoiceNumber: string) => {
+  if (!invoiceNumber) return [];
+  
+  try {
+    const { getSupabase } = await import('~/utils/supabase');
+    const supabase = getSupabase();
+    
+    // Lade ALLE Payments für diese Rechnung (inkl. gelöschte)
+    const { data: payments, error } = await supabase
+      .from('payments')
+      .select(`
+        id,
+        appointment_id,
+        lesson_price_rappen,
+        admin_fee_rappen,
+        products_price_rappen,
+        discount_amount_rappen,
+        total_amount_rappen,
+        description,
+        metadata,
+        deleted_at
+      `)
+      .eq('invoice_number', invoiceNumber);
+    
+    if (error) {
+      console.warn('Fehler beim Laden aller Zahlungen:', error);
+      return [];
+    }
+    
+    allInvoicePayments.value = payments || [];
+    
+    // Berechne Total ohne stornierte Payments
+    const activePayments = (payments || []).filter(p => !p.deleted_at);
+    totalExcludingCancelled.value = activePayments.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0);
+    
+    return payments || [];
+  } catch (error) {
+    console.error('Fehler beim Laden aller Zahlungen:', error);
+    return [];
+  }
+};
+
 // Neue Funktion: Lade detaillierte Zahlungsdaten aus der payments Tabelle
 const loadPaymentDetails = async (appointmentId: string) => {
   if (!appointmentId) return null;
