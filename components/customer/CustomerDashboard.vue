@@ -1692,6 +1692,26 @@ const confirmAppointment = async (appointment: any) => {
               if (captureResult.success) {
                 console.log('✅ Payment captured immediately')
                 
+                // Update appointment status to confirmed immediately (don't wait for webhook)
+                try {
+                  const supabase = getSupabase()
+                  const { error: updateError } = await supabase
+                    .from('appointments')
+                    .update({
+                      status: 'confirmed',
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', appointment.id)
+                  
+                  if (updateError) {
+                    console.error('⚠️ Could not update appointment status:', updateError)
+                  } else {
+                    console.log('✅ Appointment status updated to confirmed in DB')
+                  }
+                } catch (err) {
+                  console.error('⚠️ Error updating appointment status:', err)
+                }
+                
                 // Cleanup after capture success
                 pendingConfirmations.value = pendingConfirmations.value.filter((a: any) => a.id !== appointment.id)
                 showConfirmationModal.value = false
