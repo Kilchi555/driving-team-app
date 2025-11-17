@@ -2598,7 +2598,7 @@ const deleteAppointment = async (appointment: Appointment) => {
   
   showConfirmation(
     'Termin löschen',
-    'Möchtest du wirklich diesen Termin komplett löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+    'Möchtest du diesen Termin löschen? Der Termin wird als gelöscht markiert und kann später wiederhergestellt werden.',
     () => deleteAppointmentAction(appointment)
   )
 }
