@@ -654,8 +654,8 @@ const processPayment = async (success: boolean) => {
         customerEmail: userData.email,
         customerName: `${userData.first_name} ${userData.last_name}`,
         description: `Zahlung für ${paymentDetails.value.length} Termin(e)`,
-        successUrl: `${window.location.origin}/payment/success?payment_ids=${paymentIds.value.join(',')}`,
-        failedUrl: `${window.location.origin}/payment/failed?payment_ids=${paymentIds.value.join(',')}`,
+        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
+        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`,
         // Pseudonyme Customer-ID Inputs
         userId: userData.id,
         tenantId: userData.tenant_id

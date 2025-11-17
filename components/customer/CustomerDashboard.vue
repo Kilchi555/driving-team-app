@@ -2205,6 +2205,17 @@ onMounted(async () => {
   console.log('🔥 CustomerDashboard mounted')
   
   try {
+    // Check for payment success/failure from Wallee redirect
+    const route = useRoute()
+    const paymentSuccess = route.query.payment_success === 'true'
+    const paymentFailed = route.query.payment_failed === 'true'
+    
+    if (paymentSuccess) {
+      console.log('💳 Payment success detected, refreshing data...')
+      // Small delay to ensure webhook processed
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    }
+    
     // Einfacher: Warte auf Auth-Store Initialisierung
     let attempts = 0
     while (!authStore.isInitialized && attempts < 50) {
@@ -2221,6 +2232,17 @@ onMounted(async () => {
     console.log('✅ Auth verified, loading data...')
     await loadAllData()
     await loadPayments()
+    
+    // Show payment status toast
+    if (paymentSuccess) {
+      displayToast('success', 'Zahlung erfolgreich!', 'Ihr Termin wurde bestätigt.')
+      // Clean up query parameter
+      await navigateTo('/customer-dashboard', { replace: true })
+    } else if (paymentFailed) {
+      displayToast('error', 'Zahlung fehlgeschlagen', 'Bitte versuchen Sie es später erneut.')
+      // Clean up query parameter
+      await navigateTo('/customer-dashboard', { replace: true })
+    }
     
   } catch (err: any) {
     console.error('❌ Error during mount:', err)
