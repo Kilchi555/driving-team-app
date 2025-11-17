@@ -1694,22 +1694,20 @@ const confirmAppointment = async (appointment: any) => {
                 
                 // Update appointment status to confirmed immediately (don't wait for webhook)
                 try {
-                  const supabase = getSupabase()
-                  const { error: updateError } = await supabase
-                    .from('appointments')
-                    .update({
-                      status: 'confirmed',
-                      updated_at: new Date().toISOString()
-                    })
-                    .eq('id', appointment.id)
+                  const confirmResult = await $fetch('/api/appointments/confirm', {
+                    method: 'POST',
+                    body: {
+                      appointmentId: appointment.id
+                    }
+                  }) as { success?: boolean; error?: string }
                   
-                  if (updateError) {
-                    console.error('⚠️ Could not update appointment status:', updateError)
+                  if (!confirmResult.success) {
+                    console.error('⚠️ Could not confirm appointment:', confirmResult.error)
                   } else {
-                    console.log('✅ Appointment status updated to confirmed in DB')
+                    console.log('✅ Appointment confirmed via API')
                   }
                 } catch (err) {
-                  console.error('⚠️ Error updating appointment status:', err)
+                  console.error('⚠️ Error confirming appointment:', err)
                 }
                 
                 // Cleanup after capture success
