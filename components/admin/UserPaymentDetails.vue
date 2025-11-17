@@ -2765,7 +2765,7 @@ const downloadInvoice = async (appointment: Appointment) => {
     // Find the payment record for this appointment
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('id')
+      .select('id, invoice_number')
       .eq('appointment_id', appointment.id)
       .single()
     
@@ -2775,12 +2775,31 @@ const downloadInvoice = async (appointment: Appointment) => {
       return
     }
     
-    console.log('📥 Generating PDF for payment:', payment.id)
+    if (!payment.invoice_number) {
+      showErrorToast('Fehler', 'Keine Rechnung für diese Zahlung vorhanden')
+      return
+    }
     
-    const result = await $fetch('/api/payments/receipt', {
+    console.log('📥 Downloading invoice:', payment.invoice_number)
+    
+    // Fetch the invoice from the invoices table
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('invoice_number', payment.invoice_number)
+      .single()
+    
+    if (invoiceError || !invoice) {
+      console.error('❌ Invoice not found:', payment.invoice_number)
+      showErrorToast('Fehler', 'Rechnung nicht gefunden')
+      return
+    }
+    
+    // Generate PDF for the invoice
+    const result = await $fetch('/api/invoices/download', {
       method: 'POST',
       body: {
-        paymentIds: [payment.id]
+        invoiceId: invoice.id
       }
     })
     
