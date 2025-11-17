@@ -196,12 +196,15 @@ const checkStatus = async () => {
 }
 
 const startCountdown = () => {
-  countdownInterval = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) {
-      redirectToDashboard()
-    }
-  }, 1000)
+  // Wait 3 seconds for webhook to process, then start countdown
+  setTimeout(() => {
+    countdownInterval = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) {
+        redirectToDashboard()
+      }
+    }, 1000)
+  }, 3000)
 }
 
 const redirectToDashboard = () => {
