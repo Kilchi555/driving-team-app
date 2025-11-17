@@ -1677,6 +1677,24 @@ const confirmAppointment = async (appointment: any) => {
             scheduledPaymentDate: scheduledPayDate.toISOString()
           })
 
+          // ✅ Confirm appointment after authorization succeeds
+          try {
+            const confirmResult = await $fetch('/api/appointments/confirm', {
+              method: 'POST',
+              body: {
+                appointmentId: appointment.id
+              }
+            }) as { success?: boolean; error?: string }
+            
+            if (!confirmResult.success) {
+              console.error('⚠️ Could not confirm appointment:', confirmResult.error)
+            } else {
+              console.log('✅ Appointment confirmed after authorization')
+            }
+          } catch (err) {
+            console.error('⚠️ Error confirming appointment:', err)
+          }
+
           // ✅ Wenn Termin innerhalb der Capture-Frist ist, sofort capturen
           if (diffHours < automaticPaymentHoursBeforeLocal) {
             console.log('⚡ Appointment within capture window, capturing immediately...')
@@ -1741,24 +1759,6 @@ const confirmAppointment = async (appointment: any) => {
         }
       } else {
         console.log('⏳ Authorization scheduled at', authDueDate.toISOString(), '; capture scheduled at', scheduledPayDate.toISOString())
-      }
-
-      // ✅ Confirm appointment immediately (authorization successful = appointment confirmed)
-      try {
-        const confirmResult = await $fetch('/api/appointments/confirm', {
-          method: 'POST',
-          body: {
-            appointmentId: appointment.id
-          }
-        }) as { success?: boolean; error?: string }
-        
-        if (!confirmResult.success) {
-          console.error('⚠️ Could not confirm appointment:', confirmResult.error)
-        } else {
-          console.log('✅ Appointment confirmed after authorization')
-        }
-      } catch (err) {
-        console.error('⚠️ Error confirming appointment:', err)
       }
 
       // Entferne den Termin aus der lokalen Liste der offenen Bestätigungen
