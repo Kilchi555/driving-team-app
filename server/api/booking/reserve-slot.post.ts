@@ -23,9 +23,20 @@ export default defineEventHandler(async (event) => {
 
     // Validierung
     if (!user_id || !staff_id || !start_time || !end_time || !tenant_id) {
+      console.error('❌ Missing required fields:', { user_id, staff_id, start_time, end_time, tenant_id })
       throw createError({
         statusCode: 400,
         message: 'Missing required fields'
+      })
+    }
+    
+    // Validiere dass user_id ein gültiger UUID ist
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(user_id)) {
+      console.error('❌ Invalid user_id format:', user_id)
+      throw createError({
+        statusCode: 400,
+        message: 'Invalid user_id - must be a valid UUID'
       })
     }
 

@@ -2323,9 +2323,13 @@ const reserveSlot = async (userId?: string) => {
     console.warn('⚠️ Missing required data for reservation')
     return false
   }
+  
+  // For now, use a placeholder UUID if no user_id provided
+  // In production, this should come from authentication
+  const placeholderUserId = userId || '00000000-0000-0000-0000-000000000000'
 
   try {
-    console.log('🔄 Reserving slot...')
+    console.log('🔄 Reserving slot...', { userId: placeholderUserId })
     
     const response = await $fetch<{
       success: boolean
@@ -2334,7 +2338,7 @@ const reserveSlot = async (userId?: string) => {
     }>('/api/booking/reserve-slot', {
       method: 'POST',
       body: {
-        user_id: userId || 'temp-user',
+        user_id: placeholderUserId,
         staff_id: selectedInstructor.value.id,
         start_time: selectedSlot.value.start_time,
         end_time: selectedSlot.value.end_time,
