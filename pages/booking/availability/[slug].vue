@@ -1339,9 +1339,7 @@ const getInteractiveCardStyle = (isSelected: boolean, isHover = false) => {
     background: isSelected
       ? `linear-gradient(145deg, ${lightAccent}, ${withAlpha(primary, 0.15)})`
       : `linear-gradient(145deg, ${lightBase}, ${lightenColor(primary, 0.95)})`,
-    boxShadow: isSelected
-      ? `0 12px 28px ${withAlpha(primary, 0.32)}, inset 0 1px 0 rgba(255,255,255,0.8)`
-      : `0 8px 18px ${withAlpha(primary, 0.15)}, inset 0 1px 0 rgba(255,255,255,0.9)`,
+    boxShadow: 'none',
     transform: isHover || isSelected ? 'translateY(-3px)' : 'translateY(0)',
     transition: 'all 0.18s ease'
   }
