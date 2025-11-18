@@ -2362,7 +2362,7 @@ const reserveSlot = async (userId?: string) => {
   }
 }
 
-const cancelReservation = async () => {
+const cancelReservation = async (silent: boolean = false) => {
   if (!currentReservationId.value) return
 
   try {
@@ -2376,6 +2376,14 @@ const cancelReservation = async () => {
     })
 
     console.log('✅ Reservation cancelled')
+  } catch (error: any) {
+    console.error('❌ Error cancelling reservation:', error)
+    // Silently ignore cancellation errors - the reservation might already be gone
+    if (!silent) {
+      console.warn('⚠️ Could not cancel reservation, but continuing...')
+    }
+  } finally {
+    // Always reset state regardless of cancellation success
     currentReservationId.value = null
     reservedUntil.value = null
     remainingSeconds.value = 0
@@ -2384,8 +2392,6 @@ const cancelReservation = async () => {
       clearInterval(countdownInterval.value)
       countdownInterval.value = null
     }
-  } catch (error: any) {
-    console.error('❌ Error cancelling reservation:', error)
   }
 }
 
@@ -2394,7 +2400,7 @@ const startCountdown = () => {
     clearInterval(countdownInterval.value)
   }
 
-  const updateCountdown = () => {
+  const updateCountdown = async () => {
     if (!reservedUntil.value) return
 
     const now = new Date()
@@ -2403,8 +2409,10 @@ const startCountdown = () => {
     if (diff <= 0) {
       // Zeit abgelaufen
       console.log('⏰ Reservation expired')
-      cancelReservation()
-      alert('Die Reservierung ist abgelaufen. Bitte wählen Sie einen neuen Termin.')
+      // Cancel silently - just clean up state
+      await cancelReservation(true)
+      // Notify user without alert - just go back
+      console.log('🔄 Going back to step 5 due to reservation expiry')
       goBackToStep(5)
     } else {
       remainingSeconds.value = Math.ceil(diff / 1000)
