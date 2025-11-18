@@ -67,19 +67,22 @@
         </div>
 
         <!-- Step 1: Category Selection -->
-        <div v-if="currentStep === 1" class="bg-white shadow rounded-lg p-4">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-            <div>
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wählen Sie Ihre Fahrkategorie</h2>
-            </div>
+        <div v-if="currentStep === 1" class="space-y-4">
+          <!-- Back Button (above card) -->
+          <div v-if="referrerUrl" class="flex justify-start">
             <button 
-              v-if="referrerUrl"
               @click="goBackToReferrer"
               class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
             >
               ← Zurück
             </button>
           </div>
+
+          <!-- Category Selection Card -->
+          <div class="bg-white shadow rounded-lg p-4">
+            <div class="mb-6">
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wählen Sie Ihre Fahrkategorie</h2>
+            </div>
           
           <div :class="`grid ${getGridClasses(categories.length)} gap-3`">
             <div 
@@ -105,6 +108,7 @@
                 <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ category.description }}</p>
               </div>
             </div>
+          </div>
           </div>
         </div>
 
