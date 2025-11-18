@@ -878,6 +878,12 @@ const referrerUrl = ref<string | null>(null)
 const isScreenSmall = ref(false)
 const stepsContainerRef = ref<HTMLDivElement | null>(null)
 
+// Reservation state
+const currentReservationId = ref<string | null>(null)
+const reservedUntil = ref<Date | null>(null)
+const remainingSeconds = ref(0)
+const countdownInterval = ref<NodeJS.Timeout | null>(null)
+
 // Pickup state
 const pickupPLZ = ref('')
 const isCheckingPickup = ref(false)
@@ -2182,6 +2188,11 @@ const handleDocumentUploadSuccess = () => {
 }
 
 const goBackToStep = (step: number) => {
+  // Cancel reservation when going back to step 5 or earlier from step 6
+  if (currentStep.value === 6 && step <= 5) {
+    cancelReservation()
+  }
+  
   currentStep.value = step
   
   // Reset subsequent selections
@@ -2189,6 +2200,10 @@ const goBackToStep = (step: number) => {
     selectedSlot.value = null
     pickupAddress.value = ''
     pickupAddressDetails.value = null
+    // Also cancel reservation if going back from 6
+    if (currentReservationId.value) {
+      cancelReservation()
+    }
   }
   if (step < 5) {
     selectedSlot.value = null
@@ -2245,6 +2260,110 @@ const scrollToStep = (step: number) => {
     stepButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
   }
 }
+
+// Reservation functions
+const reserveSlot = async () => {
+  if (!selectedSlot.value || !selectedInstructor.value || !currentTenant.value) {
+    console.warn('⚠️ Missing required data for reservation')
+    return false
+  }
+
+  try {
+    console.log('🔄 Reserving slot...')
+    
+    const response = await $fetch<{
+      success: boolean
+      reservation_id: string
+      reserved_until: string
+    }>('/api/booking/reserve-slot', {
+      method: 'POST',
+      body: {
+        user_id: getCurrentUser().value?.id,
+        staff_id: selectedInstructor.value.id,
+        start_time: selectedSlot.value.start_time,
+        end_time: selectedSlot.value.end_time,
+        duration_minutes: selectedSlot.value.duration_minutes || selectedDuration.value,
+        category_code: selectedCategory.value?.code,
+        location_id: selectedLocation.value?.id,
+        tenant_id: currentTenant.value.id
+      }
+    })
+
+    if (response.success) {
+      console.log('✅ Slot reserved:', response.reservation_id)
+      currentReservationId.value = response.reservation_id
+      reservedUntil.value = new Date(response.reserved_until)
+      startCountdown()
+      return true
+    } else {
+      console.error('❌ Reservation failed')
+      return false
+    }
+  } catch (error: any) {
+    console.error('❌ Error reserving slot:', error)
+    alert(`Fehler bei der Reservierung: ${error?.data?.message || error?.message}`)
+    return false
+  }
+}
+
+const cancelReservation = async () => {
+  if (!currentReservationId.value) return
+
+  try {
+    console.log('🗑️ Cancelling reservation...')
+    
+    await $fetch('/api/booking/cancel-reservation', {
+      method: 'POST',
+      body: {
+        reservation_id: currentReservationId.value
+      }
+    })
+
+    console.log('✅ Reservation cancelled')
+    currentReservationId.value = null
+    reservedUntil.value = null
+    remainingSeconds.value = 0
+    
+    if (countdownInterval.value) {
+      clearInterval(countdownInterval.value)
+      countdownInterval.value = null
+    }
+  } catch (error: any) {
+    console.error('❌ Error cancelling reservation:', error)
+  }
+}
+
+const startCountdown = () => {
+  if (countdownInterval.value) {
+    clearInterval(countdownInterval.value)
+  }
+
+  const updateCountdown = () => {
+    if (!reservedUntil.value) return
+
+    const now = new Date()
+    const diff = reservedUntil.value.getTime() - now.getTime()
+    
+    if (diff <= 0) {
+      // Zeit abgelaufen
+      console.log('⏰ Reservation expired')
+      cancelReservation()
+      alert('Die Reservierung ist abgelaufen. Bitte wählen Sie einen neuen Termin.')
+      goBackToStep(5)
+    } else {
+      remainingSeconds.value = Math.ceil(diff / 1000)
+    }
+  }
+
+  updateCountdown()
+  countdownInterval.value = setInterval(updateCountdown, 1000)
+}
+
+const getCountdownText = computed(() => {
+  const mins = Math.floor(remainingSeconds.value / 60)
+  const secs = remainingSeconds.value % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+})
 
 const handleBackButton = () => {
   // On step 1, go back to referrer
