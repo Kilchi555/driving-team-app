@@ -1,4 +1,14 @@
 <template>
+  <!-- Fixed Back Button at top -->
+  <div v-if="referrerUrl && currentStep > 0" class="fixed top-4 left-4 z-50">
+    <button 
+      @click="goBackToReferrer"
+      class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
+    >
+      ← Zurück
+    </button>
+  </div>
+
   <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       
@@ -68,16 +78,6 @@
 
         <!-- Step 1: Category Selection -->
         <div v-if="currentStep === 1" class="space-y-4">
-          <!-- Back Button (above card) -->
-          <div v-if="referrerUrl" class="flex justify-start">
-            <button 
-              @click="goBackToReferrer"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
-            >
-              ← Zurück
-            </button>
-          </div>
-
           <!-- Category Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
@@ -115,16 +115,6 @@
 
         <!-- Step 2: Lesson Duration Selection -->
         <div v-if="currentStep === 2" class="space-y-4">
-          <!-- Back Button (above card) -->
-          <div class="flex justify-start">
-            <button 
-              @click="goBackToStep(1)"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
-            >
-              ← Zurück
-            </button>
-          </div>
-
           <!-- Duration Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
@@ -179,16 +169,6 @@
 
         <!-- Step 3: Location Selection -->
         <div v-if="currentStep === 3" class="space-y-4">
-          <!-- Back Button (above card) -->
-          <div class="flex justify-start">
-            <button 
-              @click="goBackToStep(2)"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
-            >
-              ← Zurück
-            </button>
-          </div>
-
           <!-- Location Selection Card -->
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
@@ -301,16 +281,6 @@
 
         <!-- Step 4: Instructor Selection -->
         <div v-if="currentStep === 4" class="space-y-4">
-          <!-- Back Button (above card) -->
-          <div class="flex justify-start">
-            <button 
-              @click="goBackToStep(3)"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
-            >
-              ← Zurück
-            </button>
-          </div>
-
           <!-- Instructor Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
@@ -372,16 +342,6 @@
 
         <!-- Step 5: Time Slot Selection -->
         <div v-if="currentStep === 5" class="space-y-4">
-          <!-- Back Button (above card) -->
-          <div class="flex justify-start">
-            <button 
-              @click="goBackToStep(4)"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
-            >
-              ← Zurück
-            </button>
-          </div>
-
           <!-- Time Slot Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
@@ -483,16 +443,6 @@
 
         <!-- Step 6: Pickup Address (nur wenn Pickup gewählt) -->
         <div v-if="currentStep === 6 && selectedLocation?.isPickup" class="space-y-4">
-          <!-- Back Button (above card) -->
-          <div class="flex justify-start">
-            <button 
-              @click="goBackToStep(5)"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
-            >
-              ← Zurück
-            </button>
-          </div>
-
           <!-- Pickup Address Card -->
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
@@ -613,16 +563,6 @@
 
         <!-- Step 6: Direct Confirmation (wenn kein Pickup) -->
         <div v-if="currentStep === 6 && !selectedLocation?.isPickup" class="space-y-4">
-          <!-- Back Button (above card) -->
-          <div class="flex justify-start">
-            <button 
-              @click="goBackToStep(5)"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
-            >
-              ← Zurück
-            </button>
-          </div>
-
           <!-- Direct Confirmation Card -->
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
           <div class="text-center mb-6">
