@@ -215,7 +215,7 @@
                     }"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">-- Wählen Sie einen Standort --</option>
+                    <option value="">-- Wähle einen Standort --</option>
                     <option v-for="location in availableLocationsForSignup" :key="location.id" :value="location.id">
                       {{ location.name }} ({{ location.address }})
                     </option>

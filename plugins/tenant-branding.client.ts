@@ -102,20 +102,22 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     }
   }
 
-  // Router-Hooks registrieren - use Nuxt hook instead of useRouter
-  nuxtApp.hook('app:created', () => {
-    const $router = nuxtApp.$router
-    
-    if ($router && $router.beforeEach) {
-      $router.beforeEach(async (to: any, from: any, next: any) => {
-        await handleRouteChange(to)
-        next()
-      })
-      console.log('✅ Router guard for tenant branding registered')
-    } else {
-      console.warn('⚠️ Router not available in app:created hook')
-    }
-  })
+  // Router-Hooks registrieren - use app:mounted hook when router is ready
+  if (process.client) {
+    nuxtApp.hook('app:mounted', () => {
+      const $router = nuxtApp.$router
+      
+      if ($router && $router.beforeEach) {
+        $router.beforeEach(async (to: any, from: any, next: any) => {
+          await handleRouteChange(to)
+          next()
+        })
+        console.log('✅ Router guard for tenant branding registered')
+      } else {
+        console.warn('⚠️ Router not available in app:mounted hook')
+      }
+    })
+  }
 
   // DEAKTIVIERT: Automatisches Laden wird von den Layouts gesteuert
   // setTimeout(async () => {

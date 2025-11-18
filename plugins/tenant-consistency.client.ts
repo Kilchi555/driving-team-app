@@ -27,25 +27,27 @@ export default defineNuxtPlugin((nuxtApp) => {
     await validateTenantConsistency()
   })
   
-  // Setup router guard using Nuxt hook instead of useRouter
-  nuxtApp.hook('app:created', () => {
-    const router = nuxtApp.$router
-    
-    if (router && router.beforeEach) {
-      router.beforeEach(async (to: any, from: any) => {
-        if (to.path.startsWith('/admin')) {
-          const isConsistent = await validateTenantConsistency()
-          if (!isConsistent) {
-            console.error('🚨 Blocking admin navigation due to tenant inconsistency')
-            return false
+  // Setup router guard using app:mounted hook when router is ready
+  if (process.client) {
+    nuxtApp.hook('app:mounted', () => {
+      const router = nuxtApp.$router
+      
+      if (router && router.beforeEach) {
+        router.beforeEach(async (to: any, from: any) => {
+          if (to.path.startsWith('/admin')) {
+            const isConsistent = await validateTenantConsistency()
+            if (!isConsistent) {
+              console.error('🚨 Blocking admin navigation due to tenant inconsistency')
+              return false
+            }
           }
-        }
-      })
-      console.log('✅ Router guard for tenant consistency registered')
-    } else {
-      console.warn('⚠️ Router not available in app:created hook')
-    }
-  })
+        })
+        console.log('✅ Router guard for tenant consistency registered')
+      } else {
+        console.warn('⚠️ Router not available in app:mounted hook')
+      }
+    })
+  }
   
   console.log('✅ Tenant consistency monitoring initialized')
 })

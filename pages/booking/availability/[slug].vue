@@ -161,9 +161,7 @@
                   <div class="text-2xl font-bold text-gray-900">
                     {{ duration }} <span class="text-base font-medium">Min.</span>
                   </div>
-                  <p class="text-xs sm:text-sm text-gray-600 mt-1">
-                    {{ duration >= 60 ? `${Math.round((duration / 60) * 10) / 10} Stunden` : 'Fokussiertes Training' }}
-                  </p>
+    
                 </div>
 
               </div>
@@ -184,7 +182,7 @@
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 3</p>
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Standort</h2>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle einen Standort</h2>
               <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
                 <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
@@ -245,8 +243,8 @@
               <div class="flex-1 w-full">
                 <h3 class="text-sm sm:text-base font-semibold text-gray-900 mb-2">Pickup-Service verfügbar!</h3>
                 <p class="text-xs sm:text-sm text-gray-600 mb-3">
-                  Für diese Kategorie bieten wir auch Abholung an Ihrem Wunschort an. 
-                  Geben Sie Ihre Postleitzahl ein, um zu prüfen, ob Sie im Pickup-Bereich liegen.
+                  Für diese Kategorie bieten wir auch Abholung an deinemWunschort an. 
+                  Gebe deine Postleitzahl ein, um zu prüfen, ob sie im Pickup-Bereich liegt.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-2">
                   <input 
@@ -294,15 +292,6 @@
               </div>
             </div>
           </div>
-          
-          <div class="mt-6 text-center">
-            <button 
-                  @click="goBackToStep(2)"
-              class="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
-            >
-                  ← Zurück zur Dauer-Auswahl
-            </button>
-          </div>
           </div>
         </div>
 
@@ -312,8 +301,7 @@
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 4</p>
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie Ihren Fahrlehrer</h2>
-              <p class="text-sm sm:text-base text-gray-600">Wer soll Ihre Fahrstunde durchführen?</p>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle deinen Fahrlehrer</h2>
               <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
                 <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
@@ -348,24 +336,13 @@
                   <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 truncate">
                     {{ instructor.first_name }} {{ instructor.last_name }}
                   </h3>
-                  <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">
-                    Kategorien: {{ Array.isArray(instructor.category) ? instructor.category.join(', ') : 'N/A' }}
-                  </p>
+
                   <div class="text-xs text-purple-600 font-medium">
                     Termine verfügbar
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          <div class="mt-6 text-center">
-            <button 
-              @click="goBackToStep(3)"
-              class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              ← Zurück zur Standort-Auswahl
-            </button>
           </div>
           </div>
         </div>
@@ -376,10 +353,9 @@
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 5</p>
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Termin</h2>
-              <p class="text-sm sm:text-base text-gray-600">Wann möchten Sie Ihre Fahrstunde haben?</p>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle deinen Termin</h2>
               <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
-                <span class="font-semibold">{{ selectedCategory?.code }}</span>
+                <span class="font-semibold">{{ selectedCategory?.name }}</span>
                 <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
                 <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
                 <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
@@ -465,12 +441,6 @@
           </div>
           
           <div class="mt-6 text-center">
-            <button 
-              @click="goBackToStep(4)"
-              class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              ← Zurück zur Fahrlehrer-Auswahl
-            </button>
           </div>
           </div>
         </div>
@@ -482,7 +452,7 @@
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 6</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Pickup-Adresse angeben</h2>
-              <p class="text-sm sm:text-base text-gray-600">Wo sollen wir Sie abholen?</p>
+              <p class="text-sm sm:text-base text-gray-600">Wo sollen wir dich abholen?</p>
               <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.code }}</span>
                 <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
@@ -502,7 +472,7 @@
               </svg>
               <div class="flex-1 text-sm text-blue-800">
                 <p class="font-medium mb-1">Pickup-Service aktiviert</p>
-                <p>Wir holen Sie an Ihrer Wunschadresse ab. Bitte geben Sie eine vollständige Adresse in PLZ {{ selectedLocation.pickupPLZ }} ein.</p>
+                <p>Wir holen dich an deiner Wunschadresse ab. Bitte gebe deine vollständige Adresse in PLZ {{ selectedLocation.pickupPLZ }} ein.</p>
               </div>
             </div>
           </div>
@@ -578,13 +548,6 @@
 
           <!-- Navigation -->
           <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <button 
-              @click="goBackToStep(5)"
-              :disabled="isCreatingBooking"
-              class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ← Zurück zur Termin-Auswahl
-            </button>
             <button
               @click="confirmBooking"
               :disabled="!pickupAddressDetails?.valid || isCreatingBooking"
@@ -605,7 +568,7 @@
           <div class="text-center mb-6">
             <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 6</p>
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Buchung bestätigen</h2>
-            <p class="text-sm sm:text-base text-gray-600">Bitte überprüfen Sie Ihre Angaben</p>
+            <p class="text-sm sm:text-base text-gray-600">Bitte überprüfe deine Angaben</p>
           </div>
 
           <!-- Booking Summary -->
@@ -642,13 +605,6 @@
 
           <!-- Navigation -->
           <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <button 
-              @click="goBackToStep(5)"
-              :disabled="isCreatingBooking"
-              class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ← Zurück zur Termin-Auswahl
-            </button>
             <button
               @click="confirmBooking"
               :disabled="isCreatingBooking"
