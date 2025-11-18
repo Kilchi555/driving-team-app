@@ -113,14 +113,9 @@
         </div>
 
         <!-- Step 2: Lesson Duration Selection -->
-        <div v-if="currentStep === 2" class="bg-white shadow rounded-lg p-4">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-            <div>
-              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 2</p>
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
-                Dauer wählen für {{ selectedCategory?.name }}
-              </h2>
-            </div>
+        <div v-if="currentStep === 2" class="space-y-4">
+          <!-- Back Button (above card) -->
+          <div class="flex justify-start">
             <button 
               @click="goBackToStep(1)"
               class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
@@ -128,6 +123,15 @@
               ← Zurück
             </button>
           </div>
+
+          <!-- Duration Selection Card -->
+          <div class="bg-white shadow rounded-lg p-4">
+            <div class="mb-6">
+              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 2</p>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
+                Dauer wählen für {{ selectedCategory?.name }}
+              </h2>
+            </div>
           
           <div
             v-if="durationOptions.length"
@@ -169,16 +173,29 @@
               Für diese Kategorie sind noch keine Lektion-Dauern hinterlegt. Bitte kontaktieren Sie die Fahrschule.
             </p>
           </div>
+          </div>
         </div>
 
         <!-- Step 3: Location Selection -->
-        <div v-if="currentStep === 3" class="bg-white shadow rounded-lg p-4 sm:p-6">
-          <div class="text-center mb-6">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Standort</h2>
-            <div class="mt-2 text-xs sm:text-sm text-blue-600">
-              <span class="font-semibold">{{ selectedCategory?.name }}</span>
-            </div>
+        <div v-if="currentStep === 3" class="space-y-4">
+          <!-- Back Button (above card) -->
+          <div class="flex justify-start">
+            <button 
+              @click="goBackToStep(2)"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
+            >
+              ← Zurück
+            </button>
           </div>
+
+          <!-- Location Selection Card -->
+          <div class="bg-white shadow rounded-lg p-4 sm:p-6">
+            <div class="text-center mb-6">
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Standort</h2>
+              <div class="mt-2 text-xs sm:text-sm text-blue-600">
+                <span class="font-semibold">{{ selectedCategory?.name }}</span>
+              </div>
+            </div>
           
           <!-- Standard Locations -->
           <div>
@@ -284,17 +301,30 @@
                   ← Zurück zur Dauer-Auswahl
             </button>
           </div>
+          </div>
         </div>
 
         <!-- Step 4: Instructor Selection -->
-        <div v-if="currentStep === 4" class="bg-white shadow rounded-lg p-4">
-          <div class="text-center mb-6">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie Ihren Fahrlehrer</h2>
-            <p class="text-sm sm:text-base text-gray-600">Wer soll Ihre Fahrstunde durchführen?</p>
-            <div class="mt-2 text-sm text-blue-600">
-              {{ selectedCategory?.code }} - {{ selectedLocation?.name }}
-            </div>
+        <div v-if="currentStep === 4" class="space-y-4">
+          <!-- Back Button (above card) -->
+          <div class="flex justify-start">
+            <button 
+              @click="goBackToStep(3)"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
+            >
+              ← Zurück
+            </button>
           </div>
+
+          <!-- Instructor Selection Card -->
+          <div class="bg-white shadow rounded-lg p-4">
+            <div class="text-center mb-6">
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie Ihren Fahrlehrer</h2>
+              <p class="text-sm sm:text-base text-gray-600">Wer soll Ihre Fahrstunde durchführen?</p>
+              <div class="mt-2 text-sm text-blue-600">
+                {{ selectedCategory?.code }} - {{ selectedLocation?.name }}
+              </div>
+            </div>
           
           <div :class="`grid ${getGridClasses(availableInstructors.length)} gap-4`">
             <div 
@@ -341,17 +371,30 @@
               ← Zurück zur Standort-Auswahl
             </button>
           </div>
+          </div>
         </div>
 
         <!-- Step 5: Time Slot Selection -->
-        <div v-if="currentStep === 5" class="bg-white shadow rounded-lg p-4">
-          <div class="text-center mb-6">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Termin</h2>
-            <p class="text-sm sm:text-base text-gray-600">Wann möchten Sie Ihre Fahrstunde haben?</p>
-            <div class="mt-2 text-sm text-blue-600">
-              {{ selectedCategory?.code }} - {{ selectedLocation?.name }} - {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}
-            </div>
+        <div v-if="currentStep === 5" class="space-y-4">
+          <!-- Back Button (above card) -->
+          <div class="flex justify-start">
+            <button 
+              @click="goBackToStep(4)"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
+            >
+              ← Zurück
+            </button>
           </div>
+
+          <!-- Time Slot Selection Card -->
+          <div class="bg-white shadow rounded-lg p-4">
+            <div class="text-center mb-6">
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Termin</h2>
+              <p class="text-sm sm:text-base text-gray-600">Wann möchten Sie Ihre Fahrstunde haben?</p>
+              <div class="mt-2 text-sm text-blue-600">
+                {{ selectedCategory?.code }} - {{ selectedLocation?.name }} - {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}
+              </div>
+            </div>
           
           <!-- Loading Time Slots -->
           <div v-if="isLoadingTimeSlots" class="text-center py-12">
@@ -438,20 +481,33 @@
               ← Zurück zur Fahrlehrer-Auswahl
             </button>
           </div>
+          </div>
         </div>
 
         <!-- Step 6: Pickup Address (nur wenn Pickup gewählt) -->
-        <div v-if="currentStep === 6 && selectedLocation?.isPickup" class="bg-white shadow rounded-lg p-4 sm:p-6">
-          <div class="text-center mb-6">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Pickup-Adresse angeben</h2>
-            <p class="text-sm sm:text-base text-gray-600">Wo sollen wir Sie abholen?</p>
-            <div class="mt-2 text-sm text-blue-600">
-              {{ selectedCategory?.code }} - {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}
-            </div>
-            <div class="mt-1 text-xs text-gray-500">
-              {{ formatDate(selectedSlot?.start_time) }} um {{ formatTime(selectedSlot?.start_time) }}
-            </div>
+        <div v-if="currentStep === 6 && selectedLocation?.isPickup" class="space-y-4">
+          <!-- Back Button (above card) -->
+          <div class="flex justify-start">
+            <button 
+              @click="goBackToStep(5)"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
+            >
+              ← Zurück
+            </button>
           </div>
+
+          <!-- Pickup Address Card -->
+          <div class="bg-white shadow rounded-lg p-4 sm:p-6">
+            <div class="text-center mb-6">
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Pickup-Adresse angeben</h2>
+              <p class="text-sm sm:text-base text-gray-600">Wo sollen wir Sie abholen?</p>
+              <div class="mt-2 text-sm text-blue-600">
+                {{ selectedCategory?.code }} - {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}
+              </div>
+              <div class="mt-1 text-xs text-gray-500">
+                {{ formatDate(selectedSlot?.start_time) }} um {{ formatTime(selectedSlot?.start_time) }}
+              </div>
+            </div>
 
           <!-- Pickup Info -->
           <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -554,10 +610,23 @@
               <span v-else>Buchung bestätigen →</span>
             </button>
           </div>
+          </div>
         </div>
 
         <!-- Step 6: Direct Confirmation (wenn kein Pickup) -->
-        <div v-if="currentStep === 6 && !selectedLocation?.isPickup" class="bg-white shadow rounded-lg p-4 sm:p-6">
+        <div v-if="currentStep === 6 && !selectedLocation?.isPickup" class="space-y-4">
+          <!-- Back Button (above card) -->
+          <div class="flex justify-start">
+            <button 
+              @click="goBackToStep(5)"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
+            >
+              ← Zurück
+            </button>
+          </div>
+
+          <!-- Direct Confirmation Card -->
+          <div class="bg-white shadow rounded-lg p-4 sm:p-6">
           <div class="text-center mb-6">
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Buchung bestätigen</h2>
             <p class="text-sm sm:text-base text-gray-600">Bitte überprüfen Sie Ihre Angaben</p>
@@ -613,6 +682,7 @@
               <span v-if="isCreatingBooking">Wird erstellt...</span>
               <span v-else>Buchung bestätigen →</span>
             </button>
+          </div>
           </div>
         </div>
       </div>
