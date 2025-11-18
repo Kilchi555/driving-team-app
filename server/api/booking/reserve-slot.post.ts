@@ -95,6 +95,13 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     console.error('❌ Error in reserve-slot:', error)
+    console.error('❌ Error details:', {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+      stack: error?.stack?.substring(0, 500)
+    })
     
     if (error.statusCode) {
       throw error
