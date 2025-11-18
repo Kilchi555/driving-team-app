@@ -1786,11 +1786,12 @@ const generateTimeSlotsForSpecificCombination = async () => {
       const beforeTimeWindows = filteredSlots.length
       
       filteredSlots = filteredSlots.filter(slot => {
-        // Parse the local time string to Date
-        const [datePart, timePart] = slot.start_time.split(' ')
-        const [year, month, day] = datePart.split('-').map(Number)
-        const [hours, minutes] = timePart.split(':').map(Number)
-        const slotDate = new Date(year, month - 1, day, hours, minutes, 0)
+        // Parse the ISO time string to Date
+        if (!slot.start_time) {
+          console.warn('⚠️ Slot has no start_time:', slot)
+          return false
+        }
+        const slotDate = new Date(slot.start_time)
         
         const isValid = isWithinTimeWindows(slotDate, selectedLocation.value.time_windows)
         
@@ -1817,11 +1818,12 @@ const generateTimeSlotsForSpecificCombination = async () => {
       console.log(`⏰ Minimum booking time: ${minimumBookingTime.toLocaleString('de-CH')}`)
       
       filteredSlots = filteredSlots.filter(slot => {
-        // Parse the local time string to Date
-        const [datePart, timePart] = slot.start_time.split(' ')
-        const [year, month, day] = datePart.split('-').map(Number)
-        const [hours, minutes] = timePart.split(':').map(Number)
-        const slotDate = new Date(year, month - 1, day, hours, minutes, 0)
+        // Parse the ISO time string to Date
+        if (!slot.start_time) {
+          console.warn('⚠️ Slot has no start_time:', slot)
+          return false
+        }
+        const slotDate = new Date(slot.start_time)
         
         const isValid = slotDate >= minimumBookingTime
         
