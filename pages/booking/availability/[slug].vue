@@ -127,6 +127,7 @@
               </h2>
               <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
+                <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
               </div>
             </div>
           
@@ -182,6 +183,8 @@
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Standort</h2>
               <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
+                <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
+                <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
               </div>
             </div>
           
@@ -294,7 +297,10 @@
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie Ihren Fahrlehrer</h2>
               <p class="text-sm sm:text-base text-gray-600">Wer soll Ihre Fahrstunde durchführen?</p>
               <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
-                {{ selectedCategory?.code }} - {{ selectedLocation?.name }}
+                <span class="font-semibold">{{ selectedCategory?.code }}</span>
+                <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
+                <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
+                <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
               </div>
             </div>
           
@@ -355,7 +361,11 @@
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Termin</h2>
               <p class="text-sm sm:text-base text-gray-600">Wann möchten Sie Ihre Fahrstunde haben?</p>
               <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
-                {{ selectedCategory?.code }} - {{ selectedLocation?.name }} - {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}
+                <span class="font-semibold">{{ selectedCategory?.code }}</span>
+                <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
+                <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
+                <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
+                <span v-if="selectedSlot" class="font-semibold"> • {{ formatDate(selectedSlot?.start_time) }} {{ formatTime(selectedSlot?.start_time) }}</span>
               </div>
             </div>
           
@@ -456,7 +466,10 @@
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Pickup-Adresse angeben</h2>
               <p class="text-sm sm:text-base text-gray-600">Wo sollen wir Sie abholen?</p>
               <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
-                {{ selectedCategory?.code }} - {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}
+                <span class="font-semibold">{{ selectedCategory?.code }}</span>
+                <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
+                <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
+                <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
               </div>
               <div class="mt-1 text-xs text-gray-500">
                 {{ formatDate(selectedSlot?.start_time) }} um {{ formatTime(selectedSlot?.start_time) }}
