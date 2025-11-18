@@ -58,10 +58,15 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (appointmentError) {
-      console.error('Error creating appointment:', appointmentError)
+      console.error('❌ Error creating appointment:', appointmentError)
+      console.error('❌ Error details:', {
+        message: appointmentError.message,
+        code: appointmentError.code,
+        details: appointmentError.details
+      })
       throw createError({
         statusCode: 500,
-        message: 'Fehler beim Erstellen des Termins'
+        message: `Fehler beim Erstellen des Termins: ${appointmentError.message}`
       })
     }
 
