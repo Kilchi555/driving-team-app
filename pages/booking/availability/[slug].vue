@@ -48,11 +48,16 @@
       <div v-else class="space-y-8">
         
         <!-- Progress Steps -->
-        <div class="bg-white shadow rounded-lg p-4 mb-6 max-w-full" :class="{ 'overflow-x-auto overflow-y-hidden': isScreenSmall, 'overflow-hidden': !isScreenSmall }">
-          <div class="flex items-center" :class="{ 'justify-start': isScreenSmall, 'justify-center': !isScreenSmall }" :style="{ transform: isScreenSmall ? `translateX(max(-${Math.max(0, (currentStep - 2) * 25)}%, -100%))` : 'none', transition: 'transform 0.3s ease' }">
-            <div class="flex items-center gap-2 sm:gap-4 flex-nowrap" :style="{ minWidth: isScreenSmall ? 'fit-content' : 'auto' }">
+        <div 
+          ref="stepsContainerRef"
+          class="bg-white shadow rounded-lg p-4 mb-6 max-w-full" 
+          :class="{ 'overflow-x-auto overflow-y-hidden': isScreenSmall, 'overflow-hidden': !isScreenSmall }"
+        >
+          <div class="flex items-center justify-start">
+            <div class="flex items-center gap-2 sm:gap-4 flex-nowrap">
               <template v-for="(step, index) in bookingSteps" :key="step.id">
               <button
+                :data-step="step.id"
                 @click="goToStep(step.id)"
                 :disabled="step.id > currentStep"
                 class="flex items-center flex-shrink-0 cursor-pointer disabled:cursor-not-allowed transition-opacity hover:opacity-80 disabled:opacity-50"
@@ -86,7 +91,7 @@
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 1</p>
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wählekategorie</h2>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deine Kategorie</h2>
               <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
               </div>
@@ -160,12 +165,7 @@
                     {{ duration >= 60 ? `${Math.round((duration / 60) * 10) / 10} Stunden` : 'Fokussiertes Training' }}
                   </p>
                 </div>
-                <div 
-                  class="rounded-full px-3 py-1 text-xs font-semibold border"
-                  :style="getDurationBadgeStyle(selectedDuration === duration)"
-                >
-                  {{ selectedDuration === duration ? 'Ausgewählt' : 'Jetzt wählen' }}
-                </div>
+
               </div>
             </button>
           </div>
@@ -920,6 +920,7 @@ const referrerUrl = ref<string | null>(null)
 
 // Responsive state for step scrolling
 const isScreenSmall = ref(false)
+const stepsContainerRef = ref<HTMLDivElement | null>(null)
 
 // Pickup state
 const pickupPLZ = ref('')
@@ -2269,6 +2270,23 @@ const goToStep = (step: number) => {
   // Only allow going to steps that are already completed or current
   if (step <= currentStep.value) {
     goBackToStep(step)
+    
+    // Scroll to the clicked step on small screens
+    if (isScreenSmall.value) {
+      nextTick(() => {
+        scrollToStep(step)
+      })
+    }
+  }
+}
+
+const scrollToStep = (step: number) => {
+  if (!stepsContainerRef.value) return
+  
+  // Find the button for this step
+  const stepButton = stepsContainerRef.value.querySelector(`button[data-step="${step}"]`)
+  if (stepButton) {
+    stepButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
   }
 }
 
