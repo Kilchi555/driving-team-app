@@ -80,7 +80,8 @@
 
           <!-- Category Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
-            <div class="mb-6">
+            <div class="text-center mb-6">
+              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 1</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wählen Sie Ihre Fahrkategorie</h2>
             </div>
           
@@ -126,7 +127,7 @@
 
           <!-- Duration Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
-            <div class="mb-6">
+            <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 2</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
                 Dauer wählen für {{ selectedCategory?.name }}
@@ -191,6 +192,7 @@
           <!-- Location Selection Card -->
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
+              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 3</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Standort</h2>
               <div class="mt-2 text-xs sm:text-sm text-blue-600">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
@@ -199,13 +201,6 @@
           
           <!-- Standard Locations -->
           <div>
-            <div class="flex items-center gap-2 mb-3">
-              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
-              <h3 class="text-xs sm:text-sm font-medium text-gray-700">Oder wählen Sie einen festen Standort:</h3>
-            </div>
             <div :class="`grid ${getGridClasses(availableLocations.length)} gap-3 sm:gap-4`">
               <div 
                 v-for="location in availableLocations" 
@@ -319,6 +314,7 @@
           <!-- Instructor Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
+              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 4</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie Ihren Fahrlehrer</h2>
               <p class="text-sm sm:text-base text-gray-600">Wer soll Ihre Fahrstunde durchführen?</p>
               <div class="mt-2 text-sm text-blue-600">
@@ -389,6 +385,7 @@
           <!-- Time Slot Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
+              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 5</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Termin</h2>
               <p class="text-sm sm:text-base text-gray-600">Wann möchten Sie Ihre Fahrstunde haben?</p>
               <div class="mt-2 text-sm text-blue-600">
@@ -499,6 +496,7 @@
           <!-- Pickup Address Card -->
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
+              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 6</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Pickup-Adresse angeben</h2>
               <p class="text-sm sm:text-base text-gray-600">Wo sollen wir Sie abholen?</p>
               <div class="mt-2 text-sm text-blue-600">
@@ -628,6 +626,7 @@
           <!-- Direct Confirmation Card -->
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
           <div class="text-center mb-6">
+            <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 6</p>
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Buchung bestätigen</h2>
             <p class="text-sm sm:text-base text-gray-600">Bitte überprüfen Sie Ihre Angaben</p>
           </div>
