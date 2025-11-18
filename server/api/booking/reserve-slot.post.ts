@@ -9,7 +9,6 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
     const {
-      user_id,
       staff_id,
       start_time,
       end_time,
@@ -19,7 +18,7 @@ export default defineEventHandler(async (event) => {
       tenant_id
     } = body
 
-    console.log('🔄 Reserving slot:', { user_id, staff_id, start_time })
+    console.log('🔄 Reserving slot:', { staff_id, start_time })
 
     // Validierung
     if (!staff_id || !start_time || !end_time || !tenant_id) {
@@ -29,19 +28,32 @@ export default defineEventHandler(async (event) => {
         message: 'Missing required fields'
       })
     }
-    
-    // user_id ist optional für temporäre Reservierungen (wird später beim echten Booking gesetzt)
-    // Validiere dass user_id ein gültiger UUID ist, wenn vorhanden
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (user_id && !uuidRegex.test(user_id)) {
-      console.error('❌ Invalid user_id format:', user_id)
-      throw createError({
-        statusCode: 400,
-        message: 'Invalid user_id - must be a valid UUID'
-      })
-    }
 
     const supabase = getSupabaseAdmin()
+    
+    // Get user from auth header
+    const authToken = getHeader(event, 'authorization')?.replace('Bearer ', '')
+    let userId: string | null = null
+    
+    if (authToken) {
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(authToken)
+        if (!authError && user?.id) {
+          userId = user.id
+          console.log('✅ User authenticated:', userId)
+        }
+      } catch (err) {
+        console.log('⚠️ Could not get authenticated user:', err)
+      }
+    }
+    
+    // If no authenticated user, generate a temporary session ID
+    // This allows unauthenticated users to reserve slots
+    if (!userId) {
+      // Generate a temporary UUID-like ID for this session
+      userId = `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      console.log('ℹ️ No auth user, using session ID:', userId)
+    }
 
     // 1. Prüfe ob der Slot noch frei ist (nur 'reserved' status)
     const startTime = new Date(start_time).toISOString()
@@ -74,7 +86,7 @@ export default defineEventHandler(async (event) => {
     const { data: reservation, error: reservationError } = await supabase
       .from('appointments')
       .insert({
-        user_id,
+        user_id: userId,
         staff_id,
         location_id,
         start_time,

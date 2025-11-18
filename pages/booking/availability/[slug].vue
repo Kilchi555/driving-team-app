@@ -2327,8 +2327,7 @@ const reserveSlot = async (userId?: string) => {
   try {
     console.log('🔄 Reserving slot...')
     
-    // For temporary reservations, user_id is optional
-    // It will be set to the real user_id when the booking is confirmed
+    // Server will determine user_id from auth token or generate session ID
     const response = await $fetch<{
       success: boolean
       reservation_id: string
@@ -2336,7 +2335,6 @@ const reserveSlot = async (userId?: string) => {
     }>('/api/booking/reserve-slot', {
       method: 'POST',
       body: {
-        user_id: userId || null,
         staff_id: selectedInstructor.value.id,
         start_time: selectedSlot.value.start_time,
         end_time: selectedSlot.value.end_time,
