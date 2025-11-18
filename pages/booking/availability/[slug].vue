@@ -190,7 +190,7 @@
           
           <!-- Standard Locations -->
           <div>
-            <div class="space-y-3 sm:space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div 
                 v-for="location in availableLocations" 
                 :key="location.id"
