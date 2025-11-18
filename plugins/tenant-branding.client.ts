@@ -1,14 +1,20 @@
 // plugins/tenant-branding.client.ts
 // Client-side Plugin für automatisches Tenant-Branding
 export default defineNuxtPlugin(async () => {
-  const nuxtApp = useNuxtApp()
-  const $router = nuxtApp.$router || null
   const { loadTenantBranding, loadTenantBrandingById } = useTenantBranding()
   const { setTenantThemeSettings, initializeTheme } = useUIStore()
 
   // Tenant aus User-Session oder Route bestimmen
   const getTenantInfo = async (route?: any) => {
-    const currentRoute = route || $router?.currentRoute?.value
+    let currentRoute = route
+    if (!currentRoute) {
+      try {
+        const $router = useRouter()
+        currentRoute = $router?.currentRoute?.value
+      } catch (e) {
+        // Router not ready yet
+      }
+    }
     
     // 1. Prüfe Login-Seiten mit Tenant-Slug
     if (currentRoute?.name === 'login-tenant' && currentRoute?.params?.tenant) {
@@ -99,6 +105,7 @@ export default defineNuxtPlugin(async () => {
   // Router-Hooks registrieren - wait for router to be ready
   const setupRouterGuard = () => {
     try {
+      const $router = useRouter()
       if ($router && $router.beforeEach) {
         $router.beforeEach(async (to, from, next) => {
           await handleRouteChange(to)
