@@ -49,7 +49,7 @@
         
         <!-- Progress Steps -->
         <div class="bg-white shadow rounded-lg p-4 mb-6 max-w-full" :class="{ 'overflow-x-auto overflow-y-hidden': isScreenSmall, 'overflow-hidden': !isScreenSmall }">
-          <div class="flex items-center" :class="{ 'justify-start': isScreenSmall, 'justify-center': !isScreenSmall }" :style="{ transform: isScreenSmall ? `translateX(calc(-${(currentStep - 1) * 15}%))` : 'none', transition: 'transform 0.3s ease' }">
+          <div class="flex items-center" :class="{ 'justify-start': isScreenSmall, 'justify-center': !isScreenSmall }" :style="{ transform: isScreenSmall ? `translateX(max(-${Math.max(0, (currentStep - 2) * 25)}%, -100%))` : 'none', transition: 'transform 0.3s ease' }">
             <div class="flex items-center gap-2 sm:gap-4 flex-nowrap" :style="{ minWidth: isScreenSmall ? 'fit-content' : 'auto' }">
               <template v-for="(step, index) in bookingSteps" :key="step.id">
               <button
@@ -86,7 +86,7 @@
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 1</p>
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wählen Sie Ihre Fahrkategorie</h2>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wählekategorie</h2>
               <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
               </div>
