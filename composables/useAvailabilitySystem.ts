@@ -138,7 +138,7 @@ export const useAvailabilitySystem = () => {
       // Build queries with tenant filtering
       let staffQuery = supabase.from('users').select('id, first_name, last_name, role, is_active, category, preferred_location_id, preferred_duration, assigned_staff_ids, tenant_id').eq('role', 'staff')
       let categoriesQuery = supabase.from('categories').select('id, code, name, description, lesson_duration_minutes, is_active, tenant_id').eq('is_active', true)
-      let locationsQuery = supabase.from('locations').select('id, name, address, location_type, is_active, staff_id, category, time_windows').eq('is_active', true).eq('location_type', 'standard')
+      let locationsQuery = supabase.from('locations').select('id, name, address, location_type, is_active, staff_ids, category, time_windows').eq('is_active', true).eq('location_type', 'standard')
       let availabilityQuery = supabase.from('staff_availability_settings').select('staff_id, minimum_booking_lead_time_hours')
       
       if (tenantId) {
