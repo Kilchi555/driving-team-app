@@ -158,7 +158,14 @@ const goToLessonBooking = async () => {
     const { currentTenantBranding } = useTenantBranding()
     const slug = currentTenantBranding.value?.slug
     const referrer = '/learning' // Return to landing page
-    await navigateTo(slug ? `/booking/availability/${slug}?referrer=${encodeURIComponent(referrer)}` : '/booking/availability')
+    if (slug) {
+      await navigateTo({
+        path: `/booking/availability/${slug}`,
+        query: { referrer }
+      })
+    } else {
+      await navigateTo('/booking/availability')
+    }
   } catch {
     await navigateTo('/booking/availability')
   }

@@ -2569,12 +2569,18 @@ const generateSlotsInRange = async (staff: any, location: any, targetDate: Date,
 
 // Lifecycle
 onMounted(async () => {
+  console.log('🎯 onMounted called!')
   try {
     // Load referrer URL from query parameter
+    console.log('🔍 Route query params:', route.query)
+    console.log('🔍 Route full URL:', window.location.href)
     const refParam = route.query.referrer as string
+    console.log('🔍 Referrer param value:', refParam)
     if (refParam) {
       referrerUrl.value = refParam
       console.log('🔄 Referrer URL set:', referrerUrl.value)
+    } else {
+      console.log('⚠️ No referrer parameter found')
     }
     
     // Lade Features um Prüfung durchführen zu können

@@ -1162,7 +1162,10 @@ const navigateToLessonBooking = async () => {
     }
     
     // Navigate with tenant slug and referrer
-    await navigateTo(`/booking/availability/${tenantData.slug}?referrer=/customer-dashboard`)
+    await navigateTo({
+      path: `/booking/availability/${tenantData.slug}`,
+      query: { referrer: '/customer-dashboard' }
+    })
   } catch (err) {
     console.error('❌ Error navigating to lesson booking:', err)
     await navigateTo('/booking/availability-test')
