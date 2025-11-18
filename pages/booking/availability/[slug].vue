@@ -1,6 +1,6 @@
 <template>
   <!-- Fixed Back Button at top -->
-  <div v-if="currentStep > 0" class="fixed top-4 left-4 z-50">
+  <div v-if="currentStep > 0" class="fixed top-4 left-4 lg:left-auto lg:right-4 z-50">
     <button 
       @click="handleBackButton"
       class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
