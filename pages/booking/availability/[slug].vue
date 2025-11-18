@@ -361,6 +361,17 @@
                 <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
                 <span v-if="selectedSlot" class="font-semibold"> • {{ formatDate(selectedSlot?.start_time) }} {{ formatTime(selectedSlot?.start_time) }}</span>
               </div>
+              
+              <!-- Countdown Timer (wenn Termin reserviert) -->
+              <div v-if="currentReservationId" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
+                  <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
+                    {{ getCountdownText }}
+                  </div>
+                </div>
+                <p class="text-xs text-blue-700 mt-2">Der Termin ist für {{ remainingSeconds < 60 ? 'noch' : '' }} {{ getCountdownText }} Minuten reserviert.</p>
+              </div>
             </div>
           
           <!-- Loading Time Slots -->
@@ -461,6 +472,16 @@
               </div>
               <div class="mt-1 text-xs text-gray-500">
                 {{ formatDate(selectedSlot?.start_time) }} um {{ formatTime(selectedSlot?.start_time) }}
+              </div>
+              
+              <!-- Countdown Timer -->
+              <div v-if="currentReservationId" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
+                  <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
+                    {{ getCountdownText }}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -569,6 +590,16 @@
             <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 6</p>
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Buchung bestätigen</h2>
             <p class="text-sm sm:text-base text-gray-600">Bitte überprüfe deine Angaben</p>
+            
+            <!-- Countdown Timer -->
+            <div v-if="currentReservationId" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
+                <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
+                  {{ getCountdownText }}
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Booking Summary -->
@@ -1872,6 +1903,13 @@ const selectTimeSlot = async (slot: any) => {
   selectedSlot.value = slot
   console.log('✅ Time slot selected:', slot)
   
+  // Reserve the slot for 5 minutes
+  const reserved = await reserveSlot()
+  if (!reserved) {
+    selectedSlot.value = null
+    return
+  }
+  
   // Go to final confirmation step (Pickup-Adresse oder Zusammenfassung)
   await waitForPressEffect()
   currentStep.value = 6
@@ -2122,6 +2160,24 @@ const createAppointment = async (userData: any) => {
   try {
     console.log('🔄 Creating appointment...')
     
+    // Check for collision one more time before creating
+    const supabase = getSupabase()
+    const startTime = new Date(selectedSlot.value.start_time).toISOString()
+    const endTime = new Date(selectedSlot.value.end_time).toISOString()
+    
+    // Query for conflicts using RPC or direct query
+    const { data: conflictingAppointments } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('staff_id', selectedInstructor.value.id)
+      .neq('status', 'reserved')
+      .lt('end_time', endTime)
+      .gt('start_time', startTime)
+    
+    if (conflictingAppointments && conflictingAppointments.length > 0) {
+      throw new Error('Der Termin wurde leider soeben vergeben. Versuchen Sie es mit einem anderen Termin.')
+    }
+    
     const appointmentData = {
       user_id: userData.id,
       staff_id: selectedInstructor.value.id,
@@ -2262,7 +2318,7 @@ const scrollToStep = (step: number) => {
 }
 
 // Reservation functions
-const reserveSlot = async () => {
+const reserveSlot = async (userId?: string) => {
   if (!selectedSlot.value || !selectedInstructor.value || !currentTenant.value) {
     console.warn('⚠️ Missing required data for reservation')
     return false
@@ -2278,7 +2334,7 @@ const reserveSlot = async () => {
     }>('/api/booking/reserve-slot', {
       method: 'POST',
       body: {
-        user_id: getCurrentUser().value?.id,
+        user_id: userId || 'temp-user',
         staff_id: selectedInstructor.value.id,
         start_time: selectedSlot.value.start_time,
         end_time: selectedSlot.value.end_time,
