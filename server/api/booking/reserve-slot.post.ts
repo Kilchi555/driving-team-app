@@ -22,17 +22,18 @@ export default defineEventHandler(async (event) => {
     console.log('🔄 Reserving slot:', { user_id, staff_id, start_time })
 
     // Validierung
-    if (!user_id || !staff_id || !start_time || !end_time || !tenant_id) {
-      console.error('❌ Missing required fields:', { user_id, staff_id, start_time, end_time, tenant_id })
+    if (!staff_id || !start_time || !end_time || !tenant_id) {
+      console.error('❌ Missing required fields:', { staff_id, start_time, end_time, tenant_id })
       throw createError({
         statusCode: 400,
         message: 'Missing required fields'
       })
     }
     
-    // Validiere dass user_id ein gültiger UUID ist
+    // user_id ist optional für temporäre Reservierungen (wird später beim echten Booking gesetzt)
+    // Validiere dass user_id ein gültiger UUID ist, wenn vorhanden
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(user_id)) {
+    if (user_id && !uuidRegex.test(user_id)) {
       console.error('❌ Invalid user_id format:', user_id)
       throw createError({
         statusCode: 400,
