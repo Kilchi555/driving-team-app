@@ -105,7 +105,17 @@ export default defineNuxtPlugin(async () => {
   // Router-Hooks registrieren - wait for router to be ready
   const setupRouterGuard = () => {
     try {
-      const $router = useRouter()
+      // Try to get router, but don't throw if not available yet
+      let $router: any = null
+      try {
+        $router = useRouter()
+      } catch (e) {
+        // Router composable not available yet
+        console.log('⚠️ useRouter() not available yet, scheduling retry...')
+        setTimeout(setupRouterGuard, 100)
+        return
+      }
+      
       if ($router && $router.beforeEach) {
         $router.beforeEach(async (to, from, next) => {
           await handleRouteChange(to)
@@ -117,13 +127,13 @@ export default defineNuxtPlugin(async () => {
         setTimeout(setupRouterGuard, 100)
       }
     } catch (err) {
-      console.log('⚠️ Router not ready yet for tenant branding hooks, retrying...')
+      console.log('⚠️ Error setting up router guard:', err)
       setTimeout(setupRouterGuard, 100)
     }
   }
   
-  // Start trying to setup router guard
-  setupRouterGuard()
+  // Start trying to setup router guard with a slight delay to ensure router is initialized
+  setTimeout(setupRouterGuard, 50)
 
   // DEAKTIVIERT: Automatisches Laden wird von den Layouts gesteuert
   // setTimeout(async () => {

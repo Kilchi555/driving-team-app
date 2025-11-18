@@ -31,7 +31,17 @@ export default defineNuxtPlugin(() => {
   // Validate before navigation - wait for router to be ready
   const setupRouterGuard = () => {
     try {
-      const router = useRouter()
+      // Try to get router, but don't throw if not available yet
+      let router: any = null
+      try {
+        router = useRouter()
+      } catch (e) {
+        // Router composable not available yet
+        console.log('⚠️ useRouter() not available yet for tenant consistency, scheduling retry...')
+        setTimeout(setupRouterGuard, 100)
+        return
+      }
+      
       if (router && router.beforeEach) {
         router.beforeEach(async (to: any, from: any) => {
           if (to.path.startsWith('/admin')) {
@@ -49,13 +59,13 @@ export default defineNuxtPlugin(() => {
         setTimeout(setupRouterGuard, 100)
       }
     } catch (err) {
-      console.log('⚠️ Router not ready yet for tenant consistency checks, retrying...')
+      console.log('⚠️ Error setting up tenant consistency router guard:', err)
       setTimeout(setupRouterGuard, 100)
     }
   }
   
-  // Start trying to setup router guard
-  setupRouterGuard()
+  // Start trying to setup router guard with a slight delay to ensure router is initialized
+  setTimeout(setupRouterGuard, 50)
   
   console.log('✅ Tenant consistency monitoring initialized')
 })
