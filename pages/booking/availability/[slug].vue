@@ -48,9 +48,9 @@
       <div v-else class="space-y-8">
         
         <!-- Progress Steps -->
-        <div class="bg-white shadow rounded-lg p-4 mb-6 overflow-x-auto overflow-y-hidden">
-          <div class="flex items-center justify-start" :style="{ transform: `translateX(calc(-${(currentStep - 1) * 15}%))`, transition: 'transform 0.3s ease' }">
-            <div class="flex items-center gap-2 sm:gap-4 flex-nowrap" style="min-width: fit-content;">
+        <div class="bg-white shadow rounded-lg p-4 mb-6 max-w-full" :class="{ 'overflow-x-auto overflow-y-hidden': isScreenSmall, 'overflow-hidden': !isScreenSmall }">
+          <div class="flex items-center" :class="{ 'justify-start': isScreenSmall, 'justify-center': !isScreenSmall }" :style="{ transform: isScreenSmall ? `translateX(calc(-${(currentStep - 1) * 15}%))` : 'none', transition: 'transform 0.3s ease' }">
+            <div class="flex items-center gap-2 sm:gap-4 flex-nowrap" :style="{ minWidth: isScreenSmall ? 'fit-content' : 'auto' }">
               <template v-for="(step, index) in bookingSteps" :key="step.id">
               <div class="flex items-center flex-shrink-0">
                   <div
@@ -83,6 +83,9 @@
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 1</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wählen Sie Ihre Fahrkategorie</h2>
+              <div class="mt-2 text-xs sm:text-sm text-blue-600">
+                <span class="font-semibold">{{ selectedCategory?.name }}</span>
+              </div>
             </div>
           
           <div :class="`grid ${getGridClasses(categories.length)} gap-3`">
@@ -120,8 +123,11 @@
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 2</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
-                Dauer wählen für {{ selectedCategory?.name }}
+                Wähle deine Dauer
               </h2>
+              <div class="mt-2 text-xs sm:text-sm text-blue-600">
+                <span class="font-semibold">{{ selectedCategory?.name }}</span>
+              </div>
             </div>
           
           <div
@@ -880,6 +886,9 @@ const hoveredSlotId = ref<string | null>(null)
 
 // Referrer state
 const referrerUrl = ref<string | null>(null)
+
+// Responsive state for step scrolling
+const isScreenSmall = ref(false)
 
 // Pickup state
 const pickupPLZ = ref('')
@@ -2594,6 +2603,13 @@ const generateSlotsInRange = async (staff: any, location: any, targetDate: Date,
 onMounted(async () => {
   console.log('🎯 onMounted called!')
   try {
+    // Check screen size for responsive step scrolling
+    const checkScreenSize = () => {
+      isScreenSmall.value = window.innerWidth < 1000
+    }
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+    
     // Load referrer URL from query parameter
     console.log('🔍 Route query params:', route.query)
     console.log('🔍 Route full URL:', window.location.href)
@@ -2626,5 +2642,12 @@ onMounted(async () => {
   } catch (err) {
     console.error('❌ Error initializing availability page:', err)
   }
+})
+
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', () => {
+    isScreenSmall.value = window.innerWidth < 1000
+  })
 })
 </script>
