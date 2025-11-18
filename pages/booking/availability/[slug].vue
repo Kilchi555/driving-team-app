@@ -68,8 +68,17 @@
 
         <!-- Step 1: Category Selection -->
         <div v-if="currentStep === 1" class="bg-white shadow rounded-lg p-4">
-          <div class="text-center mb-6">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie Ihre Fahrkategorie</h2>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+            <div>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wählen Sie Ihre Fahrkategorie</h2>
+            </div>
+            <button 
+              v-if="referrerUrl"
+              @click="goBackToReferrer"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
+            >
+              ← Zurück
+            </button>
           </div>
           
           <div :class="`grid ${getGridClasses(categories.length)} gap-3`">
@@ -855,6 +864,9 @@ const hoveredDuration = ref<number | null>(null)
 const hoveredLocationId = ref<string | null>(null)
 const hoveredInstructorId = ref<string | null>(null)
 const hoveredSlotId = ref<string | null>(null)
+
+// Referrer state
+const referrerUrl = ref<string | null>(null)
 
 // Pickup state
 const pickupPLZ = ref('')
@@ -2192,6 +2204,14 @@ const goBackToStep = (step: number) => {
   }
 }
 
+const goBackToReferrer = () => {
+  if (referrerUrl.value) {
+    navigateTo(referrerUrl.value)
+  } else {
+    navigateTo('/customer-dashboard')
+  }
+}
+
 const proceedToRegistration = () => {
   if (!selectedSlot.value) return
   
@@ -2550,6 +2570,13 @@ const generateSlotsInRange = async (staff: any, location: any, targetDate: Date,
 // Lifecycle
 onMounted(async () => {
   try {
+    // Load referrer URL from query parameter
+    const refParam = route.query.referrer as string
+    if (refParam) {
+      referrerUrl.value = refParam
+      console.log('🔄 Referrer URL set:', referrerUrl.value)
+    }
+    
     // Lade Features um Prüfung durchführen zu können
     await loadFeatures()
     
