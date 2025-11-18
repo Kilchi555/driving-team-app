@@ -52,6 +52,7 @@ export default defineEventHandler(async (event) => {
         status: status || 'pending_confirmation',
         tenant_id,
         title: `${type} - ${custom_location_address || 'Standort'}`,
+        description: `Appointment for ${type} at ${custom_location_address || 'standard location'}`,
         confirmation_token: generateConfirmationToken()
       })
       .select()
