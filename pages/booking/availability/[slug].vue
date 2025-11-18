@@ -1,8 +1,8 @@
 <template>
   <!-- Fixed Back Button at top -->
-  <div v-if="referrerUrl && currentStep > 0" class="fixed top-4 left-4 z-50">
+  <div v-if="currentStep > 0" class="fixed top-4 left-4 z-50">
     <button 
-      @click="goBackToReferrer"
+      @click="handleBackButton"
       class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
     >
       ← Zurück
@@ -2222,6 +2222,16 @@ const goBackToReferrer = () => {
     navigateTo(referrerUrl.value)
   } else {
     navigateTo('/customer-dashboard')
+  }
+}
+
+const handleBackButton = () => {
+  // On step 1, go back to referrer
+  if (currentStep.value === 1) {
+    goBackToReferrer()
+  } else {
+    // On other steps, go back one step
+    goBackToStep(currentStep.value - 1)
   }
 }
 
