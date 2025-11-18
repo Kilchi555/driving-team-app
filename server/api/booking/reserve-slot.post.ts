@@ -83,7 +83,8 @@ export default defineEventHandler(async (event) => {
         event_type_code: 'lesson',
         status: 'reserved', // Provisorischer Status
         tenant_id,
-        title: `${category_code} - Reserviert`
+        title: `${category_code} - Reserviert`,
+        description: 'Temporäre Reservierung - wird nach 5 Minuten gelöscht' // Required field
       })
       .select()
       .single()
