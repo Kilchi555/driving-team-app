@@ -125,7 +125,7 @@
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
                 Wähle deine Dauer
               </h2>
-              <div class="mt-2 text-xs sm:text-sm text-blue-600">
+              <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
               </div>
             </div>
@@ -180,7 +180,7 @@
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 3</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Standort</h2>
-              <div class="mt-2 text-xs sm:text-sm text-blue-600">
+              <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
               </div>
             </div>
@@ -293,7 +293,7 @@
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 4</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie Ihren Fahrlehrer</h2>
               <p class="text-sm sm:text-base text-gray-600">Wer soll Ihre Fahrstunde durchführen?</p>
-              <div class="mt-2 text-sm text-blue-600">
+              <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
                 {{ selectedCategory?.code }} - {{ selectedLocation?.name }}
               </div>
             </div>
@@ -354,7 +354,7 @@
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 5</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie einen Termin</h2>
               <p class="text-sm sm:text-base text-gray-600">Wann möchten Sie Ihre Fahrstunde haben?</p>
-              <div class="mt-2 text-sm text-blue-600">
+              <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
                 {{ selectedCategory?.code }} - {{ selectedLocation?.name }} - {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}
               </div>
             </div>
@@ -455,7 +455,7 @@
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 6</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Pickup-Adresse angeben</h2>
               <p class="text-sm sm:text-base text-gray-600">Wo sollen wir Sie abholen?</p>
-              <div class="mt-2 text-sm text-blue-600">
+              <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
                 {{ selectedCategory?.code }} - {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}
               </div>
               <div class="mt-1 text-xs text-gray-500">
@@ -662,7 +662,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useAvailabilitySystem } from '~/composables/useAvailabilitySystem'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 import { getSupabase } from '~/utils/supabase'
