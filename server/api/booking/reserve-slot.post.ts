@@ -31,20 +31,24 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // 1. Prüfe ob der Slot noch frei ist
+    // 1. Prüfe ob der Slot noch frei ist (nur 'reserved' status)
+    const startTime = new Date(start_time).toISOString()
+    const endTime = new Date(end_time).toISOString()
+    
     const { data: existingAppointments, error: checkError } = await supabase
       .from('appointments')
       .select('id')
       .eq('staff_id', staff_id)
       .eq('status', 'reserved')
-      .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString()) // Nur letzte 5 Min
-      .overlaps('start_time', 'end_time', {
-        start_time: new Date(start_time).toISOString(),
-        end_time: new Date(end_time).toISOString()
-      })
+      .lt('end_time', endTime)
+      .gt('start_time', startTime)
 
     if (checkError) {
       console.error('❌ Error checking appointments:', checkError)
+      throw createError({
+        statusCode: 500,
+        message: `Fehler beim Prüfen der Verfügbarkeit: ${checkError.message}`
+      })
     }
 
     if (existingAppointments && existingAppointments.length > 0) {
@@ -68,8 +72,7 @@ export default defineEventHandler(async (event) => {
         event_type_code: 'lesson',
         status: 'reserved', // Provisorischer Status
         tenant_id,
-        title: `${category_code} - Reserviert`,
-        created_at: new Date().toISOString()
+        title: `${category_code} - Reserviert`
       })
       .select()
       .single()
