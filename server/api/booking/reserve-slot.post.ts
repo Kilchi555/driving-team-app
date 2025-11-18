@@ -47,12 +47,17 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    // If no authenticated user, generate a temporary session ID
+    // If no authenticated user, generate a temporary UUID for this session
     // This allows unauthenticated users to reserve slots
     if (!userId) {
-      // Generate a temporary UUID-like ID for this session
-      userId = `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      console.log('ℹ️ No auth user, using session ID:', userId)
+      // Generate a valid UUID v4 for guest sessions
+      // Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+      userId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0
+        const v = c === 'x' ? r : (r & 0x3 | 0x8)
+        return v.toString(16)
+      })
+      console.log('ℹ️ No auth user, using generated UUID:', userId)
     }
 
     // 1. Prüfe ob der Slot noch frei ist (nur 'reserved' status)
