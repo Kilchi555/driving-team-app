@@ -1,8 +1,9 @@
 <template>
-  <!-- Fixed Back Button at top -->
-  <div v-if="currentStep > 0" class="fixed top-4 left-1/2 transform -translate-x-1/2 lg:left-auto lg:right-0 lg:translate-x-0 z-50">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-screen lg:w-auto">
-      <div class="flex justify-end">
+  <div class="min-h-screen bg-gray-50 py-4">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Back Button -->
+      <div v-if="currentStep > 0" class="mb-4">
         <button 
           @click="handleBackButton"
           class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
@@ -10,11 +11,6 @@
           ← Zurück
         </button>
       </div>
-    </div>
-  </div>
-
-  <div class="min-h-screen bg-gray-50 py-4 pt-20">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <!-- Header -->
       <div class="mb-4">
