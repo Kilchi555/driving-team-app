@@ -52,7 +52,11 @@
           <div class="flex items-center" :class="{ 'justify-start': isScreenSmall, 'justify-center': !isScreenSmall }" :style="{ transform: isScreenSmall ? `translateX(calc(-${(currentStep - 1) * 15}%))` : 'none', transition: 'transform 0.3s ease' }">
             <div class="flex items-center gap-2 sm:gap-4 flex-nowrap" :style="{ minWidth: isScreenSmall ? 'fit-content' : 'auto' }">
               <template v-for="(step, index) in bookingSteps" :key="step.id">
-              <div class="flex items-center flex-shrink-0">
+              <button
+                @click="goToStep(step.id)"
+                :disabled="step.id > currentStep"
+                class="flex items-center flex-shrink-0 cursor-pointer disabled:cursor-not-allowed transition-opacity hover:opacity-80 disabled:opacity-50"
+              >
                   <div
                     class="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold border"
                     :style="getStepCircleStyle(step.id)"
@@ -65,7 +69,7 @@
                   >
                     {{ step.label }}
                 </span>
-              </div>
+              </button>
                 <div
                   v-if="index < bookingSteps.length - 1"
                   class="w-4 sm:w-8 h-0.5 rounded-full flex-shrink-0"
@@ -2258,6 +2262,13 @@ const goBackToReferrer = () => {
     navigateTo(referrerUrl.value)
   } else {
     navigateTo('/customer-dashboard')
+  }
+}
+
+const goToStep = (step: number) => {
+  // Only allow going to steps that are already completed or current
+  if (step <= currentStep.value) {
+    goBackToStep(step)
   }
 }
 
