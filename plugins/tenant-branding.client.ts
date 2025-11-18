@@ -1,6 +1,6 @@
 // plugins/tenant-branding.client.ts
 // Client-side Plugin für automatisches Tenant-Branding
-export default defineNuxtPlugin(async () => {
+export default defineNuxtPlugin(async (nuxtApp) => {
   const { loadTenantBranding, loadTenantBrandingById } = useTenantBranding()
   const { setTenantThemeSettings, initializeTheme } = useUIStore()
 
@@ -102,38 +102,20 @@ export default defineNuxtPlugin(async () => {
     }
   }
 
-  // Router-Hooks registrieren - wait for router to be ready
-  const setupRouterGuard = () => {
-    try {
-      // Try to get router, but don't throw if not available yet
-      let $router: any = null
-      try {
-        $router = useRouter()
-      } catch (e) {
-        // Router composable not available yet
-        console.log('⚠️ useRouter() not available yet, scheduling retry...')
-        setTimeout(setupRouterGuard, 100)
-        return
-      }
-      
-      if ($router && $router.beforeEach) {
-        $router.beforeEach(async (to, from, next) => {
-          await handleRouteChange(to)
-          next()
-        })
-        console.log('✅ Router guard for tenant branding registered')
-      } else {
-        // Router not ready yet, try again later
-        setTimeout(setupRouterGuard, 100)
-      }
-    } catch (err) {
-      console.log('⚠️ Error setting up router guard:', err)
-      setTimeout(setupRouterGuard, 100)
+  // Router-Hooks registrieren - use Nuxt hook instead of useRouter
+  nuxtApp.hook('app:created', () => {
+    const $router = nuxtApp.$router
+    
+    if ($router && $router.beforeEach) {
+      $router.beforeEach(async (to: any, from: any, next: any) => {
+        await handleRouteChange(to)
+        next()
+      })
+      console.log('✅ Router guard for tenant branding registered')
+    } else {
+      console.warn('⚠️ Router not available in app:created hook')
     }
-  }
-  
-  // Start trying to setup router guard with a slight delay to ensure router is initialized
-  setTimeout(setupRouterGuard, 50)
+  })
 
   // DEAKTIVIERT: Automatisches Laden wird von den Layouts gesteuert
   // setTimeout(async () => {
