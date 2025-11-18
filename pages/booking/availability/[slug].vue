@@ -38,11 +38,11 @@
       <div v-else class="space-y-8">
         
         <!-- Progress Steps -->
-        <div class="bg-white shadow rounded-lg p-4 mb-6">
-          <div class="flex items-center justify-center">
-            <div class="flex items-center space-x-2 sm:space-x-4">
+        <div class="bg-white shadow rounded-lg p-4 mb-6 overflow-x-auto overflow-y-hidden">
+          <div class="flex items-center justify-start" :style="{ transform: `translateX(calc(-${(currentStep - 1) * 15}%))`, transition: 'transform 0.3s ease' }">
+            <div class="flex items-center gap-2 sm:gap-4 flex-nowrap" style="min-width: fit-content;">
               <template v-for="(step, index) in bookingSteps" :key="step.id">
-              <div class="flex items-center">
+              <div class="flex items-center flex-shrink-0">
                   <div
                     class="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold border"
                     :style="getStepCircleStyle(step.id)"
@@ -50,7 +50,7 @@
                     {{ step.id }}
                 </div>
                   <span
-                    class="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:block"
+                    class="ml-1 sm:ml-2 text-xs sm:text-sm font-medium whitespace-nowrap"
                     :style="getStepLabelStyle(step.id)"
                   >
                     {{ step.label }}
@@ -58,7 +58,7 @@
               </div>
                 <div
                   v-if="index < bookingSteps.length - 1"
-                  class="w-4 sm:w-8 h-0.5 rounded-full"
+                  class="w-4 sm:w-8 h-0.5 rounded-full flex-shrink-0"
                   :style="getStepConnectorStyle(step.id)"
                 ></div>
               </template>
