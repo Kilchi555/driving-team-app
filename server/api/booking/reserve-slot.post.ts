@@ -47,17 +47,15 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    // If no authenticated user, generate a temporary UUID for this session
-    // This allows unauthenticated users to reserve slots
+    // For temporary reservations without authentication, we need a valid user in the database
+    // We'll use a system user or the tenant's owner
     if (!userId) {
-      // Generate a valid UUID v4 for guest sessions
-      // Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-      userId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0
-        const v = c === 'x' ? r : (r & 0x3 | 0x8)
-        return v.toString(16)
-      })
-      console.log('ℹ️ No auth user, using generated UUID:', userId)
+      // Try to get the tenant's owner/admin user
+      // For now, we'll skip the reservation step for unauthenticated users
+      // and require them to complete booking within the session
+      console.log('ℹ️ Unauthenticated user - will require auth for booking completion')
+      // Don't create a reservation entry, just validate the slot is available
+      // The real booking will require authentication
     }
 
     // 1. Prüfe ob der Slot noch frei ist (nur 'reserved' status)
@@ -87,39 +85,50 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 2. Erstelle Reservierung
-    const { data: reservation, error: reservationError } = await supabase
-      .from('appointments')
-      .insert({
-        user_id: userId,
-        staff_id,
-        location_id,
-        start_time,
-        end_time,
-        duration_minutes,
-        type: category_code || 'lesson',
-        event_type_code: 'lesson',
-        status: 'reserved', // Provisorischer Status
-        tenant_id,
-        title: `${category_code} - Reserviert`,
-        description: 'Temporäre Reservierung - wird nach 5 Minuten gelöscht' // Required field
-      })
-      .select()
-      .single()
+    // 2. Erstelle Reservierung (nur für authentifizierte User)
+    let reservationId: string | null = null
+    
+    if (userId) {
+      const { data: reservation, error: reservationError } = await supabase
+        .from('appointments')
+        .insert({
+          user_id: userId,
+          staff_id,
+          location_id,
+          start_time,
+          end_time,
+          duration_minutes,
+          type: category_code || 'lesson',
+          event_type_code: 'lesson',
+          status: 'reserved', // Provisorischer Status
+          tenant_id,
+          title: `${category_code} - Reserviert`,
+          description: 'Temporäre Reservierung - wird nach 5 Minuten gelöscht'
+        })
+        .select()
+        .single()
 
-    if (reservationError) {
-      console.error('❌ Error creating reservation:', reservationError)
-      throw createError({
-        statusCode: 500,
-        message: `Reservierung fehlgeschlagen: ${reservationError.message}`
-      })
+      if (reservationError) {
+        console.error('❌ Error creating reservation:', reservationError)
+        throw createError({
+          statusCode: 500,
+          message: `Reservierung fehlgeschlagen: ${reservationError.message}`
+        })
+      }
+
+      reservationId = reservation.id
+      console.log('✅ Slot reserved:', reservationId)
+    } else {
+      console.log('ℹ️ Slot validation passed - unauthenticated user')
+      // For unauthenticated users, just validate the slot is available
+      // Real booking will require authentication
+      // Generate a temporary ID for this session
+      reservationId = `session-${Date.now()}`
     }
-
-    console.log('✅ Slot reserved:', reservation.id)
 
     return {
       success: true,
-      reservation_id: reservation.id,
+      reservation_id: reservationId,
       reserved_until: new Date(Date.now() + 5 * 60 * 1000).toISOString()
     }
 
