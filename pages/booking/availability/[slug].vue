@@ -190,12 +190,12 @@
           
           <!-- Standard Locations -->
           <div>
-            <div :class="`grid ${getGridClasses(availableLocations.length)} gap-3 sm:gap-4`">
+            <div class="space-y-3 sm:space-y-4">
               <div 
                 v-for="location in availableLocations" 
                 :key="location.id"
                 @click="selectLocation(location)"
-                class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 transition-all duration-200 transform active:translate-y-0.5"
+                class="group cursor-pointer rounded-2xl p-4 sm:p-5 md:p-6 transition-all duration-200 transform active:translate-y-0.5 border-2"
                 :style="getInteractiveCardStyle(
                   (selectedLocation?.id === location.id && !selectedLocation?.isPickup) || hoveredLocationId === location.id,
                   hoveredLocationId === location.id
@@ -203,13 +203,27 @@
                 @mouseenter="hoveredLocationId = location.id"
                 @mouseleave="hoveredLocationId = null"
               >
-                <div class="flex items-start space-x-2 sm:space-x-3 md:space-x-4">
-                  <div class="flex-1 min-w-0">
-                    <h3 class="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-900 mb-1 truncate">{{ location.name }}</h3>
-                    <p v-if="location.address" class="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 line-clamp-2">{{ location.address }}</p>
-                    <div class="text-xs font-medium" :style="{ color: getBrandPrimary() }">
-                      {{ location.available_staff?.length || 0 }} Fahrlehrer
-                    </div>
+                <div class="space-y-2">
+                  <!-- Location Name -->
+                  <h3 class="text-sm sm:text-base md:text-lg font-bold text-gray-900">{{ location.name }}</h3>
+                  
+                  <!-- Address -->
+                  <div v-if="location.address" class="flex items-start gap-2">
+                    <svg class="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <p class="text-sm text-gray-600">{{ location.address }}</p>
+                  </div>
+                  
+                  <!-- Staff Count -->
+                  <div class="flex items-center gap-2 pt-2 border-t border-gray-200">
+                    <svg class="w-4 h-4 flex-shrink-0" :style="{ color: getBrandPrimary() }" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12a3 3 0 100-6 3 3 0 000 6zm0 1.5a6 6 0 100-12 6 6 0 000 12z"/>
+                    </svg>
+                    <span class="text-sm font-medium" :style="{ color: getBrandPrimary() }">
+                      {{ location.available_staff?.length || 0 }} {{ location.available_staff?.length === 1 ? 'Fahrlehrer' : 'Fahrlehrer' }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -297,7 +311,7 @@
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wählen Sie Ihren Fahrlehrer</h2>
               <p class="text-sm sm:text-base text-gray-600">Wer soll Ihre Fahrstunde durchführen?</p>
               <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
-                <span class="font-semibold">{{ selectedCategory?.code }}</span>
+                <span class="font-semibold">{{ selectedCategory?.name }}</span>
                 <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
                 <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
                 <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
