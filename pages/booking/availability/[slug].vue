@@ -83,7 +83,7 @@
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 1</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wählen Sie Ihre Fahrkategorie</h2>
-              <div class="mt-2 text-xs sm:text-sm text-blue-600">
+              <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
               </div>
             </div>
