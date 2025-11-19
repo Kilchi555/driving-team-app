@@ -883,33 +883,37 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
         
         return overlaps
       }) || false) || (externalBusyTimes?.some(ebt => {
-        // Parse external busy time - DB may return in ISO format (2025-11-20T08:00:00+00:00) or space format (2025-11-20 08:00:00+00)
-        let ebtStartISO = ebt.start_time
-        let ebtEndISO = ebt.end_time
+        // Parse external busy time - stored as LOCAL TIME (not UTC)
+        // Format may be: "2025-11-20 13:00:00" (space format) or "2025-11-20T13:00:00" (ISO format)
+        let ebtStartStr = ebt.start_time
+        let ebtEndStr = ebt.end_time
         
-        // Normalize format: convert space format to ISO if needed
-        if (ebtStartISO.includes(' ') && !ebtStartISO.includes('T')) {
-          ebtStartISO = ebtStartISO.replace(' ', 'T')
+        // Remove any +00 or timezone suffixes since these are stored as local time
+        ebtStartStr = ebtStartStr.replace(/\+00.*$/, '').trim()
+        ebtEndStr = ebtEndStr.replace(/\+00.*$/, '').trim()
+        
+        // Convert space format to ISO if needed
+        if (ebtStartStr.includes(' ') && !ebtStartStr.includes('T')) {
+          ebtStartStr = ebtStartStr.replace(' ', 'T')
         }
-        if (ebtEndISO.includes(' ') && !ebtEndISO.includes('T')) {
-          ebtEndISO = ebtEndISO.replace(' ', 'T')
-        }
-        // Ensure timezone suffix is properly formatted (convert +00 to +00:00)
-        if (ebtStartISO.includes('+00') && !ebtStartISO.includes('+00:00')) {
-          ebtStartISO = ebtStartISO.replace('+00', '+00:00')
-        }
-        if (ebtEndISO.includes('+00') && !ebtEndISO.includes('+00:00')) {
-          ebtEndISO = ebtEndISO.replace('+00', '+00:00')
-        }
-        if (!ebtStartISO.includes('+') && !ebtStartISO.includes('Z')) {
-          ebtStartISO += '+00:00'
-        }
-        if (!ebtEndISO.includes('+') && !ebtEndISO.includes('Z')) {
-          ebtEndISO += '+00:00'
+        if (ebtEndStr.includes(' ') && !ebtEndStr.includes('T')) {
+          ebtEndStr = ebtEndStr.replace(' ', 'T')
         }
         
-        const ebtStartDate = new Date(ebtStartISO)
-        const ebtEndDate = new Date(ebtEndISO)
+        // Parse as local time and convert to UTC for comparison
+        // Since JavaScript Date constructor treats strings without timezone as local,
+        // we need to parse it as local and then get the equivalent UTC time
+        const ebtStartLocal = new Date(ebtStartStr)
+        const ebtEndLocal = new Date(ebtEndStr)
+        
+        // Get the time difference between local and UTC
+        const now = new Date()
+        const utcNow = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }))
+        const tzOffset = ebtStartLocal.getTime() - utcNow.getTime()
+        
+        // Convert local times to UTC
+        const ebtStartDate = new Date(ebtStartLocal.getTime() - tzOffset)
+        const ebtEndDate = new Date(ebtEndLocal.getTime() - tzOffset)
         
         // Check for time overlap: slot starts before external busy time ends AND slot ends after external busy time starts
         const overlaps = slot.startTime < ebtEndDate && slot.endTime > ebtStartDate
