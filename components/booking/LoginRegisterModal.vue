@@ -179,10 +179,18 @@ import { useRoute } from '#app'
 
 const emit = defineEmits(['close', 'success'])
 
+interface Props {
+  initialTab?: 'login' | 'register'
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  initialTab: 'login'
+})
+
 const route = useRoute()
 const supabase = getSupabase()
 
-const activeTab = ref<'login' | 'register'>('login')
+const activeTab = ref<'login' | 'register'>(props.initialTab)
 const isLoading = ref(false)
 const error = ref('')
 

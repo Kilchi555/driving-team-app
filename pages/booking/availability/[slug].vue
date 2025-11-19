@@ -655,6 +655,7 @@
   <!-- Login/Register Modal -->
   <LoginRegisterModal 
     v-if="showLoginModal"
+    :initial-tab="loginModalTab"
     @close="showLoginModal = false"
     @success="handleAuthSuccess"
   />
@@ -2068,6 +2069,7 @@ const validatePickupAddress = () => {
 
 // State for modals
 const showLoginModal = ref(false)
+const loginModalTab = ref<'login' | 'register'>('register') // Default to register for booking flow
 const showDocumentUploadModal = ref(false)
 const requiredDocuments = ref<any[]>([])
 const isCreatingBooking = ref(false)
@@ -2082,7 +2084,8 @@ const confirmBooking = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
-      console.log('❌ User not authenticated, showing login modal')
+      console.log('ℹ️ User not authenticated, showing registration modal')
+      loginModalTab.value = 'register' // Show registration tab
       showLoginModal.value = true
       return
     }
