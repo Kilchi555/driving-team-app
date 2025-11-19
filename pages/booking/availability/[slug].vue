@@ -713,7 +713,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useAvailabilitySystem } from '~/composables/useAvailabilitySystem'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 import { getSupabase } from '~/utils/supabase'
@@ -2591,7 +2591,7 @@ const scrollToStep = (step: number) => {
 }
 
 // Auto-scroll steps bar when current step changes
-watch(() => currentStep.value, (newStep) => {
+watch(() => currentStep.value, (newStep: number) => {
   // Always scroll on small screens, optionally on large screens too
   if (isScreenSmall.value || true) { // Changed: always scroll to keep current step visible
     nextTick(() => {
