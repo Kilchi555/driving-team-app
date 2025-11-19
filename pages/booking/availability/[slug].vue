@@ -777,6 +777,16 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       return timeSlots.map(() => true) // Assume available on error
     }
     
+    console.log('📊 Appointments loaded for batch check:', {
+      total: appointments?.length || 0,
+      sample: appointments?.slice(0, 3).map(a => ({
+        id: a.id,
+        start_time: a.start_time,
+        end_time: a.end_time,
+        status: a.status
+      }))
+    })
+    
     // Load working hours for this staff
     const { data: workingHours, error: whError } = await supabase
       .from('staff_working_hours')
