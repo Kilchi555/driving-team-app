@@ -137,12 +137,21 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
 
     // Insert new busy times - alle Titel als "Privat" speichern
     const busyTimes = windowEvents.map(event => {
-      // Konvertiere ISO-Format zu lokalem Format (YYYY-MM-DD HH:MM:SS)
-      const formatLocalTime = (isoStr: string) => {
-        // Falls bereits im richtigen Format, direkt zurückgeben
-        if (isoStr.includes(' ')) return isoStr
-        // Konvertiere "2025-11-12T08:00:00" zu "2025-11-12 08:00:00"
-        return isoStr.replace('T', ' ')
+      // Convert to UTC for consistent storage with appointments
+      // ICS events can be in various formats (local or UTC)
+      const convertToUTC = (isoStr: string): string => {
+        // Parse the ISO string as a UTC date
+        const date = new Date(isoStr)
+        
+        // Format as UTC ISO string (YYYY-MM-DD HH:MM:SS+00)
+        const year = date.getUTCFullYear()
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+        const day = String(date.getUTCDate()).padStart(2, '0')
+        const hours = String(date.getUTCHours()).padStart(2, '0')
+        const minutes = String(date.getUTCMinutes()).padStart(2, '0')
+        const seconds = String(date.getUTCSeconds()).padStart(2, '0')
+        
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}+00`
       }
       
       return {
@@ -151,8 +160,8 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
         external_calendar_id: calendar_id,
         external_event_id: ((event.uid || `event_${Date.now()}_${Math.random()}`) + '').slice(0, 255),
         event_title: 'Privat', // Anonymisiert für Datenschutz
-        start_time: formatLocalTime(event.start),
-        end_time: formatLocalTime(event.end),
+        start_time: convertToUTC(event.start),
+        end_time: convertToUTC(event.end),
         sync_source: 'ics'
       }
     })

@@ -797,32 +797,19 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
     }
     
     // Load external busy times for this staff
-    // External busy times are stored as LOCAL TIME (format: "2025-11-20 13:00:00")
-    // So we can't use ISO date filtering directly - we load all and filter client-side
-    const { data: externalBusyTimesRaw, error: ebtError } = await supabase
+    // External busy times are now stored in UTC (same as appointments)
+    const { data: externalBusyTimes, error: ebtError } = await supabase
       .from('external_busy_times')
       .select('id, start_time, end_time, event_title, sync_source')
       .eq('staff_id', staffId)
+      .gte('start_time', minDate.toISOString())
+      .lte('end_time', maxDate.toISOString())
     
     if (ebtError) {
       console.error('❌ Error loading external busy times:', ebtError)
     }
     
-    // Filter external busy times by date range (client-side since stored in local time)
-    const externalBusyTimes = externalBusyTimesRaw?.filter(ebt => {
-      // Parse the local time string to get a comparable value
-      const ebtStart = ebt.start_time.split(' ')[0] // Get just the date part: "2025-11-20"
-      const minDateStr = minDate.toISOString().split('T')[0]
-      const maxDateStr = maxDate.toISOString().split('T')[0]
-      // Simple string comparison works for YYYY-MM-DD format
-      return ebtStart >= minDateStr && ebtStart <= maxDateStr
-    }) || []
-    
-    console.log('📅 Raw external busy times loaded:', externalBusyTimesRaw?.length || 0)
-    if (externalBusyTimesRaw && externalBusyTimesRaw.length > 0) {
-      console.log('   Sample:', externalBusyTimesRaw.slice(0, 3).map(e => ({ start: e.start_time, end: e.end_time })))
-    }
-    console.log('📅 Found', appointments?.length || 0, 'appointments,', externalBusyTimes?.length || 0, 'external busy times (filtered), and', workingHours?.length || 0, 'working hours')
+    console.log('📅 Found', appointments?.length || 0, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', workingHours?.length || 0, 'working hours')
     
     // Check each slot against appointments and working hours
     const availabilityResults = timeSlots.map(slot => {
@@ -897,47 +884,37 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
         
         return overlaps
       }) || false) || (externalBusyTimes?.some(ebt => {
-        // Parse external busy time - stored as LOCAL TIME in database
-        // Format: "2025-11-20 13:00:00" (space format)
-        // When parsed as local time without timezone, JavaScript automatically handles UTC conversion
+        // Parse external busy time - now stored as UTC (same as appointments)
+        // Format: "2025-11-20 12:00:00+00" (space format with UTC indicator)
         let ebtStartStr = ebt.start_time
         let ebtEndStr = ebt.end_time
         
-        // Remove any +00 or timezone suffixes since these are stored as local time
-        ebtStartStr = ebtStartStr.replace(/\+00.*$/, '').trim()
-        ebtEndStr = ebtEndStr.replace(/\+00.*$/, '').trim()
-        
-        // Convert space format to ISO format for proper parsing
+        // Normalize format: convert space format to ISO if needed
         if (ebtStartStr.includes(' ') && !ebtStartStr.includes('T')) {
           ebtStartStr = ebtStartStr.replace(' ', 'T')
         }
         if (ebtEndStr.includes(' ') && !ebtEndStr.includes('T')) {
           ebtEndStr = ebtEndStr.replace(' ', 'T')
         }
+        // Ensure timezone suffix is properly formatted
+        if (ebtStartStr.includes('+00') && !ebtStartStr.includes('+00:00')) {
+          ebtStartStr = ebtStartStr.replace('+00', '+00:00')
+        }
+        if (ebtEndStr.includes('+00') && !ebtEndStr.includes('+00:00')) {
+          ebtEndStr = ebtEndStr.replace('+00', '+00:00')
+        }
+        if (!ebtStartStr.includes('+') && !ebtStartStr.includes('Z')) {
+          ebtStartStr += '+00:00'
+        }
+        if (!ebtEndStr.includes('+') && !ebtEndStr.includes('Z')) {
+          ebtEndStr += '+00:00'
+        }
         
-        // Parse as local time: JavaScript interprets ISO strings without timezone as local
-        // and internally stores as UTC, so we can compare directly with UTC slots
         const ebtStartDate = new Date(ebtStartStr)
         const ebtEndDate = new Date(ebtEndStr)
         
         // Check for time overlap: slot starts before external busy time ends AND slot ends after external busy time starts
         const overlaps = slot.startTime < ebtEndDate && slot.endTime > ebtStartDate
-        
-        // Debug for 13:00 slot
-        if (slot.startTime.getHours() === 12 && slot.startTime.getMinutes() === 0) {
-          console.log('🔍 DEBUG 12:00 UTC (13:00 CET) slot check:', {
-            slot_utc: slot.startTime.toISOString(),
-            ebt_local: `${ebtStartStr} - ${ebtEndStr}`,
-            ebt_parsed: `${ebtStartDate.toISOString()} - ${ebtEndDate.toISOString()}`,
-            overlaps,
-            comparison: {
-              slot_start_utc: slot.startTime.getTime(),
-              ebt_end: ebtEndDate.getTime(),
-              slot_end_utc: slot.endTime.getTime(),
-              ebt_start: ebtStartDate.getTime()
-            }
-          })
-        }
         
         if (overlaps) {
           console.log('⚠️ Time conflict detected (external busy time):', {
@@ -946,7 +923,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
             eventTitle: ebt.event_title,
             syncSource: ebt.sync_source,
             slotISO: `${slot.startTime.toISOString()} - ${slot.endTime.toISOString()}`,
-            externalBusyTimeISO: `${ebtStartISO} - ${ebtEndISO}`
+            externalBusyTimeISO: `${ebtStartStr} - ${ebtEndStr}`
           })
         }
         
