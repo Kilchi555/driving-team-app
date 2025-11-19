@@ -763,14 +763,15 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
     
     // Load all appointments for this staff in the extended date range
     // Include ALL statuses except those that are logically deleted
+    // Need to check for any overlap: start <= maxDate AND end >= minDate
     const { data: appointments, error: dbError } = await supabase
       .from('appointments')
       .select('id, start_time, end_time, title, status')
       .eq('staff_id', staffId)
       .not('status', 'eq', 'deleted')
       .is('deleted_at', null)
-      .gte('start_time', minDate.toISOString())
-      .lte('end_time', maxDate.toISOString())
+      .lte('start_time', maxDate.toISOString())  // Appointment starts before or at maxDate
+      .gte('end_time', minDate.toISOString())    // Appointment ends after or at minDate
     
     if (dbError) {
       console.error('❌ Error checking batch availability:', dbError)
@@ -798,12 +799,13 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
     
     // Load external busy times for this staff
     // External busy times are now stored in UTC (same as appointments)
+    // Need to check for any overlap: start <= maxDate AND end >= minDate
     const { data: externalBusyTimes, error: ebtError } = await supabase
       .from('external_busy_times')
       .select('id, start_time, end_time, event_title, sync_source')
       .eq('staff_id', staffId)
-      .gte('start_time', minDate.toISOString())
-      .lte('end_time', maxDate.toISOString())
+      .lte('start_time', maxDate.toISOString())  // Event starts before or at maxDate
+      .gte('end_time', minDate.toISOString())    // Event ends after or at minDate
     
     if (ebtError) {
       console.error('❌ Error loading external busy times:', ebtError)
