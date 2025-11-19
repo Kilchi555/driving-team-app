@@ -417,8 +417,26 @@ const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDa
         const inactiveBlocks = dayWorkingHours.filter(wh => wh.is_active === false)
         
         inactiveBlocks.forEach((block, index) => {
-          const startTime = `${dateStr}T${block.start_time}`
-          const endTime = `${dateStr}T${block.end_time}`
+          // Convert UTC time to local time for display
+          // Working hours are now stored in UTC, need to display in local time
+          const [utcHour, utcMinute, utcSecond] = block.start_time.split(':').map(Number)
+          const [utcEndHour, utcEndMinute, utcEndSecond] = block.end_time.split(':').map(Number)
+          
+          // Create UTC date and get local time equivalent
+          const utcStart = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), utcHour || 0, utcMinute || 0, utcSecond || 0))
+          const utcEnd = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), utcEndHour || 0, utcEndMinute || 0, utcEndSecond || 0))
+          
+          // Convert to local time strings for display
+          const localStartHour = String(utcStart.getHours()).padStart(2, '0')
+          const localStartMinute = String(utcStart.getMinutes()).padStart(2, '0')
+          const localStartSecond = String(utcStart.getSeconds()).padStart(2, '0')
+          
+          const localEndHour = String(utcEnd.getHours()).padStart(2, '0')
+          const localEndMinute = String(utcEnd.getMinutes()).padStart(2, '0')
+          const localEndSecond = String(utcEnd.getSeconds()).padStart(2, '0')
+          
+          const startTime = `${dateStr}T${localStartHour}:${localStartMinute}:${localStartSecond}`
+          const endTime = `${dateStr}T${localEndHour}:${localEndMinute}:${localEndSecond}`
           
           events.push({
             id: `non-working-${dayOfWeek}-${index}-${dateStr}`,
@@ -489,13 +507,19 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
     // Prüfe ob dieser Tag aktive Arbeitszeiten hat
     if (workingHour?.is_active) {
       // Tag hat aktive Arbeitszeiten -> nur Zeiten außerhalb blockieren
-      const workStart = new Date(currentDate)
+      // Working hours are now stored in UTC, need to convert to local time for display
       const [startHour, startMinute] = workingHour.start_time.split(':').map(Number)
-      workStart.setHours(startHour, startMinute, 0, 0)
+      const [endHour, endMinute] = workingHour.end_time.split(':').map(Number)
+      
+      // Create UTC dates and convert to local time
+      const utcStartDate = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), startHour || 0, startMinute || 0, 0))
+      const utcEndDate = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), endHour || 0, endMinute || 0, 0))
+      
+      const workStart = new Date(currentDate)
+      workStart.setHours(utcStartDate.getHours(), utcStartDate.getMinutes(), 0, 0)
       
       const workEnd = new Date(currentDate)
-      const [endHour, endMinute] = workingHour.end_time.split(':').map(Number)
-      workEnd.setHours(endHour, endMinute, 0, 0)
+      workEnd.setHours(utcEndDate.getHours(), utcEndDate.getMinutes(), 0, 0)
       
       // Block vor Arbeitsbeginn (00:00 bis Arbeitsbeginn) - DUNKELGRAU
       console.log('🔍 Debug workStart:', workStart.getHours(), workStart.getMinutes(), 'for day', dayOfWeek)
