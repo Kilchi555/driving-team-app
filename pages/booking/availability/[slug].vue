@@ -678,6 +678,26 @@
       </div>
     </div>
   </div>
+
+  <!-- Success Modal -->
+  <div v-if="showSuccessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-8 max-w-md mx-4 shadow-lg">
+      <div class="flex flex-col items-center gap-4">
+        <!-- Success Icon -->
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+          <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <!-- Title -->
+        <h3 class="text-xl font-bold text-gray-900 text-center">{{ successMessage.title }}</h3>
+        <!-- Description -->
+        <p class="text-gray-600 text-center text-sm">{{ successMessage.description }}</p>
+        <!-- Loading indicator -->
+        <p class="text-xs text-gray-500 text-center">Sie werden weitergeleitet...</p>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -2073,6 +2093,11 @@ const loginModalTab = ref<'login' | 'register'>('register') // Default to regist
 const showDocumentUploadModal = ref(false)
 const requiredDocuments = ref<any[]>([])
 const isCreatingBooking = ref(false)
+const showSuccessModal = ref(false)
+const successMessage = ref({
+  title: 'Termin erfolgreich gebucht!',
+  description: 'Ihr Termin wurde bestätigt und die Zahlung verarbeitet.'
+})
 
 // Confirm booking
 const confirmBooking = async () => {
@@ -2296,7 +2321,12 @@ const createAppointment = async (userData: any) => {
             
             if (captureResponse?.success) {
               console.log('✅ Payment captured successfully!')
-              alert('Termin erfolgreich gebucht! Ihr Termin wurde bestätigt und die Zahlung verarbeitet.')
+              successMessage.value = {
+                title: 'Termin erfolgreich gebucht!',
+                description: 'Ihr Termin wurde bestätigt und die Zahlung verarbeitet.'
+              }
+              showSuccessModal.value = true
+              await new Promise(resolve => setTimeout(resolve, 3000))
               await navigateTo(route.query.referrer as string || '/customer-dashboard')
               return
             }
@@ -2313,11 +2343,21 @@ const createAppointment = async (userData: any) => {
         await navigateTo(`/customer/payment-process?payments=${response.payment_id}`)
       } else {
         console.log('✅ Payment already processed or no payment needed')
-        alert('Termin erfolgreich gebucht! Ihr Termin wurde bestätigt.')
+        successMessage.value = {
+          title: 'Termin erfolgreich gebucht!',
+          description: 'Ihr Termin wurde bestätigt.'
+        }
+        showSuccessModal.value = true
+        await new Promise(resolve => setTimeout(resolve, 3000))
         await navigateTo(route.query.referrer as string || '/customer-dashboard')
       }
     } else {
-      alert('Termin erfolgreich gebucht! Ihr Termin wurde bestätigt.')
+      successMessage.value = {
+        title: 'Termin erfolgreich gebucht!',
+        description: 'Ihr Termin wurde bestätigt.'
+      }
+      showSuccessModal.value = true
+      await new Promise(resolve => setTimeout(resolve, 3000))
       await navigateTo(route.query.referrer as string || '/customer-dashboard')
     }
     
