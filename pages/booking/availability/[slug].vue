@@ -1813,6 +1813,12 @@ const generateTimeSlotsForSpecificCombination = async () => {
     
     console.log('📊 Generated', timeSlots.length, 'time slots for availability check')
     
+    // Debug: Check if 14:00 slots were generated
+    const slotsWith14 = timeSlots.filter(s => s.time_formatted === '14:00' || s.time_formatted === '13:00')
+    if (slotsWith14.length > 0) {
+      console.log('🔍 Found', slotsWith14.length, '13:00/14:00 slots:', slotsWith14.map(s => ({ date: s.date_formatted, time: s.time_formatted, id: s.id })))
+    }
+    
     // Batch check availability for all slots
     if (slotTimes.length > 0) {
       const availabilityResults = await checkBatchAvailability(selectedInstructor.value.id, slotTimes)
@@ -1821,6 +1827,12 @@ const generateTimeSlotsForSpecificCombination = async () => {
       timeSlots.forEach((slot, index) => {
         slot.is_available = availabilityResults[index] || false
       })
+      
+      // Debug: Check if 14:00 slots are marked as available after batch check
+      const slotsWith14After = timeSlots.filter(s => s.time_formatted === '14:00' || s.time_formatted === '13:00')
+      if (slotsWith14After.length > 0) {
+        console.log('🔍 After availability check, 13:00/14:00 slots:', slotsWith14After.map(s => ({ date: s.date_formatted, time: s.time_formatted, is_available: s.is_available })))
+      }
     }
     
     let filteredSlots = timeSlots.filter(slot => slot.is_available)
