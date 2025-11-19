@@ -779,8 +779,8 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
     
     console.log('📊 Appointments loaded for batch check:', {
       total: appointments?.length || 0,
-      sample: appointments?.slice(0, 3).map(a => ({
-        id: a.id,
+      all: appointments?.map(a => ({
+        id: a.id.substring(0, 8),
         start_time: a.start_time,
         end_time: a.end_time,
         status: a.status
