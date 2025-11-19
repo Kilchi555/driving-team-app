@@ -363,15 +363,15 @@
               </div>
               
               <!-- Countdown Timer (wenn Termin reserviert) -->
-              <div v-if="currentReservationId" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div class="flex items-center justify-between">
-                  <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
-                  <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
-                    {{ getCountdownText }}
-                  </div>
+            </div>
+            <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
+                <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
+                  {{ getCountdownText }}
                 </div>
-                <p class="text-xs text-blue-700 mt-2">Der Termin ist für {{ remainingSeconds < 60 ? 'noch' : '' }} {{ getCountdownText }} Minuten reserviert.</p>
               </div>
+              <p class="text-xs text-blue-700 mt-2">Der Termin ist für {{ remainingSeconds < 60 ? 'noch' : '' }} {{ getCountdownText }} Minuten reserviert.</p>
             </div>
           
           <!-- Loading Time Slots -->
@@ -475,12 +475,12 @@
               </div>
               
               <!-- Countdown Timer -->
-              <div v-if="currentReservationId" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div class="flex items-center justify-between">
-                  <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
-                  <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
-                    {{ getCountdownText }}
-                  </div>
+            </div>
+            <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
+                <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
+                  {{ getCountdownText }}
                 </div>
               </div>
             </div>
@@ -592,12 +592,12 @@
             <p class="text-sm sm:text-base text-gray-600">Bitte überprüfe deine Angaben</p>
             
             <!-- Countdown Timer -->
-            <div v-if="currentReservationId" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
-                <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
-                  {{ getCountdownText }}
-                </div>
+          </div>
+          <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
+              <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
+                {{ getCountdownText }}
               </div>
             </div>
           </div>
