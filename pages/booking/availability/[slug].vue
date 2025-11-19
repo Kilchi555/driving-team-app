@@ -837,9 +837,13 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       
       // Check for conflicts with any appointment OR external busy time
       const hasConflict = (appointments?.some(apt => {
-        // Parse appointment times as local times (no timezone conversion)
-        const aptStartDate = new Date(apt.start_time.replace('+00:00', '').replace('Z', ''))
-        const aptEndDate = new Date(apt.end_time.replace('+00:00', '').replace('Z', ''))
+        // Parse appointment times - DB stores in UTC with space format (YYYY-MM-DD HH:MM:SS+00)
+        // Convert to ISO format for proper parsing
+        const aptStartISO = apt.start_time.replace('+00', '+00:00').replace(' ', 'T')
+        const aptEndISO = apt.end_time.replace('+00', '+00:00').replace(' ', 'T')
+        
+        const aptStartDate = new Date(aptStartISO)
+        const aptEndDate = new Date(aptEndISO)
         
         // Check for time overlap: slot starts before appointment ends AND slot ends after appointment starts
         const overlaps = slot.startTime < aptEndDate && slot.endTime > aptStartDate
@@ -856,9 +860,13 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
         
         return overlaps
       }) || false) || (externalBusyTimes?.some(ebt => {
-        // Parse external busy time as local time (no timezone conversion)
-        const ebtStartDate = new Date(ebt.start_time.replace('+00:00', '').replace('Z', ''))
-        const ebtEndDate = new Date(ebt.end_time.replace('+00:00', '').replace('Z', ''))
+        // Parse external busy time - DB stores in UTC with space format (YYYY-MM-DD HH:MM:SS+00)
+        // Convert to ISO format for proper parsing
+        const ebtStartISO = ebt.start_time.replace('+00', '+00:00').replace(' ', 'T')
+        const ebtEndISO = ebt.end_time.replace('+00', '+00:00').replace(' ', 'T')
+        
+        const ebtStartDate = new Date(ebtStartISO)
+        const ebtEndDate = new Date(ebtEndISO)
         
         // Check for time overlap: slot starts before external busy time ends AND slot ends after external busy time starts
         const overlaps = slot.startTime < ebtEndDate && slot.endTime > ebtStartDate
