@@ -2193,17 +2193,30 @@ const createAppointment = async (userData: any) => {
     const startTime = new Date(selectedSlot.value.start_time).toISOString()
     const endTime = new Date(selectedSlot.value.end_time).toISOString()
     
-    // Query for conflicts using RPC or direct query
-    const { data: conflictingAppointments } = await supabase
+    console.log('🔍 Final collision check:', {
+      staff_id: selectedInstructor.value.id,
+      start_time: startTime,
+      end_time: endTime
+    })
+    
+    // Query for conflicts - check all non-deleted, non-reserved appointments
+    const { data: conflictingAppointments, error: collisionError } = await supabase
       .from('appointments')
-      .select('id')
+      .select('id, status, start_time, end_time')
       .eq('staff_id', selectedInstructor.value.id)
-      .neq('status', 'reserved')
+      .is('deleted_at', null) // Not deleted
+      .not('status', 'eq', 'reserved') // Not just reserved (those expire anyway)
       .lt('end_time', endTime)
       .gt('start_time', startTime)
     
+    console.log('📋 Collision check result:', {
+      conflicting_count: conflictingAppointments?.length || 0,
+      conflicts: conflictingAppointments,
+      error: collisionError
+    })
+    
     if (conflictingAppointments && conflictingAppointments.length > 0) {
-      throw new Error('Der Termin wurde leider soeben vergeben. Versuchen Sie es mit einem anderen Termin.')
+      throw new Error(`Der Termin wurde leider soeben vergeben (${conflictingAppointments.length} Konflikt(e)). Versuchen Sie es mit einem anderen Termin.`)
     }
     
     const appointmentData = {
