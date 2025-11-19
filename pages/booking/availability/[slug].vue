@@ -2229,6 +2229,14 @@ const createAppointment = async (userData: any) => {
       const hasToken = paymentData?.payment_method_id ? true : false
       const isWallee = paymentData?.payment_method === 'wallee'
       
+      console.log('🔍 Payment check:', {
+        payment_method: paymentData?.payment_method,
+        payment_status: paymentData?.payment_status,
+        payment_method_id: paymentData?.payment_method_id,
+        hasToken,
+        isWallee
+      })
+      
       if (isWallee && paymentData?.payment_status === 'pending' && hasToken) {
         console.log('✅ Token available, attempting automatic authorization & capture...')
         
