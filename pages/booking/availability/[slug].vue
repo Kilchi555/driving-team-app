@@ -2226,8 +2226,31 @@ const createAppointment = async (userData: any) => {
         .eq('id', response.payment_id)
         .single()
       
-      const hasToken = paymentData?.payment_method_id ? true : false
+      let hasToken = paymentData?.payment_method_id ? true : false
       const isWallee = paymentData?.payment_method === 'wallee'
+      
+      // If no payment_method_id on payment, check if user has a saved token
+      if (!hasToken && isWallee) {
+        console.log('ℹ️ No payment_method_id on payment, checking for user tokens...')
+        const { data: userToken } = await supabase
+          .from('customer_payment_methods')
+          .select('id')
+          .eq('user_id', userData.id)
+          .eq('tenant_id', currentTenant.value.id)
+          .eq('is_active', true)
+          .eq('is_default', true)
+          .maybeSingle()
+        
+        if (userToken?.id) {
+          console.log('✅ Found default user token:', userToken.id)
+          // Link the token to the payment
+          await supabase
+            .from('payments')
+            .update({ payment_method_id: userToken.id })
+            .eq('id', response.payment_id)
+          hasToken = true
+        }
+      }
       
       console.log('🔍 Payment check:', {
         payment_method: paymentData?.payment_method,
