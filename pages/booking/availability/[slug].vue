@@ -762,11 +762,12 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
     console.log('🔍 Batch checking availability for staff:', staffId, 'from', minDate.toISOString(), 'to', maxDate.toISOString())
     
     // Load all appointments for this staff in the extended date range
+    // Include ALL statuses except those that are logically deleted
     const { data: appointments, error: dbError } = await supabase
       .from('appointments')
       .select('id, start_time, end_time, title, status')
       .eq('staff_id', staffId)
-      .in('status', ['confirmed', 'scheduled', 'completed', 'booked', 'pending'])
+      .not('status', 'eq', 'deleted')
       .is('deleted_at', null)
       .gte('start_time', minDate.toISOString())
       .lte('end_time', maxDate.toISOString())
