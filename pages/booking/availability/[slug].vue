@@ -19,7 +19,10 @@
 
       <!-- Loading State -->
       <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div 
+          class="animate-spin rounded-full h-12 w-12 border-b-2" 
+          :style="{ borderBottomColor: getBrandPrimary() }"
+        ></div>
         <span class="ml-3 text-gray-600">Verfügbare Termine werden geladen...</span>
       </div>
 
@@ -376,7 +379,10 @@
           
           <!-- Loading Time Slots -->
           <div v-if="isLoadingTimeSlots" class="text-center py-12">
-            <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
+            <div 
+              class="animate-spin rounded-full h-16 w-16 border-b-4 mx-auto" 
+              :style="{ borderBottomColor: getBrandPrimary() }"
+            ></div>
             <p class="mt-6 text-xl text-gray-900 font-semibold">Verfügbare Termine werden geladen...</p>
             <p class="mt-3 text-gray-600">Wir prüfen die Verfügbarkeit und berechnen Fahrzeiten.</p>
             <p class="mt-1 text-sm text-gray-500">Dies kann einen Moment dauern.</p>
@@ -521,7 +527,10 @@
 
             <!-- Validation Feedback -->
             <div v-if="isValidatingAddress" class="flex items-center gap-2 text-sm text-gray-600">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <div 
+                class="animate-spin rounded-full h-4 w-4 border-b-2" 
+                :style="{ borderBottomColor: getBrandPrimary() }"
+              ></div>
               <span>Adresse wird geprüft...</span>
             </div>
 
@@ -672,7 +681,10 @@
   <div v-if="isCreatingBooking" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg p-6 max-w-sm mx-4">
       <div class="flex flex-col items-center gap-4">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div 
+          class="animate-spin rounded-full h-12 w-12 border-b-2" 
+          :style="{ borderBottomColor: getBrandPrimary() }"
+        ></div>
         <p class="text-lg font-medium text-gray-900">Buchung wird erstellt...</p>
         <p class="text-sm text-gray-600 text-center">Bitte warten Sie einen Moment.</p>
       </div>
