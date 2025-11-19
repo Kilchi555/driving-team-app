@@ -944,11 +944,26 @@ const loadRegularAppointments = async () => {
         title: eventTitle
       })
       
+      // Convert UTC appointment times to local time for display
+      // Appointments are stored in UTC, calendar expects local time
+      const parseUTCTime = (utcTimeString: string) => {
+        // Parse UTC ISO string and convert to local time
+        const utcDate = new Date(utcTimeString)
+        // Create local date string for calendar display
+        const localYear = utcDate.getFullYear()
+        const localMonth = String(utcDate.getMonth() + 1).padStart(2, '0')
+        const localDay = String(utcDate.getDate()).padStart(2, '0')
+        const localHour = String(utcDate.getHours()).padStart(2, '0')
+        const localMinute = String(utcDate.getMinutes()).padStart(2, '0')
+        const localSecond = String(utcDate.getSeconds()).padStart(2, '0')
+        return `${localYear}-${localMonth}-${localDay}T${localHour}:${localMinute}:${localSecond}`
+      }
+      
       const event = {
         id: apt.id,
         title: eventTitle,
-        start: apt.start_time.replace('+00:00', ''),
-        end: apt.end_time.replace('+00:00', ''),  
+        start: parseUTCTime(apt.start_time),
+        end: parseUTCTime(apt.end_time),
         allDay: false,
         backgroundColor: eventColor,
         borderColor: eventColor,
