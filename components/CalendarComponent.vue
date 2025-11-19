@@ -716,17 +716,40 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
     
     console.log('✅ Loaded external busy times:', busyTimes.length)
     
+    // Convert UTC times to local time for display (same as appointments)
+    const parseUTCTime = (utcTimeString: string) => {
+      // Parse UTC ISO string and convert to local time
+      let timeStr = utcTimeString
+      // Normalize format: convert space format to ISO if needed
+      if (timeStr.includes(' ') && !timeStr.includes('T')) {
+        timeStr = timeStr.replace(' ', 'T')
+      }
+      // Ensure timezone suffix is properly formatted
+      if (timeStr.includes('+00') && !timeStr.includes('+00:00')) {
+        timeStr = timeStr.replace('+00', '+00:00')
+      }
+      if (!timeStr.includes('+') && !timeStr.includes('Z')) {
+        timeStr += '+00:00'
+      }
+      
+      const utcDate = new Date(timeStr)
+      // Create local date string for calendar display
+      const localYear = utcDate.getFullYear()
+      const localMonth = String(utcDate.getMonth() + 1).padStart(2, '0')
+      const localDay = String(utcDate.getDate()).padStart(2, '0')
+      const localHour = String(utcDate.getHours()).padStart(2, '0')
+      const localMinute = String(utcDate.getMinutes()).padStart(2, '0')
+      const localSecond = String(utcDate.getSeconds()).padStart(2, '0')
+      return `${localYear}-${localMonth}-${localDay}T${localHour}:${localMinute}:${localSecond}`
+    }
+    
     // Convert to calendar events
     const events: CalendarEvent[] = busyTimes.map(busy => {
-      // Entferne Z-Suffix falls vorhanden, damit FullCalendar die Zeit als lokal interpretiert
-      const startTime = busy.start_time.replace('Z', '').replace(/\+\d{2}:\d{2}$/, '')
-      const endTime = busy.end_time.replace('Z', '').replace(/\+\d{2}:\d{2}$/, '')
-      
       return {
         id: `external-busy-${busy.id}`,
         title: busy.event_title || 'Privat',
-        start: startTime,
-        end: endTime,
+        start: parseUTCTime(busy.start_time),
+        end: parseUTCTime(busy.end_time),
         backgroundColor: '#e9d5ff', // Helles Lila (durchklickbar)
         borderColor: 'transparent',
         textColor: '#9333ea',
