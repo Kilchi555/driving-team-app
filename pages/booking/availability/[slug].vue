@@ -2189,9 +2189,10 @@ const createAppointment = async (userData: any) => {
       duration_minutes: selectedSlot.value.duration_minutes,
       type: selectedCategory.value.code,
       event_type_code: 'lesson',
-      // Authenticated users booking themselves → directly confirmed
-      // Unauthenticated/invited users → require confirmation
-      status: userData.id && userData.id.length > 0 ? 'confirmed' : 'pending_confirmation',
+      // All bookings from this flow are directly confirmed
+      // - Authenticated users: self-booking, no approval needed
+      // - Unauthenticated users: will pay via Wallee, then register
+      status: 'confirmed',
       tenant_id: currentTenant.value.id
     }
     
