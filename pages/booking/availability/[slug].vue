@@ -2268,7 +2268,9 @@ const createAppointment = async (userData: any) => {
           const authResponse = await $fetch<{success: boolean}>(`/api/wallee/authorize-payment`, {
             method: 'POST',
             body: {
-              paymentId: response.payment_id
+              paymentId: response.payment_id,
+              userId: userData.id,
+              tenantId: currentTenant.value.id
             }
           })
           
@@ -2279,7 +2281,9 @@ const createAppointment = async (userData: any) => {
             const captureResponse = await $fetch<{success: boolean}>(`/api/wallee/capture-payment`, {
               method: 'POST',
               body: {
-                paymentId: response.payment_id
+                paymentId: response.payment_id,
+                userId: userData.id,
+                tenantId: currentTenant.value.id
               }
             })
             
