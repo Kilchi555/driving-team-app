@@ -1718,32 +1718,36 @@ const generateTimeSlotsForSpecificCombination = async () => {
     
     const timeSlots: any[] = []
     const slotTimes: { startTime: Date, endTime: Date }[] = []
-    const today = new Date()
-    today.setHours(0, 0, 0, 0) // Reset to start of day
     
-    console.log('📅 Generating slots starting from:', today.toISOString())
+    // Working hours are now in UTC in the database
+    // We need to generate slots in UTC for proper comparison with appointments
+    const today = new Date()
+    // Get UTC start of today (00:00 UTC)
+    const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))
+    
+    console.log('📅 Generating slots starting from:', todayUTC.toISOString(), '(UTC)')
     
     // Generate slots for the next 4 weeks starting from today
     for (let week = 0; week < 4; week++) {
       for (let day = 0; day < 7; day++) {
-        // Calculate the target date more safely
-        const targetDate = new Date(today)
-        targetDate.setDate(today.getDate() + (week * 7) + day)
+        // Calculate the target date in UTC
+        const targetDateUTC = new Date(todayUTC)
+        targetDateUTC.setUTCDate(todayUTC.getUTCDate() + (week * 7) + day)
         
         // Skip past dates (only include today and future dates)
-        if (targetDate < today) continue
+        if (targetDateUTC < todayUTC) continue
         
-        // Generate time slots for this day (8:00 - 18:00, every hour)
-        for (let hour = 8; hour < 18; hour++) {
+        // Generate time slots for this day in UTC (Working hours are now in UTC: 06:00-18:00 UTC = 07:00-19:00 CET)
+        for (let hour = 6; hour < 18; hour++) {
           try {
-            // Create slot time more safely
-            const slotTime = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), hour, 0, 0, 0)
+            // Create slot time in UTC
+            const slotTime = new Date(Date.UTC(targetDateUTC.getUTCFullYear(), targetDateUTC.getUTCMonth(), targetDateUTC.getUTCDate(), hour, 0, 0, 0))
             
             // Skip if slot is in the past (more than 30 minutes ago for realistic booking)
             const thirtyMinutesAgo = new Date()
             thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30)
             if (slotTime < thirtyMinutesAgo) {
-              console.log('⏰ Skipping past slot:', slotTime.toLocaleString('de-DE'), '(30+ minutes ago)')
+              console.log('⏰ Skipping past slot (UTC):', slotTime.toISOString(), '(30+ minutes ago)')
               continue
             }
             
@@ -1770,9 +1774,13 @@ const generateTimeSlotsForSpecificCombination = async () => {
             slotTimes.push({ startTime: slotTime, endTime })
             
             // Debug: Log slot creation for today
-            if (targetDate.toDateString() === today.toDateString()) {
-              console.log('📅 Creating slot for today:', slotTime.toLocaleString('de-DE'), 'Current time:', new Date().toLocaleString('de-DE'))
+            if (targetDateUTC.toUTCString().split(' ').slice(0, 4).join(' ') === todayUTC.toUTCString().split(' ').slice(0, 4).join(' ')) {
+              console.log('📅 Creating slot for today (UTC):', slotTime.toISOString(), 'Local display:', new Date(slotTime).toLocaleString('de-DE'))
             }
+            
+            // Convert UTC slot time to local Date for display
+            const slotTimeLocal = new Date(slotTime)
+            const endTimeLocal = new Date(endTime)
             
             timeSlots.push({
               id: `${selectedInstructor.value.id}-${selectedLocation.value.id}-${slotTime.getTime()}`,
@@ -1785,9 +1793,9 @@ const generateTimeSlotsForSpecificCombination = async () => {
               duration_minutes: duration,
               is_available: true, // Will be updated after batch check
               week_number: week + 1,
-              day_name: slotTime.toLocaleDateString('de-DE', { weekday: 'long' }),
-              date_formatted: slotTime.toLocaleDateString('de-DE'),
-              time_formatted: slotTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+              day_name: slotTimeLocal.toLocaleDateString('de-DE', { weekday: 'long' }),
+              date_formatted: slotTimeLocal.toLocaleDateString('de-DE'),
+              time_formatted: slotTimeLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
             })
           } catch (dateErr) {
             console.warn('⚠️ Error creating date for slot:', { week, day, hour, error: dateErr })
