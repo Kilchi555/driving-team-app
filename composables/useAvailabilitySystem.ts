@@ -308,29 +308,21 @@ export const useAvailabilitySystem = () => {
     try {
       console.log('🔄 Loading appointments for date:', date, skipFutureFilter ? '(ALL appointments)' : '(future only)')
       
-      // Since DB stores times in local time, use local time strings for filtering
-      const startOfDay = `${date} 00:00:00`
-      const endOfDay = `${date} 23:59:59`
+      // DB stores times in UTC with timezone (+00), so use UTC for queries
+      const startOfDayUTC = `${date}T00:00:00+00:00`
+      const endOfDayUTC = `${date}T23:59:59+00:00`
       
       // Only load appointments that are at least 24 hours in the future (unless skipFutureFilter is true)
       const now = new Date()
       const minFutureTime = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+      const minFutureTimeUTC = minFutureTime.toISOString()
       
-      // Format minFutureTime as local time string for DB comparison
-      const year = minFutureTime.getFullYear()
-      const month = String(minFutureTime.getMonth() + 1).padStart(2, '0')
-      const day = String(minFutureTime.getDate()).padStart(2, '0')
-      const hours = String(minFutureTime.getHours()).padStart(2, '0')
-      const minutes = String(minFutureTime.getMinutes()).padStart(2, '0')
-      const seconds = String(minFutureTime.getSeconds()).padStart(2, '0')
-      const minFutureTimeLocal = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
-      
-      console.log('⏰ Time filters (local time):', {
+      console.log('⏰ Time filters (UTC):', {
         now: now.toLocaleString('de-CH'),
-        minFutureTime: skipFutureFilter ? 'SKIPPED' : minFutureTimeLocal,
+        minFutureTime: skipFutureFilter ? 'SKIPPED' : minFutureTimeUTC,
         date: date,
-        startOfDay: startOfDay,
-        endOfDay: endOfDay
+        startOfDayUTC: startOfDayUTC,
+        endOfDayUTC: endOfDayUTC
       })
       
       // Load internal appointments
@@ -342,9 +334,9 @@ export const useAvailabilitySystem = () => {
       
       // Apply future filter only if not skipped (for travel-time validation we need ALL appointments)
       if (skipFutureFilter) {
-        query = query.gte('start_time', startOfDay).lte('start_time', endOfDay)
+        query = query.gte('start_time', startOfDayUTC).lte('start_time', endOfDayUTC)
       } else {
-        query = query.gte('start_time', minFutureTimeLocal)
+        query = query.gte('start_time', minFutureTimeUTC)
       }
       
       const { data: appointments, error } = await query
