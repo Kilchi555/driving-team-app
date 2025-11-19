@@ -2234,7 +2234,7 @@ const createAppointment = async (userData: any) => {
         
         // Try automatic authorization and capture
         try {
-          const authResponse = await $fetch(`/api/wallee/authorize-payment`, {
+          const authResponse = await $fetch<{success: boolean}>(`/api/wallee/authorize-payment`, {
             method: 'POST',
             body: {
               paymentId: response.payment_id
@@ -2245,7 +2245,7 @@ const createAppointment = async (userData: any) => {
             console.log('✅ Payment authorized')
             
             // Try capture immediately if within capture window
-            const captureResponse = await $fetch(`/api/wallee/capture-payment`, {
+            const captureResponse = await $fetch<{success: boolean}>(`/api/wallee/capture-payment`, {
               method: 'POST',
               body: {
                 paymentId: response.payment_id
@@ -2254,8 +2254,7 @@ const createAppointment = async (userData: any) => {
             
             if (captureResponse?.success) {
               console.log('✅ Payment captured successfully!')
-              showSuccess('Termin erfolgreich gebucht!', 'Ihr Termin wurde bestätigt und die Zahlung verarbeitet.')
-              await new Promise(resolve => setTimeout(resolve, 2000))
+              alert('Termin erfolgreich gebucht! Ihr Termin wurde bestätigt und die Zahlung verarbeitet.')
               await navigateTo(route.query.referrer as string || '/customer-dashboard')
               return
             }
@@ -2272,13 +2271,11 @@ const createAppointment = async (userData: any) => {
         await navigateTo(`/customer/payment-process?payments=${response.payment_id}`)
       } else {
         console.log('✅ Payment already processed or no payment needed')
-        showSuccess('Termin erfolgreich gebucht!', 'Ihr Termin wurde bestätigt.')
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        alert('Termin erfolgreich gebucht! Ihr Termin wurde bestätigt.')
         await navigateTo(route.query.referrer as string || '/customer-dashboard')
       }
     } else {
-      showSuccess('Termin erfolgreich gebucht!', 'Ihr Termin wurde bestätigt.')
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      alert('Termin erfolgreich gebucht! Ihr Termin wurde bestätigt.')
       await navigateTo(route.query.referrer as string || '/customer-dashboard')
     }
     
