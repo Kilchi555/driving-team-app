@@ -2214,11 +2214,72 @@ const createAppointment = async (userData: any) => {
     
     console.log('✅ Appointment created:', response)
     
-    // Redirect to payment page
+    // If payment was created, check if automatic authorization is possible
     if (response.payment_id) {
-      await navigateTo(`/customer/payment-process?payments=${response.payment_id}`)
+      console.log('💳 Payment created, checking payment details...')
+      
+      // Get payment and user details
+      const supabase = getSupabase()
+      const { data: paymentData } = await supabase
+        .from('payments')
+        .select('payment_method, payment_status, payment_method_id')
+        .eq('id', response.payment_id)
+        .single()
+      
+      const hasToken = paymentData?.payment_method_id ? true : false
+      const isWallee = paymentData?.payment_method === 'wallee'
+      
+      if (isWallee && paymentData?.payment_status === 'pending' && hasToken) {
+        console.log('✅ Token available, attempting automatic authorization & capture...')
+        
+        // Try automatic authorization and capture
+        try {
+          const authResponse = await $fetch(`/api/wallee/authorize-payment`, {
+            method: 'POST',
+            body: {
+              paymentId: response.payment_id
+            }
+          })
+          
+          if (authResponse?.success) {
+            console.log('✅ Payment authorized')
+            
+            // Try capture immediately if within capture window
+            const captureResponse = await $fetch(`/api/wallee/capture-payment`, {
+              method: 'POST',
+              body: {
+                paymentId: response.payment_id
+              }
+            })
+            
+            if (captureResponse?.success) {
+              console.log('✅ Payment captured successfully!')
+              showSuccess('Termin erfolgreich gebucht!', 'Ihr Termin wurde bestätigt und die Zahlung verarbeitet.')
+              await new Promise(resolve => setTimeout(resolve, 2000))
+              await navigateTo(route.query.referrer as string || '/customer-dashboard')
+              return
+            }
+          }
+        } catch (err) {
+          console.warn('⚠️ Automatic payment failed, redirecting to payment page:', err)
+          // Fall back to payment process page
+        }
+      }
+      
+      // If no token or automatic payment failed, redirect to payment page
+      if (isWallee && paymentData?.payment_status === 'pending') {
+        console.log('🔄 Redirecting to payment process page...')
+        await navigateTo(`/customer/payment-process?payments=${response.payment_id}`)
+      } else {
+        console.log('✅ Payment already processed or no payment needed')
+        showSuccess('Termin erfolgreich gebucht!', 'Ihr Termin wurde bestätigt.')
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        await navigateTo(route.query.referrer as string || '/customer-dashboard')
+      }
     } else {
-      await navigateTo('/customer-dashboard')
+      showSuccess('Termin erfolgreich gebucht!', 'Ihr Termin wurde bestätigt.')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      await navigateTo(route.query.referrer as string || '/customer-dashboard')
     }
     
   } catch (error: any) {
