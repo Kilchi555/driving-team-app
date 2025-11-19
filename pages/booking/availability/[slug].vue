@@ -1759,7 +1759,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
             
             // Double-check the date is valid
             if (isNaN(slotTime.getTime())) {
-              console.warn('⚠️ Invalid date created:', { week, day, hour, targetDate, slotTime })
+              console.warn('⚠️ Invalid date created:', { week, day, hour, targetDateUTC, slotTime })
               continue
             }
             
