@@ -370,7 +370,7 @@ export const useAvailabilitySystem = () => {
       }))
 
       // Load external busy times for the same date
-      console.log('🛰️ Loading external busy times window:', { startOfDay, endOfDay })
+      console.log('🛰️ Loading external busy times window:', { startOfDayUTC, endOfDayUTC })
       
       // Use provided tenantId - no need to check current user
       const selectedTenantId = tenantId
@@ -387,7 +387,7 @@ export const useAvailabilitySystem = () => {
         .from('external_busy_times')
         .select('id, staff_id, start_time, end_time, event_title')
         .eq('tenant_id', selectedTenantId)
-        .gte('start_time', minFutureTimeLocal) // Only future appointments (local time)
+        .gte('start_time', minFutureTimeUTC) // Only future appointments (UTC)
 
       if (externalError) {
         console.warn('⚠️ Error loading external busy times (with date filters):', externalError)
