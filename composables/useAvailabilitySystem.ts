@@ -341,6 +341,18 @@ export const useAvailabilitySystem = () => {
       
       const { data: appointments, error } = await query
 
+      console.log('📋 Query results:', {
+        count: appointments?.length || 0,
+        appointments: appointments?.slice(0, 3).map(apt => ({
+          id: apt.id,
+          staff_id: apt.staff_id,
+          start_time: apt.start_time,
+          end_time: apt.end_time,
+          status: apt.status
+        })),
+        error: error?.message
+      })
+
       if (error) throw error
       
       // Load locations for these appointments to get addresses
