@@ -846,10 +846,24 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       
       // Check for conflicts with any appointment OR external busy time
       const hasConflict = (appointments?.some(apt => {
-        // Parse appointment times - DB stores in UTC with space format (YYYY-MM-DD HH:MM:SS+00)
-        // Convert to ISO format for proper parsing
-        const aptStartISO = apt.start_time.replace('+00', '+00:00').replace(' ', 'T')
-        const aptEndISO = apt.end_time.replace('+00', '+00:00').replace(' ', 'T')
+        // Parse appointment times - DB may return in ISO format (2025-11-20T08:00:00+00:00) or space format (2025-11-20 08:00:00+00)
+        let aptStartISO = apt.start_time
+        let aptEndISO = apt.end_time
+        
+        // Normalize format: convert space format to ISO if needed
+        if (aptStartISO.includes(' ') && !aptStartISO.includes('T')) {
+          aptStartISO = aptStartISO.replace(' ', 'T')
+        }
+        if (aptEndISO.includes(' ') && !aptEndISO.includes('T')) {
+          aptEndISO = aptEndISO.replace(' ', 'T')
+        }
+        // Ensure timezone suffix is properly formatted
+        if (!aptStartISO.includes('+') && !aptStartISO.includes('Z')) {
+          aptStartISO += '+00:00'
+        }
+        if (!aptEndISO.includes('+') && !aptEndISO.includes('Z')) {
+          aptEndISO += '+00:00'
+        }
         
         const aptStartDate = new Date(aptStartISO)
         const aptEndDate = new Date(aptEndISO)
@@ -869,10 +883,24 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
         
         return overlaps
       }) || false) || (externalBusyTimes?.some(ebt => {
-        // Parse external busy time - DB stores in UTC with space format (YYYY-MM-DD HH:MM:SS+00)
-        // Convert to ISO format for proper parsing
-        const ebtStartISO = ebt.start_time.replace('+00', '+00:00').replace(' ', 'T')
-        const ebtEndISO = ebt.end_time.replace('+00', '+00:00').replace(' ', 'T')
+        // Parse external busy time - DB may return in ISO format (2025-11-20T08:00:00+00:00) or space format (2025-11-20 08:00:00+00)
+        let ebtStartISO = ebt.start_time
+        let ebtEndISO = ebt.end_time
+        
+        // Normalize format: convert space format to ISO if needed
+        if (ebtStartISO.includes(' ') && !ebtStartISO.includes('T')) {
+          ebtStartISO = ebtStartISO.replace(' ', 'T')
+        }
+        if (ebtEndISO.includes(' ') && !ebtEndISO.includes('T')) {
+          ebtEndISO = ebtEndISO.replace(' ', 'T')
+        }
+        // Ensure timezone suffix is properly formatted
+        if (!ebtStartISO.includes('+') && !ebtStartISO.includes('Z')) {
+          ebtStartISO += '+00:00'
+        }
+        if (!ebtEndISO.includes('+') && !ebtEndISO.includes('Z')) {
+          ebtEndISO += '+00:00'
+        }
         
         const ebtStartDate = new Date(ebtStartISO)
         const ebtEndDate = new Date(ebtEndISO)
