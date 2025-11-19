@@ -54,7 +54,7 @@
           :class="{ 'overflow-x-auto overflow-y-hidden': isScreenSmall, 'overflow-hidden': !isScreenSmall }"
         >
           <div class="flex items-center justify-start">
-            <div class="flex items-center gap-2 sm:gap-4 flex-nowrap">
+            <div class="flex items-center gap-2 sm:gap-4 flex-nowrap pr-4">
               <template v-for="(step, index) in bookingSteps" :key="step.id">
               <button
                 :data-step="step.id"
