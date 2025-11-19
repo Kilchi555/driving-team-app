@@ -2208,15 +2208,16 @@ const createAppointment = async (userData: any) => {
       end_time: endTime
     })
     
-    // Query for conflicts - check all non-deleted, non-reserved appointments
+    // Query for conflicts - check all non-deleted appointments
+    // Overlap condition: apt.start < slot.end AND apt.end > slot.start
     const { data: conflictingAppointments, error: collisionError } = await supabase
       .from('appointments')
       .select('id, status, start_time, end_time')
       .eq('staff_id', selectedInstructor.value.id)
       .is('deleted_at', null) // Not deleted
-      .not('status', 'eq', 'reserved') // Not just reserved (those expire anyway)
-      .lt('end_time', endTime)
-      .gt('start_time', startTime)
+      .not('status', 'eq', 'deleted') // All statuses except logically deleted
+      .lt('start_time', endTime) // apt.start < slot.end
+      .gt('end_time', startTime) // apt.end > slot.start
     
     console.log('📋 Collision check result:', {
       conflicting_count: conflictingAppointments?.length || 0,
