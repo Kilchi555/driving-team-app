@@ -308,9 +308,9 @@ export const useAvailabilitySystem = () => {
     try {
       console.log('🔄 Loading appointments for date:', date, skipFutureFilter ? '(ALL appointments)' : '(future only)')
       
-      // DB stores times in UTC with timezone (+00), so use UTC for queries
-      const startOfDayUTC = `${date}T00:00:00+00:00`
-      const endOfDayUTC = `${date}T23:59:59+00:00`
+      // DB stores times in UTC with space format (YYYY-MM-DD HH:MM:SS+00), so use that format
+      const startOfDayUTC = `${date} 00:00:00+00`
+      const endOfDayUTC = `${date} 23:59:59+00`
       
       // Only load appointments that are at least 24 hours in the future (unless skipFutureFilter is true)
       const now = new Date()
