@@ -838,11 +838,26 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       // Check if slot is within working hours
       const withinWorkingHours = slotTimeMinutes >= startTimeMinutes && slotTimeMinutes < endTimeMinutes
       
+      // Debug 18:00 slot
+      if (slot.startTime.getHours() === 17 && slot.startTime.getMinutes() === 0) {
+        console.log('🔍 DEBUG 17:00 UTC (18:00 CET) working hours check:', {
+          slotHour: slot.startTime.getHours(),
+          slotTimeMinutes,
+          startTimeMinutes,
+          endTimeMinutes,
+          withinWorkingHours,
+          workingHours: `${dayWorkingHours.start_time} - ${dayWorkingHours.end_time}`
+        })
+      }
+      
       if (!withinWorkingHours) {
         console.log('🚫 Slot outside working hours:', {
           slot: slot.startTime.toLocaleString('de-DE'),
           workingHours: `${dayWorkingHours.start_time} - ${dayWorkingHours.end_time}`,
-          dayOfWeek: dayOfWeek
+          dayOfWeek: dayOfWeek,
+          slotTimeMinutes,
+          startTimeMinutes,
+          endTimeMinutes
         })
         return false
       }
@@ -1841,6 +1856,16 @@ const generateTimeSlotsForSpecificCombination = async () => {
     
     let filteredSlots = timeSlots.filter(slot => slot.is_available)
     console.log(`✅ Generated ${filteredSlots.length} available time slots (before time windows & travel time validation)`)
+    
+    // Debug: Check if 18:00 slots exist and their availability
+    const slots18 = timeSlots.filter(s => s.time_formatted === '18:00')
+    if (slots18.length > 0) {
+      console.log('🔍 18:00 slots found:', slots18.map(s => ({
+        date: s.date_formatted,
+        is_available: s.is_available,
+        full: s
+      })))
+    }
     
     // Debug: Check time windows
     console.log('🔍 Checking time windows:', {
