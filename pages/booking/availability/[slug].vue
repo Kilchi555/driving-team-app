@@ -894,7 +894,13 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
         if (ebtEndISO.includes(' ') && !ebtEndISO.includes('T')) {
           ebtEndISO = ebtEndISO.replace(' ', 'T')
         }
-        // Ensure timezone suffix is properly formatted
+        // Ensure timezone suffix is properly formatted (convert +00 to +00:00)
+        if (ebtStartISO.includes('+00') && !ebtStartISO.includes('+00:00')) {
+          ebtStartISO = ebtStartISO.replace('+00', '+00:00')
+        }
+        if (ebtEndISO.includes('+00') && !ebtEndISO.includes('+00:00')) {
+          ebtEndISO = ebtEndISO.replace('+00', '+00:00')
+        }
         if (!ebtStartISO.includes('+') && !ebtStartISO.includes('Z')) {
           ebtStartISO += '+00:00'
         }
@@ -915,7 +921,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
             eventTitle: ebt.event_title,
             syncSource: ebt.sync_source,
             slotISO: `${slot.startTime.toISOString()} - ${slot.endTime.toISOString()}`,
-            externalBusyTimeISO: `${ebt.start_time} - ${ebt.end_time}`
+            externalBusyTimeISO: `${ebtStartISO} - ${ebtEndISO}`
           })
         }
         
