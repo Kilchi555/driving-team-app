@@ -2578,6 +2578,16 @@ const scrollToStep = (step: number) => {
   }
 }
 
+// Auto-scroll steps bar when current step changes
+watch(() => currentStep.value, (newStep) => {
+  // Always scroll on small screens, optionally on large screens too
+  if (isScreenSmall.value || true) { // Changed: always scroll to keep current step visible
+    nextTick(() => {
+      scrollToStep(newStep)
+    })
+  }
+})
+
 // Reservation functions
 const reserveSlot = async (userId?: string) => {
   if (!selectedSlot.value || !selectedInstructor.value || !currentTenant.value) {
