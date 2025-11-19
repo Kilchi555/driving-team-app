@@ -836,7 +836,8 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       const endTimeMinutes = endHour * 60 + endMinute
       
       // Check if slot is within working hours
-      const withinWorkingHours = slotTimeMinutes >= startTimeMinutes && slotTimeMinutes < endTimeMinutes
+      // Allow slot if it starts during working hours (includes end time boundary)
+      const withinWorkingHours = slotTimeMinutes >= startTimeMinutes && slotTimeMinutes <= endTimeMinutes
       
       // Debug 18:00 slot
       if (slot.startTime.getHours() === 17 && slot.startTime.getMinutes() === 0) {
