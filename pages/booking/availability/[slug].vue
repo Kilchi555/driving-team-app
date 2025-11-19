@@ -818,7 +818,11 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       return ebtStart >= minDateStr && ebtStart <= maxDateStr
     }) || []
     
-    console.log('📅 Found', appointments?.length || 0, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', workingHours?.length || 0, 'working hours')
+    console.log('📅 Raw external busy times loaded:', externalBusyTimesRaw?.length || 0)
+    if (externalBusyTimesRaw && externalBusyTimesRaw.length > 0) {
+      console.log('   Sample:', externalBusyTimesRaw.slice(0, 3).map(e => ({ start: e.start_time, end: e.end_time })))
+    }
+    console.log('📅 Found', appointments?.length || 0, 'appointments,', externalBusyTimes?.length || 0, 'external busy times (filtered), and', workingHours?.length || 0, 'working hours')
     
     // Check each slot against appointments and working hours
     const availabilityResults = timeSlots.map(slot => {
@@ -918,6 +922,22 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
         
         // Check for time overlap: slot starts before external busy time ends AND slot ends after external busy time starts
         const overlaps = slot.startTime < ebtEndDate && slot.endTime > ebtStartDate
+        
+        // Debug for 13:00 slot
+        if (slot.startTime.getHours() === 12 && slot.startTime.getMinutes() === 0) {
+          console.log('🔍 DEBUG 12:00 UTC (13:00 CET) slot check:', {
+            slot_utc: slot.startTime.toISOString(),
+            ebt_local: `${ebtStartStr} - ${ebtEndStr}`,
+            ebt_parsed: `${ebtStartDate.toISOString()} - ${ebtEndDate.toISOString()}`,
+            overlaps,
+            comparison: {
+              slot_start_utc: slot.startTime.getTime(),
+              ebt_end: ebtEndDate.getTime(),
+              slot_end_utc: slot.endTime.getTime(),
+              ebt_start: ebtStartDate.getTime()
+            }
+          })
+        }
         
         if (overlaps) {
           console.log('⚠️ Time conflict detected (external busy time):', {
