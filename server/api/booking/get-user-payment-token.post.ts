@@ -22,14 +22,23 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
 
     // First try to find default token
+    console.log('🔎 Querying for default token with criteria:', {
+      user_id: userId,
+      tenant_id: tenantId,
+      is_active: true,
+      is_default: true
+    })
+
     const { data: defaultToken, error: defaultError } = await supabase
       .from('customer_payment_methods')
-      .select('id')
+      .select('id, is_default, is_active, user_id, tenant_id')
       .eq('user_id', userId)
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .eq('is_default', true)
       .maybeSingle()
+
+    console.log('📋 Default token query result:', { defaultToken, defaultError })
 
     if (defaultToken?.id) {
       console.log('✅ Found default token:', defaultToken.id)
@@ -42,6 +51,14 @@ export default defineEventHandler(async (event) => {
 
     // Fallback: Find ANY active token
     console.log('ℹ️ No default token, looking for any active token...')
+    const { data: allTokens, error: allError } = await supabase
+      .from('customer_payment_methods')
+      .select('id, is_default, is_active, user_id, tenant_id')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
+
+    console.log('📋 All tokens for user:', { allTokens, allError })
+
     const { data: anyToken, error: anyError } = await supabase
       .from('customer_payment_methods')
       .select('id')
@@ -50,6 +67,8 @@ export default defineEventHandler(async (event) => {
       .eq('is_active', true)
       .limit(1)
       .maybeSingle()
+
+    console.log('📋 Active token query result:', { anyToken, anyError })
 
     if (anyToken?.id) {
       console.log('✅ Found active token:', anyToken.id)
@@ -60,7 +79,7 @@ export default defineEventHandler(async (event) => {
       console.warn('⚠️ Error querying any token:', anyError)
     }
 
-    console.log('⚠️ No payment token found for user')
+    console.log('⚠️ No payment token found for user:', { userId, tenantId })
     return { id: null }
   } catch (error: any) {
     console.error('❌ Error in get-user-payment-token:', error)
