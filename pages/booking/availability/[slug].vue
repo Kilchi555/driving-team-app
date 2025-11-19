@@ -766,7 +766,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       .from('appointments')
       .select('id, start_time, end_time, title, status')
       .eq('staff_id', staffId)
-      .eq('status', 'scheduled')
+      .in('status', ['confirmed', 'scheduled', 'completed', 'booked', 'pending'])
       .is('deleted_at', null)
       .gte('start_time', minDate.toISOString())
       .lte('end_time', maxDate.toISOString())
