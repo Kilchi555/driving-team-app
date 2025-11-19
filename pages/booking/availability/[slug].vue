@@ -2232,54 +2232,30 @@ const createAppointment = async (userData: any) => {
       // If no payment_method_id on payment, check if user has a saved token
       if (!hasToken && isWallee) {
         console.log('ℹ️ No payment_method_id on payment, checking for user tokens...')
-        console.log('🔍 Search criteria:', {
-          user_id: userData.id,
-          tenant_id: currentTenant.value.id,
-          is_active: true,
-          is_default: true
-        })
         
-        const { data: userToken } = await supabase
-          .from('customer_payment_methods')
-          .select('id')
-          .eq('user_id', userData.id)
-          .eq('tenant_id', currentTenant.value.id)
-          .eq('is_active', true)
-          .eq('is_default', true)
-          .maybeSingle()
-        
-        console.log('📋 Query result:', userToken)
-        
-        if (userToken?.id) {
-          console.log('✅ Found default user token:', userToken.id)
-          // Link the token to the payment
-          await supabase
-            .from('payments')
-            .update({ payment_method_id: userToken.id })
-            .eq('id', response.payment_id)
-          hasToken = true
-        } else {
-          console.log('⚠️ No default token found, trying to find ANY active token...')
-          const { data: anyToken } = await supabase
-            .from('customer_payment_methods')
-            .select('id')
-            .eq('user_id', userData.id)
-            .eq('tenant_id', currentTenant.value.id)
-            .eq('is_active', true)
-            .limit(1)
-            .maybeSingle()
+        // Use backend API to find token (server-side bypass for RLS)
+        try {
+          const tokenResponse = await $fetch<{id: string | null}>('/api/booking/get-user-payment-token', {
+            method: 'POST',
+            body: {
+              userId: userData.id,
+              tenantId: currentTenant.value.id
+            }
+          })
           
-          console.log('📋 Any token result:', anyToken)
-          
-          if (anyToken?.id) {
-            console.log('✅ Found any active user token:', anyToken.id)
+          if (tokenResponse?.id) {
+            console.log('✅ Found user token:', tokenResponse.id)
             // Link the token to the payment
             await supabase
               .from('payments')
-              .update({ payment_method_id: anyToken.id })
+              .update({ payment_method_id: tokenResponse.id })
               .eq('id', response.payment_id)
             hasToken = true
+          } else {
+            console.log('⚠️ No user token found')
           }
+        } catch (err) {
+          console.warn('⚠️ Error fetching user token:', err)
         }
       }
       
