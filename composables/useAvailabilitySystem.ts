@@ -326,10 +326,11 @@ export const useAvailabilitySystem = () => {
       })
       
       // Load internal appointments
+      // Include ALL statuses except those that are logically deleted
       let query = supabase
         .from('appointments')
         .select('id, staff_id, location_id, start_time, end_time, duration_minutes, status, type, custom_location_address')
-        .in('status', ['confirmed', 'pending', 'completed', 'scheduled', 'booked'])
+        .not('status', 'eq', 'deleted')
         .is('deleted_at', null)
       
       // Apply future filter only if not skipped (for travel-time validation we need ALL appointments)
