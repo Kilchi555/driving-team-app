@@ -443,7 +443,7 @@
         <p class="text-gray-600 text-sm">
           Bereits registriert?
           <button 
-            @click="navigateTo('/login')"
+            @click="navigateTo(tenantSlug ? `/login/${tenantSlug}` : '/login')"
             class="text-blue-600 hover:text-blue-800 font-semibold ml-1"
           >
             Hier anmelden
