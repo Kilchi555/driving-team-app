@@ -8,7 +8,10 @@ export default defineEventHandler(async (event) => {
   try {
     const { slug } = getQuery(event)
 
+    console.log('📡 /api/tenants/by-slug called with query:', { slug })
+
     if (!slug || typeof slug !== 'string') {
+      console.error('❌ Invalid slug parameter:', slug)
       throw createError({
         statusCode: 400,
         statusMessage: 'Slug parameter is required'

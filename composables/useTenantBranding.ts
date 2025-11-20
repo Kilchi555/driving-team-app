@@ -120,13 +120,17 @@ export const useTenantBranding = () => {
 
   // Tenant-Branding laden (by slug)
   const loadTenantBranding = async (tenantSlug?: string) => {
+    console.log('🎨 loadTenantBranding called with slug:', tenantSlug)
     isLoading.value = true
     error.value = null
     
     try {
       if (!tenantSlug) {
+        console.error('❌ loadTenantBranding: No slug provided')
         throw new Error('Tenant slug is required')
       }
+      
+      console.log('🔍 loadTenantBranding: Starting client query for slug:', tenantSlug)
 
       const { data, error: queryError } = await supabase
         .from('tenants')
