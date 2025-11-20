@@ -216,7 +216,7 @@
               Führerschein-Kategorien *
             </label>
             <div class="space-y-3">
-              <div v-for="category in availableCategories" :key="category.code" class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 h-24">
+              <div v-for="category in availableCategories" :key="category.code" class="flex items-start justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 h-24">
                 <div class="flex-1">
                   <div class="flex items-center space-x-3">
                     <span class="text-lg font-bold text-gray-800">{{ category.code }}</span>
@@ -224,10 +224,10 @@
                   </div>
                   <div class="text-xs text-gray-500 mt-1">
                     <div>CHF {{ category.price }}/45min</div>
-                    <div v-if="category.adminFee && category.adminFee > 0" class="mt-1 text-[10px]">+ CHF {{ category.adminFee }} Admin/Vers. (1x)</div>
+                    <div v-if="category.adminFee && category.adminFee > 0" class="mt-1 text-[10px]">+ CHF {{ category.adminFee }} Admin- und Versicherung (einmalig)</div>
                   </div>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer ml-4">
+                <label class="relative inline-flex items-start cursor-pointer ml-4 pt-0.5">
                   <input
                     :id="`cat-${category.code}`"
                     v-model="formData.categories"
@@ -522,15 +522,23 @@ const formData = ref({
   acceptTerms: false
 })
 
+// Category type definition
+interface Category {
+  code: string
+  name: string
+  price: number
+  adminFee?: number
+}
+
 // Available categories
-const availableCategories = ref([
-  { code: 'B', name: 'Auto', price: 95 },
-  { code: 'A', name: 'Motorrad', price: 95 },
-  { code: 'BE', name: 'Auto + Anhänger', price: 120 },
-  { code: 'C', name: 'LKW', price: 170 },
-  { code: 'CE', name: 'LKW + Anhänger', price: 200 },
-  { code: 'D', name: 'Bus', price: 200 },
-  { code: 'BPT', name: 'Berufspersonentransport', price: 100 }
+const availableCategories = ref<Category[]>([
+  { code: 'B', name: 'Auto', price: 95, adminFee: 0 },
+  { code: 'A', name: 'Motorrad', price: 95, adminFee: 0 },
+  { code: 'BE', name: 'Auto + Anhänger', price: 120, adminFee: 0 },
+  { code: 'C', name: 'LKW', price: 170, adminFee: 0 },
+  { code: 'CE', name: 'LKW + Anhänger', price: 200, adminFee: 0 },
+  { code: 'D', name: 'Bus', price: 200, adminFee: 0 },
+  { code: 'BPT', name: 'Berufspersonentransport', price: 100, adminFee: 0 }
 ])
 
 // Computed
