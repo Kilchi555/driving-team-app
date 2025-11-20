@@ -1189,11 +1189,35 @@ const loadStaffForCategory = async () => {
     console.log('🔄 Triggering external calendar sync...')
     await autoSyncCalendars()
     
+    // Load staff categories from staff_categories table
+    console.log('📚 Loading staff categories for tenant:', currentTenant.value.id)
+    const { data: staffCategories, error: catError } = await supabase
+      .from('staff_categories')
+      .select('staff_id, category_code')
+      .eq('tenant_id', currentTenant.value.id)
+    
+    if (catError) {
+      console.error('❌ Error loading staff categories:', catError)
+      throw catError
+    }
+    
+    console.log('📚 Loaded staff categories:', staffCategories?.length || 0, 'entries')
+    
+    // Build a map of staff_id -> [categories]
+    const staffCategoryMap = new Map<string, string[]>()
+    staffCategories?.forEach((sc: any) => {
+      if (!staffCategoryMap.has(sc.staff_id)) {
+        staffCategoryMap.set(sc.staff_id, [])
+      }
+      staffCategoryMap.get(sc.staff_id)?.push(sc.category_code)
+    })
+    
+    console.log('📊 Staff category map:', Object.fromEntries(staffCategoryMap))
+    
     // Filter staff who can teach the selected category
     const capableStaff = activeStaff.value.filter((staff: any) => {
-      // Check if staff has the selected category in their category array
-      const staffCategories = Array.isArray(staff.category) ? staff.category : []
-      return staffCategories.includes(filters.value.category_code)
+      const categories = staffCategoryMap.get(staff.id) || []
+      return categories.includes(filters.value.category_code)
     })
     
     // Add available_locations array to each staff
@@ -1206,7 +1230,7 @@ const loadStaffForCategory = async () => {
     console.log('🔍 Capable staff:', capableStaff.map((s: any) => ({ 
       id: s.id, 
       name: `${s.first_name} ${s.last_name}`, 
-      categories: s.category 
+      categories: staffCategoryMap.get(s.id) || [] 
     })))
     
     // Load locations for all staff, but do NOT generate time slots yet
