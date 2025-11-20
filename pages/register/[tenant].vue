@@ -222,8 +222,9 @@
                     <span class="text-lg font-bold text-gray-800">{{ category.code }}</span>
                     <span class="text-sm text-gray-600">{{ category.name }}</span>
                   </div>
-                  <div class="text-xs text-gray-500 mt-1 whitespace-nowrap">
-                    CHF {{ category.price }}/45min<span v-if="category.adminFee && category.adminFee > 0" class="ml-3 text-gray-500">+ CHF {{ category.adminFee }} (einmalig)</span>
+                  <div class="text-xs text-gray-500 mt-1">
+                    <div>CHF {{ category.price }}/45min</div>
+                    <div v-if="category.adminFee && category.adminFee > 0" class="mt-1">+ CHF {{ category.adminFee }} (einmalig)</div>
                   </div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer ml-4">
