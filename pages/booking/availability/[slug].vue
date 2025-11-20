@@ -809,30 +809,46 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       console.error('❌ Error loading working hours:', whError)
     }
     
-    // Load external busy times for this staff via backend API
+    // Load availability data for this staff via backend API
     // This bypasses RLS and allows public access (backend validates tenant_id)
-    let externalBusyTimes = []
+    let externalBusyTimes: any[] = []
+    let workingHoursFromAPI: any[] = []
+    let appointmentsFromAPI: any[] = []
+    
     try {
-      const response = await fetch('/api/booking/get-external-busy-times', {
+      const response = await fetch('/api/booking/get-availability-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tenant_id: currentTenant.value?.id,
           staff_id: staffId,
           start_date: minDate.toISOString(),
-          end_date: maxDate.toISOString()
+          end_date: maxDate.toISOString(),
+          include_working_hours: true,
+          include_busy_times: true,
+          include_appointments: true
         })
       })
       const data = await response.json()
       if (data.success) {
-        externalBusyTimes = data.data || []
-        console.log('✅ Fetched external busy times via API:', externalBusyTimes.length)
+        externalBusyTimes = data.external_busy_times || []
+        workingHoursFromAPI = data.working_hours || []
+        appointmentsFromAPI = data.appointments || []
+        console.log('✅ Fetched availability data via API:', {
+          external_busy_times: externalBusyTimes.length,
+          working_hours: workingHoursFromAPI.length,
+          appointments: appointmentsFromAPI.length
+        })
       } else {
-        console.warn('⚠️ Error fetching external busy times:', data.message)
+        console.warn('⚠️ Error fetching availability data:', data.message)
       }
     } catch (err) {
-      console.error('❌ Error calling get-external-busy-times API:', err)
+      console.error('❌ Error calling get-availability-data API:', err)
     }
+    
+    // Use API data if available, otherwise use direct queries
+    if (workingHoursFromAPI.length > 0) workingHours = workingHoursFromAPI
+    if (appointmentsFromAPI.length > 0) appointments = appointmentsFromAPI
     
     console.log('📅 Found', appointments?.length || 0, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', workingHours?.length || 0, 'working hours')
     
