@@ -1,22 +1,22 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4" :style="{ background: `linear-gradient(to bottom right, ${(currentTenant?.primary_color || '#2563eb')}15, #64748b15)` }">
+  <div class="min-h-screen flex items-center justify-center p-4" :style="{ background: `linear-gradient(to bottom right, ${(currentTenantBranding?.colors?.primary || currentTenant?.primary_color || '#2563eb')}15, #64748b15)` }">
     
     <!-- Login Form -->
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
       <!-- Header mit Tenant-Branding -->
-      <div :style="{ background: currentTenant?.primary_color || '#2563eb' }" class="text-white p-6 rounded-t-xl">
+      <div :style="{ background: currentTenantBranding?.colors?.primary || currentTenant?.primary_color || '#2563eb' }" class="text-white p-6 rounded-t-xl">
         <div class="text-center">
           <!-- Tenant Logo -->
-          <div v-if="currentTenant?.logo_url" class="mb-4">
-            <img :src="currentTenant.logo_url" :alt="currentTenant.name" class="w-12 h-12 mx-auto">
+          <div v-if="currentTenantBranding?.logos?.wide || currentTenant?.logo_url" class="mb-4">
+            <img :src="currentTenantBranding?.logos?.wide || currentTenant?.logo_url" :alt="currentTenantBranding?.name || currentTenant?.name" class="w-12 h-12 mx-auto">
           </div>
           <div v-else class="mb-4">
             <div class="w-12 h-12 mx-auto bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-              <span class="text-2xl font-bold">{{ currentTenant?.name?.charAt(0) || 'S' }}</span>
+              <span class="text-2xl font-bold">{{ (currentTenantBranding?.name || currentTenant?.name)?.charAt(0) || 'S' }}</span>
             </div>
           </div>
           
-          <h1 class="text-2xl font-bold">{{ currentTenant?.name || 'Willkommen bei Simy' }}</h1>
+          <h1 class="text-2xl font-bold">{{ currentTenantBranding?.name || currentTenant?.name || 'Willkommen bei Simy' }}</h1>
           <p class="text-white text-opacity-90 mt-1">
             Melden Sie sich in Ihrem Account an
           </p>
@@ -27,7 +27,7 @@
       <div class="p-6">
         <!-- Session Check Loading -->
         <div v-if="isCheckingSession" class="text-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" :style="{ borderBottomColor: currentTenant?.primary_color || '#2563eb' }"></div>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" :style="{ borderBottomColor: currentTenantBranding?.colors?.primary || currentTenant?.primary_color || '#2563eb' }"></div>
           <p class="text-gray-600">Überprüfe Session...</p>
         </div>
 
@@ -45,7 +45,7 @@
               autocomplete="email"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-              :style="{ '--tw-ring-color': currentTenant?.primary_color || '#2563eb' }"
+              :style="{ '--tw-ring-color': currentTenantBranding?.colors?.primary || currentTenant?.primary_color || '#2563eb' }"
               placeholder="ihre@email.com"
               :disabled="isLoading"
             >
@@ -64,7 +64,7 @@
                 autocomplete="current-password"
                 required
                 class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-                :style="{ '--tw-ring-color': currentTenant?.primary_color || '#2563eb' }"
+                :style="{ '--tw-ring-color': currentTenantBranding?.colors?.primary || currentTenant?.primary_color || '#2563eb' }"
                 placeholder="Ihr Passwort"
                 :disabled="isLoading"
               >
@@ -113,8 +113,8 @@
             :disabled="isLoading"
             class="w-full py-2.5 px-4 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :style="{ 
-              background: currentTenant?.primary_color || '#2563eb',
-              '--hover-color': (currentTenant?.primary_color || '#2563eb') + 'dd'
+              background: currentTenantBranding?.colors?.primary || currentTenant?.primary_color || '#2563eb',
+              '--hover-color': (currentTenantBranding?.colors?.primary || currentTenant?.primary_color || '#2563eb') + 'dd'
             }"
             @mouseenter="$event.target.style.opacity = '0.9'"
             @mouseleave="$event.target.style.opacity = '1'"
@@ -128,7 +128,7 @@
         <div class="mt-6 text-center">
           <p class="text-sm text-gray-600">
             Noch kein Account? 
-            <NuxtLink :to="`/register/${tenantSlug}`" class="font-medium hover:underline" :style="{ color: currentTenant?.primary_color || '#2563eb' }">
+            <NuxtLink :to="`/register/${tenantSlug}`" class="font-medium hover:underline" :style="{ color: currentTenantBranding?.colors?.primary || currentTenant?.primary_color || '#2563eb' }">
               Registrieren
             </NuxtLink>
           </p>
@@ -150,6 +150,7 @@ import { useRouter, definePageMeta, useHead, useRoute } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import { getSupabase } from '~/utils/supabase'
 
 // Meta
@@ -168,10 +169,19 @@ const supabase = getSupabase()
 // Get tenant from route params
 const tenantSlug = ref(route.params.tenant as string)
 
+// Load tenant branding composable
+const { loadTenantBranding, currentTenantBranding } = useTenantBranding()
+
 // Load tenant data on mount
 onMounted(async () => {
   if (tenantSlug.value) {
     console.log('🏢 Loading tenant data for:', tenantSlug.value)
+    
+    // Load tenant branding (colors, logos, etc.)
+    console.log('🎨 Loading tenant branding for:', tenantSlug.value)
+    await loadTenantBranding(tenantSlug.value)
+    
+    // Load tenant profile
     await loadTenant(tenantSlug.value)
   }
 })
@@ -306,9 +316,9 @@ onMounted(async () => {
 
 // SEO
 useHead({
-  title: `Anmelden - ${currentTenant.value?.name || 'Simy'}`,
+  title: `Anmelden - ${currentTenantBranding.value?.name || currentTenant.value?.name || 'Simy'}`,
   meta: [
-    { name: 'description', content: `Melden Sie sich in Ihrem ${currentTenant.value?.name || 'Simy'} Account an.` },
+    { name: 'description', content: `Melden Sie sich in Ihrem ${currentTenantBranding.value?.name || currentTenant.value?.name || 'Simy'} Account an.` },
     { name: 'robots', content: 'noindex, nofollow' }
   ]
 })
