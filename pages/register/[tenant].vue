@@ -799,7 +799,7 @@ const submitRegistration = async () => {
   }
 }
 
-// Load categories from database
+// Load categories from database WITH PRICING RULES
 const loadCategories = async () => {
   try {
     const activeTenantId = tenantId.value || currentTenant.value?.id
@@ -843,11 +843,44 @@ const loadCategories = async () => {
       finalCategories = availableCategories.value
     } else {
       console.log('✅ Loaded categories from DB:', categories.length)
-      finalCategories = categories.map(cat => ({
-        code: cat.code || cat.name,
-        name: cat.description || cat.name,
-        price: 95 // Default price, could be loaded from pricing rules
-      }))
+      
+      // Load pricing rules for this tenant/service type
+      let pricingRules = null
+      if (serviceType.value === 'fahrlektion') {
+        const { data: rules, error: rulesError } = await supabase
+          .from('pricing_rules')
+          .select('*')
+          .eq('rule_type', 'driving')
+          .eq('tenant_id', activeTenantId)
+          .eq('is_active', true)
+        
+        if (!rulesError && rules && rules.length > 0) {
+          pricingRules = rules
+          console.log('✅ Loaded pricing rules for fahrlektion:', rules.length)
+        } else {
+          console.warn('⚠️ No pricing rules found for fahrlektion, using category prices')
+        }
+      }
+      
+      // Map categories with pricing
+      finalCategories = categories.map(cat => {
+        let price = cat.price_per_lesson || 95 // Use category price as default
+        
+        // Override with pricing rule if available
+        if (pricingRules) {
+          const rule = pricingRules.find(r => r.category_code === cat.code)
+          if (rule) {
+            price = Math.round((rule.price_per_minute_rappen * rule.base_duration_minutes) / 100)
+            console.log(`💰 Applied pricing rule for ${cat.code}:`, price, 'CHF')
+          }
+        }
+        
+        return {
+          code: cat.code || cat.name,
+          name: cat.description || cat.name,
+          price: price
+        }
+      })
     }
     
     availableCategories.value = finalCategories
