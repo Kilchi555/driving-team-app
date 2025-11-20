@@ -847,6 +847,7 @@ const loadCategories = async () => {
       // Load pricing rules for this tenant/service type
       let pricingRules = null
       if (serviceType.value === 'fahrlektion') {
+        // Try to load "driving" rules first
         const { data: rules, error: rulesError } = await supabase
           .from('pricing_rules')
           .select('*')
@@ -856,9 +857,10 @@ const loadCategories = async () => {
         
         if (!rulesError && rules && rules.length > 0) {
           pricingRules = rules
-          console.log('✅ Loaded pricing rules for fahrlektion:', rules.length)
+          console.log('✅ Loaded pricing rules for fahrlektion (driving):', rules.length)
         } else {
-          console.warn('⚠️ No pricing rules found for fahrlektion, using category prices')
+          console.log('ℹ️ No "driving" rules found, falling back to category prices from categories table')
+          // Use fallback: category prices from categories table
         }
       }
       
