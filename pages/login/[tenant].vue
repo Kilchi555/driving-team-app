@@ -166,59 +166,50 @@ const { showError, showSuccess } = useUIStore()
 const { loadTenant, currentTenant } = useTenant()
 const supabase = getSupabase()
 
-// Get tenant from route params
-const tenantSlug = ref(route.params.tenant as string)
-
 // Load tenant branding composable
 const { loadTenantBranding, currentTenantBranding } = useTenantBranding()
 
-// Watch for tenant slug changes and load data immediately
-watch(
-  () => route.params.tenant,
-  async (newTenant) => {
-    if (newTenant) {
-      tenantSlug.value = newTenant as string
-      console.log('🏢 Loading tenant data for:', tenantSlug.value)
-      
-      // Load tenant branding (colors, logos, etc.)
-      console.log('🎨 Loading tenant branding for:', tenantSlug.value)
-      try {
-        await loadTenantBranding(tenantSlug.value)
-      } catch (err) {
-        console.error('❌ Failed to load tenant branding:', err)
-      }
-      
-      // Load tenant profile
-      try {
-        await loadTenant(tenantSlug.value)
-      } catch (err) {
-        console.error('❌ Failed to load tenant profile:', err)
-      }
-    }
-  },
-  { immediate: true }
-)
+// Get tenant from route params - extract immediately
+const tenantSlug = computed(() => route.params.tenant as string)
 
-// Also load on mount as fallback
-onMounted(async () => {
-  if (tenantSlug.value && !currentTenantBranding.value) {
-    console.log('🏢 Fallback: Loading tenant data on mount for:', tenantSlug.value)
-    
-    // Load tenant branding if not already loaded
-    try {
-      await loadTenantBranding(tenantSlug.value)
-    } catch (err) {
-      console.error('❌ Failed to load tenant branding (fallback):', err)
-    }
-    
-    // Load tenant profile if not already loaded
-    try {
-      await loadTenant(tenantSlug.value)
-    } catch (err) {
-      console.error('❌ Failed to load tenant profile (fallback):', err)
-    }
+// Initialize loading
+const isTenantLoading = ref(true)
+
+// Define async setup to load tenant data immediately
+const setupTenant = async () => {
+  const slug = route.params.tenant as string
+  
+  if (!slug) {
+    console.error('❌ No tenant slug found in route params')
+    isTenantLoading.value = false
+    return
   }
-})
+  
+  console.log('🏢 Setup: Loading tenant data for:', slug)
+  
+  try {
+    // Load tenant branding (colors, logos, etc.)
+    console.log('🎨 Setup: Loading tenant branding for:', slug)
+    await loadTenantBranding(slug)
+    console.log('✅ Setup: Tenant branding loaded:', currentTenantBranding.value?.name)
+  } catch (err) {
+    console.error('❌ Setup: Failed to load tenant branding:', err)
+  }
+  
+  try {
+    // Load tenant profile
+    console.log('👤 Setup: Loading tenant profile for:', slug)
+    await loadTenant(slug)
+    console.log('✅ Setup: Tenant profile loaded:', currentTenant.value?.name)
+  } catch (err) {
+    console.error('❌ Setup: Failed to load tenant profile:', err)
+  }
+  
+  isTenantLoading.value = false
+}
+
+// Call setup immediately
+setupTenant()
 
 // Computed
 const isCheckingSession = computed<boolean>(() => Boolean((loading as any).value ?? loading))
