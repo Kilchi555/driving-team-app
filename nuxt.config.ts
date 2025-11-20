@@ -87,11 +87,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       script: [
-        {
-          src: `https://maps.googleapis.com/maps/api/js?key=${process.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=de&region=CH`,
-          async: true,
-          defer: true
-        }
+        // Google Maps loaded via plugins/google-maps-loader.client.ts with proper async loading
       ]
     }
   },
