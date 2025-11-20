@@ -222,7 +222,12 @@
                     <span class="text-lg font-bold text-gray-800">{{ category.code }}</span>
                     <span class="text-sm text-gray-600">{{ category.name }}</span>
                   </div>
-                  <div class="text-xs text-gray-500 mt-1">CHF {{ category.price }}/45min</div>
+                  <div class="text-xs text-gray-500 mt-1">
+                    CHF {{ category.price }}/45min
+                    <span v-if="category.adminFee && category.adminFee > 0" class="ml-3 text-orange-600">
+                      + CHF {{ category.adminFee }} (einmalig)
+                    </span>
+                  </div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input
@@ -844,9 +849,12 @@ const loadCategories = async () => {
     } else {
       console.log('✅ Loaded categories from DB:', categories.length)
       
-      // Load base_price pricing rules for categories
+      // Load base_price and admin_fee pricing rules for categories
       let pricingRules = null
+      let adminFeeRules = null
       console.log('🔍 Loading pricing rules for tenant:', activeTenantId)
+      
+      // Load base_price rules
       const { data: rules, error: rulesError } = await supabase
         .from('pricing_rules')
         .select('*')
@@ -860,20 +868,28 @@ const loadCategories = async () => {
       
       if (!rulesError && rules && rules.length > 0) {
         pricingRules = rules
-        console.log('✅ Loaded base_price rules:', rules.length, 'rules', rules)
+        console.log('✅ Loaded base_price rules:', rules.length, 'rules')
       } else {
-        console.log('ℹ️ No base_price rules found for tenant', activeTenantId, '- error:', rulesError?.message)
-        console.log('🔄 Trying to load ALL pricing rules (any rule_type) for debugging:')
-        const { data: allRules } = await supabase
-          .from('pricing_rules')
-          .select('*')
-          .eq('tenant_id', activeTenantId)
-        console.log('📊 All pricing rules for tenant:', allRules)
+        console.log('ℹ️ No base_price rules found for tenant', activeTenantId)
+      }
+      
+      // Load admin_fee rules
+      const { data: adminFees, error: adminFeeError } = await supabase
+        .from('pricing_rules')
+        .select('*')
+        .eq('rule_type', 'admin_fee')
+        .eq('tenant_id', activeTenantId)
+        .eq('is_active', true)
+      
+      if (!adminFeeError && adminFees && adminFees.length > 0) {
+        adminFeeRules = adminFees
+        console.log('✅ Loaded admin_fee rules:', adminFees.length, 'rules')
       }
       
       // Map categories with their prices
       finalCategories = categories.map(cat => {
         let price = cat.price_per_lesson || 95 // Default fallback
+        let adminFee = 0
         
         // Override with pricing rule if available
         if (pricingRules) {
@@ -884,18 +900,24 @@ const loadCategories = async () => {
             const pricePerMinuteChf = rule.price_per_minute_rappen / 100
             const baseDurationMinutes = 45 // ALWAYS 45 minutes for base price
             price = Math.round(pricePerMinuteChf * baseDurationMinutes)
-            console.log(`💰 Category ${cat.code}: ${price} CHF (from base_price rule: ${rule.price_per_minute_rappen} Rappen/min ÷ 100 = ${pricePerMinuteChf} CHF/min × ${baseDurationMinutes} min)`)
-          } else {
-            console.log(`💰 Category ${cat.code}: ${price} CHF (from category price_per_lesson)`)
+            console.log(`💰 Category ${cat.code}: ${price} CHF (from base_price rule)`)
           }
-        } else {
-          console.log(`💰 Category ${cat.code}: ${price} CHF (from category price_per_lesson, no rules found)`)
+        }
+        
+        // Load admin fee for this category
+        if (adminFeeRules) {
+          const adminFeeRule = adminFeeRules.find(r => r.category_code === cat.code)
+          if (adminFeeRule && adminFeeRule.admin_fee_rappen) {
+            adminFee = Math.round(adminFeeRule.admin_fee_rappen / 100)
+            console.log(`💳 Category ${cat.code}: Admin Fee ${adminFee} CHF (one-time)`)
+          }
         }
         
         return {
           code: cat.code || cat.name,
           name: cat.description || cat.name,
-          price: price
+          price: price,
+          adminFee: adminFee
         }
       })
     }
