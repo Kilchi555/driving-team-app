@@ -809,18 +809,29 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       console.error('❌ Error loading working hours:', whError)
     }
     
-    // Load external busy times for this staff
-    // External busy times are now stored in UTC (same as appointments)
-    // Need to check for any overlap: start <= maxDate AND end >= minDate
-    const { data: externalBusyTimes, error: ebtError } = await supabase
-      .from('external_busy_times')
-      .select('id, start_time, end_time, event_title, sync_source')
-      .eq('staff_id', staffId)
-      .lte('start_time', maxDate.toISOString())  // Event starts before or at maxDate
-      .gte('end_time', minDate.toISOString())    // Event ends after or at minDate
-    
-    if (ebtError) {
-      console.error('❌ Error loading external busy times:', ebtError)
+    // Load external busy times for this staff via backend API
+    // This bypasses RLS and allows public access (backend validates tenant_id)
+    let externalBusyTimes = []
+    try {
+      const response = await fetch('/api/booking/get-external-busy-times', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: currentTenant.value?.id,
+          staff_id: staffId,
+          start_date: minDate.toISOString(),
+          end_date: maxDate.toISOString()
+        })
+      })
+      const data = await response.json()
+      if (data.success) {
+        externalBusyTimes = data.data || []
+        console.log('✅ Fetched external busy times via API:', externalBusyTimes.length)
+      } else {
+        console.warn('⚠️ Error fetching external busy times:', data.message)
+      }
+    } catch (err) {
+      console.error('❌ Error calling get-external-busy-times API:', err)
     }
     
     console.log('📅 Found', appointments?.length || 0, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', workingHours?.length || 0, 'working hours')
