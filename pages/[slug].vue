@@ -238,6 +238,8 @@
 </template>
 
 <script setup lang="ts">
+console.log('📄 [slug].vue script setup initializing...')
+
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, definePageMeta, useHead } from '#imports'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -245,6 +247,8 @@ import { useTenant } from '~/composables/useTenant'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { getSupabase } from '~/utils/supabase'
+
+console.log('📄 [slug].vue imports completed')
 
 // Types
 interface User {

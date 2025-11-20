@@ -145,6 +145,8 @@
 </template>
 
 <script setup lang="ts">
+console.log('🔑 pages/login/[tenant].vue script setup - PAGE LOADED!')
+
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, definePageMeta, useHead, useRoute } from '#imports'
 import { useAuthStore } from '~/stores/auth'
@@ -157,6 +159,8 @@ import { getSupabase } from '~/utils/supabase'
 definePageMeta({
   layout: false
 })
+
+console.log('🔑 pages/login/[tenant].vue definePageMeta completed')
 
 // Composables
 const router = useRouter()
