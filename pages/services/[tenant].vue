@@ -160,15 +160,23 @@ onMounted(async () => {
     try {
       await loadTenant(tenantSlug.value)
       console.log('✅ Tenant loaded successfully')
+      console.log('🔍 activeTenantId:', activeTenantId.value)
+      console.log('🔍 currentTenant:', currentTenant.value)
       
       // Load available services for this tenant
-      if (activeTenantId.value) {
+      // Use activeTenantId or currentTenant.id
+      const tenantId = activeTenantId.value || currentTenant.value?.id
+      console.log('📌 Using tenantId for categories query:', tenantId)
+      
+      if (tenantId) {
         const { data: categories, error } = await supabase
           .from('categories')
           .select('name')
-          .eq('tenant_id', activeTenantId.value)
+          .eq('tenant_id', tenantId)
           .eq('is_active', true)
           .order('sort_order')
+        
+        console.log('🔍 Categories query result:', { categories, error })
         
         if (error) {
           console.warn('⚠️ Failed to load categories:', error)
@@ -177,8 +185,10 @@ onMounted(async () => {
           availableServices.value = names
           console.log('📚 Available services:', names)
         } else {
-          console.log('ℹ️ No active categories found')
+          console.log('ℹ️ No active categories found for tenant:', tenantId)
         }
+      } else {
+        console.warn('⚠️ Could not determine tenantId for categories query')
       }
     } catch (error) {
       console.warn('⚠️ Failed to load tenant, but continuing with slug:', error)
