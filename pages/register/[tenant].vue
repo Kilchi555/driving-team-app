@@ -844,38 +844,12 @@ const loadCategories = async () => {
     } else {
       console.log('✅ Loaded categories from DB:', categories.length)
       
-      // Load pricing rules for this tenant/service type
-      let pricingRules = null
-      if (serviceType.value === 'fahrlektion') {
-        // Try to load "driving" rules first
-        const { data: rules, error: rulesError } = await supabase
-          .from('pricing_rules')
-          .select('*')
-          .eq('rule_type', 'driving')
-          .eq('tenant_id', activeTenantId)
-          .eq('is_active', true)
-        
-        if (!rulesError && rules && rules.length > 0) {
-          pricingRules = rules
-          console.log('✅ Loaded pricing rules for fahrlektion (driving):', rules.length)
-        } else {
-          console.log('ℹ️ No "driving" rules found, falling back to category prices from categories table')
-          // Use fallback: category prices from categories table
-        }
-      }
-      
-      // Map categories with pricing
+      // Map categories with their prices
       finalCategories = categories.map(cat => {
-        let price = cat.price_per_lesson || 95 // Use category price as default
+        // Use price_per_lesson from category directly (simplest approach)
+        const price = cat.price_per_lesson || 95 // Fallback to 95 CHF
         
-        // Override with pricing rule if available
-        if (pricingRules) {
-          const rule = pricingRules.find(r => r.category_code === cat.code)
-          if (rule) {
-            price = Math.round((rule.price_per_minute_rappen * rule.base_duration_minutes) / 100)
-            console.log(`💰 Applied pricing rule for ${cat.code}:`, price, 'CHF')
-          }
-        }
+        console.log(`💰 Category ${cat.code}: ${price} CHF (from category)`)
         
         return {
           code: cat.code || cat.name,
