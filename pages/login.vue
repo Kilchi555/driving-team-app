@@ -1,19 +1,22 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(to bottom right, #2563eb15, #64748b15)">
+  <div class="min-h-screen flex items-center justify-center p-4" :style="{ background: `linear-gradient(to bottom right, ${(currentTenant?.primary_color || '#2563eb')}15, #64748b15)` }">
     
     <!-- Login Form -->
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-      <!-- Header mit Simy-Branding -->
-      <div class="bg-blue-600 text-white p-6 rounded-t-xl">
+      <!-- Header mit Tenant-Branding -->
+      <div :style="{ background: currentTenant?.primary_color || '#2563eb' }" class="text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <!-- Simy Logo -->
-          <div class="mb-4">
+          <!-- Tenant Logo -->
+          <div v-if="currentTenant?.logo_url" class="mb-4">
+            <img :src="currentTenant.logo_url" :alt="currentTenant.name" class="w-12 h-12 mx-auto">
+          </div>
+          <div v-else class="mb-4">
             <div class="w-12 h-12 mx-auto bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-              <span class="text-2xl font-bold">S</span>
+              <span class="text-2xl font-bold">{{ currentTenant?.name?.charAt(0) || 'S' }}</span>
             </div>
           </div>
           
-          <h1 class="text-2xl font-bold">Willkommen bei Simy</h1>
+          <h1 class="text-2xl font-bold">{{ currentTenant?.name || 'Willkommen bei Simy' }}</h1>
           <p class="text-white text-opacity-90 mt-1">
             Melden Sie sich in Ihrem Account an
           </p>
@@ -24,7 +27,7 @@
       <div class="p-6">
         <!-- Session Check Loading -->
         <div v-if="isCheckingSession" class="text-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" :style="{ borderBottomColor: currentTenant?.primary_color || '#2563eb' }"></div>
           <p class="text-gray-600">Überprüfe Session...</p>
         </div>
 
@@ -41,7 +44,8 @@
               type="email"
               autocomplete="email"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+              :style="{ '--tw-ring-color': currentTenant?.primary_color || '#2563eb' }"
               placeholder="ihre@email.com"
               :disabled="isLoading"
             >
@@ -59,7 +63,8 @@
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 required
-                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+                :style="{ '--tw-ring-color': currentTenant?.primary_color || '#2563eb' }"
                 placeholder="Ihr Passwort"
                 :disabled="isLoading"
               >
@@ -106,7 +111,13 @@
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full py-2.5 px-4 rounded-lg text-white font-medium bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full py-2.5 px-4 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            :style="{ 
+              background: currentTenant?.primary_color || '#2563eb',
+              '--hover-color': (currentTenant?.primary_color || '#2563eb') + 'dd'
+            }"
+            @mouseenter="$event.target.style.opacity = '0.9'"
+            @mouseleave="$event.target.style.opacity = '1'"
           >
             <span v-if="isLoading">Wird angemeldet...</span>
             <span v-else>Anmelden</span>
@@ -117,7 +128,7 @@
         <div class="mt-6 text-center">
           <p class="text-sm text-gray-600">
             Noch kein Account? 
-            <NuxtLink to="/auswahl" class="font-medium text-blue-600 hover:underline">
+            <NuxtLink :to="tenantParam ? `/register/${tenantParam}` : '/auswahl'" class="font-medium hover:underline" :style="{ color: currentTenant?.primary_color || '#2563eb' }">
               Registrieren
             </NuxtLink>
           </p>
@@ -134,10 +145,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter, definePageMeta, useHead } from '#imports'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, definePageMeta, useHead, useRoute } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
+import { useTenant } from '~/composables/useTenant'
 import { getSupabase } from '~/utils/supabase'
 
 // Meta
@@ -147,9 +159,23 @@ definePageMeta({
 
 // Composables
 const router = useRouter()
+const route = useRoute()
 const { login, logout, isLoggedIn, loading } = useAuthStore()
 const { showError, showSuccess } = useUIStore()
+const { loadTenant, currentTenant } = useTenant()
 const supabase = getSupabase()
+
+// Get tenant from URL parameter
+const tenantParam = ref(route.query.tenant as string || '')
+
+// Watch for tenant changes and load tenant
+watch(() => route.query.tenant, (newTenant) => {
+  if (newTenant && newTenant !== tenantParam.value) {
+    tenantParam.value = newTenant as string
+    console.log('🏢 Tenant updated from URL:', tenantParam.value)
+    loadTenant(tenantParam.value)
+  }
+}, { immediate: true })
 
 // Computed
 const isCheckingSession = computed<boolean>(() => Boolean((loading as any).value ?? loading))
