@@ -448,7 +448,7 @@
         <p class="text-gray-600 text-sm">
           Bereits registriert?
           <button 
-            @click="navigateTo('/')"
+            @click="navigateTo(tenantParam ? `/login?tenant=${tenantParam}` : '/login')"
             class="text-blue-600 hover:text-blue-800 font-semibold ml-1"
           >
             Hier anmelden
