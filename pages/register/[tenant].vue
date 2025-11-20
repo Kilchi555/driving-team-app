@@ -846,6 +846,7 @@ const loadCategories = async () => {
       
       // Load base_price pricing rules for categories
       let pricingRules = null
+      console.log('🔍 Loading pricing rules for tenant:', activeTenantId)
       const { data: rules, error: rulesError } = await supabase
         .from('pricing_rules')
         .select('*')
@@ -853,11 +854,21 @@ const loadCategories = async () => {
         .eq('tenant_id', activeTenantId)
         .eq('is_active', true)
       
+      if (rulesError) {
+        console.error('❌ Error loading pricing rules:', rulesError)
+      }
+      
       if (!rulesError && rules && rules.length > 0) {
         pricingRules = rules
-        console.log('✅ Loaded base_price rules:', rules.length, 'rules')
+        console.log('✅ Loaded base_price rules:', rules.length, 'rules', rules)
       } else {
-        console.log('ℹ️ No base_price rules found, will use category prices or fallback')
+        console.log('ℹ️ No base_price rules found for tenant', activeTenantId, '- error:', rulesError?.message)
+        console.log('🔄 Trying to load ALL pricing rules (any rule_type) for debugging:')
+        const { data: allRules } = await supabase
+          .from('pricing_rules')
+          .select('*')
+          .eq('tenant_id', activeTenantId)
+        console.log('📊 All pricing rules for tenant:', allRules)
       }
       
       // Map categories with their prices
