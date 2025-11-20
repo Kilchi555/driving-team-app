@@ -878,12 +878,13 @@ const loadCategories = async () => {
         // Override with pricing rule if available
         if (pricingRules) {
           const rule = pricingRules.find(r => r.category_code === cat.code)
-          if (rule && rule.price_per_minute_rappen && rule.base_duration_minutes) {
+          if (rule && rule.price_per_minute_rappen) {
             // Calculate price: (Rappen/minute / 100) * minutes = CHF
-            // IMPORTANT: Divide first to convert Rappen to CHF, then multiply by duration, THEN round
+            // IMPORTANT: Base price is ALWAYS calculated for 45 minutes (standard lesson duration)
             const pricePerMinuteChf = rule.price_per_minute_rappen / 100
-            price = Math.round(pricePerMinuteChf * rule.base_duration_minutes)
-            console.log(`💰 Category ${cat.code}: ${price} CHF (from base_price rule: ${rule.price_per_minute_rappen} Rappen/min ÷ 100 = ${pricePerMinuteChf} CHF/min × ${rule.base_duration_minutes} min)`)
+            const baseDurationMinutes = 45 // ALWAYS 45 minutes for base price
+            price = Math.round(pricePerMinuteChf * baseDurationMinutes)
+            console.log(`💰 Category ${cat.code}: ${price} CHF (from base_price rule: ${rule.price_per_minute_rappen} Rappen/min ÷ 100 = ${pricePerMinuteChf} CHF/min × ${baseDurationMinutes} min)`)
           } else {
             console.log(`💰 Category ${cat.code}: ${price} CHF (from category price_per_lesson)`)
           }
