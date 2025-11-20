@@ -208,8 +208,11 @@ const setupTenant = async () => {
   isTenantLoading.value = false
 }
 
-// Call setup immediately
-setupTenant()
+// Use onMounted to ensure route params are available
+onMounted(() => {
+  console.log('📄 Login page mounted, tenantSlug:', tenantSlug.value)
+  setupTenant()
+})
 
 // Computed
 const isCheckingSession = computed<boolean>(() => Boolean((loading as any).value ?? loading))
