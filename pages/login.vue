@@ -165,17 +165,26 @@ const { showError, showSuccess } = useUIStore()
 const { loadTenant, currentTenant } = useTenant()
 const supabase = getSupabase()
 
-// Get tenant from URL parameter
-const tenantParam = ref(route.query.tenant as string || '')
+// Get tenant from URL parameter or route params
+const tenantParam = ref(
+  (route.params.tenant as string) || 
+  (route.query.tenant as string) || 
+  ''
+)
 
 // Watch for tenant changes and load tenant
-watch(() => route.query.tenant, (newTenant) => {
-  if (newTenant && newTenant !== tenantParam.value) {
-    tenantParam.value = newTenant as string
-    console.log('🏢 Tenant updated from URL:', tenantParam.value)
-    loadTenant(tenantParam.value)
-  }
-}, { immediate: true })
+watch(
+  () => [route.params.tenant, route.query.tenant],
+  ([paramTenant, queryTenant]) => {
+    const newTenant = (paramTenant as string) || (queryTenant as string)
+    if (newTenant && newTenant !== tenantParam.value) {
+      tenantParam.value = newTenant
+      console.log('🏢 Tenant updated from URL:', tenantParam.value)
+      loadTenant(tenantParam.value)
+    }
+  },
+  { immediate: true }
+)
 
 // Computed
 const isCheckingSession = computed<boolean>(() => Boolean((loading as any).value ?? loading))
