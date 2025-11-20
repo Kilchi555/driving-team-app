@@ -216,20 +216,17 @@
               Führerschein-Kategorien *
             </label>
             <div class="space-y-3">
-              <div v-for="category in availableCategories" :key="category.code" class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div v-for="category in availableCategories" :key="category.code" class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 min-h-20">
                 <div class="flex-1">
                   <div class="flex items-center space-x-3">
                     <span class="text-lg font-bold text-gray-800">{{ category.code }}</span>
                     <span class="text-sm text-gray-600">{{ category.name }}</span>
                   </div>
-                  <div class="text-xs text-gray-500 mt-1">
-                    CHF {{ category.price }}/45min
-                    <span v-if="category.adminFee && category.adminFee > 0" class="ml-3 text-orange-600">
-                      + CHF {{ category.adminFee }} (einmalig)
-                    </span>
+                  <div class="text-xs text-gray-500 mt-1 whitespace-nowrap">
+                    CHF {{ category.price }}/45min<span v-if="category.adminFee && category.adminFee > 0" class="ml-3 text-gray-500">+ CHF {{ category.adminFee }} (einmalig)</span>
                   </div>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer">
+                <label class="relative inline-flex items-center cursor-pointer ml-4">
                   <input
                     :id="`cat-${category.code}`"
                     v-model="formData.categories"
