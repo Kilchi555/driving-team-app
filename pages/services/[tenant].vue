@@ -154,46 +154,45 @@ onMounted(async () => {
   console.log('📍 Current route:', route.path)
   console.log('🏷️ Tenant slug:', tenantSlug.value)
   
-  // Load tenant if tenant slug is provided
+  // Load categories for the tenant identified by slug
   if (tenantSlug.value) {
-    console.log('🏢 Loading tenant from URL parameter:', tenantSlug.value)
+    console.log('🏢 Loading categories for tenant slug:', tenantSlug.value)
     try {
-      await loadTenant(tenantSlug.value)
-      console.log('✅ Tenant loaded successfully')
-      console.log('🔍 activeTenantId:', activeTenantId.value)
-      console.log('🔍 currentTenant:', currentTenant.value)
+      // First, get the tenant ID from the slug
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('id, name')
+        .eq('slug', tenantSlug.value)
+        .single()
       
-      // Load available services for this tenant
-      // Use activeTenantId or currentTenant.id
-      const tenantId = activeTenantId.value || currentTenant.value?.id
-      console.log('📌 Using tenantId for categories query:', tenantId)
-      
-      if (tenantId) {
-        const { data: categories, error } = await supabase
+      if (tenantError || !tenantData) {
+        console.warn('⚠️ Tenant not found for slug:', tenantSlug.value, tenantError)
+      } else {
+        console.log('✅ Tenant found:', tenantData)
+        
+        // Load categories for this tenant
+        const { data: categories, error: catError } = await supabase
           .from('categories')
           .select('name')
-          .eq('tenant_id', tenantId)
+          .eq('tenant_id', tenantData.id)
           .eq('is_active', true)
           .order('sort_order')
         
-        console.log('🔍 Categories query result:', { categories, error })
-        
-        if (error) {
-          console.warn('⚠️ Failed to load categories:', error)
+        if (catError) {
+          console.warn('⚠️ Failed to load categories:', catError)
         } else if (categories && categories.length > 0) {
           const names = categories.map(cat => cat.name)
           availableServices.value = names
           console.log('📚 Available services:', names)
         } else {
-          console.log('ℹ️ No active categories found for tenant:', tenantId)
+          console.log('ℹ️ No active categories found for tenant:', tenantData.id)
         }
-      } else {
-        console.warn('⚠️ Could not determine tenantId for categories query')
+        
+        // Also load tenant for other uses
+        await loadTenant(tenantSlug.value)
       }
     } catch (error) {
-      console.warn('⚠️ Failed to load tenant, but continuing with slug:', error)
-      // Don't redirect - just continue with the slug
-      // The register page will handle tenant loading properly
+      console.warn('⚠️ Error loading tenant or categories:', error)
     }
   }
 
