@@ -147,18 +147,22 @@ export const useTenantBranding = () => {
         .eq('slug', tenantSlug)
         .maybeSingle()
 
-      if (queryError) throw queryError
-      if (!data) {
-        console.warn('⚠️ Tenant not found for slug (client query):', tenantSlug, '→ trying server API fallback')
+      if (!data || queryError) {
+        console.warn('⚠️ Tenant not found for slug (client query):', tenantSlug, 'Error:', queryError?.message, '→ trying server API fallback')
         // Fallback to server API (bypasses RLS)
         try {
-          const serverResp: any = await $fetch(`/api/tenants/by-slug`, { params: { slug: tenantSlug } })
+          console.log('📡 Calling /api/tenants/by-slug with slug:', tenantSlug)
+          const serverResp: any = await $fetch(`/api/tenants/by-slug?slug=${tenantSlug}`)
+          console.log('✅ Server API response:', serverResp)
           if (serverResp?.success && serverResp.data) {
+            console.log('✅ Processing tenant data from server API:', serverResp.data.name)
             await processTenantData(serverResp.data)
             return
+          } else {
+            console.warn('⚠️ Server API returned invalid response:', serverResp)
           }
-        } catch (e) {
-          console.warn('Server API fallback failed:', e)
+        } catch (e: any) {
+          console.error('❌ Server API fallback failed:', e.message, e)
         }
         currentTenantBranding.value = null
         error.value = 'Tenant nicht gefunden'

@@ -172,17 +172,51 @@ const tenantSlug = ref(route.params.tenant as string)
 // Load tenant branding composable
 const { loadTenantBranding, currentTenantBranding } = useTenantBranding()
 
-// Load tenant data on mount
+// Watch for tenant slug changes and load data immediately
+watch(
+  () => route.params.tenant,
+  async (newTenant) => {
+    if (newTenant) {
+      tenantSlug.value = newTenant as string
+      console.log('🏢 Loading tenant data for:', tenantSlug.value)
+      
+      // Load tenant branding (colors, logos, etc.)
+      console.log('🎨 Loading tenant branding for:', tenantSlug.value)
+      try {
+        await loadTenantBranding(tenantSlug.value)
+      } catch (err) {
+        console.error('❌ Failed to load tenant branding:', err)
+      }
+      
+      // Load tenant profile
+      try {
+        await loadTenant(tenantSlug.value)
+      } catch (err) {
+        console.error('❌ Failed to load tenant profile:', err)
+      }
+    }
+  },
+  { immediate: true }
+)
+
+// Also load on mount as fallback
 onMounted(async () => {
-  if (tenantSlug.value) {
-    console.log('🏢 Loading tenant data for:', tenantSlug.value)
+  if (tenantSlug.value && !currentTenantBranding.value) {
+    console.log('🏢 Fallback: Loading tenant data on mount for:', tenantSlug.value)
     
-    // Load tenant branding (colors, logos, etc.)
-    console.log('🎨 Loading tenant branding for:', tenantSlug.value)
-    await loadTenantBranding(tenantSlug.value)
+    // Load tenant branding if not already loaded
+    try {
+      await loadTenantBranding(tenantSlug.value)
+    } catch (err) {
+      console.error('❌ Failed to load tenant branding (fallback):', err)
+    }
     
-    // Load tenant profile
-    await loadTenant(tenantSlug.value)
+    // Load tenant profile if not already loaded
+    try {
+      await loadTenant(tenantSlug.value)
+    } catch (err) {
+      console.error('❌ Failed to load tenant profile (fallback):', err)
+    }
   }
 })
 

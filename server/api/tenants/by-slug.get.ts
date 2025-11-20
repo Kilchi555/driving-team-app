@@ -1,36 +1,39 @@
-// server/api/tenants/by-slug.get.ts
-// Public endpoint to fetch a single tenant by slug with full branding fields (bypasses RLS using service role if available)
-import { createClient } from '@supabase/supabase-js'
+/**
+ * API endpoint to fetch tenant branding by slug
+ * Bypasses RLS using service role to allow public access to tenant branding
+ * Used on login/register pages where user is not authenticated
+ */
 
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event)
-  const slug = (query.slug as string | undefined)?.toString()
-
-  if (!slug) {
-    throw createError({ statusCode: 400, statusMessage: 'Missing slug' })
-  }
-
   try {
-    const config = useRuntimeConfig()
-    const supabaseUrl = config.public.supabaseUrl
-    const supabaseServiceKey = config.supabaseServiceRoleKey
-    const supabaseAnonKey = config.public.supabaseAnonKey
+    const { slug } = getQuery(event)
 
-    if (!supabaseUrl) {
-      throw createError({ statusCode: 500, statusMessage: 'Supabase URL configuration missing' })
+    if (!slug || typeof slug !== 'string') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Slug parameter is required'
+      })
     }
 
-    // Prefer service role to bypass RLS, fallback to anon
-    const supabaseKey = supabaseServiceKey || supabaseAnonKey
-    if (!supabaseKey) {
-      throw createError({ statusCode: 500, statusMessage: 'Supabase key configuration missing' })
+    console.log('🔍 Fetching tenant branding for slug:', slug)
+
+    // Create service role client to bypass RLS
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!serviceRoleKey) {
+      console.error('❌ SUPABASE_SERVICE_ROLE_KEY not configured')
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Server configuration error'
+      })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    })
+    const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
-    const { data, error } = await supabase
+    // Fetch tenant by slug
+    const { data, error } = await serviceSupabase
       .from('tenants')
       .select(`
         id, name, slug,
@@ -47,22 +50,41 @@ export default defineEventHandler(async (event) => {
         is_active
       `)
       .eq('slug', slug)
-      .maybeSingle()
+      .eq('is_active', true)
+      .single()
 
     if (error) {
-      console.error('Tenants by-slug DB error:', error)
-      throw createError({ statusCode: 500, statusMessage: `Database error: ${error.message}` })
+      console.error('❌ Error fetching tenant:', error)
+      throw createError({
+        statusCode: 404,
+        statusMessage: `Tenant with slug '${slug}' not found`
+      })
     }
 
-    if (!data || data.is_active === false) {
-      return { success: true, data: null }
+    if (!data) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: `Tenant with slug '${slug}' not found`
+      })
     }
 
-    return { success: true, data }
-  } catch (err: any) {
-    console.error('API Error (by-slug):', err)
-    throw createError({ statusCode: err.statusCode || 500, statusMessage: err.statusMessage || 'Failed to load tenant' })
+    console.log('✅ Tenant found:', data.name)
+
+    return {
+      success: true,
+      data: data
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error in tenant by-slug endpoint:', error)
+
+    if (error.statusCode) {
+      throw error
+    }
+
+    throw createError({
+      statusCode: 500,
+      statusMessage: error.message || 'Internal server error'
+    })
   }
 })
-
-
