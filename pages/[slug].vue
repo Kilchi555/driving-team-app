@@ -289,7 +289,7 @@ interface VerificationResponse {
 
 // Reserved routes that should not be caught by the slug route
 const reservedRoutes = [
-  'admin', 'dashboard', 'customer-dashboard', 'login', 'register', 
+  'admin', 'dashboard', 'customer-dashboard', 'register', 
   'tenant-register', 'auswahl', 'customer', 'courses', 'booking', 
   'payment', 'shop', 'upgrade', 'staff', 'tenant-admin', 'anonymous-sale',
   'reset-password', 'register-staff', 'mock-payment-page', 'pricing-test',
@@ -297,6 +297,7 @@ const reservedRoutes = [
   'debug-other-events', 'optimized-workflow-test', 'accounto-test', 
   'tenant-test', 'tenant-demo', 'tenant-debug', 'tenant-start', 'customers',
   'AdminEventTypes', 'wallee-corrected-test'
+  // NOTE: 'login' is intentionally NOT in this list - it should be handled by [slug].vue or /login/[tenant].vue
 ]
 
 // Meta
