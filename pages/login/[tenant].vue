@@ -9,10 +9,13 @@
  */
 
 const route = useRoute()
+const router = useRouter()
 const tenant = route.params.tenant as string
 
 console.log('🔄 Redirecting /login/' + tenant + ' → /' + tenant)
 
-// Redirect to the tenant page which will handle branding and login
-await navigateTo('/' + tenant, { replace: true })
+// Use router.replace() for immediate redirect
+if (tenant) {
+  router.replace('/' + tenant)
+}
 </script>
