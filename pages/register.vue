@@ -1383,13 +1383,16 @@ const loadCategories = async () => {
       if (pricingRules) {
         const rule = pricingRules.find(r => r.category_code === cat.code)
         if (rule) {
-          const calculatedPrice = (rule.price_per_minute_rappen * rule.base_duration_minutes) / 100 // Convert to CHF
-          price = Math.round(calculatedPrice) // Apply rounding like in admin interface
+          // Calculate price correctly: (Rappen/minute / 100) * minutes = CHF
+          // IMPORTANT: Divide first to convert Rappen to CHF, then multiply by duration, THEN round
+          const pricePerMinuteChf = rule.price_per_minute_rappen / 100
+          price = Math.round(pricePerMinuteChf * rule.base_duration_minutes) // Apply rounding like in admin interface
           console.log(`💰 Found pricing rule for ${cat.code} (${serviceType.value}):`, {
             rule_type: rule.rule_type,
             price_per_minute_rappen: rule.price_per_minute_rappen,
+            price_per_minute_chf: pricePerMinuteChf,
             base_duration_minutes: rule.base_duration_minutes,
-            calculated_price_raw: calculatedPrice,
+            calculated_price_raw: pricePerMinuteChf * rule.base_duration_minutes,
             calculated_price_rounded: price
           })
         } else {
