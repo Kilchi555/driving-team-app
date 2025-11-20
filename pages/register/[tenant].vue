@@ -224,7 +224,7 @@
                   </div>
                   <div class="text-xs text-gray-500 mt-1">
                     <div>CHF {{ category.price }}/45min</div>
-                    <div v-if="category.adminFee && category.adminFee > 0" class="mt-1">+ CHF {{ category.adminFee }} (einmalig)</div>
+                    <div v-if="category.adminFee && category.adminFee > 0" class="mt-1">+ CHF {{ category.adminFee }} Admin- und Versicherung (einmalig)</div>
                   </div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer ml-4">
