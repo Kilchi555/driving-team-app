@@ -844,12 +844,39 @@ const loadCategories = async () => {
     } else {
       console.log('✅ Loaded categories from DB:', categories.length)
       
+      // Load base_price pricing rules for categories
+      let pricingRules = null
+      const { data: rules, error: rulesError } = await supabase
+        .from('pricing_rules')
+        .select('*')
+        .eq('rule_type', 'base_price')
+        .eq('tenant_id', activeTenantId)
+        .eq('is_active', true)
+      
+      if (!rulesError && rules && rules.length > 0) {
+        pricingRules = rules
+        console.log('✅ Loaded base_price rules:', rules.length, 'rules')
+      } else {
+        console.log('ℹ️ No base_price rules found, will use category prices or fallback')
+      }
+      
       // Map categories with their prices
       finalCategories = categories.map(cat => {
-        // Use price_per_lesson from category directly (simplest approach)
-        const price = cat.price_per_lesson || 95 // Fallback to 95 CHF
+        let price = cat.price_per_lesson || 95 // Default fallback
         
-        console.log(`💰 Category ${cat.code}: ${price} CHF (from category)`)
+        // Override with pricing rule if available
+        if (pricingRules) {
+          const rule = pricingRules.find(r => r.category_code === cat.code)
+          if (rule && rule.price_per_minute_rappen && rule.base_duration_minutes) {
+            // Calculate price: (Rappen/minute * minutes) / 100 = CHF
+            price = Math.round((rule.price_per_minute_rappen * rule.base_duration_minutes) / 100)
+            console.log(`💰 Category ${cat.code}: ${price} CHF (from base_price rule: ${rule.price_per_minute_rappen} Rappen/min × ${rule.base_duration_minutes} min)`)
+          } else {
+            console.log(`💰 Category ${cat.code}: ${price} CHF (from category price_per_lesson)`)
+          }
+        } else {
+          console.log(`💰 Category ${cat.code}: ${price} CHF (from category price_per_lesson, no rules found)`)
+        }
         
         return {
           code: cat.code || cat.name,
