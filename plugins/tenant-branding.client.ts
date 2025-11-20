@@ -108,9 +108,9 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       const $router = nuxtApp.$router
       
       if ($router && $router.beforeEach) {
-        $router.beforeEach(async (to: any, from: any, next: any) => {
+        $router.beforeEach(async (to: any, from: any) => {
           await handleRouteChange(to)
-          next()
+          // Vue Router 4: Just return undefined (or nothing) to proceed
         })
         console.log('✅ Router guard for tenant branding registered')
       } else {
