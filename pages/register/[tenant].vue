@@ -681,7 +681,7 @@ const submitRegistration = async () => {
   isSubmitting.value = true
   
   try {
-    console.log('🚀 Starting registration with trigger-based approach...')
+    console.log('🚀 Starting registration via backend API...')
     
     // Load tenant by slug
     await loadTenant(tenantSlug.value)
@@ -694,76 +694,41 @@ const submitRegistration = async () => {
     
     console.log('🏢 Registering user for tenant:', activeTenantId)
     
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: formData.value.email.trim().toLowerCase(),
-      password: formData.value.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/login`,
-        data: {
-          first_name: formData.value.firstName.trim(),
-          last_name: formData.value.lastName.trim(),
-          tenant_id: activeTenantId,
-          tenant_name: currentTenant.value?.name || 'Driving Team',
-          tenant_slug: tenantSlug.value,
-          phone: formData.value.phone?.trim() || null,
-          birthdate: formData.value.birthDate || null,
-          street: formData.value.street?.trim() || null,
-          street_nr: formData.value.streetNr?.trim() || null,
-          zip: formData.value.zip?.trim() || null,
-          city: formData.value.city?.trim() || null,
-          category: formData.value.categories || null,
-          lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null
-        }
-      }
-    })
-    
-    if (authError) {
-      if (authError.message?.includes('User already registered')) {
-        throw new Error('Diese E-Mail-Adresse ist bereits registriert. Bitte loggen Sie sich ein oder verwenden Sie eine andere E-Mail-Adresse.')
-      }
-      throw authError
-    }
-    
-    if (!authData?.user?.id) {
-      throw new Error('Benutzer-ID nicht erhalten')
-    }
-    
-    console.log('✅ Auth User created:', authData.user.id)
-    
-    // Create user profile in users table
-    console.log('👤 Creating user profile in users table...')
-    const { data: userProfile, error: userError } = await supabase
-      .from('users')
-      .insert({
-        auth_user_id: authData.user.id,
-        tenant_id: activeTenantId,
-        first_name: formData.value.firstName.trim(),
-        last_name: formData.value.lastName.trim(),
+    // Call backend API to register client (creates auth user + profile via service role)
+    console.log('📡 Calling backend registration API...')
+    const response = await fetch('/api/auth/register-client', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        firstName: formData.value.firstName.trim(),
+        lastName: formData.value.lastName.trim(),
         email: formData.value.email.trim().toLowerCase(),
+        password: formData.value.password,
         phone: formData.value.phone?.trim() || null,
-        birthdate: formData.value.birthDate || null,
+        birthDate: formData.value.birthDate || null,
         street: formData.value.street?.trim() || null,
-        street_nr: formData.value.streetNr?.trim() || null,
+        streetNr: formData.value.streetNr?.trim() || null,
         zip: formData.value.zip?.trim() || null,
         city: formData.value.city?.trim() || null,
-        category: formData.value.categories || null,
-        lernfahrausweis_nr: formData.value.lernfahrausweisNr?.trim() || null,
-        role: isAdminRegistration.value ? 'tenant_admin' : 'client',
-        is_active: true
+        categories: formData.value.categories || null,
+        lernfahrausweisNr: formData.value.lernfahrausweisNr?.trim() || null,
+        tenantId: activeTenantId,
+        isAdmin: isAdminRegistration.value
       })
-      .select()
-      .single()
+    })
     
-    if (userError) {
-      console.error('❌ Error creating user profile:', userError)
-      // Don't fail registration for user profile error - auth user is already created
-      console.warn('⚠️ User profile creation failed, but auth user exists')
-    } else {
-      console.log('✅ User profile created:', userProfile.id)
+    const data = await response.json()
+    
+    if (!response.ok) {
+      throw new Error(data.statusMessage || 'Fehler bei der Registrierung')
     }
     
+    console.log('✅ User registered successfully:', data.userId)
+    
     // Upload Lernfahrausweis image to Supabase Storage (if exists)
-    if (uploadedImage.value) {
+    if (uploadedImage.value && data.userId) {
       console.log('📸 Uploading Lernfahrausweis image to storage...')
       
       try {
@@ -778,7 +743,7 @@ const submitRegistration = async () => {
         const blob = new Blob([byteArray], { type: 'image/jpeg' })
         
         // Generate unique filename
-        const fileName = `${authData.user.id}_lernfahrausweis_${Date.now()}.jpg`
+        const fileName = `${data.userId}_lernfahrausweis_${Date.now()}.jpg`
         const filePath = `lernfahrausweise/${fileName}`
         
         // Upload to Supabase Storage
@@ -819,8 +784,8 @@ const submitRegistration = async () => {
     let errorMessage = error.message || 'Unbekannter Fehler bei der Registrierung'
     
     // Spezifische Fehlermeldungen
-    if (errorMessage.includes('duplicate key') || errorMessage.includes('already registered')) {
-      errorMessage = 'Diese Daten sind bereits registriert. Bitte verwenden Sie andere Angaben oder loggen Sie sich ein.'
+    if (errorMessage.includes('duplicate key') || errorMessage.includes('already registered') || errorMessage.includes('already exists')) {
+      errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwenden Sie eine andere E-Mail-Adresse oder loggen Sie sich ein.'
     } else if (errorMessage.includes('Invalid email')) {
       errorMessage = 'Ungültige E-Mail-Adresse. Bitte prüfen Sie Ihre Eingabe.'
     } else if (errorMessage.includes('Password') || errorMessage.includes('weak password')) {
