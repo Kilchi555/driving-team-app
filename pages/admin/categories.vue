@@ -1309,7 +1309,8 @@ const loadCategoryPricing = async (categoryCode: string) => {
     
     if (basePriceRule) {
       // Calculate price per lesson from price per minute
-      const baseDurationMinutes = basePriceRule.base_duration_minutes || 45
+      // IMPORTANT: Base price is ALWAYS calculated for 45 minutes (standard lesson duration)
+      const baseDurationMinutes = 45
       const pricePerMinuteChf = basePriceRule.price_per_minute_rappen / 100
       const pricePerLesson = pricePerMinuteChf * baseDurationMinutes
       
@@ -1445,13 +1446,14 @@ const syncPricingRules = async (categoryCode: string, pricePerLessonChf: number,
     console.log('🗑️ Deleted', deletedRules?.length || 0, 'existing pricing rules')
     
     // Create new pricing rules
+    // IMPORTANT: Base price is ALWAYS calculated for 45 minutes (standard lesson duration)
     const pricingRules = [
       {
         rule_name: `Kategorie ${categoryCode} - Grundpreis`,
         rule_type: 'base_price',
         category_code: categoryCode,
         price_per_minute_rappen: pricePerMinuteRappen,
-        base_duration_minutes: baseDurationMinutes,
+        base_duration_minutes: 45, // ALWAYS 45 minutes for base price
         admin_fee_rappen: 0,
         admin_fee_applies_from: 999,
         valid_from: new Date().toISOString().split('T')[0],
