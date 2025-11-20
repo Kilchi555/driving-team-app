@@ -119,7 +119,20 @@ const selectService = (serviceType: string) => {
 }
 
 const goBack = () => {
-  navigateTo('/auswahl')
+  // Try to go back in browser history
+  // If there's no history (e.g., direct link), fall back to /auswahl
+  const referrer = document.referrer
+  
+  if (referrer && referrer.includes(window.location.hostname)) {
+    // Safe to use history.back() if referrer is from our domain
+    window.history.back()
+  } else if (window.history.length > 1) {
+    // If there's history but no trusted referrer, still try back
+    window.history.back()
+  } else {
+    // No history, fall back to selection page
+    navigateTo('/auswahl')
+  }
 }
 
 // Initialize
