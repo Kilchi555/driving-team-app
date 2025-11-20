@@ -16,9 +16,16 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       }
     }
     
-    // 1. Prüfe Login-Seiten mit Tenant-Slug
-    if (currentRoute?.name === 'login-tenant' && currentRoute?.params?.tenant) {
+    // 1. Prüfe Login-Seiten mit Tenant-Slug in Route-Parametern
+    if (currentRoute?.params?.tenant) {
+      console.log('🎨 getTenantInfo: Found tenant param:', currentRoute.params.tenant, 'from route:', currentRoute.name)
       return { type: 'slug', value: currentRoute.params.tenant as string }
+    }
+    
+    // 1b. Prüfe auch [slug] Route für public pages
+    if (currentRoute?.params?.slug && currentRoute?.path && !currentRoute.path.includes('admin') && !currentRoute.path.includes('dashboard')) {
+      console.log('🎨 getTenantInfo: Found slug param:', currentRoute.params.slug, 'from route:', currentRoute.name)
+      return { type: 'slug', value: currentRoute.params.slug as string }
     }
     
     // 2. Für alle anderen Seiten: Verwende Tenant-ID des eingeloggten Users
@@ -81,12 +88,12 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 
   // Branding bei Route-Wechsel aktualisieren
   const handleRouteChange = async (to: any) => {
-    // Skip preloading on the login slug route; the page handles its own branding and errors
-    if (to?.name === 'login-tenant') {
-      return
-    }
+    console.log('🔄 Route changed to:', to?.path, 'params:', to?.params)
+    
     const newTenantInfo = await getTenantInfo(to)
     const currentBranding = useTenantBranding().currentTenantBranding.value
+    
+    console.log('🔄 Tenant info detected:', newTenantInfo)
     
     // Nur neu laden wenn sich der Tenant geändert hat
     if (newTenantInfo && (!currentBranding || 
