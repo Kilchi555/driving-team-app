@@ -6,6 +6,7 @@ import { Wallee } from 'wallee'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { buildMerchantReference } from '~/utils/merchantReference'
+import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 
 export default defineEventHandler(async (event) => {
   console.log('🔐 Wallee Authorization (Authorize & Capture)...')
@@ -98,17 +99,15 @@ export default defineEventHandler(async (event) => {
       durationMinutes: appointmentDetails?.duration_minutes
     })
 
-    // ✅ WALLEE SDK KONFIGURATION
-    const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
-    const walleeUserId: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
-    const apiSecret: string = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+    // ✅ GET WALLEE CONFIG FOR TENANT (with fallback to env variables)
+    const walleeConfig = await getWalleeConfigForTenant(tenantId)
+    console.log('🔧 Wallee Config:', { 
+      spaceId: walleeConfig.spaceId, 
+      userId: walleeConfig.userId,
+      forTenant: tenantId
+    })
     
-    const config = {
-      space_id: spaceId,
-      user_id: walleeUserId,
-      api_secret: apiSecret
-    }
-    
+    const config = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
     
     // Generiere Customer ID (pseudonym)

@@ -1,7 +1,8 @@
 // server/api/wallee/create-recurring-transaction.post.ts
-// ✅ WALLEE RECURRING PAYMENTS mit gespeicherten Zahlungsmethoden
+// ✅ WALLEE RECURRING PAYMENTS mit gespeicherten Zahlungsmethoden und Multi-Tenant Support
 
 import { Wallee } from 'wallee'
+import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 
 export default defineEventHandler(async (event) => {
   console.log('🔄 Wallee Recurring Transaction Creation...')
@@ -33,16 +34,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ WALLEE SDK KONFIGURATION
-    const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
-    const userId: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
-    const apiSecret: string = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+    // ✅ GET WALLEE CONFIG FOR TENANT (with fallback to env variables)
+    const walleeConfig = await getWalleeConfigForTenant(requestTenantId)
+    console.log('🔧 Wallee Config for recurring payment:', { 
+      spaceId: walleeConfig.spaceId, 
+      userId: walleeConfig.userId,
+      forTenant: requestTenantId
+    })
     
-    const config = {
-      space_id: spaceId,
-      user_id: userId,
-      api_secret: apiSecret
-    }
+    const config = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     
     // ✅ TRANSACTION SERVICE
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
