@@ -5,7 +5,7 @@
       <!-- Header -->
       <div class="bg-gray-100 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <h1 class="text-2xl font-bold text-gray-700">Dienstleistung von {{ tenantName }} auswählen</h1>
+          <h1 class="text-2xl font-bold text-gray-700">{{ serviceHeader }}</h1>
         </div>
       </div>
       
@@ -15,7 +15,7 @@
           @click="goBack"
           class="text-gray-600 hover:text-gray-800 flex items-center text-sm"
         >
-          ← Zurück zur Auswahl
+          ← Zurück
         </button>
       </div>
 
@@ -87,6 +87,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { useTenant } from '~/composables/useTenant'
+import { getSupabase } from '~/utils/supabase'
 
 // Ensure no auth middleware runs on this page
 definePageMeta({
@@ -94,12 +95,16 @@ definePageMeta({
 })
 
 const route = useRoute()
+const supabase = getSupabase()
 
 // Get tenant slug from URL parameter
 const tenantSlug = computed(() => route.params.tenant as string)
 
 // Tenant Management
 const { loadTenant, tenantId, currentTenant } = useTenant()
+
+// State for available services
+const availableServices = ref<string[]>([])
 
 // Computed
 const activeTenantId = computed(() => {
@@ -108,6 +113,14 @@ const activeTenantId = computed(() => {
 
 const tenantName = computed(() => {
   return currentTenant.value?.name || tenantSlug.value?.replace('-', ' ') || 'dieser Fahrschule'
+})
+
+// Build dynamic service header text
+const serviceHeader = computed(() => {
+  if (availableServices.value.length === 0) {
+    return `Dienstleistungen von ${tenantName.value}`
+  }
+  return `${availableServices.value.join(', ')} von ${tenantName.value}`
 })
 
 // Methods
@@ -147,6 +160,26 @@ onMounted(async () => {
     try {
       await loadTenant(tenantSlug.value)
       console.log('✅ Tenant loaded successfully')
+      
+      // Load available services for this tenant
+      if (activeTenantId.value) {
+        const { data: categories, error } = await supabase
+          .from('categories')
+          .select('name')
+          .eq('tenant_id', activeTenantId.value)
+          .eq('is_active', true)
+          .order('sort_order')
+        
+        if (error) {
+          console.warn('⚠️ Failed to load categories:', error)
+        } else if (categories && categories.length > 0) {
+          const names = categories.map(cat => cat.name)
+          availableServices.value = names
+          console.log('📚 Available services:', names)
+        } else {
+          console.log('ℹ️ No active categories found')
+        }
+      }
     } catch (error) {
       console.warn('⚠️ Failed to load tenant, but continuing with slug:', error)
       // Don't redirect - just continue with the slug
