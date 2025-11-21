@@ -100,20 +100,21 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ User profile created:', userProfile.id)
 
-    // 3. Send confirmation email via Supabase
-    console.log('📧 Sending confirmation email...')
-    const { error: emailError } = await serviceSupabase.auth.admin.sendRawEmail({
-      to: email.toLowerCase().trim(),
-      html: `
-        <p>Hallo ${firstName},</p>
-        <p>Willkommen! Ihre Registrierung wurde erfolgreich abgeschlossen.</p>
-        <p>Bitte bestätigen Sie Ihre E-Mail-Adresse, um Ihren Account vollständig zu aktivieren.</p>
-      `,
-      subject: 'Registrierung bestätigt'
-    })
+    // 3. Send verification email via Supabase (confirmation email automatically sent)
+    console.log('📧 Sending verification email...')
+    try {
+      const { error: emailError } = await serviceSupabase.auth.resend({
+        type: 'signup',
+        email: email.toLowerCase().trim()
+      })
 
-    if (emailError) {
-      console.warn('⚠️ Failed to send confirmation email:', emailError.message)
+      if (emailError) {
+        console.warn('⚠️ Failed to send verification email:', emailError.message)
+      } else {
+        console.log('✅ Verification email sent')
+      }
+    } catch (emailErr: any) {
+      console.warn('⚠️ Email send error:', emailErr.message)
     }
 
     return {
