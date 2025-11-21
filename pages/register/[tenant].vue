@@ -26,7 +26,7 @@
       </div>
 
       <!-- Progress Steps -->
-      <div class="px-6 py-4 bg-gray-50 border-b">
+      <div v-if="!registrationComplete" class="px-6 py-4 bg-gray-50 border-b">
         <div class="flex items-center justify-center space-x-4">
           <div :class="currentStep >= 1 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
                class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
@@ -56,6 +56,82 @@
 
       <!-- Step Content -->
       <div class="p-6">
+        
+        <!-- Registration Complete Screen -->
+        <div v-if="registrationComplete" class="space-y-6 text-center">
+          <!-- Success Icon -->
+          <div class="flex justify-center">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+              <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+          </div>
+          
+          <!-- Confirmation Message -->
+          <div>
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">Registrierung erfolgreich!</h2>
+            <p class="text-gray-600 text-lg mb-6">Willkommen bei {{ currentTenant?.name || 'Simy' }}!</p>
+          </div>
+          
+          <!-- Email Confirmation Required -->
+          <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+            <div class="flex items-start space-x-3">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div class="text-left">
+                <h3 class="text-lg font-semibold text-blue-900 mb-2">Bestätigen Sie Ihre E-Mail-Adresse</h3>
+                <p class="text-blue-800 mb-3">
+                  Wir haben Ihnen eine Bestätigungsmail an <strong>{{ registeredEmail }}</strong> gesendet.
+                </p>
+                <p class="text-blue-700 text-sm mb-3">
+                  Bitte klicken Sie auf den Link in der E-Mail, um Ihren Account zu aktivieren.
+                </p>
+                <p class="text-blue-700 text-sm">
+                  Nach der Bestätigung können Sie sich mit Ihren Zugangsdaten einloggen.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Next Steps -->
+          <div class="bg-gray-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Nächste Schritte:</h3>
+            <div class="text-left space-y-3">
+              <div class="flex items-center space-x-3">
+                <div class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">1</div>
+                <p class="text-gray-700">Überprüfen Sie Ihren Posteingang (und Spam-Ordner)</p>
+              </div>
+              <div class="flex items-center space-x-3">
+                <div class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">2</div>
+                <p class="text-gray-700">Klicken Sie auf den Bestätigungslink in der E-Mail</p>
+              </div>
+              <div class="flex items-center space-x-3">
+                <div class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">3</div>
+                <p class="text-gray-700">Melden Sie sich mit Ihrer E-Mail und Ihrem Passwort an</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div class="space-y-3 pt-6">
+            <button
+              @click="navigateTo(tenantSlug ? `/login/${tenantSlug}` : '/login')"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            >
+              Zur Login-Seite
+            </button>
+            <button
+              @click="navigateTo(tenantSlug ? `/${tenantSlug}` : '/')"
+              class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-6 rounded-lg transition-colors"
+            >
+              Zur Startseite
+            </button>
+          </div>
+        </div>
         
         <!-- Step 1: Personal Data -->
         <div v-if="currentStep === 1" class="space-y-6">
@@ -419,7 +495,7 @@
       </div>
 
       <!-- Navigation -->
-      <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-between">
+      <div v-if="!registrationComplete" class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-between">
         <button
           v-if="currentStep > 1"
           @click="prevStep"
@@ -450,7 +526,7 @@
       </div>
 
       <!-- Login Link -->
-      <div class="px-6 py-3 text-center border-t">
+      <div v-if="!registrationComplete" class="px-6 py-3 text-center border-t">
         <p class="text-gray-600 text-sm">
           Bereits registriert?
           <button 
@@ -536,6 +612,8 @@ const uploadedImage = ref<string | null>(null)
 const showPassword = ref(false)
 const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
+const registrationComplete = ref(false)
+const registeredEmail = ref<string>('')
 
 // Refs
 const fileInput = ref<HTMLInputElement>()
@@ -795,18 +873,10 @@ const submitRegistration = async () => {
       }
     }
     
-    // Success
-    if (isAdminRegistration.value) {
-      showSuccess('Admin-Account erstellt', 'Bitte loggen Sie sich mit Ihren Zugangsdaten ein.')
-      // Navigiere zur tenant-spezifischen Login-Seite
-      const tenantSlug = route.params.tenant as string
-      await navigateTo(`/login/${tenantSlug}`)
-    } else {
-      showSuccess('Registrierung erfolgreich', 'Bitte bestätigen Sie Ihre E-Mail und loggen Sie sich ein.')
-      // Navigate to tenant-specific login page
-      const tenantSlug = route.params.tenant as string
-      await navigateTo(`/login/${tenantSlug}`)
-    }
+    // Success - Show confirmation screen
+    registeredEmail.value = formData.value.email
+    registrationComplete.value = true
+    console.log('✅ Registration complete, showing confirmation screen')
     
   } catch (error: any) {
     console.error('❌ Registration failed:', error)
