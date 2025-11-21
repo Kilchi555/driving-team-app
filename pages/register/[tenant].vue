@@ -227,7 +227,7 @@
                     <div v-if="category.adminFee && category.adminFee > 0" class="mt-1 text-[10px] whitespace-nowrap">+ CHF {{ category.adminFee }} Admin- und Versicherung (einmalig)</div>
                   </div>
                 </div>
-                <label class="relative inline-flex items-start cursor-pointer ml-4 self-start">
+                <label class="relative inline-flex items-start cursor-pointer ml-4 self-start flex-shrink-0">
                   <input
                     :id="`cat-${category.code}`"
                     v-model="formData.categories"
