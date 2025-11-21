@@ -800,11 +800,12 @@ const submitRegistration = async () => {
       showSuccess('Admin-Account erstellt', 'Bitte loggen Sie sich mit Ihren Zugangsdaten ein.')
       // Navigiere zur tenant-spezifischen Login-Seite
       const tenantSlug = route.params.tenant as string
-      await navigateTo(`/${tenantSlug}`)
+      await navigateTo(`/login/${tenantSlug}`)
     } else {
-      showSuccess('Registrierung erfolgreich', 'Ihr Account wurde erstellt. Sie werden zum Dashboard weitergeleitet.')
-      // Navigate to customer dashboard
-      await navigateTo('/customer-dashboard')
+      showSuccess('Registrierung erfolgreich', 'Bitte bestätigen Sie Ihre E-Mail und loggen Sie sich ein.')
+      // Navigate to tenant-specific login page
+      const tenantSlug = route.params.tenant as string
+      await navigateTo(`/login/${tenantSlug}`)
     }
     
   } catch (error: any) {
