@@ -459,7 +459,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { navigateTo, useRoute } from '#app'
+import { navigateTo, useRoute, useRouter } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
@@ -467,6 +467,7 @@ import { useTenant } from '~/composables/useTenant'
 
 const supabase = getSupabase()
 const route = useRoute()
+const router = useRouter()
 const { showError, showSuccess } = useUIStore()
 
 // Get tenant slug from URL parameter
@@ -646,19 +647,7 @@ const prevStep = () => {
 }
 
 const goBack = () => {
-  if (isAdminRegistration.value) {
-    // For admin registration, go back to tenant registration
-    navigateTo('/tenant-register')
-  } else {
-    const url = `/auswahl?tenant=${tenantSlug.value}`
-    console.log('🔙 Going back to:', url)
-    
-    if (typeof navigateTo !== 'undefined') {
-      navigateTo(url)
-    } else {
-      window.location.href = url
-    }
-  }
+  router.back()
 }
 
 // File upload
