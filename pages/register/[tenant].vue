@@ -729,41 +729,28 @@ const submitRegistration = async () => {
     
     // Upload Lernfahrausweis image to Supabase Storage (if exists)
     if (uploadedImage.value && data.userId) {
-      console.log('📸 Uploading Lernfahrausweis image to storage...')
+      console.log('📸 Uploading Lernfahrausweis image via backend API...')
       
       try {
-        // Convert base64 to blob
-        const base64Data = uploadedImage.value.split(',')[1]
-        const byteCharacters = atob(base64Data)
-        const byteNumbers = new Array(byteCharacters.length)
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i)
-        }
-        const byteArray = new Uint8Array(byteNumbers)
-        const blob = new Blob([byteArray], { type: 'image/jpeg' })
-        
         // Generate unique filename
         const fileName = `${data.userId}_lernfahrausweis_${Date.now()}.jpg`
-        const filePath = `lernfahrausweise/${fileName}`
         
-        // Upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('user-documents')
-          .upload(filePath, blob, {
-            cacheControl: '3600',
-            upsert: true,
-            contentType: 'image/jpeg'
-          })
+        // Upload via backend API (uses service role to bypass RLS)
+        const uploadResponse = await $fetch('/api/auth/upload-document', {
+          method: 'POST',
+          body: {
+            userId: data.userId,
+            fileData: uploadedImage.value,
+            fileName: fileName,
+            bucket: 'user-documents',
+            path: 'lernfahrausweise'
+          }
+        }) as any
         
-        if (uploadError) {
-          console.error('❌ Image upload failed:', uploadError)
-          // Don't fail registration for image upload error
-        } else {
-          console.log('✅ Image uploaded successfully:', uploadData.path)
-        }
-      } catch (imageError) {
-        console.error('❌ Image processing failed:', imageError)
-        // Don't fail registration for image processing error
+        console.log('✅ Image uploaded successfully:', uploadResponse.path)
+      } catch (imageError: any) {
+        console.error('❌ Image upload failed:', imageError)
+        // Don't fail registration for image upload error
       }
     }
     
