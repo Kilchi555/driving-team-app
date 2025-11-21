@@ -118,13 +118,13 @@
           <!-- Action Buttons -->
           <div class="space-y-3 pt-6">
             <button
-              @click="navigateTo(tenantSlug ? `/login/${tenantSlug}` : '/login')"
+              @click="navigateTo(`/login/${registeredTenantSlug}`)"
               class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
               Zur Login-Seite
             </button>
             <button
-              @click="navigateTo(tenantSlug ? `/${tenantSlug}` : '/')"
+              @click="navigateTo(`/${registeredTenantSlug}`)"
               class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-6 rounded-lg transition-colors"
             >
               Zur Startseite
@@ -629,6 +629,7 @@ const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
 const registrationComplete = ref(false)
 const registeredEmail = ref<string>('')
+const registeredTenantSlug = ref<string>('')
 
 // Refs
 const fileInput = ref<HTMLInputElement>()
@@ -898,6 +899,7 @@ const submitRegistration = async () => {
     
     // Success - Show confirmation screen
     registeredEmail.value = formData.value.email
+    registeredTenantSlug.value = tenantSlug.value
     registrationComplete.value = true
     console.log('✅ Registration complete, showing confirmation screen')
     
