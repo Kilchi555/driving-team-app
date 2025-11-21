@@ -91,10 +91,18 @@ export default defineEventHandler(async (event) => {
     if (userError) {
       // Delete the auth user if profile creation fails
       await serviceSupabase.auth.admin.deleteUser(authData.user.id)
-      console.error('❌ Error creating user profile:', userError)
+      console.error('❌ Error creating user profile:', JSON.stringify(userError, null, 2))
+      console.error('📋 Attempted insert data:', {
+        auth_user_id: authData.user.id,
+        tenant_id: tenantId,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: email.toLowerCase().trim(),
+        role: userRole
+      })
       throw createError({
         statusCode: 400,
-        statusMessage: 'Fehler beim Erstellen des Benutzerprofils'
+        statusMessage: `Fehler beim Erstellen des Benutzerprofils: ${userError.message}`
       })
     }
 
