@@ -761,8 +761,9 @@ const submitRegistration = async () => {
       const tenantSlug = route.params.tenant as string
       await navigateTo(`/${tenantSlug}`)
     } else {
-      showSuccess('Registrierung erfolgreich', 'Ihr Account wurde erstellt. Bitte prüfen Sie Ihre E-Mails zur Bestätigung und loggen Sie sich dann ein.')
-      await navigateTo('/')
+      showSuccess('Registrierung erfolgreich', 'Ihr Account wurde erstellt. Sie werden zum Dashboard weitergeleitet.')
+      // Navigate to customer dashboard
+      await navigateTo('/customer')
     }
     
   } catch (error: any) {
