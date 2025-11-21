@@ -397,13 +397,21 @@
               />
               <label for="terms" class="text-sm text-gray-700">
                 Ich akzeptiere die 
-                <a href="/terms" target="_blank" class="text-green-600 hover:text-green-800 underline">
+                <button
+                  type="button"
+                  @click.prevent="openRegulationModal('nutzungsbedingungen')"
+                  class="text-green-600 hover:text-green-800 underline cursor-pointer"
+                >
                   Nutzungsbedingungen
-                </a> 
+                </button> 
                 und die 
-                <a href="/privacy" target="_blank" class="text-green-600 hover:text-green-800 underline">
+                <button
+                  type="button"
+                  @click.prevent="openRegulationModal('datenschutz')"
+                  class="text-green-600 hover:text-green-800 underline cursor-pointer"
+                >
                   Datenschutzerklärung
-                </a>
+                </button>
               </label>
             </div>
           </form>
@@ -453,6 +461,37 @@
           </button>
         </p>
       </div>
+
+      <!-- Regulations Modal -->
+      <div v-if="showRegulationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
+          <!-- Modal Header -->
+          <div class="sticky top-0 bg-gray-100 px-6 py-4 flex justify-between items-center border-b">
+            <h2 class="text-xl font-bold text-gray-900">{{ currentRegulation?.title }}</h2>
+            <button
+              @click="showRegulationModal = false"
+              class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <!-- Modal Content -->
+          <div class="px-6 py-6">
+            <div v-if="currentRegulation" v-html="currentRegulation.content" class="prose prose-sm max-w-none text-gray-700"></div>
+          </div>
+          
+          <!-- Modal Footer -->
+          <div class="bg-gray-50 px-6 py-4 border-t flex justify-end">
+            <button
+              @click="showRegulationModal = false"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            >
+              Schließen
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -495,6 +534,8 @@ const currentStep = ref(1)
 const isSubmitting = ref(false)
 const uploadedImage = ref<string | null>(null)
 const showPassword = ref(false)
+const showRegulationModal = ref(false)
+const currentRegulation = ref<any>(null)
 
 // Refs
 const fileInput = ref<HTMLInputElement>()
@@ -909,6 +950,38 @@ const loadCategories = async () => {
     console.log('✅ Final available categories:', availableCategories.value)
   } catch (error) {
     console.error('Error loading categories:', error)
+  }
+}
+
+// Load and display regulations
+const openRegulationModal = async (type: string) => {
+  try {
+    const activeTenantId = tenantId.value || currentTenant.value?.id
+    
+    // Try to load tenant-specific regulation first, then fall back to global
+    const { data: regulation, error } = await supabase
+      .from('regulations')
+      .select('*')
+      .eq('type', type)
+      .or(`tenant_id.eq.${activeTenantId},tenant_id.is.null`)
+      .order('tenant_id', { ascending: false })
+      .limit(1)
+      .single()
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('❌ Error loading regulation:', error)
+      return
+    }
+    
+    if (regulation) {
+      currentRegulation.value = regulation
+      showRegulationModal.value = true
+      console.log('✅ Opened regulation modal:', type)
+    } else {
+      console.warn('⚠️ Regulation not found:', type)
+    }
+  } catch (err) {
+    console.error('Error opening regulation modal:', err)
   }
 }
 
