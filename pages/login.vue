@@ -97,9 +97,13 @@
               <span class="ml-2 text-sm text-gray-600">Angemeldet bleiben</span>
             </label>
             
-            <a href="#" class="text-sm text-blue-600 hover:underline">
+            <button
+              type="button"
+              @click.prevent="showForgotPasswordModal = true"
+              class="text-sm text-blue-600 hover:underline hover:text-blue-800 cursor-pointer"
+            >
               Passwort vergessen?
-            </a>
+            </button>
           </div>
 
           <!-- Error Message -->
@@ -194,6 +198,7 @@ const isAuthenticated = computed<boolean>(() => Boolean((isLoggedIn as any).valu
 const isLoading = ref(false)
 const loginError = ref<string | null>(null)
 const showPassword = ref(false)
+const showForgotPasswordModal = ref(false)
 
 const loginForm = ref({
   email: '',
