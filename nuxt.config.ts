@@ -80,7 +80,8 @@ export default defineNuxtConfig({
       walleeSpaceId: process.env.WALLEE_SPACE_ID,
       walleeUserId: process.env.WALLEE_USER_ID,
       supabaseUrl: process.env.SUPABASE_URL,
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+      hcaptchaSiteKey: process.env.VITE_HCAPTCHA_SITE_KEY
     }
   },
   
@@ -88,6 +89,7 @@ export default defineNuxtConfig({
     head: {
       script: [
         // Google Maps loaded via plugins/google-maps-loader.client.ts with proper async loading
+        // hCaptcha loaded dynamically in registration page
       ]
     }
   },

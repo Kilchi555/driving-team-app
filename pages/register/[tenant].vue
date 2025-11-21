@@ -490,6 +490,15 @@
                 </button>
               </label>
             </div>
+
+            <!-- hCaptcha -->
+            <div class="flex justify-center">
+              <div
+                id="hcaptcha"
+                class="h-captcha"
+                :data-sitekey="hcaptchaSiteKey"
+              ></div>
+            </div>
           </form>
         </div>
       </div>
@@ -578,7 +587,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { navigateTo, useRoute, useRouter } from '#app'
+import { navigateTo, useRoute, useRouter, useRuntimeConfig } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
@@ -588,6 +597,8 @@ const supabase = getSupabase()
 const route = useRoute()
 const router = useRouter()
 const { showError, showSuccess } = useUIStore()
+const { public: publicConfig } = useRuntimeConfig()
+const hcaptchaSiteKey = computed(() => publicConfig.hcaptchaSiteKey)
 
 // Get tenant slug from URL parameter
 const tenantSlug = computed(() => route.params.tenant as string)
@@ -804,6 +815,13 @@ const submitRegistration = async () => {
   isSubmitting.value = true
   
   try {
+    // Get hCaptcha token
+    const captchaToken = (window as any).hcaptcha?.getResponse?.()
+    if (!captchaToken) {
+      throw new Error('Bitte führen Sie die Captcha-Verifikation durch')
+    }
+    console.log('✅ hCaptcha token received')
+    
     console.log('🚀 Starting registration via backend API...')
     
     // Load tenant by slug
@@ -838,7 +856,8 @@ const submitRegistration = async () => {
         categories: formData.value.categories || null,
         lernfahrausweisNr: formData.value.lernfahrausweisNr?.trim() || null,
         tenantId: activeTenantId,
-        isAdmin: isAdminRegistration.value
+        isAdmin: isAdminRegistration.value,
+        captchaToken: captchaToken
       })
     })
     
