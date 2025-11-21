@@ -56,7 +56,6 @@
 
       <!-- Step Content -->
       <div class="p-6">
-        
         <!-- Registration Complete Screen -->
         <div v-if="registrationComplete" class="space-y-6 text-center">
           <!-- Success Icon -->
@@ -133,8 +132,9 @@
           </div>
         </div>
         
+        <!-- Form Steps - only show if not registration complete -->
         <!-- Step 1: Personal Data -->
-        <div v-if="currentStep === 1" class="space-y-6">
+        <div v-if="!registrationComplete && currentStep === 1" class="space-y-6">
           
           <!-- Admin Registration Header -->
           <div v-if="isAdminRegistration" class="text-center mb-6">
@@ -319,7 +319,7 @@
         </div>
 
         <!-- Step 2: Lernfahrausweis Upload (only for Fahrlektionen) -->
-        <div v-if="currentStep === 2 && requiresLernfahrausweis" class="space-y-6">
+        <div v-if="!registrationComplete && currentStep === 2 && requiresLernfahrausweis" class="space-y-6">
           <div class="text-center">
             <h2 class="text-xl font-semibold text-gray-900 mb-2">Lernfahr- oder Führerausweis hochladen</h2>
           </div>
@@ -376,7 +376,7 @@
         </div>
 
         <!-- Account & Registrierung (Step 2 for theory/consultation, Step 3 for driving lessons) -->
-        <div v-else-if="(currentStep === 2 && !requiresLernfahrausweis) || (currentStep === 3 && requiresLernfahrausweis)" class="space-y-6">
+        <div v-if="!registrationComplete && ((currentStep === 2 && !requiresLernfahrausweis) || (currentStep === 3 && requiresLernfahrausweis))" class="space-y-6">
           <div class="text-center mb-6">
             <div class="text-4xl mb-2">🔐</div>
             <h3 class="text-xl font-semibold text-gray-900">Account erstellen</h3>
