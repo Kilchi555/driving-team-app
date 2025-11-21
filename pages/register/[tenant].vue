@@ -958,30 +958,31 @@ const openRegulationModal = async (type: string) => {
   try {
     const activeTenantId = tenantId.value || currentTenant.value?.id
     
-    // Try to load tenant-specific regulation first, then fall back to global
-    const { data: regulation, error } = await supabase
-      .from('regulations')
+    console.log('📋 Loading regulation:', type, 'for tenant:', activeTenantId)
+    
+    // Try to load tenant-specific reglement first, then fall back to global
+    const { data: regulations, error } = await supabase
+      .from('tenant_reglements')
       .select('*')
       .eq('type', type)
+      .eq('is_active', true)
       .or(`tenant_id.eq.${activeTenantId},tenant_id.is.null`)
       .order('tenant_id', { ascending: false })
-      .limit(1)
-      .single()
     
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-      console.error('❌ Error loading regulation:', error)
+    if (error) {
+      console.error('❌ Error loading reglement:', error)
       return
     }
     
-    if (regulation) {
-      currentRegulation.value = regulation
+    if (regulations && regulations.length > 0) {
+      currentRegulation.value = regulations[0]
       showRegulationModal.value = true
-      console.log('✅ Opened regulation modal:', type)
+      console.log('✅ Opened reglement modal:', type, regulations[0].title)
     } else {
-      console.warn('⚠️ Regulation not found:', type)
+      console.warn('⚠️ Reglement not found:', type)
     }
   } catch (err) {
-    console.error('Error opening regulation modal:', err)
+    console.error('Error opening reglement modal:', err)
   }
 }
 
