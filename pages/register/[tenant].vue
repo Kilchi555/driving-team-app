@@ -118,16 +118,10 @@
           <!-- Action Buttons -->
           <div class="space-y-3 pt-6">
             <button
-              @click="navigateTo(`/login/${registeredTenantSlug}`)"
+              @click="navigateTo(`/${registeredTenantSlug}`)"
               class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
-              Zur Login-Seite
-            </button>
-            <button
-              @click="navigateTo(`/${registeredTenantSlug}`)"
-              class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-6 rounded-lg transition-colors"
-            >
-              Zur Startseite
+              Weiter zur Fahrschule
             </button>
           </div>
         </div>
