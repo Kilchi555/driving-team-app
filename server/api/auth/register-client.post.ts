@@ -1,8 +1,29 @@
 import { getSupabase } from '~/utils/supabase'
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { validateRegistrationEmail } from '~/server/utils/email-validator'
 
 export default defineEventHandler(async (event) => {
   try {
+    // Get client IP for rate limiting
+    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
+                      getHeader(event, 'x-real-ip') || 
+                      event.node.req.socket.remoteAddress || 
+                      'unknown'
+    
+    console.log('🔍 Registration attempt from IP:', ipAddress)
+    
+    // Check rate limit
+    const rateLimit = checkRateLimit(ipAddress)
+    if (!rateLimit.allowed) {
+      console.warn('⚠️ Rate limit exceeded for IP:', ipAddress)
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Zu viele Registrierungsversuche. Bitte versuchen Sie es in einer Minute erneut.'
+      })
+    }
+    console.log('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
+
     const body = await readBody(event)
     const {
       firstName,
@@ -18,7 +39,8 @@ export default defineEventHandler(async (event) => {
       categories,
       lernfahrausweisNr,
       tenantId,
-      isAdmin = false
+      isAdmin = false,
+      captchaToken
     } = body
 
     // Validate required fields
@@ -28,6 +50,57 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Erforderliche Felder fehlen'
       })
     }
+
+    // Validate email format and check for disposable/spam emails
+    console.log('📧 Validating email:', email)
+    const emailValidation = validateRegistrationEmail(email)
+    if (!emailValidation.valid) {
+      console.warn('⚠️ Email validation failed:', emailValidation.reason)
+      throw createError({
+        statusCode: 400,
+        statusMessage: emailValidation.reason || 'Ungültige E-Mail-Adresse'
+      })
+    }
+    console.log('✅ Email validation passed')
+
+    // Verify hCaptcha token
+    if (!captchaToken) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Captcha-Verifikation erforderlich'
+      })
+    }
+
+    console.log('🔐 Verifying hCaptcha token...')
+    const hcaptchaSecret = process.env.HCAPTCHA_SECRET_KEY
+    if (!hcaptchaSecret) {
+      console.error('❌ HCAPTCHA_SECRET_KEY not configured')
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Server configuration error'
+      })
+    }
+
+    const captchaResponse = await fetch('https://hcaptcha.com/siteverify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        secret: hcaptchaSecret,
+        response: captchaToken
+      }).toString()
+    })
+
+    const captchaData = await captchaResponse.json()
+    if (!captchaData.success) {
+      console.warn('⚠️ hCaptcha verification failed:', captchaData['error-codes'])
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Captcha-Verifikation fehlgeschlagen. Bitte versuchen Sie es erneut.'
+      })
+    }
+    console.log('✅ hCaptcha verified successfully')
 
     // Create service role client to bypass RLS
     const { createClient } = await import('@supabase/supabase-js')
