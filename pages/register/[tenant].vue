@@ -216,7 +216,7 @@
               Führerschein-Kategorien *
             </label>
             <div class="space-y-3">
-              <div v-for="category in availableCategories" :key="category.code" class="flex items-start justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 h-24">
+              <div v-for="category in availableCategories" :key="category.code" class="flex items-start justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div class="flex-1">
                   <div class="flex items-center space-x-3">
                     <span class="text-lg font-bold text-gray-800">{{ category.code }}</span>
@@ -224,7 +224,7 @@
                   </div>
                   <div class="text-xs text-gray-500 mt-1">
                     <div>CHF {{ category.price }}/45min</div>
-                    <div v-if="category.adminFee && category.adminFee > 0" class="mt-1 text-[10px]">+ CHF {{ category.adminFee }} Admin- und Versicherung (einmalig)</div>
+                    <div v-if="category.adminFee && category.adminFee > 0" class="mt-1 text-[10px] whitespace-nowrap">+ CHF {{ category.adminFee }} Admin- und Versicherung (einmalig)</div>
                   </div>
                 </div>
                 <label class="relative inline-flex items-start cursor-pointer ml-4 pt-0.5">
