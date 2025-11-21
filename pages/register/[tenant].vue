@@ -763,7 +763,7 @@ const submitRegistration = async () => {
     } else {
       showSuccess('Registrierung erfolgreich', 'Ihr Account wurde erstellt. Sie werden zum Dashboard weitergeleitet.')
       // Navigate to customer dashboard
-      await navigateTo('/customer')
+      await navigateTo('/customer-dashboard')
     }
     
   } catch (error: any) {

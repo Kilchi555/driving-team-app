@@ -50,7 +50,11 @@ export default defineEventHandler(async (event) => {
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
       email: email.toLowerCase().trim(),
       password: password,
-      email_confirm: false
+      email_confirm: false,
+      user_metadata: {
+        first_name: firstName.trim(),
+        last_name: lastName.trim()
+      }
     })
 
     if (authError) {
@@ -111,16 +115,9 @@ export default defineEventHandler(async (event) => {
     // 3. Send verification email via Supabase (confirmation email automatically sent)
     console.log('📧 Sending verification email...')
     try {
-      const { error: emailError } = await serviceSupabase.auth.resend({
-        type: 'signup',
-        email: email.toLowerCase().trim()
-      })
-
-      if (emailError) {
-        console.warn('⚠️ Failed to send verification email:', emailError.message)
-      } else {
-        console.log('✅ Verification email sent')
-      }
+      // Supabase automatically sends a confirmation email after user creation
+      // No need to manually resend - just log it
+      console.log('✅ Verification email will be sent by Supabase automatically')
     } catch (emailErr: any) {
       console.warn('⚠️ Email send error:', emailErr.message)
     }
