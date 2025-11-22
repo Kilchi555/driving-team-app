@@ -123,7 +123,7 @@ export default defineEventHandler(async (event) => {
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
       email: email.toLowerCase().trim(),
       password: password,
-      email_confirm: false,
+      email_confirm: true,
       user_metadata: {
         first_name: firstName.trim(),
         last_name: lastName.trim()

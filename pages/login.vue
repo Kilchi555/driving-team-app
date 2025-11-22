@@ -99,7 +99,7 @@
             
             <button
               type="button"
-              @click.prevent="showForgotPasswordModal = true"
+              @click="() => { console.log('Button clicked'); showForgotPasswordModal = true; console.log('Modal set to:', showForgotPasswordModal.value); }"
               class="text-sm text-blue-600 hover:underline hover:text-blue-800 cursor-pointer"
             >
               Passwort vergessen?
@@ -145,12 +145,117 @@
         </div>
       </div>
     </div>
+
+    <!-- Passwort Vergessen Modal -->
+    <div v-if="showForgotPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <!-- Header -->
+        <div :style="{ background: currentTenant?.primary_color || '#2563eb' }" class="text-white p-6 rounded-t-xl">
+          <h2 class="text-2xl font-bold">Passwort zurücksetzen</h2>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 space-y-4">
+          <p class="text-gray-600 text-sm">
+            Geben Sie Ihre E-Mail-Adresse oder Telefonnummer ein, und wir senden Ihnen einen Magic Link zum Zurücksetzen Ihres Passworts.
+          </p>
+
+          <!-- Contact Method Selector -->
+          <div class="flex gap-2">
+            <button
+              @click="resetContactMethod = 'email'"
+              :class="[
+                'flex-1 py-2 px-4 rounded-lg font-medium transition-colors text-sm',
+                resetContactMethod === 'email'
+                  ? 'text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+              :style="resetContactMethod === 'email' ? { background: currentTenant?.primary_color || '#2563eb' } : {}"
+            >
+              E-Mail
+            </button>
+            <button
+              @click="resetContactMethod = 'phone'"
+              :class="[
+                'flex-1 py-2 px-4 rounded-lg font-medium transition-colors text-sm',
+                resetContactMethod === 'phone'
+                  ? 'text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+              :style="resetContactMethod === 'phone' ? { background: currentTenant?.primary_color || '#2563eb' } : {}"
+            >
+              Telefon
+            </button>
+          </div>
+
+          <!-- Email Input -->
+          <div v-if="resetContactMethod === 'email'">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              E-Mail-Adresse
+            </label>
+            <input
+              v-model="resetForm.email"
+              type="email"
+              placeholder="ihre@email.com"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+              :style="{ '--tw-ring-color': currentTenant?.primary_color || '#2563eb' }"
+              :disabled="resetIsLoading"
+            >
+          </div>
+
+          <!-- Phone Input -->
+          <div v-if="resetContactMethod === 'phone'">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Telefonnummer
+            </label>
+            <input
+              v-model="resetForm.phone"
+              type="tel"
+              placeholder="+41 79 123 45 67"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+              :style="{ '--tw-ring-color': currentTenant?.primary_color || '#2563eb' }"
+              :disabled="resetIsLoading"
+            >
+          </div>
+
+          <!-- Error Message -->
+          <div v-if="resetError" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-sm text-red-700">{{ resetError }}</p>
+          </div>
+
+          <!-- Success Message -->
+          <div v-if="resetSuccess" class="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p class="text-sm text-green-700">{{ resetSuccess }}</p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-3 pt-4">
+            <button
+              @click="showForgotPasswordModal = false"
+              class="flex-1 py-2 px-4 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              :disabled="resetIsLoading"
+            >
+              Abbrechen
+            </button>
+            <button
+              @click="handlePasswordReset"
+              class="flex-1 py-2 px-4 rounded-lg font-medium text-white transition-colors disabled:opacity-50"
+              :style="{ background: currentTenant?.primary_color || '#2563eb' }"
+              :disabled="resetIsLoading"
+            >
+              <span v-if="resetIsLoading">Wird gesendet...</span>
+              <span v-else>Magic Link senden</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter, definePageMeta, useHead, useRoute } from '#imports'
+import { useRouter, definePageMeta, useHead, useRoute, navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
@@ -199,6 +304,17 @@ const isLoading = ref(false)
 const loginError = ref<string | null>(null)
 const showPassword = ref(false)
 const showForgotPasswordModal = ref(false)
+
+// Password Reset State
+const resetContactMethod = ref<'email' | 'phone'>('email')
+const resetIsLoading = ref(false)
+const resetError = ref<string | null>(null)
+const resetSuccess = ref<string | null>(null)
+
+const resetForm = ref({
+  email: '',
+  phone: ''
+})
 
 const loginForm = ref({
   email: '',
@@ -292,6 +408,63 @@ const handleLogin = async () => {
     }
   } finally {
     isLoading.value = false
+  }
+}
+
+const handlePasswordReset = async () => {
+  resetError.value = null
+  resetSuccess.value = null
+
+  const contact = resetContactMethod.value === 'email' ? resetForm.value.email : resetForm.value.phone
+
+  if (!contact) {
+    resetError.value = resetContactMethod.value === 'email' 
+      ? 'Bitte geben Sie eine E-Mail-Adresse ein.' 
+      : 'Bitte geben Sie eine Telefonnummer ein.'
+    return
+  }
+
+  resetIsLoading.value = true
+
+  try {
+    console.log('🔐 Requesting password reset for:', contact)
+    
+    const response = await $fetch('/api/auth/password-reset-request', {
+      method: 'POST',
+      body: {
+        contact,
+        method: resetContactMethod.value,
+        tenantId: null // We'll determine this from the contact
+      }
+    }) as any
+
+    console.log('📧 Password reset response:', response)
+
+    if (response?.success) {
+      resetSuccess.value = resetContactMethod.value === 'email'
+        ? `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihren Posteingang.`
+        : `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihre SMS.`
+      
+      resetForm.value.email = ''
+      resetForm.value.phone = ''
+      
+      console.log('✅ Password reset email/SMS sent, closing modal in 3 seconds...')
+      
+      // Schließe Modal nach 3 Sekunden
+      setTimeout(() => {
+        showForgotPasswordModal.value = false
+        resetSuccess.value = null
+      }, 3000)
+    } else {
+      resetError.value = response?.message || 'Fehler beim Senden des Magic Links. Bitte versuchen Sie es später erneut.'
+    }
+  } catch (error: any) {
+    console.error('❌ Password reset error:', error)
+    console.error('Error data:', error?.data)
+    console.error('Error status:', error?.status)
+    resetError.value = error?.data?.statusMessage || error?.message || 'Fehler beim Senden des Magic Links. Bitte versuchen Sie es später erneut.'
+  } finally {
+    resetIsLoading.value = false
   }
 }
 

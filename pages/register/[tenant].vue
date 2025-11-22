@@ -3,7 +3,7 @@
   <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- Header -->
-      <div class="bg-gray-100 text-white p-1 rounded-t-xl">
+      <div v-if="!registrationComplete" class="bg-gray-100 text-white p-1 rounded-t-xl">
         <div class="text-center">
           <LoadingLogo size="2xl" :tenant-id="activeTenantId || undefined" :tenant-slug="tenantSlug" />
           <h1 class="text-xl font-bold text-gray-700">
@@ -16,7 +16,7 @@
       </div>
       
       <!-- Navigation Back -->
-      <div class="px-6 py-3 bg-gray-50 border-b">
+      <div v-if="!registrationComplete" class="px-6 py-3 bg-gray-50 border-b">
         <button
           @click="goBack"
           class="text-gray-600 hover:text-gray-800 flex items-center text-sm"
@@ -57,11 +57,11 @@
       <!-- Step Content -->
       <div class="p-6">
         <!-- Registration Complete Screen -->
-        <div v-if="registrationComplete" class="space-y-6 text-center">
+        <div v-if="registrationComplete" class="space-y-4 sm:space-y-6 text-center py-8 sm:py-12">
           <!-- Success Icon -->
           <div class="flex justify-center">
-            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-              <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center">
+              <svg class="w-9 h-9 sm:w-12 sm:h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
               </svg>
             </div>
@@ -69,27 +69,27 @@
           
           <!-- Confirmation Message -->
           <div>
-            <h2 class="text-3xl font-bold text-gray-900 mb-2">Registrierung erfolgreich!</h2>
-            <p class="text-gray-600 text-lg mb-6">Willkommen bei {{ currentTenant?.name || 'Simy' }}!</p>
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Registrierung erfolgreich!</h2>
+            <p class="text-gray-600 text-base sm:text-lg">Willkommen bei {{ currentTenant?.name || 'Simy' }}!</p>
           </div>
           
           <!-- Email Confirmation Required -->
-          <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-            <div class="flex items-start space-x-3">
-              <div class="flex-shrink-0">
-                <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 sm:p-6">
+            <div class="flex items-start space-x-2 sm:space-x-3">
+              <div class="flex-shrink-0 mt-1">
+                <svg class="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
               </div>
-              <div class="text-left">
-                <h3 class="text-lg font-semibold text-blue-900 mb-2">Bestätigen Sie Ihre E-Mail-Adresse</h3>
-                <p class="text-blue-800 mb-3">
+              <div class="text-left min-w-0">
+                <h3 class="text-base sm:text-lg font-semibold text-blue-900 mb-2">Bestätigen Sie Ihre E-Mail-Adresse</h3>
+                <p class="text-blue-800 mb-2 text-sm sm:text-base break-words">
                   Wir haben Ihnen eine Bestätigungsmail an <strong>{{ registeredEmail }}</strong> gesendet.
                 </p>
-                <p class="text-blue-700 text-sm mb-3">
+                <p class="text-blue-700 text-xs sm:text-sm mb-2">
                   Bitte klicken Sie auf den Link in der E-Mail, um Ihren Account zu aktivieren.
                 </p>
-                <p class="text-blue-700 text-sm">
+                <p class="text-blue-700 text-xs sm:text-sm">
                   Nach der Bestätigung können Sie sich mit Ihren Zugangsdaten einloggen.
                 </p>
               </div>
@@ -97,29 +97,29 @@
           </div>
           
           <!-- Next Steps -->
-          <div class="bg-gray-50 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Nächste Schritte:</h3>
-            <div class="text-left space-y-3">
-              <div class="flex items-center space-x-3">
-                <div class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">1</div>
-                <p class="text-gray-700">Überprüfen Sie Ihren Posteingang (und Spam-Ordner)</p>
+          <div class="bg-gray-50 rounded-lg p-4 sm:p-6">
+            <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Nächste Schritte:</h3>
+            <div class="text-left space-y-2 sm:space-y-3">
+              <div class="flex items-start space-x-2 sm:space-x-3">
+                <div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">1</div>
+                <p class="text-gray-700 text-sm sm:text-base">Überprüfen Sie Ihren Posteingang (und Spam-Ordner)</p>
               </div>
-              <div class="flex items-center space-x-3">
-                <div class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">2</div>
-                <p class="text-gray-700">Klicken Sie auf den Bestätigungslink in der E-Mail</p>
+              <div class="flex items-start space-x-2 sm:space-x-3">
+                <div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">2</div>
+                <p class="text-gray-700 text-sm sm:text-base">Klicken Sie auf den Bestätigungslink in der E-Mail</p>
               </div>
-              <div class="flex items-center space-x-3">
-                <div class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">3</div>
-                <p class="text-gray-700">Melden Sie sich mit Ihrer E-Mail und Ihrem Passwort an</p>
+              <div class="flex items-start space-x-2 sm:space-x-3">
+                <div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">3</div>
+                <p class="text-gray-700 text-sm sm:text-base">Melden Sie sich mit Ihrer E-Mail und Ihrem Passwort an</p>
               </div>
             </div>
           </div>
           
           <!-- Action Buttons -->
-          <div class="space-y-3 pt-6">
+          <div class="space-y-3 pt-4 sm:pt-6">
             <button
               @click="navigateTo(`/${registeredTenantSlug}`)"
-              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
             >
               Weiter zur Fahrschule
             </button>
@@ -489,8 +489,6 @@
             <div class="flex justify-center">
               <div
                 id="hcaptcha"
-                class="h-captcha"
-                :data-sitekey="hcaptchaSiteKey"
               ></div>
             </div>
           </form>
@@ -581,11 +579,24 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { navigateTo, useRoute, useRouter, useRuntimeConfig } from '#app'
+import { navigateTo, useRoute, useRouter, useRuntimeConfig, useHead } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
+
+// Load hCaptcha script - ensure it loads immediately
+if (typeof window !== 'undefined') {
+  useHead({
+    script: [
+      {
+        src: 'https://js.hcaptcha.com/1/api.js',
+        async: true,
+        defer: false
+      }
+    ]
+  })
+}
 
 const supabase = getSupabase()
 const route = useRoute()
@@ -593,6 +604,7 @@ const router = useRouter()
 const { showError, showSuccess } = useUIStore()
 const { public: publicConfig } = useRuntimeConfig()
 const hcaptchaSiteKey = computed(() => publicConfig.hcaptchaSiteKey)
+const hcaptchaWidgetId = ref<number | null>(null)
 
 // Get tenant slug from URL parameter
 const tenantSlug = computed(() => route.params.tenant as string)
@@ -810,11 +822,64 @@ const submitRegistration = async () => {
   isSubmitting.value = true
   
   try {
-    // Get hCaptcha token
-    const captchaToken = (window as any).hcaptcha?.getResponse?.()
+    // Debug: Check if hCaptcha element and script exist
+    const hcaptchaElement = document.getElementById('hcaptcha')
+    console.log('🔍 hCaptcha element exists:', !!hcaptchaElement)
+    console.log('🔍 window.hcaptcha exists:', !!(window as any).hcaptcha)
+    console.log('🔍 window.hcaptcha object:', (window as any).hcaptcha)
+    
+    // Get hCaptcha token - wait for it to be available
+    let captchaToken: string | null = null
+    
+    // Try to get token with retries
+    const widgetId = hcaptchaWidgetId.value
+    console.log('🔍 Using hCaptcha widget ID:', widgetId)
+    
+    for (let attempt = 0; attempt < 10; attempt++) {
+      console.log(`🔄 Attempt ${attempt + 1}: checking for hcaptcha.getResponse`)
+      
+      if ((window as any).hcaptcha?.getResponse) {
+        try {
+          // Try to get response using widget ID
+          let response: string
+          if (widgetId !== null) {
+            response = (window as any).hcaptcha.getResponse(widgetId)
+          } else {
+            // Fallback to container ID if widget ID not available
+            response = (window as any).hcaptcha.getResponse('hcaptcha')
+          }
+          console.log(`✅ Got captcha response on attempt ${attempt + 1}:`, !!response, 'First 20 chars:', response?.substring(0, 20))
+          
+          // If we got a token, use it
+          if (response && typeof response === 'string' && response.length > 0) {
+            captchaToken = response
+            break
+          } else if (attempt === 0) {
+            console.log('ℹ️ hCaptcha response is empty - user might not have completed the challenge yet')
+          }
+        } catch (error: any) {
+          console.log(`⚠️ Error calling getResponse on attempt ${attempt + 1}:`, error?.message || error?.cause || error)
+          if (attempt === 0) {
+            console.log('🔍 Full error object:', error)
+          }
+        }
+      } else {
+        console.log(`❌ hcaptcha.getResponse not available on attempt ${attempt + 1}`)
+      }
+      
+      // Wait 200ms before retrying
+      if (attempt < 9 && !captchaToken) {
+        await new Promise(resolve => setTimeout(resolve, 200))
+      }
+    }
+    
     if (!captchaToken) {
+      console.error('❌ Failed to get hCaptcha token after retries')
+      console.error('❌ window.hcaptcha:', (window as any).hcaptcha)
+      console.error('❌ hcaptcha element:', hcaptchaElement)
       throw new Error('Bitte führen Sie die Captcha-Verifikation durch')
     }
+    
     console.log('✅ hCaptcha token received')
     
     console.log('🚀 Starting registration via backend API...')
@@ -1131,6 +1196,41 @@ watch(serviceType, (newValue, oldValue) => {
   if (oldValue !== undefined && newValue !== oldValue) {
     console.log('🔄 Service type changed from', oldValue, 'to', newValue, '- reloading categories')
     loadCategories()
+  }
+})
+
+// Watch for step changes and render hCaptcha when on last step
+watch(currentStep, async (newStep) => {
+  if (newStep === maxSteps.value) {
+    console.log('📍 Reached final step, rendering hCaptcha...')
+    
+    // Wait for DOM to update
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    if ((window as any).hcaptcha) {
+      const hcaptchaContainer = document.getElementById('hcaptcha')
+      console.log('🔍 hCaptcha container found:', !!hcaptchaContainer)
+      
+      if (hcaptchaContainer && hcaptchaContainer.children.length === 0) {
+        try {
+          const siteKey = hcaptchaSiteKey.value
+          const keyPreview = typeof siteKey === 'string' ? siteKey.substring(0, 10) : siteKey
+          console.log('🎨 Rendering hCaptcha widget with sitekey:', keyPreview)
+          const widgetId = (window as any).hcaptcha.render('hcaptcha', {
+            sitekey: siteKey,
+            theme: 'light'
+          })
+          hcaptchaWidgetId.value = widgetId
+          console.log('✅ hCaptcha rendered successfully on step change with widget ID:', widgetId)
+        } catch (error: any) {
+          console.error('❌ Error rendering hCaptcha:', error?.message || error)
+        }
+      } else if (hcaptchaContainer) {
+        console.log('✅ hCaptcha already rendered')
+      }
+    } else {
+      console.warn('⚠️ window.hcaptcha not available')
+    }
   }
 })
 

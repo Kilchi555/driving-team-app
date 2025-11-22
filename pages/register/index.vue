@@ -191,8 +191,13 @@ const loadTenants = async () => {
 }
 
 const navigateToRegister = (slug: string) => {
-  console.log('🔗 Navigating to:', `/register/${slug}`)
-  window.location.href = `/register/${slug}`
+  const targetPath = `/register/${slug}`
+  console.log('🔗 Navigating to:', targetPath)
+  try {
+    navigateTo(targetPath)
+  } catch (error) {
+    console.error('❌ Navigation error:', error)
+  }
 }
 
 // Lifecycle

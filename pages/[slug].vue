@@ -185,9 +185,14 @@
               <span class="ml-2 text-sm text-gray-600">Angemeldet bleiben</span>
             </label>
             
-            <a href="#" class="text-sm hover:underline" :style="{ color: primaryColor }">
+            <button
+              type="button"
+              @click="showForgotPasswordModal = true"
+              class="text-sm hover:underline"
+              :style="{ color: primaryColor }"
+            >
               Passwort vergessen?
-            </a>
+            </button>
           </div>
 
           <!-- Error Message -->
@@ -223,6 +228,111 @@
               class="block w-full text-sm text-red-500 hover:text-red-700 transition-colors"
             >
               Aktuellen Account abmelden
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Passwort Vergessen Modal -->
+    <div v-if="showForgotPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <!-- Header -->
+        <div :style="{ background: primaryColor }" class="text-white p-6 rounded-t-xl">
+          <h2 class="text-2xl font-bold">Passwort zurücksetzen</h2>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 space-y-4">
+          <p class="text-gray-600 text-sm">
+            Geben Sie Ihre E-Mail-Adresse oder Telefonnummer ein, und wir senden Ihnen einen Magic Link zum Zurücksetzen Ihres Passworts.
+          </p>
+
+          <!-- Contact Method Selector -->
+          <div class="flex gap-2">
+            <button
+              @click="resetContactMethod = 'email'"
+              :class="[
+                'flex-1 py-2 px-4 rounded-lg font-medium transition-colors text-sm',
+                resetContactMethod === 'email'
+                  ? 'text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+              :style="resetContactMethod === 'email' ? { background: primaryColor } : {}"
+            >
+              E-Mail
+            </button>
+            <button
+              @click="resetContactMethod = 'phone'"
+              :class="[
+                'flex-1 py-2 px-4 rounded-lg font-medium transition-colors text-sm',
+                resetContactMethod === 'phone'
+                  ? 'text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+              :style="resetContactMethod === 'phone' ? { background: primaryColor } : {}"
+            >
+              Telefon
+            </button>
+          </div>
+
+          <!-- Email Input -->
+          <div v-if="resetContactMethod === 'email'">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              E-Mail-Adresse
+            </label>
+            <input
+              v-model="resetForm.email"
+              type="email"
+              placeholder="ihre@email.com"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+              :style="{ '--tw-ring-color': primaryColor }"
+              :disabled="resetIsLoading"
+            >
+          </div>
+
+          <!-- Phone Input -->
+          <div v-if="resetContactMethod === 'phone'">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Telefonnummer
+            </label>
+            <input
+              v-model="resetForm.phone"
+              type="tel"
+              placeholder="+41 79 123 45 67"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+              :style="{ '--tw-ring-color': primaryColor }"
+              :disabled="resetIsLoading"
+            >
+          </div>
+
+          <!-- Error Message -->
+          <div v-if="resetError" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-sm text-red-700">{{ resetError }}</p>
+          </div>
+
+          <!-- Success Message -->
+          <div v-if="resetSuccess" class="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p class="text-sm text-green-700">{{ resetSuccess }}</p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-3 pt-4">
+            <button
+              @click="showForgotPasswordModal = false"
+              class="flex-1 py-2 px-4 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              :disabled="resetIsLoading"
+            >
+              Abbrechen
+            </button>
+            <button
+              @click="handlePasswordReset"
+              class="flex-1 py-2 px-4 rounded-lg font-medium text-white transition-colors disabled:opacity-50"
+              :style="{ background: primaryColor }"
+              :disabled="resetIsLoading"
+            >
+              <span v-if="resetIsLoading">Wird gesendet...</span>
+              <span v-else>Magic Link senden</span>
             </button>
           </div>
         </div>
@@ -747,6 +857,58 @@ const resendVerificationEmail = async () => {
   }
 }
 
+const handlePasswordReset = async () => {
+  resetError.value = null
+  resetSuccess.value = null
+
+  const contact = resetContactMethod.value === 'email' ? resetForm.value.email : resetForm.value.phone
+
+  if (!contact) {
+    resetError.value = resetContactMethod.value === 'email' 
+      ? 'Bitte geben Sie eine E-Mail-Adresse ein.' 
+      : 'Bitte geben Sie eine Telefonnummer ein.'
+    return
+  }
+
+  resetIsLoading.value = true
+
+  try {
+    console.log('🔐 Requesting password reset for:', contact)
+    
+    const response = await $fetch('/api/auth/password-reset-request', {
+      method: 'POST',
+      body: {
+        contact,
+        method: resetContactMethod.value,
+        tenantId: null
+      }
+    }) as any
+
+    console.log('📧 Password reset response:', response)
+
+    if (response?.success) {
+      resetSuccess.value = resetContactMethod.value === 'email'
+        ? `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihren Posteingang.`
+        : `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihre SMS.`
+      
+      resetForm.value.email = ''
+      resetForm.value.phone = ''
+      
+      setTimeout(() => {
+        showForgotPasswordModal.value = false
+        resetSuccess.value = null
+      }, 3000)
+    } else {
+      resetError.value = response?.message || 'Fehler beim Senden des Magic Links. Bitte versuchen Sie es später erneut.'
+    }
+  } catch (error: any) {
+    console.error('❌ Password reset error:', error)
+    resetError.value = error?.data?.statusMessage || error?.message || 'Fehler beim Senden des Magic Links. Bitte versuchen Sie es später erneut.'
+  } finally {
+    resetIsLoading.value = false
+  }
+}
+
 // Device fingerprinting functions
 // ✅ VERBESSERT: Nur stabile Eigenschaften verwenden (ohne Canvas, der sich ändern kann)
 const generateDeviceFingerprint = async (): Promise<string | null> => {
@@ -816,6 +978,17 @@ const pendingDeviceId = ref<string | null>(null)
 const pendingAuthUserId = ref<string | null>(null)
 const resendingVerification = ref(false)
 const deviceVerificationWarning = ref<string | null>(null)
+
+// Password Reset State
+const showForgotPasswordModal = ref(false)
+const resetContactMethod = ref<'email' | 'phone'>('email')
+const resetIsLoading = ref(false)
+const resetError = ref<string | null>(null)
+const resetSuccess = ref<string | null>(null)
+const resetForm = ref({
+  email: '',
+  phone: ''
+})
 
 const loginForm = ref({
   email: '',
