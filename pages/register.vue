@@ -112,7 +112,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter, navigateTo } from '#app'
+import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 
 interface Tenant {
@@ -133,9 +133,6 @@ interface BusinessType {
   name: string
   tenants: Tenant[]
 }
-
-// Router
-const router = useRouter()
 
 // State
 const isLoading = ref(true)
@@ -193,8 +190,9 @@ const loadTenants = async () => {
   }
 }
 
-const navigateToRegister = (slug: string) => {
-  router.push(`/register/${slug}`)
+const navigateToRegister = async (slug: string) => {
+  console.log('🔗 Navigating to:', `/register/${slug}`)
+  await navigateTo(`/register/${slug}`)
 }
 
 // Lifecycle
