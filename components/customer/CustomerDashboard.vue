@@ -155,27 +155,30 @@
             </div>
           </div>
         </div>
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+        <!-- Kommende Termine - Uses Secondary Color -->
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '1px' }">
           <div class="p-6 h-full flex flex-col">
-            <div class="flex items-center mb-3">
-              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: secondaryButtonColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h3 class="text-sm font-medium text-gray-500">Kommende Termine</h3>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">Kommende Termine</h3>
+                <p class="text-3xl font-bold text-gray-900 mt-1">{{ upcomingAppointments.length }}</p>
+              </div>
             </div>
             
-            <div class="flex-1">
-              <p class="text-3xl font-bold text-gray-900">{{ upcomingAppointments.length }}</p>
-              <p class="text-xs text-gray-500 mt-1">Nächster Termin bald</p>
+            <div class="flex-1 flex items-center">
+              <p class="text-sm text-gray-500">Nächster Termin bald</p>
             </div>
             
             <div class="mt-4">
               <button
                 @click="showUpcomingLessonsModal = true"
-                class="w-full px-3 py-2 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
-                :style="{ background: buttonColor }"
+                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
+                :style="{ background: secondaryButtonColor }"
               >
                 Details anzeigen
               </button>
@@ -183,28 +186,30 @@
           </div>
         </div>
 
-        <!-- Absolvierte Lektionen -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+        <!-- Absolvierte Lektionen - Uses Accent Color -->
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: accentButtonBorderColor, borderWidth: '1px' }">
           <div class="p-6 h-full flex flex-col">
-            <div class="flex items-center mb-3">
-              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: accentButtonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: accentButtonColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 class="text-sm font-medium text-gray-500">Absolvierte Lektionen</h3>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">Absolvierte Lektionen</h3>
+                <p class="text-3xl font-bold text-gray-900 mt-1">{{ completedLessonsCount }}</p>
+              </div>
             </div>
             
-            <div class="flex-1">
-              <p class="text-3xl font-bold text-gray-900">{{ completedLessonsCount }}</p>
-              <p class="text-xs text-gray-500 mt-1">{{ totalEvaluationsCount }} Bewertungen</p>
+            <div class="flex-1 flex items-center">
+              <p class="text-sm text-gray-500">{{ totalEvaluationsCount }} Bewertungen</p>
             </div>
             
             <div class="mt-4">
               <button
                 @click="showEvaluationsModal = true"
-                class="w-full px-3 py-2 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
-                :style="{ background: buttonColor }"
+                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
+                :style="{ background: accentButtonColor }"
               >
                 Bewertungen ansehen
               </button>
@@ -250,12 +255,12 @@
           </div>
         </div>
 
-        <!-- Kurs buchen -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+        <!-- Kurs buchen - Uses Secondary Color -->
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '1px' }">
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center mb-4">
-              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: secondaryButtonColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
@@ -276,7 +281,7 @@
               <button
                 @click="navigateToCourseBooking"
                 class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
-                :style="{ background: buttonColor }"
+                :style="{ background: secondaryButtonColor }"
               >
                 📚 Kurse ansehen
               </button>
@@ -284,12 +289,12 @@
           </div>
         </div>
 
-        <!-- Lernbereich -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+        <!-- Lernbereich - Uses Accent Color -->
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: accentButtonBorderColor, borderWidth: '1px' }">
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center mb-4">
-              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: accentButtonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: accentButtonColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0112 21.5c-2.28 0-4.4-.64-6.16-1.742L12 14z" />
                 </svg>
               </div>
@@ -310,7 +315,7 @@
               <button
                 @click="navigateTo('/learning')"
                 class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
-                :style="{ background: buttonColor }"
+                :style="{ background: accentButtonColor }"
               >
                 📘 Öffnen
               </button>
@@ -353,12 +358,12 @@
         </div>
       </div>
 
-      <!-- Fahrlehrer Card -->
-      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow mb-8" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+      <!-- Fahrlehrer Card - Uses Secondary Color -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow mb-8" :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '1px' }">
         <div class="p-6 h-full flex flex-col">
           <div class="flex items-center mb-4">
-            <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+            <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: secondaryButtonColor }">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
@@ -379,7 +384,7 @@
             <button
               @click="showInstructorModal = true"
               class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              :style="{ background: buttonColor }"
+              :style="{ background: secondaryButtonColor }"
               :disabled="isLoading"
             >
               Fahrlehrer anzeigen
@@ -388,12 +393,12 @@
         </div>
       </div>
 
-      <!-- Reglemente Card -->
-      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow mb-8" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+      <!-- Reglemente Card - Uses Accent Color -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow mb-8" :style="{ borderColor: accentButtonBorderColor, borderWidth: '1px' }">
         <div class="p-6 h-full flex flex-col">
           <div class="flex items-center mb-4">
-            <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+            <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: accentButtonColorLight }">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: accentButtonColor }">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
@@ -414,7 +419,7 @@
             <button
               @click="showReglementeModal = true"
               class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              :style="{ background: buttonColor }"
+              :style="{ background: accentButtonColor }"
             >
               Reglemente anzeigen
             </button>
@@ -921,7 +926,7 @@ import ProfileModal from './ProfileModal.vue'
 // Composables
 const authStore = useAuthStore()
 const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
-const { loadTenantBrandingById, primaryColor, secondaryColor, currentTenantBranding } = useTenantBranding()
+const { loadTenantBrandingById, primaryColor, secondaryColor, accentColor, currentTenantBranding } = useTenantBranding()
 
 // State
 const isLoading = ref(true)
@@ -968,22 +973,25 @@ const displayToast = (type: 'success' | 'error' | 'warning' | 'info', title: str
 const isServerSide = process.server
 const showContent = computed(() => !isServerSide && currentUser.value && isClient.value)
 
-// Tenant colors
-const buttonColor = computed(() => {
-  const color = primaryColor.value || '#2563eb'
-  console.log('🎨 buttonColor computed:', color, 'from primaryColor:', primaryColor.value)
-  return color
-})
-const buttonColorLight = computed(() => {
-  // Create a lighter version of primary color
-  const color = primaryColor.value || '#2563eb'
-  return `${color}20` // Add 20% opacity for lighter version
-})
-const buttonBorderColor = computed(() => {
-  // Create a subtle border color
-  const color = primaryColor.value || '#2563eb'
-  return `${color}40` // Add 40% opacity for border
-})
+// Tenant colors - elegant combination of primary and secondary
+const primary = computed(() => primaryColor.value || '#2563eb')
+const secondary = computed(() => secondaryColor.value || '#64748B')
+const accent = computed(() => accentColor.value || '#3B82F6')
+
+// Primary color variants (for main actions)
+const buttonColor = computed(() => primary.value)
+const buttonColorLight = computed(() => `${primary.value}15`) // Light background
+const buttonBorderColor = computed(() => `${primary.value}40`) // Subtle border
+
+// Secondary color variants (for accent/alternative actions)
+const secondaryButtonColor = computed(() => secondary.value)
+const secondaryButtonColorLight = computed(() => `${secondary.value}15`)
+const secondaryButtonBorderColor = computed(() => `${secondary.value}40`)
+
+// Accent color for special highlights
+const accentButtonColor = computed(() => accent.value)
+const accentButtonColorLight = computed(() => `${accent.value}15`)
+const accentButtonBorderColor = computed(() => `${accent.value}40`)
 
 const {
   payments,
@@ -2384,8 +2392,13 @@ watch(() => currentTenantBranding.value, (newVal) => {
   if (newVal) {
     console.log('👀 Tenant branding changed:', {
       name: newVal.name,
-      primaryColor: newVal.colors?.primary,
-      buttonColor: buttonColor.value
+      colors: newVal.colors,
+      primaryColor: primaryColor.value,
+      secondaryColor: secondaryColor.value,
+      accentColor: accentColor.value,
+      buttonColor: buttonColor.value,
+      secondaryButtonColor: secondaryButtonColor.value,
+      accentButtonColor: accentButtonColor.value
     })
   }
 }, { deep: true })
