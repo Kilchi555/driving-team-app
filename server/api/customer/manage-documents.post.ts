@@ -1,0 +1,159 @@
+import { defineEventHandler, readBody, createError } from 'h3'
+import { createClient } from '@supabase/supabase-js'
+import { getSupabase } from '~/utils/supabase'
+
+export default defineEventHandler(async (event) => {
+  try {
+    const body = await readBody(event)
+    const { action, documentId, base64Data, documentType, categoryCode } = body
+
+    // Get authenticated user
+    const supabase = getSupabase()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Nicht authentifiziert'
+      })
+    }
+
+    console.log('📄 Document action:', action, 'for user:', user.id)
+
+    // Create service role client
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!serviceRoleKey) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Server configuration error'
+      })
+    }
+
+    const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+
+    // Get user info to find their tenant
+    const { data: userProfile, error: profileError } = await serviceSupabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (profileError || !userProfile) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Benutzerprofil nicht gefunden'
+      })
+    }
+
+    if (action === 'upload') {
+      // Upload document
+      if (!base64Data || !documentType || !categoryCode) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Erforderliche Felder fehlen'
+        })
+      }
+
+      // Convert base64 to buffer
+      const buffer = Buffer.from(base64Data.split(',')[1] || base64Data, 'base64')
+      
+      // Generate filename
+      const timestamp = Date.now()
+      const filename = `user-documents/${user.id}/${categoryCode}/${documentType}_${timestamp}.jpg`
+
+      console.log('📤 Uploading document:', filename)
+
+      // Upload to storage
+      const { error: uploadError } = await serviceSupabase.storage
+        .from('user-documents')
+        .upload(filename, buffer, {
+          contentType: 'image/jpeg',
+          upsert: true
+        })
+
+      if (uploadError) {
+        console.error('❌ Upload error:', uploadError)
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Fehler beim Hochladen des Dokuments'
+        })
+      }
+
+      // Get public URL
+      const { data: publicUrl } = serviceSupabase.storage
+        .from('user-documents')
+        .getPublicUrl(filename)
+
+      console.log('✅ Document uploaded:', publicUrl.publicUrl)
+
+      return {
+        success: true,
+        message: 'Dokument erfolgreich hochgeladen',
+        documentUrl: publicUrl.publicUrl,
+        filename
+      }
+
+    } else if (action === 'delete') {
+      // Delete document
+      if (!documentId) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Dokument-ID erforderlich'
+        })
+      }
+
+      // Get document path from database or from documentId
+      const { data: doc, error: docError } = await serviceSupabase
+        .from('user_documents')
+        .select('file_path')
+        .eq('id', documentId)
+        .eq('user_id', userProfile.id)
+        .single()
+
+      if (docError || !doc) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Dokument nicht gefunden'
+        })
+      }
+
+      // Delete from storage
+      const { error: deleteError } = await serviceSupabase.storage
+        .from('user-documents')
+        .remove([doc.file_path])
+
+      if (deleteError) {
+        console.error('❌ Delete error:', deleteError)
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Fehler beim Löschen des Dokuments'
+        })
+      }
+
+      // Delete from database
+      await serviceSupabase
+        .from('user_documents')
+        .delete()
+        .eq('id', documentId)
+
+      console.log('✅ Document deleted:', doc.file_path)
+
+      return {
+        success: true,
+        message: 'Dokument erfolgreich gelöscht'
+      }
+    }
+
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Ungültige Aktion'
+    })
+
+  } catch (error: any) {
+    console.error('❌ Document management error:', error)
+    throw error
+  }
+})
+
