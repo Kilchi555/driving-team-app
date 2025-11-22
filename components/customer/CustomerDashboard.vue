@@ -3,56 +3,51 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       <!-- Header -->
-      <div class="bg-white shadow-lg border-b">
+      <div class="shadow-lg border-b" :style="{ background: primaryColor }">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between items-center py-4">
             <div class="flex items-center space-x-4">
-              <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+              <!-- Tenant Logo or Initials -->
+              <div v-if="currentTenantBranding?.logos?.standard" class="h-12 flex items-center">
+                <img :src="currentTenantBranding.logos.standard" :alt="currentTenantBranding.name" class="h-full object-contain max-w-xs">
+              </div>
+              <div v-else class="w-12 h-12 rounded-full flex items-center justify-center" :style="{ background: `${primaryColor}dd` }">
                 <span class="text-white font-bold text-lg">
                   {{ getInitials() }}
                 </span>
               </div>
               <div>
-                <h1 class="text-xl font-bold text-gray-900">
+                <h1 class="text-xl font-bold text-white">
                   Hallo, {{ getFirstName() }}!
                 </h1>
+                <p class="text-sm text-white text-opacity-90">{{ currentTenantBranding?.name || 'Dashboard' }}</p>
               </div>
             </div>
             
-            <!-- Profile and Refresh Buttons -->
-              <div class="flex items-center space-x-2">
-                <button
-                  @click="showProfileModal = true"
-                  class="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            <!-- Refresh Button -->
+              <button
+                @click="refreshData"
+                :disabled="isLoading"
+                class="flex items-center space-x-2 px-4 py-2 text-white rounded-lg disabled:opacity-50 transition-colors"
+                :style="{ background: `${primaryColor}cc`, 'hover:background': primaryColor }"
+              >
+                <!-- ✅ SVG Refresh Icon -->
+                <svg 
+                  class="w-5 h-5" 
+                  :class="{ 'animate-spin': isLoading }" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
                 >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span class="hidden sm:inline">Profil</span>
-                </button>
-                <button
-                  @click="refreshData"
-                  :disabled="isLoading"
-                  class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                >
-                  <!-- ✅ SVG Refresh Icon -->
-                  <svg 
-                    class="w-5 h-5" 
-                    :class="{ 'animate-spin': isLoading }" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path 
-                      stroke-linecap="round" 
-                      stroke-linejoin="round" 
-                      stroke-width="2" 
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  <span class="hidden sm:inline">Aktualisieren</span>
-                </button>
-              </div>
+                  <path 
+                    stroke-linecap="round" 
+                    stroke-linejoin="round" 
+                    stroke-width="2" 
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                <span class="hidden sm:inline">Aktualisieren</span>
+              </button>
           </div>
         </div>
       </div>
@@ -120,11 +115,11 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         
         <!-- Zahlungsübersicht -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-blue-100">
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center mb-4">
-              <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mr-3">
-                <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
               </div>
@@ -152,18 +147,19 @@
               <button
                 @click="navigateToPayments"
                 :disabled="paymentsLoading"
-                class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                :style="{ background: buttonColor }"
               >
                 Zur Übersicht
               </button>
             </div>
           </div>
         </div>
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-green-100">
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center mb-3">
-              <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
@@ -178,7 +174,8 @@
             <div class="mt-4">
               <button
                 @click="showUpcomingLessonsModal = true"
-                class="w-full px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+                class="w-full px-3 py-2 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
+                :style="{ background: buttonColor }"
               >
                 Details anzeigen
               </button>
@@ -187,11 +184,11 @@
         </div>
 
         <!-- Absolvierte Lektionen -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-blue-100">
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center mb-3">
-              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -206,7 +203,8 @@
             <div class="mt-4">
               <button
                 @click="showEvaluationsModal = true"
-                class="w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                class="w-full px-3 py-2 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
+                :style="{ background: buttonColor }"
               >
                 Bewertungen ansehen
               </button>
@@ -219,23 +217,32 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         
         <!-- Fahrstunden buchen -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-blue-100">
-          <div class="p-8 h-full flex flex-col">
-            <div class="flex items-center mb-6">
-              <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
-                <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">Fahrstunden buchen</h2>
+              <h3 class="text-lg font-semibold text-gray-900">
+                Fahrstunden buchen
+              </h3>
+            </div>
+            
+            <div class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <p class="text-gray-600 text-sm">
+                  Buchen Sie Ihre nächste Fahrstunde
+                </p>
               </div>
             </div>
             
-            <div class="flex space-x-3">
+            <div class="mt-4">
               <button
                 @click="navigateToLessonBooking"
-                class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
+                :style="{ background: buttonColor }"
               >
                 🚗 Fahrstunde buchen
               </button>
@@ -244,23 +251,32 @@
         </div>
 
         <!-- Kurs buchen -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-green-100">
-          <div class="p-8 h-full flex flex-col">
-            <div class="flex items-center mb-6">
-              <div class="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mr-4">
-                <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">Kurse buchen</h2>
+              <h3 class="text-lg font-semibold text-gray-900">
+                Kurse buchen
+              </h3>
+            </div>
+            
+            <div class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <p class="text-gray-600 text-sm">
+                  Schauen Sie sich verfügbare Kurse an
+                </p>
               </div>
             </div>
             
-            <div class="flex space-x-3">
+            <div class="mt-4">
               <button
                 @click="navigateToCourseBooking"
-                class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
+                :style="{ background: buttonColor }"
               >
                 📚 Kurse ansehen
               </button>
@@ -269,24 +285,32 @@
         </div>
 
         <!-- Lernbereich -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-emerald-100">
-          <div class="p-8 h-full flex flex-col">
-            <div class="flex items-center mb-6">
-              <div class="w-16 h-16 bg-emerald-100 rounded-xl flex items-center justify-center mr-4">
-                <svg class="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0112 21.5c-2.28 0-4.4-.64-6.16-1.742L12 14z" />
                 </svg>
               </div>
-              <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">Lernbereich</h2>
-                <p class="text-sm text-gray-600">Themen mit Lerninhalt, die du bereits bearbeitet hast</p>
+              <h3 class="text-lg font-semibold text-gray-900">
+                Lernbereich
+              </h3>
+            </div>
+
+            <div class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <p class="text-gray-600 text-sm">
+                  Themen mit Lerninhalt, die du bereits bearbeitet hast
+                </p>
               </div>
             </div>
 
-            <div class="flex space-x-3">
+            <div class="mt-4">
               <button
                 @click="navigateTo('/learning')"
-                class="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
+                :style="{ background: buttonColor }"
               >
                 📘 Öffnen
               </button>
@@ -295,84 +319,105 @@
         </div>
       </div>
 
-      <!-- Fahrlehrer Sektion -->
-      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-purple-100 mb-8">
-        <div class="p-8">
-          <div class="flex items-center mb-6">
-            <div class="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
-              <svg class="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      <!-- Mein Profil Card -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow mb-8" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+        <div class="p-6 h-full flex flex-col">
+          <div class="flex items-center mb-4">
+            <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <div>
-              <h2 class="text-2xl font-bold text-gray-900 mb-2">Meine Fahrlehrer</h2>
+            <h3 class="text-lg font-semibold text-gray-900">
+              Mein Profil
+            </h3>
+          </div>
+          
+          <div class="flex-1 flex items-center justify-center">
+            <div class="text-center">
+              <p class="text-gray-600 text-sm">
+                Verwalten Sie Ihre persönlichen Daten und Ausweise
+              </p>
             </div>
           </div>
           
-          <!-- Loading State -->
-          <div v-if="isLoading" class="text-center py-8">
-            <LoadingLogo size="md" />
-            <p class="text-gray-500 mt-2">Fahrlehrer werden geladen...</p>
-          </div>
-          
-          <!-- Fahrlehrer Liste -->
-          <div v-else-if="instructors && instructors.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div 
-              v-for="instructor in instructors" 
-              :key="instructor.id"
-              @click="showInstructorDetails(instructor)"
-              class="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200 hover:border-purple-300"
+          <div class="mt-4">
+            <button
+              @click="showProfileModal = true"
+              class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              :style="{ background: buttonColor }"
             >
-              <div class="flex items-center space-x-3">
-                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <span class="text-purple-600 font-semibold text-lg">
-                    {{ getInstructorInitials(instructor) }}
-                  </span>
-                </div>
-                <div class="flex-1">
-                  <h3 class="font-semibold text-gray-900">{{ instructor.name }}</h3>
-                </div>
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Keine Fahrlehrer -->
-          <div v-else class="text-center py-8">
-            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">Noch keine Fahrlehrer</h3>
-            <p class="text-gray-600">Buchen Sie Ihre erste Fahrstunde, um Ihre Fahrlehrer kennenzulernen.</p>
+              Profil öffnen
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Reglemente Sektion -->
-      <div 
-        @click="showReglementeModal = true"
-        class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-indigo-100 mb-8 cursor-pointer"
-      >
-        <div class="p-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900">Reglemente</h3>
-                <p class="text-xs text-gray-500">Wichtige Dokumente und Richtlinien</p>
-              </div>
+      <!-- Fahrlehrer Card -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow mb-8" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+        <div class="p-6 h-full flex flex-col">
+          <div class="flex items-center mb-4">
+            <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
             </div>
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
+            <h3 class="text-lg font-semibold text-gray-900">
+              Meine Fahrlehrer
+            </h3>
+          </div>
+          
+          <div class="flex-1 flex items-center justify-center">
+            <div class="text-center">
+              <p class="text-gray-600 text-sm">
+                Verwalten Sie Ihre Fahrlehrerverbindungen
+              </p>
+            </div>
+          </div>
+          
+          <div class="mt-4">
+            <button
+              @click="showInstructorModal = true"
+              class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              :style="{ background: buttonColor }"
+              :disabled="isLoading"
+            >
+              Fahrlehrer anzeigen
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reglemente Card -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow mb-8" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+        <div class="p-6 h-full flex flex-col">
+          <div class="flex items-center mb-4">
+            <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900">
+              Reglemente
+            </h3>
+          </div>
+          
+          <div class="flex-1 flex items-center justify-center">
+            <div class="text-center">
+              <p class="text-gray-600 text-sm">
+                Wichtige Dokumente und Richtlinien
+              </p>
+            </div>
+          </div>
+          
+          <div class="mt-4">
+            <button
+              @click="showReglementeModal = true"
+              class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              :style="{ background: buttonColor }"
+            >
+              Reglemente anzeigen
+            </button>
           </div>
         </div>
       </div>
@@ -675,21 +720,11 @@
 
     <!-- Instructor Details Modal -->
     <div v-if="showInstructorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6">
           <!-- Header -->
           <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <span class="text-purple-600 font-semibold text-lg">
-                  {{ getInstructorInitials(selectedInstructor) }}
-                </span>
-              </div>
-              <div>
-                <h2 class="text-xl font-bold text-gray-900">{{ selectedInstructor?.name }}</h2>
-                <p class="text-sm text-gray-600">Fahrlehrer</p>
-              </div>
-            </div>
+            <h2 class="text-2xl font-bold text-gray-900">Meine Fahrlehrer</h2>
             <button 
               @click="showInstructorModal = false"
               class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -700,16 +735,70 @@
             </button>
           </div>
 
-          <!-- Contact Information -->
-          <div class="space-y-4">
-            <div class="bg-gray-50 rounded-lg p-4">
-              <h3 class="font-semibold text-gray-900 mb-3">Kontaktinformationen</h3>
+          <!-- Loading State -->
+          <div v-if="isLoading" class="text-center py-8">
+            <LoadingLogo size="md" />
+            <p class="text-gray-500 mt-2">Fahrlehrer werden geladen...</p>
+          </div>
+
+          <!-- Instructors List -->
+          <div v-else-if="instructors && instructors.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div 
+              v-for="instructor in instructors" 
+              :key="instructor.id"
+              @click="showInstructorDetails(instructor)"
+              class="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200 hover:border-purple-300"
+            >
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <span class="text-purple-600 font-semibold text-lg">
+                    {{ getInstructorInitials(instructor) }}
+                  </span>
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-semibold text-gray-900">{{ instructor.name }}</h3>
+                </div>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- No Instructors -->
+          <div v-else class="text-center py-8">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Noch keine Fahrlehrer</h3>
+            <p class="text-gray-600">Buchen Sie Ihre erste Fahrstunde, um Ihre Fahrlehrer kennenzulernen.</p>
+          </div>
+
+          <!-- Detail View (when clicked) -->
+          <div v-if="selectedInstructor" class="mt-6 border-t pt-6">
+            <div class="flex items-center space-x-3 mb-4">
+              <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                <span class="text-purple-600 font-semibold text-lg">
+                  {{ getInstructorInitials(selectedInstructor) }}
+                </span>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">{{ selectedInstructor.name }}</h3>
+                <p class="text-sm text-gray-600">Fahrlehrer-Details</p>
+              </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-4">
+              <h4 class="font-semibold text-gray-900 mb-3">Kontaktinformationen</h4>
               <div class="space-y-2">
                 <div v-if="selectedInstructor?.email" class="flex items-center space-x-3">
                   <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  <a :href="`mailto:${selectedInstructor.email}`" class="text-blue-600 hover:text-blue-800">
+                  <a :href="`mailto:${selectedInstructor.email}`" class="text-blue-600 hover:text-blue-800 break-all">
                     {{ selectedInstructor.email }}
                   </a>
                 </div>
@@ -726,30 +815,36 @@
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Actions -->
-          <div class="mt-6 flex space-x-3">
-            <button 
-              v-if="selectedInstructor?.email"
-              @click="openEmail(selectedInstructor.email)"
-              class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              <span>E-Mail</span>
-            </button>
-            <button 
-              v-if="selectedInstructor?.phone"
-              @click="openPhone(selectedInstructor.phone)"
-              class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-              <span>Anrufen</span>
-            </button>
+            <!-- Actions -->
+            <div class="flex space-x-3">
+              <button 
+                v-if="selectedInstructor?.email"
+                @click="openEmail(selectedInstructor.email)"
+                class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span>E-Mail</span>
+              </button>
+              <button 
+                v-if="selectedInstructor?.phone"
+                @click="openPhone(selectedInstructor.phone)"
+                class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <span>Anrufen</span>
+              </button>
+              <button
+                @click="selectedInstructor = null"
+                class="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Zurück
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -826,6 +921,7 @@ import ProfileModal from './ProfileModal.vue'
 // Composables
 const authStore = useAuthStore()
 const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
+const { loadTenantBrandingById, primaryColor, secondaryColor, currentTenantBranding } = useTenantBranding()
 
 // State
 const isLoading = ref(true)
@@ -871,6 +967,23 @@ const displayToast = (type: 'success' | 'error' | 'warning' | 'info', title: str
 // In CustomerDashboard.vue - vor dem Template:
 const isServerSide = process.server
 const showContent = computed(() => !isServerSide && currentUser.value && isClient.value)
+
+// Tenant colors
+const buttonColor = computed(() => {
+  const color = primaryColor.value || '#2563eb'
+  console.log('🎨 buttonColor computed:', color, 'from primaryColor:', primaryColor.value)
+  return color
+})
+const buttonColorLight = computed(() => {
+  // Create a lighter version of primary color
+  const color = primaryColor.value || '#2563eb'
+  return `${color}20` // Add 20% opacity for lighter version
+})
+const buttonBorderColor = computed(() => {
+  // Create a subtle border color
+  const color = primaryColor.value || '#2563eb'
+  return `${color}40` // Add 40% opacity for border
+})
 
 const {
   payments,
@@ -2173,9 +2286,11 @@ const loadInstructors = () => {
 }
 
 const getInstructorInitials = (instructor: any) => {
+  if (!instructor) return 'N/A'
   const firstName = instructor.first_name || ''
   const lastName = instructor.last_name || ''
-  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+  return initials || 'N/A'
 }
 
 const showInstructorDetails = (instructor: any) => {
@@ -2264,6 +2379,17 @@ watch(userRole, (newRole: string | null) => {
   }
 }, { immediate: true })// ← Stelle sicher dass immediate: true da ist
 
+// Watch for tenant branding changes
+watch(() => currentTenantBranding.value, (newVal) => {
+  if (newVal) {
+    console.log('👀 Tenant branding changed:', {
+      name: newVal.name,
+      primaryColor: newVal.colors?.primary,
+      buttonColor: buttonColor.value
+    })
+  }
+}, { deep: true })
+
 // Lifecycle
 onMounted(async () => {
   console.log('🔥 CustomerDashboard mounted')
@@ -2294,6 +2420,13 @@ onMounted(async () => {
     }
     
     console.log('✅ Auth verified, loading data...')
+    
+    // Load tenant branding
+    if (currentUser.value?.tenant_id) {
+      console.log('🎨 Loading tenant branding for:', currentUser.value.tenant_id)
+      await loadTenantBrandingById(currentUser.value.tenant_id)
+    }
+    
     await loadAllData()
     await loadPayments()
     
