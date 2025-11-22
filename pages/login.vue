@@ -343,9 +343,7 @@ const handleLogin = async () => {
       const authStore = useAuthStore()
       const errorMsg = authStore.errorMessage
       
-      if (errorMsg?.includes('Email not confirmed')) {
-        loginError.value = 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse. Prüfen Sie Ihren Posteingang.'
-      } else if (errorMsg?.includes('Invalid login credentials')) {
+      if (errorMsg?.includes('Invalid login credentials')) {
         loginError.value = 'Falsches Passwort oder E-Mail-Adresse.'
       } else {
         loginError.value = errorMsg || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
@@ -401,8 +399,6 @@ const handleLogin = async () => {
     
     if (error.message?.includes('Invalid login credentials')) {
       loginError.value = 'Falsches Passwort oder E-Mail-Adresse.'
-    } else if (error.message?.includes('Email not confirmed')) {
-      loginError.value = 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.'
     } else {
       loginError.value = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }

@@ -795,8 +795,6 @@ const handleLogin = async () => {
     
     if (error.message?.includes('Invalid login credentials')) {
       loginError.value = 'Falsches Passwort.'
-    } else if (error.message?.includes('Email not confirmed')) {
-      loginError.value = 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.'
     } else {
       loginError.value = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }

@@ -139,8 +139,19 @@
           </button>
         </form>
 
-        <!-- Success State -->
-        <div v-if="isSuccess" class="space-y-4 text-center">
+      </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div v-if="isSuccess" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <!-- Header -->
+        <div class="text-white p-6 rounded-t-xl text-center" :style="{ background: primaryColor || '#2563eb' }">
+          <h2 class="text-2xl font-bold">Passwort zurückgesetzt!</h2>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 space-y-4 text-center">
           <div class="flex justify-center">
             <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
               <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -149,7 +160,6 @@
             </div>
           </div>
           
-          <h2 class="text-xl font-bold text-gray-900">Passwort erfolgreich zurückgesetzt!</h2>
           <p class="text-gray-600">Sie können sich jetzt mit Ihrem neuen Passwort anmelden.</p>
           
           <NuxtLink
