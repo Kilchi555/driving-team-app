@@ -19,29 +19,40 @@
               </div>
             </div>
             
-            <!-- Nur Refresh Button -->
-              <button
-                @click="refreshData"
-                :disabled="isLoading"
-                class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                <!-- ✅ SVG Refresh Icon -->
-                <svg 
-                  class="w-5 h-5" 
-                  :class="{ 'animate-spin': isLoading }" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
+            <!-- Profile and Refresh Buttons -->
+              <div class="flex items-center space-x-2">
+                <button
+                  @click="showProfileModal = true"
+                  class="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                 >
-                  <path 
-                    stroke-linecap="round" 
-                    stroke-linejoin="round" 
-                    stroke-width="2" 
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                <span class="hidden sm:inline">Aktualisieren</span>
-              </button>
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="hidden sm:inline">Profil</span>
+                </button>
+                <button
+                  @click="refreshData"
+                  :disabled="isLoading"
+                  class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  <!-- ✅ SVG Refresh Icon -->
+                  <svg 
+                    class="w-5 h-5" 
+                    :class="{ 'animate-spin': isLoading }" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      stroke-linecap="round" 
+                      stroke-linejoin="round" 
+                      stroke-width="2" 
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  <span class="hidden sm:inline">Aktualisieren</span>
+                </button>
+              </div>
           </div>
         </div>
       </div>
@@ -781,6 +792,15 @@
     :duration="2000"
     @close="showToast = false"
   />
+
+  <!-- Profile Modal -->
+  <ProfileModal
+    :is-open="showProfileModal"
+    :user-email="currentUser?.email || ''"
+    :user-name="getFirstName()"
+    :categories="userDocumentCategories"
+    @close="showProfileModal = false"
+  />
   
 </template>
 
@@ -801,6 +821,7 @@ import UpcomingLessonsModal from './UpcomingLessonsModal.vue'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import ProfileModal from './ProfileModal.vue'
 
 // Composables
 const authStore = useAuthStore()
@@ -828,6 +849,10 @@ const hasPaymentMethod = ref(false)
 const automaticPaymentHoursBefore = ref(24)
 const automaticAuthorizationHoursBefore = ref(168) // Standard: 1 Woche vor Termin
 const confirmingAppointments = ref<Set<string>>(new Set()) // Loading state per appointment ID
+
+// Profile Modal State
+const showProfileModal = ref(false)
+const userDocumentCategories = ref<any[]>([])
 
 // Toast Notification State
 const showToast = ref(false)
