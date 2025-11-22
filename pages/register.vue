@@ -190,9 +190,9 @@ const loadTenants = async () => {
   }
 }
 
-const navigateToRegister = async (slug: string) => {
+const navigateToRegister = (slug: string) => {
   console.log('🔗 Navigating to:', `/register/${slug}`)
-  await navigateTo(`/register/${slug}`)
+  window.location.href = `/register/${slug}`
 }
 
 // Lifecycle
