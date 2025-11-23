@@ -1660,20 +1660,42 @@ const handleLogout = async () => {
 }
 
 // Helper function to extract HH:MM from working hours data
+// Working hours are stored as UTC in DB, need to convert to Zurich local time
 const formatWorkingTime = (timeValue: any): string => {
   if (!timeValue) return '08:00'
   
-  console.log('🔍 formatWorkingTime DEBUG:', { input: timeValue, type: typeof timeValue })
-  
-  // If it's already HH:MM format
+  // Parse the time string (format: HH:MM:SS or HH:MM)
   if (typeof timeValue === 'string' && timeValue.includes(':')) {
     const [hours, minutes] = timeValue.split(':')
-    const result = `${hours.padStart(2, '0')}:${minutes.slice(0, 2).padStart(2, '0')}`
-    console.log('✅ formatWorkingTime RESULT:', result)
-    return result
+    const utcHours = parseInt(hours)
+    const utcMinutes = parseInt(minutes)
+    
+    // Create a fake date to calculate Zurich offset
+    // Use a winter date (no DST) for consistent offset calculation
+    const fakeDate = new Date('2025-01-15T00:00:00Z')
+    const zurichFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/Zurich',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+    
+    // Get Zurich time for midnight UTC
+    const zurichMidnight = zurichFormatter.format(fakeDate)
+    const [zurichHourStr, zurichMinuteStr] = zurichMidnight.split(':')
+    const zurichOffsetHours = parseInt(zurichHourStr)
+    
+    // Apply offset to get local time from UTC
+    let localHours = utcHours + zurichOffsetHours
+    const localMinutes = utcMinutes
+    
+    // Handle day wraparound
+    if (localHours >= 24) localHours -= 24
+    if (localHours < 0) localHours += 24
+    
+    return `${String(localHours).padStart(2, '0')}:${String(localMinutes).padStart(2, '0')}`
   }
   
-  console.log('❌ formatWorkingTime fallback to 08:00')
   return '08:00'
 }
 
