@@ -960,8 +960,22 @@ const useEventModalForm = (currentUser?: any, refs?: {
         return result
       }
       
-      const localStart = convertLocalToUTC(formData.value.startDate, formData.value.startTime)
-      const localEnd = convertLocalToUTC(formData.value.startDate, formData.value.endTime)
+      console.log('🚀 BEFORE convertLocalToUTC call')
+      
+      let localStart: string
+      let localEnd: string
+      
+      try {
+        console.log('📞 Calling convertLocalToUTC with:', formData.value.startDate, formData.value.startTime)
+        localStart = convertLocalToUTC(formData.value.startDate, formData.value.startTime)
+        console.log('📞 convertLocalToUTC returned:', localStart)
+        
+        localEnd = convertLocalToUTC(formData.value.startDate, formData.value.endTime)
+      } catch (err) {
+        console.error('❌ ERROR in convertLocalToUTC:', err)
+        localStart = `${formData.value.startDate}T${formData.value.startTime}:00`
+        localEnd = `${formData.value.startDate}T${formData.value.endTime}:00`
+      }
       
       console.log('🕐 DEBUG CONVERSION:', {
         input: `${formData.value.startDate}T${formData.value.startTime}`,
