@@ -125,6 +125,23 @@ export default defineEventHandler(async (event) => {
         }
       }
 
+      // Nach erfolgreicher Fulfillment: Speichere Payment Method Token
+      console.log('💳 Attempting to save payment method token...')
+      try {
+        const tokenResponse = await $fetch('/api/wallee/save-payment-token', {
+          method: 'POST',
+          body: {
+            transactionId: transactionId,
+            userId: payment.user_id || null,
+            tenantId: body.spaceId ? null : null // Will be fetched from payment
+          }
+        })
+        console.log('✅ Token saved:', tokenResponse)
+      } catch (tokenError: any) {
+        console.warn('⚠️ Could not save payment method token:', tokenError.message)
+        // Continue - this is not critical
+      }
+
       return {
         success: true,
         message: 'Payment fulfilled and appointment confirmed',
