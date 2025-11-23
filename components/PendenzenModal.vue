@@ -35,6 +35,13 @@
       <div class="bg-gray-50 border-b px-4">
         <div class="flex space-x-4">
           <button
+            :class="['py-3 border-b-2 flex items-center space-x-2', activeTab === 'allgemein' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
+            @click="activeTab = 'allgemein'"
+          >
+            <span>Allgemein</span>
+            <span v-if="(pendingCount + unconfirmedNext24hCount) > 0" class="ml-1 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800">{{ pendingCount + unconfirmedNext24hCount }}</span>
+          </button>
+          <button
             :class="['py-3 border-b-2', activeTab === 'bewertungen' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
             @click="activeTab = 'bewertungen'"
           >
@@ -82,6 +89,59 @@
             >
               Super! Schliessen
             </button>
+          </div>
+        </div>
+
+        <!-- Allgemein Tab (Overview) -->
+        <div v-else-if="activeTab === 'allgemein'" class="p-4 space-y-6">
+          <!-- Unconfirmed Section -->
+          <div v-if="unconfirmedNext24hCount > 0">
+            <h3 class="text-sm font-bold text-gray-700 mb-2 uppercase">Unbestätigte Termine ({{ unconfirmedNext24hCount }})</h3>
+            <div class="space-y-2">
+              <div
+                v-for="appointment in unconfirmedWithStatus"
+                :key="appointment.id"
+                :class="[
+                  'rounded-lg border p-3 hover:shadow-md transition-all cursor-pointer text-sm',
+                  'border-orange-300 bg-orange-50'
+                ]"
+                @click="selectedAppointment = appointment"
+              >
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <div class="font-semibold text-gray-900">{{ appointment.users?.first_name }} {{ appointment.users?.last_name }}</div>
+                    <div class="text-gray-600">{{ formatLocalDate(appointment.start_time) }} • {{ formatLocalTime(appointment.start_time) }} - {{ formatLocalTime(appointment.end_time) }}</div>
+                  </div>
+                  <span :class="['px-2 py-1 rounded text-xs font-semibold', appointment.dueStatus === 'overdue_past' ? 'bg-red-200 text-red-800' : appointment.dueStatus === 'overdue_24h' ? 'bg-orange-200 text-orange-800' : 'bg-yellow-200 text-yellow-800']">
+                    {{ appointment.dueStatus === 'overdue_past' ? 'Überfällig' : appointment.dueStatus === 'overdue_24h' ? '< 24h' : 'Fällig' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Section -->
+          <div v-if="pendingCount > 0">
+            <h3 class="text-sm font-bold text-gray-700 mb-2 uppercase">Ausstehende Bewertungen ({{ pendingCount }})</h3>
+            <div class="space-y-2">
+              <div
+                v-for="appointment in evaluationAppointments"
+                :key="appointment.id"
+                :class="[
+                  'rounded-lg border p-3 hover:shadow-md transition-all cursor-pointer text-sm',
+                  'border-blue-300 bg-blue-50'
+                ]"
+                @click="selectedAppointment = appointment"
+              >
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <div class="font-semibold text-gray-900">{{ appointment.studentName }}</div>
+                    <div class="text-gray-600">{{ appointment.formattedDate }} • {{ appointment.formattedStartTime }} - {{ appointment.formattedEndTime }}</div>
+                  </div>
+                  <span class="px-2 py-1 rounded text-xs font-semibold bg-blue-200 text-blue-800">Bewertung</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -229,7 +289,6 @@
                   {{ getAppointmentFormattedTime(appointment, 'start') }} - 
                   {{ getAppointmentFormattedTime(appointment, 'end') }}
                 </div>
-                <div class="text-xs text-gray-500 mt-1">{{ appointment.title }}</div>
               </div>
             </div>
           </div>
@@ -367,6 +426,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { nextTick } from 'vue'
 import { usePendingTasks } from '~/composables/usePendingTasks'
 import { useCategoryData } from '~/composables/useCategoryData'
 import EvaluationModal from '~/components/EvaluationModal.vue'
@@ -379,7 +439,7 @@ import { getSupabase } from '~/utils/supabase'
 interface Props {
   isOpen: boolean
   currentUser: any
-  defaultTab?: 'bewertungen' | 'unconfirmed'
+  defaultTab?: 'allgemein' | 'bewertungen' | 'unconfirmed'
 }
 
 const props = defineProps<Props>()
@@ -410,7 +470,7 @@ const { allCategories, loadCategories } = useCategoryData()
 // Modal state
 const showEvaluationModal = ref(false)
 const selectedAppointment = ref<any>(null)
-const activeTab = ref<'bewertungen' | 'unconfirmed'>(props.defaultTab || 'bewertungen')
+const activeTab = ref<'allgemein' | 'bewertungen' | 'unconfirmed'>(props.defaultTab || 'allgemein')
 
 // ✅ NEU: Filter für unbestätigte Termine
 const dueFilter = ref<'all' | 'due' | 'overdue_24h' | 'overdue_past'>('all')
@@ -1046,25 +1106,51 @@ watch(() => props.isOpen, async (newIsOpen) => {
   
   if (newIsOpen && props.currentUser?.id) {
     console.log('🔄 PendenzenModal opened - loading data...')
+    try {
+      await refreshData()
+      console.log('✅ refreshData completed')
+    } catch (error) {
+      console.error('❌ Error in refreshData:', error)
+    }
+    
+    // Nutze MEHRERE nextTick um sicherzustellen, dass alle computed values aktualisiert sind
+    console.log('⏳ Waiting for nextTick...')
+    await nextTick()
+    console.log('⏳ Waiting for timeout...')
+    await new Promise(resolve => setTimeout(resolve, 100)) // Extra delay
+    console.log('⏳ Waiting for second nextTick...')
+    await nextTick()
+    console.log('✅ All nextTicks completed')
+    
     // Setze Tab anhand defaultTab, falls übergeben
     if (props.defaultTab) {
       activeTab.value = props.defaultTab
+      console.log('📌 Using defaultTab:', props.defaultTab)
     } else {
-      // Priorisiere den Tab mit den meisten Pendenzen
-      const bewertungenCount = (pendingCount as any)?.value || 0
-      const unbestätigtCount = (unconfirmedNext24hCount as any)?.value || 0
-      
-      console.log('📊 Pendency counts:', { bewertungenCount, unbestätigtCount })
-      
-      if (unbestätigtCount > bewertungenCount) {
-        activeTab.value = 'unconfirmed'
-        console.log('📌 Switching to Unbestätigt tab (more pending)')
-      } else {
+      console.log('🔄 Starting tab selection logic...')
+      try {
+        // Priorisiere den Tab mit den meisten Pendenzen
+        // Direkt vom usePendingTasks composable abfragen, nicht vom computed
+        const { unconfirmedNext24h: unconfirmedList, pendingAppointments: pendingList } = usePendingTasks()
+        const bewertungenCount = pendingList.value?.length || 0
+        const unbestätigtCount = unconfirmedList.value?.length || 0
+        
+        console.log('📊 Tab selection - Direct counts:', { bewertungenCount, unbestätigtCount })
+        console.log('🔍 unconfirmedList.value:', unconfirmedList.value)
+        console.log('🔍 pendingList.value:', pendingList.value)
+        
+        if (unbestätigtCount > 0 && unbestätigtCount > bewertungenCount) {
+          activeTab.value = 'unconfirmed'
+          console.log('📌 Switching to Unbestätigt tab (more pending)')
+        } else {
+          activeTab.value = 'bewertungen'
+          console.log('📌 Switching to Bewertungen tab')
+        }
+      } catch (error) {
+        console.error('❌ Error in tab selection:', error)
         activeTab.value = 'bewertungen'
-        console.log('📌 Switching to Bewertungen tab')
       }
     }
-    await refreshData()
   } else if (!newIsOpen) {
     console.log('ℹ️ PendenzenModal closed')
   } else {

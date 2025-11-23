@@ -52,11 +52,22 @@ const calendarRef = ref<{ getApi(): CalendarApi } | null>(null)
 const showStaffSettings = ref(false)
 const showCustomers = ref(false)
 const showPendenzen = ref(false)
-const defaultPendenzenTab = ref<'bewertungen' | 'unconfirmed'>('bewertungen')
 const showProductSaleModal = ref(false)
 const isTodayActive = ref(false)
 const currentMonth = ref('')
 const selectedStaffId = ref<string | null>(null) // For admin staff filtering
+
+// Computed: Dynamically select the default tab based on pending counts
+const defaultPendenzenTab = computed(() => {
+  const bewertungenCount = pendingCount.value || 0
+  const unbestätigtCount = unconfirmedNext24hCount.value || 0
+  
+  // Wenn es Pendenzen gibt, zeige Allgemein (Überblick)
+  if (bewertungenCount > 0 || unbestätigtCount > 0) {
+    return 'allgemein'
+  }
+  return 'allgemein'
+})
 
 // NEU: Lokale computed für bessere Reaktivität
 const pendenzenButtonClasses = computed(() => {

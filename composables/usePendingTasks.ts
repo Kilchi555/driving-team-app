@@ -296,7 +296,9 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     
     // Query 2: Nicht-bestätigte Termine (nur für Staff/Admin, nicht für Clients)
     let unconfirmedAppointments: any[] = []
+    console.log('🔍 Checking userRole for unconfirmed query:', userRole, 'type:', typeof userRole)
     if (userRole === 'staff' || userRole === 'admin') {
+      console.log('✅ Loading unconfirmed appointments for', userRole)
       let unconfirmedQuery = supabase
         .from('appointments')
         .select(`
@@ -439,9 +441,22 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     
     // ✅ Speichere ALLE unbestätigten Termine (nicht nur nächste 24h)
     // Die Filterung nach Fälligkeit erfolgt im Frontend via unconfirmedWithStatus
-    globalState.unconfirmedNext24h = (unconfirmedAppointments || []).map((apt: any) => getFormattedAppointment(apt)) as any
+    console.log('🔥 Raw unconfirmedAppointments before processing:', unconfirmedAppointments)
+    
+    const formattedUnconfirmed = (unconfirmedAppointments || []).map((apt: any) => {
+      try {
+        return getFormattedAppointment(apt)
+      } catch (error) {
+        console.error('❌ Error formatting unconfirmed appointment:', error, apt)
+        // Fallback: return raw appointment
+        return apt
+      }
+    }) as any
+    
+    globalState.unconfirmedNext24h = formattedUnconfirmed
     
     console.log('📌 Unconfirmed next 24h:', globalState.unconfirmedNext24h.length)
+    console.log('🔥 Unconfirmed next 24h data:', globalState.unconfirmedNext24h)
     console.log('🔥 Global pending state updated, count:', pendingCount.value)
     
   } catch (err: any) {
