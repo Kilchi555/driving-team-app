@@ -908,27 +908,15 @@ const useEventModalForm = (currentUser?: any, refs?: {
         })
         
         const zurichMidnightStr = formatter.format(midnightUTC)
-        console.log('📍 zurichMidnightStr FULL:', zurichMidnightStr, 'length:', zurichMidnightStr.length)
-        console.log('📍 substring(11,13):', zurichMidnightStr.substring(11, 13))
-        
-        const zurichHour = parseInt(zurichMidnightStr.substring(11, 13))
-        console.log('📍 zurichHour parsed:', zurichHour, 'isNaN:', isNaN(zurichHour))
+        // Format is "YYYY-MM-DD, HH:MM:SS" with comma and space after date
+        // Position 12-14 contains "HH" (hours)
+        const zurichHour = parseInt(zurichMidnightStr.substring(12, 14))
         
         const offsetHours = zurichHour // Zurich offset from UTC
         
         // Parse input time
         const [hours, minutes] = timeStr.split(':').map(Number)
         
-        console.log('🔧 CONVERSION DEBUG:', {
-          dateStr,
-          timeStr,
-          year, month, day,
-          zurichMidnightStr,
-          zurichHour,
-          offsetHours,
-          inputHours: hours,
-          calculation: `${hours} - ${offsetHours} = ${hours - offsetHours}`
-        })
         
         // Convert: UTC = Local - Offset
         let utcHours = hours - offsetHours
@@ -950,39 +938,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
         
         const result = `${year}-${String(month).padStart(2, '0')}-${paddedDay}T${paddedHours}:${paddedMinutes}:00`
         
-        console.log('✅ CONVERSION RESULT:', {
-          input: `${dateStr}T${timeStr}`,
-          output: result,
-          utcHours,
-          offsetHours
-        })
         
         return result
       }
       
-      console.log('🚀 BEFORE convertLocalToUTC call')
-      
-      let localStart: string
-      let localEnd: string
-      
-      try {
-        console.log('📞 Calling convertLocalToUTC with:', formData.value.startDate, formData.value.startTime)
-        localStart = convertLocalToUTC(formData.value.startDate, formData.value.startTime)
-        console.log('📞 convertLocalToUTC returned:', localStart)
-        
-        localEnd = convertLocalToUTC(formData.value.startDate, formData.value.endTime)
-      } catch (err) {
-        console.error('❌ ERROR in convertLocalToUTC:', err)
-        localStart = `${formData.value.startDate}T${formData.value.startTime}:00`
-        localEnd = `${formData.value.startDate}T${formData.value.endTime}:00`
-      }
-      
-      console.log('🕐 DEBUG CONVERSION:', {
-        input: `${formData.value.startDate}T${formData.value.startTime}`,
-        output: localStart,
-        inputTime: formData.value.startTime,
-        outputTime: localStart?.split('T')[1]
-      })
+      const localStart = convertLocalToUTC(formData.value.startDate, formData.value.startTime)
+      const localEnd = convertLocalToUTC(formData.value.startDate, formData.value.endTime)
       
       const nowLocal = toLocalTimeString(new Date()) // Current timestamp (unchanged for now)
 
