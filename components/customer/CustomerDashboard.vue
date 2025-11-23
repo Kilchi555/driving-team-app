@@ -1239,12 +1239,22 @@ const formatDateTime = (dateString: string | null | undefined) => {
   try {
     // Parse UTC datetime and convert to Zurich timezone
     const date = new Date(dateString)
+    console.log('🔍 formatDateTime DEBUG:', {
+      input: dateString,
+      dateObject: date.toISOString(),
+      getTime: date.getTime(),
+      isNaN: isNaN(date.getTime())
+    })
     if (isNaN(date.getTime())) {
       return 'Ungültiges Datum/Zeit'
     }
     const weekday = date.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', weekday: 'short' }) // z.B. "Mi."
     const datePart = date.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric' })
     const timePart = date.toLocaleTimeString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })
+    console.log('✅ formatDateTime RESULT:', {
+      weekday, datePart, timePart,
+      result: `${weekday} ${datePart} ${timePart}`
+    })
     return `${weekday} ${datePart} ${timePart}`
   } catch (error) {
     console.warn('Error formatting dateTime:', dateString, error)
