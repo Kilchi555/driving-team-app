@@ -139,12 +139,21 @@ const formatLessonDate = (dateString: string) => {
   const tomorrow = new Date(today)
   tomorrow.setDate(today.getDate() + 1)
   
-  if (date.toDateString() === today.toDateString()) {
+  // Get Zurich date for comparison
+  const zurichDateStr = date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const zurichDate = new Date(zurichDateStr)
+  const todayStr = today.toLocaleDateString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const todayDate = new Date(todayStr)
+  const tomorrowDate = new Date(todayDate)
+  tomorrowDate.setDate(todayDate.getDate() + 1)
+  
+  if (zurichDate.getTime() === todayDate.getTime()) {
     return 'Heute'
-  } else if (date.toDateString() === tomorrow.toDateString()) {
+  } else if (zurichDate.getTime() === tomorrowDate.getTime()) {
     return 'Morgen'
   } else {
-    return date.toLocaleDateString('de-CH', { 
+    return date.toLocaleDateString('de-CH', {
+      timeZone: 'Europe/Zurich',
       weekday: 'long',
       day: '2-digit', 
       month: 'long',
@@ -154,35 +163,21 @@ const formatLessonDate = (dateString: string) => {
 }
 
 const formatTimeRange = (startTime: string, endTime: string) => {
-  console.log('🔍 RAW DB DATA:', { startTime, endTime })
-  
-  // ✅ KRITISCHER FIX: Entferne das +00:00 UTC-Suffix
-  const cleanStartTime = startTime.replace('+00:00', '').replace('T', ' ')
-  const cleanEndTime = endTime.replace('+00:00', '').replace('T', ' ')
-  
-  console.log('🔍 CLEANED TIMES:', { cleanStartTime, cleanEndTime })
-  
-  // Jetzt wird es als lokale Zeit interpretiert
-  const start = new Date(cleanStartTime)
-  const end = new Date(cleanEndTime)
-  
-  console.log('🔍 PARSED AS LOCAL:', {
-    start_getHours: start.getHours(),
-    start_getMinutes: start.getMinutes(),
-    should_show: '06:00'
-  })
+  // Convert UTC times to Zurich local time
+  const start = new Date(startTime)
+  const end = new Date(endTime)
   
   const startStr = start.toLocaleTimeString('de-CH', {
+    timeZone: 'Europe/Zurich',
     hour: '2-digit',
     minute: '2-digit'
   })
   
   const endStr = end.toLocaleTimeString('de-CH', {
+    timeZone: 'Europe/Zurich',
     hour: '2-digit',
     minute: '2-digit'
   })
-  
-  console.log('🔍 FINAL OUTPUT:', { startStr, endStr })
   
   return `${startStr} - ${endStr}`
 }
