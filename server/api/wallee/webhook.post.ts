@@ -48,18 +48,26 @@ export default defineEventHandler(async (event) => {
 
     // Find payment by Wallee transaction ID
     console.log('🔍 Looking up payment for transaction:', transactionId)
+    console.log('🔍 Searching for wallee_transaction_id =', String(transactionId))
+    
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('id, appointment_id')
+      .select('id, appointment_id, payment_status')
       .eq('wallee_transaction_id', String(transactionId))
       .maybeSingle()
 
-    if (paymentError || !payment) {
-      console.error('❌ Payment not found for transaction:', transactionId, paymentError)
+    if (paymentError) {
+      console.error('❌ Database error looking up payment:', paymentError)
+      return { success: false, message: 'Database error', error: paymentError }
+    }
+    
+    if (!payment) {
+      console.error('❌ Payment not found for transaction:', transactionId)
+      console.log('📋 Searched for wallee_transaction_id:', String(transactionId))
       return { success: false, message: 'Payment not found' }
     }
 
-    console.log('✅ Payment found:', payment.id)
+    console.log('✅ Payment found:', { id: payment.id, appointment_id: payment.appointment_id, current_status: payment.payment_status })
 
     // Handle AUTHORIZED state (provisorische Belastung - 3 Tage vor Termin)
     if (isAuthorized) {
