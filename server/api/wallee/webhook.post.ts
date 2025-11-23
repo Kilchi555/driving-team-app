@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
     
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('id, appointment_id, payment_status')
+      .select('id, appointment_id, payment_status, user_id, tenant_id')
       .eq('wallee_transaction_id', String(transactionId))
       .maybeSingle()
 
@@ -127,19 +127,23 @@ export default defineEventHandler(async (event) => {
 
       // Nach erfolgreicher Fulfillment: Speichere Payment Method Token
       console.log('💳 Attempting to save payment method token...')
-      try {
-        const tokenResponse = await $fetch('/api/wallee/save-payment-token', {
-          method: 'POST',
-          body: {
-            transactionId: transactionId,
-            userId: payment.user_id || null,
-            tenantId: body.spaceId ? null : null // Will be fetched from payment
-          }
-        })
-        console.log('✅ Token saved:', tokenResponse)
-      } catch (tokenError: any) {
-        console.warn('⚠️ Could not save payment method token:', tokenError.message)
-        // Continue - this is not critical
+      if (payment.user_id && payment.tenant_id) {
+        try {
+          const tokenResponse = await $fetch('/api/wallee/save-payment-token', {
+            method: 'POST',
+            body: {
+              transactionId: transactionId,
+              userId: payment.user_id,
+              tenantId: payment.tenant_id
+            }
+          })
+          console.log('✅ Token saved:', tokenResponse)
+        } catch (tokenError: any) {
+          console.warn('⚠️ Could not save payment method token:', tokenError.message)
+          // Continue - this is not critical
+        }
+      } else {
+        console.warn('⚠️ Cannot save token - missing user_id or tenant_id in payment')
       }
 
       return {
