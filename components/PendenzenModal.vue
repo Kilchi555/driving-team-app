@@ -477,23 +477,12 @@ const getDueStatusLabel = (status: string) => {
 // Computed: Formatierte unconfirmed appointments
 const formattedUnconfirmedAppointments = computed(() => {
   return (unconfirmedNext24h.value || []).map((apt: any) => {
-    // Parse UTC times and convert to Europe/Zurich timezone
-    const utcStartDate = new Date(apt.start_time)
-    const utcEndDate = new Date(apt.end_time)
-    
-    // Convert UTC to local timezone (Europe/Zurich)
-    const startTimeStr = utcStartDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
-    const endTimeStr = utcEndDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
-    
-    const startTime = new Date(startTimeStr)
-    const endTime = new Date(endTimeStr)
-    
     return {
       ...apt,
       studentName: `${apt.users?.first_name || ''} ${apt.users?.last_name || ''}`.trim() || 'Unbekannt',
-      formattedDate: startTime.toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }),
-      formattedStartTime: startTime.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }),
-      formattedEndTime: endTime.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+      formattedDate: formatLocalDate(apt.start_time),
+      formattedStartTime: formatLocalTime(apt.start_time),
+      formattedEndTime: formatLocalTime(apt.end_time)
     }
   })
 })
@@ -511,25 +500,31 @@ const openReminderModal = async (appointment: any) => {
   await loadReminderHistory(appointment.id)
 }
 
-const parseLocalDateTime = (dateTimeStr: string) => {
-  if (!dateTimeStr) return new Date()
+const parseUTCTime = (utcTimeString: string) => {
+  // Parse UTC ISO string and convert to local time (same logic as CalendarComponent)
+  let timeStr = utcTimeString
+  // Normalize format: convert space format to ISO if needed
+  if (timeStr.includes(' ') && !timeStr.includes('T')) {
+    timeStr = timeStr.replace(' ', 'T')
+  }
+  // Ensure timezone suffix is properly formatted
+  if (timeStr.includes('+00') && !timeStr.includes('+00:00')) {
+    timeStr = timeStr.replace('+00', '+00:00')
+  }
+  if (!timeStr.includes('+') && !timeStr.includes('Z')) {
+    timeStr += '+00:00'
+  }
   
-  // Parse UTC ISO string
-  const utcDate = new Date(dateTimeStr)
-  
-  // Convert to Europe/Zurich timezone
+  const utcDate = new Date(timeStr)
+  // Use toLocaleString to convert UTC to local timezone (Europe/Zurich)
   const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const localDate = new Date(localDateStr)
   
-  return new Date(localDateStr)
+  return localDate
 }
 
 const formatLocalDate = (dateTimeStr: string) => {
-  const utcDate = new Date(dateTimeStr)
-  
-  // Convert to Europe/Zurich timezone
-  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
-  const date = new Date(localDateStr)
-  
+  const date = parseUTCTime(dateTimeStr)
   return date.toLocaleDateString('de-CH', {
     weekday: 'short',
     day: '2-digit',
@@ -539,12 +534,7 @@ const formatLocalDate = (dateTimeStr: string) => {
 }
 
 const formatLocalTime = (dateTimeStr: string) => {
-  const utcDate = new Date(dateTimeStr)
-  
-  // Convert to Europe/Zurich timezone
-  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
-  const date = new Date(localDateStr)
-  
+  const date = parseUTCTime(dateTimeStr)
   return date.toLocaleTimeString('de-CH', {
     hour: '2-digit',
     minute: '2-digit'

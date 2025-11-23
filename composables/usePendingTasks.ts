@@ -173,25 +173,27 @@ const getFormattedAppointment = (appointment: PendingAppointment) => {
   }
 }
 
-// ✅ Hilfsfunktion: Parse DateTime-String als lokale Zeit
+// ✅ Hilfsfunktion: Parse UTC DateTime-String und konvertiere zu Europe/Zurich
 const parseLocalDateTime = (dateTimeStr: string): Date => {
-  // Entferne Timezone-Indikatoren (Z, +00:00, +00)
-  const cleanStr = dateTimeStr.replace('+00:00', '').replace('+00', '').replace('Z', '').trim()
-  
-  // Parse als lokale Zeit - unterstützt beide Formate (mit T oder Leerzeichen)
-  const parts = cleanStr.includes('T') ? cleanStr.split('T') : cleanStr.split(' ')
-  
-  if (parts.length < 2) {
-    console.warn('Invalid datetime format:', dateTimeStr)
-    return new Date()
+  // Normalize format: convert space format to ISO if needed
+  let timeStr = dateTimeStr
+  if (timeStr.includes(' ') && !timeStr.includes('T')) {
+    timeStr = timeStr.replace(' ', 'T')
+  }
+  // Ensure timezone suffix is properly formatted
+  if (timeStr.includes('+00') && !timeStr.includes('+00:00')) {
+    timeStr = timeStr.replace('+00', '+00:00')
+  }
+  if (!timeStr.includes('+') && !timeStr.includes('Z')) {
+    timeStr += '+00:00'
   }
   
-  const [datePart, timePart] = parts
-  const [year, month, day] = datePart.split('-').map(Number)
-  const [hour, minute, second] = timePart.split(':').map(Number)
+  const utcDate = new Date(timeStr)
+  // Use toLocaleString to convert UTC to local timezone (Europe/Zurich)
+  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const localDate = new Date(localDateStr)
   
-  // Erstelle Date-Objekt in lokaler Zeitzone
-  return new Date(year, month - 1, day, hour, minute, second || 0)
+  return localDate
 }
 
 // Computed für direkt formatierte Appointments
