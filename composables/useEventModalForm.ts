@@ -937,6 +937,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       const localStart = convertLocalToUTC(formData.value.startDate, formData.value.startTime)
       const localEnd = convertLocalToUTC(formData.value.startDate, formData.value.endTime)
+      
+      console.log('🕐 DEBUG CONVERSION:', {
+        input: `${formData.value.startDate}T${formData.value.startTime}`,
+        output: localStart,
+        inputTime: formData.value.startTime,
+        outputTime: localStart?.split('T')[1]
+      })
+      
       const nowLocal = toLocalTimeString(new Date()) // Current timestamp (unchanged for now)
 
       const appointmentData = {
