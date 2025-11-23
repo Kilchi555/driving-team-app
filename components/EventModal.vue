@@ -5107,12 +5107,17 @@ watch(() => props.isVisible, async (newVisible) => {
         
         if (eventData?.start) {
           const startDateTime = new Date(eventData.start)
-          startDate = startDateTime.toISOString().split('T')[0]
-          startTime = startDateTime.toTimeString().substring(0, 5) // ✅ SIMPLE: Lokale Zeit HH:MM
+          
+          // Convert UTC from calendar to Zurich local time for display
+          const startLocalStr = startDateTime.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+          startDate = startLocalStr.substring(0, 10) // YYYY-MM-DD
+          startTime = startLocalStr.substring(11, 16) // HH:MM
           
           if (eventData.end) {
             const endDateTime = new Date(eventData.end)
-            endTime = endDateTime.toTimeString().substring(0, 5) // HH:MM format
+            // Convert UTC end time to Zurich local time
+            const endLocalStr = endDateTime.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+            endTime = endLocalStr.substring(11, 16) // HH:MM format
             
             // Berechne Dauer in Minuten
             const diffMs = endDateTime.getTime() - startDateTime.getTime()
