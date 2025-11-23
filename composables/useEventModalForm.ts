@@ -908,7 +908,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
         })
         
         const zurichMidnightStr = formatter.format(midnightUTC)
+        console.log('📍 zurichMidnightStr FULL:', zurichMidnightStr, 'length:', zurichMidnightStr.length)
+        console.log('📍 substring(11,13):', zurichMidnightStr.substring(11, 13))
+        
         const zurichHour = parseInt(zurichMidnightStr.substring(11, 13))
+        console.log('📍 zurichHour parsed:', zurichHour, 'isNaN:', isNaN(zurichHour))
+        
         const offsetHours = zurichHour // Zurich offset from UTC
         
         // Parse input time
