@@ -1049,11 +1049,20 @@ watch(() => props.isOpen, async (newIsOpen) => {
     // Setze Tab anhand defaultTab, falls übergeben
     if (props.defaultTab) {
       activeTab.value = props.defaultTab
-    } else if ((unconfirmedNext24hCount as any)?.value > 0) {
-      // Falls es unbestätigte gibt, priorisiere diesen Tab
-      activeTab.value = 'unconfirmed'
     } else {
-      activeTab.value = 'bewertungen'
+      // Priorisiere den Tab mit den meisten Pendenzen
+      const bewertungenCount = (pendingCount as any)?.value || 0
+      const unbestätigtCount = (unconfirmedNext24hCount as any)?.value || 0
+      
+      console.log('📊 Pendency counts:', { bewertungenCount, unbestätigtCount })
+      
+      if (unbestätigtCount > bewertungenCount) {
+        activeTab.value = 'unconfirmed'
+        console.log('📌 Switching to Unbestätigt tab (more pending)')
+      } else {
+        activeTab.value = 'bewertungen'
+        console.log('📌 Switching to Bewertungen tab')
+      }
     }
     await refreshData()
   } else if (!newIsOpen) {
