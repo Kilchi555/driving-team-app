@@ -2937,10 +2937,19 @@ const withAlpha = (hex: string, alpha: number) => {
 // New availability logic functions
 const determineDayMode = async (staffId: string, targetDate: Date): Promise<'free-day' | 'constrained'> => {
   try {
-    const dayStart = new Date(targetDate)
-    dayStart.setHours(0, 0, 0, 0)
-    const dayEnd = new Date(targetDate)
-    dayEnd.setHours(23, 59, 59, 999)
+    // Calculate timezone offset
+    const localDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate())
+    const utcDate = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()))
+    const offsetMs = localDate.getTime() - utcDate.getTime()
+    
+    // Convert local day boundaries to UTC
+    const dayStartLocal = new Date(targetDate)
+    dayStartLocal.setHours(0, 0, 0, 0)
+    const dayStartUtc = new Date(dayStartLocal.getTime() - offsetMs)
+    
+    const dayEndLocal = new Date(targetDate)
+    dayEndLocal.setHours(23, 59, 59, 999)
+    const dayEndUtc = new Date(dayEndLocal.getTime() - offsetMs)
     
     // Check for appointments on this day
     const { data: appointments } = await supabase
@@ -2949,16 +2958,16 @@ const determineDayMode = async (staffId: string, targetDate: Date): Promise<'fre
       .eq('staff_id', staffId)
       .eq('status', 'scheduled')
       .is('deleted_at', null)
-      .gte('start_time', dayStart.toISOString())
-      .lte('end_time', dayEnd.toISOString())
+      .gte('start_time', dayStartUtc.toISOString())
+      .lte('end_time', dayEndUtc.toISOString())
     
     // Check for external busy times on this day
     const { data: externalBusy } = await supabase
       .from('external_busy_times')
       .select('id')
       .eq('staff_id', staffId)
-      .gte('start_time', dayStart.toISOString())
-      .lte('end_time', dayEnd.toISOString())
+      .gte('start_time', dayStartUtc.toISOString())
+      .lte('end_time', dayEndUtc.toISOString())
     
     const hasAppointments = appointments && appointments.length > 0
     const hasExternalBusy = externalBusy && externalBusy.length > 0
@@ -2982,35 +2991,55 @@ const generateFreeDaySlots = async (staff: any, location: any, targetDate: Date,
   
   // Generate slots in intervals
   for (let timeMinutes = startTimeMinutes; timeMinutes < endTimeMinutes; timeMinutes += slotInterval) {
-    const slotTime = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 
-      Math.floor(timeMinutes / 60), timeMinutes % 60, 0, 0)
+    // Create UTC date: Working hours are in local time (Europe/Zurich), but we need to convert to UTC for storage
+    // Get offset between UTC and local time
+    const localDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate())
+    const utcDate = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()))
+    const offsetMs = localDate.getTime() - utcDate.getTime()
+    
+    // Create slot time in UTC (subtract the offset)
+    const slotTimeUtc = new Date(Date.UTC(
+      targetDate.getFullYear(), 
+      targetDate.getMonth(), 
+      targetDate.getDate(),
+      Math.floor(timeMinutes / 60), 
+      timeMinutes % 60, 
+      0, 
+      0
+    ))
+    // Adjust for timezone offset
+    slotTimeUtc.setTime(slotTimeUtc.getTime() - offsetMs)
     
     // Skip if slot is in the past
-    if (slotTime < new Date()) continue
+    if (slotTimeUtc < new Date()) continue
     
     const duration = Array.isArray(filters.value.duration_minutes) 
       ? filters.value.duration_minutes[0] || 45 
       : filters.value.duration_minutes || 45
     
-    const endTime = new Date(slotTime.getTime() + duration * 60000)
+    const endTimeUtc = new Date(slotTimeUtc.getTime() + duration * 60000)
     
-    // Check if slot fits within working hours
-    if (endTime.getHours() * 60 + endTime.getMinutes() > endTimeMinutes) continue
+    // Check if end time fits within working hours (check end time in local)
+    const endTimeLocal = new Date(endTimeUtc.getTime() + offsetMs)
+    if (endTimeLocal.getHours() * 60 + endTimeLocal.getMinutes() > endTimeMinutes) continue
+    
+    // For display, convert back to local time
+    const slotTimeLocal = new Date(slotTimeUtc.getTime() + offsetMs)
     
     slots.push({
-      id: `${staff.id}-${location.id}-${slotTime.getTime()}`,
+      id: `${staff.id}-${location.id}-${slotTimeUtc.getTime()}`,
       staff_id: staff.id,
       staff_name: `${staff.first_name} ${staff.last_name}`,
       location_id: location.id,
       location_name: location.name,
-      start_time: slotTime.toISOString(),
-      end_time: endTime.toISOString(),
+      start_time: slotTimeUtc.toISOString(),
+      end_time: endTimeUtc.toISOString(),
       duration_minutes: duration,
       is_available: true,
       week_number: Math.ceil((targetDate.getTime() - new Date().getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1,
-      day_name: slotTime.toLocaleDateString('de-DE', { weekday: 'long' }),
-      date_formatted: slotTime.toLocaleDateString('de-DE'),
-      time_formatted: slotTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+      day_name: slotTimeLocal.toLocaleDateString('de-DE', { weekday: 'long' }),
+      date_formatted: slotTimeLocal.toLocaleDateString('de-DE'),
+      time_formatted: slotTimeLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
     })
   }
   
@@ -3021,10 +3050,19 @@ const generateConstrainedSlots = async (staff: any, location: any, targetDate: D
   const slots: any[] = []
   
   try {
-    const dayStart = new Date(targetDate)
-    dayStart.setHours(0, 0, 0, 0)
-    const dayEnd = new Date(targetDate)
-    dayEnd.setHours(23, 59, 59, 999)
+    // Calculate timezone offset
+    const localDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate())
+    const utcDate = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()))
+    const offsetMs = localDate.getTime() - utcDate.getTime()
+    
+    // Convert local day boundaries to UTC for database queries
+    const dayStartLocal = new Date(targetDate)
+    dayStartLocal.setHours(0, 0, 0, 0)
+    const dayStartUtc = new Date(dayStartLocal.getTime() - offsetMs)
+    
+    const dayEndLocal = new Date(targetDate)
+    dayEndLocal.setHours(23, 59, 59, 999)
+    const dayEndUtc = new Date(dayEndLocal.getTime() - offsetMs)
     
     // Get appointments for this staff on this day at this location
     const { data: appointments } = await supabase
@@ -3034,8 +3072,8 @@ const generateConstrainedSlots = async (staff: any, location: any, targetDate: D
       .eq('location_id', location.id)
       .eq('status', 'scheduled')
       .is('deleted_at', null)
-      .gte('start_time', dayStart.toISOString())
-      .lte('end_time', dayEnd.toISOString())
+      .gte('start_time', dayStartUtc.toISOString())
+      .lte('end_time', dayEndUtc.toISOString())
       .order('start_time')
     
     // Get external busy times for this staff on this day
@@ -3043,8 +3081,8 @@ const generateConstrainedSlots = async (staff: any, location: any, targetDate: D
       .from('external_busy_times')
       .select('start_time, end_time')
       .eq('staff_id', staff.id)
-      .gte('start_time', dayStart.toISOString())
-      .lte('end_time', dayEnd.toISOString())
+      .gte('start_time', dayStartUtc.toISOString())
+      .lte('end_time', dayEndUtc.toISOString())
       .order('start_time')
     
     // Combine all busy times
@@ -3093,35 +3131,47 @@ const generateConstrainedSlots = async (staff: any, location: any, targetDate: D
 const generateSlotsInRange = async (staff: any, location: any, targetDate: Date, startTime: Date, endTime: Date, slotInterval: number) => {
   const slots: any[] = []
   
+  // Get timezone offset
+  const localDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate())
+  const utcDate = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()))
+  const offsetMs = localDate.getTime() - utcDate.getTime()
+  
+  // startTime and endTime are in LOCAL time, convert to UTC for iteration
+  const startTimeUtc = new Date(startTime.getTime() - offsetMs)
+  const endTimeUtc = new Date(endTime.getTime() - offsetMs)
+  
   const slotIntervalMs = slotInterval * 60000
   const duration = Array.isArray(filters.value.duration_minutes) 
     ? filters.value.duration_minutes[0] || 45 
     : filters.value.duration_minutes || 45
   
-  for (let time = startTime.getTime(); time < endTime.getTime(); time += slotIntervalMs) {
-    const slotTime = new Date(time)
-    const slotEndTime = new Date(time + duration * 60000)
+  for (let time = startTimeUtc.getTime(); time < endTimeUtc.getTime(); time += slotIntervalMs) {
+    const slotTimeUtc = new Date(time)
+    const slotEndTimeUtc = new Date(time + duration * 60000)
     
     // Skip if slot is in the past
-    if (slotTime < new Date()) continue
+    if (slotTimeUtc < new Date()) continue
     
     // Skip if slot doesn't fit in range
-    if (slotEndTime.getTime() > endTime.getTime()) continue
+    if (slotEndTimeUtc.getTime() > endTimeUtc.getTime()) continue
+    
+    // For display, convert back to local time
+    const slotTimeLocal = new Date(slotTimeUtc.getTime() + offsetMs)
     
     slots.push({
-      id: `${staff.id}-${location.id}-${slotTime.getTime()}`,
+      id: `${staff.id}-${location.id}-${slotTimeUtc.getTime()}`,
       staff_id: staff.id,
       staff_name: `${staff.first_name} ${staff.last_name}`,
       location_id: location.id,
       location_name: location.name,
-      start_time: slotTime.toISOString(),
-      end_time: slotEndTime.toISOString(),
+      start_time: slotTimeUtc.toISOString(),
+      end_time: slotEndTimeUtc.toISOString(),
       duration_minutes: duration,
       is_available: true,
       week_number: Math.ceil((targetDate.getTime() - new Date().getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1,
-      day_name: slotTime.toLocaleDateString('de-DE', { weekday: 'long' }),
-      date_formatted: slotTime.toLocaleDateString('de-DE'),
-      time_formatted: slotTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+      day_name: slotTimeLocal.toLocaleDateString('de-DE', { weekday: 'long' }),
+      date_formatted: slotTimeLocal.toLocaleDateString('de-DE'),
+      time_formatted: slotTimeLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
     })
   }
   
