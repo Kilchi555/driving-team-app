@@ -1169,7 +1169,7 @@ const currentWeekRangeLabel = computed(() => {
   if (!weekSlots.length) return ''
   const start = new Date(weekSlots[0].start_time)
   const end = new Date(weekSlots[weekSlots.length - 1].start_time)
-  const fmt = (d: Date) => d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })
+  const fmt = (d: Date) => d.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit' })
   return `${fmt(start)} – ${fmt(end)}`
 })
 
@@ -1184,16 +1184,20 @@ const getGridClasses = (itemCount: number) => {
 
 // Methods
 const formatTime = (dateTimeString: string) => {
+  // Convert UTC to Zurich timezone
   const date = new Date(dateTimeString)
-  return date.toLocaleTimeString('de-DE', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  return date.toLocaleTimeString('sv-SE', {
+    timeZone: 'Europe/Zurich',
+    hour: '2-digit',
+    minute: '2-digit'
   })
 }
 
 const formatDate = (dateTimeString: string) => {
+  // Convert UTC to Zurich timezone
   const date = new Date(dateTimeString)
   return date.toLocaleDateString('de-DE', {
+    timeZone: 'Europe/Zurich',
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -1469,8 +1473,8 @@ const getWeeksForLocation = (location: any) => {
     // Get start and end date for this week
     const firstSlot = slots[0]
     const lastSlot = slots[slots.length - 1]
-    const startDate = new Date(firstSlot.start_time).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
-    const endDate = new Date(lastSlot.start_time).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+    const startDate = new Date(firstSlot.start_time).toLocaleDateString('de-DE', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit' })
+    const endDate = new Date(lastSlot.start_time).toLocaleDateString('de-DE', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit' })
     
     return {
       number: weekNumber,
