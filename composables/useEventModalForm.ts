@@ -888,11 +888,55 @@ const useEventModalForm = (currentUser?: any, refs?: {
       const confirmationToken = isChargeableLesson ? crypto.randomUUID?.() || Math.random().toString(36).slice(2) : null
 
       // Build timestamps: Convert from local (Zurich) time to UTC for database storage
-      const startDateObj = new Date(`${formData.value.startDate}T${formData.value.startTime}:00`)
-      const endDateObj = new Date(`${formData.value.startDate}T${formData.value.endTime}:00`)
-      // Use localTimeToUTC to convert Zurich local time to UTC (same as BookingPage)
-      const localStart = localTimeToUTC(startDateObj)
-      const localEnd = localTimeToUTC(endDateObj)
+      // formData values are already in Zurich local time (e.g., "11:00")
+      // We need to convert them to UTC ISO strings (e.g., "2025-11-17T10:00:00")
+      
+      const convertLocalToUTC = (dateStr: string, timeStr: string): string => {
+        // Get Zurich timezone offset at this date
+        const [year, month, day] = dateStr.split('-').map(Number)
+        const midnightUTC = new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
+        
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Europe/Zurich',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        })
+        
+        const zurichMidnightStr = formatter.format(midnightUTC)
+        const zurichHour = parseInt(zurichMidnightStr.substring(11, 13))
+        const offsetHours = zurichHour // Zurich offset from UTC
+        
+        // Parse input time
+        const [hours, minutes] = timeStr.split(':').map(Number)
+        
+        // Convert: UTC = Local - Offset
+        let utcHours = hours - offsetHours
+        let utcDay = day
+        
+        // Handle day wrap-around
+        if (utcHours < 0) {
+          utcHours += 24
+          utcDay -= 1
+        }
+        if (utcHours >= 24) {
+          utcHours -= 24
+          utcDay += 1
+        }
+        
+        const paddedHours = String(utcHours).padStart(2, '0')
+        const paddedMinutes = String(minutes).padStart(2, '0')
+        const paddedDay = String(utcDay).padStart(2, '0')
+        
+        return `${year}-${String(month).padStart(2, '0')}-${paddedDay}T${paddedHours}:${paddedMinutes}:00`
+      }
+      
+      const localStart = convertLocalToUTC(formData.value.startDate, formData.value.startTime)
+      const localEnd = convertLocalToUTC(formData.value.startDate, formData.value.endTime)
       const nowLocal = toLocalTimeString(new Date()) // Current timestamp (unchanged for now)
 
       const appointmentData = {
