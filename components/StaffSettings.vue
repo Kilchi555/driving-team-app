@@ -1663,12 +1663,17 @@ const handleLogout = async () => {
 const formatWorkingTime = (timeValue: any): string => {
   if (!timeValue) return '08:00'
   
+  console.log('🔍 formatWorkingTime DEBUG:', { input: timeValue, type: typeof timeValue })
+  
   // If it's already HH:MM format
   if (typeof timeValue === 'string' && timeValue.includes(':')) {
     const [hours, minutes] = timeValue.split(':')
-    return `${hours.padStart(2, '0')}:${minutes.slice(0, 2).padStart(2, '0')}`
+    const result = `${hours.padStart(2, '0')}:${minutes.slice(0, 2).padStart(2, '0')}`
+    console.log('✅ formatWorkingTime RESULT:', result)
+    return result
   }
   
+  console.log('❌ formatWorkingTime fallback to 08:00')
   return '08:00'
 }
 
