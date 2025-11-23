@@ -1659,14 +1659,27 @@ const handleLogout = async () => {
   }
 }
 
+// Helper function to extract HH:MM from working hours data
+const formatWorkingTime = (timeValue: any): string => {
+  if (!timeValue) return '08:00'
+  
+  // If it's already HH:MM format
+  if (typeof timeValue === 'string' && timeValue.includes(':')) {
+    const [hours, minutes] = timeValue.split(':')
+    return `${hours.padStart(2, '0')}:${minutes.slice(0, 2).padStart(2, '0')}`
+  }
+  
+  return '08:00'
+}
+
 // Working Hours Methods
 const initializeWorkingHoursForm = () => {
   // Initialize form for all weekdays (Legacy)
   weekdays.forEach(day => {
     const existingHour = workingHoursByDay.value[day.value]
     workingHoursForm.value[day.value] = {
-      start_time: existingHour?.start_time || '08:00',
-      end_time: existingHour?.end_time || '18:00',
+      start_time: formatWorkingTime(existingHour?.start_time),
+      end_time: formatWorkingTime(existingHour?.end_time),
       is_active: existingHour?.is_active || false
     }
   })
@@ -1687,8 +1700,8 @@ const initializeWorkingHoursForm = () => {
         is_active: true,
         blocks: dayWorkingHours.map((wh: any) => ({
           id: wh.id,
-          start_time: wh.start_time,
-          end_time: wh.end_time,
+          start_time: formatWorkingTime(wh.start_time),
+          end_time: formatWorkingTime(wh.end_time),
           is_active: true
         }))
       }
