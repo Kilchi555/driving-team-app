@@ -2,7 +2,7 @@
 import { ref, computed, reactive } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useCategoryData } from '~/composables/useCategoryData'
-import { toLocalTimeString } from '~/utils/dateUtils'
+import { toLocalTimeString, localTimeToUTC } from '~/utils/dateUtils'
 import { useEventTypes } from '~/composables/useEventTypes'
 
 // Types (können später in separates types file)
@@ -881,10 +881,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // Generate confirmation token for chargeable appointments
       const confirmationToken = isChargeableLesson ? crypto.randomUUID?.() || Math.random().toString(36).slice(2) : null
 
-      // Build local timestamps for start/end and created/updated
-      const localStart = toLocalTimeString(new Date(`${formData.value.startDate}T${formData.value.startTime}:00`))
-      const localEnd = toLocalTimeString(new Date(`${formData.value.startDate}T${formData.value.endTime}:00`))
-      const nowLocal = toLocalTimeString(new Date())
+      // Build timestamps: Convert from local (Zurich) time to UTC for database storage
+      const startDateObj = new Date(`${formData.value.startDate}T${formData.value.startTime}:00`)
+      const endDateObj = new Date(`${formData.value.startDate}T${formData.value.endTime}:00`)
+      const localStart = localTimeToUTC(startDateObj)
+      const localEnd = localTimeToUTC(endDateObj)
+      const nowLocal = toLocalTimeString(new Date()) // Current timestamp (unchanged for now)
 
       const appointmentData = {
         title: formData.value.title,

@@ -2,21 +2,72 @@
 // ✅ Korrigierte Datums- und Zeitformatierung für lokale Zeiten
 
 /**
- * Konvertiert ein Date-Objekt zu einem ISO-String für die Datenbank
- * Wichtig: Zeiten sind bereits als lokale Zeiten in der DB gespeichert
- * Diese Funktion behält die lokale Zeit bei (keine UTC-Konvertierung)
+ * ⚠️ DEPRECATED: Verwendet alte Logik, verwende stattdessen localTimeToUTC
+ * 
+ * Diese Funktion speichert Zeiten falsch! Sie nimmt Browser-Timezone statt Zurich.
+ * Verwende localTimeToUTC() stattdessen!
  */
 export const toLocalTimeString = (date: Date): string => {
-  // Verwende lokale Zeit-Komponenten um lokale Zeit beizubehalten
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
+  // FALLBACK - NICHT VERWENDEN FÜR NEUE TERMINE!
+  const isoString = date.toISOString()
+  return isoString.substring(0, 19) // YYYY-MM-DDTHH:MM:SS
+}
+
+/**
+ * Konvertiert eine eingegeben Zeit (gedacht als Zurich local) zu UTC ISO-String
+ * 
+ * ✅ KORREKT: Speichert als UTC
+ * 
+ * INPUT: Date-Objekt der in Browser-TZ ist mit der GEWOLLTEN Zurich-Zeit
+ *        z.B. new Date("2025-11-24T11:00:00") = User meinte 11:00 Zurich
+ * 
+ * OUTPUT: ISO-String in UTC (z.B. "2025-11-24T10:00:00" für 11:00 Zurich wenn UTC+1)
+ * 
+ * Die Logik:
+ * 1. Berechne Zurich offset für dieses Datum
+ * 2. Zurich-Zeit minus Offset = UTC-Zeit
+ * 3. Speichere UTC-Zeit in DB
+ */
+export const localTimeToUTC = (date: Date): string => {
+  // Berechne Zurich offset mittels Intl
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Zurich',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
   
-  // Format: YYYY-MM-DDTHH:MM:SS (lokale Zeit, kein Z)
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+  // Midnight UTC für diese Datum
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const day = date.getDate()
+  const midnightUtc = new Date(Date.UTC(year, month, day, 0, 0, 0))
+  
+  // Was ist die Zurich-Zeit wenn UTC midnight ist?
+  const zurichMidnightStr = formatter.format(midnightUtc)
+  const match = zurichMidnightStr.match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/)
+  if (!match) return date.toISOString().substring(0, 19)
+  
+  const [, , , , zurichHour, zurichMin, zurichSec] = match
+  const zurichOffsetMinutes = (parseInt(zurichHour) * 60) + parseInt(zurichMin)
+  const zurichOffsetMs = zurichOffsetMinutes * 60 * 1000
+  
+  // Die Input date ist "11:00" im Browser
+  // Das ist "11:00" in lokaler Browser-Zeit
+  // Aber wir wollen es als "11:00" Zurich interpretieren
+  // Also: Berechne UTC Zeit = 11:00 Zurich - Offset
+  
+  // Input date Zeit in MS seit epoch
+  const inputTimeMs = date.getTime()
+  // Das ist die Zurich-Zeit! Jetzt minus Offset = UTC
+  const utcTimeMs = inputTimeMs - zurichOffsetMs
+  
+  const utcDate = new Date(utcTimeMs)
+  return utcDate.toISOString().substring(0, 19)
 }
 
 /**
