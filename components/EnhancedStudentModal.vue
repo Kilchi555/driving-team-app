@@ -962,7 +962,7 @@
       :is-open="showEvaluationModal"
       :appointment="selectedAppointmentForEvaluation"
       :student-category="selectedAppointmentForEvaluation.type || selectedStudent?.category?.[0] || 'B'"
-      :current-user="{ id: selectedStudent?.id }"
+      :current-user="currentUser"
       @close="closeEvaluationModal"
       @saved="onEvaluationSaved"
     />
