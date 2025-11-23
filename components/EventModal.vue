@@ -5109,15 +5109,34 @@ watch(() => props.isVisible, async (newVisible) => {
           const startDateTime = new Date(eventData.start)
           
           // Convert UTC from calendar to Zurich local time for display
-          const startLocalStr = startDateTime.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
-          startDate = startLocalStr.substring(0, 10) // YYYY-MM-DD
-          startTime = startLocalStr.substring(11, 16) // HH:MM
+          // Use Intl.DateTimeFormat for reliable timezone conversion
+          const zurichDateFormatter = new Intl.DateTimeFormat('en-CA', { 
+            timeZone: 'Europe/Zurich',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })
+          
+          const startParts = zurichDateFormatter.formatToParts(startDateTime)
+          startDate = `${startParts.find(p => p.type === 'year').value}-${startParts.find(p => p.type === 'month').value}-${startParts.find(p => p.type === 'day').value}`
+          startTime = `${startParts.find(p => p.type === 'hour').value}:${startParts.find(p => p.type === 'minute').value}`
+          
+          console.log('⏰ DEBUG: UTC start conversion:', {
+            inputUTC: eventData.start,
+            parsedStart: startDateTime.toISOString(),
+            zurichDate: startDate,
+            zurichTime: startTime,
+            parts: startParts
+          })
           
           if (eventData.end) {
             const endDateTime = new Date(eventData.end)
-            // Convert UTC end time to Zurich local time
-            const endLocalStr = endDateTime.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
-            endTime = endLocalStr.substring(11, 16) // HH:MM format
+            const endParts = zurichDateFormatter.formatToParts(endDateTime)
+            endTime = `${endParts.find(p => p.type === 'hour').value}:${endParts.find(p => p.type === 'minute').value}`
             
             // Berechne Dauer in Minuten
             const diffMs = endDateTime.getTime() - startDateTime.getTime()
