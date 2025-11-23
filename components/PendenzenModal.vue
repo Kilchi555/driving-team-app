@@ -32,14 +32,21 @@
       </div>
 
       <!-- Tabs -->
-      <div class="bg-gray-50 border-b px-4">
-        <div class="flex space-x-4">
+      <div class="bg-gray-50 border-b px-4 overflow-x-auto">
+        <div class="flex space-x-4 min-w-min">
           <button
-            :class="['py-3 border-b-2 flex items-center space-x-2', activeTab === 'allgemein' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
+            :class="['py-3 border-b-2 flex items-center space-x-2 whitespace-nowrap', activeTab === 'allgemein' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
             @click="activeTab = 'allgemein'"
           >
             <span>Allgemein</span>
             <span v-if="(pendingCount + unconfirmedNext24hCount) > 0" class="ml-1 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800">{{ pendingCount + unconfirmedNext24hCount }}</span>
+          </button>
+          <button
+            :class="['py-3 border-b-2 flex items-center space-x-2 whitespace-nowrap', activeTab === 'pendenzen' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
+            @click="activeTab = 'pendenzen'"
+          >
+            <span>Pendenzen</span>
+            <span v-if="pendenciesCount > 0" class="ml-1 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">{{ pendenciesCount }}</span>
           </button>
           <button
             :class="['py-3 border-b-2', activeTab === 'bewertungen' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
@@ -48,7 +55,7 @@
             Bewertungen
           </button>
           <button
-            :class="['py-3 border-b-2 flex items-center space-x-2', activeTab === 'unconfirmed' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
+            :class="['py-3 border-b-2 flex items-center space-x-2 whitespace-nowrap', activeTab === 'unconfirmed' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
             @click="activeTab = 'unconfirmed'"
           >
             <span>Unbestätigt</span>
@@ -149,6 +156,71 @@
                   </div>
                   <span class="px-2 py-1 rounded text-xs font-semibold bg-blue-200 text-blue-800">Bewertung</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pendenzen Tab -->
+        <div v-else-if="activeTab === 'pendenzen'" class="p-4 space-y-3">
+          <div v-if="userPendencies.length === 0" class="flex items-center justify-center py-8">
+            <div class="text-center px-4">
+              <div class="text-6xl mb-4">✅</div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Pendenzen!</h3>
+              <p class="text-gray-600 mb-4">Alle Aufgaben erledigt</p>
+            </div>
+          </div>
+
+          <div v-else>
+            <div
+              v-for="pendency in userPendencies"
+              :key="pendency.id"
+              :class="[
+                'rounded-lg border p-4 hover:shadow-md transition-all cursor-pointer',
+                pendency.status === 'abgeschlossen' ? 'border-green-300 bg-green-50' :
+                pendency.status === 'überfällig' ? 'border-red-300 bg-red-50' :
+                pendency.status === 'in_bearbeitung' ? 'border-yellow-300 bg-yellow-50' :
+                'border-blue-300 bg-blue-50'
+              ]"
+            >
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <div class="flex items-center space-x-2 mb-1">
+                    <h4 class="font-semibold text-gray-900">{{ pendency.title }}</h4>
+                    <span :class="[
+                      'text-xs px-2 py-0.5 rounded-full font-semibold',
+                      pendency.priority === 'kritisch' ? 'bg-red-200 text-red-800' :
+                      pendency.priority === 'hoch' ? 'bg-orange-200 text-orange-800' :
+                      pendency.priority === 'mittel' ? 'bg-yellow-200 text-yellow-800' :
+                      'bg-gray-200 text-gray-800'
+                    ]">
+                      {{ pendency.priority }}
+                    </span>
+                    <span :class="[
+                      'text-xs px-2 py-0.5 rounded-full font-semibold',
+                      pendency.status === 'abgeschlossen' ? 'bg-green-200 text-green-800' :
+                      pendency.status === 'überfällig' ? 'bg-red-200 text-red-800' :
+                      pendency.status === 'in_bearbeitung' ? 'bg-yellow-200 text-yellow-800' :
+                      'bg-blue-200 text-blue-800'
+                    ]">
+                      {{ pendency.status }}
+                    </span>
+                  </div>
+                  <p v-if="pendency.description" class="text-sm text-gray-600 mb-2">{{ pendency.description }}</p>
+                  <div class="text-xs text-gray-500 flex items-center space-x-2">
+                    <span>📅 {{ new Date(pendency.due_date).toLocaleDateString('de-CH') }}</span>
+                    <span v-if="pendency.category">• {{ pendency.category }}</span>
+                  </div>
+                </div>
+                <select 
+                  :value="pendency.status"
+                  @change="(e) => changeStatus(pendency.id, (e.target as any).value)"
+                  class="ml-2 px-2 py-1 text-sm border rounded bg-white hover:bg-gray-50"
+                >
+                  <option value="pendent">Pendent</option>
+                  <option value="in_bearbeitung">In Bearbeitung</option>
+                  <option value="abgeschlossen">Abgeschlossen</option>
+                </select>
               </div>
             </div>
           </div>
@@ -437,7 +509,9 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { nextTick } from 'vue'
 import { usePendingTasks } from '~/composables/usePendingTasks'
+import { usePendencies } from '~/composables/usePendencies'
 import { useCategoryData } from '~/composables/useCategoryData'
+import { useCurrentUser } from '~/composables/useCurrentUser'
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import CashPaymentConfirmation from '~/components/CashPaymentConfirmation.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
@@ -448,7 +522,7 @@ import { getSupabase } from '~/utils/supabase'
 interface Props {
   isOpen: boolean
   currentUser: any
-  defaultTab?: 'allgemein' | 'bewertungen' | 'unconfirmed'
+  defaultTab?: 'allgemein' | 'pendenzen' | 'bewertungen' | 'unconfirmed'
 }
 
 const props = defineProps<Props>()
@@ -476,10 +550,21 @@ const {
 // Category Data Composable
 const { allCategories, loadCategories } = useCategoryData()
 
+// Get current user
+const { currentUser } = useCurrentUser()
+
+// Pendencies composable
+const { 
+  pendencies, 
+  loadPendencies, 
+  changeStatus,
+  isLoading: pendenciesLoading
+} = usePendencies()
+
 // Modal state
 const showEvaluationModal = ref(false)
 const selectedAppointment = ref<any>(null)
-const activeTab = ref<'allgemein' | 'bewertungen' | 'unconfirmed'>(props.defaultTab || 'allgemein')
+const activeTab = ref<'allgemein' | 'pendenzen' | 'bewertungen' | 'unconfirmed'>(props.defaultTab || 'allgemein')
 
 // ✅ NEU: Filter für unbestätigte Termine
 const dueFilter = ref<'all' | 'due' | 'overdue_24h' | 'overdue_past'>('all')
@@ -498,6 +583,19 @@ const currentReminderAppointment = ref<any>(null)
 const reminderHistory = ref<any[]>([])
 const isLoadingReminders = ref(false)
 const isSendingReminder = ref(false)
+
+// Computed: Pendenzen die dem User zugewiesen sind oder von ihm erstellt wurden
+const userPendencies = computed(() => {
+  if (!currentUser.value?.id) return []
+  return pendencies.value.filter((p: any) => 
+    (p.assigned_to === currentUser.value?.id || p.created_by === currentUser.value?.id) &&
+    p.status !== 'gelöscht'
+  )
+})
+
+const pendenciesCount = computed(() => {
+  return userPendencies.value.filter((p: any) => p.status !== 'abgeschlossen').length
+})
 
 // Computed: Nur Bewertungen (ohne pending_confirmation)
 const evaluationAppointments = computed(() => {
@@ -931,7 +1029,15 @@ const refreshData = async () => {
   // Lade Kategorien aus der DB
   await loadCategories()
   
+  // Lade Pending Tasks (Bewertungen + Unbestätigte)
   await fetchPendingTasks(props.currentUser.id, props.currentUser.role)
+  
+  // Lade Pendenzen für diesen User
+  // Nutze tenant_id vom currentUser
+  if (props.currentUser.tenant_id) {
+    await loadPendencies(props.currentUser.tenant_id)
+  }
+  
   console.log('✅ PendenzenModal - data refreshed, count:', pendingCount.value)
 }
 
