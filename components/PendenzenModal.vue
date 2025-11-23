@@ -94,8 +94,17 @@
 
         <!-- Allgemein Tab (Overview) -->
         <div v-else-if="activeTab === 'allgemein'" class="p-4 space-y-6">
+          <!-- Empty State for Allgemein Tab -->
+          <div v-if="pendingCount === 0 && unconfirmedNext24hCount === 0" class="flex items-center justify-center py-8">
+            <div class="text-center px-4">
+              <div class="text-6xl mb-4">✨</div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Alles erledigt!</h3>
+              <p class="text-gray-600 mb-4">Aktuell keine ausstehenden Aufgaben</p>
+            </div>
+          </div>
+
           <!-- Unconfirmed Section -->
-          <div v-if="unconfirmedNext24hCount > 0">
+          <div v-else-if="unconfirmedNext24hCount > 0">
             <h3 class="text-sm font-bold text-gray-700 mb-2 uppercase">Unbestätigte Termine ({{ unconfirmedNext24hCount }})</h3>
             <div class="space-y-2">
               <div
@@ -121,7 +130,7 @@
           </div>
 
           <!-- Pending Section -->
-          <div v-if="pendingCount > 0">
+          <div v-else-if="pendingCount > 0">
             <h3 class="text-sm font-bold text-gray-700 mb-2 uppercase">Ausstehende Bewertungen ({{ pendingCount }})</h3>
             <div class="space-y-2">
               <div
