@@ -225,12 +225,18 @@ const useEventModalForm = (currentUser?: any, refs?: {
     
     const isOtherEvent = appointmentType && otherEventTypes.includes(appointmentType.toLowerCase())
     
-    // Zeit-Verarbeitung
+    // Zeit-Verarbeitung: Convert UTC from DB to Zurich local time for display
     const startDateTime = new Date(appointment.start_time || appointment.start)
     const endDateTime = appointment.end_time || appointment.end ? new Date(appointment.end_time || appointment.end) : null
-    const startDate = startDateTime.toISOString().split('T')[0]
-    const startTime = startDateTime.toTimeString().slice(0, 5)
-    const endTime = endDateTime ? endDateTime.toTimeString().slice(0, 5) : ''
+    
+    // Convert UTC to Zurich local time using toLocaleString
+    const startLocalStr = startDateTime.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+    const startDate = startLocalStr.substring(0, 10) // YYYY-MM-DD
+    const startTime = startLocalStr.substring(11, 16) // HH:MM
+    
+    const endTime = endDateTime 
+      ? endDateTime.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' }).substring(11, 16)
+      : ''
     
     let duration = appointment.duration_minutes || appointment.extendedProps?.duration_minutes
     console.log('🔍 Duration calculation debug:', {
@@ -884,6 +890,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // Build timestamps: Convert from local (Zurich) time to UTC for database storage
       const startDateObj = new Date(`${formData.value.startDate}T${formData.value.startTime}:00`)
       const endDateObj = new Date(`${formData.value.startDate}T${formData.value.endTime}:00`)
+      // Use localTimeToUTC to convert Zurich local time to UTC (same as BookingPage)
       const localStart = localTimeToUTC(startDateObj)
       const localEnd = localTimeToUTC(endDateObj)
       const nowLocal = toLocalTimeString(new Date()) // Current timestamp (unchanged for now)
