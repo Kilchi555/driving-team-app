@@ -23,10 +23,17 @@ export const toLocalTimeString = (date: Date): string => {
  * 
  * OUTPUT: ISO-String in UTC (z.B. "2025-11-24T10:00:00" für 11:00 Zurich wenn UTC+1)
  * 
- * Die Logik:
- * 1. Berechne Zurich offset für dieses Datum
- * 2. Zurich-Zeit minus Offset = UTC-Zeit
- * 3. Speichere UTC-Zeit in DB
+ * MATHEMATIK:
+ * - UTC midnight = 00:00
+ * - Zurich timezone offset = +1 (winter) oder +2 (summer)
+ * - Wenn UTC ist 00:00, dann ist es 01:00 in Zurich (offset)
+ * - User gibt 11:00 ein (gemeint als Zurich-Zeit)
+ * - UTC equivalent = 11:00 - 1 Stunde = 10:00 UTC
+ * 
+ * Browser behavior:
+ * - new Date("2025-11-24T11:00") = 11:00 in BROWSER's local timezone
+ * - Wenn Browser auch in Zurich-TZ: Das ist schon richtig
+ * - Wenn Browser woanders: Falsch! Aber wir berechnen offset dynamisch
  */
 export const localTimeToUTC = (date: Date): string => {
   // Berechne Zurich offset mittels Intl
@@ -48,23 +55,62 @@ export const localTimeToUTC = (date: Date): string => {
   const midnightUtc = new Date(Date.UTC(year, month, day, 0, 0, 0))
   
   // Was ist die Zurich-Zeit wenn UTC midnight ist?
+  // z.B. "01:00" (UTC+1 im Winter) oder "02:00" (UTC+2 im Sommer)
   const zurichMidnightStr = formatter.format(midnightUtc)
   const match = zurichMidnightStr.match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/)
   if (!match) return date.toISOString().substring(0, 19)
   
-  const [, , , , zurichHour, zurichMin, zurichSec] = match
-  const zurichOffsetMinutes = (parseInt(zurichHour) * 60) + parseInt(zurichMin)
+  const [, , , , zurichHour, zurichMin] = match
+  const zurichOffsetHours = parseInt(zurichHour)
+  const zurichOffsetMinutes = (zurichOffsetHours * 60) + parseInt(zurichMin)
   const zurichOffsetMs = zurichOffsetMinutes * 60 * 1000
   
-  // Die Input date ist "11:00" im Browser
-  // Das ist "11:00" in lokaler Browser-Zeit
-  // Aber wir wollen es als "11:00" Zurich interpretieren
-  // Also: Berechne UTC Zeit = 11:00 Zurich - Offset
+  // Die Input date wurde vom Browser als lokale Zeit interpretiert
+  // z.B. new Date("2025-11-24T11:00") = 11:00 in Browser-TZ
+  // 
+  // Aber wir wollen es als 11:00 ZURICH Zeit speichern
+  // Problem: Browser kennt Zurich nicht, nur seine eigene TZ
+  // 
+  // Lösung: 
+  // 1. Input ist das was der Browser sieht (z.B. 11:00)
+  // 2. Das soll 11:00 Zurich sein
+  // 3. UTC = Zurich-Time - Zurich-Offset
+  // 4. Also: UTC = input - offset
   
-  // Input date Zeit in MS seit epoch
   const inputTimeMs = date.getTime()
-  // Das ist die Zurich-Zeit! Jetzt minus Offset = UTC
-  const utcTimeMs = inputTimeMs - zurichOffsetMs
+  // WICHTIG: Das ist die Zeit wie der Browser sie sieht
+  // Wenn Input "2025-11-24T11:00" war und Browser in Zurich: 
+  //   inputTimeMs = die absolute Zeit für 11:00 Zurich
+  // Wenn Browser in UTC:
+  //   inputTimeMs = die absolute Zeit für 11:00 UTC
+  // 
+  // Wir wollen IMMER die UTC Zeit!
+  // Also: inputTimeMs repräsentiert "11:00 in Browser-TZ"
+  // Wir wollen "11:00 in Zurich-TZ"
+  // Wenn Browser ≠ Zurich: wir müssen die Differenz rausrechnen
+  //
+  // Browser-Offset = getTimezoneOffset() (immer negative Werte)
+  // z.B. UTC-Bereich: -0, UTC+1-Bereich: -60, etc
+  // 
+  // Browser-Offset zur Zurich-Offset Umrechnung:
+  const browserOffsetMinutes = date.getTimezoneOffset() // NEGATIVE werte!
+  const browserOffsetMs = browserOffsetMinutes * 60 * 1000
+  
+  // Input ist "11:00 in Browser-TZ"
+  // Umwandeln zu UTC: addiere Browser-Offset (macht Negativ!)
+  // Dann von UTC zu Zurich: subtrahiere Zurich-Offset
+  // Dann von Zurich zu UTC (für DB): subtrahiere Zurich-Offset nochmal
+  
+  // Einfacher: 
+  // UTC = Input + BrowserOffset - ZurichOffset
+  // Warum: 
+  //   Input + BrowserOffset = Die absolute UTC-Zeit
+  //   Aber die ist "11:00 UTC" wenn Browser in UTC
+  //   Wir wollen "11:00 Zurich" also UTC-equivalent
+  //   11:00 Zurich - 1h = 10:00 UTC
+  //   Also - ZurichOffset nochmal
+  
+  const utcTimeMs = inputTimeMs + browserOffsetMs - zurichOffsetMs
   
   const utcDate = new Date(utcTimeMs)
   return utcDate.toISOString().substring(0, 19)
