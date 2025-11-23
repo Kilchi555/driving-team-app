@@ -35,24 +35,34 @@
       <div class="bg-gray-50 border-b px-4 overflow-x-auto">
         <div class="flex space-x-4 min-w-min">
           <button
-            :class="['py-3 border-b-2 flex items-center space-x-2 whitespace-nowrap', activeTab === 'pendenzen' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
+            :class="[
+              'py-3 border-b-2 whitespace-nowrap',
+              activeTab === 'pendenzen' ? 'border-green-600' : 'border-transparent',
+              pendenciesCount > 0 ? 'text-red-600 font-bold' : activeTab === 'pendenzen' ? 'text-green-700' : 'text-gray-500'
+            ]"
             @click="activeTab = 'pendenzen'"
           >
-            <span>Pendenzen</span>
-            <span v-if="pendenciesCount > 0" class="ml-1 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">{{ pendenciesCount }}</span>
+            Allgemein
           </button>
           <button
-            :class="['py-3 border-b-2', activeTab === 'bewertungen' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
+            :class="[
+              'py-3 border-b-2 whitespace-nowrap',
+              activeTab === 'bewertungen' ? 'border-green-600' : 'border-transparent',
+              pendingCount > 0 ? 'text-red-600 font-bold' : activeTab === 'bewertungen' ? 'text-green-700' : 'text-gray-500'
+            ]"
             @click="activeTab = 'bewertungen'"
           >
             Bewertungen
           </button>
           <button
-            :class="['py-3 border-b-2 flex items-center space-x-2 whitespace-nowrap', activeTab === 'unconfirmed' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
+            :class="[
+              'py-3 border-b-2 whitespace-nowrap',
+              activeTab === 'unconfirmed' ? 'border-green-600' : 'border-transparent',
+              unconfirmedNext24hCount > 0 ? 'text-red-600 font-bold' : activeTab === 'unconfirmed' ? 'text-green-700' : 'text-gray-500'
+            ]"
             @click="activeTab = 'unconfirmed'"
           >
-            <span>Unbestätigt</span>
-            <span v-if="unconfirmedNext24hCount > 0" class="ml-1 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800">{{ unconfirmedNext24hCount }}</span>
+            Unbestätigt
           </button>
         </div>
       </div>

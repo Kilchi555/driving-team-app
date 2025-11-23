@@ -57,8 +57,23 @@ const isTodayActive = ref(false)
 const currentMonth = ref('')
 const selectedStaffId = ref<string | null>(null) // For admin staff filtering
 
-// Computed: Default tab is always Pendenzen
+// Computed: Dynamically select the default tab based on pending counts
 const defaultPendenzenTab = computed(() => {
+  const pendenzenCount = pendingTasksComposable.unconfirmedNext24hCount?.value || 0
+  const bewertungenCount = pendingCount.value || 0
+  const unbestätigtCount = unconfirmedNext24hCount.value || 0
+  
+  console.log('📊 Default tab selection:', { pendenzenCount, bewertungenCount, unbestätigtCount })
+  
+  // Priorisiere den Tab mit den meisten Pendenzen
+  if (unbestätigtCount > 0 && unbestätigtCount >= pendenzenCount && unbestätigtCount >= bewertungenCount) {
+    return 'unconfirmed'
+  } else if (bewertungenCount > 0 && bewertungenCount >= pendenzenCount && bewertungenCount >= unbestätigtCount) {
+    return 'bewertungen'
+  } else if (pendenzenCount > 0) {
+    return 'pendenzen'
+  }
+  
   return 'pendenzen'
 })
 
