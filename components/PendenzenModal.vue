@@ -35,13 +35,6 @@
       <div class="bg-gray-50 border-b px-4 overflow-x-auto">
         <div class="flex space-x-4 min-w-min">
           <button
-            :class="['py-3 border-b-2 flex items-center space-x-2 whitespace-nowrap', activeTab === 'allgemein' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
-            @click="activeTab = 'allgemein'"
-          >
-            <span>Allgemein</span>
-            <span v-if="(pendingCount + unconfirmedNext24hCount) > 0" class="ml-1 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800">{{ pendingCount + unconfirmedNext24hCount }}</span>
-          </button>
-          <button
             :class="['py-3 border-b-2 flex items-center space-x-2 whitespace-nowrap', activeTab === 'pendenzen' ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500']"
             @click="activeTab = 'pendenzen'"
           >
@@ -96,68 +89,6 @@
             >
               Super! Schliessen
             </button>
-          </div>
-        </div>
-
-        <!-- Allgemein Tab (Overview) -->
-        <div v-else-if="activeTab === 'allgemein'" class="p-4 space-y-6">
-          <!-- Empty State for Allgemein Tab -->
-          <div v-if="pendingCount === 0 && unconfirmedNext24hCount === 0" class="flex items-center justify-center py-8">
-            <div class="text-center px-4">
-              <div class="text-6xl mb-4">✨</div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Alles erledigt!</h3>
-              <p class="text-gray-600 mb-4">Aktuell keine ausstehenden Aufgaben</p>
-            </div>
-          </div>
-
-          <!-- Unconfirmed Section -->
-          <div v-else-if="unconfirmedNext24hCount > 0">
-            <h3 class="text-sm font-bold text-gray-700 mb-2 uppercase">Unbestätigte Termine ({{ unconfirmedNext24hCount }})</h3>
-            <div class="space-y-2">
-              <div
-                v-for="appointment in unconfirmedWithStatus"
-                :key="appointment.id"
-                :class="[
-                  'rounded-lg border p-3 hover:shadow-md transition-all cursor-pointer text-sm',
-                  'border-orange-300 bg-orange-50'
-                ]"
-                @click="selectedAppointment = appointment"
-              >
-                <div class="flex justify-between items-start">
-                  <div class="flex-1">
-                    <div class="font-semibold text-gray-900">{{ appointment.users?.first_name }} {{ appointment.users?.last_name }}</div>
-                    <div class="text-gray-600">{{ formatLocalDate(appointment.start_time) }} • {{ formatLocalTime(appointment.start_time) }} - {{ formatLocalTime(appointment.end_time) }}</div>
-                  </div>
-                  <span :class="['px-2 py-1 rounded text-xs font-semibold', appointment.dueStatus === 'overdue_past' ? 'bg-red-200 text-red-800' : appointment.dueStatus === 'overdue_24h' ? 'bg-orange-200 text-orange-800' : 'bg-yellow-200 text-yellow-800']">
-                    {{ appointment.dueStatus === 'overdue_past' ? 'Überfällig' : appointment.dueStatus === 'overdue_24h' ? '< 24h' : 'Fällig' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pending Section -->
-          <div v-else-if="pendingCount > 0">
-            <h3 class="text-sm font-bold text-gray-700 mb-2 uppercase">Ausstehende Bewertungen ({{ pendingCount }})</h3>
-            <div class="space-y-2">
-              <div
-                v-for="appointment in evaluationAppointments"
-                :key="appointment.id"
-                :class="[
-                  'rounded-lg border p-3 hover:shadow-md transition-all cursor-pointer text-sm',
-                  'border-blue-300 bg-blue-50'
-                ]"
-                @click="selectedAppointment = appointment"
-              >
-                <div class="flex justify-between items-start">
-                  <div class="flex-1">
-                    <div class="font-semibold text-gray-900">{{ appointment.studentName }}</div>
-                    <div class="text-gray-600">{{ appointment.formattedDate }} • {{ appointment.formattedStartTime }} - {{ appointment.formattedEndTime }}</div>
-                  </div>
-                  <span class="px-2 py-1 rounded text-xs font-semibold bg-blue-200 text-blue-800">Bewertung</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -522,7 +453,7 @@ import { getSupabase } from '~/utils/supabase'
 interface Props {
   isOpen: boolean
   currentUser: any
-  defaultTab?: 'allgemein' | 'pendenzen' | 'bewertungen' | 'unconfirmed'
+  defaultTab?: 'pendenzen' | 'bewertungen' | 'unconfirmed'
 }
 
 const props = defineProps<Props>()
@@ -564,7 +495,7 @@ const {
 // Modal state
 const showEvaluationModal = ref(false)
 const selectedAppointment = ref<any>(null)
-const activeTab = ref<'allgemein' | 'pendenzen' | 'bewertungen' | 'unconfirmed'>(props.defaultTab || 'allgemein')
+const activeTab = ref<'pendenzen' | 'bewertungen' | 'unconfirmed'>(props.defaultTab || 'pendenzen')
 
 // ✅ NEU: Filter für unbestätigte Termine
 const dueFilter = ref<'all' | 'due' | 'overdue_24h' | 'overdue_past'>('all')

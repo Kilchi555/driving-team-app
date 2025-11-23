@@ -57,16 +57,9 @@ const isTodayActive = ref(false)
 const currentMonth = ref('')
 const selectedStaffId = ref<string | null>(null) // For admin staff filtering
 
-// Computed: Dynamically select the default tab based on pending counts
+// Computed: Default tab is always Pendenzen
 const defaultPendenzenTab = computed(() => {
-  const bewertungenCount = pendingCount.value || 0
-  const unbestätigtCount = unconfirmedNext24hCount.value || 0
-  
-  // Wenn es Pendenzen gibt, zeige Allgemein (Überblick)
-  if (bewertungenCount > 0 || unbestätigtCount > 0) {
-    return 'allgemein'
-  }
-  return 'allgemein'
+  return 'pendenzen'
 })
 
 // NEU: Lokale computed für bessere Reaktivität
