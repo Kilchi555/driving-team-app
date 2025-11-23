@@ -569,7 +569,6 @@
     <!-- ✅ MODAL: Bestätigung mit automatischer Zahlung -->
     <div v-if="showConfirmationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {{ console.log('📋 MODAL OPENED - pendingConfirmations:', pendingConfirmations) }}
         <div class="p-6">
           <!-- Header -->
           <div class="flex items-center justify-between mb-6">
@@ -1240,22 +1239,12 @@ const formatDateTime = (dateString: string | null | undefined) => {
   try {
     // Parse UTC datetime and convert to Zurich timezone
     const date = new Date(dateString)
-    console.log('🔍 formatDateTime DEBUG:', {
-      input: dateString,
-      dateObject: date.toISOString(),
-      getTime: date.getTime(),
-      isNaN: isNaN(date.getTime())
-    })
     if (isNaN(date.getTime())) {
       return 'Ungültiges Datum/Zeit'
     }
-    const weekday = date.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', weekday: 'short' }) // z.B. "Mi."
+    const weekday = date.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', weekday: 'short' }) // z.B. "Mo."
     const datePart = date.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric' })
     const timePart = date.toLocaleTimeString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })
-    console.log('✅ formatDateTime RESULT:', {
-      weekday, datePart, timePart,
-      result: `${weekday} ${datePart} ${timePart}`
-    })
     return `${weekday} ${datePart} ${timePart}`
   } catch (error) {
     console.warn('Error formatting dateTime:', dateString, error)
