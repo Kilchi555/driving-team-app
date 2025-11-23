@@ -8,9 +8,9 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
     console.log('🔔 Wallee Webhook received:', {
-      eventType: body.eventType,
       entityId: body.entityId,
       state: body.state,
+      timestamp: body.timestamp,
       fullBody: body
     })
 
