@@ -942,6 +942,7 @@ const submitRegistration = async () => {
           method: 'POST',
           body: {
             userId: data.userId,
+            tenantId: activeTenantId,
             fileData: uploadedImage.value,
             fileName: fileName,
             bucket: 'user-documents',

@@ -45,19 +45,27 @@ export default defineEventHandler(async (event) => {
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
     // Update user profile
+    const updateData: any = {
+      first_name: firstName?.trim() || null,
+      last_name: lastName?.trim() || null,
+      phone: phone?.trim() || null,
+      birthdate: birthdate || null,
+      street: street?.trim() || null,
+      street_nr: streetNr?.trim() || null,
+      zip: zip?.trim() || null,
+      city: city?.trim() || null,
+      updated_at: new Date().toISOString()
+    }
+
+    // Add email if it changed
+    if (email && email !== user.email) {
+      console.log('📧 Email changed from', user.email, 'to', email)
+      updateData.email = email.toLowerCase().trim()
+    }
+
     const { error: updateError } = await serviceSupabase
       .from('users')
-      .update({
-        first_name: firstName?.trim() || null,
-        last_name: lastName?.trim() || null,
-        phone: phone?.trim() || null,
-        birthdate: birthdate || null,
-        street: street?.trim() || null,
-        street_nr: streetNr?.trim() || null,
-        zip: zip?.trim() || null,
-        city: city?.trim() || null,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('auth_user_id', user.id)
 
     if (updateError) {
@@ -66,6 +74,25 @@ export default defineEventHandler(async (event) => {
         statusCode: 400,
         statusMessage: 'Fehler beim Aktualisieren des Profils'
       })
+    }
+
+    // If email changed, also update in auth
+    if (email && email !== user.email) {
+      console.log('🔐 Updating auth email to:', email)
+      const { error: emailUpdateError } = await serviceSupabase.auth.admin.updateUserById(user.id, {
+        email: email.toLowerCase().trim(),
+        email_confirm: true // Auto-confirm new email
+      })
+
+      if (emailUpdateError) {
+        console.error('⚠️ Warning updating auth email:', emailUpdateError)
+        // Don't fail if email update fails, but warn the user
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Fehler beim Aktualisieren der Email-Adresse'
+        })
+      }
+      console.log('✅ Auth email updated successfully')
     }
 
     // Update auth user metadata

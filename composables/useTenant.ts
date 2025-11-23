@@ -20,6 +20,9 @@ interface Tenant {
   currency: string
   language: string
   is_active: boolean
+  wallee_space_id?: number
+  wallee_user_id?: number
+  wallee_secret_key?: string
 }
 
 const currentTenant = ref<Tenant | null>(null)

@@ -40,17 +40,20 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ GET WALLEE CONFIG FOR TENANT (with fallback to env variables)
+    // ✅ GET WALLEE CONFIG FOR TENANT (from database only - NEVER from frontend)
+    console.log('🔍 Fetching Wallee config for tenant from database:', requestTenantId)
     const walleeConfig = await getWalleeConfigForTenant(requestTenantId)
+    const spaceId = walleeConfig.spaceId
+    
     console.log('🔧 SDK Config:', { 
-      spaceId: walleeConfig.spaceId, 
+      spaceId: spaceId, 
       userId: walleeConfig.userId, 
       apiSecretPreview: walleeConfig.apiSecret.substring(0, 10) + '...',
       forTenant: requestTenantId
     })
     
     // ✅ SDK KONFIGURATION
-    const config = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, walleeConfig.apiSecret)
+    const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     
     // ✅ TRANSACTION SERVICE mit SDK
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)

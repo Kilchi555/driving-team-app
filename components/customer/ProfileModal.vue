@@ -51,9 +51,10 @@
               <input
                 v-model="formData.email"
                 type="email"
-                disabled
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="email@example.com"
               />
+              <p class="text-xs text-gray-500 mt-1">📧 Email-Änderungen werden sofort übernommen</p>
             </div>
 
             <!-- Telefon -->
@@ -146,19 +147,48 @@
               </div>
             </div>
 
-            <!-- Current Document -->
-            <div v-if="category.document" class="mb-3 p-3 bg-gray-50 rounded-lg">
-              <div class="flex justify-between items-start">
-                <div>
-                  <p class="text-sm font-medium text-gray-700">Hochgeladen:</p>
-                  <p class="text-xs text-gray-500">{{ formatDate(category.document.created_at) }}</p>
+            <!-- Current Documents -->
+            <div v-if="category.documents && category.documents.length > 0" class="mb-3 space-y-2">
+              <div v-for="doc in category.documents" :key="doc.id" class="p-3 bg-gray-50 rounded-lg">
+                <div class="flex gap-3">
+                  <!-- Thumbnail Preview -->
+                  <div class="flex-shrink-0">
+                    <img 
+                      v-if="doc.file_type && doc.file_type.startsWith('image/')"
+                      :src="getDocumentUrl(doc)" 
+                      :alt="doc.file_name"
+                      class="w-16 h-16 object-cover rounded border border-gray-200"
+                      @error="(e) => handleImageError(e, doc)"
+                      @load="() => handleImageLoad(doc)"
+                    >
+                    <div v-else class="w-16 h-16 bg-gray-200 rounded border border-gray-200 flex items-center justify-center">
+                      <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  <!-- Document Info -->
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ doc.file_name }}</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ formatDate(doc.created_at) }}</p>
+                    <div class="flex gap-2 mt-2">
+                      <a 
+                        :href="getDocumentUrl(doc)" 
+                        target="_blank"
+                        class="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Öffnen
+                      </a>
+                      <button
+                        @click="deleteDocument(doc.id, category.name)"
+                        class="text-xs text-red-600 hover:text-red-800"
+                      >
+                        Löschen
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  @click="deleteDocument(category.document.id, category.name)"
-                  class="text-red-600 hover:text-red-800 text-sm font-medium"
-                >
-                  Löschen
-                </button>
               </div>
             </div>
 
@@ -176,7 +206,7 @@
                 :disabled="isUploading"
                 class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
               >
-                {{ category.document ? 'Austausch' : 'Hochladen' }}
+                {{ (category.documents && category.documents.length > 0) ? 'Austausch' : 'Hochladen' }}
               </button>
             </div>
           </div>
@@ -233,8 +263,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useUIStore } from '~/stores/ui'
+import { useAuthStore } from '~/stores/auth'
 
 interface Category {
   code: string
@@ -247,17 +278,19 @@ interface Category {
 
 interface Props {
   isOpen: boolean
-  userEmail: string
+  userEmail?: string
   userName?: string
-  categories: Category[]
+  categories?: Category[]
+  userData?: any
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 defineEmits<{
   close: []
 }>()
 
 const { showSuccess, showError } = useUIStore()
+const authStore = useAuthStore()
 
 const formData = ref({
   firstName: '',
@@ -271,6 +304,35 @@ const formData = ref({
   city: ''
 })
 
+// Load user data when modal opens
+const loadUserData = () => {
+  try {
+    console.log('📥 Loading user profile data...')
+    console.log('props.userData:', props.userData)
+    
+    if (props.userData) {
+      console.log('✅ Using userData from props')
+      formData.value = {
+        firstName: props.userData.first_name || '',
+        lastName: props.userData.last_name || '',
+        email: props.userData.email || props.userEmail || '',
+        phone: props.userData.phone || '',
+        birthdate: props.userData.birthdate || '',
+        street: props.userData.street || '',
+        streetNr: props.userData.street_nr || '',
+        zip: props.userData.zip || '',
+        city: props.userData.city || ''
+      }
+    } else {
+      console.log('⚠️ No userData provided')
+      formData.value.email = props.userEmail || ''
+    }
+    console.log('📋 Final formData:', formData.value)
+  } catch (err: any) {
+    console.error('❌ Error loading user profile:', err)
+  }
+}
+
 const isSaving = ref(false)
 const isUploading = ref(false)
 const isDeleting = ref(false)
@@ -279,6 +341,7 @@ const successMessage = ref('')
 const showDeleteConfirm = ref(false)
 const deleteDocId = ref<string | null>(null)
 const deleteDocName = ref('')
+const categories = ref<any[]>([])
 
 const triggerFileInput = (categoryCode: string) => {
   const input = document.querySelector(`input[ref*="${categoryCode}"]`) as HTMLInputElement
@@ -368,19 +431,38 @@ const confirmDelete = async () => {
 const saveProfile = async () => {
   isSaving.value = true
   error.value = ''
+  successMessage.value = ''
 
   try {
+    console.log('💾 Saving profile with data:', formData.value)
+    
     const response = await $fetch('/api/customer/update-profile', {
       method: 'POST',
-      body: formData.value
+      body: {
+        firstName: formData.value.firstName,
+        lastName: formData.value.lastName,
+        email: formData.value.email,
+        phone: formData.value.phone,
+        birthDate: formData.value.birthdate,
+        street: formData.value.street,
+        streetNr: formData.value.streetNr,
+        zip: formData.value.zip,
+        city: formData.value.city
+      }
     }) as any
 
     if (response?.success) {
+      successMessage.value = 'Profil erfolgreich gespeichert'
       showSuccess('Erfolg', 'Profil gespeichert')
+      console.log('✅ Profile saved successfully')
       setTimeout(() => { successMessage.value = '' }, 3000)
+    } else {
+      error.value = response?.message || 'Fehler beim Speichern'
+      showError('Fehler', error.value)
     }
   } catch (err: any) {
-    error.value = err?.data?.statusMessage || 'Fehler beim Speichern'
+    console.error('❌ Save error:', err)
+    error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Speichern'
     showError('Fehler', error.value)
   } finally {
     isSaving.value = false
@@ -395,9 +477,59 @@ const formatDate = (dateString: string) => {
   })
 }
 
+const getDocumentUrl = (doc: any) => {
+  if (!doc.storage_path) return ''
+  
+  // Check if it's already a full URL
+  if (doc.storage_path.startsWith('http')) return doc.storage_path
+  
+  // Build Supabase storage URL
+  const supabaseUrl = 'https://unyjaetebnaexaflpyoc.supabase.co'
+  const bucket = 'documents'
+  
+  // The storage_path might be: "user-documents/lernfahrausweise/filename.jpg"
+  // Or it might include the bucket: "documents/user-documents/lernfahrausweise/filename.jpg"
+  let path = doc.storage_path.trim()
+  
+  // Remove bucket prefix if it exists
+  if (path.startsWith(`${bucket}/`)) {
+    path = path.substring(bucket.length + 1)
+  }
+  
+  // Clean up any double slashes
+  path = path.replace(/\/+/g, '/')
+  
+  console.log('📷 Building URL for doc:', doc.file_name, 'path:', path)
+  const finalUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+  console.log('📷 Final URL:', finalUrl)
+  
+  return finalUrl
+}
+
+const handleImageLoad = (doc: any) => {
+  console.log('✅ Image loaded:', doc.file_name)
+}
+
+const handleImageError = (e: Event, doc: any) => {
+  const img = e.target as HTMLImageElement
+  console.error('❌ Image load error for:', doc.file_name, 'url:', getDocumentUrl(doc))
+  img.style.display = 'none'
+}
+
 const useRouter = () => {
   const router = window.__NUXT__.nuxtApp.$router
   return router
 }
+
+// Watch for modal opening
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    loadUserData()
+    // Use categories from props if provided
+    if (props.categories) {
+      categories.value = props.categories
+    }
+  }
+})
 </script>
 

@@ -3,7 +3,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { userId, fileData, fileName, bucket, path } = body
+    const { userId, fileData, fileName, bucket, path, tenantId } = body
 
     if (!userId || !fileData || !fileName || !bucket || !path) {
       throw createError({
@@ -60,6 +60,41 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log('✅ File uploaded successfully:', data.path)
+
+    // Create document record in user_documents table
+    if (path === 'lernfahrausweise' && tenantId) {
+      try {
+        console.log('📝 Creating user_documents record...')
+        
+        const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${data.path}`
+        
+        const { error: docError } = await serviceSupabase
+          .from('user_documents')
+          .insert({
+            user_id: userId,
+            tenant_id: tenantId,
+            document_type: 'lernfahrausweis',
+            category_code: null,
+            side: 'front',
+            file_name: fileName,
+            file_size: fileBuffer.length,
+            file_type: 'image/jpeg',
+            storage_path: data.path,
+            title: 'Lernfahrausweis',
+            is_verified: false
+          })
+
+        if (docError) {
+          console.warn('⚠️ Could not create user_documents record:', docError)
+          // Continue - document is uploaded but not linked
+        } else {
+          console.log('✅ Document record created in user_documents table')
+        }
+      } catch (recordErr: any) {
+        console.error('⚠️ Error creating document record:', recordErr)
+        // Continue - document is uploaded but not linked
+      }
+    }
 
     return {
       success: true,

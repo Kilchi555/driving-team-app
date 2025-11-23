@@ -899,6 +899,7 @@
     :user-email="currentUser?.email || ''"
     :user-name="getFirstName()"
     :categories="userDocumentCategories"
+    :user-data="userData"
     @close="showProfileModal = false"
   />
   
@@ -921,12 +922,14 @@ import UpcomingLessonsModal from './UpcomingLessonsModal.vue'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTenant } from '~/composables/useTenant'
 import ProfileModal from './ProfileModal.vue'
 
 // Composables
 const authStore = useAuthStore()
 const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
 const { loadTenantBrandingById, primaryColor, secondaryColor, accentColor, currentTenantBranding } = useTenantBranding()
+const { currentTenant } = useTenant()
 
 // State
 const isLoading = ref(true)
@@ -954,6 +957,65 @@ const confirmingAppointments = ref<Set<string>>(new Set()) // Loading state per 
 // Profile Modal State
 const showProfileModal = ref(false)
 const userDocumentCategories = ref<any[]>([])
+const userData = ref<any>(null) // Store full user data from users table
+
+// Load user documents
+const loadUserDocuments = async () => {
+  if (!userData.value?.id || !userData.value?.tenant_id) {
+    console.log('⚠️ User data not available for loading documents')
+    return
+  }
+
+  try {
+    console.log('📄 Loading user documents for user:', userData.value.id)
+    const supabase = getSupabase()
+
+    // Get all documents for this user
+    const { data: docs, error: docsError } = await supabase
+      .from('user_documents')
+      .select('*')
+      .eq('user_id', userData.value.id)
+      .eq('tenant_id', userData.value.tenant_id)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+
+    if (docsError) {
+      console.error('❌ Error loading documents:', docsError)
+      return
+    }
+
+    console.log('✅ Loaded documents:', docs?.length || 0)
+
+    // Group documents by document_type and category_code
+    const groupedDocs: Record<string, any> = {}
+    
+    if (docs && docs.length > 0) {
+      docs.forEach((doc: any) => {
+        const key = doc.category_code 
+          ? `${doc.document_type}_${doc.category_code}` 
+          : doc.document_type
+        
+        if (!groupedDocs[key]) {
+          groupedDocs[key] = {
+            id: key,
+            code: key,
+            name: doc.title || `${doc.document_type}${doc.category_code ? ` - ${doc.category_code}` : ''}`,
+            document_type: doc.document_type,
+            category_code: doc.category_code,
+            documents: []
+          }
+        }
+        groupedDocs[key].documents.push(doc)
+      })
+    }
+
+    const categoriesArray = Object.keys(groupedDocs).map(key => groupedDocs[key])
+    userDocumentCategories.value = categoriesArray
+    console.log('✅ Documents grouped, categories:', categoriesArray.length)
+  } catch (err: any) {
+    console.error('❌ Error loading user documents:', err)
+  }
+}
 
 // Toast Notification State
 const showToast = ref(false)
@@ -1377,13 +1439,16 @@ const loadPendingConfirmations = async () => {
   try {
     const supabase = getSupabase()
     
-    const { data: userData, error: userError } = await supabase
+    const { data: userDataFromDb, error: userError } = await supabase
       .from('users')
-      .select('id, tenant_id')
+      .select('*')
       .eq('auth_user_id', currentUser.value.id)
       .single()
     
-    if (userError || !userData) return
+    if (userError || !userDataFromDb) return
+    
+    // Store user data for ProfileModal
+    userData.value = userDataFromDb
 
 
 
@@ -1405,9 +1470,9 @@ const loadPendingConfirmations = async () => {
           last_name
         )
       `)
-      .eq('user_id', userData.id)
+      .eq('user_id', userDataFromDb.id)
       .eq('status', 'pending_confirmation')
-      .eq('tenant_id', userData.tenant_id)
+      .eq('tenant_id', userDataFromDb.tenant_id)
       .not('confirmation_token', 'is', null)
       .order('start_time', { ascending: true })
 
@@ -1430,7 +1495,7 @@ const loadPendingConfirmations = async () => {
         .from('categories')
         .select('code, name')
         .in('code', categoryCodes)
-        .eq('tenant_id', userData.tenant_id)
+        .eq('tenant_id', userDataFromDb.tenant_id)
       
       if (!categoriesError && categoriesData) {
         categoriesData.forEach(cat => {
@@ -2024,6 +2089,26 @@ const confirmAppointment = async (appointment: any) => {
       })
     }
 
+    // Update appointment status to "pending_confirmation" before redirecting to payment
+    try {
+      console.log('🔄 Updating appointment status to pending_confirmation...')
+      const { error: appointmentError } = await supabase
+        .from('appointments')
+        .update({
+          status: 'pending_confirmation',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointment.id)
+      
+      if (appointmentError) {
+        console.error('⚠️ Failed to update appointment status:', appointmentError)
+      } else {
+        console.log('✅ Appointment status updated to pending_confirmation')
+      }
+    } catch (err) {
+      console.error('⚠️ Error updating appointment status:', err)
+    }
+
     // Direkt zu Wallee weiterleiten
     console.log('🔄 Redirecting to Wallee payment page...')
     window.location.href = response.paymentUrl
@@ -2402,6 +2487,14 @@ watch(() => currentTenantBranding.value, (newVal) => {
     })
   }
 }, { deep: true })
+
+// Watch for ProfileModal opening to load documents
+watch(() => showProfileModal.value, async (newVal) => {
+  if (newVal && userData.value) {
+    console.log('📂 ProfileModal opened, loading documents...')
+    await loadUserDocuments()
+  }
+})
 
 // Lifecycle
 onMounted(async () => {

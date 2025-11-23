@@ -32,20 +32,36 @@ export async function getWalleeConfigForTenant(tenantId?: string) {
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
     // Fetch Wallee config for this tenant
+    console.log(`🔍 Querying tenants table for tenant ${tenantId}...`)
     const { data: tenant, error } = await serviceSupabase
       .from('tenants')
-      .select('wallee_space_id, wallee_user_id, wallee_secret_key')
+      .select('id, wallee_space_id, wallee_user_id, wallee_secret_key')
       .eq('id', tenantId)
       .single()
 
-    if (error || !tenant) {
-      console.warn(`⚠️ Could not fetch Wallee config for tenant ${tenantId}, using default`, error)
+    if (error) {
+      console.error(`❌ Database query error for tenant ${tenantId}:`, error)
+      return defaultConfig
+    }
+    
+    if (!tenant) {
+      console.warn(`⚠️ Tenant ${tenantId} not found`)
       return defaultConfig
     }
 
+    console.log(`🔍 Tenant data fetched:`, {
+      id: tenant.id,
+      hasSpaceId: !!tenant.wallee_space_id,
+      hasUserId: !!tenant.wallee_user_id,
+      hasSecretKey: !!tenant.wallee_secret_key
+    })
+
     // If tenant has custom Wallee config, use it
     if (tenant.wallee_space_id && tenant.wallee_user_id && tenant.wallee_secret_key) {
-      console.log(`✅ Using tenant-specific Wallee config for tenant ${tenantId}`)
+      console.log(`✅ Using tenant-specific Wallee config for tenant ${tenantId}:`, {
+        spaceId: tenant.wallee_space_id,
+        userId: tenant.wallee_user_id
+      })
       return {
         spaceId: tenant.wallee_space_id,
         userId: tenant.wallee_user_id,
@@ -54,7 +70,11 @@ export async function getWalleeConfigForTenant(tenantId?: string) {
     }
 
     // Otherwise fall back to default
-    console.log(`ℹ️ Tenant ${tenantId} has no custom Wallee config, using default`)
+    console.warn(`⚠️ Tenant ${tenantId} has incomplete Wallee config, using default:`, {
+      spaceId: !!tenant.wallee_space_id,
+      userId: !!tenant.wallee_user_id,
+      secretKey: !!tenant.wallee_secret_key
+    })
     return defaultConfig
 
   } catch (error) {
