@@ -5191,8 +5191,9 @@ watch(() => props.isVisible, async (newVisible) => {
         selectedPaymentMethod.value = 'wallee'
         console.log('💳 Default payment method for new appointment: wallee')
         
-        // ✅ WICHTIG: Auch initializeFormData aufrufen für weitere Initialisierung
-        await initializeFormData()
+        // ✅ WICHTIG: Nicht initializeFormData aufrufen - wir haben die Zeit schon oben extrahiert!
+        // initializeFormData würde die Zeit NOCHMAL auslesen und dabei die falsche Zeit einsetzen
+        // Statt dessen verwenden wir die bereits extrahierte Zeit
         
         // ✅ Create-Mode handling
         await handleCreateMode()
