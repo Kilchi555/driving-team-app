@@ -78,6 +78,7 @@ interface PaymentReminderEmailData {
   dashboardLink: string
   tenantName: string
   reminderNumber: number
+  primaryColor?: string
 }
 
 export function generatePaymentReminderEmail(data: PaymentReminderEmailData): string {
@@ -86,6 +87,8 @@ export function generatePaymentReminderEmail(data: PaymentReminderEmailData): st
     : data.reminderNumber === 2
     ? 'Erinnerung: Bitte bestätigen Sie Ihren Termin'
     : 'Letzte Erinnerung: Bitte bestätigen Sie Ihren Termin'
+
+  const primaryColor = data.primaryColor || '#2563eb'
 
   return `
 <!DOCTYPE html>
@@ -97,14 +100,14 @@ export function generatePaymentReminderEmail(data: PaymentReminderEmailData): st
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background-color: #f8f9fa; border-radius: 10px; padding: 30px; margin-bottom: 20px;">
-    <h1 style="color: #2563eb; margin-top: 0;">${urgencyText}</h1>
+    <h1 style="color: ${primaryColor}; margin-top: 0;">${urgencyText}</h1>
     
     <p>Hallo ${data.customerName},</p>
     
     <p>Sie haben einen Termin bei <strong>${data.tenantName}</strong> gebucht, der noch nicht bestätigt wurde.</p>
     
-    <div style="background-color: white; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 5px;">
-      <h3 style="margin-top: 0; color: #2563eb;">Termin-Details</h3>
+    <div style="background-color: white; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 5px;">
+      <h3 style="margin-top: 0; color: ${primaryColor};">Termin-Details</h3>
       <p style="margin: 5px 0;"><strong>Datum:</strong> ${data.appointmentDate}</p>
       <p style="margin: 5px 0;"><strong>Zeit:</strong> ${data.appointmentTime}</p>
       <p style="margin: 5px 0;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>
@@ -121,14 +124,14 @@ export function generatePaymentReminderEmail(data: PaymentReminderEmailData): st
     
     <div style="text-align: center; margin: 30px 0;">
       <a href="${data.dashboardLink}" 
-         style="background-color: #2563eb; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+         style="background-color: ${primaryColor}; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
         Termin jetzt bestätigen
       </a>
     </div>
     
     <p style="font-size: 14px; color: #666;">
       Oder kopieren Sie diesen Link in Ihren Browser:<br>
-      <a href="${data.dashboardLink}" style="color: #2563eb; word-break: break-all;">${data.dashboardLink}</a>
+      <a href="${data.dashboardLink}" style="color: ${primaryColor}; word-break: break-all;">${data.dashboardLink}</a>
     </p>
     
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">

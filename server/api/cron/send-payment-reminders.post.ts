@@ -195,7 +195,7 @@ export default defineEventHandler(async (event) => {
                 // Get tenant data
                 const { data: tenant, error: tenantError } = await supabase
                   .from('tenants')
-                  .select('name, slug')
+                  .select('name, slug, primary_color')
                   .eq('id', tenantId)
                   .single()
 
@@ -207,12 +207,14 @@ export default defineEventHandler(async (event) => {
                 // Format data
                 const startTime = new Date(appointment.start_time)
                 const appointmentDate = startTime.toLocaleDateString('de-CH', {
+                  timeZone: 'Europe/Zurich',
                   weekday: 'short',
                   day: '2-digit',
                   month: '2-digit',
                   year: 'numeric'
                 })
                 const appointmentTime = startTime.toLocaleTimeString('de-CH', {
+                  timeZone: 'Europe/Zurich',
                   hour: '2-digit',
                   minute: '2-digit'
                 })
@@ -229,7 +231,8 @@ export default defineEventHandler(async (event) => {
                   amount,
                   dashboardLink,
                   tenantName: tenant.name,
-                  reminderNumber: nextReminderNumber
+                  reminderNumber: nextReminderNumber,
+                  primaryColor: tenant.primary_color || '#2563eb'
                 })
 
                 const emailResult = await sendEmail({
@@ -320,6 +323,7 @@ export default defineEventHandler(async (event) => {
                   year: 'numeric'
                 })
                 const appointmentTime = startTime.toLocaleTimeString('de-CH', {
+                  timeZone: 'Europe/Zurich',
                   hour: '2-digit',
                   minute: '2-digit'
                 })
