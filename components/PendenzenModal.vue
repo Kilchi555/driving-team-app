@@ -477,8 +477,16 @@ const getDueStatusLabel = (status: string) => {
 // Computed: Formatierte unconfirmed appointments
 const formattedUnconfirmedAppointments = computed(() => {
   return (unconfirmedNext24h.value || []).map((apt: any) => {
-    const startTime = new Date(apt.start_time)
-    const endTime = new Date(apt.end_time)
+    // Parse UTC times and convert to Europe/Zurich timezone
+    const utcStartDate = new Date(apt.start_time)
+    const utcEndDate = new Date(apt.end_time)
+    
+    // Convert UTC to local timezone (Europe/Zurich)
+    const startTimeStr = utcStartDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+    const endTimeStr = utcEndDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+    
+    const startTime = new Date(startTimeStr)
+    const endTime = new Date(endTimeStr)
     
     return {
       ...apt,
@@ -505,19 +513,23 @@ const openReminderModal = async (appointment: any) => {
 
 const parseLocalDateTime = (dateTimeStr: string) => {
   if (!dateTimeStr) return new Date()
-  const cleanStr = dateTimeStr.replace('+00:00', '').replace('+00', '').replace('Z', '').trim()
-  const [datePart, timePart = '00:00:00'] = cleanStr.includes('T')
-    ? cleanStr.split('T')
-    : cleanStr.split(' ')
-
-  const [year, month, day] = datePart.split('-').map(Number)
-  const [hour = 0, minute = 0, second = 0] = timePart.split(':').map(Number)
-
-  return new Date(year, (month ?? 1) - 1, day ?? 1, hour, minute, second)
+  
+  // Parse UTC ISO string
+  const utcDate = new Date(dateTimeStr)
+  
+  // Convert to Europe/Zurich timezone
+  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  
+  return new Date(localDateStr)
 }
 
 const formatLocalDate = (dateTimeStr: string) => {
-  const date = parseLocalDateTime(dateTimeStr)
+  const utcDate = new Date(dateTimeStr)
+  
+  // Convert to Europe/Zurich timezone
+  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const date = new Date(localDateStr)
+  
   return date.toLocaleDateString('de-CH', {
     weekday: 'short',
     day: '2-digit',
@@ -527,7 +539,12 @@ const formatLocalDate = (dateTimeStr: string) => {
 }
 
 const formatLocalTime = (dateTimeStr: string) => {
-  const date = parseLocalDateTime(dateTimeStr)
+  const utcDate = new Date(dateTimeStr)
+  
+  // Convert to Europe/Zurich timezone
+  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const date = new Date(localDateStr)
+  
   return date.toLocaleTimeString('de-CH', {
     hour: '2-digit',
     minute: '2-digit'
