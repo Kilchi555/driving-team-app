@@ -1237,22 +1237,14 @@ const formatDateTime = (dateString: string | null | undefined) => {
   if (!dateString) return 'Kein Datum/Zeit'
   
   try {
-    // Parse als lokale Zeit (nicht UTC)
-    const parts = dateString.replace('T', ' ').replace('Z', '').split(/[-: ]/)
-    const date = new Date(
-      parseInt(parts[0]), // year
-      parseInt(parts[1]) - 1, // month (0-indexed)
-      parseInt(parts[2]), // day
-      parseInt(parts[3] || '0'), // hour
-      parseInt(parts[4] || '0'), // minute
-      parseInt(parts[5] || '0')  // second
-    )
+    // Parse UTC datetime and convert to Zurich timezone
+    const date = new Date(dateString)
     if (isNaN(date.getTime())) {
       return 'Ungültiges Datum/Zeit'
     }
-    const weekday = date.toLocaleDateString('de-CH', { weekday: 'short' }) // z.B. "Mi."
-    const datePart = date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const timePart = date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+    const weekday = date.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', weekday: 'short' }) // z.B. "Mi."
+    const datePart = date.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric' })
+    const timePart = date.toLocaleTimeString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })
     return `${weekday} ${datePart} ${timePart}`
   } catch (error) {
     console.warn('Error formatting dateTime:', dateString, error)
