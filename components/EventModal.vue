@@ -5106,7 +5106,9 @@ watch(() => props.isVisible, async (newVisible) => {
         let duration = 45
         
         if (eventData?.start) {
-          const startDateTime = new Date(eventData.start)
+          // Calendar passes UTC time as ISO string without Z suffix
+          // Add Z to ensure it's parsed as UTC, not local time
+          const startDateTime = new Date(eventData.start.includes('Z') ? eventData.start : eventData.start + 'Z')
           
           // Convert UTC from calendar to Zurich local time for display
           // Use Intl.DateTimeFormat for reliable timezone conversion
@@ -5134,7 +5136,8 @@ watch(() => props.isVisible, async (newVisible) => {
           })
           
           if (eventData.end) {
-            const endDateTime = new Date(eventData.end)
+            // Same fix for end time
+            const endDateTime = new Date(eventData.end.includes('Z') ? eventData.end : eventData.end + 'Z')
             const endParts = zurichDateFormatter.formatToParts(endDateTime)
             endTime = `${endParts.find(p => p.type === 'hour').value}:${endParts.find(p => p.type === 'minute').value}`
             
