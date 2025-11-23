@@ -733,13 +733,17 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
       }
       
       const utcDate = new Date(timeStr)
+      // Use toLocaleString to convert UTC to local timezone (Europe/Zurich)
+      const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+      const localDate = new Date(localDateStr)
+      
       // Create local date string for calendar display
-      const localYear = utcDate.getFullYear()
-      const localMonth = String(utcDate.getMonth() + 1).padStart(2, '0')
-      const localDay = String(utcDate.getDate()).padStart(2, '0')
-      const localHour = String(utcDate.getHours()).padStart(2, '0')
-      const localMinute = String(utcDate.getMinutes()).padStart(2, '0')
-      const localSecond = String(utcDate.getSeconds()).padStart(2, '0')
+      const localYear = localDate.getFullYear()
+      const localMonth = String(localDate.getMonth() + 1).padStart(2, '0')
+      const localDay = String(localDate.getDate()).padStart(2, '0')
+      const localHour = String(localDate.getHours()).padStart(2, '0')
+      const localMinute = String(localDate.getMinutes()).padStart(2, '0')
+      const localSecond = String(localDate.getSeconds()).padStart(2, '0')
       return `${localYear}-${localMonth}-${localDay}T${localHour}:${localMinute}:${localSecond}`
     }
     
@@ -972,13 +976,17 @@ const loadRegularAppointments = async () => {
       const parseUTCTime = (utcTimeString: string) => {
         // Parse UTC ISO string and convert to local time
         const utcDate = new Date(utcTimeString)
+        // Use toLocaleString to convert UTC to local timezone (Europe/Zurich)
+        const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+        const localDate = new Date(localDateStr)
+        
         // Create local date string for calendar display
-        const localYear = utcDate.getFullYear()
-        const localMonth = String(utcDate.getMonth() + 1).padStart(2, '0')
-        const localDay = String(utcDate.getDate()).padStart(2, '0')
-        const localHour = String(utcDate.getHours()).padStart(2, '0')
-        const localMinute = String(utcDate.getMinutes()).padStart(2, '0')
-        const localSecond = String(utcDate.getSeconds()).padStart(2, '0')
+        const localYear = localDate.getFullYear()
+        const localMonth = String(localDate.getMonth() + 1).padStart(2, '0')
+        const localDay = String(localDate.getDate()).padStart(2, '0')
+        const localHour = String(localDate.getHours()).padStart(2, '0')
+        const localMinute = String(localDate.getMinutes()).padStart(2, '0')
+        const localSecond = String(localDate.getSeconds()).padStart(2, '0')
         return `${localYear}-${localMonth}-${localDay}T${localHour}:${localMinute}:${localSecond}`
       }
       
