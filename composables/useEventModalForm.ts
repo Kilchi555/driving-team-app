@@ -914,6 +914,17 @@ const useEventModalForm = (currentUser?: any, refs?: {
         // Parse input time
         const [hours, minutes] = timeStr.split(':').map(Number)
         
+        console.log('🔧 CONVERSION DEBUG:', {
+          dateStr,
+          timeStr,
+          year, month, day,
+          zurichMidnightStr,
+          zurichHour,
+          offsetHours,
+          inputHours: hours,
+          calculation: `${hours} - ${offsetHours} = ${hours - offsetHours}`
+        })
+        
         // Convert: UTC = Local - Offset
         let utcHours = hours - offsetHours
         let utcDay = day
@@ -932,7 +943,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
         const paddedMinutes = String(minutes).padStart(2, '0')
         const paddedDay = String(utcDay).padStart(2, '0')
         
-        return `${year}-${String(month).padStart(2, '0')}-${paddedDay}T${paddedHours}:${paddedMinutes}:00`
+        const result = `${year}-${String(month).padStart(2, '0')}-${paddedDay}T${paddedHours}:${paddedMinutes}:00`
+        
+        console.log('✅ CONVERSION RESULT:', {
+          input: `${dateStr}T${timeStr}`,
+          output: result,
+          utcHours,
+          offsetHours
+        })
+        
+        return result
       }
       
       const localStart = convertLocalToUTC(formData.value.startDate, formData.value.startTime)
