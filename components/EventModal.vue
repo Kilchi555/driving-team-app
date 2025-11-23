@@ -4514,38 +4514,10 @@ const handleCreateMode = async () => {
       console.log('⚠️ CREATE MODE: No default location available')
     }
     
-    // ✅ SIMPLE: Verwende lokale Zeit direkt ohne Konvertierung
-    const startTime = props.eventData.start
-    if (startTime instanceof Date) {
-      // ✅ EINFACH: Lokale Zeit direkt verwenden
-      formData.value.startDate = startTime.toISOString().split('T')[0]  // "2025-08-24"
-      formData.value.startTime = startTime.toTimeString().slice(0, 5)  // "15:00" (lokale Zeit)
-      
-      console.log('✅ CREATE MODE - Zeit gesetzt:', {
-        startDate: formData.value.startDate,
-        startTime: formData.value.startTime,
-        originalDate: startTime,
-        processedTime: 'lokale Zeit verwendet'
-      })
-      
-      calculateEndTime()
-    } else if (typeof startTime === 'string' && startTime.includes('T')) {
-      // ISO-String verarbeiten
-      const [datePart, timePart] = startTime.split('T')
-      const timeOnly = timePart.split(':').slice(0, 2).join(':') // "07:00"
-      
-      formData.value.startDate = datePart  // "2025-08-24"
-      formData.value.startTime = timeOnly  // "07:00"
-      
-      console.log('✅ CREATE MODE - ISO-String verarbeitet:', {
-        startDate: formData.value.startDate,
-        startTime: formData.value.startTime
-      })
-      
-      calculateEndTime()
-    } else {
-      console.error('❌ Invalid startTime:', startTime, 'Type:', typeof startTime)
-    }
+    // ✅ WICHTIG: Nicht die Zeit nochmal setzen - sie wurde bereits oben extrahiert und konvertiert!
+    // Die Zeit wurde in der watch-Funktion bereits korrekt aus dem Calendar extrahiert
+    // und von UTC zu Zurich local konvertiert
+    console.log('✅ CREATE MODE: Keeping already-extracted time (no override)')
     
     // ✅ NEU: Standard-Dauern laden für Create-Mode
     await loadDefaultDurations()
