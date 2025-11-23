@@ -36,9 +36,9 @@
         <div class="flex space-x-4 min-w-min">
           <button
             :class="[
-              'py-3 border-b-2 whitespace-nowrap',
-              activeTab === 'pendenzen' ? 'border-green-600' : 'border-transparent',
-              pendenciesCount > 0 ? 'text-red-600 font-bold' : activeTab === 'pendenzen' ? 'text-green-700' : 'text-gray-500'
+              'py-3 border-b-2 whitespace-nowrap transition-all font-medium',
+              activeTab === 'pendenzen' ? 'border-b-2 font-bold' : 'border-transparent',
+              activeTab === 'pendenzen' && pendenciesCount > 0 ? 'border-red-600 text-red-600' : activeTab === 'pendenzen' ? 'border-green-600 text-green-700' : pendenciesCount > 0 ? 'text-red-600' : 'text-green-600'
             ]"
             @click="activeTab = 'pendenzen'"
           >
@@ -46,9 +46,9 @@
           </button>
           <button
             :class="[
-              'py-3 border-b-2 whitespace-nowrap',
-              activeTab === 'bewertungen' ? 'border-green-600' : 'border-transparent',
-              pendingCount > 0 ? 'text-red-600 font-bold' : activeTab === 'bewertungen' ? 'text-green-700' : 'text-gray-500'
+              'py-3 border-b-2 whitespace-nowrap transition-all font-medium',
+              activeTab === 'bewertungen' ? 'border-b-2 font-bold' : 'border-transparent',
+              activeTab === 'bewertungen' && pendingCount > 0 ? 'border-red-600 text-red-600' : activeTab === 'bewertungen' ? 'border-green-600 text-green-700' : pendingCount > 0 ? 'text-red-600' : 'text-green-600'
             ]"
             @click="activeTab = 'bewertungen'"
           >
@@ -56,9 +56,9 @@
           </button>
           <button
             :class="[
-              'py-3 border-b-2 whitespace-nowrap',
-              activeTab === 'unconfirmed' ? 'border-green-600' : 'border-transparent',
-              unconfirmedNext24hCount > 0 ? 'text-red-600 font-bold' : activeTab === 'unconfirmed' ? 'text-green-700' : 'text-gray-500'
+              'py-3 border-b-2 whitespace-nowrap transition-all font-medium',
+              activeTab === 'unconfirmed' ? 'border-b-2 font-bold' : 'border-transparent',
+              activeTab === 'unconfirmed' && unconfirmedNext24hCount > 0 ? 'border-red-600 text-red-600' : activeTab === 'unconfirmed' ? 'border-green-600 text-green-700' : unconfirmedNext24hCount > 0 ? 'text-red-600' : 'text-green-600'
             ]"
             @click="activeTab = 'unconfirmed'"
           >
@@ -169,8 +169,17 @@
 
         <!-- Pending Appointments List (Bewertungen) -->
         <div v-else-if="activeTab === 'bewertungen'" class="p-4 space-y-3">
-          <div
-            v-for="appointment in evaluationAppointments"
+          <div v-if="evaluationAppointments.length === 0" class="flex items-center justify-center py-8">
+            <div class="text-center px-4">
+              <div class="text-6xl mb-4">✅</div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Bewertungen ausstehend!</h3>
+              <p class="text-gray-600 mb-4">Alle Lektionen bewertet</p>
+            </div>
+          </div>
+
+          <div v-else>
+            <div
+              v-for="appointment in evaluationAppointments"
             :key="appointment.id"
             :class="[
               'rounded-lg border p-4 hover:shadow-md transition-all cursor-pointer relative',
@@ -263,26 +272,14 @@
               </span>
             </div>
           </div>
-        </div>
-        <div v-else-if="activeTab === 'unconfirmed'" class="p-4 space-y-3">
-          <!-- Filter Dropdown -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Filter nach Status</label>
-            <select 
-              v-model="dueFilter" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="all">Alle ({{ unconfirmedWithStatus.length }})</option>
-              <option value="overdue_past">Termin vorbei ({{ unconfirmedWithStatus.filter(a => a.dueStatus === 'overdue_past').length }})</option>
-              <option value="overdue_24h">Überfällig < 24h ({{ unconfirmedWithStatus.filter(a => a.dueStatus === 'overdue_24h').length }})</option>
-              <option value="due">Fällig ({{ unconfirmedWithStatus.filter(a => a.dueStatus === 'due').length }})</option>
-            </select>
           </div>
+        </div>
 
+        <!-- Unconfirmed Appointments -->
+        <div v-else-if="activeTab === 'unconfirmed'" class="p-4 space-y-3">
           <!-- Termine Liste -->
           <div v-if="filteredUnconfirmedAppointments.length === 0" class="text-center py-8 text-gray-500">
-            <p>Keine Termine mit diesem Status</p>
-            <p class="text-xs mt-2">Filter: {{ dueFilter }}</p>
+            <p>Keine unbestätigten Termine</p>
           </div>
           
           <div
@@ -507,8 +504,6 @@ const showEvaluationModal = ref(false)
 const selectedAppointment = ref<any>(null)
 const activeTab = ref<'pendenzen' | 'bewertungen' | 'unconfirmed'>(props.defaultTab || 'pendenzen')
 
-// ✅ NEU: Filter für unbestätigte Termine
-const dueFilter = ref<'all' | 'due' | 'overdue_24h' | 'overdue_past'>('all')
 
 // Cash Payment Confirmation Modal
 const showCashPaymentModal = ref(false)
@@ -545,25 +540,7 @@ const evaluationAppointments = computed(() => {
 
 // ✅ NEU: Gefilterte unbestätigte Termine
 const filteredUnconfirmedAppointments = computed(() => {
-  const appointments = unconfirmedWithStatus.value || []
-  
-  if (dueFilter.value === 'all') {
-    return appointments
-  }
-  
-  return appointments.filter(apt => {
-    if (dueFilter.value === 'due') {
-      // Nur "Fällig" (Autorisierungs-Deadline überschritten, aber noch > 24h)
-      return apt.dueStatus === 'due'
-    } else if (dueFilter.value === 'overdue_24h') {
-      // Nur "Überfällig < 24h"
-      return apt.dueStatus === 'overdue_24h'
-    } else if (dueFilter.value === 'overdue_past') {
-      // Nur "Überfällig nach Termin"
-      return apt.dueStatus === 'overdue_past'
-    }
-    return true
-  })
+  return unconfirmedWithStatus.value || []
 })
 
 // ✅ Hilfsfunktion: Status-Label und Farbe

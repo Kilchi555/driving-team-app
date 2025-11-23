@@ -2,20 +2,12 @@
   <div v-if="selectedStudent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 pb-16">
     <div class="bg-white rounded-lg max-w-4xl w-full max-h-[calc(100vh-120px)] overflow-hidden flex flex-col">
       <!-- Header -->
-      <div class="text-white p-4" :style="{ backgroundColor: secondaryColor }">
+      <div class="text-white p-4" :style="{ backgroundColor: primaryColor }">
         <div class="flex items-center justify-between">
           <div class="flex-1">
             <h3 class="text-lg font-bold">{{ selectedStudent.first_name }} {{ selectedStudent.last_name }}</h3>
           </div>
           <div class="flex items-center gap-3">
-            <span :class="[
-              'text-xs px-2 py-1 rounded-full font-medium',
-              selectedStudent.is_active 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            ]">
-              {{ selectedStudent.is_active ? 'Aktiv' : 'Inaktiv' }}
-            </span>
             <button @click="closeModal" class="text-white hover:opacity-80 transition-opacity">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -30,48 +22,32 @@
         <div class="flex">
           <button
             @click="activeTab = 'details'"
-            :class="[
-              'px-2 py-2 font-medium text-sm border-b-2 transition-colors',
-              activeTab === 'details'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
-            ]"
+            :class="['px-2 py-2 font-medium text-sm border-b-2 transition-colors', activeTab === 'details' ? 'border-transparent text-gray-600 hover:text-gray-800' : 'border-transparent text-gray-600 hover:text-gray-800']"
+            :style="activeTab === 'details' ? { borderBottomColor: secondaryColor, color: secondaryColor } : {}"
           >
             Details
           </button>
 
           <button
             @click="activeTab = 'progress'"
-            :class="[
-              'px-2 py-1 font-medium text-sm border-b-2 transition-colors',
-              activeTab === 'progress'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
-            ]"
+            :class="['px-2 py-1 font-medium text-sm border-b-2 transition-colors', activeTab === 'progress' ? 'border-transparent text-gray-600 hover:text-gray-800' : 'border-transparent text-gray-600 hover:text-gray-800']"
+            :style="activeTab === 'progress' ? { borderBottomColor: secondaryColor, color: secondaryColor } : {}"
           >
             Fortschritt
           </button>
           
           <button
             @click="activeTab = 'payments'"
-            :class="[
-              'px-2 py-2 font-medium text-sm border-b-2 transition-colors',
-              activeTab === 'payments'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
-            ]"
+            :class="['px-2 py-2 font-medium text-sm border-b-2 transition-colors', activeTab === 'payments' ? 'border-transparent text-gray-600 hover:text-gray-800' : 'border-transparent text-gray-600 hover:text-gray-800']"
+            :style="activeTab === 'payments' ? { borderBottomColor: secondaryColor, color: secondaryColor } : {}"
           >
             Zahlungen
           </button>
 
           <button
             @click="activeTab = 'documents'"
-            :class="[
-              'px-2 py-1 font-medium text-sm border-b-2 transition-colors',
-              activeTab === 'documents'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
-            ]"
+            :class="['px-2 py-1 font-medium text-sm border-b-2 transition-colors', activeTab === 'documents' ? 'border-transparent text-gray-600 hover:text-gray-800' : 'border-transparent text-gray-600 hover:text-gray-800']"
+            :style="activeTab === 'documents' ? { borderBottomColor: secondaryColor, color: secondaryColor } : {}"
           >
             Dokumente
           </button>
@@ -392,21 +368,9 @@
                   </div>
                   <span :class="[
                     'px-2 py-1 text-xs font-medium rounded-full',
-                    lesson.status === 'completed' && lesson.evaluations && lesson.evaluations.length > 0 ? 'bg-green-100 text-green-800' :
-                    lesson.status === 'completed' && (!lesson.evaluations || lesson.evaluations.length === 0) ? 'bg-orange-100 text-orange-800' :
-                    lesson.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                    lesson.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                    lesson.status === 'pending_confirmation' ? 'bg-yellow-100 text-yellow-800' :
-                    lesson.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
+                    lesson.evaluations && lesson.evaluations.length > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                   ]">
-                    {{ lesson.status === 'completed' && lesson.evaluations && lesson.evaluations.length > 0 ? 'Abgeschlossen' :
-                       lesson.status === 'completed' && (!lesson.evaluations || lesson.evaluations.length === 0) ? 'Unbewertet' :
-                       lesson.status === 'confirmed' ? 'Bestätigt' :
-                       lesson.status === 'scheduled' ? 'Geplant' :
-                       lesson.status === 'pending_confirmation' ? 'Ausstehend' :
-                       lesson.status === 'cancelled' ? 'Abgesagt' :
-                       lesson.status }}
+                    {{ lesson.evaluations && lesson.evaluations.length > 0 ? 'Bewertet' : 'Unbewertet' }}
                   </span>
                 </div>
                 
@@ -573,43 +537,84 @@
 
           <div v-else class="space-y-4">
             
+            <!-- Payment Summary Box (nur wenn Zahlungen ausgewählt sind) -->
+            <div v-if="selectedPayments.length > 0" class="rounded-lg p-4 shadow-sm border-l-4" :style="{ borderLeftColor: primaryColor, backgroundColor: primaryColor + '08' }">
+              <div class="flex items-center justify-between gap-4">
+                <div class="flex-1">
+                  <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">{{ selectedPayments.length }} Zahlung{{ selectedPayments.length > 1 ? 'en' : '' }} ausgewählt</p>
+                  <p class="text-3xl font-bold mt-1" :style="{ color: primaryColor }">{{ formatCurrency(totalSelectedAmount) }}</p>
+                </div>
+                <div class="flex gap-2">
+                  <button 
+                    class="px-5 py-2 rounded-lg font-semibold text-white transition-all hover:shadow-md"
+                    style="background-color: #22C55E"
+                    @click="handleBulkPayment('cash')"
+                  >
+                    Bar
+                  </button>
+                  <button 
+                    class="px-5 py-2 rounded-lg font-semibold text-white transition-all hover:shadow-md"
+                    :style="{ backgroundColor: primaryColor }"
+                    @click="handleBulkPayment('online')"
+                  >
+                    Online
+                  </button>
+                </div>
+              </div>
+            </div>
+            
             <!-- Filter auf separater Zeile -->
             <div 
-              class="flex items-center justify-center gap-3 py-3 rounded-lg"
+              class="flex items-center justify-between gap-3 py-3 px-4 rounded-lg"
               :style="{ backgroundColor: primaryColor + '20' }"
             >
-              <span 
-                :class="['text-sm font-medium transition-colors']"
-                :style="{ color: paymentsFilterMode === 'alle' ? primaryColor : '#6B7280' }"
-              >
-                Alle
-              </span>
+              <div class="flex items-center gap-3">
+                <span 
+                  :class="['text-sm font-medium transition-colors']"
+                  :style="{ color: paymentsFilterMode === 'alle' ? primaryColor : '#6B7280' }"
+                >
+                  Alle
+                </span>
+                
+                <!-- Schieberegler -->
+                <button
+                  @click="paymentsFilterMode = paymentsFilterMode === 'alle' ? 'ausstehend' : 'alle'"
+                  :class="[
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2'
+                  ]"
+                  :style="{ 
+                    backgroundColor: paymentsFilterMode === 'ausstehend' ? primaryColor : '#D1D5DB',
+                    '--tw-ring-color': primaryColor
+                  }"
+                >
+                  <span
+                    :class="[
+                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                      paymentsFilterMode === 'ausstehend' ? 'translate-x-6' : 'translate-x-1'
+                    ]"
+                  />
+                </button>
+                
+                <span 
+                  :class="['text-sm font-medium transition-colors']"
+                  :style="{ color: paymentsFilterMode === 'ausstehend' ? primaryColor : '#6B7280' }"
+                >
+                  Ausstehend
+                </span>
+              </div>
               
-              <!-- Schieberegler -->
+              <!-- Select All Button -->
               <button
-                @click="paymentsFilterMode = paymentsFilterMode === 'alle' ? 'ausstehend' : 'alle'"
-                :class="[
-                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2'
-                ]"
+                @click="toggleAllPayments"
+                :class="['text-sm font-medium px-3 py-1 rounded transition-colors']"
                 :style="{ 
-                  backgroundColor: paymentsFilterMode === 'ausstehend' ? primaryColor : '#D1D5DB',
-                  '--tw-ring-color': primaryColor
+                  backgroundColor: selectedPayments.length === filteredPayments.length ? primaryColor : 'transparent',
+                  color: selectedPayments.length === filteredPayments.length ? 'white' : primaryColor,
+                  border: `1px solid ${primaryColor}`
                 }"
               >
-                <span
-                  :class="[
-                    'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                    paymentsFilterMode === 'ausstehend' ? 'translate-x-6' : 'translate-x-1'
-                  ]"
-                />
+                {{ selectedPayments.length === filteredPayments.length ? 'Alle abwählen' : 'Alle auswählen' }}
               </button>
-              
-              <span 
-                :class="['text-sm font-medium transition-colors']"
-                :style="{ color: paymentsFilterMode === 'ausstehend' ? primaryColor : '#6B7280' }"
-              >
-                Ausstehend
-              </span>
             </div>
             
             <!-- Zahlungen Liste -->
@@ -626,28 +631,37 @@
                 :style="payment.appointments?.status !== 'cancelled' ? { backgroundColor: primaryColor + '15' } : {}"
               >
                 <div class="flex justify-between items-start mb-2">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-1">
-                      <h5 :class="[
-                        'font-semibold',
-                        payment.appointments?.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-900'
+                  <div class="flex items-center gap-3 flex-1">
+                    <input 
+                      type="checkbox" 
+                      :checked="selectedPayments.includes(payment.id)"
+                      @change="togglePaymentSelection(payment.id)"
+                      class="w-4 h-4 rounded cursor-pointer"
+                      :style="{ accentColor: primaryColor }"
+                    />
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <h5 :class="[
+                          'font-semibold',
+                          payment.appointments?.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-900'
+                        ]">
+                          {{ (payment.total_amount_rappen / 100).toFixed(2) }} CHF
+                        </h5>
+                        <span v-if="payment.appointments?.type" :class="[
+                          'px-2 py-0.5 text-xs font-medium rounded',
+                          payment.appointments?.status === 'cancelled' ? 'bg-gray-200 text-gray-400' : 'bg-blue-100 text-blue-800'
+                        ]">
+                          {{ payment.appointments.type }}
+                        </span>
+                      </div>
+                      <p :class="[
+                        'text-sm',
+                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'
                       ]">
-                        {{ (payment.total_amount_rappen / 100).toFixed(2) }} CHF
-                      </h5>
-                      <span v-if="payment.appointments?.type" :class="[
-                        'px-2 py-0.5 text-xs font-medium rounded',
-                        payment.appointments?.status === 'cancelled' ? 'bg-gray-200 text-gray-400' : 'bg-blue-100 text-blue-800'
-                      ]">
-                        {{ payment.appointments.type }}
-                      </span>
+                        {{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}
+                        um {{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }}
+                      </p>
                     </div>
-                    <p :class="[
-                      'text-sm',
-                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'
-                    ]">
-                      {{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}
-                      um {{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }}
-                    </p>
                     <p v-if="payment.appointments?.event_types?.name || payment.appointments?.event_type_code" :class="[
                       'text-xs mt-1',
                       payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'
@@ -792,26 +806,6 @@
                   </span>
                 </div>
                 
-                <!-- Action Buttons -->
-                <div v-if="payment.payment_status === 'pending' && payment.appointments?.status !== 'cancelled'" class="mt-4 pt-4 border-t border-gray-200 flex gap-2">
-                  <!-- Bar Bezahlt Button -->
-                  <button
-                    @click="markPaymentAsCashPaid(payment)"
-                    class="flex-1 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition-colors"
-                  >
-                    💰 Bar bezahlt
-                  </button>
-                  
-                  <!-- Zu Online-Zahlung Button -->
-                  <button
-                    @click="convertPaymentToOnline(payment)"
-                    :disabled="isConvertingToOnline"
-                    class="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-                  >
-                    <span v-if="!isConvertingToOnline">💳 Online-Zahlung</span>
-                    <span v-else>Wird konvertiert...</span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -1243,6 +1237,7 @@ const selectedCategoryFilter = ref<string>('alle') // Filter nach Kategorie
 const progressSubTab = ref<'lektionen' | 'prüfungen'>('lektionen') // Sub-Tab im Fortschritt
 const isLoadingPayments = ref(false)
 const paymentsFilterMode = ref<'alle' | 'ausstehend'>('alle') // Filter für Zahlungen
+const selectedPaymentIds = ref<Set<string>>(new Set()) // Selected payments for bulk payment
 const lessonsError = ref<string | null>(null)
 const paymentsError = ref<string | null>(null)
 const examResultsError = ref<string | null>(null)
@@ -1264,7 +1259,6 @@ const confirmDialogData = ref({
   cancelText: 'Abbrechen'
 })
 const pendingPaymentAction = ref<(() => Promise<void>) | null>(null)
-const isConvertingToOnline = ref(false)
 
 // Hilfsfunktion: Prüft ob ein Termin eine Prüfung ist
 const isExam = (lesson: any) => {
@@ -1383,6 +1377,15 @@ const sortedLessons = computed(() => {
   }
 })
 
+// Selected payments summary
+const selectedPaymentsSummary = computed(() => {
+  const selected = payments.value.filter(p => selectedPaymentIds.value.has(p.id))
+  const total = selected.reduce((sum, p) => {
+    return sum + ((p.total_amount_rappen || 0) / 100)
+  }, 0)
+  return { count: selected.length, total }
+})
+
 // Gefilterte Zahlungen
 const filteredPayments = computed(() => {
   if (paymentsFilterMode.value === 'ausstehend') {
@@ -1395,29 +1398,24 @@ const filteredPayments = computed(() => {
 const formatLocalDate = (dateString: string) => {
   if (!dateString) return '-'
   
-  // Parse ohne Timezone-Konvertierung - unterstützt beide Formate
-  // Format 1: "2025-10-10 11:30:00+00"
-  // Format 2: "2025-10-10T11:30:00+00:00"
-  const dateStr = dateString.replace('+00:00', '').replace('+00', '').replace('Z', '').trim()
-  
-  // Split by 'T' or ' ' to get the date part
-  const datePart = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0]
-  
-  if (!datePart) {
-    console.warn('Invalid date format:', dateString)
-    return '-'
+  // Normalize format: convert space to T and ensure +00:00
+  let timeStr = dateString
+  if (timeStr.includes(' ') && !timeStr.includes('T')) {
+    timeStr = timeStr.replace(' ', 'T')
+  }
+  if (timeStr.includes('+00') && !timeStr.includes('+00:00')) {
+    timeStr = timeStr.replace('+00', '+00:00')
+  }
+  if (!timeStr.includes('+') && !timeStr.includes('Z')) {
+    timeStr += '+00:00'
   }
   
-  const dateComponents = datePart.split('-')
-  if (dateComponents.length < 3) {
-    console.warn('Invalid date components:', datePart)
-    return '-'
-  }
+  const utcDate = new Date(timeStr)
+  // Convert UTC to Europe/Zurich timezone
+  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const localDate = new Date(localDateStr)
   
-  const [year, month, day] = dateComponents
-  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-  
-  return date.toLocaleDateString('de-CH', {
+  return localDate.toLocaleDateString('de-CH', {
     weekday: 'short',
     day: '2-digit',
     month: '2-digit',
@@ -1428,36 +1426,85 @@ const formatLocalDate = (dateString: string) => {
 const formatLocalTime = (dateString: string) => {
   if (!dateString) return '00:00'
   
-  // Parse ohne Timezone-Konvertierung - unterstützt beide Formate
-  // Format 1: "2025-10-10 11:30:00+00"
-  // Format 2: "2025-10-10T11:30:00+00:00"
-  const dateStr = dateString.replace('+00:00', '').replace('+00', '').replace('Z', '').trim()
-  
-  // Split by 'T' or ' '
-  const parts = dateStr.includes('T') ? dateStr.split('T') : dateStr.split(' ')
-  
-  if (parts.length < 2) {
-    console.warn('Invalid time format:', dateString)
-    return '00:00'
+  // Normalize format: convert space to T and ensure +00:00
+  let timeStr = dateString
+  if (timeStr.includes(' ') && !timeStr.includes('T')) {
+    timeStr = timeStr.replace(' ', 'T')
+  }
+  if (timeStr.includes('+00') && !timeStr.includes('+00:00')) {
+    timeStr = timeStr.replace('+00', '+00:00')
+  }
+  if (!timeStr.includes('+') && !timeStr.includes('Z')) {
+    timeStr += '+00:00'
   }
   
-  const timePart = parts[1]
-  const timeComponents = timePart.split(':')
+  const utcDate = new Date(timeStr)
+  // Convert UTC to Europe/Zurich timezone
+  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const localDate = new Date(localDateStr)
   
-  if (timeComponents.length < 2) {
-    console.warn('Invalid time components:', timePart)
-    return '00:00'
-  }
-  
-  const hour = timeComponents[0]
-  const minute = timeComponents[1]
-  
-  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`
+  return localDate.toLocaleTimeString('de-CH', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 // Payment functionality
 const selectedPayments = ref<string[]>([])
 const isProcessingBulkAction = ref(false)
+
+// Toggle payment selection
+const togglePaymentSelection = (paymentId: string) => {
+  if (selectedPayments.value.includes(paymentId)) {
+    selectedPayments.value = selectedPayments.value.filter(id => id !== paymentId)
+  } else {
+    selectedPayments.value.push(paymentId)
+  }
+}
+
+// Toggle all payments
+const toggleAllPayments = () => {
+  if (selectedPayments.value.length === filteredPayments.value.length) {
+    selectedPayments.value = []
+  } else {
+    selectedPayments.value = filteredPayments.value.map(p => p.id)
+  }
+}
+
+// Format currency
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('de-CH', { 
+    style: 'currency', 
+    currency: 'CHF' 
+  }).format(amount / 100)
+}
+
+// Handle bulk payment method selection
+const handleBulkPayment = async (method: 'cash' | 'online') => {
+  if (selectedPayments.value.length === 0) return
+  
+  isProcessingBulkAction.value = true
+  try {
+    console.log(`💳 Processing ${selectedPayments.value.length} payments as ${method}`)
+    console.log(`Payment IDs: ${selectedPayments.value.join(', ')}`)
+    
+    if (method === 'cash') {
+      // For cash payments, we might want to mark them as paid directly or show a confirmation
+      // This is a placeholder - implement as needed
+      console.log('✅ Cash payment method selected')
+    } else if (method === 'online') {
+      // For online payments, we might redirect to Wallee or payment processor
+      console.log('✅ Online payment method selected')
+    }
+    
+    // Clear selection after processing
+    selectedPayments.value = []
+  } catch (error) {
+    console.error('❌ Error processing bulk payment:', error)
+  } finally {
+    isProcessingBulkAction.value = false
+  }
+}
 
 // Computed properties
 const paymentsCount = computed(() => payments.value.length)
@@ -1561,101 +1608,6 @@ const handleCancelPayment = () => {
 }
 
 // Payment Functions
-const markPaymentAsCashPaid = async (payment: any) => {
-  try {
-    // Wenn bereits bezahlt, nichts tun
-    if (payment.payment_status === 'completed') {
-      console.log('💰 Payment already completed')
-      return
-    }
-    
-    const amount = (payment.total_amount_rappen / 100).toFixed(2)
-    const paymentDate = new Date(payment.created_at).toLocaleDateString('de-CH', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric' 
-    })
-    
-    // Zeige Bestätigungsdialog
-    confirmDialogData.value = {
-      title: 'Zahlung bestätigen',
-      message: 'Möchten Sie diese Zahlung als bar bezahlt markieren?',
-      details: `
-        <strong>Betrag:</strong> ${amount} CHF<br>
-        <strong>Datum:</strong> ${paymentDate}<br>
-        <strong>Status:</strong> ${payment.payment_status === 'pending' ? 'Ausstehend' : payment.payment_status}
-      `,
-      icon: '💰',
-      type: 'success',
-      confirmText: 'Als Bar bezahlt markieren',
-      cancelText: 'Abbrechen'
-    }
-    
-    pendingPaymentAction.value = async () => {
-      console.log('💰 Marking payment as cash paid:', payment.id)
-      
-      const supabase = getSupabase()
-      
-      const { error } = await supabase
-        .from('payments')
-        .update({
-          payment_method: 'cash',
-          payment_status: 'completed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payment.id)
-      
-      if (error) {
-        console.error('❌ Error updating payment:', error)
-        alert('Fehler beim Aktualisieren der Zahlung: ' + error.message)
-        return
-      }
-      
-      console.log('✅ Payment marked as cash paid')
-      
-      // Lade Zahlungen neu
-      await loadPayments()
-    }
-    
-    showConfirmDialog.value = true
-    
-  } catch (err: any) {
-    console.error('❌ Error in markPaymentAsCashPaid:', err)
-    alert('Fehler: ' + err.message)
-  }
-}
-
-// Convert payment from cash/invoice to online payment
-const convertPaymentToOnline = async (payment: any) => {
-  if (!payment || !payment.id) return
-  
-  try {
-    isConvertingToOnline.value = true
-    console.log('🔄 Converting payment to online:', payment.id)
-    
-    const result = await $fetch('/api/payments/convert-to-online', {
-      method: 'POST',
-      body: {
-        paymentId: payment.id,
-        customerEmail: selectedStudent.value?.email
-      }
-    })
-    
-    console.log('✅ Payment converted to online:', result)
-    
-    // Show success message
-    alert(`✅ Zahlung konvertiert!\n\nZahlungslink wurde per E-Mail versendet.\n\nLink: ${result.payment.paymentLink}`)
-    
-    // Reload payments
-    await loadPayments()
-    
-  } catch (err: any) {
-    console.error('❌ Error converting payment to online:', err)
-    alert('Fehler beim Konvertieren der Zahlung: ' + (err.data?.statusMessage || err.message))
-  } finally {
-    isConvertingToOnline.value = false
-  }
-}
 
 const startCategoryUpload = (requirement: any, side: 'front' | 'back', openNativeImmediately = false) => {
   currentUploadRequirement.value = requirement
@@ -1885,15 +1837,42 @@ const loadLessons = async () => {
           }
         }
         
-        // Gruppiere Notes nach appointment_id und füge Criteria-Details hinzu
-        notesData.forEach(note => {
-          if (!evaluationsMap[note.appointment_id]) {
-            evaluationsMap[note.appointment_id] = []
+        // Gruppiere Notes nach appointment_id, nimm nur die LETZTEN (neuesten) pro evaluation_criteria_id
+        const latestEvaluationsMap: Record<string, Record<string, any>> = {}
+        
+        // Sortiere Notes nach created_at DESC (neueste zuerst) - nur created_at da updated_at nicht existiert
+        const sortedNotes = [...notesData].sort((a, b) => {
+          const dateA = new Date(a.created_at).getTime()
+          const dateB = new Date(b.created_at).getTime()
+          return dateB - dateA // Neueste zuerst
+        })
+        
+        console.log('🔍 Total notes loaded:', notesData.length)
+        
+        sortedNotes.forEach(note => {
+          const aptId = note.appointment_id
+          const criteriaId = note.evaluation_criteria_id
+          
+          if (!latestEvaluationsMap[aptId]) {
+            latestEvaluationsMap[aptId] = {}
           }
-          evaluationsMap[note.appointment_id].push({
-            ...note,
-            evaluation_criteria: note.evaluation_criteria_id ? criteriaMap[note.evaluation_criteria_id] : null
-          })
+          
+          // Wenn dieses Kriterium noch nicht vorhanden ist (da wir sortiert haben, ist das erste die neueste), speichern
+          if (!latestEvaluationsMap[aptId][criteriaId]) {
+            console.log(`✅ Keeping evaluation for apt ${aptId.slice(0, 8)}, criteria ${criteriaId?.slice(0, 8)}`)
+            latestEvaluationsMap[aptId][criteriaId] = {
+              ...note,
+              evaluation_criteria: criteriaId ? criteriaMap[criteriaId] : null
+            }
+          } else {
+            console.log(`⏭️ Skipping duplicate for apt ${aptId.slice(0, 8)}, criteria ${criteriaId?.slice(0, 8)}`)
+          }
+        })
+        
+        // Konvertiere in das erwartete Format
+        Object.entries(latestEvaluationsMap).forEach(([aptId, criteriaMap]) => {
+          evaluationsMap[aptId] = Object.values(criteriaMap)
+          console.log(`📦 Apt ${aptId.slice(0, 8)} has ${evaluationsMap[aptId].length} evaluations`)
         })
       }
     }

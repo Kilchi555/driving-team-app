@@ -252,6 +252,7 @@ const criteriaNotes = ref<Record<string, string>>({})
 const sortByNewest = ref(true) // true = neueste zuerst, false = schlechteste zuerst
 const criteriaTimestamps = ref<Record<string, string>>({}) // Neue ref für Timestamps
 const criteriaAppointments = ref<Record<string, { appointment_id: string, start_time: string }>>({})
+const newlyRatedCriteria = ref<string[]>([]) // Track which criteria were newly rated in this session
 
 
 // Computed
@@ -568,6 +569,9 @@ const loadAllCriteria = async () => {
 const selectCriteria = (criteria: any) => {
   if (!selectedCriteriaOrder.value.includes(criteria.id)) {
     selectedCriteriaOrder.value.unshift(criteria.id)
+    if (!newlyRatedCriteria.value.includes(criteria.id)) {
+      newlyRatedCriteria.value.push(criteria.id) // Mark as newly rated in this session
+    }
     
     // Setze aktuelles Appointment für neue Kriterien
     if (props.appointment) {
@@ -599,6 +603,10 @@ const removeCriteria = (criteriaId: string) => {
   // Remove rating and note
   delete criteriaRatings.value[criteriaId]
   delete criteriaNotes.value[criteriaId]
+  const newIndex = newlyRatedCriteria.value.indexOf(criteriaId)
+  if (newIndex > -1) {
+    newlyRatedCriteria.value.splice(newIndex, 1)
+  }
 }
 
 const getCriteriaById = (criteriaId: string) => {
@@ -654,13 +662,18 @@ const saveEvaluation = async () => {
   
   try {
     // Erstelle ein Array von CriteriaEvaluationData-Objekten
-    const evaluationsToSave: CriteriaEvaluationData[] = selectedCriteriaOrder.value.map(criteriaId => {
-      return {
-        criteria_id: criteriaId,
-        rating: criteriaRatings.value[criteriaId],
-        note: criteriaNotes.value[criteriaId] || '' // Sicherstellen, dass es ein String ist
-      }
-    })
+    // WICHTIG: Speichere NUR die neu bewerteten Kriterien, nicht die historischen!
+    const evaluationsToSave: CriteriaEvaluationData[] = selectedCriteriaOrder.value
+      .filter(criteriaId => newlyRatedCriteria.value.includes(criteriaId)) // Only save newly rated criteria
+      .map(criteriaId => {
+        return {
+          criteria_id: criteriaId,
+          rating: criteriaRatings.value[criteriaId],
+          note: criteriaNotes.value[criteriaId] || '' // Sicherstellen, dass es ein String ist
+        }
+      })
+    
+    console.log(`🔥 Saving only ${evaluationsToSave.length} newly rated criteria (filtered from ${selectedCriteriaOrder.value.length} total)`)
 
     console.log('🔥 EvaluationModal - calling saveCriteriaEvaluations with:', {
       appointmentId: props.appointment.id,
@@ -919,6 +932,7 @@ watch(() => props.isOpen, (isOpen) => {
     criteriaNotes.value = {}
     error.value = null
     criteriaTimestamps.value = {}
+    newlyRatedCriteria.value = [] // Clear tracking
     
 
     

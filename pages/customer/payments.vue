@@ -603,17 +603,19 @@ const formatPaymentDate = (dateString: string): string => {
   
   try {
     const date = new Date(dateString)
-    const formattedDate = date.toLocaleDateString('de-CH', {
+    // Convert UTC to Europe/Zurich timezone
+    const localDateStr = date.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+    const localDate = new Date(localDateStr)
+    
+    const formattedDate = localDate.toLocaleDateString('de-CH', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
-      timeZone: 'Europe/Zurich'
+      year: 'numeric'
     })
     
-    const formattedTime = date.toLocaleTimeString('de-CH', {
+    const formattedTime = localDate.toLocaleTimeString('de-CH', {
       hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Zurich'
+      minute: '2-digit'
     })
     
     return `${formattedDate}, ${formattedTime} Uhr`
@@ -662,23 +664,25 @@ const formatPaymentTimeline = (dateString: string): string => {
   
   try {
     const date = new Date(dateString)
+    // Convert UTC to Europe/Zurich timezone
+    const localDateStr = date.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+    const localDate = new Date(localDateStr)
+    
     const now = new Date()
-    const diffMs = date.getTime() - now.getTime()
+    const diffMs = localDate.getTime() - now.getTime()
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
     
-    const formattedDate = date.toLocaleDateString('de-CH', {
+    const formattedDate = localDate.toLocaleDateString('de-CH', {
       weekday: 'short',
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
-      timeZone: 'Europe/Zurich'
+      year: 'numeric'
     })
     
-    const formattedTime = date.toLocaleTimeString('de-CH', {
+    const formattedTime = localDate.toLocaleTimeString('de-CH', {
       hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Zurich'
+      minute: '2-digit'
     })
     
     // Relative Zeit hinzufügen
@@ -700,7 +704,10 @@ const formatPaymentTimeline = (dateString: string): string => {
     return `${formattedDate}, ${formattedTime}${relativeTime}`
   } catch (error) {
     console.error('Error formatting payment timeline:', error)
-    return new Date(dateString).toLocaleString('de-CH', { timeZone: 'Europe/Zurich' })
+    const date = new Date(dateString)
+    const localDateStr = date.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+    const localDate = new Date(localDateStr)
+    return localDate.toLocaleString('de-CH')
   }
 }
 
