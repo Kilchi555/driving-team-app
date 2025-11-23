@@ -9,18 +9,20 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     console.log('🔔 Wallee Webhook received:', {
       eventType: body.eventType,
-      transactionId: body.transaction?.id,
-      transactionState: body.transaction?.state
+      entityId: body.entityId,
+      state: body.state,
+      fullBody: body
     })
 
     // Validate webhook (in production, verify signature)
-    if (!body.transaction || !body.transaction.id) {
-      console.warn('⚠️ Invalid webhook payload')
+    // Wallee sendet entityId statt transaction.id und state direkt
+    const transactionId = body.entityId || body.transaction?.id
+    const transactionState = body.state || body.transaction?.state
+    
+    if (!transactionId) {
+      console.warn('⚠️ Invalid webhook payload - no transaction ID found')
       return { success: false, message: 'Invalid payload' }
     }
-
-    const transactionId = body.transaction.id
-    const transactionState = body.transaction.state
 
     // Process AUTHORIZED (provisorische Belastung) and FULFILL (finale Abbuchung)
     if (!['AUTHORIZED', 'FULFILL'].includes(transactionState)) {
