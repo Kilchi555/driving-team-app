@@ -322,7 +322,7 @@
       :is-open="showEvaluationModal"
       :appointment="selectedAppointment"
       :student-category="getStudentCategory(selectedAppointment)"
-      :current-user="currentUser"
+      :current-user="props.currentUser"
       @close="closeEvaluationModal"
       @saved="onEvaluationSaved"
   />
