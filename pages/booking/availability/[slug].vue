@@ -2937,18 +2937,36 @@ const withAlpha = (hex: string, alpha: number) => {
 // New availability logic functions
 const determineDayMode = async (staffId: string, targetDate: Date): Promise<'free-day' | 'constrained'> => {
   try {
-    // Calculate timezone offset
-    const localDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate())
-    const utcDate = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()))
-    const offsetMs = localDate.getTime() - utcDate.getTime()
+    // Get Zurich offset
+    const getZurichOffsetMs = (date: Date): number => {
+      const formatter = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: 'Europe/Zurich',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      })
+      
+      const utcMidnight = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0))
+      const zurichTimeStr = formatter.format(utcMidnight)
+      const match = zurichTimeStr.match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/)
+      if (!match) return 0
+      
+      const [, , , , hour, min] = match
+      const zurichMinutesFromMidnight = (parseInt(hour) * 60) + parseInt(min)
+      return zurichMinutesFromMidnight * 60 * 1000
+    }
+    
+    const offsetMs = getZurichOffsetMs(targetDate)
     
     // Convert local day boundaries to UTC
-    const dayStartLocal = new Date(targetDate)
-    dayStartLocal.setHours(0, 0, 0, 0)
+    const dayStartLocal = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0))
     const dayStartUtc = new Date(dayStartLocal.getTime() - offsetMs)
     
-    const dayEndLocal = new Date(targetDate)
-    dayEndLocal.setHours(23, 59, 59, 999)
+    const dayEndLocal = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999))
     const dayEndUtc = new Date(dayEndLocal.getTime() - offsetMs)
     
     // Check for appointments on this day
@@ -2989,26 +3007,46 @@ const generateFreeDaySlots = async (staff: any, location: any, targetDate: Date,
   const startTimeMinutes = startHour * 60 + startMinute
   const endTimeMinutes = endHour * 60 + endMinute
   
+  // Helper function to get Zurich offset in milliseconds
+  const getZurichOffsetMs = (date: Date): number => {
+    const formatter = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Europe/Zurich',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+    
+    const utcMidnight = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0))
+    const zurichTimeStr = formatter.format(utcMidnight)
+    
+    // Parse "YYYY-MM-DD HH:MM:SS"
+    const match = zurichTimeStr.match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/)
+    if (!match) return 0
+    
+    const [, , , , hour, min, sec] = match
+    const zurichMinutesFromMidnight = (parseInt(hour) * 60) + parseInt(min)
+    const offsetMinutes = zurichMinutesFromMidnight // This is the offset from UTC
+    
+    return offsetMinutes * 60 * 1000
+  }
+  
   // Generate slots in intervals
   for (let timeMinutes = startTimeMinutes; timeMinutes < endTimeMinutes; timeMinutes += slotInterval) {
-    // Create UTC date: Working hours are in local time (Europe/Zurich), but we need to convert to UTC for storage
-    // Get offset between UTC and local time
-    const localDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate())
-    const utcDate = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()))
-    const offsetMs = localDate.getTime() - utcDate.getTime()
+    const hours = Math.floor(timeMinutes / 60)
+    const mins = timeMinutes % 60
     
-    // Create slot time in UTC (subtract the offset)
-    const slotTimeUtc = new Date(Date.UTC(
-      targetDate.getFullYear(), 
-      targetDate.getMonth(), 
-      targetDate.getDate(),
-      Math.floor(timeMinutes / 60), 
-      timeMinutes % 60, 
-      0, 
-      0
-    ))
-    // Adjust for timezone offset
-    slotTimeUtc.setTime(slotTimeUtc.getTime() - offsetMs)
+    // Create the slot time as if it were UTC (we'll adjust after)
+    const tempDate = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), hours, mins, 0, 0))
+    
+    // Get the Zurich offset for this date
+    const offsetMs = getZurichOffsetMs(targetDate)
+    
+    // The slot time in Zurich minus offset = UTC time
+    const slotTimeUtc = new Date(tempDate.getTime() - offsetMs)
     
     // Skip if slot is in the past
     if (slotTimeUtc < new Date()) continue
@@ -3019,11 +3057,7 @@ const generateFreeDaySlots = async (staff: any, location: any, targetDate: Date,
     
     const endTimeUtc = new Date(slotTimeUtc.getTime() + duration * 60000)
     
-    // Check if end time fits within working hours (check end time in local)
-    const endTimeLocal = new Date(endTimeUtc.getTime() + offsetMs)
-    if (endTimeLocal.getHours() * 60 + endTimeLocal.getMinutes() > endTimeMinutes) continue
-    
-    // For display, convert back to local time
+    // For display, convert back to Zurich time
     const slotTimeLocal = new Date(slotTimeUtc.getTime() + offsetMs)
     
     slots.push({
@@ -3050,18 +3084,36 @@ const generateConstrainedSlots = async (staff: any, location: any, targetDate: D
   const slots: any[] = []
   
   try {
-    // Calculate timezone offset
-    const localDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate())
-    const utcDate = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()))
-    const offsetMs = localDate.getTime() - utcDate.getTime()
+    // Get Zurich offset
+    const getZurichOffsetMs = (date: Date): number => {
+      const formatter = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: 'Europe/Zurich',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      })
+      
+      const utcMidnight = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0))
+      const zurichTimeStr = formatter.format(utcMidnight)
+      const match = zurichTimeStr.match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/)
+      if (!match) return 0
+      
+      const [, , , , hour, min] = match
+      const zurichMinutesFromMidnight = (parseInt(hour) * 60) + parseInt(min)
+      return zurichMinutesFromMidnight * 60 * 1000
+    }
+    
+    const offsetMs = getZurichOffsetMs(targetDate)
     
     // Convert local day boundaries to UTC for database queries
-    const dayStartLocal = new Date(targetDate)
-    dayStartLocal.setHours(0, 0, 0, 0)
+    const dayStartLocal = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0))
     const dayStartUtc = new Date(dayStartLocal.getTime() - offsetMs)
     
-    const dayEndLocal = new Date(targetDate)
-    dayEndLocal.setHours(23, 59, 59, 999)
+    const dayEndLocal = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999))
     const dayEndUtc = new Date(dayEndLocal.getTime() - offsetMs)
     
     // Get appointments for this staff on this day at this location
@@ -3131,12 +3183,32 @@ const generateConstrainedSlots = async (staff: any, location: any, targetDate: D
 const generateSlotsInRange = async (staff: any, location: any, targetDate: Date, startTime: Date, endTime: Date, slotInterval: number) => {
   const slots: any[] = []
   
-  // Get timezone offset
-  const localDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate())
-  const utcDate = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()))
-  const offsetMs = localDate.getTime() - utcDate.getTime()
+  // Get Zurich offset
+  const getZurichOffsetMs = (date: Date): number => {
+    const formatter = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Europe/Zurich',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+    
+    const utcMidnight = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0))
+    const zurichTimeStr = formatter.format(utcMidnight)
+    const match = zurichTimeStr.match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/)
+    if (!match) return 0
+    
+    const [, , , , hour, min] = match
+    const zurichMinutesFromMidnight = (parseInt(hour) * 60) + parseInt(min)
+    return zurichMinutesFromMidnight * 60 * 1000
+  }
   
-  // startTime and endTime are in LOCAL time, convert to UTC for iteration
+  const offsetMs = getZurichOffsetMs(targetDate)
+  
+  // startTime and endTime are in LOCAL time (Zurich), convert to UTC for iteration
   const startTimeUtc = new Date(startTime.getTime() - offsetMs)
   const endTimeUtc = new Date(endTime.getTime() - offsetMs)
   
