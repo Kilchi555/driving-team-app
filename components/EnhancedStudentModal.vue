@@ -623,11 +623,12 @@
                 v-for="payment in filteredPayments" 
                 :key="payment.id"
                 :class="[
-                  'rounded-lg border-2 transition-all overflow-hidden',
+                  'rounded-lg transition-all overflow-hidden border-l-4 shadow-sm',
                   payment.appointments?.status === 'cancelled'
-                    ? 'border-gray-300 bg-gray-50 opacity-60'
-                    : 'border-gray-200 bg-white hover:shadow-md'
+                    ? 'border-l-gray-300 bg-gray-50 opacity-60'
+                    : 'hover:shadow-md'
                 ]"
+                :style="payment.appointments?.status !== 'cancelled' ? { borderLeftColor: primaryColor, backgroundColor: primaryColor + '08' } : {}"
               >
                 <!-- Header Row with Checkbox and Main Info -->
                 <div class="p-4 flex gap-4">
