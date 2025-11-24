@@ -802,6 +802,14 @@
                   </div>
                 </div>
                 
+                <!-- Cancellation Date -->
+                <div v-if="payment.appointments?.deleted_at" class="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm">
+                  <span class="text-gray-600">Abgesagt am:</span>
+                  <span class="ml-1 font-medium text-gray-900">
+                    {{ formatLocalDate(payment.appointments.deleted_at) }} {{ formatLocalTime(payment.appointments.deleted_at) }}
+                  </span>
+                </div>
+                
                 <!-- Payment Method -->
                 <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm">
                   <span class="text-gray-600">Zahlungsmethode:</span>
@@ -2181,6 +2189,8 @@ const loadPayments = async () => {
           event_type_code,
           staff_id,
           type,
+          deleted_at,
+          deletion_reason,
           event_types(name)
         )
       `)
