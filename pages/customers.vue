@@ -709,7 +709,7 @@ const loadStudents = async (loadAppointments = true) => {
     console.log('🔍 Testing direct query for all students in tenant...')
     const { data: testData } = await supabase
       .from('users')
-      .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id')
+      .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id, assigned_staff_ids')
       .eq('role', 'client')
       .eq('tenant_id', tenantId)
     
@@ -718,7 +718,7 @@ const loadStudents = async (loadAppointments = true) => {
     // DEBUG: Teste mit Service Role (ohne RLS)
     const { data: testDataNoRLS } = await supabase
       .from('users')
-      .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id')
+      .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id, assigned_staff_ids')
       .eq('role', 'client')
       .eq('tenant_id', tenantId)
     
@@ -768,6 +768,7 @@ const loadStudents = async (loadAppointments = true) => {
         is_active,
         category,
         assigned_staff_id,
+        assigned_staff_ids,
         payment_provider_customer_id,
         auth_user_id,
         onboarding_status,
@@ -823,7 +824,7 @@ const loadStudents = async (loadAppointments = true) => {
     
     
     if (!showAllStudents.value) {
-      // "Meine" - Filter by assigned staff
+      // "Meine" - Filter by assigned staff (check both assigned_staff_id and assigned_staff_ids array)
       console.log('👤 Filter: Show only MY students (assigned to me)')
       console.log('🔍 Current user details:', {
         id: currentUser.value.id,
@@ -832,8 +833,12 @@ const loadStudents = async (loadAppointments = true) => {
         first_name: currentUser.value.first_name
       })
       
-      // ✅ Filter to only students assigned to current user
-      studentsToProcess = studentsToProcess.filter((s: any) => s.assigned_staff_id === currentUser.value.id)
+      // ✅ Filter to only students assigned to current user (single or multiple staff)
+      studentsToProcess = studentsToProcess.filter((s: any) => {
+        // Check if current user is in assigned_staff_ids array
+        const assignedIds = s.assigned_staff_ids || []
+        return assignedIds.includes(currentUser.value.id)
+      })
       console.log(`✅ Filtered to ${studentsToProcess.length} students assigned to me`)
     } else {
       // "Alle" - Show all students in tenant

@@ -73,25 +73,45 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ Appointment created:', appointment.id)
 
-    // 1b. Assign staff to customer if not yet assigned
-    const { data: userData, error: userFetchError } = await supabase
-      .from('users')
-      .select('assigned_staff_id')
-      .eq('id', user_id)
-      .single()
-
-    if (!userFetchError && userData && !userData.assigned_staff_id) {
-      console.log(`👤 Assigning staff ${staff_id} to customer ${user_id}`)
-      const { error: updateError } = await supabase
+    // 1b. Auto-assign staff to customer on first appointment with this staff
+    try {
+      const { data: userData, error: userFetchError } = await supabase
         .from('users')
-        .update({ assigned_staff_id: staff_id })
+        .select('assigned_staff_ids')
         .eq('id', user_id)
-      
-      if (updateError) {
-        console.warn('⚠️ Could not assign staff to customer:', updateError)
-      } else {
-        console.log('✅ Staff assigned to customer')
+        .single()
+
+      if (userFetchError) {
+        console.warn('⚠️ Could not fetch user assigned_staff_ids:', userFetchError)
+      } else if (userData) {
+        const currentStaffIds = userData.assigned_staff_ids || []
+        
+        // Check if staff is already assigned
+        if (!currentStaffIds.includes(staff_id)) {
+          // Add staff to the array
+          const updatedStaffIds = [...currentStaffIds, staff_id]
+          
+          console.log(`👤 Adding staff ${staff_id} to customer ${user_id}'s assigned_staff_ids`, {
+            before: currentStaffIds,
+            after: updatedStaffIds
+          })
+          
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ assigned_staff_ids: updatedStaffIds })
+            .eq('id', user_id)
+          
+          if (updateError) {
+            console.warn('⚠️ Could not update assigned_staff_ids:', updateError)
+          } else {
+            console.log('✅ Staff added to customer assigned_staff_ids')
+          }
+        } else {
+          console.log(`ℹ️ Staff ${staff_id} already in customer's assigned_staff_ids`)
+        }
       }
+    } catch (error: any) {
+      console.error('❌ Error in auto-assign staff:', error.message)
     }
 
     // 2. Lade Preis-Informationen
