@@ -1488,17 +1488,33 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
     console.log(`💳 Processing ${selectedPayments.value.length} payments as ${method}`)
     console.log(`Payment IDs: ${selectedPayments.value.join(', ')}`)
     
-    if (method === 'cash') {
-      // For cash payments, we might want to mark them as paid directly or show a confirmation
-      // This is a placeholder - implement as needed
-      console.log('✅ Cash payment method selected')
-    } else if (method === 'online') {
-      // For online payments, we might redirect to Wallee or payment processor
-      console.log('✅ Online payment method selected')
+    const supabase = getSupabase()
+    
+    // Update payment_method for all selected payments
+    for (const paymentId of selectedPayments.value) {
+      const { error } = await supabase
+        .from('payments')
+        .update({ 
+          payment_method: method === 'cash' ? 'cash' : 'wallee',
+          payment_status: method === 'cash' ? 'completed' : 'pending',
+          paid_at: method === 'cash' ? new Date().toISOString() : null
+        })
+        .eq('id', paymentId)
+      
+      if (error) {
+        console.error(`❌ Error updating payment ${paymentId}:`, error)
+      } else {
+        console.log(`✅ Payment ${paymentId} updated to ${method}`)
+      }
     }
+    
+    // Reload payments to reflect changes
+    await loadPayments()
     
     // Clear selection after processing
     selectedPayments.value = []
+    
+    console.log(`✅ Successfully processed ${selectedPayments.value.length} payments as ${method}`)
   } catch (error) {
     console.error('❌ Error processing bulk payment:', error)
   } finally {
