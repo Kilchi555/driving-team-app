@@ -1078,7 +1078,7 @@ const paidAppointments = computed(() => {
 })
 
 const paymentsCount = computed(() => {
-  return pendingPayments.value?.length || 0
+  return payments.value?.length || 0
 })
 
 const recentEvaluations = computed(() => {
