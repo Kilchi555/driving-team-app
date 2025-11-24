@@ -80,6 +80,7 @@ export default defineEventHandler(async (event) => {
     })
     
     // ✅ WICHTIG: Token wird über Charge Attempt abgerufen, nicht direkt aus Transaction!
+    // Aber: Charge Attempt ist optional - nicht alle Zahlungsmethoden haben Tokens
     if ((transaction as any).chargeAttemptId) {
       console.log('🔄 Attempting to fetch Charge Attempt details for token...')
       try {
@@ -114,6 +115,9 @@ export default defineEventHandler(async (event) => {
       } catch (chargeError: any) {
         console.warn('⚠️ Could not fetch charge attempt:', chargeError.message)
       }
+    } else {
+      console.log('ℹ️ No chargeAttemptId in transaction - this is normal for some payment methods like TWINT')
+      console.log('ℹ️ Wallee handles tokenization automatically for supported methods')
     }
 
     // ✅ Hole Payment Method Token von Wallee
