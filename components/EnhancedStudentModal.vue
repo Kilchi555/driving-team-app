@@ -2141,6 +2141,7 @@ const loadPayments = async () => {
         created_at,
         payment_method,
         payment_status,
+        paid_at,
         total_amount_rappen,
         admin_fee_rappen,
         appointment_id,
