@@ -1315,16 +1315,16 @@ const calculateCancelledPayment = (payment: any) => {
   const policy = getCancellationPolicy(payment.appointments)
   if (!policy) return null
   
-  // Termin-Kosten (wird nach Policy verrechnet)
-  const appointmentCost = payment.total_amount_rappen
+  // Admin-Fee (wird IMMER verrechnet)
+  const adminFee = payment.admin_fee_rappen || 0
+  
+  // Termin-Kosten (wird nach Policy verrechnet) = Total - Admin-Fee
+  const appointmentCost = (payment.total_amount_rappen || 0) - adminFee
   
   // Product-Kosten (werden IMMER verrechnet)
   const productCost = (payment.product_sales || []).reduce((sum: number, ps: any) => {
     return sum + (ps.unit_price_rappen || 0) * ps.quantity
   }, 0)
-  
-  // Admin-Fee (wird IMMER verrechnet)
-  const adminFee = payment.admin_fee_rappen || 0
   
   // Discount-Wert (wird nach Policy behandelt)
   const discountValue = payment.discount_sale?.discount_amount_rappen || 0
