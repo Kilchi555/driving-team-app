@@ -1291,18 +1291,32 @@ const isExam = (lesson: any) => {
 const getCancellationPolicy = (appointment: any) => {
   if (!appointment || appointment.status !== 'cancelled') return null
   
+  // Convert to Zurich time for accurate hour difference calculation
   const appointmentTime = new Date(appointment.start_time)
   const now = new Date()
-  const hoursDifference = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+  
+  // Use Zurich timezone for both dates to get accurate hour difference
+  const appointmentZurich = new Date(appointmentTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
+  const nowZurich = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
+  
+  const hoursDifference = (appointmentZurich.getTime() - nowZurich.getTime()) / (1000 * 60 * 60)
+  
+  console.log('🕐 Cancellation policy check:', {
+    appointmentTime: appointment.start_time,
+    hoursDifference: hoursDifference.toFixed(2),
+    policies: cancellationPolicies.value.map(p => ({ hours: p.hours_before_appointment, refund: p.refund_percentage }))
+  })
   
   // Finde die passende Policy basierend auf der Zeit vor dem Termin
   for (const policy of cancellationPolicies.value) {
     if (hoursDifference >= policy.hours_before_appointment) {
+      console.log('✅ Policy found:', { hours: policy.hours_before_appointment, refund: policy.refund_percentage })
       return policy
     }
   }
   
   // Fallback: Letzte Policy (meist 100% Stornierung)
+  console.log('⚠️ No matching policy, using fallback')
   return cancellationPolicies.value[cancellationPolicies.value.length - 1] || null
 }
 
