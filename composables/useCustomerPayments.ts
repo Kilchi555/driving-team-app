@@ -94,6 +94,11 @@ export const useCustomerPayments = () => {
               status,
               confirmation_token,
               staff_id,
+              deleted_at,
+              cancellation_type,
+              cancellation_charge_percentage,
+              medical_certificate_status,
+              medical_certificate_url,
               staff:users!staff_id (
                 id,
                 first_name,
