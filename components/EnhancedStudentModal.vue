@@ -622,26 +622,28 @@
               <div 
                 v-for="payment in filteredPayments" 
                 :key="payment.id"
+                @click="togglePaymentSelection(payment.id)"
                 :class="[
-                  'rounded-lg transition-all overflow-hidden border-l-4 shadow-sm',
+                  'rounded-lg transition-all overflow-hidden border-l-4 shadow-sm cursor-pointer',
                   payment.appointments?.status === 'cancelled'
                     ? 'border-l-gray-300 bg-gray-50 opacity-60'
-                    : 'hover:shadow-md'
+                    : 'hover:shadow-md',
+                  selectedPayments.includes(payment.id) && payment.appointments?.status !== 'cancelled'
+                    ? 'ring-2 ring-offset-0'
+                    : ''
                 ]"
-                :style="payment.appointments?.status !== 'cancelled' ? { borderLeftColor: primaryColor, backgroundColor: primaryColor + '08' } : {}"
+                :style="{
+                  ...(payment.appointments?.status !== 'cancelled' ? { 
+                    borderLeftColor: primaryColor,
+                    backgroundColor: selectedPayments.includes(payment.id) ? primaryColor + '20' : primaryColor + '08'
+                  } : {}),
+                  ...(selectedPayments.includes(payment.id) && payment.appointments?.status !== 'cancelled' ? {
+                    '--tw-ring-color': primaryColor
+                  } : {})
+                }"
               >
-                <!-- Header Row with Checkbox and Main Info -->
-                <div class="p-4 flex gap-4">
-                  <div class="flex-shrink-0 pt-1">
-                    <input 
-                      type="checkbox" 
-                      :checked="selectedPayments.includes(payment.id)"
-                      @change="togglePaymentSelection(payment.id)"
-                      class="w-5 h-5 rounded cursor-pointer"
-                      :style="{ accentColor: primaryColor }"
-                    />
-                  </div>
-                  
+                <!-- Header Row with Main Info -->
+                <div class="p-4">
                   <!-- Main Content -->
                   <div class="flex-1 min-w-0">
                     <!-- Amount + Category + Status Row -->
