@@ -307,6 +307,7 @@ export default defineEventHandler(async (event) => {
         wallee_customer_id: walleeCustomerId,
         display_name: displayName,
         payment_method_type: paymentMethodType,
+        payment_provider: 'wallee', // ✅ Added required field
         metadata: {
           transaction_id: transactionId,
           saved_at: new Date().toISOString()
