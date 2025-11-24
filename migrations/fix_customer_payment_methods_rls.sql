@@ -12,18 +12,18 @@ DROP POLICY IF EXISTS "Service role can manage all payment methods" ON customer_
 CREATE POLICY "Users can view their own payment methods"
   ON customer_payment_methods
   FOR SELECT
-  USING (user_id = auth.uid()::text);
+  USING (user_id::text = auth.uid()::text);
 
 -- Create policy for authenticated users to manage their own payment methods
 CREATE POLICY "Users can manage their own payment methods"
   ON customer_payment_methods
   FOR INSERT
-  WITH CHECK (user_id = auth.uid()::text);
+  WITH CHECK (user_id::text = auth.uid()::text);
 
 CREATE POLICY "Users can update their own payment methods"
   ON customer_payment_methods
   FOR UPDATE
-  USING (user_id = auth.uid()::text);
+  USING (user_id::text = auth.uid()::text);
 
 -- Create policy for service role (webhooks) to manage all payment methods
 CREATE POLICY "Service role can manage all payment methods"
