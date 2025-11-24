@@ -754,8 +754,8 @@
                   </div>
                 </div>
                 
-                <!-- Stornierungs-Policy Info -->
-                <div v-if="payment.appointments?.status === 'cancelled'" class="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                <!-- Stornierungs-Policy Info (nur bei expanded) -->
+                <div v-if="payment.appointments?.status === 'cancelled' && expandedCancelledPayments.has(payment.id)" class="px-4 py-3 bg-gray-50 border-t border-gray-200">
                   <div v-if="getCancellationPolicy(payment.appointments)" class="text-sm space-y-2">
                     <div>
                       <span class="text-gray-600">Stornierungs-Policy:</span>
@@ -1459,6 +1459,7 @@ const formatLocalTime = (dateString: string) => {
 // Payment functionality
 const selectedPayments = ref<string[]>([])
 const isProcessingBulkAction = ref(false)
+const expandedCancelledPayments = ref<Set<string>>(new Set())
 
 // Toggle payment selection
 const togglePaymentSelection = (paymentId: string) => {
@@ -1575,11 +1576,14 @@ const totalSelectedAmount = computed(() => {
 
 // Handle click on payment card
 const handlePaymentCardClick = (payment: any) => {
-  // If cancelled, show details/abrechnung
+  // If cancelled, toggle expansion to show/hide details
   if (payment.appointments?.status === 'cancelled') {
-    console.log('📋 Showing cancelled payment details:', payment.id)
-    // We can add a modal/expansion here to show cancellation details
-    // For now, the details are already shown in the card
+    console.log('📋 Toggling cancelled payment details:', payment.id)
+    if (expandedCancelledPayments.value.has(payment.id)) {
+      expandedCancelledPayments.value.delete(payment.id)
+    } else {
+      expandedCancelledPayments.value.add(payment.id)
+    }
   }
   // If completed, ignore click
   else if (payment.payment_status === 'completed') {
