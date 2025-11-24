@@ -682,33 +682,18 @@
                       </div>
                     </div>
                     
-                    <!-- Date and Time + Description -->
-                    <div class="flex items-center gap-3 text-sm">
-                      <div :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
-                        <span class="font-medium">{{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}</span>
-                        <span class="mx-1">•</span>
-                        <span>{{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }} Uhr</span>
-                      </div>
-                      
-                      <span v-if="payment.appointments?.event_types?.name || payment.appointments?.event_type_code" :class="[
-                        'text-xs',
-                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'
-                      ]">
-                        •
-                      </span>
-                      
-                      <span v-if="payment.appointments?.event_types?.name || payment.appointments?.event_type_code" :class="[
-                        'text-xs',
-                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'
-                      ]">
-                        {{ payment.appointments.event_types?.name || payment.appointments.event_type_code }}
-                      </span>
-                      
-                      <span v-if="payment.appointments.staff" :class="[
-                        'text-xs',
-                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'
-                      ]">
-                        • mit {{ payment.appointments.staff.first_name }}
+                    <!-- Date and Time -->
+                    <div :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'" class="text-xs">
+                      <span class="font-medium">{{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}</span>
+                      <span class="mx-1">•</span>
+                      <span>{{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }} Uhr</span>
+                    </div>
+                    
+                    <!-- Service Description (on new line) -->
+                    <div :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-700'" class="text-sm font-medium">
+                      {{ payment.appointments.event_types?.name || payment.appointments.event_type_code || 'Termin' }}
+                      <span v-if="payment.appointments.staff" class="font-normal text-gray-600">
+                        mit {{ payment.appointments.staff.first_name }}
                       </span>
                     </div>
                   </div>
