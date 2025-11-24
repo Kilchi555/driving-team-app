@@ -623,128 +623,136 @@
                 v-for="payment in filteredPayments" 
                 :key="payment.id"
                 :class="[
-                  'rounded-lg p-4 border transition-all',
+                  'rounded-lg border-2 transition-all overflow-hidden',
                   payment.appointments?.status === 'cancelled'
-                    ? 'border-gray-300 bg-gray-100 opacity-60'
-                    : 'border-gray-200'
+                    ? 'border-gray-300 bg-gray-50 opacity-60'
+                    : 'border-gray-200 bg-white hover:shadow-md'
                 ]"
-                :style="payment.appointments?.status !== 'cancelled' ? { backgroundColor: primaryColor + '15' } : {}"
               >
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex items-center gap-3 flex-1">
+                <!-- Header Row with Checkbox and Main Info -->
+                <div class="p-4 flex gap-4">
+                  <div class="flex-shrink-0 pt-1">
                     <input 
                       type="checkbox" 
                       :checked="selectedPayments.includes(payment.id)"
                       @change="togglePaymentSelection(payment.id)"
-                      class="w-4 h-4 rounded cursor-pointer"
+                      class="w-5 h-5 rounded cursor-pointer"
                       :style="{ accentColor: primaryColor }"
                     />
-                    <div class="flex-1">
-                      <div class="flex items-center gap-2 mb-1">
-                        <h5 :class="[
-                          'font-semibold',
-                          payment.appointments?.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-900'
+                  </div>
+                  
+                  <!-- Main Content -->
+                  <div class="flex-1 min-w-0">
+                    <!-- Amount + Category + Status Row -->
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                      <div class="flex items-center gap-2">
+                        <span :class="[
+                          'text-xl font-bold',
+                          payment.appointments?.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
                         ]">
-                          {{ (payment.total_amount_rappen / 100).toFixed(2) }} CHF
-                        </h5>
+                          {{ (payment.total_amount_rappen / 100).toFixed(2) }}
+                        </span>
+                        <span class="text-xs font-semibold text-gray-500">CHF</span>
+                        
                         <span v-if="payment.appointments?.type" :class="[
-                          'px-2 py-0.5 text-xs font-medium rounded',
+                          'px-2.5 py-0.5 text-xs font-bold rounded-full ml-2',
                           payment.appointments?.status === 'cancelled' ? 'bg-gray-200 text-gray-400' : 'bg-blue-100 text-blue-800'
                         ]">
                           {{ payment.appointments.type }}
                         </span>
                       </div>
-                      <p :class="[
-                        'text-sm',
+                      
+                      <!-- Status Badges on Right -->
+                      <div class="flex items-center gap-2">
+                        <span v-if="payment.appointments?.status === 'cancelled'" class="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700">
+                          Abgesagt
+                        </span>
+                        <span :class="[
+                          'px-3 py-1 text-xs font-semibold rounded-full',
+                          payment.payment_status === 'completed' ? 'bg-green-100 text-green-700' :
+                          payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          payment.payment_status === 'failed' ? 'bg-red-100 text-red-700' :
+                          'bg-gray-100 text-gray-700'
+                        ]">
+                          {{ payment.payment_status === 'completed' ? 'Bezahlt' :
+                             payment.payment_status === 'pending' ? 'Ausstehend' :
+                             payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
+                             payment.payment_status }}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <!-- Date and Time + Description -->
+                    <div class="flex items-center gap-3 text-sm">
+                      <div :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                        <span class="font-medium">{{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}</span>
+                        <span class="mx-1">•</span>
+                        <span>{{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }} Uhr</span>
+                      </div>
+                      
+                      <span v-if="payment.appointments?.event_types?.name || payment.appointments?.event_type_code" :class="[
+                        'text-xs',
+                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'
+                      ]">
+                        •
+                      </span>
+                      
+                      <span v-if="payment.appointments?.event_types?.name || payment.appointments?.event_type_code" :class="[
+                        'text-xs',
                         payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'
                       ]">
-                        {{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}
-                        um {{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }}
-                      </p>
-                    </div>
-                    <p v-if="payment.appointments?.event_types?.name || payment.appointments?.event_type_code" :class="[
-                      'text-xs mt-1',
-                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'
-                    ]">
-                      {{ payment.appointments.event_types?.name || payment.appointments.event_type_code }}
-                      <span v-if="payment.appointments.staff" class="font-normal">
-                        mit {{ payment.appointments.staff.first_name }}
+                        {{ payment.appointments.event_types?.name || payment.appointments.event_type_code }}
                       </span>
-                    </p>
-                  </div>
-                  <div class="flex flex-col items-end gap-1">
-                    <span :class="[
-                      'px-2 py-1 text-xs font-medium rounded-full',
-                      payment.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
-                      payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      payment.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    ]">
-                      {{ payment.payment_status === 'completed' ? 'Bezahlt' :
-                         payment.payment_status === 'pending' ? 'Ausstehend' :
-                         payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
-                         payment.payment_status }}
-                    </span>
-                    <span v-if="payment.appointments?.status === 'cancelled'" class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                      Termin abgesagt
-                    </span>
+                      
+                      <span v-if="payment.appointments.staff" :class="[
+                        'text-xs',
+                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'
+                      ]">
+                        • mit {{ payment.appointments.staff.first_name }}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
                 <!-- Product Sales & Discounts Section -->
-                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale || (payment.admin_fee_rappen && payment.admin_fee_rappen > 0)" class="mt-3 pt-3 border-t border-gray-300">
+                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale || (payment.admin_fee_rappen && payment.admin_fee_rappen > 0)" class="px-4 py-3 bg-gray-50 border-t border-gray-200 space-y-2 text-sm">
                   <!-- Product Sales -->
-                  <div v-if="payment.product_sales && payment.product_sales.length > 0" class="mb-3">
-                    <h6 class="text-xs font-semibold text-gray-700 mb-2">Produkte:</h6>
-                    <div class="space-y-1">
-                      <div 
-                        v-for="productSale in payment.product_sales" 
-                        :key="productSale.id"
-                        class="flex justify-between items-center text-sm"
-                      >
-                        <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
-                          {{ productSale.products?.name || 'Produkt' }} ({{ productSale.quantity }}x)
-                        </span>
-                        <span :class="[
-                          'font-medium',
-                          payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
-                        ]">
-                          {{ ((productSale.unit_price_rappen || 0) * productSale.quantity / 100).toFixed(2) }} CHF
-                        </span>
-                      </div>
-                    </div>
+                  <div v-for="productSale in (payment.product_sales || [])" :key="productSale.id" class="flex justify-between items-center">
+                    <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                      {{ productSale.products?.name || 'Produkt' }} <span class="text-xs">({{ productSale.quantity }}x)</span>
+                    </span>
+                    <span :class="[
+                      'font-semibold',
+                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
+                    ]">
+                      {{ ((productSale.unit_price_rappen || 0) * productSale.quantity / 100).toFixed(2) }} CHF
+                    </span>
                   </div>
                   
                   <!-- Admin Fee -->
-                  <div v-if="payment.admin_fee_rappen && payment.admin_fee_rappen > 0" class="mb-3">
-                    <h6 class="text-xs font-semibold text-gray-700 mb-2">Zusatzkosten:</h6>
-                    <div class="flex justify-between items-center text-sm">
-                      <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
-                        Adminpauschale
-                      </span>
-                      <span :class="[
-                        'font-medium',
-                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
-                      ]">
-                        {{ (payment.admin_fee_rappen / 100).toFixed(2) }} CHF
-                      </span>
-                    </div>
+                  <div v-if="payment.admin_fee_rappen && payment.admin_fee_rappen > 0" class="flex justify-between items-center">
+                    <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                      Adminpauschale
+                    </span>
+                    <span :class="[
+                      'font-semibold',
+                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
+                    ]">
+                      {{ (payment.admin_fee_rappen / 100).toFixed(2) }} CHF
+                    </span>
                   </div>
                   
                   <!-- Discount Sale (Rabatt) -->
-                  <div v-if="payment.discount_sale && payment.discount_sale.discount_amount_rappen > 0">
-                    <h6 class="text-xs font-semibold text-gray-700 mb-2">Rabatt:</h6>
-                    <div class="flex justify-between items-center text-sm">
-                      <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
-                        {{ payment.discount_sale.discount_reason || 'Rabatt' }}
-                      </span>
-                      <span :class="[
-                        'font-medium',
-                        payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
-                      ]">
-                        -{{ ((payment.discount_sale.discount_amount_rappen || 0) / 100).toFixed(2) }} CHF
-                      </span>
-                    </div>
+                  <div v-if="payment.discount_sale && payment.discount_sale.discount_amount_rappen > 0" class="flex justify-between items-center">
+                    <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                      {{ payment.discount_sale.discount_reason || 'Rabatt' }}
+                    </span>
+                    <span :class="[
+                      'font-semibold',
+                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
+                    ]">
+                      -{{ ((payment.discount_sale.discount_amount_rappen || 0) / 100).toFixed(2) }} CHF
+                    </span>
                   </div>
                 </div>
                 
