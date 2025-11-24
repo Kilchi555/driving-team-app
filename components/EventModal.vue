@@ -3763,6 +3763,11 @@ const goToPolicySelection = async () => {
   const selectedReason = cancellationReasons.value.find(r => r.id === selectedCancellationReasonId.value)
   if (selectedReason && selectedReason.force_charge_percentage !== null && selectedReason.force_charge_percentage !== undefined) {
     console.log('✅ Force charge percentage found:', selectedReason.force_charge_percentage)
+    // Load appointment price first
+    if (props.eventData?.id) {
+      const price = await loadAppointmentPrice(props.eventData.id)
+      appointmentPrice.value = price
+    }
     // Directly set the policy result with force_charge_percentage
     cancellationPolicyResult.value = {
       calculation: {
@@ -3776,6 +3781,7 @@ const goToPolicySelection = async () => {
         : `Stornogebühr für Termin (${selectedReason.force_charge_percentage}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
     }
     console.log('✅ Policy result set with force_charge_percentage:', cancellationPolicyResult.value)
+    // ✅ IMPORTANT: Don't load policies, as they would override this setting!
     return
   }
   
