@@ -625,22 +625,24 @@
               <div 
                 v-for="payment in filteredPayments" 
                 :key="payment.id"
-                @click="togglePaymentSelection(payment.id)"
+                @click="payment.payment_status !== 'completed' && togglePaymentSelection(payment.id)"
                 :class="[
-                  'rounded-lg transition-all overflow-hidden border-l-4 shadow-sm cursor-pointer',
+                  'rounded-lg transition-all overflow-hidden border-l-4 shadow-sm',
                   payment.appointments?.status === 'cancelled'
                     ? 'border-l-gray-300 bg-gray-50 opacity-60'
-                    : 'hover:shadow-md',
-                  selectedPayments.includes(payment.id) && payment.appointments?.status !== 'cancelled'
+                    : payment.payment_status === 'completed'
+                    ? 'border-l-green-300 bg-gray-50 opacity-60 cursor-not-allowed'
+                    : 'hover:shadow-md cursor-pointer',
+                  selectedPayments.includes(payment.id) && payment.appointments?.status !== 'cancelled' && payment.payment_status !== 'completed'
                     ? 'ring-2 ring-offset-0'
                     : ''
                 ]"
                 :style="{
-                  ...(payment.appointments?.status !== 'cancelled' ? { 
+                  ...(payment.appointments?.status !== 'cancelled' && payment.payment_status !== 'completed' ? { 
                     borderLeftColor: primaryColor,
                     backgroundColor: selectedPayments.includes(payment.id) ? primaryColor + '20' : primaryColor + '08'
                   } : {}),
-                  ...(selectedPayments.includes(payment.id) && payment.appointments?.status !== 'cancelled' ? {
+                  ...(selectedPayments.includes(payment.id) && payment.appointments?.status !== 'cancelled' && payment.payment_status !== 'completed' ? {
                     '--tw-ring-color': primaryColor
                   } : {})
                 }"
