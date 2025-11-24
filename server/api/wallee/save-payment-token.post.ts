@@ -72,11 +72,49 @@ export default defineEventHandler(async (event) => {
       state: transaction.state,
       paymentConnectorConfiguration: transaction.paymentConnectorConfiguration,
       customerId: transaction.customerId,
+      chargeAttemptId: (transaction as any).chargeAttemptId,
       // Prüfe alle möglichen Felder für Token
       metadata: (transaction as any).metaData,
       paymentMethodToken: (transaction as any).paymentMethodToken,
       tokenVersion: (transaction as any).tokenVersion
     })
+    
+    // ✅ WICHTIG: Token wird über Charge Attempt abgerufen, nicht direkt aus Transaction!
+    if ((transaction as any).chargeAttemptId) {
+      console.log('🔄 Attempting to fetch Charge Attempt details for token...')
+      try {
+        const chargeAttemptService: Wallee.api.ChargeAttemptService = new Wallee.api.ChargeAttemptService(config)
+        const chargeAttemptResponse = await chargeAttemptService.read(walleeConfig.spaceId, (transaction as any).chargeAttemptId)
+        const chargeAttempt: any = chargeAttemptResponse?.body
+        
+        if (chargeAttempt) {
+          console.log('✅ Charge Attempt fetched:', {
+            id: chargeAttempt.id,
+            state: chargeAttempt.state,
+            labels: chargeAttempt.labels?.length || 0
+          })
+          
+          // ✅ Token ist in den Labels versteckt
+          if (chargeAttempt.labels && Array.isArray(chargeAttempt.labels)) {
+            const tokenLabel = chargeAttempt.labels.find((label: any) => 
+              label.descriptor?.toLowerCase().includes('token') || 
+              label.descriptor?.toLowerCase().includes('card') ||
+              label.content?.toLowerCase().includes('token')
+            )
+            
+            if (tokenLabel) {
+              console.log('✅ Found token in charge attempt labels:', tokenLabel)
+              // Der Token könnte in verschiedenen Formaten vorliegen
+              if (tokenLabel.content) {
+                paymentMethodToken = tokenLabel.content
+              }
+            }
+          }
+        }
+      } catch (chargeError: any) {
+        console.warn('⚠️ Could not fetch charge attempt:', chargeError.message)
+      }
+    }
 
     // ✅ Hole Payment Method Token von Wallee
     // Wenn Tokenization aktiviert war, gibt Wallee einen Token zurück
