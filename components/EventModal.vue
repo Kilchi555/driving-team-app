@@ -5059,12 +5059,33 @@ const initializePastedAppointment = async () => {
       })
       
       if (props.eventData.start) {
-        const startDate = new Date(props.eventData.start)
-        formData.value.startDate = startDate.toISOString().split('T')[0]
-        formData.value.startTime = startDate.toTimeString().slice(0, 5) // ✅ SIMPLE: Lokale Zeit
-        console.log('⏰ Start-Daten gesetzt:', {
+        const startDateTime = new Date(props.eventData.start.includes('Z') ? props.eventData.start : props.eventData.start + 'Z')
+        
+        // ✅ RICHTIG: Convert UTC to Zurich local time using Intl.DateTimeFormat
+        const zurichDateFormatter = new Intl.DateTimeFormat('de-CH', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: 'Europe/Zurich'
+        })
+        
+        const startParts = zurichDateFormatter.formatToParts(startDateTime)
+        const year = startParts.find(p => p.type === 'year').value
+        const month = startParts.find(p => p.type === 'month').value
+        const day = startParts.find(p => p.type === 'day').value
+        const hour = startParts.find(p => p.type === 'hour').value
+        const minute = startParts.find(p => p.type === 'minute').value
+        
+        formData.value.startDate = `${year}-${month}-${day}`
+        formData.value.startTime = `${hour}:${minute}`
+        
+        console.log('⏰ Start-Daten gesetzt (mit Zurich timezone):', {
           startDate: formData.value.startDate,
-          startTime: formData.value.startTime
+          startTime: formData.value.startTime,
+          inputUTC: props.eventData.start
         })
       }
       
