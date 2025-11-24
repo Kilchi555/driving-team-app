@@ -231,17 +231,31 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ Speichere Token in unserer Datenbank
-    const { data: userData } = await supabase
+    console.log('🔍 Looking up user:', userId)
+    
+    if (!userId) {
+      console.warn('⚠️ No userId provided - cannot save token without user')
+      return {
+        success: true,
+        message: 'No userId provided - token saved in Wallee only',
+        tokenId: null
+      }
+    }
+    
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('first_name, last_name')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
+    if (userError) {
+      console.warn('⚠️ Error looking up user:', userError)
+      // Continue anyway - user lookup is not critical
+    }
+    
     if (!userData) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'User not found'
-      })
+      console.warn('⚠️ User not found for userId:', userId)
+      // Continue anyway - we can still save the token without user details
     }
 
     // Generiere pseudonyme Wallee Customer ID (bevorzugt): dt-<tenantId>-<userId>
