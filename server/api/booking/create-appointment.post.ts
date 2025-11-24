@@ -73,6 +73,27 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ Appointment created:', appointment.id)
 
+    // 1b. Assign staff to customer if not yet assigned
+    const { data: userData, error: userFetchError } = await supabase
+      .from('users')
+      .select('assigned_staff_id')
+      .eq('id', user_id)
+      .single()
+
+    if (!userFetchError && userData && !userData.assigned_staff_id) {
+      console.log(`👤 Assigning staff ${staff_id} to customer ${user_id}`)
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ assigned_staff_id: staff_id })
+        .eq('id', user_id)
+      
+      if (updateError) {
+        console.warn('⚠️ Could not assign staff to customer:', updateError)
+      } else {
+        console.log('✅ Staff assigned to customer')
+      }
+    }
+
     // 2. Lade Preis-Informationen
     const { data: eventType } = await supabase
       .from('event_types')
