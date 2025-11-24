@@ -3752,6 +3752,20 @@ const loadCancellationData = async () => {
 const selectReasonAndContinue = async (reasonId: string) => {
   console.log('🎯 Reason selected and continuing:', reasonId)
   selectedCancellationReasonId.value = reasonId
+  
+  // Check if reason has force_charge_percentage (staff cancellations, etc.)
+  const reason = cancellationReasons.value.find(r => r.id === reasonId)
+  if (reason && reason.force_charge_percentage !== null && reason.force_charge_percentage !== undefined) {
+    console.log('✅ Force charge percentage found:', reason.force_charge_percentage)
+    // If force_charge_percentage exists, auto-select matching policy and proceed to delete
+    // Don't show policy selection, go directly to confirmation
+    pendingCancellationReason.value = reason
+    console.log('🗑️ Proceeding directly to deletion (force charge percentage applied)')
+    await proceedWithCancellation(reason)
+    return
+  }
+  
+  // Otherwise, show policy selection
   await goToPolicySelection()
 }
 
