@@ -1001,6 +1001,41 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       console.log('✅ Appointment saved:', result.id)
       
+      // ✅ Auto-assign staff to customer (add to assigned_staff_ids array)
+      if (mode === 'create' && result.staff_id && result.user_id) {
+        try {
+          const { data: userData, error: userFetchError } = await supabase
+            .from('users')
+            .select('assigned_staff_ids')
+            .eq('id', result.user_id)
+            .single()
+
+          if (!userFetchError && userData) {
+            const currentStaffIds = userData.assigned_staff_ids || []
+            
+            // Check if staff is already assigned
+            if (!currentStaffIds.includes(result.staff_id)) {
+              const updatedStaffIds = [...currentStaffIds, result.staff_id]
+              
+              console.log(`👤 Adding staff ${result.staff_id} to customer ${result.user_id}'s assigned_staff_ids`)
+              
+              const { error: updateError } = await supabase
+                .from('users')
+                .update({ assigned_staff_ids: updatedStaffIds })
+                .eq('id', result.user_id)
+              
+              if (updateError) {
+                console.warn('⚠️ Could not update assigned_staff_ids:', updateError)
+              } else {
+                console.log('✅ Staff added to customer assigned_staff_ids')
+              }
+            }
+          }
+        } catch (error: any) {
+          console.error('❌ Error in auto-assign staff:', error.message)
+        }
+      }
+      
       // ✅ Save discount and products (create discount_sales record even if no discount, for products linkage)
       const discountSale = await saveDiscountOrCreateForProducts(result.id)
       
