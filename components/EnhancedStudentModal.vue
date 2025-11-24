@@ -673,18 +673,23 @@
                         <span v-if="payment.appointments?.status === 'cancelled'" class="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700">
                           Abgesagt
                         </span>
-                        <span :class="[
-                          'px-3 py-1 text-xs font-semibold rounded-full',
+                        <div :class="[
+                          'px-3 py-1 text-xs font-semibold rounded-full flex flex-col items-end',
                           payment.payment_status === 'completed' ? 'bg-green-100 text-green-700' :
                           payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                           payment.payment_status === 'failed' ? 'bg-red-100 text-red-700' :
                           'bg-gray-100 text-gray-700'
                         ]">
-                          {{ payment.payment_status === 'completed' ? 'Bezahlt' :
-                             payment.payment_status === 'pending' ? 'Ausstehend' :
-                             payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
-                             payment.payment_status }}
-                        </span>
+                          <span>
+                            {{ payment.payment_status === 'completed' ? 'Bezahlt' :
+                               payment.payment_status === 'pending' ? 'Ausstehend' :
+                               payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
+                               payment.payment_status }}
+                          </span>
+                          <span v-if="payment.payment_status === 'completed' && payment.paid_at" class="text-xs font-normal opacity-90 whitespace-nowrap">
+                            {{ formatLocalDate(payment.paid_at) }} {{ formatLocalTime(payment.paid_at) }}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     
