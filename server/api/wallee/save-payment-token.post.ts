@@ -111,34 +111,57 @@ export default defineEventHandler(async (event) => {
         }
       }
       
-      // Option 3: Hole Payment Methods über Wallee Payment Methods API für den Customer
+      // Option 3: Hole Payment Methods über Wallee Payment Methods Service für den Customer
       if (!paymentMethodToken && transaction.customerId) {
         try {
           console.log('🔍 Fetching payment methods from Wallee for customer:', transaction.customerId)
           
-          // Versuche Payment Methods für diesen Customer über Wallee API zu holen
-          // Wallee speichert Tokens per Customer, nicht per Transaction
-          const walleeCustomerId = transaction.customerId
+          // ✅ Nutze Wallee PaymentMethodService um Tokens für den Customer zu fetchen
+          const paymentMethodService: Wallee.api.CustomerPaymentMethodService = new Wallee.api.CustomerPaymentMethodService(config)
           
-          // Prüfe zuerst ob bereits ein Token für diesen Customer existiert
-          const { data: existingToken } = await supabase
-            .from('customer_payment_methods')
-            .select('id, wallee_token_id')
-            .eq('wallee_customer_id', walleeCustomerId)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
+          try {
+            // Hole alle Payment Methods für diesen Customer
+            const paymentMethodsResponse = await paymentMethodService.search(walleeConfig.spaceId, new Wallee.model.EntityQuery())
+            
+            if (paymentMethodsResponse?.body && Array.isArray(paymentMethodsResponse.body)) {
+              const customerMethods = paymentMethodsResponse.body.filter((pm: any) => pm.customerId === parseInt(transaction.customerId))
+              
+              if (customerMethods.length > 0) {
+                const latestMethod = customerMethods[customerMethods.length - 1]
+                if (latestMethod.id) {
+                  paymentMethodToken = latestMethod.id.toString()
+                  displayName = latestMethod.displayName || 'Gespeicherte Karte'
+                  paymentMethodType = latestMethod.paymentMethodIdentifier || null
+                  console.log('✅ Found payment method token from Wallee API:', paymentMethodToken.substring(0, 8) + '...')
+                }
+              }
+            }
+          } catch (searchError: any) {
+            console.warn('⚠️ Could not search payment methods:', searchError.message)
+          }
+          
+          // Fallback: Prüfe ob bereits ein Token in unserer DB existiert
+          if (!paymentMethodToken) {
+            const walleeCustomerId = transaction.customerId.toString()
+            const { data: existingToken } = await supabase
+              .from('customer_payment_methods')
+              .select('id, wallee_token_id')
+              .eq('wallee_customer_id', walleeCustomerId)
+              .eq('is_active', true)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
 
-          if (existingToken) {
-            console.log('✅ Payment method token already exists for customer')
-            // Verknüpfe diese Payment mit bestehendem Token
-            if (existingToken.wallee_token_id) {
+            if (existingToken?.wallee_token_id) {
+              paymentMethodToken = existingToken.wallee_token_id
+              console.log('✅ Found payment method token in database:', paymentMethodToken.substring(0, 8) + '...')
+              
+              // Verknüpfe diese Payment mit bestehendem Token
               try {
                 const { error: linkError } = await supabase
                   .from('payments')
                   .update({ payment_method_id: existingToken.id })
-                  .eq('wallee_transaction_id', transactionId)
+                  .eq('wallee_transaction_id', transactionId.toString())
                   .is('payment_method_id', null)
 
                 if (!linkError) {
@@ -147,22 +170,17 @@ export default defineEventHandler(async (event) => {
               } catch (e: any) {
                 console.warn('⚠️ Linking existing token failed:', e?.message)
               }
-            }
-            return {
-              success: true,
-              message: 'Token already saved',
-              tokenId: existingToken.id
+              
+              return {
+                success: true,
+                message: 'Token already saved',
+                tokenId: existingToken.id
+              }
             }
           }
-
-          // ✅ WICHTIG: Wallee gibt Tokens nicht direkt in Transaction zurück
-          // Stattdessen müssen wir die Payment Methods API verwenden
-          // Für jetzt: Markiere dass Token via Wallee Dashboard verfügbar ist
-          // Der Token wird beim nächsten API-Aufruf von get-customer-payment-methods abgerufen
-          console.log('ℹ️ Token wird über get-customer-payment-methods API abgerufen werden')
           
         } catch (methodError: any) {
-          console.warn('⚠️ Could not check/fetch payment method from Wallee API:', methodError.message)
+          console.warn('⚠️ Could not fetch payment method from Wallee API:', methodError.message)
         }
       }
     }

@@ -220,6 +220,13 @@ export default defineEventHandler(async (event) => {
     
     console.log('✅ Payment Page URL generated:', paymentPageUrl)
     
+    console.log('✅ Transaction created:', {
+      id: transactionCreate.id,
+      state: transactionCreate.state,
+      currency: transactionCreate.currency,
+      customerId: transactionCreate.customerId
+    })
+    
     return {
       success: true,
       transactionId: transactionCreate.id,
