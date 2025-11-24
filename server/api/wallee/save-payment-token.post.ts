@@ -27,7 +27,19 @@ export default defineEventHandler(async (event) => {
 
     // ✅ GET WALLEE CONFIG FOR TENANT (Multi-Tenant Support!)
     console.log('🔍 Fetching Wallee config for tenant:', tenantId)
-    const walleeConfig = await getWalleeConfigForTenant(tenantId)
+    let walleeConfig: any
+    try {
+      walleeConfig = await getWalleeConfigForTenant(tenantId)
+    } catch (configError: any) {
+      console.error('❌ Error loading Wallee config for tenant:', tenantId, configError)
+      // Fallback zu globaler Konfiguration
+      console.log('⚠️ Falling back to global Wallee config')
+      walleeConfig = {
+        spaceId: parseInt(process.env.WALLEE_SPACE_ID || '82592'),
+        userId: parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525'),
+        apiSecret: process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+      }
+    }
     const spaceId = walleeConfig.spaceId
     
     console.log('🔧 Wallee Config loaded:', {
@@ -164,9 +176,11 @@ export default defineEventHandler(async (event) => {
 
     if (!paymentMethodToken) {
       console.warn('⚠️ No payment method token available yet. Token will be saved when Wallee provides it via webhook.')
+      // ✅ Nicht als Fehler behandeln - Token ist optional
       return {
-        success: false,
-        message: 'No payment method token available yet. Will be saved when available.'
+        success: true,
+        message: 'No payment method token available yet. Will be saved when available.',
+        tokenId: null
       }
     }
 
