@@ -3759,6 +3759,27 @@ const goToPolicySelection = async () => {
   console.log('📋 Going to policy selection')
   cancellationStep.value = 2
   
+  // ✅ NEW: Check if selected reason has force_charge_percentage
+  const selectedReason = cancellationReasons.value.find(r => r.id === selectedCancellationReasonId.value)
+  if (selectedReason && selectedReason.force_charge_percentage !== null && selectedReason.force_charge_percentage !== undefined) {
+    console.log('✅ Force charge percentage found:', selectedReason.force_charge_percentage)
+    // Directly set the policy result with force_charge_percentage
+    cancellationPolicyResult.value = {
+      calculation: {
+        chargePercentage: selectedReason.force_charge_percentage
+      },
+      chargeAmountRappen: Math.round((appointmentPrice.value || 0) * selectedReason.force_charge_percentage / 100),
+      shouldCreateInvoice: selectedReason.force_charge_percentage > 0,
+      shouldCreditHours: selectedReason.force_charge_percentage === 0,
+      invoiceDescription: selectedReason.force_charge_percentage === 0 
+        ? 'Kostenlose Stornierung durch Fahrlehrer'
+        : `Stornogebühr für Termin (${selectedReason.force_charge_percentage}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
+    }
+    console.log('✅ Policy result set with force_charge_percentage:', cancellationPolicyResult.value)
+    return
+  }
+  
+  // Otherwise, load policies normally
   // Determine applies_to based on appointment's course_id
   let appliesTo: 'appointments' | 'courses' | undefined = undefined
   if (props.eventData?.id) {
