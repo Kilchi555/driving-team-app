@@ -3757,7 +3757,6 @@ const selectReasonAndContinue = async (reasonId: string) => {
 
 const goToPolicySelection = async () => {
   console.log('📋 Going to policy selection')
-  cancellationStep.value = 2
   
   // ✅ NEW: Check if selected reason has force_charge_percentage
   const selectedReason = cancellationReasons.value.find(r => r.id === selectedCancellationReasonId.value)
@@ -3781,9 +3780,13 @@ const goToPolicySelection = async () => {
         : `Stornogebühr für Termin (${selectedReason.force_charge_percentage}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
     }
     console.log('✅ Policy result set with force_charge_percentage:', cancellationPolicyResult.value)
-    // ✅ IMPORTANT: Don't load policies, as they would override this setting!
+    // ✅ IMPORTANT: Skip policy selection modal and go directly to confirmation!
+    cancellationStep.value = 3
     return
   }
+  
+  // Otherwise, show policy selection modal (step 2)
+  cancellationStep.value = 2
   
   // Otherwise, load policies normally
   // Determine applies_to based on appointment's course_id
