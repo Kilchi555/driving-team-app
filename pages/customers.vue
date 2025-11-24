@@ -823,8 +823,8 @@ const loadStudents = async (loadAppointments = true) => {
     
     
     if (!showAllStudents.value) {
-      // Standard: Alle Schüler des Tenants (nicht nur die mit Fahrstunden)
-      console.log('📚 Loading all students in tenant (not just those with lessons):', currentUser.value.id)
+      // "Meine" - Filter by assigned staff
+      console.log('👤 Filter: Show only MY students (assigned to me)')
       console.log('🔍 Current user details:', {
         id: currentUser.value.id,
         email: currentUser.value.email,
@@ -832,14 +832,14 @@ const loadStudents = async (loadAppointments = true) => {
         first_name: currentUser.value.first_name
       })
       
-      // ✅ FIX: Alle Studenten des Tenants verwenden (nicht nur die mit Fahrstunden)
-      // Das ermöglicht es, auch Pending-Users ohne Fahrstunden zu sehen
-      console.log(`✅ Using all ${studentsToProcess.length} students in tenant (including those without lessons)`)
+      // ✅ Filter to only students assigned to current user
+      studentsToProcess = studentsToProcess.filter((s: any) => s.assigned_staff_id === currentUser.value.id)
+      console.log(`✅ Filtered to ${studentsToProcess.length} students assigned to me`)
     } else {
-      // Alle Kunden (aktive und inaktive)
-      console.log('👑 Loading all customers (active and inactive)')
-      studentsToProcess = data as any[]
-      console.log(`✅ Found ${studentsToProcess.length} total customers`)
+      // "Alle" - Show all students in tenant
+      console.log('👑 Filter: Show ALL students in tenant')
+      // studentsToProcess already contains all filtered data (active/inactive)
+      console.log(`✅ Showing all ${studentsToProcess.length} students in tenant`)
     }
 
     // ✅ OPTIMIERT: Lade alle Fahrlehrer-Daten in EINER Abfrage
