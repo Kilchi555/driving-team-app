@@ -109,9 +109,19 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 3. Calculate hours until appointment
+    // 3. Calculate hours until appointment (using Zurich timezone)
     const appointmentTime = new Date(appointment.start_time)
-    const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+    
+    // Convert to Zurich timezone for accurate hour calculation
+    const appointmentZurich = new Date(appointmentTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
+    const nowZurich = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
+    
+    const hoursUntilAppointment = (appointmentZurich.getTime() - nowZurich.getTime()) / (1000 * 60 * 60)
+    
+    console.log('🕐 Backend hours until appointment (Zurich TZ):', hoursUntilAppointment.toFixed(2), {
+      appointment: appointment.start_time,
+      now: now.toISOString()
+    })
 
     // 4. Determine charge percentage
     let chargePercentage = 100 // Default
@@ -119,11 +129,13 @@ export default defineEventHandler(async (event) => {
 
     if (hoursUntilAppointment >= 24) {
       // More than 24h before appointment
+      console.log('✅ Free cancellation (>= 24h)')
       chargePercentage = 0
       creditHours = true
     } else {
       // Less than 24h before appointment
       // Will charge 100% unless medical certificate is approved
+      console.log('⚠️ Charged cancellation (< 24h)')
       chargePercentage = 100
       creditHours = true
     }
