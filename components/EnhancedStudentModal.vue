@@ -538,28 +538,31 @@
           <div v-else class="space-y-4">
             
             <!-- Payment Summary Box (nur wenn Zahlungen ausgewählt sind) -->
-            <div v-if="selectedPayments.length > 0" class="rounded-lg p-4 shadow-sm border-l-4" :style="{ borderLeftColor: primaryColor, backgroundColor: primaryColor + '08' }">
-              <div class="flex items-center justify-between gap-4">
-                <div class="flex-1">
+            <div v-if="selectedPayments.length > 0" class="rounded-lg p-4 shadow-sm border-l-4 space-y-3" :style="{ borderLeftColor: primaryColor, backgroundColor: primaryColor + '08' }">
+              <!-- Row 1: Text and Price -->
+              <div class="flex items-start justify-between gap-4">
+                <div>
                   <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">{{ selectedPayments.length }} Zahlung{{ selectedPayments.length > 1 ? 'en' : '' }} ausgewählt</p>
-                  <p class="text-3xl font-bold mt-1" :style="{ color: primaryColor }">{{ formatCurrency(totalSelectedAmount) }}</p>
                 </div>
-                <div class="flex gap-2">
-                  <button 
-                    class="px-5 py-2 rounded-lg font-semibold text-white transition-all hover:shadow-md"
-                    style="background-color: #22C55E"
-                    @click="handleBulkPayment('cash')"
-                  >
-                    Bar
-                  </button>
-                  <button 
-                    class="px-5 py-2 rounded-lg font-semibold text-white transition-all hover:shadow-md"
-                    :style="{ backgroundColor: primaryColor }"
-                    @click="handleBulkPayment('online')"
-                  >
-                    Online
-                  </button>
-                </div>
+                <p class="text-2xl font-bold" :style="{ color: primaryColor }">{{ formatCurrency(totalSelectedAmount) }}</p>
+              </div>
+              
+              <!-- Row 2: Buttons -->
+              <div class="flex gap-2">
+                <button 
+                  class="flex-1 px-4 py-2.5 rounded-lg font-semibold text-white transition-all hover:shadow-md"
+                  style="background-color: #22C55E"
+                  @click="handleBulkPayment('cash')"
+                >
+                  Bar
+                </button>
+                <button 
+                  class="flex-1 px-4 py-2.5 rounded-lg font-semibold text-white transition-all hover:shadow-md"
+                  :style="{ backgroundColor: primaryColor }"
+                  @click="handleBulkPayment('online')"
+                >
+                  Online
+                </button>
               </div>
             </div>
             
