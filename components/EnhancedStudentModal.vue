@@ -625,11 +625,11 @@
               <div 
                 v-for="payment in filteredPayments" 
                 :key="payment.id"
-                @click="payment.payment_status !== 'completed' && togglePaymentSelection(payment.id)"
+                @click="handlePaymentCardClick(payment)"
                 :class="[
                   'rounded-lg transition-all overflow-hidden border-l-4 shadow-sm',
                   payment.appointments?.status === 'cancelled'
-                    ? 'border-l-gray-300 bg-gray-50 opacity-60'
+                    ? 'border-l-orange-300 bg-orange-50 cursor-pointer hover:shadow-md'
                     : payment.payment_status === 'completed'
                     ? 'border-l-green-300 bg-gray-50 opacity-60 cursor-not-allowed'
                     : 'hover:shadow-md cursor-pointer',
@@ -1565,9 +1565,31 @@ const paymentsCount = computed(() => payments.value.length)
 const totalSelectedAmount = computed(() => {
   return selectedPayments.value.reduce((total, paymentId) => {
     const payment = payments.value.find(p => p.id === paymentId)
+    // Only count non-cancelled payments
+    if (payment?.appointments?.status === 'cancelled') {
+      return total
+    }
     return total + (payment?.total_amount_rappen || 0)
   }, 0)
 })
+
+// Handle click on payment card
+const handlePaymentCardClick = (payment: any) => {
+  // If cancelled, show details/abrechnung
+  if (payment.appointments?.status === 'cancelled') {
+    console.log('📋 Showing cancelled payment details:', payment.id)
+    // We can add a modal/expansion here to show cancellation details
+    // For now, the details are already shown in the card
+  }
+  // If completed, ignore click
+  else if (payment.payment_status === 'completed') {
+    console.log('🔒 Payment is completed, cannot select')
+  }
+  // Otherwise, toggle selection
+  else {
+    togglePaymentSelection(payment.id)
+  }
+}
 
 const totalEvaluations = computed(() => {
   return progressData.value.reduce((total, group) => total + group.evaluations.length, 0)
