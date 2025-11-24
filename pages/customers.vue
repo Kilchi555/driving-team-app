@@ -789,14 +789,20 @@ const loadStudents = async (loadAppointments = true) => {
       return
     }
 
-    // ✅ Client-seitige Filterung für active/pending users
+    // ✅ Client-seitige Filterung für active/inactive users
     let filteredData = data
-    if (!showInactive.value) {
-      // Filtere: aktive Schüler ODER pending users (auth_user_id = null)
+    if (showInactive.value) {
+      // Show only INACTIVE students (is_active = false AND not pending/auth_user_id = null)
+      filteredData = data.filter((student: any) => {
+        return student.is_active === false && student.auth_user_id !== null
+      })
+      console.log(`📊 Client-side filtering (INACTIVE only): ${data.length} total → ${filteredData.length} inactive`)
+    } else {
+      // Show ACTIVE students OR pending users (auth_user_id = null)
       filteredData = data.filter((student: any) => {
         return student.is_active === true || student.auth_user_id === null
       })
-      console.log(`📊 Client-side filtering: ${data.length} total → ${filteredData.length} after filter`)
+      console.log(`📊 Client-side filtering (ACTIVE): ${data.length} total → ${filteredData.length} active/pending`)
     }
 
     // ✅ NEU: Intelligente Filterung basierend auf showAllStudents
