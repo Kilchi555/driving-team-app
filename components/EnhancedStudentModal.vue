@@ -1291,18 +1291,19 @@ const isExam = (lesson: any) => {
 const getCancellationPolicy = (appointment: any) => {
   if (!appointment || appointment.status !== 'cancelled') return null
   
-  // Convert to Zurich time for accurate hour difference calculation
+  // For cancelled appointments, use deleted_at (when it was cancelled) not current time
   const appointmentTime = new Date(appointment.start_time)
-  const now = new Date()
+  const cancellationTime = appointment.deleted_at ? new Date(appointment.deleted_at) : new Date()
   
-  // Use Zurich timezone for both dates to get accurate hour difference
+  // Convert to Zurich time for accurate hour difference calculation
   const appointmentZurich = new Date(appointmentTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
-  const nowZurich = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
+  const cancellationZurich = new Date(cancellationTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
   
-  const hoursDifference = (appointmentZurich.getTime() - nowZurich.getTime()) / (1000 * 60 * 60)
+  const hoursDifference = (appointmentZurich.getTime() - cancellationZurich.getTime()) / (1000 * 60 * 60)
   
   console.log('🕐 Cancellation policy check:', {
     appointmentTime: appointment.start_time,
+    cancelledAt: appointment.deleted_at,
     hoursDifference: hoursDifference.toFixed(2),
     policies: cancellationPolicies.value.map(p => ({ hours: p.hours_before_appointment, refund: p.refund_percentage }))
   })
