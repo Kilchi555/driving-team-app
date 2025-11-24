@@ -169,20 +169,29 @@
         <!-- Kommende Termine - Uses Secondary Color -->
         <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '1px' }">
           <div class="p-6 h-full flex flex-col">
-            <div class="flex items-center mb-4">
-              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: secondaryButtonColor }">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: secondaryButtonColor }">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
                 <h3 class="text-lg font-semibold text-gray-900">Kommende Termine</h3>
-                <p class="text-3xl font-bold text-gray-900 mt-1">{{ upcomingAppointments.length }}</p>
+              </div>
+              <div class="bg-gray-100 px-3 py-1 rounded-full">
+                <span class="text-sm font-semibold text-gray-700">{{ upcomingAppointments.length }}</span>
               </div>
             </div>
             
-            <div class="flex-1 flex items-center">
-              <p class="text-sm text-gray-500">Nächster Termin bald</p>
+            <div class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <p v-if="upcomingAppointments.length > 0" class="text-gray-600 text-sm">
+                  Sie haben {{ upcomingAppointments.length }} {{ upcomingAppointments.length === 1 ? 'Termin' : 'Termine' }} geplant
+                </p>
+                <p v-else class="text-gray-600 text-sm">
+                  Keine Termine geplant
+                </p>
+              </div>
             </div>
             
             <div class="mt-4">
@@ -200,20 +209,32 @@
         <!-- Absolvierte Lektionen - Uses Accent Color -->
         <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: accentButtonBorderColor, borderWidth: '1px' }">
           <div class="p-6 h-full flex flex-col">
-            <div class="flex items-center mb-4">
-              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: accentButtonColorLight }">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: accentButtonColor }">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: accentButtonColorLight }">
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: accentButtonColor }">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
                 <h3 class="text-lg font-semibold text-gray-900">Absolvierte Lektionen</h3>
-                <p class="text-3xl font-bold text-gray-900 mt-1">{{ completedLessonsCount }}</p>
+              </div>
+              <div class="bg-gray-100 px-3 py-1 rounded-full">
+                <span class="text-sm font-semibold text-gray-700">{{ completedLessonsCount }}</span>
               </div>
             </div>
             
-            <div class="flex-1 flex items-center">
-              <p class="text-sm text-gray-500">{{ totalEvaluationsCount }} Bewertungen</p>
+            <div class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <p v-if="totalEvaluationsCount > 0" class="text-gray-900 text-lg font-semibold">
+                  <span :style="{ color: accentButtonColor }">{{ totalEvaluationsCount }}</span>
+                  <span class="text-gray-600 text-sm block mt-1">
+                    {{ totalEvaluationsCount === 1 ? 'Bewertung' : 'Bewertungen' }}
+                  </span>
+                </p>
+                <p v-else class="text-gray-600 text-sm">
+                  Noch keine Bewertungen
+                </p>
+              </div>
             </div>
             
             <div class="mt-4">
