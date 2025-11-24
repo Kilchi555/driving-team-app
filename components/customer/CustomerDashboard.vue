@@ -117,15 +117,20 @@
         <!-- Zahlungsübersicht -->
         <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
           <div class="p-6 h-full flex flex-col">
-            <div class="flex items-center mb-4">
-              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                </svg>
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">
+                  Meine Zahlungen
+                </h3>
               </div>
-              <h3 class="text-lg font-semibold text-gray-900">
-                Meine Zahlungen
-              </h3>
+              <div v-if="!paymentsLoading" class="bg-gray-100 px-3 py-1 rounded-full">
+                <span class="text-sm font-semibold text-gray-700">{{ paymentsCount }}</span>
+              </div>
             </div>
             
             <div class="flex-1 flex items-center justify-center">
@@ -1070,6 +1075,10 @@ const completedLessonsCount = computed(() => {
 
 const paidAppointments = computed(() => {
   return appointments.value?.filter(apt => apt.status === 'completed') || []
+})
+
+const paymentsCount = computed(() => {
+  return pendingPayments.value?.length || 0
 })
 
 const recentEvaluations = computed(() => {
