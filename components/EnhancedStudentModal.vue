@@ -743,7 +743,7 @@
                 </div>
                 
                 <!-- Stornierungs-Policy Info -->
-                <div v-if="payment.appointments?.status === 'cancelled'" class="mt-3 pt-3 border-t border-gray-300">
+                <div v-if="payment.appointments?.status === 'cancelled'" class="px-4 py-3 bg-gray-50 border-t border-gray-200">
                   <div v-if="getCancellationPolicy(payment.appointments)" class="text-sm space-y-2">
                     <div>
                       <span class="text-gray-600">Stornierungs-Policy:</span>
@@ -756,7 +756,7 @@
                     </div>
                     
                     <!-- Detaillierte Berechnung -->
-                    <div v-if="calculateCancelledPayment(payment)" class="bg-gray-50 p-3 rounded text-xs space-y-1">
+                    <div v-if="calculateCancelledPayment(payment)" class="bg-white p-3 rounded text-xs space-y-1 border border-gray-200">
                       <template v-if="calculateCancelledPayment(payment)">
                         <div class="flex justify-between">
                           <span>Termin-Kosten:</span>
@@ -790,9 +790,10 @@
                   </div>
                 </div>
                 
-                <div class="text-sm">
-                  <span class="text-gray-500">Zahlungsmethode:</span>
-                  <span class="ml-1 font-medium">
+                <!-- Payment Method -->
+                <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm">
+                  <span class="text-gray-600">Zahlungsmethode:</span>
+                  <span class="ml-1 font-medium text-gray-900">
                     {{ payment.payment_method === 'cash' ? 'Bar' :
                        payment.payment_method === 'invoice' ? 'Rechnung' :
                        payment.payment_method === 'wallee' ? 'Online' :
