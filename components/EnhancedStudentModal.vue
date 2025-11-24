@@ -1492,7 +1492,20 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
     
     // Update payment_method for all selected payments
     for (const paymentId of selectedPayments.value) {
-      const { error } = await supabase
+      // Get the payment to find the associated appointment
+      const { data: paymentData, error: paymentError } = await supabase
+        .from('payments')
+        .select('appointment_id')
+        .eq('id', paymentId)
+        .single()
+      
+      if (paymentError) {
+        console.error(`❌ Error fetching payment ${paymentId}:`, paymentError)
+        continue
+      }
+      
+      // Update payment
+      const { error: updatePaymentError } = await supabase
         .from('payments')
         .update({ 
           payment_method: method === 'cash' ? 'cash' : 'wallee',
@@ -1501,15 +1514,32 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
         })
         .eq('id', paymentId)
       
-      if (error) {
-        console.error(`❌ Error updating payment ${paymentId}:`, error)
-      } else {
-        console.log(`✅ Payment ${paymentId} updated to ${method}`)
+      if (updatePaymentError) {
+        console.error(`❌ Error updating payment ${paymentId}:`, updatePaymentError)
+        continue
       }
+      
+      // If payment is being marked as paid (cash), also confirm the appointment if it's pending
+      if (method === 'cash' && paymentData?.appointment_id) {
+        const { error: updateAppointmentError } = await supabase
+          .from('appointments')
+          .update({ status: 'confirmed' })
+          .eq('id', paymentData.appointment_id)
+          .eq('status', 'pending_confirmation') // Only update if still pending
+        
+        if (updateAppointmentError) {
+          console.error(`❌ Error confirming appointment ${paymentData.appointment_id}:`, updateAppointmentError)
+        } else {
+          console.log(`✅ Appointment ${paymentData.appointment_id} confirmed`)
+        }
+      }
+      
+      console.log(`✅ Payment ${paymentId} updated to ${method}`)
     }
     
-    // Reload payments to reflect changes
+    // Reload payments and lessons to reflect changes
     await loadPayments()
+    await loadLessons()
     
     // Clear selection after processing
     selectedPayments.value = []
