@@ -245,6 +245,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
+import { useUIStore } from '~/stores/ui'
 import { storeToRefs } from 'pinia'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import CustomerCancellationModal from '~/components/customer/CustomerCancellationModal.vue'
@@ -832,11 +833,18 @@ const onAppointmentCancelled = async (appointmentId: string) => {
   // Close modal first
   closeCancellationModal()
   
-  // Show success message first
-  alert('Termin erfolgreich abgesagt')
+  // Show success notification
+  const uiStore = useUIStore()
+  uiStore.addNotification({
+    type: 'success',
+    title: 'Termin abgesagt',
+    message: 'Der Termin wurde erfolgreich abgesagt.'
+  })
   
   // Reload page to get fresh data
-  window.location.reload()
+  setTimeout(() => {
+    window.location.reload()
+  }, 1500)
 }
 
 const getAppointmentTitle = (payment: any): string => {
