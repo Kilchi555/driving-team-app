@@ -3,6 +3,7 @@
 
 import { getSupabase } from '~/utils/supabase'
 import { Wallee } from 'wallee'
+import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -24,20 +25,16 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabase()
 
-    // ✅ WALLEE SDK KONFIGURATION
-    const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
-    const userIdWallee: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
-    const apiSecret: string = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+    // ✅ GET WALLEE CONFIG FOR TENANT (Multi-Tenant Support!)
+    console.log('🔍 Fetching Wallee config for tenant:', tenantId)
+    const walleeConfig = await getWalleeConfigForTenant(tenantId)
+    const spaceId = walleeConfig.spaceId
     
-    const config = {
-      space_id: spaceId,
-      user_id: userIdWallee,
-      api_secret: apiSecret
-    }
+    const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
 
     // ✅ Hole Transaktions-Details von Wallee (inkl. Payment Method Token)
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
-    const transactionResponse = await transactionService.read(spaceId, parseInt(transactionId.toString()))
+    const transactionResponse = await transactionService.read(walleeConfig.spaceId, parseInt(transactionId.toString()))
     const transaction: Wallee.model.Transaction = transactionResponse.body
 
     console.log('🔍 Wallee transaction details:', {
