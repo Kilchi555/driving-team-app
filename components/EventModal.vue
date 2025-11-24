@@ -3481,12 +3481,14 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     // ✅ SCHRITT 2: Soft Delete des Appointments mit Absage-Grund
     console.log('🗑️ Soft deleting appointment with cancellation reason')
     
-    // Get the cancellation reason to check if medical certificate is required
+    // Get the cancellation reason to check if medical certificate is required and force_charge_percentage
     const { data: reasonData } = await supabase
       .from('cancellation_reasons')
-      .select('requires_proof')
+      .select('requires_proof, force_charge_percentage')
       .eq('id', cancellationReasonId)
       .single()
+    
+    console.log('🔍 Cancellation reason data:', reasonData)
     
     // Prepare update data with policy information
     const updateData: any = {
@@ -3498,17 +3500,32 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       deleted_by: props.currentUser?.id
     }
 
+    // ✅ Use force_charge_percentage if available (for staff cancellations = 0%)
+    if (reasonData?.force_charge_percentage !== null && reasonData?.force_charge_percentage !== undefined) {
+      const chargePercentage = reasonData.force_charge_percentage
+      updateData.cancellation_charge_percentage = chargePercentage
+      console.log(`💰 Using force_charge_percentage from cancellation reason: ${chargePercentage}%`)
+      
+      // If staff cancels (force_charge_percentage = 0), don't charge customer
+      if (chargePercentage === 0) {
+        console.log('✅ Staff cancellation - NO CHARGE for customer')
+      }
+    } else if (cancellationPolicyResult.value) {
+      // Fallback: Use calculated policy if no force_charge_percentage
+      updateData.cancellation_charge_percentage = cancellationPolicyResult.value.calculation.chargePercentage
+      console.log(`💳 Using calculated policy charge percentage: ${cancellationPolicyResult.value.calculation.chargePercentage}%`)
+    }
+
     // ✅ Set medical certificate status if required
     if (reasonData?.requires_proof) {
       updateData.medical_certificate_status = 'pending'
-      updateData.original_charge_percentage = cancellationPolicyResult.value?.calculation?.chargePercentage || 100
+      updateData.original_charge_percentage = updateData.cancellation_charge_percentage || 100
       console.log('📄 Medical certificate required - status set to pending')
     }
 
-    // Add policy information if available
-    if (cancellationPolicyResult.value) {
-      updateData.cancellation_charge_percentage = cancellationPolicyResult.value.calculation.chargePercentage
-      updateData.cancellation_credit_hours = cancellationPolicyResult.value.shouldCreditHours
+    // Add credit hours information if available
+    if (cancellationPolicyResult.value?.shouldCreditHours) {
+      updateData.cancellation_credit_hours = true
       if (selectedCancellationPolicyId.value) {
         updateData.cancellation_policy_applied = selectedCancellationPolicyId.value
       }
