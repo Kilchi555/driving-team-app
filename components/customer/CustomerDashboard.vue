@@ -142,8 +142,14 @@
               
               <!-- Content -->
               <div v-else class="text-center">
-                <p class="text-gray-600 text-sm">
-                  Verwalten Sie Ihre Zahlungen und sehen Sie Ihren Zahlungsverlauf
+                <p v-if="pendingPayments.length > 0" class="text-gray-900 text-lg font-semibold">
+                  <span :style="{ color: buttonColor }">{{ pendingPayments.length }}</span>
+                  <span class="text-gray-600 text-sm block mt-1">
+                    {{ pendingPayments.length === 1 ? 'Zahlung ausstehend' : 'Zahlungen ausstehend' }}
+                  </span>
+                </p>
+                <p v-else class="text-gray-600 text-sm">
+                  Alle Zahlungen sind aktuell
                 </p>
               </div>
             </div>
