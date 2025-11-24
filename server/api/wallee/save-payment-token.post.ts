@@ -30,12 +30,30 @@ export default defineEventHandler(async (event) => {
     const walleeConfig = await getWalleeConfigForTenant(tenantId)
     const spaceId = walleeConfig.spaceId
     
+    console.log('🔧 Wallee Config loaded:', {
+      spaceId: spaceId,
+      userId: walleeConfig.userId,
+      apiSecretPreview: walleeConfig.apiSecret.substring(0, 10) + '...'
+    })
+    
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
 
     // ✅ Hole Transaktions-Details von Wallee (inkl. Payment Method Token)
+    console.log('🔄 Fetching transaction from Wallee:', {
+      spaceId: walleeConfig.spaceId,
+      transactionId: parseInt(transactionId.toString())
+    })
+    
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
-    const transactionResponse = await transactionService.read(walleeConfig.spaceId, parseInt(transactionId.toString()))
-    const transaction: Wallee.model.Transaction = transactionResponse.body
+    let transactionResponse: any
+    try {
+      transactionResponse = await transactionService.read(walleeConfig.spaceId, parseInt(transactionId.toString()))
+    } catch (error: any) {
+      console.error('❌ Error fetching transaction from Wallee:', error)
+      console.log('⚠️ Transaction fetch failed - continuing without token data')
+      transactionResponse = { body: null }
+    }
+    const transaction: Wallee.model.Transaction = transactionResponse?.body || {}
 
     console.log('🔍 Wallee transaction details:', {
       id: transaction.id,

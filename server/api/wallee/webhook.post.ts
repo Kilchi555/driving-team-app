@@ -47,23 +47,40 @@ export default defineEventHandler(async (event) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
     // Find payment by Wallee transaction ID
+    // ⚠️ WICHTIG: Wallee kann entityId und transactionId unterschiedlich sein!
+    // Versuche beide zu prüfen
     console.log('🔍 Looking up payment for transaction:', transactionId)
     console.log('🔍 Searching for wallee_transaction_id =', String(transactionId))
     
-    const { data: payment, error: paymentError } = await supabase
+    let payment: any = null
+    let paymentError: any = null
+    
+    // First try: Suche nach transactionId (entityId vom Webhook)
+    ({ data: payment, error: paymentError } = await supabase
       .from('payments')
       .select('id, appointment_id, payment_status, user_id, tenant_id')
       .eq('wallee_transaction_id', String(transactionId))
-      .maybeSingle()
+      .maybeSingle())
 
     if (paymentError) {
       console.error('❌ Database error looking up payment:', paymentError)
       return { success: false, message: 'Database error', error: paymentError }
     }
     
+    // Wenn nicht gefunden, versuche noch in metadata zu suchen
+    if (!payment && body.transaction?.id) {
+      console.log('🔍 Payment not found by entityId, trying transaction.id from body...')
+      ({ data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .select('id, appointment_id, payment_status, user_id, tenant_id')
+        .eq('wallee_transaction_id', String(body.transaction.id))
+        .maybeSingle())
+    }
+    
     if (!payment) {
       console.error('❌ Payment not found for transaction:', transactionId)
       console.log('📋 Searched for wallee_transaction_id:', String(transactionId))
+      console.log('📋 Full webhook body:', body)
       return { success: false, message: 'Payment not found' }
     }
 
