@@ -233,6 +233,12 @@ export default defineEventHandler(async (event) => {
     // ✅ Speichere Token in unserer Datenbank
     console.log('🔍 Looking up user:', userId)
     
+    // ✅ Setze Default für payment_method_type wenn nicht vorhanden
+    if (!paymentMethodType) {
+      paymentMethodType = 'wallee_token' // Default für alle Wallee Zahlungsmethoden
+      console.log('ℹ️ Using default payment_method_type:', paymentMethodType)
+    }
+    
     if (!userId) {
       console.warn('⚠️ No userId provided - cannot save token without user')
       return {
@@ -303,11 +309,12 @@ export default defineEventHandler(async (event) => {
       .insert({
         user_id: userId,
         tenant_id: tenantId,
+        payment_provider: 'wallee',
+        payment_method_type: paymentMethodType,
+        provider_payment_method_id: paymentMethodToken, // ✅ Use token as provider ID
         wallee_token: paymentMethodToken,
         wallee_customer_id: walleeCustomerId,
         display_name: displayName,
-        payment_method_type: paymentMethodType,
-        payment_provider: 'wallee', // ✅ Added required field
         metadata: {
           transaction_id: transactionId,
           saved_at: new Date().toISOString()
