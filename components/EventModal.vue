@@ -338,7 +338,7 @@
           <div class="flex items-center">
             <div class="text-2xl mr-3">❌</div>
             <h3 class="text-lg font-semibold text-gray-900">
-              {{ cancellationStep === 0 ? 'Wer hat abgesagt?' : cancellationStep === 1 ? 'Absage-Grund auswählen' : 'Absage-Policy auswählen' }}
+              {{ cancellationStep === 0 ? 'Wer hat abgesagt?' : cancellationStep === 1 ? 'Absage-Grund auswählen' : cancellationStep === 2 ? 'Absage-Policy auswählen' : 'Bestätigung' }}
             </h3>
           </div>
           <button
@@ -466,6 +466,74 @@
             <p>Keine Termindaten verfügbar</p>
           </div>
         </div>
+
+        <!-- Bestätigung (Step 3) -->
+        <div v-if="cancellationStep === 3" class="mb-6">
+          <div v-if="cancellationPolicyResult" class="space-y-4">
+            <!-- Termin-Info Header -->
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h4 class="font-medium text-gray-900">{{ props.eventData?.title || 'Termin' }}</h4>
+                  <p class="text-sm text-gray-600">
+                    {{ formatDate(props.eventData?.start) }} • 
+                    {{ props.eventData?.duration_minutes || 45 }} Min • 
+                    {{ formatCurrency(appointmentDataForPolicy?.price_rappen || 0) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Confirmation Summary -->
+            <div :class="[
+              'border-l-4 rounded-lg p-4',
+              cancellationPolicyResult.calculation.chargePercentage > 0
+                ? 'bg-red-50 border-red-400'
+                : 'bg-green-50 border-green-400'
+            ]">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center mr-3" :class="[
+                    cancellationPolicyResult.calculation.chargePercentage > 0
+                      ? 'bg-red-100'
+                      : 'bg-green-100'
+                  ]">
+                    <svg class="w-4 h-4" :class="[
+                      cancellationPolicyResult.calculation.chargePercentage > 0
+                        ? 'text-red-600'
+                        : 'text-green-600'
+                    ]" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="font-medium" :class="[
+                      cancellationPolicyResult.calculation.chargePercentage > 0
+                        ? 'text-red-900'
+                        : 'text-green-900'
+                    ]">Absage-Berechnung</div>
+                    <div class="text-sm" :class="[
+                      cancellationPolicyResult.calculation.chargePercentage > 0
+                        ? 'text-red-700'
+                        : 'text-green-700'
+                    ]">
+                      {{ cancellationPolicyResult.calculation.chargePercentage }}% verrechnen
+                      {{ cancellationPolicyResult.shouldCreditHours ? '• Stunden gutschreiben' : '' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div v-if="cancellationPolicyResult.calculation.chargePercentage > 0" class="text-lg font-bold text-red-600">
+                    {{ formatCurrency(cancellationPolicyResult.chargeAmountRappen) }}
+                  </div>
+                  <div v-else class="text-lg font-bold text-green-600">
+                    Kostenlos
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         
         <div class="flex space-x-3">
           <button
@@ -483,7 +551,22 @@
             ← Zurück
           </button>
           <button
+            v-if="cancellationStep === 3"
+            @click="goBackInCancellationFlow"
+            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ← Zurück
+          </button>
+          <button
             v-if="cancellationStep === 2"
+            @click="confirmCancellationWithReason"
+            :disabled="isLoading"
+            class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ isLoading ? 'Lösche...' : 'Termin absagen' }}
+          </button>
+          <button
+            v-if="cancellationStep === 3"
             @click="confirmCancellationWithReason"
             :disabled="isLoading"
             class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
