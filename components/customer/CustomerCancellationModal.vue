@@ -189,7 +189,18 @@ const hoursUntilAppointment = computed(() => {
   if (!props.appointment?.start_time) return null
   const appointmentTime = new Date(props.appointment.start_time)
   const now = new Date()
-  return (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+  
+  // Convert to Zurich timezone for accurate hour calculation
+  const appointmentZurich = new Date(appointmentTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
+  const nowZurich = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
+  
+  const hours = (appointmentZurich.getTime() - nowZurich.getTime()) / (1000 * 60 * 60)
+  console.log('🕐 Hours until appointment (Zurich TZ):', hours.toFixed(2), {
+    appointment: props.appointment.start_time,
+    appointmentZurich: appointmentZurich.toISOString(),
+    nowZurich: nowZurich.toISOString()
+  })
+  return hours
 })
 
 // Methods
