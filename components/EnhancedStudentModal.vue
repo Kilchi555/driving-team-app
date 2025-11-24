@@ -551,7 +551,7 @@
               <div class="flex gap-2">
                 <button 
                   class="flex-1 px-4 py-2.5 rounded-lg font-semibold text-white transition-all hover:shadow-md"
-                  style="background-color: #22C55E"
+                  :style="{ backgroundColor: secondaryColor || '#22C55E' }"
                   @click="handleBulkPayment('cash')"
                 >
                   Bar
