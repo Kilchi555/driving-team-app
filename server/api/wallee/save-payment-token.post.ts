@@ -212,12 +212,21 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!paymentMethodToken) {
-      console.warn('⚠️ No payment method token available yet. Token will be saved when Wallee provides it via webhook.')
-      // ✅ Nicht als Fehler behandeln - Token ist optional
-      return {
-        success: true,
-        message: 'No payment method token available yet. Will be saved when available.',
-        tokenId: null
+      // ✅ Für Payment Methods mit Force Storage (wie TWINT):
+      // Wallee speichert den Token automatisch mit der Customer ID als Token Reference!
+      // Wir speichern die Customer ID als Token
+      if (transaction.customerId) {
+        console.log('ℹ️ No separate token ID - using customer ID as token reference (typical for TWINT/Wallets)')
+        paymentMethodToken = transaction.customerId
+        console.log('✅ Using customer ID as token reference:', paymentMethodToken)
+      } else {
+        console.warn('⚠️ No payment method token available yet. Token will be saved when Wallee provides it via webhook.')
+        // ✅ Nicht als Fehler behandeln - Token ist optional
+        return {
+          success: true,
+          message: 'No payment method token available yet. Will be saved when available.',
+          tokenId: null
+        }
       }
     }
 
