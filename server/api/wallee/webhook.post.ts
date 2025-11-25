@@ -91,10 +91,10 @@ export default defineEventHandler(async (event) => {
 
     // Handle AUTHORIZED state
     if (isAuthorized) {
-      console.log('💳 Transaction AUTHORIZED')
+      console.log('💳 Transaction AUTHORIZED - Payment charged')
       
-      // ✅ Sofort zu completed, nicht authorized!
-      console.log('🔄 Updating payment status to completed (skip authorized state)...')
+      // ✅ Setze Payment zu completed (tatsächlich abgebucht)
+      console.log('🔄 Updating payment status to completed...')
       const { error: updatePaymentError } = await supabase
         .from('payments')
         .update({
@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
       }
       
       // ✅ Speichere Payment Method Token
-      console.log('💳 Attempting to save payment method token after authorization...')
+      console.log('💳 Attempting to save payment method token...')
       if (payment.user_id && payment.tenant_id) {
         try {
           const tokenResponse = await $fetch('/api/wallee/save-payment-token', {

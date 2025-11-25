@@ -149,16 +149,19 @@ export default defineEventHandler(async (event) => {
     if (appointmentTime) {
       const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
       console.log('⏰ Hours until appointment:', hoursUntilAppointment)
-      console.log('💰 Payment settings:', {
+      console.log('💰 Payment threshold:', {
         automaticPaymentHoursBefore,
         hoursUntilAppointment,
-        willCompleteImmediately: hoursUntilAppointment < automaticPaymentHoursBefore
+        willChargeImmediately: hoursUntilAppointment < automaticPaymentHoursBefore
       })
       
-      // Wenn Termin < automaticPaymentHoursBefore entfernt: sofort abbuchen
+      // ✅ Wenn Termin < 24h entfernt: sofort abbuchen (COMPLETE_IMMEDIATE)
+      // Sonst: Nur Zustimmung sammeln, kein Charge (COMPLETE_DEFERRED)
       if (hoursUntilAppointment < automaticPaymentHoursBefore) {
         completionBehavior = Wallee.model.TransactionCompletionBehavior.COMPLETE_IMMEDIATE
-        console.log('⚡ Short-term appointment - using COMPLETE_IMMEDIATE')
+        console.log('⚡ Short-term appointment (< 24h) - using COMPLETE_IMMEDIATE for immediate charge')
+      } else {
+        console.log('ℹ️ Long-term appointment (>= 24h) - using COMPLETE_DEFERRED, charge will happen via cron 24h before')
       }
     }
 
