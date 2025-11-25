@@ -1905,7 +1905,9 @@ const confirmAppointment = async (appointment: any) => {
             body: {
               paymentId: payment.id,
               userId: userDb.id,
-              tenantId: userDb.tenant_id
+              tenantId: userDb.tenant_id,
+              appointmentStartTime: appointment.start_time,
+              automaticPaymentHoursBefore: automaticPaymentHoursBeforeLocal
             }
           }) as { success?: boolean; transactionId?: number; state?: string; error?: string }
 

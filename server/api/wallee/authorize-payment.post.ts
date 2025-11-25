@@ -18,7 +18,9 @@ export default defineEventHandler(async (event) => {
     const {
       paymentId,
       userId,
-      tenantId
+      tenantId,
+      appointmentStartTime,
+      automaticPaymentHoursBefore = 24
     } = body
 
     // Validierung
@@ -139,25 +141,14 @@ export default defineEventHandler(async (event) => {
     console.log('💳 Using saved payment method:', paymentMethod.provider_payment_method_id)
 
     // ✅ Berechne, wie viel Zeit bis zum Termin bleibt
-    const appointmentTime = appointmentDetails?.start_time ? new Date(appointmentDetails.start_time) : null
+    // WICHTIG: Verwende die Zeit vom Frontend (appointmentStartTime), um Diskrepanzen zu vermeiden
+    const appointmentTime = appointmentStartTime ? new Date(appointmentStartTime) : null
     const now = new Date()
     let completionBehavior = Wallee.model.TransactionCompletionBehavior.COMPLETE_DEFERRED // Default: deferred
     
     if (appointmentTime) {
       const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
       console.log('⏰ Hours until appointment:', hoursUntilAppointment)
-      
-      // Hole automaticPaymentHoursBefore aus Tenant Settings (Standard: 24)
-      const { data: paymentSettings } = await supabase
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', tenantId)
-        .eq('setting_key', 'payment_settings')
-        .single()
-      
-      const settings = paymentSettings?.setting_value || {}
-      const automaticPaymentHoursBefore = settings.automatic_payment_hours_before || 24
-      
       console.log('💰 Payment settings:', {
         automaticPaymentHoursBefore,
         hoursUntilAppointment,
