@@ -138,6 +138,39 @@ export default defineEventHandler(async (event) => {
 
     console.log('💳 Using saved payment method:', paymentMethod.provider_payment_method_id)
 
+    // ✅ Berechne, wie viel Zeit bis zum Termin bleibt
+    const appointmentTime = appointmentDetails?.start_time ? new Date(appointmentDetails.start_time) : null
+    const now = new Date()
+    let completionBehavior = Wallee.model.TransactionCompletionBehavior.COMPLETE_DEFERRED // Default: deferred
+    
+    if (appointmentTime) {
+      const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+      console.log('⏰ Hours until appointment:', hoursUntilAppointment)
+      
+      // Hole automaticPaymentHoursBefore aus Tenant Settings (Standard: 24)
+      const { data: paymentSettings } = await supabase
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', tenantId)
+        .eq('setting_key', 'payment_settings')
+        .single()
+      
+      const settings = paymentSettings?.setting_value || {}
+      const automaticPaymentHoursBefore = settings.automatic_payment_hours_before || 24
+      
+      console.log('💰 Payment settings:', {
+        automaticPaymentHoursBefore,
+        hoursUntilAppointment,
+        willCompleteImmediately: hoursUntilAppointment < automaticPaymentHoursBefore
+      })
+      
+      // Wenn Termin < automaticPaymentHoursBefore entfernt: sofort abbuchen
+      if (hoursUntilAppointment < automaticPaymentHoursBefore) {
+        completionBehavior = Wallee.model.TransactionCompletionBehavior.COMPLETE_IMMEDIATE
+        console.log('⚡ Short-term appointment - using COMPLETE_IMMEDIATE')
+      }
+    }
+
     // ✅ Erstelle Transaction mit Token (für Authorization-only)
     const transactionData: any = {
       lineItems: [{
@@ -150,7 +183,7 @@ export default defineEventHandler(async (event) => {
       }],
       autoConfirmationEnabled: false, // ❗ WICHTIG: false für Authorization
       chargeRetryEnabled: false, // Keine automatischen Wiederholungen
-      completionBehavior: Wallee.model.TransactionCompletionBehavior.COMPLETE_DEFERRED, // ✅ Deferred für Token-basierte Zahlungen
+      completionBehavior: completionBehavior, // ✅ Dynamic: IMMEDIATE für < 24h, sonst DEFERRED
       currency: currency,
       customerId: paymentMethod.wallee_token, // ✅ Use wallee_token (Customer ID) as customerId
       merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
