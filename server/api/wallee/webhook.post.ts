@@ -93,20 +93,48 @@ export default defineEventHandler(async (event) => {
     if (isAuthorized) {
       console.log('💳 Transaction AUTHORIZED - provisorische Belastung (Authorization Hold)')
       
-      // Update payment status to authorized
-      console.log('🔄 Updating payment status to authorized...')
+      // ✅ Prüfe, ob der Termin kurzfristig ist (< 24h entfernt)
+      // Bei kurzfristigen Terminen sollte die Zahlung sofort zu 'completed' gehen
+      let paymentStatus = 'authorized'
+      let shouldCaptureImmediately = false
+      
+      if (payment.appointment_id) {
+        const { data: appointment } = await supabase
+          .from('appointments')
+          .select('start_time')
+          .eq('id', payment.appointment_id)
+          .single()
+        
+        if (appointment?.start_time) {
+          const appointmentTime = new Date(appointment.start_time)
+          const now = new Date()
+          const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+          
+          console.log('⏰ Hours until appointment:', hoursUntilAppointment)
+          
+          // Wenn weniger als 24h bis zum Termin: sofort capturen
+          if (hoursUntilAppointment < 24) {
+            console.log('⚡ Short-term appointment (< 24h) - will be marked for immediate completion')
+            shouldCaptureImmediately = true
+            paymentStatus = 'authorized' // Keep as authorized, will be captured soon
+          }
+        }
+      }
+      
+      // Update payment status
+      console.log('🔄 Updating payment status to', paymentStatus + '...')
       const { error: updatePaymentError } = await supabase
         .from('payments')
         .update({
-          payment_status: 'authorized',
+          payment_status: paymentStatus,
           updated_at: new Date().toISOString()
         })
         .eq('id', payment.id)
       
       if (updatePaymentError) {
-        console.error('⚠️ Failed to update payment to authorized:', updatePaymentError)
+        console.error('⚠️ Failed to update payment to', paymentStatus + ':', updatePaymentError)
       } else {
-        console.log('✅ Payment updated to authorized')
+        console.log('✅ Payment updated to', paymentStatus)
       }
       
       // Update appointment status to confirmed (authorization means payment is secured)
