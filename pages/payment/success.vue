@@ -9,14 +9,17 @@
       </div>
 
       <!-- Success State -->
-      <div v-else-if="paymentStatus === 'completed'" class="text-center">
+      <div v-else-if="paymentStatus === 'completed' || paymentStatus === 'authorized'" class="text-center">
         <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
           <svg class="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
           </svg>
         </div>
         <h2 class="text-2xl font-bold text-gray-900 mb-2">Zahlung erfolgreich!</h2>
-        <p class="text-gray-600 mb-6">Ihre Zahlung wurde erfolgreich verarbeitet.</p>
+        <p class="text-gray-600 mb-6">
+          <span v-if="paymentStatus === 'authorized'">Ihre Zahlung wurde autorisiert und wird zum Termin abgebucht.</span>
+          <span v-else>Ihre Zahlung wurde erfolgreich verarbeitet.</span>
+        </p>
         
         <div v-if="paymentDetails" class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
           <div class="flex justify-between mb-2">
@@ -177,13 +180,13 @@ const checkStatus = async () => {
     paymentStatus.value = data.payment_status
     isLoading.value = false
     
-    // Start countdown if payment is completed
-    if (data.payment_status === 'completed' && !countdownInterval) {
+    // Start countdown if payment is completed or authorized
+    if ((data.payment_status === 'completed' || data.payment_status === 'authorized') && !countdownInterval) {
       startCountdown()
     }
     
-    // Stop checking if payment is completed or failed
-    if (data.payment_status === 'completed' || data.payment_status === 'failed') {
+    // Stop checking if payment is completed, authorized, or failed
+    if (data.payment_status === 'completed' || data.payment_status === 'authorized' || data.payment_status === 'failed') {
       if (statusCheckInterval) {
         clearInterval(statusCheckInterval)
         statusCheckInterval = null
@@ -218,12 +221,23 @@ onMounted(() => {
   // Initial status check
   checkStatus()
   
-  // Check status every 3 seconds if still pending
+  // Check status every 2 seconds if still pending (for max 30 seconds)
+  let pollCount = 0
+  const maxPolls = 15 // 15 * 2s = 30s
+  
   statusCheckInterval = setInterval(() => {
-    if (paymentStatus.value === 'pending') {
+    pollCount++
+    
+    if (paymentStatus.value === 'pending' && pollCount < maxPolls) {
       checkStatus()
+    } else if (pollCount >= maxPolls) {
+      // Stop polling after 30s
+      if (statusCheckInterval) {
+        clearInterval(statusCheckInterval)
+        statusCheckInterval = null
+      }
     }
-  }, 3000)
+  }, 2000)
 })
 
 onUnmounted(() => {

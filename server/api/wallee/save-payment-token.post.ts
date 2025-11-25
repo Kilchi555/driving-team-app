@@ -217,35 +217,48 @@ export default defineEventHandler(async (event) => {
         console.log('🔍 Fetching real token IDs from Wallee for customer:', transaction.customerId)
         
         try {
-          // ✅ Hole die ECHTE Token ID von Wallee via API
-          const customerPaymentMethodService: Wallee.api.CustomerPaymentMethodService = new Wallee.api.CustomerPaymentMethodService(config)
-          const customerId = parseInt(transaction.customerId.split('-').pop() || '0')
+          // ✅ Hole die ECHTE Token ID von Wallee via TokenService
+          const tokenService: Wallee.api.TokenService = new Wallee.api.TokenService(config)
           
-          // Suche nach Token für diesen Customer
-          const tokensResponse = await customerPaymentMethodService.search(
-            walleeConfig.spaceId,
-            new Wallee.model.EntityQuery()
-          )
-          
-          if (tokensResponse?.body && Array.isArray(tokensResponse.body)) {
-            // Finde Tokens für diesen Customer
-            const customerTokens = tokensResponse.body.filter((token: any) => 
-              token.customerId === customerId && token.state === 'ACTIVE'
-            )
-            
-            if (customerTokens.length > 0) {
-              // Nutze den neuesten Token
-              const latestToken = customerTokens[customerTokens.length - 1]
-              paymentMethodToken = latestToken.id.toString()
-              displayName = latestToken.displayName || 'Gespeicherte Karte'
-              paymentMethodType = latestToken.paymentMethodIdentifier || 'wallee_token'
-              console.log('✅ Found real token from Wallee:', paymentMethodToken)
-            } else {
-              console.log('⚠️ No active tokens found for customer in Wallee')
+          // Suche nach aktiven Tokens für diesen Customer
+          const tokenSearchResult = await tokenService.search(walleeConfig.spaceId, {
+            filter: {
+              customerId: {
+                value: transaction.customerId,
+                operator: Wallee.model.CriteriaOperator.EQUALS
+              },
+              state: {
+                value: Wallee.model.TokenState.ACTIVE,
+                operator: Wallee.model.CriteriaOperator.EQUALS
+              }
+            },
+            orderBy: {
+              field: 'createdOn',
+              direction: Wallee.model.SortOrder.DESC
             }
+          })
+          
+          const tokens = tokenSearchResult.body || []
+          console.log('💳 Found active tokens from TokenService:', tokens.length)
+          
+          if (tokens.length > 0) {
+            // Nutze den neuesten Token
+            const latestToken = tokens[0]
+            paymentMethodToken = latestToken.id?.toString() || null
+            displayName = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 
+                          (latestToken.cardData?.lastFourDigits ? `Karte **** ${latestToken.cardData.lastFourDigits}` : 'Gespeicherte Karte')
+            paymentMethodType = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.description || 
+                                latestToken.cardData?.brand || 'wallee_token'
+            console.log('✅ Found real token from Wallee TokenService:', {
+              tokenId: paymentMethodToken,
+              displayName,
+              type: paymentMethodType
+            })
+          } else {
+            console.log('⚠️ No active tokens found for customer in Wallee')
           }
         } catch (searchError: any) {
-          console.warn('⚠️ Could not fetch tokens from Wallee:', searchError.message)
+          console.warn('⚠️ Could not fetch tokens from Wallee TokenService:', searchError.message)
         }
       }
       
