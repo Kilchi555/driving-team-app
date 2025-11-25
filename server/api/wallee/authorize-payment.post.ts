@@ -129,14 +129,14 @@ export default defineEventHandler(async (event) => {
       .limit(1)
       .maybeSingle()
 
-    if (!paymentMethod?.wallee_token) {
+    if (!paymentMethod?.provider_payment_method_id) {
       throw createError({
         statusCode: 400,
         statusMessage: 'No saved payment method found for user'
       })
     }
 
-    console.log('💳 Using saved payment method:', paymentMethod.wallee_token)
+    console.log('💳 Using saved payment method:', paymentMethod.provider_payment_method_id)
 
     // ✅ Erstelle Transaction mit Token (für Authorization-only)
     const transactionData: any = {
@@ -152,11 +152,11 @@ export default defineEventHandler(async (event) => {
       chargeRetryEnabled: false, // Keine automatischen Wiederholungen
       completionBehavior: Wallee.model.TransactionCompletionBehavior.COMPLETE_DEFERRED, // ❗ Wichtig: Deferred = nur autorisieren
       currency: currency,
-      customerId: customerId,
+      customerId: paymentMethod.wallee_token, // ✅ Use wallee_token (Customer ID) as customerId
       merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       language: 'de-CH',
       customerEmailAddress: customerEmail,
-      token: parseInt(paymentMethod.wallee_token), // ✅ Token direkt bei Erstellung
+      token: parseInt(paymentMethod.provider_payment_method_id), // ✅ Use provider_payment_method_id as token (must be numeric)
       tokenizationEnabled: false // Kein neues Token erstellen, bestehendes verwenden
     }
 
