@@ -129,14 +129,15 @@ export default defineEventHandler(async (event) => {
     let adminFee = 0
     
     if (eventType?.default_fee_rappen && eventType.default_fee_rappen > 0) {
-      // Zähle, wie viele confirmed/completed Termine der Kunde bereits hat (für diesen event_type_code)
+      // Zähle, wie viele Termine der Kunde bereits hat (für diesen event_type_code)
+      // Berücksichtige: pending_confirmation, confirmed, completed
       const { count: existingAppointmentsCount } = await supabase
         .from('appointments')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user_id)
         .eq('tenant_id', tenant_id)
         .eq('event_type_code', event_type_code || 'lesson')
-        .in('status', ['confirmed', 'completed'])
+        .in('status', ['pending_confirmation', 'confirmed', 'completed'])
       
       const appointmentNumber = (existingAppointmentsCount || 0) + 1 // +1 for current appointment
       
