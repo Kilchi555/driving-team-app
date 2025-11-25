@@ -162,7 +162,7 @@ export default defineEventHandler(async (event) => {
 
     console.log('📤 Creating AUTHORIZED transaction with token...')
     
-    const authorizeResponse = await transactionService.create(spaceId, transactionData)
+    const authorizeResponse = await transactionService.create(walleeConfig.spaceId, transactionData)
     const authorizedTransaction: any = authorizeResponse.body
 
     console.log('✅ Transaction created:', {
@@ -173,7 +173,7 @@ export default defineEventHandler(async (event) => {
     // ✅ Processiere die Transaction, um die Autorisierung zu starten
     console.log('🔄 Processing transaction to authorize...')
     
-    const processResponse = await transactionService.processWithoutUserInteraction(spaceId, authorizedTransaction.id as number)
+    const processResponse = await transactionService.processWithoutUserInteraction(walleeConfig.spaceId, authorizedTransaction.id as number)
     const processedTransaction: any = processResponse.body
     
     console.log('✅ Transaction processed:', {
@@ -184,7 +184,7 @@ export default defineEventHandler(async (event) => {
     // Warte kurz und hole den finalen State
     await new Promise(resolve => setTimeout(resolve, 2000))
     
-    const updatedResponse = await transactionService.read(spaceId, authorizedTransaction.id as number)
+    const updatedResponse = await transactionService.read(walleeConfig.spaceId, authorizedTransaction.id as number)
     const updatedTransaction: any = updatedResponse.body
     
     console.log('✅ Transaction state after processing:', {
