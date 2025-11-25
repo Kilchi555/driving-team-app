@@ -212,16 +212,45 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!paymentMethodToken) {
-      // ✅ Für Payment Methods mit Force Storage (wie TWINT):
-      // Wallee speichert den Token automatisch mit der Customer ID als Token Reference!
-      // Wir speichern die Customer ID als Token
+      // ✅ Für Force Storage Payment Methods: Hole ECHTEN Token von Wallee
       if (transaction.customerId) {
-        console.log('ℹ️ No separate token ID - using customer ID as token reference (typical for TWINT/Wallets)')
-        paymentMethodToken = transaction.customerId
-        console.log('✅ Using customer ID as token reference:', paymentMethodToken)
-      } else {
+        console.log('🔍 Fetching real token IDs from Wallee for customer:', transaction.customerId)
+        
+        try {
+          // ✅ Hole die ECHTE Token ID von Wallee via API
+          const customerPaymentMethodService: Wallee.api.CustomerPaymentMethodService = new Wallee.api.CustomerPaymentMethodService(config)
+          const customerId = parseInt(transaction.customerId.split('-').pop() || '0')
+          
+          // Suche nach Token für diesen Customer
+          const tokensResponse = await customerPaymentMethodService.search(
+            walleeConfig.spaceId,
+            new Wallee.model.EntityQuery()
+          )
+          
+          if (tokensResponse?.body && Array.isArray(tokensResponse.body)) {
+            // Finde Tokens für diesen Customer
+            const customerTokens = tokensResponse.body.filter((token: any) => 
+              token.customerId === customerId && token.state === 'ACTIVE'
+            )
+            
+            if (customerTokens.length > 0) {
+              // Nutze den neuesten Token
+              const latestToken = customerTokens[customerTokens.length - 1]
+              paymentMethodToken = latestToken.id.toString()
+              displayName = latestToken.displayName || 'Gespeicherte Karte'
+              paymentMethodType = latestToken.paymentMethodIdentifier || 'wallee_token'
+              console.log('✅ Found real token from Wallee:', paymentMethodToken)
+            } else {
+              console.log('⚠️ No active tokens found for customer in Wallee')
+            }
+          }
+        } catch (searchError: any) {
+          console.warn('⚠️ Could not fetch tokens from Wallee:', searchError.message)
+        }
+      }
+      
+      if (!paymentMethodToken) {
         console.warn('⚠️ No payment method token available yet. Token will be saved when Wallee provides it via webhook.')
-        // ✅ Nicht als Fehler behandeln - Token ist optional
         return {
           success: true,
           message: 'No payment method token available yet. Will be saved when available.',
