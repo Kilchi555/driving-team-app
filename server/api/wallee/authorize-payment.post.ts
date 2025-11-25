@@ -216,12 +216,16 @@ export default defineEventHandler(async (event) => {
     console.error('❌ Authorization failed:', {
       message: error.message,
       statusCode: error.statusCode,
-      body: error.body
+      body: error.body,
+      stack: error.stack
     })
     
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: error.message || 'Authorization failed'
+      statusMessage: error.message || 'Authorization failed',
+      data: {
+        originalError: error.toString()
+      }
     })
   }
 })
