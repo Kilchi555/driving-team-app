@@ -125,36 +125,54 @@ export default defineEventHandler(async (event) => {
     const requiresPayment = eventType?.require_payment !== false
     const lessonPrice = eventType?.default_price_rappen || 9500 // Default: CHF 95
     
-    // ✅ Admin Fee nur beim 2. Termin des Kunden berechnen
+    // ✅ Admin Fee nur beim 2. Termin des Kunden berechnen (einmal pro Kategorie)
     let adminFee = 0
     
     if (eventType?.default_fee_rappen && eventType.default_fee_rappen > 0) {
-      // Zähle, wie viele Termine der Kunde bereits hat (für diesen event_type_code)
-      // Berücksichtige: pending_confirmation, confirmed, completed
-      const { count: existingAppointmentsCount } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
+      // Prüfe, ob der Kunde jemals eine Admin Fee für diesen event_type bezahlt hat
+      // (unabhängig davon, ob Termine storniert wurden)
+      const { data: previousAdminFeePayments } = await supabase
+        .from('payments')
+        .select('id')
         .eq('user_id', user_id)
         .eq('tenant_id', tenant_id)
-        .eq('event_type_code', event_type_code || 'lesson')
-        .in('status', ['pending_confirmation', 'confirmed', 'completed'])
+        .gt('admin_fee_rappen', 0)
+        .limit(1)
       
-      const appointmentNumber = (existingAppointmentsCount || 0) + 1 // +1 for current appointment
+      const hasAlreadyPaidAdminFee = previousAdminFeePayments && previousAdminFeePayments.length > 0
       
-      console.log('💰 Admin fee check:', {
-        eventTypeCode: event_type_code || 'lesson',
-        existingAppointments: existingAppointmentsCount,
-        appointmentNumber,
-        defaultFeeRappen: eventType.default_fee_rappen,
-        willChargeAdminFee: appointmentNumber === 2
-      })
-      
-      // Admin Fee nur beim 2. Termin
-      if (appointmentNumber === 2) {
-        adminFee = eventType.default_fee_rappen
-        console.log('✅ Admin fee will be charged (2nd appointment):', adminFee / 100, 'CHF')
+      if (hasAlreadyPaidAdminFee) {
+        console.log('ℹ️ Customer has already paid admin fee before - no admin fee for this appointment')
+        adminFee = 0
       } else {
-        console.log('ℹ️ No admin fee (appointment #' + appointmentNumber + ')')
+        // Zähle, wie viele Termine der Kunde bereits hat (für diesen event_type_code)
+        // Berücksichtige: pending_confirmation, confirmed, completed
+        const { count: existingAppointmentsCount } = await supabase
+          .from('appointments')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user_id)
+          .eq('tenant_id', tenant_id)
+          .eq('event_type_code', event_type_code || 'lesson')
+          .in('status', ['pending_confirmation', 'confirmed', 'completed'])
+        
+        const appointmentNumber = (existingAppointmentsCount || 0) + 1 // +1 for current appointment
+        
+        console.log('💰 Admin fee check:', {
+          eventTypeCode: event_type_code || 'lesson',
+          existingAppointments: existingAppointmentsCount,
+          appointmentNumber,
+          defaultFeeRappen: eventType.default_fee_rappen,
+          hasAlreadyPaidAdminFee,
+          willChargeAdminFee: appointmentNumber === 2
+        })
+        
+        // Admin Fee nur beim 2. Termin
+        if (appointmentNumber === 2) {
+          adminFee = eventType.default_fee_rappen
+          console.log('✅ Admin fee will be charged (2nd appointment):', adminFee / 100, 'CHF')
+        } else {
+          console.log('ℹ️ No admin fee (appointment #' + appointmentNumber + ')')
+        }
       }
     }
 
