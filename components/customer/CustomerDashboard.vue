@@ -1753,6 +1753,32 @@ const confirmAppointment = async (appointment: any) => {
       return
     }
 
+    // ✅ SCHRITT 1: Setze Termin SOFORT auf 'confirmed' - BEVOR Zahlung starten!
+    console.log('🔄 Setting appointment to confirmed immediately...')
+    try {
+      const confirmResult = await $fetch('/api/appointments/confirm', {
+        method: 'POST',
+        body: {
+          appointmentId: appointment.id
+        }
+      }) as { success?: boolean; error?: string }
+      
+      if (!confirmResult.success) {
+        console.error('⚠️ Could not confirm appointment:', confirmResult.error)
+        throw new Error(confirmResult.error || 'Could not confirm appointment')
+      } else {
+        console.log('✅ Appointment confirmed immediately')
+      }
+    } catch (err) {
+      console.error('❌ Error confirming appointment:', err)
+      displayToast('error', 'Fehler', 'Termin konnte nicht bestätigt werden')
+      confirmingAppointments.value.delete(appointment.id)
+      return
+    }
+
+    // ✅ SCHRITT 2: Hole Payment und starte Zahlung
+    // Der Termin ist jetzt bereits 'confirmed', unabhängig davon, ob die Zahlung sofort abgebucht wird
+
     // Hole Payment für diesen Termin (Betrag)
     const { data: payment } = await supabase
       .from('payments')
