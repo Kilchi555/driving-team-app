@@ -220,15 +220,11 @@ export default defineEventHandler(async (event) => {
           // ✅ Hole die ECHTE Token ID von Wallee via TokenService
           const tokenService: Wallee.api.TokenService = new Wallee.api.TokenService(config)
           
-          // Suche nach aktiven Tokens für diesen Customer
+          // Suche nach aktiven Tokens für diesen Customer (ohne State Filter, da TokenState.ACTIVE existiert nicht)
           const tokenSearchResult = await tokenService.search(walleeConfig.spaceId, {
             filter: {
               customerId: {
                 value: transaction.customerId,
-                operator: Wallee.model.CriteriaOperator.EQUALS
-              },
-              state: {
-                value: Wallee.model.TokenState.ACTIVE,
                 operator: Wallee.model.CriteriaOperator.EQUALS
               }
             },
@@ -238,12 +234,16 @@ export default defineEventHandler(async (event) => {
             }
           })
           
-          const tokens = tokenSearchResult.body || []
-          console.log('💳 Found active tokens from TokenService:', tokens.length)
+          const allTokens = tokenSearchResult.body || []
+          console.log('💳 Found all tokens from TokenService:', allTokens.length)
           
-          if (tokens.length > 0) {
+          // Filtere aktive Tokens (state === 'ACTIVE')
+          const activeTokens = allTokens.filter((t: any) => t.state === 'ACTIVE' || t.state === 1)
+          console.log('💳 Filtered active tokens:', activeTokens.length)
+          
+          if (activeTokens.length > 0) {
             // Nutze den neuesten Token
-            const latestToken = tokens[0]
+            const latestToken = activeTokens[0]
             paymentMethodToken = latestToken.id?.toString() || null
             displayName = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 
                           (latestToken.cardData?.lastFourDigits ? `Karte **** ${latestToken.cardData.lastFourDigits}` : 'Gespeicherte Karte')
