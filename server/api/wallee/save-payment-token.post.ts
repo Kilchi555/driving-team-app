@@ -264,7 +264,14 @@ export default defineEventHandler(async (event) => {
         }
       }
       
-      if (!paymentMethodToken) {
+    if (!paymentMethodToken) {
+      // ✅ FALLBACK für TWINT mit Force Storage: Nutze customerId als Token
+      if (transaction.customerId) {
+        console.log('🔄 No explicit token found, using customerId as fallback (typical for TWINT Force Storage)')
+        paymentMethodToken = transaction.customerId
+        displayName = 'TWINT (Gespeichert)'
+        paymentMethodType = 'twint'
+      } else {
         console.warn('⚠️ No payment method token available yet. Token will be saved when Wallee provides it via webhook.')
         return {
           success: true,
@@ -272,6 +279,7 @@ export default defineEventHandler(async (event) => {
           tokenId: null
         }
       }
+    }
     }
 
     // ✅ Speichere Token in unserer Datenbank

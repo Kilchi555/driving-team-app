@@ -982,8 +982,11 @@ const pendingConfirmations = ref<any[]>([])
 const showConfirmationModal = ref(false)
 const showReglementeModal = ref(false)
 const hasPaymentMethod = ref(false)
-const automaticPaymentHoursBefore = ref(24)
-const automaticAuthorizationHoursBefore = ref(168) // Standard: 1 Woche vor Termin
+// Hardcoded payment thresholds
+const HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE = 24  // Capture exactly 24h before
+const HOURS_BEFORE_APPOINTMENT_FOR_IMMEDIATE = 24 // Charge immediately if < 24h away
+const automaticPaymentHoursBefore = ref(HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE)
+const automaticAuthorizationHoursBefore = ref(HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE) // Same as capture time
 const confirmingAppointments = ref<Set<string>>(new Set()) // Loading state per appointment ID
 
 // Profile Modal State
