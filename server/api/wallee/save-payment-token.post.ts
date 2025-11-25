@@ -220,25 +220,27 @@ export default defineEventHandler(async (event) => {
           // ✅ Hole die ECHTE Token ID von Wallee via TokenService
           const tokenService: Wallee.api.TokenService = new Wallee.api.TokenService(config)
           
-          // Suche nach aktiven Tokens für diesen Customer (ohne State Filter, da TokenState.ACTIVE existiert nicht)
+          // Suche nach aktiven Tokens für diesen Customer (ohne orderBy, da das nicht funktioniert)
           const tokenSearchResult = await tokenService.search(walleeConfig.spaceId, {
             filter: {
               customerId: {
                 value: transaction.customerId,
                 operator: Wallee.model.CriteriaOperator.EQUALS
               }
-            },
-            orderBy: {
-              field: 'createdOn',
-              direction: Wallee.model.SortOrder.DESC
             }
           })
           
           const allTokens = tokenSearchResult.body || []
           console.log('💳 Found all tokens from TokenService:', allTokens.length)
           
-          // Filtere aktive Tokens (state === 'ACTIVE')
-          const activeTokens = allTokens.filter((t: any) => t.state === 'ACTIVE' || t.state === 1)
+          // Filtere aktive Tokens (state === 'ACTIVE') und sortiere nach createdOn DESC
+          const activeTokens = allTokens
+            .filter((t: any) => t.state === 'ACTIVE' || t.state === 1)
+            .sort((a: any, b: any) => {
+              const aTime = a.createdOn?.getTime() || 0
+              const bTime = b.createdOn?.getTime() || 0
+              return bTime - aTime // DESC order
+            })
           console.log('💳 Filtered active tokens:', activeTokens.length)
           
           if (activeTokens.length > 0) {
