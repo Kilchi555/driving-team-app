@@ -150,7 +150,7 @@ export default defineEventHandler(async (event) => {
       }],
       autoConfirmationEnabled: false, // ❗ WICHTIG: false für Authorization
       chargeRetryEnabled: false, // Keine automatischen Wiederholungen
-      completionBehavior: Wallee.model.TransactionCompletionBehavior.COMPLETE_DEFERRED, // ❗ Wichtig: Deferred = nur autorisieren
+      completionBehavior: Wallee.model.TransactionCompletionBehavior.COMPLETE_IMMEDIATE, // ✅ WICHTIG: Match Space default
       currency: currency,
       customerId: paymentMethod.wallee_token, // ✅ Use wallee_token (Customer ID) as customerId
       merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
