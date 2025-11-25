@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/cleanup-expired-reservations",
-      "schedule": "* * * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }

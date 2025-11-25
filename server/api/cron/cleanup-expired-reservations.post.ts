@@ -2,7 +2,8 @@
  * Cron Job: Cleanup Expired Reservations
  * Löscht Reservierungen die älter als 5 Minuten sind
  * 
- * Runs every minute via Vercel Cron
+ * Runs every hour via Vercel Cron (instead of every minute to save resources)
+ * Since reservations are only 5 minutes valid, hourly cleanup is sufficient
  */
 
 import { getSupabaseAdmin } from '~/utils/supabase'
