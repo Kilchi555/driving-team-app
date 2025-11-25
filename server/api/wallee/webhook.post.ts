@@ -92,8 +92,61 @@ export default defineEventHandler(async (event) => {
     // Handle AUTHORIZED state (provisorische Belastung - 3 Tage vor Termin)
     if (isAuthorized) {
       console.log('💳 Transaction AUTHORIZED - provisorische Belastung (Authorization Hold)')
-      // Just log it, no DB update needed for AUTHORIZED state
-      // The payment will remain pending until FULFILL happens
+      
+      // Update payment status to authorized
+      console.log('🔄 Updating payment status to authorized...')
+      const { error: updatePaymentError } = await supabase
+        .from('payments')
+        .update({
+          payment_status: 'authorized',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payment.id)
+      
+      if (updatePaymentError) {
+        console.error('⚠️ Failed to update payment to authorized:', updatePaymentError)
+      } else {
+        console.log('✅ Payment updated to authorized')
+      }
+      
+      // Update appointment status to confirmed (authorization means payment is secured)
+      if (payment.appointment_id) {
+        console.log('🔄 Updating appointment status to confirmed after authorization...')
+        const { error: updateAppointmentError } = await supabase
+          .from('appointments')
+          .update({
+            status: 'confirmed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', payment.appointment_id)
+        
+        if (updateAppointmentError) {
+          console.error('⚠️ Failed to update appointment:', updateAppointmentError)
+        } else {
+          console.log('✅ Appointment updated to confirmed after authorization')
+        }
+      }
+      
+      // ✅ WICHTIG: Speichere Payment Method Token auch bei AUTHORIZED!
+      // Der Token ist nach erfolgreicher Authorization verfügbar
+      console.log('💳 Attempting to save payment method token after authorization...')
+      if (payment.user_id && payment.tenant_id) {
+        try {
+          const tokenResponse = await $fetch('/api/wallee/save-payment-token', {
+            method: 'POST',
+            body: {
+              transactionId: transactionId,
+              userId: payment.user_id,
+              tenantId: payment.tenant_id
+            }
+          })
+          console.log('✅ Token saved after authorization:', tokenResponse)
+        } catch (tokenError: any) {
+          console.warn('⚠️ Could not save payment method token after authorization:', tokenError.message)
+          // Continue - this is not critical
+        }
+      }
+      
       return {
         success: true,
         message: 'Transaction authorized (provisional hold)',
