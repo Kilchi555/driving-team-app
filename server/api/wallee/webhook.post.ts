@@ -89,57 +89,30 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ Payment found:', { id: payment.id, appointment_id: payment.appointment_id, current_status: payment.payment_status })
 
-    // Handle AUTHORIZED state (provisorische Belastung - 3 Tage vor Termin)
+    // Handle AUTHORIZED state
     if (isAuthorized) {
-      console.log('💳 Transaction AUTHORIZED - provisorische Belastung (Authorization Hold)')
+      console.log('💳 Transaction AUTHORIZED')
       
-      // ✅ Prüfe, ob der Termin kurzfristig ist (< 24h entfernt)
-      // Bei kurzfristigen Terminen sollte die Zahlung sofort zu 'completed' gehen
-      let paymentStatus = 'authorized'
-      let shouldCaptureImmediately = false
-      
-      if (payment.appointment_id) {
-        const { data: appointment } = await supabase
-          .from('appointments')
-          .select('start_time')
-          .eq('id', payment.appointment_id)
-          .single()
-        
-        if (appointment?.start_time) {
-          const appointmentTime = new Date(appointment.start_time)
-          const now = new Date()
-          const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
-          
-          console.log('⏰ Hours until appointment:', hoursUntilAppointment)
-          
-          // Wenn weniger als 24h bis zum Termin: sofort capturen
-          if (hoursUntilAppointment < 24) {
-            console.log('⚡ Short-term appointment (< 24h) - will be marked for immediate completion')
-            shouldCaptureImmediately = true
-            paymentStatus = 'authorized' // Keep as authorized, will be captured soon
-          }
-        }
-      }
-      
-      // Update payment status
-      console.log('🔄 Updating payment status to', paymentStatus + '...')
+      // ✅ Sofort zu completed, nicht authorized!
+      console.log('🔄 Updating payment status to completed (skip authorized state)...')
       const { error: updatePaymentError } = await supabase
         .from('payments')
         .update({
-          payment_status: paymentStatus,
+          payment_status: 'completed',
+          paid_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', payment.id)
       
       if (updatePaymentError) {
-        console.error('⚠️ Failed to update payment to', paymentStatus + ':', updatePaymentError)
+        console.error('⚠️ Failed to update payment to completed:', updatePaymentError)
       } else {
-        console.log('✅ Payment updated to', paymentStatus)
+        console.log('✅ Payment updated to completed')
       }
       
-      // Update appointment status to confirmed (authorization means payment is secured)
+      // Update appointment status to confirmed
       if (payment.appointment_id) {
-        console.log('🔄 Updating appointment status to confirmed after authorization...')
+        console.log('🔄 Updating appointment status to confirmed...')
         const { error: updateAppointmentError } = await supabase
           .from('appointments')
           .update({
@@ -151,12 +124,11 @@ export default defineEventHandler(async (event) => {
         if (updateAppointmentError) {
           console.error('⚠️ Failed to update appointment:', updateAppointmentError)
         } else {
-          console.log('✅ Appointment updated to confirmed after authorization')
+          console.log('✅ Appointment updated to confirmed')
         }
       }
       
-      // ✅ WICHTIG: Speichere Payment Method Token auch bei AUTHORIZED!
-      // Der Token ist nach erfolgreicher Authorization verfügbar
+      // ✅ Speichere Payment Method Token
       console.log('💳 Attempting to save payment method token after authorization...')
       if (payment.user_id && payment.tenant_id) {
         try {
@@ -168,18 +140,17 @@ export default defineEventHandler(async (event) => {
               tenantId: payment.tenant_id
             }
           })
-          console.log('✅ Token saved after authorization:', tokenResponse)
+          console.log('✅ Token saved:', tokenResponse)
         } catch (tokenError: any) {
-          console.warn('⚠️ Could not save payment method token after authorization:', tokenError.message)
-          // Continue - this is not critical
+          console.warn('⚠️ Could not save payment method token:', tokenError.message)
         }
       }
       
       return {
         success: true,
-        message: 'Transaction authorized (provisional hold)',
+        message: 'Transaction completed',
         paymentId: payment.id,
-        state: 'authorized'
+        state: 'completed'
       }
     }
 
