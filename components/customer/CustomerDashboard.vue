@@ -1918,7 +1918,8 @@ const confirmAppointment = async (appointment: any) => {
         .update({
           automatic_payment_consent: true,
           automatic_payment_consent_at: new Date().toISOString(),
-          scheduled_payment_date: roundedPayDate.toISOString(),
+          // ✅ Nur scheduled_payment_date setzen, wenn >= 24h entfernt (nicht für sofortige Zahlungen)
+          scheduled_payment_date: shouldProcessImmediately ? null : roundedPayDate.toISOString(),
           // speichere geplanten Autorisierungszeitpunkt, wenn noch nicht fällig
           scheduled_authorization_date: shouldAuthorizeNow ? new Date().toISOString() : roundedAuthDate.toISOString(),
           payment_method_id: defaultMethodId,
