@@ -95,11 +95,24 @@
           </svg>
         </div>
         <h2 class="text-2xl font-bold text-gray-900 mb-2">Zahlung nicht gefunden</h2>
-        <p class="text-gray-600 mb-6">Die Zahlungsinformationen konnten nicht geladen werden.</p>
+        <p class="text-gray-600 mb-4">Die Zahlungsinformationen konnten nicht geladen werden.</p>
+        <p class="text-sm text-gray-500 mb-6">
+          Die Zahlung wird möglicherweise noch verarbeitet. Bitte versuchen Sie es erneut.
+        </p>
+
+        <button
+          @click="checkStatus"
+          class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold mb-3"
+        >
+          <svg class="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Neu laden
+        </button>
 
         <button
           @click="redirectToDashboard"
-          class="w-full bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors font-semibold"
+          class="w-full bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
         >
           Zum Dashboard
         </button>
@@ -141,6 +154,7 @@ const formatDate = (dateStr: string) => {
 
 const checkStatus = async () => {
   try {
+    isLoading.value = true
     const supabase = getSupabase()
     
     let query = supabase
