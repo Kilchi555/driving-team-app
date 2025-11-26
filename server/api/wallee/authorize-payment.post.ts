@@ -249,12 +249,26 @@ export default defineEventHandler(async (event) => {
       customerEmailAddress: customerEmail
     }
     
-    // ✅ Check if we have a real Token ID (numeric or UUID)
-    // Token IDs sind entweder numerisch (1572) oder UUIDs (1b5a914a-d2c8-4849-beaf-55fc1c62f01c)
-    const hasRealTokenId = paymentMethod.provider_payment_method_id && 
-                           (paymentMethod.provider_payment_method_id.includes('-') && 
-                            paymentMethod.provider_payment_method_id.length > 20 || 
-                            !isNaN(parseInt(paymentMethod.provider_payment_method_id)))
+    // ✅ Check if we have a real Token ID (UUID format or numeric)
+    // Token IDs sind entweder:
+    // - Numerisch: 1572
+    // - UUID: 1b5a914a-d2c8-4849-beaf-55fc1c62f01c (36 chars, 5 segments)
+    // Customer IDs sind:
+    // - Lang: dt-{tenantId}-{userId} (starts with 'dt-', > 50 chars)
+    const providerId = paymentMethod.provider_payment_method_id || ''
+    const isNumeric = !isNaN(parseInt(providerId)) && providerId === parseInt(providerId).toString()
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(providerId)
+    const isCustomerId = providerId.startsWith('dt-') && providerId.length > 50
+    
+    const hasRealTokenId = (isNumeric || isUUID) && !isCustomerId
+    
+    console.log('🔍 Token ID check:', {
+      providerId: providerId.substring(0, 40) + '...',
+      isNumeric,
+      isUUID,
+      isCustomerId,
+      hasRealTokenId
+    })
     
     if (hasRealTokenId) {
       // ✅ OPTION 1: Use TOKEN ID (preferred for One-Click Payment)
