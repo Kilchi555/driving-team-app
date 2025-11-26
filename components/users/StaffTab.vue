@@ -805,22 +805,10 @@ const loadStaff = async () => {
       console.warn('⚠️ Could not load locations:', locationsError)
     }
 
-    // Load per-category pickup availability
-    const { data: scaData, error: scaError } = await supabase
-      .from('staff_category_availability')
-      .select('*')
-      .in('staff_id', staffData.map(s => s.id))
-
-    if (scaError) {
-      console.warn('⚠️ Could not load staff_category_availability:', scaError)
-    }
-
-    const byStaff: Record<string, any[]> = {}
-    ;(scaData || []).forEach(row => {
-      if (!byStaff[row.staff_id]) byStaff[row.staff_id] = []
-      byStaff[row.staff_id].push(row)
-    })
-    staffCategoryAvailability.value = byStaff
+    // Load per-category pickup availability - NO LONGER NEEDED
+    // Data is already in users.category array
+    // const staffCategoryAvailability = byStaff
+    staffCategoryAvailability.value = {}
 
     // Combine data
     const enrichedStaff = (staffData || []).map(staff => {

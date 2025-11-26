@@ -20,7 +20,8 @@ export default defineEventHandler(async (event) => {
       type,
       event_type_code,
       status,
-      tenant_id
+      tenant_id,
+      reservation_id // Optional: booking_reservations ID
     } = body
 
     console.log('📝 Creating appointment:', body)
@@ -34,6 +35,21 @@ export default defineEventHandler(async (event) => {
     }
 
     const supabase = getSupabaseAdmin()
+
+    // 0. Falls reservation_id vorhanden: lösche die Reservierung
+    if (reservation_id) {
+      const { error: deleteReservationError } = await supabase
+        .from('booking_reservations')
+        .delete()
+        .eq('id', reservation_id)
+
+      if (deleteReservationError) {
+        console.warn('⚠️ Could not delete booking reservation:', deleteReservationError)
+        // Nicht kritisch, fahre fort
+      } else {
+        console.log('✅ Booking reservation deleted:', reservation_id)
+      }
+    }
 
     // 1. Erstelle Appointment
     const { data: appointment, error: appointmentError } = await supabase

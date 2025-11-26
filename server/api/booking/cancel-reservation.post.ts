@@ -1,6 +1,6 @@
 /**
  * API Endpoint: Cancel Slot Reservation
- * Löscht eine Reservierung
+ * Löscht eine Reservierung aus booking_reservations
  */
 
 import { getSupabaseAdmin } from '~/utils/supabase'
@@ -21,30 +21,21 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // Check if reservation_id is a valid UUID (looks like session-* ID means no DB entry needed)
-    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reservation_id)
-    
-    if (isValidUUID) {
-      // Only delete if it's a real UUID - session-based IDs don't have DB entries
-      const { error: deleteError } = await supabase
-        .from('appointments')
-        .delete()
-        .eq('id', reservation_id)
-        .eq('status', 'reserved')
+    // Delete from booking_reservations
+    const { error: deleteError } = await supabase
+      .from('booking_reservations')
+      .delete()
+      .eq('id', reservation_id)
 
-      if (deleteError) {
-        console.error('❌ Error deleting reservation:', deleteError)
-        throw createError({
-          statusCode: 500,
-          message: `Fehler beim Löschen der Reservierung: ${deleteError.message}`
-        })
-      }
-
-      console.log('✅ Reservation cancelled (real UUID):', reservation_id)
-    } else {
-      // Session-based ID - no DB entry to delete
-      console.log('ℹ️ Session-based reservation ID - no DB entry to delete:', reservation_id)
+    if (deleteError) {
+      console.error('❌ Error deleting reservation:', deleteError)
+      throw createError({
+        statusCode: 500,
+        message: `Fehler beim Löschen der Reservierung: ${deleteError.message}`
+      })
     }
+
+    console.log('✅ Booking reservation cancelled:', reservation_id)
 
     return {
       success: true
@@ -63,4 +54,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-

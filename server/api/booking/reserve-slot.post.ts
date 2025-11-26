@@ -1,6 +1,6 @@
 /**
  * API Endpoint: Reserve Appointment Slot
- * Reserviert einen Termin für 5 Minuten
+ * Reserviert einen Termin für 5 Minuten in der booking_reservations Tabelle
  */
 
 import { getSupabaseAdmin } from '~/utils/supabase'
@@ -31,91 +31,27 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
     
-    // Get user from auth header
-    const authToken = getHeader(event, 'authorization')?.replace('Bearer ', '')
-    let userId: string | null = null
-    
-    if (authToken) {
-      try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser(authToken)
-        if (!authError && user?.id) {
-          userId = user.id
-          console.log('✅ User authenticated:', userId)
-        }
-      } catch (err) {
-        console.log('⚠️ Could not get authenticated user:', err)
-      }
-    }
-    
-    // Generate a temporary user ID for unauthenticated users
-    // This ensures we can track and prevent multiple simultaneous reservations
-    if (!userId) {
-      // For guests, we'll still create a temporary UUID-like identifier
-      // We can't use actual UUID generation without a proper library, so we'll
-      // use a hash-based approach with tenant_id and session data
-      const crypto = await import('crypto')
-      userId = crypto.randomUUID?.() || `guest-${tenant_id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      console.log('ℹ️ Generated temporary user ID for guest:', userId.substring(0, 20) + '...')
-    }
-
     const startTime = new Date(start_time).toISOString()
     const endTime = new Date(end_time).toISOString()
-    
-    // 1. Delete any existing 'reserved' appointments for this user (only 1 reservation per user at a time)
-    const { error: deleteError } = await supabase
-      .from('appointments')
-      .delete()
-      .eq('user_id', userId)
-      .eq('status', 'reserved')
-    
-    if (deleteError) {
-      console.warn('⚠️ Could not delete old reservations:', deleteError)
-      // Don't throw - continue anyway
-    } else {
-      console.log('✅ Old reservations cleaned up for user:', userId.substring(0, 20) + '...')
-    }
 
-    // 2. Prüfe ob der Slot noch frei ist (keine 'reserved' oder andere Termine)
-    const { data: existingAppointments, error: checkError } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('staff_id', staff_id)
-      .in('status', ['reserved', 'scheduled', 'confirmed', 'pending_confirmation'])
-      .lte('start_time', endTime)
-      .gte('end_time', startTime)
+    // Calculate expiration time (5 minutes from now)
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
-    if (checkError) {
-      console.error('❌ Error checking appointments:', checkError)
-      throw createError({
-        statusCode: 500,
-        message: `Fehler beim Prüfen der Verfügbarkeit: ${checkError.message}`
-      })
-    }
+    console.log('📅 Reservation times:', { startTime, endTime, expiresAt })
 
-    if (existingAppointments && existingAppointments.length > 0) {
-      console.log('⚠️ Slot is taken:', { existingCount: existingAppointments.length })
-      return {
-        success: false,
-        message: 'Der Termin wurde leider soeben vergeben. Versuchen Sie es mit einem anderen Termin.'
-      }
-    }
-
-    // 3. Erstelle Reservierung (für alle User - authenticated und guest)
+    // Reserviere den Slot in booking_reservations (nicht in appointments!)
     const { data: reservation, error: reservationError } = await supabase
-      .from('appointments')
+      .from('booking_reservations')
       .insert({
-        user_id: userId,
         staff_id,
         location_id,
         start_time: startTime,
         end_time: endTime,
         duration_minutes,
-        type: category_code || 'lesson',
-        event_type_code: 'lesson',
-        status: 'reserved', // Provisorischer Status
+        category_code: category_code || 'lesson',
         tenant_id,
-        title: `${category_code} - Reserviert`,
-        description: 'Temporäre Reservierung - wird nach 5 Minuten gelöscht'
+        expires_at: expiresAt,
+        status: 'reserved'
       })
       .select()
       .single()
@@ -129,12 +65,12 @@ export default defineEventHandler(async (event) => {
     }
 
     const reservationId = reservation.id
-    console.log('✅ Slot reserved:', reservationId)
+    console.log('✅ Slot reserved in booking_reservations:', reservationId)
 
     return {
       success: true,
       reservation_id: reservationId,
-      reserved_until: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      reserved_until: expiresAt
     }
 
   } catch (error: any) {
@@ -157,4 +93,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
