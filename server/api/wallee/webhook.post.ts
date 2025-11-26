@@ -91,44 +91,26 @@ export default defineEventHandler(async (event) => {
 
     // Handle AUTHORIZED state
     if (isAuthorized) {
-      console.log('💳 Transaction AUTHORIZED - Payment charged')
+      console.log('💳 Transaction AUTHORIZED - provisorische Belastung (wird noch gefüllt)')
       
-      // ✅ Setze Payment zu completed (tatsächlich abgebucht)
-      console.log('🔄 Updating payment status to completed...')
+      // ✅ Setze Payment zu 'authorized' (nur provisorisch belastet)
+      // Echte Abbuchung erfolgt bei FULFILL
+      console.log('🔄 Updating payment status to authorized...')
       const { error: updatePaymentError } = await supabase
         .from('payments')
         .update({
-          payment_status: 'completed',
-          paid_at: new Date().toISOString(),
+          payment_status: 'authorized',  // NOT 'completed' - noch nicht gefüllt!
           updated_at: new Date().toISOString()
         })
         .eq('id', payment.id)
       
       if (updatePaymentError) {
-        console.error('⚠️ Failed to update payment to completed:', updatePaymentError)
+        console.error('⚠️ Failed to update payment to authorized:', updatePaymentError)
       } else {
-        console.log('✅ Payment updated to completed')
+        console.log('✅ Payment updated to authorized')
       }
       
-      // Update appointment status to confirmed
-      if (payment.appointment_id) {
-        console.log('🔄 Updating appointment status to confirmed...')
-        const { error: updateAppointmentError } = await supabase
-          .from('appointments')
-          .update({
-            status: 'confirmed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', payment.appointment_id)
-        
-        if (updateAppointmentError) {
-          console.error('⚠️ Failed to update appointment:', updateAppointmentError)
-        } else {
-          console.log('✅ Appointment updated to confirmed')
-        }
-      }
-      
-      // ✅ Speichere Payment Method Token
+      // ✅ Speichere Payment Method Token (Optional bei AUTHORIZED, aber wichtig!)
       console.log('💳 Attempting to save payment method token...')
       if (payment.user_id && payment.tenant_id) {
         try {
@@ -148,17 +130,17 @@ export default defineEventHandler(async (event) => {
       
       return {
         success: true,
-        message: 'Transaction completed',
+        message: 'Transaction authorized (awaiting fulfillment)',
         paymentId: payment.id,
-        state: 'completed'
+        state: 'authorized'
       }
     }
 
-    // Handle FULFILL state (finale Abbuchung - 24h vor Termin)
+    // Handle FULFILL state (finale Abbuchung)
     if (isFulfilled) {
-      console.log('✅ Transaction FULFILL - finale Abbuchung')
+      console.log('✅ Transaction FULFILL - finale Abbuchung (tatsächlich abgebucht)')
       
-      // Update payment status to completed
+      // Update payment status to completed (now actually charged)
       console.log('🔄 Updating payment status to completed...')
       const { error: updatePaymentError } = await supabase
         .from('payments')
@@ -191,7 +173,6 @@ export default defineEventHandler(async (event) => {
 
         if (updateAppointmentError) {
           console.error('⚠️ Failed to update appointment:', updateAppointmentError)
-          // Don't fail the webhook if appointment update fails
         } else {
           console.log('✅ Appointment updated to confirmed')
         }
@@ -212,10 +193,7 @@ export default defineEventHandler(async (event) => {
           console.log('✅ Token saved:', tokenResponse)
         } catch (tokenError: any) {
           console.warn('⚠️ Could not save payment method token:', tokenError.message)
-          // Continue - this is not critical
         }
-      } else {
-        console.warn('⚠️ Cannot save token - missing user_id or tenant_id in payment')
       }
 
       return {
