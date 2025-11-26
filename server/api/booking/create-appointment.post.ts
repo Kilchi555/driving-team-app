@@ -208,18 +208,31 @@ export default defineEventHandler(async (event) => {
       const automaticPaymentEnabled = settings.automatic_payment_enabled !== false
       const hoursBeforePayment = settings.automatic_payment_hours_before || 24
 
-      // Berechne scheduled_payment_date
+      // ✅ Berechne scheduled_authorization_date (24h vor Termin)
       const appointmentDate = new Date(start_time)
-      const scheduledPaymentDate = new Date(appointmentDate)
-      scheduledPaymentDate.setHours(scheduledPaymentDate.getHours() - hoursBeforePayment)
-      // Runde auf die nächste volle Stunde auf (Cron läuft zur vollen Stunde)
-      // Wenn nicht genau auf der vollen Stunde, dann aufrunden
-      if (scheduledPaymentDate.getMinutes() > 0 || scheduledPaymentDate.getSeconds() > 0) {
-        scheduledPaymentDate.setHours(scheduledPaymentDate.getHours() + 1)
+      const now = new Date()
+      const hoursUntilAppointment = (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+      
+      let scheduledAuthorizationDate = null
+      
+      // Nur setzen, wenn Termin >= 24h entfernt ist (sonst sofort autorisieren)
+      if (hoursUntilAppointment >= 24) {
+        scheduledAuthorizationDate = new Date(appointmentDate)
+        scheduledAuthorizationDate.setHours(scheduledAuthorizationDate.getHours() - 24)
+        // Runde auf die nächste volle Stunde auf
+        if (scheduledAuthorizationDate.getMinutes() > 0 || scheduledAuthorizationDate.getSeconds() > 0) {
+          scheduledAuthorizationDate.setHours(scheduledAuthorizationDate.getHours() + 1)
+        }
+        scheduledAuthorizationDate.setMinutes(0)
+        scheduledAuthorizationDate.setSeconds(0)
+        scheduledAuthorizationDate.setMilliseconds(0)
+      } else {
+        // Termin < 24h: sofort autorisieren
+        console.log('⚡ Appointment < 24h away - will authorize immediately')
+        scheduledAuthorizationDate = new Date()
+        scheduledAuthorizationDate.setSeconds(0)
+        scheduledAuthorizationDate.setMilliseconds(0)
       }
-      scheduledPaymentDate.setMinutes(0)
-      scheduledPaymentDate.setSeconds(0)
-      scheduledPaymentDate.setMilliseconds(0)
 
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
@@ -235,7 +248,8 @@ export default defineEventHandler(async (event) => {
           payment_status: 'pending',
           currency: 'CHF',
           description: `Payment for appointment: ${type}`,
-          scheduled_payment_date: automaticPaymentEnabled ? scheduledPaymentDate.toISOString() : null,
+          scheduled_authorization_date: scheduledAuthorizationDate ? scheduledAuthorizationDate.toISOString() : null,
+          scheduled_payment_date: null,  // Not used anymore, authorization will handle charging
           created_by: user_id
         })
         .select()

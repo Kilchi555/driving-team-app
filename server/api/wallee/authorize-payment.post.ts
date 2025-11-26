@@ -122,7 +122,7 @@ export default defineEventHandler(async (event) => {
     // ✅ Hole gespeicherte Payment Method (Token)
     const { data: paymentMethod } = await supabase
       .from('customer_payment_methods')
-      .select('wallee_token, provider_payment_method_id')
+      .select('wallee_token, wallee_customer_id, provider_payment_method_id')
       .eq('user_id', userId)
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
@@ -131,14 +131,16 @@ export default defineEventHandler(async (event) => {
       .limit(1)
       .maybeSingle()
 
-    if (!paymentMethod?.provider_payment_method_id) {
+    if (!paymentMethod?.provider_payment_method_id && !paymentMethod?.wallee_token) {
       throw createError({
         statusCode: 400,
         statusMessage: 'No saved payment method found for user'
       })
     }
 
-    console.log('💳 Using saved payment method:', paymentMethod.provider_payment_method_id)
+    // Provider ID kann ein Token (numeric UUID) oder Customer ID (string) sein
+    const tokenOrCustomerId = paymentMethod.provider_payment_method_id || paymentMethod.wallee_token
+    console.log('💳 Using saved payment method:', tokenOrCustomerId)
 
     // ✅ Berechne, wie viel Zeit bis zum Termin bleibt
     // WICHTIG: Verwende die Zeit vom Frontend (appointmentStartTime), um Diskrepanzen zu vermeiden
@@ -179,11 +181,11 @@ export default defineEventHandler(async (event) => {
       chargeRetryEnabled: false, // Keine automatischen Wiederholungen
       completionBehavior: completionBehavior, // ✅ Dynamic: IMMEDIATE für < 24h, sonst DEFERRED
       currency: currency,
-      customerId: paymentMethod.wallee_token, // ✅ Use wallee_token (Customer ID) as customerId
+      customerId: paymentMethod.wallee_customer_id || customerId, // ✅ Use wallee_customer_id or generated customerId
       merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       language: 'de-CH',
       customerEmailAddress: customerEmail,
-      token: parseInt(paymentMethod.provider_payment_method_id), // ✅ Use provider_payment_method_id as token (must be numeric)
+      token: tokenOrCustomerId, // ✅ Can be numeric token ID or string customer ID
       tokenizationEnabled: false // Kein neues Token erstellen, bestehendes verwenden
     }
 
