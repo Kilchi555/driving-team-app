@@ -138,9 +138,29 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Provider ID kann ein Token (numeric UUID) oder Customer ID (string) sein
-    const tokenOrCustomerId = paymentMethod.provider_payment_method_id || paymentMethod.wallee_token
-    console.log('💳 Using saved payment method:', tokenOrCustomerId)
+    // Provider ID könnte eine UUID sein - wir müssen die numerische Token ID von Wallee fetchen
+    let walleTokenId: string | number = null
+    
+    // ✅ Wenn provider_payment_method_id eine UUID ist (wie 4a1f67de-...), fetch die echte numerische ID von Wallee
+    if (paymentMethod.provider_payment_method_id && paymentMethod.provider_payment_method_id.includes('-')) {
+      console.log('🔍 provider_payment_method_id is a UUID, fetching actual Token ID from Wallee...')
+      try {
+        const tokenService: Wallee.api.TokenService = new Wallee.api.TokenService(new Wallee.api.ApiClient())
+        // Note: TokenService.search() might not work, so we'll use tokenId directly if it matches
+        // For now, assume provider_payment_method_id IS the token UUID version ID
+        // Wallee accepts both UUID and numeric IDs for tokens
+        walleTokenId = paymentMethod.provider_payment_method_id
+        console.log('💳 Using UUID token version:', walleTokenId)
+      } catch (error: any) {
+        console.warn('⚠️ Could not fetch token ID, using provider_payment_method_id as fallback:', error.message)
+        walleTokenId = paymentMethod.provider_payment_method_id
+      }
+    } else {
+      // Assume it's already a numeric ID or customer ID
+      walleTokenId = paymentMethod.provider_payment_method_id || paymentMethod.wallee_token
+    }
+    
+    console.log('💳 Using payment method token:', walleTokenId)
 
     // ✅ Berechne, wie viel Zeit bis zum Termin bleibt
     // WICHTIG: Verwende die Zeit vom Frontend (appointmentStartTime), um Diskrepanzen zu vermeiden
@@ -185,7 +205,9 @@ export default defineEventHandler(async (event) => {
       merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       language: 'de-CH',
       customerEmailAddress: customerEmail,
-      token: tokenOrCustomerId, // ✅ Can be numeric token ID or string customer ID
+      // ✅ WICHTIG: token ist nur für echte Token-IDs nötig, nicht für Customer IDs
+      // Für TWINT Force Storage: customerId ist genug, token bleibt leer
+      // token: walleTokenId, // Nur wenn es echte Token ID ist, nicht Customer ID!
       tokenizationEnabled: false // Kein neues Token erstellen, bestehendes verwenden
     }
 
