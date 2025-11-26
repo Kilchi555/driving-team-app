@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     // Validate webhook (in production, verify signature)
     // Wallee sendet entityId statt transaction.id und state direkt
     const transactionId = body.entityId || body.transaction?.id
-    const transactionState = body.state || body.transaction?.state
+    const transactionState = (body.state || body.transaction?.state || '').toUpperCase() // ✅ Normalize to uppercase
     
     if (!transactionId) {
       console.warn('⚠️ Invalid webhook payload - no transaction ID found')
