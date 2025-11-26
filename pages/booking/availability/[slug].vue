@@ -1220,30 +1220,34 @@ const loadStaffForCategory = async () => {
     console.log('🔄 Triggering external calendar sync...')
     await autoSyncCalendars()
     
-    // Load staff categories from staff_categories table
-    console.log('📚 Loading staff categories for tenant:', currentTenant.value.id)
-    const { data: staffCategories, error: catError } = await supabase
-      .from('staff_categories')
-      .select('staff_id, category_code')
-      .eq('tenant_id', currentTenant.value.id)
+    // Load staff categories from locations (available_categories + staff_ids)
+    console.log('📚 Building staff categories from locations data...')
     
-    if (catError) {
-      console.error('❌ Error loading staff categories:', catError)
-      throw catError
+    // Build a map of staff_id -> [categories] from locations
+    const staffCategoryMap = new Map<string, string[]>()
+    
+    if (locations.value) {
+      locations.value.forEach((location: any) => {
+        const availableCategories = location.available_categories || []
+        const staffIds = location.staff_ids || []
+        
+        // Add each category to each staff member at this location
+        staffIds.forEach((staffId: string) => {
+          if (!staffCategoryMap.has(staffId)) {
+            staffCategoryMap.set(staffId, [])
+          }
+          const staffCategories = staffCategoryMap.get(staffId)!
+          // Add categories that aren't already there
+          availableCategories.forEach((category: string) => {
+            if (!staffCategories.includes(category)) {
+              staffCategories.push(category)
+            }
+          })
+        })
+      })
     }
     
-    console.log('📚 Loaded staff categories:', staffCategories?.length || 0, 'entries')
-    
-    // Build a map of staff_id -> [categories]
-    const staffCategoryMap = new Map<string, string[]>()
-    staffCategories?.forEach((sc: any) => {
-      if (!staffCategoryMap.has(sc.staff_id)) {
-        staffCategoryMap.set(sc.staff_id, [])
-      }
-      staffCategoryMap.get(sc.staff_id)?.push(sc.category_code)
-    })
-    
-    console.log('📊 Staff category map:', Object.fromEntries(staffCategoryMap))
+    console.log('📊 Built staff category map from locations:', Object.fromEntries(staffCategoryMap))
     
     // Filter staff who can teach the selected category
     const capableStaff = activeStaff.value.filter((staff: any) => {
