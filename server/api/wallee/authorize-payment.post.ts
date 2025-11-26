@@ -65,6 +65,18 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ WICHTIG: Checke ob Payment bereits autorisiert/verarbeitet wird
+    // Verhindere Doppelaufruf durch Race Condition
+    if (payment.payment_status !== 'pending') {
+      console.log(`ℹ️ Payment already in status '${payment.payment_status}', skipping authorization`)
+      return {
+        success: true,
+        message: `Payment already ${payment.payment_status}`,
+        paymentId: payment.id,
+        state: payment.payment_status
+      }
+    }
+
     // Hole User-Daten
     const { data: user, error: userError } = await supabase
       .from('users')
