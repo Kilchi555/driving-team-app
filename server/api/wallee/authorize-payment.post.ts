@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
     // Nur wenn aktuell 'pending', dann zu 'processing' setzen
     // Dies verhindert Race Conditions - nur EINE Request wird erfolgreich sein!
     console.log('🔄 Marking payment as processing (acquiring lock)...')
-    const { error: lockError } = await supabase
+    const { data: lockResult, error: lockError } = await supabase
       .from('payments')
       .update({
         payment_status: 'processing',
@@ -78,35 +78,37 @@ export default defineEventHandler(async (event) => {
       })
       .eq('id', paymentId)
       .eq('payment_status', 'pending')  // ✅ Only if currently 'pending'!
+      .select()
     
     if (lockError) {
       console.error('❌ Could not acquire payment lock:', lockError)
       throw lockError
     }
     
-    // ✅ Verify the update succeeded (only 1 row should be updated)
-    // If update affected 0 rows, another request already locked it!
-    const { data: updatedPayment, error: verifyError } = await supabase
-      .from('payments')
-      .select('payment_status')
-      .eq('id', paymentId)
-      .single()
-    
-    if (verifyError || !updatedPayment) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Payment not found after lock attempt'
-      })
-    }
-    
-    if (updatedPayment.payment_status !== 'processing') {
-      console.log(`ℹ️ Payment already being processed or completed (status: ${updatedPayment.payment_status})`)
-      return {
-        success: true,
-        message: `Payment already in ${updatedPayment.payment_status} status`,
-        paymentId: paymentId,
-        state: updatedPayment.payment_status
+    // ✅ Check if the update succeeded (should have 1 row)
+    if (!lockResult || lockResult.length === 0) {
+      console.log(`ℹ️ Payment already being processed or completed, skipping`)
+      
+      // Fetch current status to return it
+      const { data: currentPayment, error: fetchError } = await supabase
+        .from('payments')
+        .select('payment_status')
+        .eq('id', paymentId)
+        .single()
+      
+      if (!fetchError && currentPayment) {
+        return {
+          success: true,
+          message: `Payment already in ${currentPayment.payment_status} status`,
+          paymentId: paymentId,
+          state: currentPayment.payment_status
+        }
       }
+      
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Payment is already being processed'
+      })
     }
     
     console.log('✅ Payment locked for processing')
