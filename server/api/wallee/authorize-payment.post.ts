@@ -193,8 +193,9 @@ export default defineEventHandler(async (event) => {
 
     // ✅ TWINT Force Storage verwendet die customerId, kein separates Token
     // WICHTIG: Wir MÜSSEN dieselbe Customer ID verwenden, die bei der ersten Zahlung gespeichert wurde!
-    // provider_payment_method_id enthält die SHORT ID, die tatsächlich in Wallee gespeichert wurde
-    const savedCustomerId = paymentMethod.provider_payment_method_id || paymentMethod.wallee_token || shortCustomerId
+    // provider_payment_method_id und wallee_customer_id enthalten beide die LANGE ID
+    // Priorität: wallee_customer_id (definitiv die richtige ID) > provider_payment_method_id (fallback)
+    const savedCustomerId = paymentMethod.wallee_customer_id || paymentMethod.provider_payment_method_id || customerId
     
     console.log('💳 Using customer-based tokenization (TWINT Force Storage mode)')
     console.log('🔑 Payment method on file:', {

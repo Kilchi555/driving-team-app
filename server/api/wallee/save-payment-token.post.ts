@@ -265,13 +265,13 @@ export default defineEventHandler(async (event) => {
       }
       
     if (!paymentMethodToken) {
-      // ✅ FALLBACK für TWINT mit Force Storage: Nutze SHORT customerId als Token
+      // ✅ FALLBACK für TWINT mit Force Storage: Nutze die LANGE Customer ID aus der Transaction
       if (transaction.customerId) {
-        console.log('🔄 No explicit token found, using customerId as fallback (typical for TWINT Force Storage)')
-        // ✅ Generate SHORT customer ID instead of using the long one
-        const shortCustomerId = `${tenantId.substring(0, 8)}-${userId.substring(0, 8)}`
-        paymentMethodToken = shortCustomerId
-        console.log('🔑 Using SHORT customer ID:', shortCustomerId)
+        console.log('🔄 No explicit token found, using transaction customerId as fallback (typical for TWINT Force Storage)')
+        // ✅ WICHTIG: Verwende die Customer ID DIREKT aus der Transaction - nicht neu generieren!
+        // Diese ID muss EXAKT übereinstimmen mit der ID, die beim Erstellen der Transaction verwendet wurde!
+        paymentMethodToken = transaction.customerId.toString()
+        console.log('🔑 Using Customer ID from transaction:', paymentMethodToken)
         displayName = 'TWINT (Gespeichert)'
         paymentMethodType = 'twint'
       } else {
