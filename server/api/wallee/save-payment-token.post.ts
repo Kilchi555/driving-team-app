@@ -137,10 +137,28 @@ export default defineEventHandler(async (event) => {
       // ✅ Versuche Token direkt aus Transaction zu extrahieren
       const transactionAny = transaction as any
       
+      console.log('🔍 Transaction details for token extraction:', {
+        id: transaction.id,
+        state: transaction.state,
+        customerId: transaction.customerId,
+        hasTokens: !!transaction.tokens,
+        tokensCount: transaction.tokens?.length || 0,
+        hasPaymentMethodToken: !!transactionAny.paymentMethodToken,
+        allFields: Object.keys(transaction).filter(k => k.toLowerCase().includes('token'))
+      })
+      
       // Option 1: Token direkt in transaction
       if (transactionAny.paymentMethodToken) {
         paymentMethodToken = transactionAny.paymentMethodToken
         console.log('✅ Found payment method token in transaction:', paymentMethodToken?.substring(0, 8) + '...')
+      }
+      
+      // Option 1b: tokens Array in transaction
+      if (!paymentMethodToken && transaction.tokens && Array.isArray(transaction.tokens) && transaction.tokens.length > 0) {
+        // Verwende den ersten/neuesten Token
+        const tokenObj = transaction.tokens[0]
+        paymentMethodToken = tokenObj.id?.toString() || tokenObj
+        console.log('✅ Found token in transaction.tokens array:', typeof paymentMethodToken, paymentMethodToken?.substring ? paymentMethodToken.substring(0, 8) + '...' : paymentMethodToken)
       }
       
       // Option 2: Token in metaData

@@ -230,10 +230,10 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ✅ Erstelle Transaction mit Customer ID (TWINT Force Storage)
-    // WICHTIG: Bei TWINT mit "Force Storage" nutzt Wallee die customerId für die Zuordnung
-    // Es gibt KEINE separaten Token IDs - die Zahlungsmethode wird automatisch via customerId gefunden
-    // KRITISCH: Wir müssen EXAKT dieselbe Customer ID verwenden, die beim ersten Payment gespeichert wurde!
+    // ✅ Erstelle Transaction mit gespeichertem Token (TWINT Force Storage)
+    // WICHTIG: Laut Wallee Dokumentation gibt es 2 Ansätze:
+    // 1. Token ID verwenden (wenn verfügbar) - für echte One-Click Payments
+    // 2. Customer ID verwenden (Fallback) - Wallee sucht automatisch nach gespeicherten Payment Methods
     const transactionData: any = {
       lineItems: [{
         name: description || 'Fahrlektion',
@@ -243,15 +243,34 @@ export default defineEventHandler(async (event) => {
         amountIncludingTax: amount,
         type: Wallee.model.LineItemType.PRODUCT
       }],
-      autoConfirmationEnabled: true, // ✅ WICHTIG: true für One-Click Payment mit gespeicherter Methode!
-      chargeRetryEnabled: false, // Keine automatischen Wiederholungen
-      completionBehavior: completionBehavior, // ✅ Dynamic: IMMEDIATE für < 24h, sonst DEFERRED
       currency: currency,
-      customerId: savedCustomerId, // ✅ WICHTIG: Verwende EXAKT die gespeicherte Customer ID!
       merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       language: 'de-CH',
-      customerEmailAddress: customerEmail,
-      tokenizationMode: Wallee.model.TokenizationMode.FORCE_CREATION // ✅ Force Storage Mode
+      customerEmailAddress: customerEmail
+    }
+    
+    // ✅ Check if we have a real Token ID (numeric or UUID)
+    // Token IDs sind entweder numerisch (1572) oder UUIDs (1b5a914a-d2c8-4849-beaf-55fc1c62f01c)
+    const hasRealTokenId = paymentMethod.provider_payment_method_id && 
+                           (paymentMethod.provider_payment_method_id.includes('-') && 
+                            paymentMethod.provider_payment_method_id.length > 20 || 
+                            !isNaN(parseInt(paymentMethod.provider_payment_method_id)))
+    
+    if (hasRealTokenId) {
+      // ✅ OPTION 1: Use TOKEN ID (preferred for One-Click Payment)
+      console.log('💳 Using stored token ID for one-click payment')
+      transactionData.token = paymentMethod.provider_payment_method_id
+      transactionData.autoConfirmationEnabled = true
+      transactionData.chargeRetryEnabled = false
+      transactionData.completionBehavior = completionBehavior
+    } else {
+      // ✅ OPTION 2: Use CUSTOMER ID (fallback - Wallee searches for payment methods)
+      console.log('💳 Using customer ID - Wallee will search for stored payment method')
+      transactionData.customerId = savedCustomerId
+      transactionData.autoConfirmationEnabled = true
+      transactionData.chargeRetryEnabled = false
+      transactionData.completionBehavior = completionBehavior
+      transactionData.tokenizationMode = Wallee.model.TokenizationMode.FORCE_CREATION
     }
 
     console.log('📤 Creating AUTHORIZED transaction with token...')
