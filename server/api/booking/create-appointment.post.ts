@@ -163,6 +163,7 @@ export default defineEventHandler(async (event) => {
       } else {
         // Zähle, wie viele Termine der Kunde bereits hat (für diesen event_type_code)
         // Berücksichtige: pending_confirmation, confirmed, completed
+        // WICHTIG: Zähle NUR nicht-stornierte Termine
         const { count: existingAppointmentsCount } = await supabase
           .from('appointments')
           .select('*', { count: 'exact', head: true })
@@ -170,8 +171,9 @@ export default defineEventHandler(async (event) => {
           .eq('tenant_id', tenant_id)
           .eq('event_type_code', event_type_code || 'lesson')
           .in('status', ['pending_confirmation', 'confirmed', 'completed'])
+          .is('deleted_at', null)  // Nur nicht-gelöschte Termine
         
-        const appointmentNumber = (existingAppointmentsCount || 0) + 1 // +1 for current appointment
+        const appointmentNumber = (existingAppointmentsCount || 0) + 1 // +1 for current appointment being created
         
         console.log('💰 Admin fee check:', {
           eventTypeCode: event_type_code || 'lesson',
