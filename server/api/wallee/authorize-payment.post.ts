@@ -37,6 +37,7 @@ export default defineEventHandler(async (event) => {
       .from('payments')
       .select(`
         id,
+        payment_status,
         total_amount_rappen,
         description,
         appointment_id,
