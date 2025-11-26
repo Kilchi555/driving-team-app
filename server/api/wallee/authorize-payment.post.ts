@@ -131,6 +131,11 @@ export default defineEventHandler(async (event) => {
 
     console.log('🔑 Customer ID:', customerId)
 
+    // ✅ Generiere kürzere Customer ID für Wallee (max 200 chars!)
+    // Die aktuelle `dt-...` ID ist zu lang und kann Probleme verursachen
+    const shortCustomerId = `${tenantId.substring(0, 8)}-${userId.substring(0, 8)}`
+    console.log('🔑 Short Customer ID:', shortCustomerId)
+
     // ✅ Hole gespeicherte Payment Method (Token)
     const { data: paymentMethod } = await supabase
       .from('customer_payment_methods')
@@ -213,7 +218,7 @@ export default defineEventHandler(async (event) => {
       chargeRetryEnabled: false, // Keine automatischen Wiederholungen
       completionBehavior: completionBehavior, // ✅ Dynamic: IMMEDIATE für < 24h, sonst DEFERRED
       currency: currency,
-      customerId: paymentMethod.wallee_customer_id || customerId, // ✅ Use wallee_customer_id or generated customerId
+      customerId: shortCustomerId, // ✅ Use SHORT customer ID, not the full one!
       merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       language: 'de-CH',
       customerEmailAddress: customerEmail,
