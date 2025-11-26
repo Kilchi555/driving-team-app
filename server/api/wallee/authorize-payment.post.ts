@@ -284,7 +284,7 @@ export default defineEventHandler(async (event) => {
       transactionData.autoConfirmationEnabled = true
       transactionData.chargeRetryEnabled = false
       transactionData.completionBehavior = completionBehavior
-      transactionData.tokenizationMode = Wallee.model.TokenizationMode.FORCE_CREATION
+      // ❌ NICHT tokenizationMode setzen - wir wollen einen BESTEHENDEN Token verwenden, nicht einen neuen erstellen!
     }
 
     console.log('📤 Creating AUTHORIZED transaction with token...')
