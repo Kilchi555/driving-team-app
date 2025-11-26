@@ -93,21 +93,26 @@ export default defineEventHandler(async (event) => {
     if (isAuthorized) {
       console.log('💳 Transaction AUTHORIZED - provisorische Belastung (wird noch gefüllt)')
       
-      // ✅ Setze Payment zu 'authorized' (nur provisorisch belastet)
-      // Echte Abbuchung erfolgt bei FULFILL
-      console.log('🔄 Updating payment status to authorized...')
-      const { error: updatePaymentError } = await supabase
-        .from('payments')
-        .update({
-          payment_status: 'authorized',  // NOT 'completed' - noch nicht gefüllt!
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payment.id)
-      
-      if (updatePaymentError) {
-        console.error('⚠️ Failed to update payment to authorized:', updatePaymentError)
+      // ✅ WICHTIG: Nur auf 'authorized' setzen, wenn noch nicht 'completed'
+      // Wenn bereits 'completed', dann war der FULFILL Webhook schneller
+      // und wir überschreiben es nicht!
+      if (payment.payment_status !== 'completed') {
+        console.log('🔄 Updating payment status to authorized...')
+        const { error: updatePaymentError } = await supabase
+          .from('payments')
+          .update({
+            payment_status: 'authorized',  // NOT 'completed' - noch nicht gefüllt!
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', payment.id)
+        
+        if (updatePaymentError) {
+          console.error('⚠️ Failed to update payment to authorized:', updatePaymentError)
+        } else {
+          console.log('✅ Payment updated to authorized')
+        }
       } else {
-        console.log('✅ Payment updated to authorized')
+        console.log('ℹ️ Payment already completed, skipping AUTHORIZED update (FULFILL webhook was faster)')
       }
       
       // ✅ Speichere Payment Method Token (Optional bei AUTHORIZED, aber wichtig!)
