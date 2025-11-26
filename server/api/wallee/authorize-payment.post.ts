@@ -66,17 +66,50 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ WICHTIG: Checke ob Payment bereits autorisiert/verarbeitet wird
-    // Verhindere Doppelaufruf durch Race Condition
-    if (payment.payment_status !== 'pending') {
-      console.log(`ℹ️ Payment already in status '${payment.payment_status}', skipping authorization`)
+    // ✅ Update Payment Status zu 'processing' ATOMARE mit Bedingung
+    // Nur wenn aktuell 'pending', dann zu 'processing' setzen
+    // Dies verhindert Race Conditions - nur EINE Request wird erfolgreich sein!
+    console.log('🔄 Marking payment as processing (acquiring lock)...')
+    const { error: lockError } = await supabase
+      .from('payments')
+      .update({
+        payment_status: 'processing',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', paymentId)
+      .eq('payment_status', 'pending')  // ✅ Only if currently 'pending'!
+    
+    if (lockError) {
+      console.error('❌ Could not acquire payment lock:', lockError)
+      throw lockError
+    }
+    
+    // ✅ Verify the update succeeded (only 1 row should be updated)
+    // If update affected 0 rows, another request already locked it!
+    const { data: updatedPayment, error: verifyError } = await supabase
+      .from('payments')
+      .select('payment_status')
+      .eq('id', paymentId)
+      .single()
+    
+    if (verifyError || !updatedPayment) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Payment not found after lock attempt'
+      })
+    }
+    
+    if (updatedPayment.payment_status !== 'processing') {
+      console.log(`ℹ️ Payment already being processed or completed (status: ${updatedPayment.payment_status})`)
       return {
         success: true,
-        message: `Payment already ${payment.payment_status}`,
-        paymentId: payment.id,
-        state: payment.payment_status
+        message: `Payment already in ${updatedPayment.payment_status} status`,
+        paymentId: paymentId,
+        state: updatedPayment.payment_status
       }
     }
+    
+    console.log('✅ Payment locked for processing')
 
     // Hole User-Daten
     const { data: user, error: userError } = await supabase
