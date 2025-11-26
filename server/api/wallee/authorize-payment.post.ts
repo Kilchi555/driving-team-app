@@ -192,12 +192,15 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ TWINT Force Storage verwendet die customerId, kein separates Token
-    // Wir verwenden einfach den shortCustomerId für die Transaktion
+    // WICHTIG: Wir MÜSSEN dieselbe Customer ID verwenden, die bei der ersten Zahlung gespeichert wurde!
+    const savedCustomerId = paymentMethod.wallee_customer_id || paymentMethod.provider_payment_method_id || customerId
+    
     console.log('💳 Using customer-based tokenization (TWINT Force Storage mode)')
     console.log('🔑 Payment method on file:', {
       provider_payment_method_id: paymentMethod.provider_payment_method_id,
       wallee_token: paymentMethod.wallee_token,
-      wallee_customer_id: paymentMethod.wallee_customer_id
+      wallee_customer_id: paymentMethod.wallee_customer_id,
+      willUseCustomerId: savedCustomerId
     })
 
     // ✅ Berechne, wie viel Zeit bis zum Termin bleibt
@@ -228,6 +231,7 @@ export default defineEventHandler(async (event) => {
     // ✅ Erstelle Transaction mit Customer ID (TWINT Force Storage)
     // WICHTIG: Bei TWINT mit "Force Storage" nutzt Wallee die customerId für die Zuordnung
     // Es gibt KEINE separaten Token IDs - die Zahlungsmethode wird automatisch via customerId gefunden
+    // KRITISCH: Wir müssen EXAKT dieselbe Customer ID verwenden, die beim ersten Payment gespeichert wurde!
     const transactionData: any = {
       lineItems: [{
         name: description || 'Fahrlektion',
@@ -241,7 +245,7 @@ export default defineEventHandler(async (event) => {
       chargeRetryEnabled: false, // Keine automatischen Wiederholungen
       completionBehavior: completionBehavior, // ✅ Dynamic: IMMEDIATE für < 24h, sonst DEFERRED
       currency: currency,
-      customerId: shortCustomerId, // ✅ Wallee findet die gespeicherte TWINT-Methode via customerId!
+      customerId: savedCustomerId, // ✅ WICHTIG: Verwende EXAKT die gespeicherte Customer ID!
       merchantReference: orderId || `order-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       language: 'de-CH',
       customerEmailAddress: customerEmail,
