@@ -26,10 +26,6 @@ export default defineEventHandler(async (event) => {
       .from('appointments')
       .update({
         status: 'scheduled',
-        // ✅ Clear email scheduling when appointment is confirmed
-        // No need to send confirmation email if user confirmed manually
-        confirmation_email_scheduled_for: null,
-        confirmation_email_sent: true,
         updated_at: new Date().toISOString()
       })
       .eq('id', body.appointmentId)

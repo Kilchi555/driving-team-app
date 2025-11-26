@@ -13,10 +13,6 @@
       "schedule": "0 */12 * * *"
     },
     {
-      "path": "/api/cron/send-confirmation-emails",
-      "schedule": "* * * * *"
-    },
-    {
       "path": "/api/cron/cleanup-expired-reservations",
       "schedule": "0 * * * *"
     },
