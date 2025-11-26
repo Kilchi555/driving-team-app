@@ -69,7 +69,10 @@ export default defineEventHandler(async (event) => {
         tenant_id,
         title: `${type} - ${custom_location_address || 'Standort'}`,
         description: `Appointment for ${type} at ${custom_location_address || 'standard location'}`,
-        confirmation_token: generateConfirmationToken()
+        confirmation_token: generateConfirmationToken(),
+        // ✅ Schedule confirmation email for 5 minutes from now
+        confirmation_email_scheduled_for: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        confirmation_email_sent: false
       })
       .select()
       .single()
