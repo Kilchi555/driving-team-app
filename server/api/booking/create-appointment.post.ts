@@ -145,20 +145,61 @@ export default defineEventHandler(async (event) => {
     let adminFee = 0
     
     if (eventType?.default_fee_rappen && eventType.default_fee_rappen > 0) {
-      // Prüfe, ob der Kunde jemals eine Admin Fee für diesen event_type bezahlt hat
-      // (unabhängig davon, ob Termine storniert wurden)
-      const { data: previousAdminFeePayments } = await supabase
+      // ✅ WICHTIG: Prüfe ob Admin Fee bereits bezahlt UND NICHT erstattet wurde
+      // Admin Fee wird NICHT erneut berechnet wenn:
+      // 1. Kunde hat schon eine Admin Fee bezahlt UND
+      // 2. Der zugehörige Termin wurde NICHT storniert ODER
+      // 3. Der Termin wurde kostenpflichtig storniert (< 24h)
+      
+      const { data: adminFeePayments } = await supabase
         .from('payments')
-        .select('id')
+        .select(`
+          id,
+          payment_status,
+          admin_fee_rappen,
+          appointments!inner (
+            id,
+            status,
+            deleted_at,
+            cancellation_charge_percentage
+          )
+        `)
         .eq('user_id', user_id)
         .eq('tenant_id', tenant_id)
+        .eq('event_type_code', event_type_code || 'lesson')
         .gt('admin_fee_rappen', 0)
-        .limit(1)
       
-      const hasAlreadyPaidAdminFee = previousAdminFeePayments && previousAdminFeePayments.length > 0
+      let hasValidAdminFeePayment = false
       
-      if (hasAlreadyPaidAdminFee) {
-        console.log('ℹ️ Customer has already paid admin fee before - no admin fee for this appointment')
+      if (adminFeePayments && adminFeePayments.length > 0) {
+        // Prüfe jeden Admin Fee Payment
+        for (const payment of adminFeePayments) {
+          const appointment = Array.isArray(payment.appointments)
+            ? payment.appointments[0]
+            : payment.appointments
+          
+          // ✅ Admin Fee ist noch gültig wenn:
+          if (!appointment.deleted_at) {
+            // 1. Termin wurde NICHT storniert → Fee ist gültig!
+            console.log('✅ Admin fee still valid - appointment not cancelled')
+            hasValidAdminFeePayment = true
+            break
+          } else if (appointment.deleted_at && appointment.cancellation_charge_percentage > 0) {
+            // 2. Termin wurde KOSTENPFLICHTIG storniert → Fee bleibt bei Kunde!
+            console.log('✅ Admin fee still valid - appointment cancelled but with charge (< 24h)')
+            hasValidAdminFeePayment = true
+            break
+          } else if (appointment.deleted_at && appointment.cancellation_charge_percentage === 0) {
+            // 3. Termin wurde KOSTENLOS storniert → Fee sollte erstattet sein
+            //    → Admin Fee kann erneut berechnet werden!
+            console.log('ℹ️ Admin fee was refunded (appointment cancelled for free, > 24h)')
+            // Weiter zur nächsten Payment oder berechne neue Fee
+          }
+        }
+      }
+      
+      if (hasValidAdminFeePayment) {
+        console.log('ℹ️ Customer has already paid admin fee (still valid) - no admin fee for this appointment')
         adminFee = 0
       } else {
         // Zähle, wie viele Termine der Kunde bereits hat (für diesen event_type_code)
@@ -180,7 +221,7 @@ export default defineEventHandler(async (event) => {
           existingAppointments: existingAppointmentsCount,
           appointmentNumber,
           defaultFeeRappen: eventType.default_fee_rappen,
-          hasAlreadyPaidAdminFee,
+          hasValidAdminFeePayment,
           willChargeAdminFee: appointmentNumber === 2
         })
         
