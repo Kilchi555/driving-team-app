@@ -144,13 +144,21 @@ export default defineEventHandler(async (event) => {
         hasTokens: !!transaction.tokens,
         tokensCount: transaction.tokens?.length || 0,
         hasPaymentMethodToken: !!transactionAny.paymentMethodToken,
+        token: transactionAny.token,
+        tokenId: transactionAny.tokenId,
         allFields: Object.keys(transaction).filter(k => k.toLowerCase().includes('token'))
       })
       
-      // Option 1: Token direkt in transaction
-      if (transactionAny.paymentMethodToken) {
+      // Option 1: token oder tokenId in transaction (numerische ID!)
+      if (transactionAny.token || transactionAny.tokenId) {
+        paymentMethodToken = (transactionAny.token || transactionAny.tokenId)?.toString()
+        console.log('✅ Found numeric token ID in transaction:', paymentMethodToken)
+      }
+      
+      // Option 1b: paymentMethodToken (könnte Token Version UUID sein)
+      if (!paymentMethodToken && transactionAny.paymentMethodToken) {
         paymentMethodToken = transactionAny.paymentMethodToken
-        console.log('✅ Found payment method token in transaction:', paymentMethodToken?.substring(0, 8) + '...')
+        console.log('⚠️ Found paymentMethodToken (might be Token Version UUID):', paymentMethodToken?.substring(0, 8) + '...')
       }
       
       // Option 1b: tokens Array in transaction
@@ -267,13 +275,17 @@ export default defineEventHandler(async (event) => {
           if (allTokens.length > 0) {
             // Nutze den neuesten Token (numerische ID!)
             const latestToken = allTokens[0]
+            // ✅ WICHTIG: token.id ist die numerische Token ID, nicht die Token Version ID!
+            // Token Version IDs sind UUIDs, aber wir brauchen die numerische Token ID
             paymentMethodToken = latestToken.id?.toString() || null
             displayName = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 'Gespeicherte Zahlungsmethode'
             paymentMethodType = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.description || 'wallee_token'
             console.log('✅ Found real token from Wallee TokenService:', {
               tokenId: paymentMethodToken,
+              tokenIdType: typeof latestToken.id,
               displayName,
-              type: paymentMethodType
+              type: paymentMethodType,
+              note: 'Using numeric Token ID (not Token Version UUID)'
             })
           } else {
             console.log('⚠️ No active tokens found for customer in Wallee - will wait for token creation')
@@ -378,7 +390,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // Speichere neuen Token
-    console.log('💾 Saving new payment method token...')
+    console.log('💾 Saving new payment method token...', {
+      paymentMethodToken,
+      walleeCustomerId,
+      isTokenId: paymentMethodToken !== walleeCustomerId
+    })
     const { data: savedToken, error: saveError } = await supabase
       .from('customer_payment_methods')
       .insert({
@@ -386,9 +402,9 @@ export default defineEventHandler(async (event) => {
         tenant_id: tenantId,
         payment_provider: 'wallee',
         payment_method_type: paymentMethodType,
-        provider_payment_method_id: paymentMethodToken, // ✅ Use token as provider ID
-        wallee_token: paymentMethodToken,
-        wallee_customer_id: walleeCustomerId,
+        provider_payment_method_id: paymentMethodToken, // Token ID (UUID or numeric) OR Customer ID (fallback)
+        wallee_token: paymentMethodToken, // Same as provider_payment_method_id
+        wallee_customer_id: walleeCustomerId, // Always the Customer ID
         display_name: displayName,
         metadata: {
           transaction_id: transactionId,
