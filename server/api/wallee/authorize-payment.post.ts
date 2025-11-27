@@ -277,7 +277,8 @@ export default defineEventHandler(async (event) => {
       // ✅ OPTION 1: Use TOKEN ID (preferred for One-Click Payment)
       console.log('💳 Using stored token ID for one-click payment')
       transactionData.token = parseInt(paymentMethod.wallee_token || paymentMethod.provider_payment_method_id) // ✅ Numerisch!
-      transactionData.customerId = savedCustomerId // ✅ WICHTIG: Auch Customer ID setzen!
+      // ❌ WICHTIG: KEINE customerId setzen wenn Token verwendet wird!
+      // Wallee verwendet sonst customerId und ignoriert token!
       transactionData.autoConfirmationEnabled = true
       transactionData.chargeRetryEnabled = false
       transactionData.completionBehavior = completionBehavior
