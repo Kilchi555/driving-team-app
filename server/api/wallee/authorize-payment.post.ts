@@ -294,13 +294,17 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log('📤 Creating AUTHORIZED transaction with token...')
+    console.log('🔍 completionBehavior variable:', completionBehavior)
+    console.log('🔍 completionBehavior type:', typeof completionBehavior)
     console.log('🔍 Transaction data being sent:', {
       hasToken: !!transactionData.token,
       tokenValue: transactionData.token,
       hasCustomerId: !!transactionData.customerId,
       customerIdValue: transactionData.customerId,
-      completionBehavior: transactionData.completionBehavior
+      completionBehavior: transactionData.completionBehavior,
+      completionBehaviorType: typeof transactionData.completionBehavior
     })
+    console.log('🔍 Full transactionData:', JSON.stringify(transactionData, null, 2))
     
     const authorizeResponse = await transactionService.create(walleeConfig.spaceId, transactionData)
     const authorizedTransaction: any = authorizeResponse.body
