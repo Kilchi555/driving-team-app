@@ -4,16 +4,16 @@
     <!-- Header -->
     <div class="bg-white shadow-sm border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
-          <div>
-            <h1 class="text-3xl font-bold text-gray-900">Unsere Kurse</h1>
-          </div>
+        <div class="py-6 space-y-4">
           <button
             @click="navigateToDashboard"
-            class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+            class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
           >
             Zurück
           </button>
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900">Unsere Kurse</h1>
+          </div>
         </div>
       </div>
     </div>

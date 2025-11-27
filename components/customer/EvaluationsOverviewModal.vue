@@ -19,90 +19,6 @@
       <!-- Content -->
       <div class="flex-1 overflow-y-auto p-2 space-y-6">
 
-        <!-- Filter und Sortierung -->
-        <div class="bg-gray-50 rounded-lg p-4">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-            
-            <!-- Filter nach Fahrerkategorie -->
-            <div v-if="availableDrivingCategories.length > 1">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Fahrerkategorie</label>
-              <select
-                v-model="filterDrivingCategory"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
-              >
-                <option value="all" class="text-gray-600">Alle Kategorien</option>
-                <option v-for="category in availableDrivingCategories" :key="category" :value="category" class="text-gray-600">
-                  {{ category }}
-                </option>
-              </select>
-            </div>
-            
-            <!-- Filter nach Bewertungskategorie -->
-            <div v-if="availableCategories.length > 0">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Bewertungskategorie</label>
-              <select
-                v-model="filterCategory"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
-              >
-                <option value="all" class="text-gray-600">Alle Kategorien</option>
-                <option v-for="category in availableCategories" :key="category" :value="category" class="text-gray-600">
-                  {{ category }}
-                </option>
-              </select>
-            </div>
-            
-            <!-- Sortierung Switches nebeneinander -->
-            <div class="flex gap-6">
-              <!-- Sortierung nach Datum -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Datum</label>
-                <div class="flex items-center space-x-2">
-                  <span class="text-xs text-gray-500">Alt</span>
-                  <button
-                    @click="toggleDateSort"
-                    :class="[
-                      'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                      sortBy === 'date' && sortOrder === 'desc' ? 'bg-blue-600' : 'bg-gray-200'
-                    ]"
-                  >
-                    <span
-                      :class="[
-                        'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
-                        sortBy === 'date' && sortOrder === 'desc' ? 'translate-x-5' : 'translate-x-1'
-                      ]"
-                    />
-                  </button>
-                  <span class="text-xs text-gray-500">Neu</span>
-                </div>
-              </div>
-              
-              <!-- Sortierung nach Bewertung -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Bewertung</label>
-                <div class="flex items-center space-x-2">
-                  <span class="text-xs text-gray-500">⭐</span>
-                  <button
-                    @click="toggleRatingSort"
-                    :class="[
-                      'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2',
-                      sortBy === 'rating' && sortOrder === 'desc' ? 'bg-green-600' : 'bg-gray-200'
-                    ]"
-                  >
-                    <span
-                      :class="[
-                        'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
-                        sortBy === 'rating' && sortOrder === 'desc' ? 'translate-x-5' : 'translate-x-1'
-                      ]"
-                    />
-                  </button>
-                  <span class="text-xs text-gray-500">⭐⭐⭐</span>
-                </div>
-              </div>
-            </div>
-            
-          </div>
-        </div>
-
         <!-- Empty States -->
         <div v-if="allEvaluations.length === 0" class="text-center py-12">
           <div class="text-4xl mb-4">📊</div>
@@ -130,68 +46,63 @@
             class="bg-white rounded-lg border border-gray-200 overflow-hidden"
           >
             <!-- Termin Header -->
-            <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
-              <div class="flex items-center justify-between">
-                <div>
+              <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
                   <div class="flex items-center gap-2">
                     <h4 class="font-semibold text-gray-900">
                       {{ lessonGroup.is_exam ? '🎓 Prüfungsfahrt' : 'Fahrlektion' }}
                     </h4>
-                    <span 
+                    <div 
                       v-if="lessonGroup.staff?.first_name"
                       class="text-sm text-gray-600"
                     >
                       mit {{ lessonGroup.staff.first_name }}
-                    </span>
-                    <span 
+                    </div>
+                    <div 
                       v-if="lessonGroup.driving_category" 
                       class="inline-flex items-center px-2 py-1 text-sm bg-blue-100 text-blue-800 rounded-full"
                     >
                       Kategorie {{ lessonGroup.driving_category }}
-                    </span>
+                    </div>
                   </div>
                   <div class="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                    <span>{{ formatLessonDate(lessonGroup.lesson_date) }}</span>
-                  </div>
-                  <div class="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                    <span>{{ formatCompactDate(lessonGroup.lesson_date) }}</span>
                     <span>🕐 {{ formatTimeRange(lessonGroup.start_time, lessonGroup.end_time) }}</span>
-                    <span v-if="lessonGroup.duration_minutes">⏱️ {{ lessonGroup.duration_minutes }} Min.</span>
+                    <span v-if="lessonGroup.duration_minutes">⏱️ {{ lessonGroup.duration_minutes }}min</span>
                   </div>
                 </div>
-                <div class="text-right">
-                  <div class="text-sm text-gray-100">{{ lessonGroup.evaluations.length }}</div>
-                </div>
+                <div class="text-sm text-gray-100 ml-4 flex-shrink-0">{{ lessonGroup.evaluations.length }}</div>
               </div>
             </div>
 
             <!-- Bewertungen für diesen Termin -->
-            <div class="p-4 space-y-3">
+            <div class="p-4 space-y-2">
               <!-- Regular Evaluations -->
               <template v-if="!lessonGroup.is_exam">
                 <div 
                   v-for="(evaluation, index) in lessonGroup.evaluations" 
                   :key="`${evaluation.criteria_id}-${index}`"
-                  class="bg-gray-50 rounded-lg p-3 border border-gray-100"
                 >
                   <div class="flex items-start justify-between">
                     <div class="flex-1">
                       <h5 class="font-medium text-gray-900">
                         {{ evaluation.criteria_name }}
                       </h5>
-                      <p v-if="evaluation.criteria_category_name" class="text-sm text-gray-600 mt-1">
+                      <p v-if="evaluation.criteria_category_name" class="text-sm text-gray-600">
                         {{ evaluation.criteria_category_name }}
                       </p>
                     </div>
 
                     <div :class="[
-                      'px-3 py-1 rounded-full text-sm font-medium border',
+                      'px-3 py-1 text-sm font-medium',
                       getRatingColor(evaluation.criteria_rating)
                     ]">
                       {{ evaluation.criteria_rating }} - {{ getRatingText(evaluation.criteria_rating) }}
                     </div>
                   </div>
 
-                  <div v-if="evaluation.criteria_note" class="mt-3 p-2 bg-white rounded-md border border-gray-100">
+                  <div v-if="evaluation.criteria_note">
                     <p class="text-sm text-gray-700">{{ evaluation.criteria_note }}</p>
                   </div>
                 </div>
@@ -279,6 +190,14 @@ const formatLessonDate = (dateString: string) => {
     month: 'long',
     year: 'numeric'
   })
+}
+
+// Kompakte Datumsformatierung für die Leisten (z.B. "Mo 27.11.25")
+const formatCompactDate = (dateString: string) => {
+  const date = new Date(dateString)
+  const dayStr = date.toLocaleDateString('de-CH', { weekday: 'short' }).substring(0, 2)
+  const dateStr = date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' })
+  return `${dayStr} ${dateStr}`
 }
 
 const formatTimeRange = (startTime: string, endTime?: string) => {

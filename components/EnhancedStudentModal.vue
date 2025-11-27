@@ -68,156 +68,61 @@
             class="hidden"
           />
 
-          <!-- Category-Based Document Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Document placeholders based on categories -->
-            <div 
-              v-for="requirement in categoryDocumentRequirements" 
-              :key="`${requirement.id}_${requirement.categoryCode}`"
-              class="bg-white border border-gray-200 rounded-lg p-6"
-            >
-              <!-- Document Header -->
-              <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center">
-                  <span v-for="cat in requirement.categories" :key="cat" class="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                    {{ cat }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Document Status & Upload -->
-              <div class="space-y-4">
-                <!-- Front/Main Document -->
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-700">
-                      {{ requirement.requiresBothSides ? 'Vorderseite' : requirement.title }}
-                    </span>
-                    <span v-if="getDocumentUrl(requirement, 'front')" class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                      ✅
-                    </span>
-                    <span v-else class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                      ❌ Fehlt
-                    </span>
-                  </div>
-                  
-                  <!-- Upload Area or Preview -->
-                  <div v-if="getDocumentUrl(requirement, 'front')" class="relative group">
-                    <img 
-                      :src="getDocumentUrl(requirement, 'front')!" 
-                      :alt="requirement.title + ' Vorderseite'"
-                      class="w-full h-32 object-cover rounded-lg border cursor-pointer hover:opacity-80"
-                      @click="viewDocument(getDocumentUrl(requirement, 'front')!, requirement.title + (requirement.requiresBothSides ? ' Vorderseite' : ''))"
-                    />
-                    <button
-                      @click="deleteDocumentFile(requirement, 'front')"
-                      class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div v-else
-                    @click="startCategoryUpload(requirement, 'front', true)"
-                    class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors"
-                  >
-                    <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    <p class="text-sm text-gray-600">{{ requirement.requiresBothSides ? 'Vorderseite' : requirement.title }} hochladen</p>
-                  </div>
-                </div>
-
-                <!-- Back Document disabled: one upload per category -->
-                <div v-if="false">
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-700">Rückseite</span>
-                    <span v-if="getDocumentUrl(requirement, 'back')" class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                      ✅
-                    </span>
-                    <span v-else class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                      ❌ Fehlt
-                    </span>
-                  </div>
-                  
-                  <!-- Upload Area or Preview -->
-                  <div v-if="getDocumentUrl(requirement, 'back')" class="relative group">
-                    <img 
-                      :src="getDocumentUrl(requirement, 'back')!" 
-                      :alt="requirement.title + ' Rückseite'"
-                      class="w-full h-32 object-cover rounded-lg border cursor-pointer hover:opacity-80"
-                      @click="viewDocument(getDocumentUrl(requirement, 'back')!, requirement.title + ' Rückseite')"
-                    />
-                    <button
-                      @click="deleteDocumentFile(requirement, 'back')"
-                      class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div v-else
-                    @click="startCategoryUpload(requirement, 'back', true)"
-                    class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors"
-                  >
-                    <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    <p class="text-sm text-gray-600">Rückseite hochladen</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Upload Modal (when uploading) -->
-          <div v-if="showUploadInterface" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-lg max-w-md w-full p-6">
-              <div class="text-center mb-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-2">{{ currentUploadTitle }}</h3>
-                <p class="text-sm text-gray-500">{{ currentUploadDescription }}</p>
-              </div>
-
-              <!-- Upload Area -->
-              <div 
-                @click="triggerCurrentUpload"
-                @dragover.prevent="setDragState(true)"
-                @dragleave.prevent="setDragState(false)"
-                @drop.prevent="handleCurrentDrop"
-                :class="[
-                  'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all',
-                  isDraggingCurrent 
-                    ? 'border-blue-400 bg-blue-50 scale-105' 
-                    : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
-                ]"
+          <!-- Student Documents (Ausweise) Section -->
+          <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+              </svg>
+              Ausweise
+            </h4>
+            
+            <!-- Bilder anzeigen -->
+            <div class="flex justify-center gap-4 flex-wrap mb-6">
+              <a 
+                v-for="doc in studentDocuments" 
+                :key="doc.id"
+                :href="getStudentDocumentUrl(doc)" 
+                target="_blank"
+                class="flex-shrink-0"
+                title="Zum Öffnen klicken"
               >
-                <div class="space-y-4">
-                  <div v-if="isUploadingCurrent" class="flex items-center justify-center">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                  </div>
-                  <div v-else class="space-y-2">
-                    <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                    </svg>
-                    <div class="text-lg font-medium text-gray-900">
-                      {{ isDraggingCurrent ? 'Loslassen zum Hochladen' : 'Bild hier ablegen' }}
-                    </div>
-                    <p class="text-sm text-gray-500">oder klicken Sie hier zum Auswählen</p>
-                    <p class="text-xs text-gray-400">JPG, PNG bis 5MB</p>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Hidden file input moved to documents tab for direct trigger -->
-
-              <!-- Modal Actions -->
-              <div class="mt-6 flex justify-end space-x-3">
-                <button
-                  @click="showUploadInterface = false"
-                  class="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  Abbrechen
-                </button>
-              </div>
+                <img 
+                  :src="getStudentDocumentUrl(doc)" 
+                  :alt="doc.file_name"
+                  class="w-24 h-24 object-cover rounded border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer"
+                />
+              </a>
             </div>
+            
+            <!-- Upload Button -->
+            <div 
+              @click="showUploadOptions"
+              class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors"
+            >
+              <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              <p class="text-sm text-gray-600 font-medium">Weiteres Ausweis hochladen</p>
+              <p class="text-xs text-gray-500 mt-1">Foto machen oder Datei auswählen</p>
+            </div>
+            
+            <!-- Hidden file inputs -->
+            <input
+              ref="documentFileInput"
+              type="file"
+              accept="image/*,.pdf"
+              @change="handleDocumentUpload"
+              class="hidden"
+            />
+            <input
+              ref="cameraInput"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              @change="handleDocumentUpload"
+              class="hidden"
+            />
           </div>
         </div>
         
@@ -946,6 +851,8 @@
               </div>
             </div>
           </div>
+
+          <!-- Andere Details... -->
         </div>
       </div>
     </div>
@@ -1243,6 +1150,7 @@ const viewerTitle = ref('')
 const lessons = ref<any[]>([])
 const progressData = ref<any[]>([])
 const payments = ref<any[]>([])
+const studentDocuments = ref<any[]>([])
 const examResults = ref<any[]>([])
 const cancellationPolicies = ref<any[]>([])
 const isLoadingLessons = ref(false)
@@ -1495,10 +1403,15 @@ const togglePaymentSelection = (paymentId: string) => {
 
 // Toggle all payments
 const toggleAllPayments = () => {
-  if (selectedPayments.value.length === filteredPayments.value.length) {
+  // Nur auswählbar: offene Zahlungen (nicht bezahlt und nicht storniert)
+  const selectablePayments = filteredPayments.value.filter(p => 
+    p.payment_status !== 'completed' && !p.deleted_at
+  )
+  
+  if (selectedPayments.value.length === selectablePayments.length) {
     selectedPayments.value = []
   } else {
-    selectedPayments.value = filteredPayments.value.map(p => p.id)
+    selectedPayments.value = selectablePayments.map(p => p.id)
   }
 }
 
@@ -2445,6 +2358,125 @@ const deleteDocumentFile = async (requirement: DocumentRequirement, side: 'front
 }
 
 // viewDocument function already defined earlier
+
+// ===== HELPER: Build document URL for user_documents =====
+const getStudentDocumentUrl = (doc: any): string => {
+  if (!doc.storage_path) return ''
+  
+  // Check if it's already a full URL
+  if (doc.storage_path.startsWith('http')) return doc.storage_path
+  
+  // Build Supabase storage URL
+  const supabaseUrl = 'https://unyjaetebnaexaflpyoc.supabase.co'
+  
+  let path = doc.storage_path.trim()
+  
+  // Remove bucket prefix if it exists
+  if (path.startsWith('documents/')) {
+    path = path.substring('documents/'.length)
+  }
+  
+  // Clean up any double slashes
+  path = path.replace(/\/+/g, '/')
+  
+  return `${supabaseUrl}/storage/v1/object/public/${path}`
+}
+
+// ===== STUDENT DOCUMENTS UPLOAD =====
+const documentFileInput = ref<HTMLInputElement>()
+const cameraInput = ref<HTMLInputElement>()
+
+const showUploadOptions = () => {
+  // Erstelle ein einfaches Menü zum Auswählen
+  const userChoice = confirm('Möchten Sie ein Foto mit der Kamera machen?\n\nOK = Kamera\nAbbrechen = Datei auswählen')
+  
+  if (userChoice) {
+    // Kamera
+    cameraInput.value?.click()
+  } else {
+    // Dateimanager
+    documentFileInput.value?.click()
+  }
+}
+
+const startDocumentUpload = () => {
+  documentFileInput.value?.click()
+}
+
+const handleDocumentUpload = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  
+  if (!file || !props.selectedStudent) return
+  
+  try {
+    console.log('📤 Uploading document for student:', props.selectedStudent.id)
+    
+    // Create FormData
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('userId', props.selectedStudent.id)
+    
+    // Upload via API
+    const response = await $fetch('/api/student/upload-document', {
+      method: 'POST',
+      body: formData
+    }) as any
+    
+    if (response.success) {
+      console.log('✅ Document uploaded successfully')
+      // Reload documents
+      await loadStudentDocuments()
+    } else {
+      console.error('❌ Upload failed:', response.message)
+    }
+  } catch (err: any) {
+    console.error('❌ Error uploading document:', err)
+  }
+  
+  // Reset input
+  input.value = ''
+}
+
+// ===== STUDENT DOCUMENTS (Ausweise) =====
+const loadStudentDocuments = async () => {
+  if (!props.selectedStudent) return
+  
+  try {
+    console.log('📄 Loading student documents for:', props.selectedStudent.id)
+    
+    const { data: docs, error } = await supabase
+      .from('user_documents')
+      .select('*')
+      .eq('user_id', props.selectedStudent.id)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('❌ Error loading student documents:', error)
+      return
+    }
+    
+    studentDocuments.value = docs || []
+    console.log('✅ Loaded student documents:', studentDocuments.value.length)
+  } catch (err) {
+    console.error('❌ Error in loadStudentDocuments:', err)
+  }
+}
+
+// Watch for tab changes to load documents when Documents tab is opened
+watch(() => activeTab.value, (newTab) => {
+  if (newTab === 'documents' && studentDocuments.value.length === 0) {
+    loadStudentDocuments()
+  }
+})
+
+// Load documents when modal opens
+watch(() => props.selectedStudent, () => {
+  if (props.selectedStudent && activeTab.value === 'documents') {
+    loadStudentDocuments()
+  }
+})
 
 </script>
 

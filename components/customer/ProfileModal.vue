@@ -5,209 +5,295 @@
       <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-xl">
         <div class="flex justify-between items-center">
           <h2 class="text-2xl font-bold">Mein Profil</h2>
-          <button
-            @click="$emit('close')"
-            class="text-white hover:text-gray-200 transition-colors"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              v-if="!isEditMode"
+              @click="isEditMode = true"
+              class="text-white hover:text-gray-200 transition-colors p-2"
+              title="Bearbeiten"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button
+              @click="$emit('close')"
+              class="text-white hover:text-gray-200 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- Content -->
       <div class="p-6 space-y-6 max-h-[calc(90vh-200px)] overflow-y-auto">
-        <!-- Personal Data Section -->
-        <div class="space-y-4">
-          <h3 class="text-lg font-semibold text-gray-900">Persönliche Daten</h3>
-          
-          <div class="grid grid-cols-2 gap-4">
-            <!-- Vorname -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Vorname</label>
-              <input
-                v-model="formData.firstName"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Vorname"
-              />
-            </div>
-
-            <!-- Nachname -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Nachname</label>
-              <input
-                v-model="formData.lastName"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Nachname"
-              />
-            </div>
-
-            <!-- Email -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                v-model="formData.email"
-                type="email"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="email@example.com"
-              />
-              <p class="text-xs text-gray-500 mt-1">📧 Email-Änderungen werden sofort übernommen</p>
-            </div>
-
-            <!-- Telefon -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Telefonnummer</label>
-              <input
-                v-model="formData.phone"
-                type="tel"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="+41 79 123 45 67"
-              />
-            </div>
-
-            <!-- Geburtsdatum -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Geburtsdatum</label>
-              <input
-                v-model="formData.birthdate"
-                type="date"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+        
+        <!-- VIEW MODE - Compact Display -->
+        <div v-if="!isEditMode" class="space-y-4">
+          <!-- Personal Data Section - Compact -->
+          <div class="space-y-2">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="text-gray-600">Vorname</p>
+                <p class="font-medium text-gray-900">{{ formData.firstName || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-gray-600">Nachname</p>
+                <p class="font-medium text-gray-900">{{ formData.lastName || '-' }}</p>
+              </div>
+              <div class="col-span-2">
+                <p class="text-gray-600">Email</p>
+                <p class="font-medium text-gray-900 break-all">{{ formData.email || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-gray-600">Telefon</p>
+                <p class="font-medium text-gray-900">{{ formData.phone || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-gray-600">Geburtsdatum</p>
+                <p class="font-medium text-gray-900">{{ formData.birthdate ? formatDate(formData.birthdate) : '-' }}</p>
+              </div>
+              <div v-if="formData.street || formData.streetNr" class="col-span-2">
+                <p class="text-gray-600">Adresse</p>
+                <p class="font-medium text-gray-900">{{ formData.street }} {{ formData.streetNr }}</p>
+              </div>
+              <div v-if="formData.zip">
+                <p class="text-gray-600">PLZ</p>
+                <p class="font-medium text-gray-900">{{ formData.zip }}</p>
+              </div>
+              <div v-if="formData.city">
+                <p class="text-gray-600">Stadt</p>
+                <p class="font-medium text-gray-900">{{ formData.city }}</p>
+              </div>
             </div>
           </div>
 
-          <!-- Adresse -->
-          <div class="grid grid-cols-4 gap-4">
-            <div class="col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Strasse</label>
-              <input
-                v-model="formData.street"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Strasse"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Nr.</label>
-              <input
-                v-model="formData.streetNr"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Nr."
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
-              <input
-                v-model="formData.zip"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="PLZ"
-              />
+          <!-- Documents Section - Compact -->
+          <div v-if="categories.length > 0" class="border-t pt-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Ausweise</h3>
+            <div class="space-y-2">
+              <div v-for="category in categories" :key="category.code" class="text-sm">
+                <p class="text-gray-600">{{ category.name }}</p>
+                <div v-if="category.documents && category.documents.length > 0" class="flex gap-2 mt-1 flex-wrap">
+                <a 
+                  v-for="doc in category.documents" 
+                  :key="doc.id"
+                  :href="getDocumentUrl(doc)" 
+                  target="_blank"
+                  class="relative group"
+                  title="Klicke zum Öffnen"
+                >
+                  <!-- Versuche immer das Bild anzuzeigen, egal ob file_type gesetzt ist -->
+                  <img 
+                    :src="getDocumentUrl(doc)" 
+                    :alt="doc.file_name"
+                    class="w-12 h-12 object-cover rounded border border-blue-200 hover:border-blue-400 transition-colors"
+                    @load="handleImageLoad(doc)"
+                    @error="handleImageError"
+                  />
+                  <div class="absolute left-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <div class="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                      {{ doc.file_name }}
+                    </div>
+                  </div>
+                </a>
+              </div>
+                <p v-else class="text-gray-400 text-xs mt-1">Kein Dokument hochgeladen</p>
+              </div>
             </div>
           </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Stadt</label>
-            <input
-              v-model="formData.city"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Stadt"
-            />
-          </div>
-
-          <!-- Save Button for Personal Data -->
-          <button
-            @click="saveProfile"
-            :disabled="isSaving"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-          >
-            <span v-if="isSaving">Wird gespeichert...</span>
-            <span v-else>Persönliche Daten speichern</span>
-          </button>
         </div>
 
-        <!-- Documents Section -->
-        <div class="space-y-4 border-t pt-6">
-          <h3 class="text-lg font-semibold text-gray-900">Ausweise</h3>
-          
-          <div v-if="categories.length === 0" class="text-center text-gray-500 py-8">
-            <p>Keine Kategorien verfügbar</p>
-          </div>
-
-          <div v-for="category in categories" :key="category.code" class="border rounded-lg p-4">
-            <div class="flex justify-between items-start mb-3">
+        <!-- EDIT MODE - Full Form -->
+        <div v-else class="space-y-4">
+          <!-- Personal Data Section -->
+          <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-gray-900">Persönliche Daten</h3>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Vorname -->
               <div>
-                <h4 class="font-medium text-gray-900">{{ category.name }}</h4>
-                <p class="text-sm text-gray-500">Kategorie: {{ category.code }}</p>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Vorname</label>
+                <input
+                  v-model="formData.firstName"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Vorname"
+                />
+              </div>
+
+              <!-- Nachname -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nachname</label>
+                <input
+                  v-model="formData.lastName"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nachname"
+                />
+              </div>
+
+              <!-- Email -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  v-model="formData.email"
+                  type="email"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="email@example.com"
+                />
+                <p class="text-xs text-gray-500 mt-1">📧 Email-Änderungen werden sofort übernommen</p>
+              </div>
+
+              <!-- Telefon -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Telefonnummer</label>
+                <input
+                  v-model="formData.phone"
+                  type="tel"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="+41 79 123 45 67"
+                />
+              </div>
+
+              <!-- Geburtsdatum -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Geburtsdatum</label>
+                <input
+                  v-model="formData.birthdate"
+                  type="date"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
             </div>
 
-            <!-- Current Documents -->
-            <div v-if="category.documents && category.documents.length > 0" class="mb-3 space-y-2">
-              <div v-for="doc in category.documents" :key="doc.id" class="p-3 bg-gray-50 rounded-lg">
-                <div class="flex gap-3">
-                  <!-- Thumbnail Preview -->
-                  <div class="flex-shrink-0">
-                    <img 
-                      v-if="doc.file_type && doc.file_type.startsWith('image/')"
-                      :src="getDocumentUrl(doc)" 
-                      :alt="doc.file_name"
-                      class="w-16 h-16 object-cover rounded border border-gray-200"
-                      @error="(e) => handleImageError(e, doc)"
-                      @load="() => handleImageLoad(doc)"
-                    >
-                    <div v-else class="w-16 h-16 bg-gray-200 rounded border border-gray-200 flex items-center justify-center">
-                      <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                      </svg>
+            <!-- Adresse -->
+            <div class="grid grid-cols-4 gap-4">
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Strasse</label>
+                <input
+                  v-model="formData.street"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Strasse"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nr.</label>
+                <input
+                  v-model="formData.streetNr"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nr."
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
+                <input
+                  v-model="formData.zip"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="PLZ"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Stadt</label>
+              <input
+                v-model="formData.city"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Stadt"
+              />
+            </div>
+
+            <!-- Save Button for Personal Data -->
+            <button
+              @click="saveProfile"
+              :disabled="isSaving"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <span v-if="isSaving">Wird gespeichert...</span>
+              <span v-else>Persönliche Daten speichern</span>
+            </button>
+          </div>
+
+          <!-- Documents Section -->
+          <div class="space-y-4 border-t pt-6">
+            <h3 class="text-lg font-semibold text-gray-900">Ausweise</h3>
+            
+            <div v-if="categories.length === 0" class="text-center text-gray-500 py-8">
+              <p>Keine Kategorien verfügbar</p>
+            </div>
+
+            <div v-for="category in categories" :key="category.code" class="border rounded-lg p-4">
+              <div class="flex justify-between items-start mb-3">
+                <div>
+                  <h4 class="font-medium text-gray-900">{{ category.name }}</h4>
+                  <p class="text-sm text-gray-500">Kategorie: {{ category.code }}</p>
+                </div>
+              </div>
+
+              <!-- Current Documents -->
+              <div v-if="category.documents && category.documents.length > 0" class="mb-3 space-y-2">
+                <div v-for="doc in category.documents" :key="doc.id" class="p-3 bg-gray-50 rounded-lg">
+                  <div class="flex gap-3">
+                    <!-- Thumbnail Preview -->
+                    <div class="flex-shrink-0">
+                      <img 
+                        v-if="doc.file_type && doc.file_type.startsWith('image/')"
+                        :src="getDocumentUrl(doc)" 
+                        :alt="doc.file_name"
+                        class="w-16 h-16 object-cover rounded border border-gray-200"
+                        @error="(e) => handleImageError(e, doc)"
+                        @load="() => handleImageLoad(doc)"
+                      >
+                      <div v-else class="w-16 h-16 bg-gray-200 rounded border border-gray-200 flex items-center justify-center">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <!-- Document Info -->
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900 truncate">{{ doc.file_name }}</p>
-                    <p class="text-xs text-gray-500 mt-1">{{ formatDate(doc.created_at) }}</p>
-                    <div class="flex gap-2 mt-2">
-                      <a 
-                        :href="getDocumentUrl(doc)" 
-                        target="_blank"
-                        class="text-xs text-blue-600 hover:text-blue-800"
-                      >
-                        Öffnen
-                      </a>
-                      <button
-                        @click="deleteDocument(doc.id, category.name)"
-                        class="text-xs text-red-600 hover:text-red-800"
-                      >
-                        Löschen
-                      </button>
+                    
+                    <!-- Document Info -->
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-gray-900 truncate">{{ doc.file_name }}</p>
+                      <p class="text-xs text-gray-500 mt-1">{{ formatDate(doc.created_at) }}</p>
+                      <div class="flex gap-2 mt-2">
+                        <a 
+                          :href="getDocumentUrl(doc)" 
+                          target="_blank"
+                          class="text-xs text-blue-600 hover:text-blue-800"
+                        >
+                          Öffnen
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Upload -->
-            <div class="flex gap-2">
-              <input
-                type="file"
-                :ref="`fileInput_${category.code}`"
-                accept="image/*,application/pdf"
-                class="hidden"
-                @change="(e) => uploadDocument(e, category.code, category.name)"
-              />
-              <button
-                @click="triggerFileInput(category.code)"
-                :disabled="isUploading"
-                class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {{ (category.documents && category.documents.length > 0) ? 'Austausch' : 'Hochladen' }}
-              </button>
+              <!-- Upload -->
+              <div class="flex gap-2">
+                <input
+                  type="file"
+                  :ref="`fileInput_${category.code}`"
+                  accept="image/*,application/pdf"
+                  class="hidden"
+                  @change="(e) => uploadDocument(e, category.code, category.name)"
+                />
+                <button
+                  @click="triggerFileInput(category.code)"
+                  :disabled="isUploading"
+                  class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {{ (category.documents && category.documents.length > 0) ? 'Austausch' : 'Hochladen' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -222,42 +308,6 @@
           <p class="text-sm text-green-700">{{ successMessage }}</p>
         </div>
       </div>
-
-      <!-- Footer -->
-      <div class="border-t p-4 bg-gray-50 rounded-b-xl flex justify-end gap-3">
-        <button
-          @click="$emit('close')"
-          class="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
-        >
-          Schliessen
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Delete Confirmation Modal -->
-  <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm">
-      <div class="p-6 space-y-4">
-        <h3 class="text-lg font-bold text-gray-900">Dokument löschen?</h3>
-        <p class="text-gray-600">Möchten Sie {{ deleteDocName }} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</p>
-        
-        <div class="flex gap-3 pt-4">
-          <button
-            @click="showDeleteConfirm = false"
-            class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-colors"
-          >
-            Abbrechen
-          </button>
-          <button
-            @click="confirmDelete"
-            :disabled="isDeleting"
-            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
-          >
-            {{ isDeleting ? 'Wird gelöscht...' : 'Löschen' }}
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -266,6 +316,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
 
 interface Category {
   code: string
@@ -291,6 +342,8 @@ defineEmits<{
 
 const { showSuccess, showError } = useUIStore()
 const authStore = useAuthStore()
+
+const isEditMode = ref(false)
 
 const formData = ref({
   firstName: '',
@@ -335,12 +388,8 @@ const loadUserData = () => {
 
 const isSaving = ref(false)
 const isUploading = ref(false)
-const isDeleting = ref(false)
 const error = ref('')
 const successMessage = ref('')
-const showDeleteConfirm = ref(false)
-const deleteDocId = ref<string | null>(null)
-const deleteDocName = ref('')
 const categories = ref<any[]>([])
 
 const triggerFileInput = (categoryCode: string) => {
@@ -393,40 +442,6 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
   }
 }
 
-const deleteDocument = (docId: string, docName: string) => {
-  deleteDocId.value = docId
-  deleteDocName.value = docName
-  showDeleteConfirm.value = true
-}
-
-const confirmDelete = async () => {
-  if (!deleteDocId.value) return
-
-  isDeleting.value = true
-  error.value = ''
-
-  try {
-    const response = await $fetch('/api/customer/manage-documents', {
-      method: 'POST',
-      body: {
-        action: 'delete',
-        documentId: deleteDocId.value
-      }
-    }) as any
-
-    if (response?.success) {
-      showSuccess('Erfolg', 'Dokument gelöscht')
-      showDeleteConfirm.value = false
-      useRouter().go(0)
-    }
-  } catch (err: any) {
-    error.value = err?.data?.statusMessage || 'Fehler beim Löschen'
-    showError('Fehler', error.value)
-    showDeleteConfirm.value = false
-  } finally {
-    isDeleting.value = false
-  }
-}
 
 const saveProfile = async () => {
   isSaving.value = true
@@ -478,29 +493,40 @@ const formatDate = (dateString: string) => {
 }
 
 const getDocumentUrl = (doc: any) => {
-  if (!doc.storage_path) return ''
+  console.log('🔍 getDocumentUrl called with doc:', doc)
+  console.log('🔍 doc keys:', Object.keys(doc))
+  
+  // Versuche verschiedene Feldnamen
+  const storagePath = doc.storage_path || doc.file_path || doc.path || doc.url
+  
+  if (!storagePath) {
+    console.warn('⚠️ No storage path found in doc:', doc.file_name, 'Available fields:', Object.keys(doc))
+    return ''
+  }
   
   // Check if it's already a full URL
-  if (doc.storage_path.startsWith('http')) return doc.storage_path
+  if (storagePath.startsWith('http')) return storagePath
   
   // Build Supabase storage URL
   const supabaseUrl = 'https://unyjaetebnaexaflpyoc.supabase.co'
-  const bucket = 'documents'
   
   // The storage_path might be: "user-documents/lernfahrausweise/filename.jpg"
   // Or it might include the bucket: "documents/user-documents/lernfahrausweise/filename.jpg"
-  let path = doc.storage_path.trim()
+  let path = storagePath.trim()
   
   // Remove bucket prefix if it exists
-  if (path.startsWith(`${bucket}/`)) {
-    path = path.substring(bucket.length + 1)
+  if (path.startsWith('documents/')) {
+    path = path.substring('documents/'.length)
   }
   
   // Clean up any double slashes
   path = path.replace(/\/+/g, '/')
   
   console.log('📷 Building URL for doc:', doc.file_name, 'path:', path)
-  const finalUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+  
+  // Der Bucket-Name sollte NICHT in der URL sein!
+  // Format: /storage/v1/object/public/{path}
+  const finalUrl = `${supabaseUrl}/storage/v1/object/public/${path}`
   console.log('📷 Final URL:', finalUrl)
   
   return finalUrl
@@ -510,10 +536,11 @@ const handleImageLoad = (doc: any) => {
   console.log('✅ Image loaded:', doc.file_name)
 }
 
-const handleImageError = (e: Event, doc: any) => {
+const handleImageError = (e: Event) => {
   const img = e.target as HTMLImageElement
-  console.error('❌ Image load error for:', doc.file_name, 'url:', getDocumentUrl(doc))
-  img.style.display = 'none'
+  console.error('❌ Image load error for:', img.alt, 'url:', img.src)
+  // Zeige ein Fallback-Icon statt das Bild zu verstecken
+  img.replaceWith(document.createElement('div'))
 }
 
 const useRouter = () => {
@@ -524,12 +551,21 @@ const useRouter = () => {
 // Watch for modal opening
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
+    isEditMode.value = false
     loadUserData()
     // Use categories from props if provided
     if (props.categories) {
       categories.value = props.categories
+      console.log('📂 Categories loaded from props:', categories.value.length)
     }
   }
 })
-</script>
 
+// Also watch for props.categories changes
+watch(() => props.categories, (newVal) => {
+  if (newVal && newVal.length > 0) {
+    categories.value = newVal
+    console.log('📂 Categories updated from props:', newVal.length)
+  }
+}, { deep: true })
+</script>

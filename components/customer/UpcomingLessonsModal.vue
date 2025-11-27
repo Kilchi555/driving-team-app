@@ -23,38 +23,6 @@
       <!-- Content -->
       <div class="flex-1 overflow-y-auto p-2 space-y-6">
 
-        <!-- Filter und Sortierung -->
-        <div class="bg-gray-50 rounded-lg p-4">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-            
-            <!-- Sortierung Switch -->
-            <div class="flex gap-6">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Sortierung</label>
-                <div class="flex items-center space-x-2">
-                  <span class="text-xs text-gray-500">Spät</span>
-                  <button
-                    @click="toggleSort"
-                    :class="[
-                      'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                      sortOrder === 'asc' ? 'bg-blue-600' : 'bg-gray-200'
-                    ]"
-                  >
-                    <span
-                      :class="[
-                        'inline-block h-3 w-3 transform rounded-full bg-white transition-transform',
-                        sortOrder === 'asc' ? 'translate-x-5' : 'translate-x-1'
-                      ]"
-                    />
-                  </button>
-                  <span class="text-xs text-gray-500">Früh</span>
-                </div>
-              </div>
-            </div>
-            
-          </div>
-        </div>
-
         <!-- Empty State -->
         <div v-if="filteredLessons.length === 0" class="text-center py-12">
           <div class="text-4xl mb-4">📅</div>
@@ -87,6 +55,9 @@
                 <div v-if="lesson.event_type_code" class="mb-2">
                   <span class="text-sm text-gray-700 font-medium">
                     {{ getLessonTypeTitle(lesson.event_type_code) }}
+                    <span v-if="lesson.staff?.first_name" class="text-gray-600">
+                      mit {{ lesson.staff.first_name }}
+                    </span>
                   </span>
                 </div>
                 
@@ -100,7 +71,7 @@
             </div>
                 <div class="mt-2 text-sm text-gray-600">
                     <div v-if="lesson.location_details && (lesson.location_details.address || lesson.location_details.formatted_address)" class="mt-1 text-xs text-gray-500">
-                        {{ formatLocationAddress(lesson.location_details) }}
+                        Treffpunkt: {{ formatLocationAddress(lesson.location_details) }}
                     </div>
                 </div>
           </div>

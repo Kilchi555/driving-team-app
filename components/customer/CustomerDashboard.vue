@@ -138,10 +138,10 @@
             <div class="flex-1 flex items-center justify-center">
               
               <!-- Content -->
-                <p v-if="pendingPayments.length > 0" class="text-gray-900 text-lg font-semibold">
-                  <span :style="{ color: buttonColor }">{{ pendingPayments.length }}</span>
-                  <span class="text-gray-600 text-sm block mt-1">
-                    {{ pendingPayments.length === 1 ? 'Zahlung ausstehend' : 'Zahlungen ausstehend' }}
+                <p v-if="pendingPayments.length > 0" class="text-gray-600 text-sm">
+                  <span >{{ pendingPayments.length }}</span>
+                  <span>
+                    {{ pendingPayments.length === 1 ? ' Zahlung ausstehend' : ' Zahlungen ausstehend' }}
                   </span>
                 </p>
                 <p v-else class="text-gray-600 text-sm">
@@ -212,7 +212,7 @@
                 <p v-if="totalEvaluationsCount > 0" class="text-gray-600 text-sm">
                   <span>{{ totalEvaluationsCount }} </span>
                   <span class="text-gray-600 text-sm">
-                    {{ totalEvaluationsCount === 1 ? ' Bewertung' : 'Bewertungen' }}
+                    {{ totalEvaluationsCount === 1 ? ' Bewertung vorhanden' : ' Bewertungen vorhanden' }}
                   </span>
                 </p>
                 <p v-else class="text-gray-600 text-sm">
@@ -307,7 +307,7 @@
             <div class="flex-1 flex items-center justify-center">
               <div class="text-center">
                 <p class="text-gray-600 text-sm">
-                  Themen mit Lerninhalt, die du bereits angeschaut hast
+                  Themen, die du bereits angeschaut hast
                 </p>
               </div>
             </div>
@@ -337,7 +337,7 @@
           <div class="flex-1 flex items-center justify-center">
             <div class="text-center">
               <p class="text-gray-600 text-sm">
-                Verwalte deine persönlichen Daten und Ausweise
+                Verwalte deine persönlichen Daten
               </p>
             </div>
           </div>
@@ -366,7 +366,8 @@
           <div class="flex-1 flex items-center justify-center">
             <div class="text-center">
               <p class="text-gray-600 text-sm">
-                Hier findest du die Kontaktdaten deiner Fahrlehrer              </p>
+                Finde die Angaben deiner Fahrlehrer              
+              </p>
             </div>
           </div>
         </div>
@@ -576,21 +577,23 @@
               :class="isOverdue(appointment) ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-white'"
             >
               <div class="flex flex-col gap-3">
-                <!-- Header: Datum & Überfällig-Badge -->
-                <div class="flex items-center justify-between text-sm">
-                  <div class="flex items-center text-gray-900 font-semibold gap-1.5">
-                    <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span>{{ formatDateTime(appointment.start_time) }}</span>
-                    <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
-                    </svg>
-                    <span class="text-gray-600">{{ appointment.duration_minutes || 45 }} Min</span>
-                  </div>
+                <!-- Header: Status Badge oben rechts -->
+                <div class="flex justify-end">
                   <span v-if="isOverdue(appointment)" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-800 flex-shrink-0">
                     Überfällig
                   </span>
+                </div>
+                
+                <!-- Datum, Zeit & Dauer -->
+                <div class="flex items-center text-sm gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span class="text-gray-900 font-semibold">{{ formatDateTime(appointment.start_time) }}</span>
+                  <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
+                  </svg>
+                  <span class="text-gray-600">{{ appointment.duration_minutes || 45 }} Min</span>
                 </div>
 
                 <!-- Details Grid -->
@@ -720,109 +723,41 @@
           </div>
 
           <!-- Instructors List -->
-          <div v-else-if="instructors && instructors.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-else-if="instructors && instructors.length > 0" class="space-y-2">
             <div 
               v-for="instructor in instructors" 
               :key="instructor.id"
-              @click="showInstructorDetails(instructor)"
-              class="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200 hover:border-purple-300"
+              class="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:bg-gray-100 hover:border-blue-300 transition-colors cursor-pointer"
             >
-              <div class="flex items-center space-x-3">
-                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <span class="text-purple-600 font-semibold text-lg">
-                    {{ getInstructorInitials(instructor) }}
-                  </span>
-                </div>
+              <div class="flex items-start justify-between gap-3">
                 <div class="flex-1">
                   <h3 class="font-semibold text-gray-900">{{ instructor.name }}</h3>
+                  <div class="space-y-1 mt-2">
+                    <div v-if="instructor.email" class="flex items-center gap-2 text-sm text-gray-600">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <a :href="`mailto:${instructor.email}`" class="text-blue-600 hover:text-blue-800 break-all">
+                        {{ instructor.email }}
+                      </a>
+                    </div>
+                    <div v-if="instructor.phone" class="flex items-center gap-2 text-sm text-gray-600">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <a :href="`tel:${instructor.phone}`" class="text-blue-600 hover:text-blue-800">
+                        {{ instructor.phone }}
+                      </a>
+                    </div>
+                  </div>
                 </div>
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
               </div>
             </div>
           </div>
 
           <!-- No Instructors -->
           <div v-else class="text-center py-8">
-            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">Noch keine Fahrlehrer</h3>
-            <p class="text-gray-600">Buchen Sie Ihre erste Fahrstunde, um Ihre Fahrlehrer kennenzulernen.</p>
-          </div>
-
-          <!-- Detail View (when clicked) -->
-          <div v-if="selectedInstructor" class="mt-6 border-t pt-6">
-            <div class="flex items-center space-x-3 mb-4">
-              <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <span class="text-purple-600 font-semibold text-lg">
-                  {{ getInstructorInitials(selectedInstructor) }}
-                </span>
-              </div>
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900">{{ selectedInstructor.name }}</h3>
-                <p class="text-sm text-gray-600">Fahrlehrer-Details</p>
-              </div>
-            </div>
-
-            <!-- Contact Information -->
-            <div class="bg-gray-50 rounded-lg p-4 mb-4">
-              <h4 class="font-semibold text-gray-900 mb-3">Kontaktinformationen</h4>
-              <div class="space-y-2">
-                <div v-if="selectedInstructor?.email" class="flex items-center space-x-3">
-                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  <a :href="`mailto:${selectedInstructor.email}`" class="text-blue-600 hover:text-blue-800 break-all">
-                    {{ selectedInstructor.email }}
-                  </a>
-                </div>
-                <div v-if="selectedInstructor?.phone" class="flex items-center space-x-3">
-                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  <a :href="`tel:${selectedInstructor.phone}`" class="text-blue-600 hover:text-blue-800">
-                    {{ selectedInstructor.phone }}
-                  </a>
-                </div>
-                <div v-if="!selectedInstructor?.email && !selectedInstructor?.phone" class="text-gray-500 text-sm">
-                  Keine Kontaktinformationen verfügbar
-                </div>
-              </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex space-x-3">
-              <button 
-                v-if="selectedInstructor?.email"
-                @click="openEmail(selectedInstructor.email)"
-                class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span>E-Mail</span>
-              </button>
-              <button 
-                v-if="selectedInstructor?.phone"
-                @click="openPhone(selectedInstructor.phone)"
-                class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                <span>Anrufen</span>
-              </button>
-              <button
-                @click="selectedInstructor = null"
-                class="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Zurück
-              </button>
-            </div>
+            <p class="text-gray-600">Noch keine Fahrlehrer. Buchen Sie Ihre erste Fahrstunde!</p>
           </div>
         </div>
       </div>
