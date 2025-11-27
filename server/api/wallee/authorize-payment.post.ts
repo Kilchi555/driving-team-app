@@ -226,6 +226,7 @@ export default defineEventHandler(async (event) => {
         completionBehavior = Wallee.model.TransactionCompletionBehavior.COMPLETE_IMMEDIATE
         console.log('⚡ Short-term appointment (< 24h) - using COMPLETE_IMMEDIATE for immediate charge')
       } else {
+        completionBehavior = Wallee.model.TransactionCompletionBehavior.COMPLETE_DEFERRED
         console.log('ℹ️ Long-term appointment (>= 24h) - using COMPLETE_DEFERRED, charge will happen via cron 24h before')
       }
     }

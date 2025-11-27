@@ -5229,44 +5229,65 @@ watch(() => props.isVisible, async (newVisible) => {
         let duration = 45
         
         if (eventData?.start) {
-          // Calendar passes UTC time as ISO string without Z suffix
-          // Add Z to ensure it's parsed as UTC, not local time
-          const startDateTime = new Date(eventData.start.includes('Z') ? eventData.start : eventData.start + 'Z')
+          // ✅ NEU: Prüfe ob Zeit bereits lokal ist (von toLocalTimeString) oder UTC (aus DB)
+          const hasTimezone = eventData.start.includes('Z') || eventData.start.includes('+')
           
-          // Convert UTC from calendar to Zurich local time for display
-          // Use Intl.DateTimeFormat for reliable timezone conversion
-          const zurichDateFormatter = new Intl.DateTimeFormat('en-CA', { 
-            timeZone: 'Europe/Zurich',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-          })
-          
-          const startParts = zurichDateFormatter.formatToParts(startDateTime)
-          startDate = `${startParts.find(p => p.type === 'year').value}-${startParts.find(p => p.type === 'month').value}-${startParts.find(p => p.type === 'day').value}`
-          startTime = `${startParts.find(p => p.type === 'hour').value}:${startParts.find(p => p.type === 'minute').value}`
-          
-          console.log('⏰ DEBUG: UTC start conversion:', {
-            inputUTC: eventData.start,
-            parsedStart: startDateTime.toISOString(),
-            zurichDate: startDate,
-            zurichTime: startTime,
-            parts: startParts
-          })
-          
-          if (eventData.end) {
-            // Same fix for end time
-            const endDateTime = new Date(eventData.end.includes('Z') ? eventData.end : eventData.end + 'Z')
-            const endParts = zurichDateFormatter.formatToParts(endDateTime)
-            endTime = `${endParts.find(p => p.type === 'hour').value}:${endParts.find(p => p.type === 'minute').value}`
+          if (hasTimezone) {
+            // Fall 1: Zeit ist UTC (aus DB) → konvertiere zu Zurich lokal
+            const startDateTime = new Date(eventData.start)
             
-            // Berechne Dauer in Minuten
-            const diffMs = endDateTime.getTime() - startDateTime.getTime()
-            duration = Math.round(diffMs / (1000 * 60))
+            const zurichDateFormatter = new Intl.DateTimeFormat('en-CA', { 
+              timeZone: 'Europe/Zurich',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false
+            })
+            
+            const startParts = zurichDateFormatter.formatToParts(startDateTime)
+            startDate = `${startParts.find(p => p.type === 'year').value}-${startParts.find(p => p.type === 'month').value}-${startParts.find(p => p.type === 'day').value}`
+            startTime = `${startParts.find(p => p.type === 'hour').value}:${startParts.find(p => p.type === 'minute').value}`
+            
+            console.log('⏰ UTC from DB → Zurich local:', {
+              inputUTC: eventData.start,
+              zurichDate: startDate,
+              zurichTime: startTime
+            })
+            
+            if (eventData.end) {
+              const endDateTime = new Date(eventData.end)
+              const endParts = zurichDateFormatter.formatToParts(endDateTime)
+              endTime = `${endParts.find(p => p.type === 'hour').value}:${endParts.find(p => p.type === 'minute').value}`
+              
+              const diffMs = endDateTime.getTime() - startDateTime.getTime()
+              duration = Math.round(diffMs / (1000 * 60))
+            }
+          } else {
+            // Fall 2: Zeit ist bereits lokal (von toLocalTimeString) → direkt extrahieren
+            // Format: "2025-11-27T10:00:00"
+            const [datePart, timePart] = eventData.start.split('T')
+            startDate = datePart
+            startTime = timePart.substring(0, 5) // HH:MM
+            
+            console.log('⏰ Already local time (from calendar click):', {
+              inputLocal: eventData.start,
+              extractedDate: startDate,
+              extractedTime: startTime
+            })
+            
+            if (eventData.end) {
+              const [, endTimePart] = eventData.end.split('T')
+              endTime = endTimePart.substring(0, 5) // HH:MM
+              
+              // Berechne Dauer
+              const startDate = new Date(eventData.start)
+              const endDate = new Date(eventData.end)
+              const diffMs = endDate.getTime() - startDate.getTime()
+              duration = Math.round(diffMs / (1000 * 60))
+            }
           }
           
           console.log('⏰ Extracted calendar time data:', {
