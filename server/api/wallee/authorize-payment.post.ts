@@ -290,6 +290,13 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log('📤 Creating AUTHORIZED transaction with token...')
+    console.log('🔍 Transaction data being sent:', {
+      hasToken: !!transactionData.token,
+      tokenValue: transactionData.token,
+      hasCustomerId: !!transactionData.customerId,
+      customerIdValue: transactionData.customerId,
+      completionBehavior: transactionData.completionBehavior
+    })
     
     const authorizeResponse = await transactionService.create(walleeConfig.spaceId, transactionData)
     const authorizedTransaction: any = authorizeResponse.body
