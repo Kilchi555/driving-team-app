@@ -2,15 +2,26 @@
 // ✅ Korrigierte Datums- und Zeitformatierung für lokale Zeiten
 
 /**
- * ⚠️ DEPRECATED: Verwendet alte Logik, verwende stattdessen localTimeToUTC
+ * ✅ Konvertiert ein Date-Objekt zu lokalem Zeit-String (OHNE UTC-Konversion!)
  * 
- * Diese Funktion speichert Zeiten falsch! Sie nimmt Browser-Timezone statt Zurich.
- * Verwende localTimeToUTC() stattdessen!
+ * WICHTIG: Diese Funktion wird vom Kalender verwendet, wenn auf einen Slot geklickt wird.
+ * Der Kalender gibt ein Date-Objekt, das bereits die korrekte lokale Zeit enthält.
+ * 
+ * INPUT: Date-Objekt vom Kalender (z.B. 09:00 Zurich local time)
+ * OUTPUT: ISO-String OHNE Timezone (z.B. "2025-11-27T09:00:00")
+ * 
+ * KEINE UTC-Konversion hier! Das passiert später in useEventModalForm.ts!
  */
 export const toLocalTimeString = (date: Date): string => {
-  // FALLBACK - NICHT VERWENDEN FÜR NEUE TERMINE!
-  const isoString = date.toISOString()
-  return isoString.substring(0, 19) // YYYY-MM-DDTHH:MM:SS
+  // ✅ DIREKT die lokalen Komponenten extrahieren (KEINE UTC-Konversion!)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  const second = String(date.getSeconds()).padStart(2, '0')
+  
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}`
 }
 
 /**
