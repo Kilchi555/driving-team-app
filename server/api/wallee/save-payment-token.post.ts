@@ -282,6 +282,7 @@ export default defineEventHandler(async (event) => {
           console.warn('⚠️ Could not fetch tokens from Wallee TokenService:', searchError.message, searchError.stack)
         }
       }
+    }
       
     if (!paymentMethodToken) {
       // ✅ FALLBACK für TWINT mit Force Storage: Nutze die LANGE Customer ID aus der Transaction
