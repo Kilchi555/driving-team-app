@@ -230,6 +230,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!paymentMethodToken) {
+    if (!paymentMethodToken) {
       // ✅ Für Force Storage Payment Methods: Hole ECHTEN Token von Wallee
       if (transaction.customerId) {
         console.log('🔍 Fetching real token IDs from Wallee for customer:', transaction.customerId)
@@ -244,41 +245,41 @@ export default defineEventHandler(async (event) => {
               customerId: {
                 value: transaction.customerId,
                 operator: Wallee.model.CriteriaOperator.EQUALS
+              },
+              state: {
+                value: Wallee.model.TokenState.ACTIVE,
+                operator: Wallee.model.CriteriaOperator.EQUALS
               }
             }
           })
           
           const allTokens = tokenSearchResult.body || []
-          console.log('💳 Found all tokens from TokenService:', allTokens.length)
+          console.log('💳 Found tokens from TokenService:', {
+            count: allTokens.length,
+            tokens: allTokens.map((t: any) => ({
+              id: t.id,
+              state: t.state,
+              customerId: t.customerId,
+              enabledForOneClick: t.enabledForOneClickPayment
+            }))
+          })
           
-          // Filtere aktive Tokens (state === 'ACTIVE') und sortiere nach createdOn DESC
-          const activeTokens = allTokens
-            .filter((t: any) => t.state === 'ACTIVE' || t.state === 1)
-            .sort((a: any, b: any) => {
-              const aTime = a.createdOn?.getTime() || 0
-              const bTime = b.createdOn?.getTime() || 0
-              return bTime - aTime // DESC order
-            })
-          console.log('💳 Filtered active tokens:', activeTokens.length)
-          
-          if (activeTokens.length > 0) {
-            // Nutze den neuesten Token
-            const latestToken = activeTokens[0]
+          if (allTokens.length > 0) {
+            // Nutze den neuesten Token (numerische ID!)
+            const latestToken = allTokens[0]
             paymentMethodToken = latestToken.id?.toString() || null
-            displayName = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 
-                          (latestToken.cardData?.lastFourDigits ? `Karte **** ${latestToken.cardData.lastFourDigits}` : 'Gespeicherte Karte')
-            paymentMethodType = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.description || 
-                                latestToken.cardData?.brand || 'wallee_token'
+            displayName = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 'Gespeicherte Zahlungsmethode'
+            paymentMethodType = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.description || 'wallee_token'
             console.log('✅ Found real token from Wallee TokenService:', {
               tokenId: paymentMethodToken,
               displayName,
               type: paymentMethodType
             })
           } else {
-            console.log('⚠️ No active tokens found for customer in Wallee')
+            console.log('⚠️ No active tokens found for customer in Wallee - will wait for token creation')
           }
         } catch (searchError: any) {
-          console.warn('⚠️ Could not fetch tokens from Wallee TokenService:', searchError.message)
+          console.warn('⚠️ Could not fetch tokens from Wallee TokenService:', searchError.message, searchError.stack)
         }
       }
       
