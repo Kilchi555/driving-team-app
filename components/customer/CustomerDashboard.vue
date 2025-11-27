@@ -1100,11 +1100,33 @@ const {
 
 // Computed properties
 const completedLessonsCount = computed(() => {
-  return appointments.value?.filter(apt => apt.status === 'completed').length || 0
+  const now = new Date()
+  return appointments.value?.filter(apt => {
+    // Termin ist absolviert wenn:
+    // 1. Status ist 'completed' ODER
+    // 2. Status ist 'confirmed' UND der Termin liegt in der Vergangenheit
+    if (apt.status === 'completed') return true
+    if (apt.status === 'confirmed' && apt.end_time) {
+      const endTime = new Date(apt.end_time)
+      return endTime < now
+    }
+    return false
+  }).length || 0
 })
 
 const paidAppointments = computed(() => {
-  return appointments.value?.filter(apt => apt.status === 'completed') || []
+  const now = new Date()
+  return appointments.value?.filter(apt => {
+    // Termin ist absolviert wenn:
+    // 1. Status ist 'completed' ODER
+    // 2. Status ist 'confirmed' UND der Termin liegt in der Vergangenheit
+    if (apt.status === 'completed') return true
+    if (apt.status === 'confirmed' && apt.end_time) {
+      const endTime = new Date(apt.end_time)
+      return endTime < now
+    }
+    return false
+  }) || []
 })
 
 const paymentsCount = computed(() => {
@@ -1928,139 +1950,31 @@ const confirmAppointment = async (appointment: any) => {
         })
         .eq('id', payment.id)
 
-      // ❌ DEAKTIVIERT: One-Click Payment (Token-based authorization)
-      // TODO: Später aktivieren wenn Wallee Token-Problem gelöst ist
-      // Problem: Wallee ignoriert token-Parameter und verwendet stattdessen customerId
-      const ONE_CLICK_PAYMENT_ENABLED = false
-      
-      if (shouldAuthorizeNow && ONE_CLICK_PAYMENT_ENABLED) {
-        try {
-          const authorizeResult = await $fetch('/api/wallee/authorize-payment', {
-            method: 'POST',
-            body: {
-              paymentId: payment.id,
-              userId: userDb.id,
-              tenantId: userDb.tenant_id,
-              appointmentStartTime: appointment.start_time,
-              automaticPaymentHoursBefore: automaticPaymentHoursBeforeLocal
-            }
-          }) as { success?: boolean; transactionId?: number; state?: string; error?: string }
-
-          if (!authorizeResult.success) {
-            throw new Error(authorizeResult.error || 'Authorization failed')
-          }
-
-          console.log('✅ Payment authorized (provisional charge):', {
-            paymentId: payment.id,
-            transactionId: authorizeResult.transactionId,
-            scheduledPaymentDate: scheduledPayDate.toISOString()
-          })
-
-          // ✅ Confirm appointment after authorization succeeds
-          try {
-            const confirmResult = await $fetch('/api/appointments/confirm', {
-              method: 'POST',
-              body: {
-                appointmentId: appointment.id
-              }
-            }) as { success?: boolean; error?: string }
-            
-            if (!confirmResult.success) {
-              console.error('⚠️ Could not confirm appointment:', confirmResult.error)
-            } else {
-              console.log('✅ Appointment confirmed after authorization')
-            }
-          } catch (err) {
-            console.error('⚠️ Error confirming appointment:', err)
-          }
-
-          // ✅ Wenn Termin innerhalb der Capture-Frist ist, sofort capturen
-          if (diffHours < automaticPaymentHoursBeforeLocal) {
-            console.log('⚡ Appointment within capture window, capturing immediately...')
-            try {
-              const captureResult = await $fetch('/api/wallee/capture-payment', {
-                method: 'POST',
-                body: {
-                  paymentId: payment.id,
-                  transactionId: authorizeResult.transactionId
-                }
-              }) as { success?: boolean; error?: string }
-
-              if (captureResult.success) {
-                console.log('✅ Payment captured immediately')
-                
-                // Update appointment status to confirmed immediately (don't wait for webhook)
-                try {
-                  const confirmResult = await $fetch('/api/appointments/confirm', {
-                    method: 'POST',
-                    body: {
-                      appointmentId: appointment.id
-                    }
-                  }) as { success?: boolean; error?: string }
-                  
-                  if (!confirmResult.success) {
-                    console.error('⚠️ Could not confirm appointment:', confirmResult.error)
-                  } else {
-                    console.log('✅ Appointment confirmed via API')
-                  }
-                } catch (err) {
-                  console.error('⚠️ Error confirming appointment:', err)
-                }
-                
-                // Cleanup after capture success
-                pendingConfirmations.value = pendingConfirmations.value.filter((a: any) => a.id !== appointment.id)
-                showConfirmationModal.value = false
-                confirmingAppointments.value.delete(appointment.id)
-                
-                // Reload data
-                try {
-                  await refreshData()
-                } catch (refreshErr) {
-                  console.error('⚠️ Failed to refresh data after capture:', refreshErr)
-                }
-                
-                displayToast('success', 'Termin bestätigt!', 'Die Zahlung wurde abgebucht.')
-                return
-              } else {
-                console.error('❌ Immediate capture failed:', captureResult.error)
-                throw new Error(captureResult.error || 'Capture failed')
-              }
-            } catch (captureError: any) {
-              console.error('❌ Error capturing payment:', captureError)
-              displayToast('error', 'Fehler', `Zahlung konnte nicht eingezogen werden: ${captureError.message}`)
-              confirmingAppointments.value.delete(appointment.id)
-              return
-            }
-          }
-        } catch (authError: any) {
-          console.error('❌ Error authorizing payment (will rely on scheduled auth):', authError)
-          // wir lassen scheduled_authorization_date stehen; Cron wird autorisieren
-        }
-      } else {
-        console.log('⏳ Authorization scheduled at', authDueDate.toISOString(), '; capture scheduled at', scheduledPayDate.toISOString())
-      }
-
-      // Entferne den Termin aus der lokalen Liste der offenen Bestätigungen
-      pendingConfirmations.value = pendingConfirmations.value.filter((a: any) => a.id !== appointment.id)
-      showConfirmationModal.value = false
-      confirmingAppointments.value.delete(appointment.id)
-      
-      // Lade Daten neu, um aktuelle Zahlungsinformationen anzuzeigen
+      // ✅ NEU: Termin sofort auf 'confirmed' setzen, wenn der Kunde bestätigt
       try {
-        await refreshData()
-      } catch (refreshErr) {
-        console.error('⚠️ Failed to refresh data after confirmation:', refreshErr)
+        const confirmResult = await $fetch('/api/appointments/confirm', {
+          method: 'POST',
+          body: {
+            appointmentId: appointment.id
+          }
+        }) as { success?: boolean; error?: string }
+        
+        if (!confirmResult.success) {
+          console.error('⚠️ Could not confirm appointment immediately:', confirmResult.error)
+          displayToast('error', 'Fehler', `Termin konnte nicht sofort bestätigt werden: ${confirmResult.error}`)
+          confirmingAppointments.value.delete(appointment.id)
+          return
+        } else {
+          console.log('✅ Appointment confirmed immediately after customer click')
+        }
+      } catch (err: any) {
+        console.error('⚠️ Error confirming appointment immediately:', err)
+        displayToast('error', 'Fehler', `Fehler beim sofortigen Bestätigen des Termins: ${err.message}`)
+        confirmingAppointments.value.delete(appointment.id)
+        return
       }
       
-      // Zeige Erfolgs-Benachrichtigung
-      const message = shouldProcessImmediately
-        ? 'Die Zahlung wurde abgebucht.'
-        : shouldAuthorizeNow
-          ? 'Der Betrag wurde provisorisch reserviert und wird 24h vor dem Termin abgebucht.'
-          : `Der Betrag wird ${automaticAuthorizationHoursBeforeLocal/24} Tage vor dem Termin reserviert, Abbuchung ${automaticPaymentHoursBeforeLocal}h vorher.`
-      
-      displayToast('success', 'Termin bestätigt!', message)
-      return
+      console.log('⏳ Authorization scheduled at', authDueDate.toISOString(), '; capture scheduled at', scheduledPayDate.toISOString())
     }
 
     // Erstelle Wallee-Transaktion über Backend
@@ -2154,25 +2068,8 @@ const confirmAppointment = async (appointment: any) => {
       })
     }
 
-    // Update appointment status to "pending_confirmation" before redirecting to payment
-    try {
-      console.log('🔄 Updating appointment status to pending_confirmation...')
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .update({
-          status: 'pending_confirmation',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', appointment.id)
-      
-      if (appointmentError) {
-        console.error('⚠️ Failed to update appointment status:', appointmentError)
-      } else {
-        console.log('✅ Appointment status updated to pending_confirmation')
-      }
-    } catch (err) {
-      console.error('⚠️ Error updating appointment status:', err)
-    }
+    // ✅ Der Termin ist bereits bestätigt (siehe oben)
+    // Wir aktualisieren den Status NICHT mehr hier, da er bereits auf 'confirmed' gesetzt wurde!
 
     // Direkt zu Wallee weiterleiten
     console.log('🔄 Redirecting to Wallee payment page...')
