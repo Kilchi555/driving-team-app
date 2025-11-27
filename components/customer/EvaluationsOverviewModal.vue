@@ -135,14 +135,23 @@
                 <div>
                   <div class="flex items-center gap-2">
                     <h4 class="font-semibold text-gray-900">
-                      {{ lessonGroup.is_exam ? '🎓 Prüfungsfahrt' : '📅 Fahrlektion' }} - {{ formatLessonDate(lessonGroup.lesson_date) }}
+                      {{ lessonGroup.is_exam ? '🎓 Prüfungsfahrt' : 'Fahrlektion' }}
                     </h4>
                     <span 
-                      v-if="lessonGroup.driving_category" 
-                      class="inline-flex items-center px-2 py-1 text-md font-medium bg-blue-100 text-blue-800 rounded-full"
+                      v-if="lessonGroup.staff?.first_name"
+                      class="text-sm text-gray-600"
                     >
-                      {{ lessonGroup.driving_category }}
+                      mit {{ lessonGroup.staff.first_name }}
                     </span>
+                    <span 
+                      v-if="lessonGroup.driving_category" 
+                      class="inline-flex items-center px-2 py-1 text-sm bg-blue-100 text-blue-800 rounded-full"
+                    >
+                      Kategorie {{ lessonGroup.driving_category }}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                    <span>{{ formatLessonDate(lessonGroup.lesson_date) }}</span>
                   </div>
                   <div class="flex items-center gap-4 text-sm text-gray-600 mt-1">
                     <span>🕐 {{ formatTimeRange(lessonGroup.start_time, lessonGroup.end_time) }}</span>
@@ -385,7 +394,8 @@ const allEvaluations = computed(() => {
           location_name: lesson.location_name,
           driving_category: drivingCategory,
           sort_date: new Date(lesson.start_time).getTime(),
-          is_exam: false
+          is_exam: false,
+          staff: lesson.staff
         })
       })
     } else if (hasExamResults) {
@@ -404,7 +414,8 @@ const allEvaluations = computed(() => {
           exam_passed: examResult.passed,
           examiner_behavior_rating: examResult.examiner_behavior_rating,
           examiner_behavior_notes: examResult.examiner_behavior_notes,
-          exam_date: examResult.exam_date
+          exam_date: examResult.exam_date,
+          staff: lesson.staff
         })
       })
     }
@@ -456,6 +467,7 @@ const groupedByLesson = computed(() => {
     duration_minutes?: number
     sort_date: number
     is_exam: boolean
+    staff?: any
     evaluations: any[]
   }> = {}
 
@@ -475,6 +487,7 @@ const groupedByLesson = computed(() => {
         duration_minutes: lesson?.duration_minutes,
         sort_date: evaluation.sort_date,
         is_exam: evaluation.is_exam || false,
+        staff: evaluation.staff || lesson?.staff,
         evaluations: []
       }
     }

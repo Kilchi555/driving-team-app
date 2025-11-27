@@ -11,7 +11,7 @@
               <div v-if="currentTenantBranding?.logos?.standard" class="h-12 flex items-center">
                 <img :src="currentTenantBranding.logos.standard" :alt="currentTenantBranding.name" class="h-full object-contain max-w-xs">
               </div>
-              <div v-else class="w-12 h-12 rounded-full flex items-center justify-center" :style="{ background: `${primaryColor}dd` }">
+              <div v-else class="w-12 h-12 rounded-full flex items-center justify-center" :style="{ background: `${secondaryColor}dd` }">
                 <span class="text-white font-bold text-lg">
                   {{ getInitials() }}
                 </span>
@@ -20,7 +20,6 @@
                 <h1 class="text-xl font-bold text-white">
                   Hallo, {{ getFirstName() }}!
                 </h1>
-                <p class="text-sm text-white text-opacity-90">{{ currentTenantBranding?.name || 'Dashboard' }}</p>
               </div>
             </div>
             
@@ -115,7 +114,12 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         
         <!-- Zahlungsübersicht -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+        <div 
+          @click="handleClickWithDelay('payments', navigateToPayments)"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'payments' }"
+          :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
+        >
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center">
@@ -128,20 +132,12 @@
                   Meine Zahlungen
                 </h3>
               </div>
-              <div v-if="!paymentsLoading" class="bg-gray-100 px-3 py-1 rounded-full">
-                <span class="text-sm font-semibold text-gray-700">{{ paymentsCount }}</span>
-              </div>
+
             </div>
             
             <div class="flex-1 flex items-center justify-center">
-              <!-- Loading State -->
-              <div v-if="paymentsLoading" class="text-center">
-                <LoadingLogo size="md" />
-                <p class="text-xs text-gray-500 mt-2">Wird geladen...</p>
-              </div>
               
               <!-- Content -->
-              <div v-else class="text-center">
                 <p v-if="pendingPayments.length > 0" class="text-gray-900 text-lg font-semibold">
                   <span :style="{ color: buttonColor }">{{ pendingPayments.length }}</span>
                   <span class="text-gray-600 text-sm block mt-1">
@@ -151,23 +147,16 @@
                 <p v-else class="text-gray-600 text-sm">
                   Alle Zahlungen sind aktuell
                 </p>
-              </div>
-            </div>
-            
-            <div class="mt-4">
-              <button
-                @click="navigateToPayments"
-                :disabled="paymentsLoading"
-                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                :style="{ background: buttonColor }"
-              >
-                Zur Übersicht
-              </button>
             </div>
           </div>
         </div>
         <!-- Kommende Termine - Uses Secondary Color -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '1px' }">
+        <div 
+          @click="handleClickWithDelay('upcoming', () => { showUpcomingLessonsModal = true })"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'upcoming' }"
+          :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '4.5px' }"
+        >
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center">
@@ -186,28 +175,23 @@
             <div class="flex-1 flex items-center justify-center">
               <div class="text-center">
                 <p v-if="upcomingAppointments.length > 0" class="text-gray-600 text-sm">
-                  Sie haben {{ upcomingAppointments.length }} {{ upcomingAppointments.length === 1 ? 'Termin' : 'Termine' }} geplant
+                  Du hast {{ upcomingAppointments.length }} {{ upcomingAppointments.length === 1 ? 'Termin' : 'Termine' }} geplant
                 </p>
                 <p v-else class="text-gray-600 text-sm">
                   Keine Termine geplant
                 </p>
               </div>
             </div>
-            
-            <div class="mt-4">
-              <button
-                @click="showUpcomingLessonsModal = true"
-                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
-                :style="{ background: secondaryButtonColor }"
-              >
-                Details anzeigen
-              </button>
-            </div>
           </div>
         </div>
 
         <!-- Absolvierte Lektionen - Uses Accent Color -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: accentButtonBorderColor, borderWidth: '1px' }">
+        <div 
+          @click="handleClickWithDelay('evaluations', () => { showEvaluationsModal = true })"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'evaluations' }"
+          :style="{ borderColor: accentButtonBorderColor, borderWidth: '4.5px' }"
+        >
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center">
@@ -225,10 +209,10 @@
             
             <div class="flex-1 flex items-center justify-center">
               <div class="text-center">
-                <p v-if="totalEvaluationsCount > 0" class="text-gray-900 text-lg font-semibold">
-                  <span :style="{ color: accentButtonColor }">{{ totalEvaluationsCount }}</span>
-                  <span class="text-gray-600 text-sm block mt-1">
-                    {{ totalEvaluationsCount === 1 ? 'Bewertung' : 'Bewertungen' }}
+                <p v-if="totalEvaluationsCount > 0" class="text-gray-600 text-sm">
+                  <span>{{ totalEvaluationsCount }} </span>
+                  <span class="text-gray-600 text-sm">
+                    {{ totalEvaluationsCount === 1 ? ' Bewertung' : 'Bewertungen' }}
                   </span>
                 </p>
                 <p v-else class="text-gray-600 text-sm">
@@ -236,25 +220,20 @@
                 </p>
               </div>
             </div>
-            
-            <div class="mt-4">
-              <button
-                @click="showEvaluationsModal = true"
-                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
-                :style="{ background: accentButtonColor }"
-              >
-                Bewertungen ansehen
-              </button>
-            </div>
           </div>
         </div>
       </div>
 
       <!-- Booking Sections -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         
         <!-- Fahrstunden buchen -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+        <div 
+          @click="handleClickWithDelay('lesson', navigateToLessonBooking)"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'lesson' }"
+          :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
+        >
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center mb-4">
               <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
@@ -270,25 +249,20 @@
             <div class="flex-1 flex items-center justify-center">
               <div class="text-center">
                 <p class="text-gray-600 text-sm">
-                  Buchen Sie Ihre nächste Fahrstunde
+                  Buche deine nächste Fahrstunde
                 </p>
               </div>
-            </div>
-            
-            <div class="mt-4">
-              <button
-                @click="navigateToLessonBooking"
-                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
-                :style="{ background: buttonColor }"
-              >
-                🚗 Fahrstunde buchen
-              </button>
             </div>
           </div>
         </div>
 
         <!-- Kurs buchen - Uses Secondary Color -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '1px' }">
+        <div 
+          @click="handleClickWithDelay('course', navigateToCourseBooking)"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'course' }"
+          :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '4.5px' }"
+        >
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center mb-4">
               <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
@@ -304,25 +278,20 @@
             <div class="flex-1 flex items-center justify-center">
               <div class="text-center">
                 <p class="text-gray-600 text-sm">
-                  Schauen Sie sich verfügbare Kurse an
+                  Schaue unsere verfügbaren Kurse an
                 </p>
               </div>
-            </div>
-            
-            <div class="mt-4">
-              <button
-                @click="navigateToCourseBooking"
-                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
-                :style="{ background: secondaryButtonColor }"
-              >
-                📚 Kurse ansehen
-              </button>
             </div>
           </div>
         </div>
 
         <!-- Lernbereich - Uses Accent Color -->
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow" :style="{ borderColor: accentButtonBorderColor, borderWidth: '1px' }">
+        <div 
+          @click="handleClickWithDelay('learning', () => navigateTo('/learning'))"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'learning' }"
+          :style="{ borderColor: accentButtonBorderColor, borderWidth: '4.5px' }"
+        >
           <div class="p-6 h-full flex flex-col">
             <div class="flex items-center mb-4">
               <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: accentButtonColorLight }">
@@ -338,26 +307,21 @@
             <div class="flex-1 flex items-center justify-center">
               <div class="text-center">
                 <p class="text-gray-600 text-sm">
-                  Themen mit Lerninhalt, die du bereits bearbeitet hast
+                  Themen mit Lerninhalt, die du bereits angeschaut hast
                 </p>
               </div>
-            </div>
-
-            <div class="mt-4">
-              <button
-                @click="navigateTo('/learning')"
-                class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
-                :style="{ background: accentButtonColor }"
-              >
-                📘 Öffnen
-              </button>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Mein Profil Card -->
-      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow mb-8" :style="{ borderColor: buttonBorderColor, borderWidth: '1px' }">
+      <div 
+        @click="handleClickWithDelay('profile', () => { showProfileModal = true })"
+        class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all mb-4 cursor-pointer transform" 
+        :class="{ 'scale-95 opacity-80': activeClickDiv === 'profile' }"
+        :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
+      >
         <div class="p-6 h-full flex flex-col">
           <div class="flex items-center mb-4">
             <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
@@ -373,25 +337,20 @@
           <div class="flex-1 flex items-center justify-center">
             <div class="text-center">
               <p class="text-gray-600 text-sm">
-                Verwalten Sie Ihre persönlichen Daten und Ausweise
+                Verwalte deine persönlichen Daten und Ausweise
               </p>
             </div>
-          </div>
-          
-          <div class="mt-4">
-            <button
-              @click="showProfileModal = true"
-              class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              :style="{ background: buttonColor }"
-            >
-              Profil öffnen
-            </button>
           </div>
         </div>
       </div>
 
       <!-- Fahrlehrer Card - Uses Secondary Color -->
-      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow mb-8" :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '1px' }">
+      <div 
+        @click="handleClickWithDelay('instructors', () => { showInstructorModal = true })"
+        class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all mb-4 cursor-pointer transform" 
+        :class="{ 'scale-95 opacity-80': activeClickDiv === 'instructors' }"
+        :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '4.5px' }"
+      >
         <div class="p-6 h-full flex flex-col">
           <div class="flex items-center mb-4">
             <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
@@ -407,26 +366,19 @@
           <div class="flex-1 flex items-center justify-center">
             <div class="text-center">
               <p class="text-gray-600 text-sm">
-                Verwalten Sie Ihre Fahrlehrerverbindungen
-              </p>
+                Hier findest du die Kontaktdaten deiner Fahrlehrer              </p>
             </div>
-          </div>
-          
-          <div class="mt-4">
-            <button
-              @click="showInstructorModal = true"
-              class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              :style="{ background: secondaryButtonColor }"
-              :disabled="isLoading"
-            >
-              Fahrlehrer anzeigen
-            </button>
           </div>
         </div>
       </div>
 
       <!-- Reglemente Card - Uses Accent Color -->
-      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow mb-8" :style="{ borderColor: accentButtonBorderColor, borderWidth: '1px' }">
+      <div 
+        @click="handleClickWithDelay('regulations', () => { showReglementeModal = true })"
+        class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all mb-4 cursor-pointer transform" 
+        :class="{ 'scale-95 opacity-80': activeClickDiv === 'regulations' }"
+        :style="{ borderColor: accentButtonBorderColor, borderWidth: '4.5px' }"
+      >
         <div class="p-6 h-full flex flex-col">
           <div class="flex items-center mb-4">
             <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: accentButtonColorLight }">
@@ -445,16 +397,6 @@
                 Wichtige Dokumente und Richtlinien
               </p>
             </div>
-          </div>
-          
-          <div class="mt-4">
-            <button
-              @click="showReglementeModal = true"
-              class="w-full px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              :style="{ background: accentButtonColor }"
-            >
-              Reglemente anzeigen
-            </button>
           </div>
         </div>
       </div>
@@ -477,7 +419,6 @@
               </div>
               <div>
                 <h2 class="text-xl font-bold text-gray-900">Reglemente</h2>
-                <p class="text-sm text-gray-600">Wichtige Dokumente und Richtlinien</p>
               </div>
             </div>
             <button 
@@ -993,6 +934,7 @@ const confirmingAppointments = ref<Set<string>>(new Set()) // Loading state per 
 const showProfileModal = ref(false)
 const userDocumentCategories = ref<any[]>([])
 const userData = ref<any>(null) // Store full user data from users table
+const activeClickDiv = ref<string | null>(null) // Track which div is being clicked for visual feedback
 
 // Load user documents
 const loadUserDocuments = async () => {
@@ -1387,6 +1329,18 @@ const getRatingColorPreview = (rating: number) => {
 }
 
 // Navigation methods
+
+// Helper function to handle click with visual feedback
+const handleClickWithDelay = async (divId: string, callback: () => Promise<any> | any) => {
+  activeClickDiv.value = divId
+  try {
+    await callback()
+  } finally {
+    // Reset after a short delay so the visual effect is visible
+    await new Promise(resolve => setTimeout(resolve, 150))
+    activeClickDiv.value = null
+  }
+}
 
 const navigateToPayments = async () => {
   // Immer zur Zahlungsübersicht
