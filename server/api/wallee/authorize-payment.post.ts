@@ -252,10 +252,11 @@ export default defineEventHandler(async (event) => {
     // ✅ Check if we have a real Token ID (UUID format or numeric)
     // Token IDs sind entweder:
     // - Numerisch: 1572
-    // - UUID: 1b5a914a-d2c8-4849-beaf-55fc1c62f01c (36 chars, 5 segments)
+    // - UUID: fd7f6c7e-bc52-4aa2-8a1e-4476fe6b4cd5 (36 chars, 5 segments)
     // Customer IDs sind:
     // - Lang: dt-{tenantId}-{userId} (starts with 'dt-', > 50 chars)
-    const providerId = paymentMethod.provider_payment_method_id || ''
+    // WICHTIG: Verwende wallee_token (die echte Token ID), nicht provider_payment_method_id!
+    const providerId = paymentMethod.wallee_token || paymentMethod.provider_payment_method_id || ''
     const isNumeric = !isNaN(parseInt(providerId)) && providerId === parseInt(providerId).toString()
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(providerId)
     const isCustomerId = providerId.startsWith('dt-') && providerId.length > 50
@@ -267,13 +268,14 @@ export default defineEventHandler(async (event) => {
       isNumeric,
       isUUID,
       isCustomerId,
-      hasRealTokenId
+      hasRealTokenId,
+      source: paymentMethod.wallee_token ? 'wallee_token' : 'provider_payment_method_id'
     })
     
     if (hasRealTokenId) {
       // ✅ OPTION 1: Use TOKEN ID (preferred for One-Click Payment)
       console.log('💳 Using stored token ID for one-click payment')
-      transactionData.token = paymentMethod.provider_payment_method_id
+      transactionData.token = paymentMethod.wallee_token || paymentMethod.provider_payment_method_id
       transactionData.autoConfirmationEnabled = true
       transactionData.chargeRetryEnabled = false
       transactionData.completionBehavior = completionBehavior
