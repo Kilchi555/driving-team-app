@@ -151,8 +151,15 @@ export default defineEventHandler(async (event) => {
       
       // Option 1: token oder tokenId in transaction (numerische ID!)
       if (transactionAny.token || transactionAny.tokenId) {
-        paymentMethodToken = (transactionAny.token || transactionAny.tokenId)?.toString()
-        console.log('✅ Found numeric token ID in transaction:', paymentMethodToken)
+        const tokenValue = transactionAny.token || transactionAny.tokenId
+        // ✅ WICHTIG: Könnte ein Objekt sein, extrahiere die ID!
+        if (typeof tokenValue === 'object' && tokenValue !== null) {
+          paymentMethodToken = tokenValue.id?.toString() || tokenValue.toString()
+          console.log('✅ Extracted token ID from token object:', paymentMethodToken)
+        } else {
+          paymentMethodToken = tokenValue?.toString()
+          console.log('✅ Found numeric token ID in transaction:', paymentMethodToken)
+        }
       }
       
       // Option 1b: paymentMethodToken (könnte Token Version UUID sein)
