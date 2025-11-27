@@ -1928,7 +1928,12 @@ const confirmAppointment = async (appointment: any) => {
         })
         .eq('id', payment.id)
 
-      if (shouldAuthorizeNow) {
+      // ❌ DEAKTIVIERT: One-Click Payment (Token-based authorization)
+      // TODO: Später aktivieren wenn Wallee Token-Problem gelöst ist
+      // Problem: Wallee ignoriert token-Parameter und verwendet stattdessen customerId
+      const ONE_CLICK_PAYMENT_ENABLED = false
+      
+      if (shouldAuthorizeNow && ONE_CLICK_PAYMENT_ENABLED) {
         try {
           const authorizeResult = await $fetch('/api/wallee/authorize-payment', {
             method: 'POST',
