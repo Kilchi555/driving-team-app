@@ -509,12 +509,14 @@ export const useReminderService = () => {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
+        timeZone: 'Europe/Zurich'
       })
 
       const appointmentTime = new Date(appointment.start_time).toLocaleTimeString('de-CH', {
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        timeZone: 'Europe/Zurich'
       })
 
       // Create confirmation link with token
