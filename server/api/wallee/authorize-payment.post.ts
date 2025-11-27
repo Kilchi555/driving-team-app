@@ -220,11 +220,11 @@ export default defineEventHandler(async (event) => {
         willChargeImmediately: hoursUntilAppointment < automaticPaymentHoursBefore
       })
       
-      // ✅ Wenn Termin < 24h entfernt: sofort abbuchen (COMPLETE_IMMEDIATE)
+      // ✅ Wenn Termin < 24h entfernt: sofort abbuchen (COMPLETE_IMMEDIATELY with LY!)
       // Sonst: Nur Zustimmung sammeln, kein Charge (COMPLETE_DEFERRED)
       if (hoursUntilAppointment < automaticPaymentHoursBefore) {
-        completionBehavior = 'COMPLETE_IMMEDIATE'
-        console.log('⚡ Short-term appointment (< 24h) - using COMPLETE_IMMEDIATE for immediate charge')
+        completionBehavior = 'COMPLETE_IMMEDIATELY'
+        console.log('⚡ Short-term appointment (< 24h) - using COMPLETE_IMMEDIATELY for immediate charge')
       } else {
         completionBehavior = 'COMPLETE_DEFERRED'
         console.log('ℹ️ Long-term appointment (>= 24h) - using COMPLETE_DEFERRED, charge will happen via cron 24h before')
