@@ -1,6 +1,11 @@
 <!-- pages/[slug]/services.vue - Service selection page -->
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
+  <div 
+    class="min-h-screen flex items-center justify-center p-4 transition-colors duration-300"
+    :style="{ 
+      background: `linear-gradient(to bottom right, ${tenantPrimaryColor}, ${tenantSecondaryColor})` 
+    }"
+  >
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl">
       <!-- Header -->
       <div class="bg-gray-100 text-white p-6 rounded-t-xl">
