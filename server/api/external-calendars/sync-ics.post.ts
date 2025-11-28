@@ -154,17 +154,23 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}+00`
       }
       
-      return {
+      const busyTime: any = {
         tenant_id: calendar.tenant_id,
         staff_id: calendar.staff_id,
         external_calendar_id: calendar_id,
         external_event_id: ((event.uid || `event_${Date.now()}_${Math.random()}`) + '').slice(0, 255),
         event_title: 'Privat', // Anonymisiert für Datenschutz
-        event_location: event.location || null, // Extract location from ICS event
         start_time: convertToUTC(event.start),
         end_time: convertToUTC(event.end),
         sync_source: 'ics'
       }
+      
+      // Only add event_location if event has location data
+      if (event.location) {
+        busyTime.event_location = event.location
+      }
+      
+      return busyTime
     })
 
     // Deduplicate by conflict key to avoid "ON CONFLICT ... cannot affect row a second time"
@@ -220,12 +226,14 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
 function parseICSData(icsData: string): Array<{
   uid?: string
   summary?: string
+  location?: string
   start: string
   end: string
 }> {
   const events: Array<{
     uid?: string
     summary?: string
+    location?: string
     start: string
     end: string
   }> = []
@@ -281,6 +289,9 @@ function parseICSData(icsData: string): Array<{
           break
         case 'SUMMARY':
           currentEvent.summary = value
+          break
+        case 'LOCATION':
+          currentEvent.location = value
           break
         case 'DTSTART': {
           const tzidParam = params.find(p => p.toUpperCase().startsWith('TZID='))
