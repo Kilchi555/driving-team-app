@@ -2454,6 +2454,23 @@ onMounted(async () => {
     
     console.log('✅ Auth verified, loading data...')
     
+    // First, load user data from database
+    if (!userData.value && currentUser.value?.id) {
+      const supabase = getSupabase()
+      const { data: userDataFromDb, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', currentUser.value.id)
+        .single()
+      
+      if (!userError && userDataFromDb) {
+        userData.value = userDataFromDb
+        console.log('✅ User data loaded:', userDataFromDb.id)
+      } else {
+        console.warn('⚠️ Error loading user data:', userError?.message)
+      }
+    }
+    
     // Load tenant data and branding
     if (userData.value?.tenant_id) {
       console.log('🎨 Loading tenant data for:', userData.value.tenant_id)
