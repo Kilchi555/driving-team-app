@@ -309,7 +309,7 @@
         <!-- Step 2: Lernfahrausweis Upload (only for Fahrlektionen) -->
         <div v-if="!registrationComplete && currentStep === 2 && requiresLernfahrausweis" class="space-y-6">
           <div class="text-center mb-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-2">Lernfahr- oder Führerausweis hochladen</h2>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">Ausweis hochladen</h2>
             <p class="text-gray-600 text-sm">Bitte laden Sie für jede Kategorie einen Ausweis hoch</p>
           </div>
 
@@ -320,9 +320,19 @@
               :key="category"
               class="border-2 border-gray-200 rounded-lg p-6"
             >
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                Kategorie {{ category }}
-              </h3>
+              <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">
+                  Kategorie {{ category }}
+                </h3>
+                <p class="text-sm text-gray-600 mt-1">
+                  <template v-if="category === 'M' || category === 'Motorboot'">
+                    Lernfahr-/Führerausweis, ID oder Pass
+                  </template>
+                  <template v-else>
+                    Lernfahr- oder Führerausweis
+                  </template>
+                </p>
+              </div>
 
               <!-- Upload Area -->
               <div 
