@@ -518,9 +518,33 @@ const dragOver = reactive<Record<string, boolean>>({})
 
 // Load user data by token
 onMounted(async () => {
+  // DEV MODE: Allow testing with 'dev' token
+  const token = route.params.token as string
+  const isDevelopment = process.dev && token === 'dev'
+  
+  if (isDevelopment) {
+    console.log('🔧 DEV MODE: Using mock data for testing')
+    isLoading.value = false
+    userData.value = {
+      id: 'dev-user-id',
+      email: 'test@example.com',
+      first_name: 'Test',
+      last_name: 'User',
+      tenant_id: '64259d68-195a-4c68-8875-f1b44d962830'
+    }
+    tenantName.value = 'Driving Team'
+    categories.value = [
+      { code: 'B', name: 'Auto', id: 1 },
+      { code: 'A1', name: 'Motorrad', id: 2 },
+      { code: 'Boot', name: 'Motorboot', id: 31 }
+    ]
+    termsText.value = 'Test AGB - Development Mode'
+    form.email = 'test@example.com'
+    return
+  }
+  
   // Redirect if we're on localhost to production domain
   if (process.client && window.location.hostname === 'localhost') {
-    const token = route.params.token
     const redirectUrl = `https://simy.ch/onboarding/${token}`
     console.log('🔄 Redirecting onboarding link from localhost to production:', redirectUrl)
     window.location.href = redirectUrl
