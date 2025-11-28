@@ -21,9 +21,24 @@
 
       <!-- Service Selection -->
       <div class="p-6">
-        <div class="space-y-4">
+        <!-- Loading State -->
+        <div v-if="isLoading" class="space-y-4">
+          <div class="w-full p-6 bg-gray-100 rounded-lg animate-pulse">
+            <div class="h-20"></div>
+          </div>
+          <div class="w-full p-6 bg-gray-100 rounded-lg animate-pulse">
+            <div class="h-20"></div>
+          </div>
+          <div class="w-full p-6 bg-gray-100 rounded-lg animate-pulse">
+            <div class="h-20"></div>
+          </div>
+        </div>
+
+        <!-- Service Buttons -->
+        <div v-else class="space-y-4">
           <!-- Fahrlektionen -->
           <button
+            v-if="availableServices.includes('fahrlektion')"
             @click="selectService('fahrlektion')"
             class="w-full p-6 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-left group"
           >
@@ -39,6 +54,7 @@
 
           <!-- Theorielektionen -->
           <button
+            v-if="availableServices.includes('theorie')"
             @click="selectService('theorie')"
             class="w-full p-6 bg-white border-2 border-gray-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all duration-200 text-left group"
           >
@@ -46,7 +62,7 @@
               <div class="text-4xl">📚</div>
               <div class="flex-1">
                 <h3 class="text-xl font-semibold text-gray-900 group-hover:text-green-700">Theorielektionen</h3>
-                <p class="text-gray-600 mt-1">Theorelektionen für effizientes Lernen</p>
+                <p class="text-gray-600 mt-1">Theorielektionen für effizientes Lernen</p>
               </div>
               <div class="text-2xl text-gray-400 group-hover:text-green-500">→</div>
             </div>
@@ -54,6 +70,7 @@
 
           <!-- Beratung -->
           <button
+            v-if="availableServices.includes('beratung')"
             @click="selectService('beratung')"
             class="w-full p-6 bg-white border-2 border-gray-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all duration-200 text-left group"
           >
@@ -66,10 +83,21 @@
               <div class="text-2xl text-gray-400 group-hover:text-purple-500">→</div>
             </div>
           </button>
+
+          <!-- No Services Available -->
+          <div v-if="availableServices.length === 0" class="p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div class="flex items-start space-x-3">
+              <div class="text-yellow-500 text-xl">⚠️</div>
+              <div class="text-sm text-yellow-800">
+                <p class="font-medium">Keine Dienstleistungen verfügbar</p>
+                <p class="mt-1">Derzeit sind keine Services für diese Fahrschule aktiv. Bitte kontaktieren Sie die Fahrschule direkt.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Info Box -->
-        <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div v-if="!isLoading && availableServices.length > 0" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div class="flex items-start space-x-3">
             <div class="text-blue-500 text-xl">ℹ️</div>
             <div class="text-sm text-blue-800">
@@ -105,6 +133,7 @@ const { loadTenant, tenantId, currentTenant } = useTenant()
 
 // State for available services
 const availableServices = ref<string[]>([])
+const isLoading = ref(true)
 
 // Computed
 const activeTenantId = computed(() => {
@@ -117,10 +146,19 @@ const tenantName = computed(() => {
 
 // Build dynamic service header text
 const serviceHeader = computed(() => {
-  if (availableServices.value.length === 0) {
+  if (isLoading.value) {
     return `Dienstleistungen von ${tenantName.value}`
   }
-  return `${availableServices.value.join(', ')} von ${tenantName.value}`
+  if (availableServices.value.length === 0) {
+    return `Keine Dienstleistungen verfügbar`
+  }
+  const serviceNames = availableServices.value.map(s => {
+    if (s === 'fahrlektion') return 'Fahrlektionen'
+    if (s === 'theorie') return 'Theorielektionen'
+    if (s === 'beratung') return 'Beratung'
+    return s
+  })
+  return `${serviceNames.join(' • ')} bei ${tenantName.value}`
 })
 
 // Methods
@@ -154,9 +192,11 @@ onMounted(async () => {
   console.log('📍 Current route:', route.path)
   console.log('🏷️ Tenant slug:', tenantSlug.value)
   
-  // Load categories for the tenant identified by slug
+  isLoading.value = true
+  
+  // Load available services for the tenant identified by slug
   if (tenantSlug.value) {
-    console.log('🏢 Loading categories for tenant slug:', tenantSlug.value)
+    console.log('🏢 Loading services for tenant slug:', tenantSlug.value)
     try {
       // First, get the tenant ID from the slug
       const { data: tenantData, error: tenantError } = await supabase
@@ -167,35 +207,69 @@ onMounted(async () => {
       
       if (tenantError || !tenantData) {
         console.warn('⚠️ Tenant not found for slug:', tenantSlug.value, tenantError)
-      } else {
-        console.log('✅ Tenant found:', tenantData)
-        
-        // Load categories for this tenant
-        const { data: categories, error: catError } = await supabase
-          .from('categories')
-          .select('name')
-          .eq('tenant_id', tenantData.id)
-          .eq('is_active', true)
-          .order('name')
-        
-        if (catError) {
-          console.warn('⚠️ Failed to load categories:', catError)
-        } else if (categories && categories.length > 0) {
-          const names = categories.map(cat => cat.name)
-          availableServices.value = names
-          console.log('📚 Available services:', names)
-        } else {
-          console.log('ℹ️ No active categories found for tenant:', tenantData.id)
-        }
-        
-        // Also load tenant for other uses
-        await loadTenant(tenantSlug.value)
+        isLoading.value = false
+        return
       }
+      
+      console.log('✅ Tenant found:', tenantData)
+      
+      // Load pricing_rules for this tenant to determine available services
+      const { data: pricingRules, error: pricingError } = await supabase
+        .from('pricing_rules')
+        .select('rule_type')
+        .eq('tenant_id', tenantData.id)
+        .eq('is_active', true)
+      
+      if (pricingError) {
+        console.warn('⚠️ Failed to load pricing rules:', pricingError)
+        isLoading.value = false
+        return
+      }
+      
+      console.log('📊 Pricing rules found:', pricingRules)
+      
+      // Extract unique service types from pricing rules
+      const uniqueServiceTypes = [...new Set(pricingRules?.map(r => r.rule_type) || [])]
+      console.log('🔍 Unique service types:', uniqueServiceTypes)
+      
+      // Map rule_types to service identifiers
+      const services: string[] = []
+      if (uniqueServiceTypes.includes('base_price')) {
+        services.push('fahrlektion')
+      }
+      if (uniqueServiceTypes.includes('theory')) {
+        services.push('theorie')
+      }
+      if (uniqueServiceTypes.includes('consultation')) {
+        services.push('beratung')
+      }
+      
+      console.log('✅ Available services:', services)
+      
+      // Auto-skip if only one service is available
+      if (services.length === 1) {
+        console.log('🎯 Only one service available, auto-redirecting to registration...')
+        const url = `/register/${tenantSlug.value}?service=${services[0]}`
+        console.log('🔗 Navigating to:', url)
+        navigateTo(url)
+        return
+      }
+      
+      availableServices.value = services
+      
+      // Also load tenant for other uses
+      await loadTenant(tenantSlug.value)
+      
     } catch (error) {
-      console.warn('⚠️ Error loading tenant or categories:', error)
+      console.warn('⚠️ Error loading tenant or pricing rules:', error)
+    } finally {
+      isLoading.value = false
     }
+  } else {
+    isLoading.value = false
   }
 
   console.log('✅ Service selection page ready for:', tenantSlug.value)
 })
 </script>
+
