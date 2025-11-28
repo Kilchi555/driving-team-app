@@ -307,7 +307,6 @@ function parseICSData(icsData: string): Array<{
         case 'LOCATION':
           currentEvent.location = value
           console.log(`🗺️  Parsed LOCATION from ICS: "${value}"`)
-          console.log(`🔍 Full line: "${line}"`)
           break
         case 'DTSTART': {
           const tzidParam = params.find(p => p.toUpperCase().startsWith('TZID='))
@@ -322,10 +321,7 @@ function parseICSData(icsData: string): Array<{
           break
         }
         default:
-          // Log all other properties to see what we're missing
-          if (upperName && upperName.length > 0) {
-            console.log(`📋 Other property: ${upperName} = ${value.substring(0, 50)}`)
-          }
+          // ignore other properties
           break
       }
     }
