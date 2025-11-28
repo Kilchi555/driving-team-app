@@ -672,27 +672,17 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
     console.log('📅 Loading external busy times...')
     
     const { currentUser: composableCurrentUser } = useCurrentUser()
-    const authUserId = props.currentUser?.id || composableCurrentUser.value?.id
+    const currentUserData = props.currentUser || composableCurrentUser.value
     
-    if (!authUserId) {
-      console.log('⚠️ No user ID for external busy times')
+    if (!currentUserData?.id) {
+      console.log('⚠️ No user data for external busy times')
       return []
     }
     
-    // Get user's tenant_id and internal ID
-    // WICHTIG: Wir suchen nach auth_user_id, nicht nach id!
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, tenant_id')
-      .eq('auth_user_id', authUserId)
-      .single()
-    
-    if (userError || !userData) {
-      console.log('⚠️ Could not load user data for external busy times', { authUserId, error: userError })
-      return []
-    }
-    
-    console.log('🔍 DEBUG: Loading external busy times for staff_id:', userData.id)
+    console.log('🔍 DEBUG: Loading external busy times for user:', { 
+      userId: currentUserData.id, 
+      tenantId: currentUserData.tenant_id 
+    })
     
     // Load external busy times für einen erweiterten Zeitraum (1 Jahr voraus)
     const oneYearFromNow = new Date()
@@ -701,8 +691,8 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
     const { data: busyTimes, error } = await supabase
       .from('external_busy_times')
       .select('*')
-      .eq('staff_id', userData.id)
-      .eq('tenant_id', userData.tenant_id)
+      .eq('staff_id', currentUserData.id)
+      .eq('tenant_id', currentUserData.tenant_id)
       .gte('end_time', new Date().toISOString()) // Ab jetzt
       .lte('start_time', oneYearFromNow.toISOString()) // Bis 1 Jahr voraus
       .order('start_time')

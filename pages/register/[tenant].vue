@@ -93,7 +93,7 @@
           <!-- Action Buttons -->
           <div class="space-y-3 pt-4 sm:pt-6">
             <button
-              @click="navigateTo(tenantSlug ? `/${tenantSlug}` : '/login')"
+              @click="navigateTo(registeredTenantSlug || tenantSlug ? `/${registeredTenantSlug || tenantSlug}` : '/login')"
               class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
             >
               Zum Login
