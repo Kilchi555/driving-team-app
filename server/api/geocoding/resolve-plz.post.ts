@@ -62,7 +62,7 @@ async function callGoogleGeocodingAPI(
 export default defineEventHandler(async (event): Promise<GeocodeResult> => {
   try {
     const body = await readBody(event)
-    const { location } = body
+    const { location, tenantId } = body
 
     if (!location) {
       throw createError({
@@ -92,13 +92,12 @@ export default defineEventHandler(async (event): Promise<GeocodeResult> => {
 
     if (!cacheError && cached) {
       const postal_code = cached.from_plz
-      const address = cached.distance_km // We'll store the address as a string here as a hack
       console.log(`✅ Cache hit for "${normalizedLocation}" → ${postal_code}`)
       return {
         success: true,
         location: normalizedLocation,
         postal_code,
-        address
+        address: normalizedLocation
       }
     }
 
@@ -128,15 +127,17 @@ export default defineEventHandler(async (event): Promise<GeocodeResult> => {
       }
     }
 
-    // Save to plz_distance_cache with special marker
-    console.log(`💾 Saving geocoding result to plz_distance_cache`)
-    const { error: saveError } = await supabase
+    // Save to both plz_distance_cache AND locations table
+    console.log(`💾 Saving geocoding result...`)
+    
+    // 1. Save to plz_distance_cache with special marker
+    const { error: cacheError2 } = await supabase
       .from('plz_distance_cache')
       .upsert({
         from_plz: normalizedLocation,
         to_plz: '0000', // Special marker for geocoding results
         postal_code: result.postal_code,
-        driving_time_minutes: 0, // Not used for geocoding
+        driving_time_minutes: 0,
         driving_time_minutes_peak: 0,
         driving_time_minutes_offpeak: 0,
         distance_km: 0,
@@ -145,8 +146,60 @@ export default defineEventHandler(async (event): Promise<GeocodeResult> => {
         onConflict: 'from_plz,to_plz'
       })
 
-    if (saveError) {
-      console.warn('⚠️ Failed to save geocoding cache:', saveError)
+    if (cacheError2) {
+      console.warn('⚠️ Failed to save to plz_distance_cache:', cacheError2)
+    }
+
+    // 2. Create or update location in locations table (if tenantId provided)
+    if (tenantId) {
+      console.log(`💾 Creating/updating location in locations table...`)
+      
+      // Try to find existing location with this city
+      const { data: existingLocation } = await supabase
+        .from('locations')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('city', normalizedLocation)
+        .limit(1)
+        .single()
+
+      if (existingLocation) {
+        // Update existing
+        const { error: updateError } = await supabase
+          .from('locations')
+          .update({
+            postal_code: result.postal_code,
+            city: normalizedLocation,
+            address: result.address,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingLocation.id)
+
+        if (updateError) {
+          console.warn('⚠️ Failed to update location:', updateError)
+        } else {
+          console.log(`✅ Updated existing location with PLZ: ${result.postal_code}`)
+        }
+      } else {
+        // Create new generic location entry for this city
+        const { error: createError } = await supabase
+          .from('locations')
+          .insert({
+            tenant_id: tenantId,
+            name: normalizedLocation, // Generic name
+            city: normalizedLocation,
+            postal_code: result.postal_code,
+            address: result.address,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+
+        if (createError) {
+          console.warn('⚠️ Failed to create location:', createError)
+        } else {
+          console.log(`✅ Created new location entry: ${normalizedLocation} (${result.postal_code})`)
+        }
+      }
     }
 
     return {
