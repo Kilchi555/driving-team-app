@@ -3303,6 +3303,63 @@ onMounted(async () => {
         // Set the tenant from slug
         await setTenantFromSlug(slug)
         console.log('✅ Tenant set from slug:', slug)
+        
+        // Check for pre-fill parameters (from returning customer)
+        const prefill = route.query.prefill as string
+        if (prefill === 'true' && route.query.category && route.query.staff && route.query.location && route.query.duration) {
+          console.log('🎯 Pre-filling booking from previous appointment:', {
+            category: route.query.category,
+            staff: route.query.staff,
+            location: route.query.location,
+            duration: route.query.duration
+          })
+          
+          // Load categories and find the one to pre-select
+          await loadCategories()
+          const categoryToSelect = categories.value.find(c => c.code === route.query.category)
+          
+          if (categoryToSelect) {
+            // Pre-select category
+            await selectCategory(categoryToSelect)
+            
+            // Pre-select duration
+            const durationValue = parseInt(route.query.duration as string)
+            if (durationOptions.value.includes(durationValue)) {
+              selectedDuration.value = durationValue
+              filters.value.duration_minutes = durationValue
+              currentStep.value = 3
+            }
+            
+            // Pre-select location
+            const locationToSelect = availableLocations.value.find(l => l.id === route.query.location)
+            if (locationToSelect) {
+              await selectLocation(locationToSelect)
+            }
+            
+            // Pre-select instructor
+            const instructorToSelect = availableInstructors.value.find(i => i.id === route.query.staff)
+            if (instructorToSelect) {
+              await selectInstructor(instructorToSelect)
+              
+              // Jump to step 5 (time slot selection)
+              currentStep.value = 5
+              console.log('✅ Pre-filled all data, jumped to step 5 (time selection)')
+            }
+          }
+        } else if (prefill === 'partial' && route.query.category) {
+          console.log('🎯 Partial pre-fill: category and/or staff')
+          
+          // Load categories and find the one to pre-select
+          await loadCategories()
+          const categoryToSelect = categories.value.find(c => c.code === route.query.category)
+          
+          if (categoryToSelect) {
+            // Pre-select category
+            await selectCategory(categoryToSelect)
+            currentStep.value = 2
+            console.log('✅ Pre-selected category, user can continue from step 2')
+          }
+        }
       } else {
         console.error('❌ No tenant slug provided in URL')
       }

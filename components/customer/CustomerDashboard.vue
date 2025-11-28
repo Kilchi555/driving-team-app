@@ -1320,7 +1320,7 @@ const navigateToLessonBooking = async () => {
     const supabase = getSupabase()
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('tenant_id')
+      .select('tenant_id, assigned_staff_ids, category')
       .eq('auth_user_id', currentUser.value?.id)
       .single()
     
@@ -1343,10 +1343,47 @@ const navigateToLessonBooking = async () => {
       return
     }
     
-    // Navigate with tenant slug and referrer
+    // Load last confirmed appointment to pre-fill booking data
+    const { data: lastAppointment, error: appointmentError } = await supabase
+      .from('appointments')
+      .select('type, staff_id, location_id, duration_minutes')
+      .eq('user_id', currentUser.value?.id)
+      .eq('tenant_id', userData.tenant_id)
+      .in('status', ['confirmed', 'completed'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+    
+    if (appointmentError && appointmentError.code !== 'PGRST116') {
+      console.warn('⚠️ Error loading last appointment:', appointmentError)
+    }
+    
+    // Build query parameters
+    const query: any = { referrer: '/customer-dashboard' }
+    
+    // If user has previous appointments, pre-fill the data
+    if (lastAppointment) {
+      console.log('✅ Found previous appointment, pre-filling:', lastAppointment)
+      query.prefill = 'true'
+      query.category = lastAppointment.type
+      query.staff = lastAppointment.staff_id
+      query.location = lastAppointment.location_id
+      query.duration = lastAppointment.duration_minutes
+    } 
+    // Otherwise, use assigned_staff_ids and category from user profile
+    else if (userData.assigned_staff_ids && userData.assigned_staff_ids.length > 0) {
+      console.log('✅ No previous appointments, using assigned staff and category')
+      query.prefill = 'partial'
+      if (userData.category && userData.category.length > 0) {
+        query.category = userData.category[0] // Use first category
+      }
+      query.staff = userData.assigned_staff_ids[0] // Use first assigned staff
+    }
+    
+    // Navigate with tenant slug and query parameters
     await navigateTo({
       path: `/booking/availability/${tenantData.slug}`,
-      query: { referrer: '/customer-dashboard' }
+      query
     })
   } catch (err) {
     console.error('❌ Error navigating to lesson booking:', err)
