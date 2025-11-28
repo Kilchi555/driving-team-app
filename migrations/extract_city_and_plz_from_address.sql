@@ -2,7 +2,14 @@
 -- Populates postal_code column from existing address data
 -- Format: "Street, NNNN City"
 
--- Extract postal code - 4 digits after comma and space
+-- Step 1: Clear bad postal_code values first
+UPDATE locations
+SET postal_code = NULL
+WHERE address IS NOT NULL 
+  AND address LIKE '%, %'
+  AND (postal_code IS NULL OR LENGTH(postal_code) != 4);
+
+-- Step 2: Extract postal code - 4 digits after comma and space
 -- Example: "Cilanderstrasse, 9100 Herisau" -> take chars 2-5 after ", " = "9100"
 UPDATE locations
 SET postal_code = SUBSTRING(address FROM POSITION(', ' IN address) + 2 FOR 4)
