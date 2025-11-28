@@ -74,23 +74,17 @@
           </div>
           
           <!-- Email Confirmation Required -->
-          <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 sm:p-6">
+          <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4 sm:p-6">
             <div class="flex items-start space-x-2 sm:space-x-3">
               <div class="flex-shrink-0 mt-1">
-                <svg class="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <svg class="h-5 w-5 sm:h-6 sm:w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
               </div>
               <div class="text-left min-w-0">
-                <h3 class="text-base sm:text-lg font-semibold text-blue-900 mb-2">Bestätigen Sie Ihre E-Mail-Adresse</h3>
-                <p class="text-blue-800 mb-2 text-sm sm:text-base break-words">
-                  Wir haben Ihnen eine Bestätigungsmail an <strong>{{ registeredEmail }}</strong> gesendet.
-                </p>
-                <p class="text-blue-700 text-xs sm:text-sm mb-2">
-                  Bitte klicken Sie auf den Link in der E-Mail, um Ihren Account zu aktivieren.
-                </p>
-                <p class="text-blue-700 text-xs sm:text-sm">
-                  Nach der Bestätigung können Sie sich mit Ihren Zugangsdaten einloggen.
+                <h3 class="text-base sm:text-lg font-semibold text-green-900 mb-2">Account aktiviert</h3>
+                <p class="text-green-800 text-sm sm:text-base break-words">
+                  Ihr Account ist sofort aktiv. Sie können sich jetzt mit Ihren Zugangsdaten einloggen.
                 </p>
               </div>
             </div>
@@ -118,10 +112,10 @@
           <!-- Action Buttons -->
           <div class="space-y-3 pt-4 sm:pt-6">
             <button
-              @click="navigateTo(`/${registeredTenantSlug}`)"
+              @click="navigateTo(tenantSlug ? `/login/${tenantSlug}` : '/login')"
               class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
             >
-              Weiter zur Fahrschule
+              Zum Login
             </button>
           </div>
         </div>
@@ -793,17 +787,23 @@ const goBack = () => {
 
 // File upload
 const handleFileUpload = (event: Event) => {
+  console.log('📤 File upload started')
   const file = (event.target as HTMLInputElement).files?.[0]
+  console.log('📄 File selected:', file?.name, 'Size:', file?.size)
+  
   if (file) {
     // Check file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
+      console.error('❌ File too large')
       showError('Datei zu groß', 'Maximale Größe: 5MB')
       return
     }
     
     const reader = new FileReader()
     reader.onload = (e) => {
+      console.log('✅ File read complete, setting uploadedImage')
       uploadedImage.value = e.target?.result as string
+      console.log('✅ uploadedImage.value set, length:', uploadedImage.value?.length)
     }
     reader.readAsDataURL(file)
   }
