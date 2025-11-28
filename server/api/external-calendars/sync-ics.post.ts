@@ -176,7 +176,6 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     
     // Resolve postal codes for all busy times (will be populated after initial insert)
     // This happens asynchronously to not block the sync
-    const supabase = getSupabaseAdmin()
     
     // Deduplicate by conflict key to avoid "ON CONFLICT ... cannot affect row a second time"
     const uniqueMap = new Map<string, typeof busyTimes[number]>()
