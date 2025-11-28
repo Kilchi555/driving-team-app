@@ -252,10 +252,11 @@
                         @error="handleImageError"
                         @load="() => handleImageLoad(doc)"
                       >
-                      <div v-else class="w-16 h-16 bg-gray-200 rounded border border-gray-200 flex items-center justify-center">
-                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div v-else class="w-16 h-16 bg-red-50 rounded border border-red-200 flex flex-col items-center justify-center">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                         </svg>
+                        <span class="text-xs text-red-600 font-medium">PDF</span>
                       </div>
                     </div>
                     

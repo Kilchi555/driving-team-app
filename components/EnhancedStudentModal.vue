@@ -85,13 +85,22 @@
                 :href="getStudentDocumentUrl(doc)" 
                 target="_blank"
                 class="flex-shrink-0"
-                title="Zum Öffnen klicken"
+                :title="doc.file_name"
               >
+                <!-- Image Preview -->
                 <img 
+                  v-if="doc.file_type && doc.file_type.startsWith('image/')"
                   :src="getStudentDocumentUrl(doc)" 
                   :alt="doc.file_name"
                   class="w-24 h-24 object-cover rounded border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer"
                 />
+                <!-- PDF Icon -->
+                <div v-else class="w-24 h-24 bg-red-50 rounded border border-red-200 hover:border-red-400 transition-colors cursor-pointer flex flex-col items-center justify-center">
+                  <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                  </svg>
+                  <span class="text-xs text-red-600 mt-1 font-medium">PDF</span>
+                </div>
               </a>
             </div>
             
