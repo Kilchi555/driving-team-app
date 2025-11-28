@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     console.log('📝 Complete onboarding request body:', JSON.stringify(body, null, 2))
     
-    const { token, password, email, birthdate, category, street, street_nr, zip, city, documentUrls } = body
+    const { token, password, email, birthdate, categories, category, street, street_nr, zip, city, documentUrls } = body
 
     if (!token || !password || !email) {
       console.error('❌ Missing required fields:', { token: !!token, password: !!password, email: !!email })
@@ -92,8 +92,10 @@ export default defineEventHandler(async (event) => {
     console.log('✅ Auth user created:', { id: authData.user.id, email: authData.user.email })
 
     // 4. Update user record with all data
-    // Ensure category stored as array
-    const categoryValue = Array.isArray(category) ? category : (category ? [category] : [])
+    // Ensure category stored as array - support both old (category) and new (categories) format
+    const categoryValue = Array.isArray(categories) ? categories : 
+                         Array.isArray(category) ? category : 
+                         (category ? [category] : [])
 
     const { error: updateError } = await supabaseAdmin
       .from('users')

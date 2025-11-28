@@ -169,21 +169,30 @@
                 >
               </div>
 
-              <!-- Category -->
+              <!-- Category Selection -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  Führerausweis-Kategorie *
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                  Führerausweis-Kategorien *
                 </label>
-                <select
-                  v-model="form.category"
-                  required
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="">Kategorie wählen</option>
-                  <option v-for="cat in categories" :key="cat.code || cat.id" :value="cat.code || cat.id">
-                    {{ cat.name || cat.code || cat.id }}
-                  </option>
-                </select>
+                <div class="space-y-3">
+                  <div v-for="cat in categories" :key="cat.code || cat.id" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center space-x-3">
+                        <span class="text-lg font-bold text-gray-800">{{ cat.code || cat.id }}</span>
+                        <span class="text-sm text-gray-600">{{ cat.name }}</span>
+                      </div>
+                    </div>
+                    <label class="relative inline-flex items-start cursor-pointer ml-4 flex-shrink-0">
+                      <input
+                        v-model="form.categories"
+                        :value="cat.code || cat.id"
+                        type="checkbox"
+                        class="sr-only peer"
+                      />
+                      <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <!-- Address -->
@@ -249,33 +258,47 @@
           <div v-if="step === 2">
             <h2 class="text-xl font-bold mb-4">Dokumente hochladen</h2>
             <p class="text-sm text-gray-600 mb-6">
-              Bitte lade deinen Lernfahr- oder Fahrausweis hoch.
+              Bitte lade für jede Kategorie einen Ausweis hoch.
             </p>
 
             <div class="space-y-6">
-              <!-- Lernfahr- oder Fahrausweis (Required) -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-3">
-                  Lernfahr- oder Fahrausweis *
-                </label>
+              <!-- Upload per Category -->
+              <div 
+                v-for="category in form.categories" 
+                :key="category"
+                class="border-2 border-gray-200 rounded-lg p-6"
+              >
+                <div class="mb-4">
+                  <h3 class="text-lg font-semibold text-gray-900">
+                    Kategorie {{ category }}
+                  </h3>
+                  <p class="text-sm text-gray-600 mt-1">
+                    <template v-if="category === 'Boot' || category === 'M' || category === 'Motorboot'">
+                      Lernfahr-/Führerausweis, ID oder Pass
+                    </template>
+                    <template v-else>
+                      Lernfahr- oder Führerausweis
+                    </template>
+                  </p>
+                </div>
                 
                 <!-- File Upload Area -->
                 <div 
-                  @drop="handleDrop($event, 'learner_permit')"
-                  @dragover="handleDragOver($event, 'learner_permit')"
-                  @dragenter="handleDragOver($event, 'learner_permit')"
-                  @dragleave="handleDragLeave($event, 'learner_permit')"
+                  @drop="handleDrop($event, category)"
+                  @dragover="handleDragOver($event, category)"
+                  @dragenter="handleDragOver($event, category)"
+                  @dragleave="handleDragLeave($event, category)"
                   :class="[
                     'border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200',
-                    dragOver.learner_permit ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400'
+                    dragOver[category] ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400'
                   ]"
                 >
-                  <div v-if="!uploadedFiles.learner_permit">
+                  <div v-if="!uploadedFiles[category]">
                     <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                       <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                     <div class="mt-4">
-                      <label for="learner_permit" class="cursor-pointer">
+                      <label :for="`file_${category}`" class="cursor-pointer">
                         <span class="mt-2 block text-sm font-medium text-gray-900">
                           Datei hierher ziehen oder
                           <span class="text-green-600 hover:text-green-500">durchsuchen</span>
@@ -285,10 +308,10 @@
                         </p>
                       </label>
                       <input
-                        id="learner_permit"
+                        :id="`file_${category}`"
                         type="file"
                         accept="image/*,.pdf"
-                        @change="handleFileUpload($event, 'learner_permit')"
+                        @change="handleFileUpload($event, category)"
                         class="sr-only"
                         required
                       >
@@ -299,7 +322,7 @@
                   <div v-else class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
                     <div class="flex items-center space-x-3">
                       <div class="flex-shrink-0">
-                        <svg v-if="uploadedFiles.learner_permit.type.startsWith('image/')" class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg v-if="uploadedFiles[category].type.startsWith('image/')" class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                         <svg v-else class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -308,16 +331,16 @@
                       </div>
                       <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-green-900 truncate">
-                          {{ uploadedFiles.learner_permit.name }}
+                          {{ uploadedFiles[category].name }}
                         </p>
                         <p class="text-xs text-green-600">
-                          {{ formatFileSize(uploadedFiles.learner_permit.size) }}
+                          {{ formatFileSize(uploadedFiles[category].size) }}
                         </p>
                       </div>
                     </div>
                     <button
                       type="button"
-                      @click="removeFile('learner_permit')"
+                      @click="removeFile(category)"
                       class="flex-shrink-0 p-1 text-green-600 hover:text-green-800"
                     >
                       <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -482,7 +505,7 @@ const form = reactive({
   confirmPassword: '',
   email: '',
   birthdate: '',
-  category: '',
+  categories: [] as string[], // Changed from category to categories array
   street: '',
   street_nr: '',
   zip: '',
@@ -634,6 +657,21 @@ const handleNextStep = async () => {
     }
     passwordError.value = ''
     step.value++
+  } else if (step.value === 1) {
+    // Step 2 validation: Check that at least one category is selected
+    if (form.categories.length === 0) {
+      showErrorMessage('Bitte wähle mindestens eine Kategorie aus')
+      return
+    }
+    step.value++
+  } else if (step.value === 2) {
+    // Step 3 validation: Check that all categories have uploaded documents
+    const allCategoriesHaveDocuments = form.categories.every(cat => uploadedFiles[cat])
+    if (!allCategoriesHaveDocuments) {
+      showErrorMessage('Bitte lade für jede Kategorie einen Ausweis hoch')
+      return
+    }
+    step.value++
   } else if (step.value < 3) {
     step.value++
   } else {
@@ -674,7 +712,7 @@ const completeOnboarding = async () => {
       password: form.password,
       email: form.email,
       birthdate: form.birthdate,
-      category: form.category,
+      categories: form.categories, // Changed from category to categories
       street: form.street,
       street_nr: form.street_nr,
       zip: form.zip,
