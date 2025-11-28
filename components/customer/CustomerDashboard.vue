@@ -869,7 +869,7 @@ import ProfileModal from './ProfileModal.vue'
 const authStore = useAuthStore()
 const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
 const { loadTenantBrandingById, primaryColor, secondaryColor, accentColor, currentTenantBranding } = useTenantBranding()
-const { currentTenant } = useTenant()
+const { currentTenant, loadTenant } = useTenant()
 
 // State
 const isLoading = ref(true)
@@ -2454,9 +2454,25 @@ onMounted(async () => {
     
     console.log('✅ Auth verified, loading data...')
     
-    // Load tenant branding
+    // Load tenant data and branding
     if (userData.value?.tenant_id) {
-      console.log('🎨 Loading tenant branding for:', userData.value.tenant_id)
+      console.log('🎨 Loading tenant data for:', userData.value.tenant_id)
+      
+      // Load tenant info from database using tenant_id
+      const supabase = getSupabase()
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('id', userData.value.tenant_id)
+        .single()
+      
+      if (!tenantError && tenantData) {
+        console.log('✅ Tenant loaded:', tenantData.name)
+      } else {
+        console.warn('⚠️ Error loading tenant:', tenantError?.message)
+      }
+      
+      // Also load branding
       await loadTenantBrandingById(userData.value.tenant_id)
     }
     
