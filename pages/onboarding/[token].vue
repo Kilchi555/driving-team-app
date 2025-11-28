@@ -723,6 +723,12 @@ const openRegulationModal = async (type: string) => {
     
     console.log('📋 Loading regulation:', type, 'for tenant:', activeTenantId)
     
+    if (!activeTenantId) {
+      console.error('❌ No tenant_id available')
+      showErrorMessage('Tenant-Daten fehlen')
+      return
+    }
+    
     // Try to load tenant-specific reglement first, then fall back to global
     const { data: regulations, error } = await supabase
       .from('tenant_reglements')
@@ -731,10 +737,13 @@ const openRegulationModal = async (type: string) => {
       .eq('is_active', true)
       .or(`tenant_id.eq.${activeTenantId},tenant_id.is.null`)
       .order('tenant_id', { ascending: false })
+      .limit(1)
+    
+    console.log('📋 Query result:', { regulations, error })
     
     if (error) {
       console.error('❌ Error loading reglement:', error)
-      showErrorMessage('Fehler beim Laden der Dokumente')
+      showErrorMessage('Fehler beim Laden der Dokumente: ' + error.message)
       return
     }
     
@@ -744,11 +753,11 @@ const openRegulationModal = async (type: string) => {
       console.log('✅ Opened reglement modal:', type, regulations[0].title)
     } else {
       console.warn('⚠️ Reglement not found:', type)
-      showErrorMessage('Dokument nicht gefunden')
+      showErrorMessage(`${type === 'nutzungsbedingungen' ? 'Nutzungsbedingungen' : 'Datenschutzerklärung'} nicht gefunden`)
     }
-  } catch (err) {
-    console.error('Error opening reglement modal:', err)
-    showErrorMessage('Fehler beim Laden der Dokumente')
+  } catch (err: any) {
+    console.error('❌ Error opening reglement modal:', err)
+    showErrorMessage('Fehler beim Laden der Dokumente: ' + err.message)
   }
 }
 
