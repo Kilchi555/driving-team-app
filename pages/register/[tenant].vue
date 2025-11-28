@@ -372,13 +372,12 @@
                     <!-- PDF Preview -->
                     <div 
                       v-else 
-                      class="max-w-sm mx-auto bg-red-50 rounded-lg shadow-md border-2 border-red-200 p-6"
+                      class="max-w-sm mx-auto bg-green-50 rounded-lg shadow-md border-2 border-green-200 p-8"
                     >
-                      <svg class="w-16 h-16 text-red-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                      <svg class="w-20 h-20 text-green-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                       </svg>
-                      <p class="text-red-600 font-bold text-lg">PDF</p>
-                      <p class="text-red-700 text-xs mt-1">{{ uploadedDocuments[category].fileName }}</p>
+                      <p class="text-green-600 font-bold text-xl">PDF hochgeladen</p>
                     </div>
                   </div>
                   
@@ -1060,11 +1059,16 @@ const submitRegistration = async () => {
       }
     }
     
-    // Success - Show confirmation screen
+    // Success - Show confirmation screen and redirect to login after 3 seconds
     registeredEmail.value = formData.value.email
     registeredTenantSlug.value = tenantSlug.value
     registrationComplete.value = true
     console.log('✅ Registration complete, showing confirmation screen')
+    
+    // Auto-redirect to tenant login after 3 seconds
+    setTimeout(() => {
+      navigateTo(tenantSlug.value ? `/login/${tenantSlug.value}` : '/login')
+    }, 3000)
     
   } catch (error: any) {
     console.error('❌ Registration failed:', error)
