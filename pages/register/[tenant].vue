@@ -90,25 +90,6 @@
             </div>
           </div>
           
-          <!-- Next Steps -->
-          <div class="bg-gray-50 rounded-lg p-4 sm:p-6">
-            <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Nächste Schritte:</h3>
-            <div class="text-left space-y-2 sm:space-y-3">
-              <div class="flex items-start space-x-2 sm:space-x-3">
-                <div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">1</div>
-                <p class="text-gray-700 text-sm sm:text-base">Überprüfen Sie Ihren Posteingang (und Spam-Ordner)</p>
-              </div>
-              <div class="flex items-start space-x-2 sm:space-x-3">
-                <div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">2</div>
-                <p class="text-gray-700 text-sm sm:text-base">Klicken Sie auf den Bestätigungslink in der E-Mail</p>
-              </div>
-              <div class="flex items-start space-x-2 sm:space-x-3">
-                <div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">3</div>
-                <p class="text-gray-700 text-sm sm:text-base">Melden Sie sich mit Ihrer E-Mail und Ihrem Passwort an</p>
-              </div>
-            </div>
-          </div>
-          
           <!-- Action Buttons -->
           <div class="space-y-3 pt-4 sm:pt-6">
             <button

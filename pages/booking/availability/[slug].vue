@@ -1223,13 +1223,22 @@ const loadStaffForCategory = async () => {
     // Load staff categories from locations (available_categories + staff_ids)
     console.log('📚 Building staff categories from locations data...')
     
+    // Load all tenant locations to build staff category map
+    const { data: tenantLocations, error: locationsError } = await supabase
+      .from('locations')
+      .select('available_categories, staff_ids')
+      .eq('is_active', true)
+      .eq('tenant_id', currentTenant.value.id)
+    
+    if (locationsError) {
+      console.error('❌ Error loading locations:', locationsError)
+    }
+    
     // Build a map of staff_id -> [categories] from locations
     const staffCategoryMap = new Map<string, string[]>()
     
-    // @ts-ignore
-    if (locations.value) {
-      // @ts-ignore
-      locations.value.forEach((location: any) => {
+    if (tenantLocations) {
+      tenantLocations.forEach((location: any) => {
         const availableCategories = location.available_categories || []
         const staffIds = location.staff_ids || []
         
