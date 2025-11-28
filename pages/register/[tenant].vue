@@ -339,7 +339,24 @@
             <!-- Uploaded Image Preview -->
             <div v-if="uploadedImage" class="space-y-4">
               <div class="text-center">
-                <img :src="uploadedImage" alt="Lernfahrausweis" class="max-w-full h-64 object-contain mx-auto rounded-lg shadow-md border border-gray-200">
+                <!-- Image Preview -->
+                <img 
+                  v-if="uploadedFileType && uploadedFileType.startsWith('image/')"
+                  :src="uploadedImage" 
+                  alt="Lernfahrausweis" 
+                  class="max-w-full h-64 object-contain mx-auto rounded-lg shadow-md border border-gray-200"
+                >
+                <!-- PDF Preview -->
+                <div 
+                  v-else 
+                  class="max-w-sm mx-auto bg-red-50 rounded-lg shadow-md border-2 border-red-200 p-8"
+                >
+                  <svg class="w-24 h-24 text-red-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                  </svg>
+                  <p class="text-red-600 font-bold text-xl">PDF</p>
+                  <p class="text-red-700 text-sm mt-2">Dokument hochgeladen</p>
+                </div>
               </div>
               
               <div class="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -624,6 +641,7 @@ const prefilledData = ref({
 const currentStep = ref(1)
 const isSubmitting = ref(false)
 const uploadedImage = ref<string | null>(null)
+const uploadedFileType = ref<string | null>(null)
 const showPassword = ref(false)
 const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
@@ -789,7 +807,7 @@ const goBack = () => {
 const handleFileUpload = (event: Event) => {
   console.log('📤 File upload started')
   const file = (event.target as HTMLInputElement).files?.[0]
-  console.log('📄 File selected:', file?.name, 'Size:', file?.size)
+  console.log('📄 File selected:', file?.name, 'Size:', file?.size, 'Type:', file?.type)
   
   if (file) {
     // Check file size (5MB limit)
@@ -798,6 +816,9 @@ const handleFileUpload = (event: Event) => {
       showError('Datei zu groß', 'Maximale Größe: 5MB')
       return
     }
+    
+    // Store file type
+    uploadedFileType.value = file.type
     
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -811,6 +832,7 @@ const handleFileUpload = (event: Event) => {
 
 const clearImage = () => {
   uploadedImage.value = null
+  uploadedFileType.value = null
   if (fileInput.value) {
     fileInput.value.value = ''
   }
