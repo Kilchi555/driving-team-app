@@ -112,7 +112,7 @@
           <!-- Action Buttons -->
           <div class="space-y-3 pt-4 sm:pt-6">
             <button
-              @click="navigateTo(tenantSlug ? `/login/${tenantSlug}` : '/login')"
+              @click="navigateTo(tenantSlug ? `/${tenantSlug}` : '/login')"
               class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
             >
               Zum Login
@@ -562,7 +562,7 @@
         <p class="text-gray-600 text-sm">
           Bereits registriert?
           <button 
-            @click="navigateTo(tenantSlug ? `/login/${tenantSlug}` : '/login')"
+            @click="navigateTo(tenantSlug ? `/${tenantSlug}` : '/login')"
             class="text-blue-600 hover:text-blue-800 font-semibold ml-1"
           >
             Hier anmelden
@@ -1062,16 +1062,13 @@ const submitRegistration = async () => {
       }
     }
     
-    // Success - Show confirmation screen and redirect to login after 3 seconds
+    // Success - Show confirmation screen
     registeredEmail.value = formData.value.email
     registeredTenantSlug.value = tenantSlug.value
     registrationComplete.value = true
     console.log('✅ Registration complete, showing confirmation screen')
     
-    // Auto-redirect to tenant login after 3 seconds
-    setTimeout(() => {
-      navigateTo(tenantSlug.value ? `/login/${tenantSlug.value}` : '/login')
-    }, 3000)
+    // No auto-redirect - user clicks button to proceed
     
   } catch (error: any) {
     console.error('❌ Registration failed:', error)
