@@ -176,7 +176,7 @@ onMounted(async () => {
           .select('name')
           .eq('tenant_id', tenantData.id)
           .eq('is_active', true)
-          .order('sort_order')
+          .order('name')
         
         if (catError) {
           console.warn('⚠️ Failed to load categories:', catError)
