@@ -3319,31 +3319,41 @@ onMounted(async () => {
           const categoryToSelect = categories.value.find(c => c.code === route.query.category)
           
           if (categoryToSelect) {
-            // Pre-select category
+            // Pre-select category (this loads staff and locations)
             await selectCategory(categoryToSelect)
+            
+            // Wait a bit for data to load
+            await new Promise(resolve => setTimeout(resolve, 500))
             
             // Pre-select duration
             const durationValue = parseInt(route.query.duration as string)
             if (durationOptions.value.includes(durationValue)) {
               selectedDuration.value = durationValue
               filters.value.duration_minutes = durationValue
-              currentStep.value = 3
             }
             
             // Pre-select location
             const locationToSelect = availableLocations.value.find(l => l.id === route.query.location)
             if (locationToSelect) {
-              await selectLocation(locationToSelect)
-            }
-            
-            // Pre-select instructor
-            const instructorToSelect = availableInstructors.value.find(i => i.id === route.query.staff)
-            if (instructorToSelect) {
-              await selectInstructor(instructorToSelect)
+              selectedLocation.value = locationToSelect
               
-              // Jump to step 5 (time slot selection)
-              currentStep.value = 5
-              console.log('✅ Pre-filled all data, jumped to step 5 (time selection)')
+              // Filter instructors for this location
+              availableInstructors.value = locationToSelect.available_staff || []
+              
+              // Pre-select instructor
+              const instructorToSelect = availableInstructors.value.find(i => i.id === route.query.staff)
+              if (instructorToSelect) {
+                // Call the actual selectInstructor to load time slots
+                await selectInstructor(instructorToSelect)
+                
+                console.log('✅ Pre-filled all data, jumped to step 5 (time selection)')
+              } else {
+                console.warn('⚠️ Instructor not found, staying at step 3')
+                currentStep.value = 3
+              }
+            } else {
+              console.warn('⚠️ Location not found, staying at step 2')
+              currentStep.value = 2
             }
           }
         } else if (prefill === 'partial' && route.query.category) {
