@@ -858,12 +858,12 @@ const completeOnboarding = async () => {
       const tenantSlug = userData.value?.tenant_slug || data.value?.tenant_slug
       
       if (tenantSlug) {
-        console.log('✅ Redirecting to tenant login:', `/login/${tenantSlug}`)
-        await navigateTo(`/login/${tenantSlug}`)
+        console.log('✅ Redirecting to tenant login:', `/${tenantSlug}`)
+        await navigateTo(`/${tenantSlug}`)
       } else if (userData.value?.tenant_id === '64259d68-195a-4c68-8875-f1b44d962830') {
         // Fallback: Known Driving Team tenant
         console.log('✅ Redirecting to driving-team login')
-        await navigateTo('/login/driving-team')
+        await navigateTo('/driving-team')
       } else {
         console.log('✅ Redirecting to general login')
         await navigateTo('/login')
