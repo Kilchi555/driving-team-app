@@ -357,17 +357,10 @@
           <div v-if="step === 3">
             <h2 class="text-xl font-bold mb-4">AGB akzeptieren</h2>
             <p class="text-sm text-gray-600 mb-6">
-              Bitte lies und akzeptiere unsere Allgemeinen Geschäftsbedingungen.
+              Bitte lies und akzeptiere unsere Geschäftsbedingungen.
             </p>
 
             <div class="space-y-4">
-              <div class="border rounded-md p-4 max-h-60 sm:max-h-80 overflow-y-auto bg-gray-50">
-                <h3 class="font-semibold mb-2 text-gray-900">Allgemeine Geschäftsbedingungen</h3>
-                <div class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {{ termsText }}
-                </div>
-              </div>
-
               <div class="flex items-start space-x-3 p-4 bg-green-50 rounded-lg border border-green-200">
                 <input
                   v-model="form.acceptedTerms"
@@ -376,7 +369,23 @@
                   class="mt-1 h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded flex-shrink-0"
                 >
                 <label class="text-sm text-gray-700 leading-relaxed">
-                  Ich akzeptiere die Allgemeinen Geschäftsbedingungen und bestätige, dass ich alle Angaben korrekt gemacht habe. *
+                  Ich akzeptiere die 
+                  <button
+                    type="button"
+                    @click.prevent="openRegulationModal('nutzungsbedingungen')"
+                    class="text-green-600 hover:text-green-800 underline font-medium"
+                  >
+                    Nutzungsbedingungen
+                  </button>
+                  und die
+                  <button
+                    type="button"
+                    @click.prevent="openRegulationModal('datenschutz')"
+                    class="text-green-600 hover:text-green-800 underline font-medium"
+                  >
+                    Datenschutzerklärung
+                  </button>
+                  und bestätige, dass ich alle Angaben korrekt gemacht habe. *
                 </label>
               </div>
             </div>
@@ -475,10 +484,47 @@
         </div>
       </div>
     </div>
+
+    <!-- Regulations Modal -->
+    <div v-if="showRegulationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showRegulationModal = false">
+      <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
+        <!-- Modal Header -->
+        <div class="sticky top-0 bg-gray-100 px-6 py-4 border-b">
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-bold text-gray-900">{{ currentRegulation?.title }}</h2>
+            <button
+              type="button"
+              @click="showRegulationModal = false"
+              class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal Content -->
+        <div class="px-6 py-6">
+          <div v-if="currentRegulation" v-html="currentRegulation.content" class="prose prose-sm max-w-none text-gray-700"></div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="bg-gray-50 px-6 py-4 border-t flex justify-end">
+          <button
+            type="button"
+            @click="showRegulationModal = false"
+            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          >
+            Schließen
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { getSupabase } from '~/utils/supabase'
+
 const route = useRoute()
 const token = route.params.token as string
 
@@ -492,6 +538,8 @@ const passwordError = ref('')
 const successMessage = ref('')
 const showErrorModal = ref(false)
 const showSuccessModal = ref(false)
+const showRegulationModal = ref(false)
+const currentRegulation = ref<any>(null)
 const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 8)
 const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.password !== form.confirmPassword)
 
@@ -663,6 +711,43 @@ const goToLogin = async () => {
     await navigateTo(`/${userData.value.tenant_slug}`)
   } else {
     await navigateTo('/')
+  }
+}
+
+// Load and display regulations
+const openRegulationModal = async (type: string) => {
+  try {
+    const supabase = getSupabase()
+    const activeTenantId = userData.value?.tenant_id
+    
+    console.log('📋 Loading regulation:', type, 'for tenant:', activeTenantId)
+    
+    // Try to load tenant-specific reglement first, then fall back to global
+    const { data: regulations, error } = await supabase
+      .from('tenant_reglements')
+      .select('*')
+      .eq('type', type)
+      .eq('is_active', true)
+      .or(`tenant_id.eq.${activeTenantId},tenant_id.is.null`)
+      .order('tenant_id', { ascending: false })
+    
+    if (error) {
+      console.error('❌ Error loading reglement:', error)
+      showErrorMessage('Fehler beim Laden der Dokumente')
+      return
+    }
+    
+    if (regulations && regulations.length > 0) {
+      currentRegulation.value = regulations[0]
+      showRegulationModal.value = true
+      console.log('✅ Opened reglement modal:', type, regulations[0].title)
+    } else {
+      console.warn('⚠️ Reglement not found:', type)
+      showErrorMessage('Dokument nicht gefunden')
+    }
+  } catch (err) {
+    console.error('Error opening reglement modal:', err)
+    showErrorMessage('Fehler beim Laden der Dokumente')
   }
 }
 
