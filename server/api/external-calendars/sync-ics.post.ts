@@ -207,30 +207,74 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
         try {
           for (const busyTime of uniqueBusyTimes) {
             if (busyTime.event_location) {
-              const plz = await resolvePLZForExternalBusyTime(
-                busyTime.event_location,
-                calendar.tenant_id,
-                supabase
-              )
-              
-              if (plz) {
-                // Update the busy time with resolved PLZ
-                const { error: updateError } = await supabase
-                  .from('external_busy_times')
-                  .update({ postal_code: plz })
-                  .eq('external_event_id', busyTime.external_event_id)
-                  .eq('staff_id', busyTime.staff_id)
+              // Call the geocoding API directly for server-side processing
+              try {
+                console.log(`🌐 Resolving PLZ for: "${busyTime.event_location}"`)
                 
-                if (updateError) {
-                  console.warn(`⚠️  Failed to update PLZ for ${busyTime.event_location}:`, updateError)
-                } else {
-                  console.log(`✅ Updated PLZ: ${busyTime.event_location} → ${plz}`)
+                // Import and use the geocoding resolution function
+                const { extractPLZFromAddress, lookupPLZFromLocationName } = await import('~/utils/postalCodeUtils')
+                
+                // Try extraction first
+                let plz = extractPLZFromAddress(busyTime.event_location)
+                console.log(`📝 Extraction attempt: "${busyTime.event_location}" → ${plz || 'no match'}`)
+                
+                // Try DB lookup next
+                if (!plz) {
+                  plz = await lookupPLZFromLocationName(busyTime.event_location, calendar.tenant_id, supabase)
+                  console.log(`🔍 DB lookup attempt: "${busyTime.event_location}" → ${plz || 'no match'}`)
                 }
+                
+                // Try Google API as fallback
+                if (!plz) {
+                  console.log(`🌐 Attempting Google Geocoding API for: "${busyTime.event_location}"`)
+                  try {
+                    const GOOGLE_API_KEY = process.env.GOOGLE_GEOCODING_API_KEY
+                    if (!GOOGLE_API_KEY) {
+                      console.warn('⚠️ GOOGLE_GEOCODING_API_KEY not configured')
+                    } else {
+                      const googleUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(busyTime.event_location)}&key=${GOOGLE_API_KEY}`
+                      const response = await fetch(googleUrl)
+                      const data = await response.json()
+                      
+                      if (data.status === 'OK' && data.results.length > 0) {
+                        const result = data.results[0]
+                        for (const component of result.address_components) {
+                          if (component.types.includes('postal_code')) {
+                            plz = component.short_name
+                            console.log(`✅ Google API resolved: "${busyTime.event_location}" → ${plz}`)
+                            break
+                          }
+                        }
+                      }
+                    }
+                  } catch (googleErr: any) {
+                    console.warn(`⚠️ Google Geocoding failed:`, googleErr.message)
+                  }
+                }
+                
+                if (plz) {
+                  // Update the busy time with resolved PLZ
+                  const { error: updateError } = await supabase
+                    .from('external_busy_times')
+                    .update({ postal_code: plz })
+                    .eq('external_event_id', busyTime.external_event_id)
+                    .eq('staff_id', busyTime.staff_id)
+                  
+                  if (updateError) {
+                    console.warn(`⚠️  Failed to update PLZ for ${busyTime.event_location}:`, updateError)
+                  } else {
+                    console.log(`✅ Updated PLZ: ${busyTime.event_location} → ${plz}`)
+                  }
+                } else {
+                  console.warn(`❌ Could not resolve PLZ for: "${busyTime.event_location}"`)
+                }
+              } catch (err: any) {
+                console.error(`❌ Error resolving PLZ for ${busyTime.event_location}:`, err.message)
               }
             }
           }
         } catch (err: any) {
-          console.error('❌ Error resolving postal codes:', err)
+          console.error('❌ Error in postal code resolution loop:', err)
         }
       })()
     }

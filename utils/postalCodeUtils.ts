@@ -78,20 +78,22 @@ export async function resolvePLZForExternalBusyTime(
     return lookedUpPLZ
   }
 
-  // Third: Use Google Geocoding API as fallback
+  // Third: Use Google Geocoding API as fallback (server-side call)
   console.log(`🌐 Attempting Google Geocoding API for: "${eventLocation}"`)
   try {
-    // Call the server-side API endpoint
-    const response = await supabase.functions.invoke('geocoding-resolve-plz', {
+    // Note: This is called from server-side, so it will use the server's Google API key
+    // The API endpoint will be called directly via $fetch
+    const response = await $fetch<any>('/api/geocoding/resolve-plz', {
+      method: 'POST',
       body: {
         location_name: eventLocation,
         tenant_id: tenantId
       }
     })
 
-    if (response.data && response.data.postal_code) {
-      console.log(`✅ Geocoding API resolved: "${eventLocation}" → ${response.data.postal_code}`)
-      return response.data.postal_code
+    if (response && response.postal_code) {
+      console.log(`✅ Geocoding API resolved: "${eventLocation}" → ${response.postal_code}`)
+      return response.postal_code
     }
   } catch (error: any) {
     console.warn(`⚠️ Geocoding API failed for "${eventLocation}":`, error.message)
