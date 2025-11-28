@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { resolvePLZForExternalBusyTime } from '~/utils/postalCodeUtils'
 
 interface ICSImportRequest {
   calendar_id: string
@@ -172,7 +173,11 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       
       return busyTime
     })
-
+    
+    // Resolve postal codes for all busy times (will be populated after initial insert)
+    // This happens asynchronously to not block the sync
+    const supabase = getSupabaseAdmin()
+    
     // Deduplicate by conflict key to avoid "ON CONFLICT ... cannot affect row a second time"
     const uniqueMap = new Map<string, typeof busyTimes[number]>()
     for (const bt of busyTimes) {
@@ -192,6 +197,43 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
         statusCode: 500,
         statusMessage: `Failed to insert busy times: ${insertError.message}`
       })
+    }
+    
+    // Asynchronously resolve and update postal codes for events with locations
+    if (uniqueBusyTimes.some(bt => bt.event_location)) {
+      console.log('📍 Resolving postal codes for external busy times...')
+      
+      // Don't await this - let it process in background
+      ;(async () => {
+        try {
+          for (const busyTime of uniqueBusyTimes) {
+            if (busyTime.event_location) {
+              const plz = await resolvePLZForExternalBusyTime(
+                busyTime.event_location,
+                calendar.tenant_id,
+                supabase
+              )
+              
+              if (plz) {
+                // Update the busy time with resolved PLZ
+                const { error: updateError } = await supabase
+                  .from('external_busy_times')
+                  .update({ postal_code: plz })
+                  .eq('external_event_id', busyTime.external_event_id)
+                  .eq('staff_id', busyTime.staff_id)
+                
+                if (updateError) {
+                  console.warn(`⚠️  Failed to update PLZ for ${busyTime.event_location}:`, updateError)
+                } else {
+                  console.log(`✅ Updated PLZ: ${busyTime.event_location} → ${plz}`)
+                }
+              }
+            }
+          }
+        } catch (err: any) {
+          console.error('❌ Error resolving postal codes:', err)
+        }
+      })()
     }
 
     // Update last sync time
