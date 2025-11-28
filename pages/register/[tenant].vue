@@ -325,7 +325,7 @@
                   Kategorie {{ category }}
                 </h3>
                 <p class="text-sm text-gray-600 mt-1">
-                  <template v-if="category === 'M' || category === 'Motorboot'">
+                  <template v-if="category === 'Boot' || category === 'M' || category === 'Motorboot'">
                     Lernfahr-/Führerausweis, ID oder Pass
                   </template>
                   <template v-else>
