@@ -146,19 +146,7 @@ const tenantName = computed(() => {
 
 // Build dynamic service header text
 const serviceHeader = computed(() => {
-  if (isLoading.value) {
-    return `Dienstleistungen von ${tenantName.value}`
-  }
-  if (availableServices.value.length === 0) {
-    return `Keine Dienstleistungen verfügbar`
-  }
-  const serviceNames = availableServices.value.map(s => {
-    if (s === 'fahrlektion') return 'Fahrlektionen'
-    if (s === 'theorie') return 'Theorielektionen'
-    if (s === 'beratung') return 'Beratung'
-    return s
-  })
-  return `${serviceNames.join(' • ')} bei ${tenantName.value}`
+  return `Dienstleistungen von ${tenantName.value}`
 })
 
 // Methods
