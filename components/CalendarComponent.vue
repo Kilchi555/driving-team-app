@@ -672,24 +672,27 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
     console.log('📅 Loading external busy times...')
     
     const { currentUser: composableCurrentUser } = useCurrentUser()
-    const actualUserId = props.currentUser?.id || composableCurrentUser.value?.id
+    const authUserId = props.currentUser?.id || composableCurrentUser.value?.id
     
-    if (!actualUserId) {
+    if (!authUserId) {
       console.log('⚠️ No user ID for external busy times')
       return []
     }
     
     // Get user's tenant_id and internal ID
+    // WICHTIG: Wir suchen nach auth_user_id, nicht nach id!
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id, tenant_id')
-      .eq('id', actualUserId)
+      .eq('auth_user_id', authUserId)
       .single()
     
     if (userError || !userData) {
-      console.log('⚠️ Could not load user data for external busy times')
+      console.log('⚠️ Could not load user data for external busy times', { authUserId, error: userError })
       return []
     }
+    
+    console.log('🔍 DEBUG: Loading external busy times for staff_id:', userData.id)
     
     // Load external busy times für einen erweiterten Zeitraum (1 Jahr voraus)
     const oneYearFromNow = new Date()

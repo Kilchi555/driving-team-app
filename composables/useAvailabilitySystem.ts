@@ -396,10 +396,12 @@ export const useAvailabilitySystem = () => {
       }
       
       // Load external busy times (only future appointments, at least 24h ahead)
+      // WICHTIG: Filtere nach staff_id um nur die Busy Times des aktuellen Mitarbeiters zu zeigen
       const { data: externalBusyTimes, error: externalError } = await supabase
         .from('external_busy_times')
         .select('id, staff_id, start_time, end_time, event_title, event_location')
         .eq('tenant_id', selectedTenantId)
+        .eq('staff_id', currentStaffId) // NEU: Filtere nach aktueller Staff ID
         .gte('start_time', minFutureTimeUTC) // Only future appointments (UTC)
 
       if (externalError) {
