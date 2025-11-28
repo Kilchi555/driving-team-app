@@ -578,7 +578,8 @@ onMounted(async () => {
       email: 'test@example.com',
       first_name: 'Test',
       last_name: 'User',
-      tenant_id: '64259d68-195a-4c68-8875-f1b44d962830'
+      tenant_id: '64259d68-195a-4c68-8875-f1b44d962830',
+      tenant_slug: 'driving-team' // Added for redirect
     }
     tenantName.value = 'Driving Team'
     categories.value = [
@@ -850,12 +851,22 @@ const completeOnboarding = async () => {
 
     // Success - show success message and redirect
     showSuccessMessage('Registrierung erfolgreich abgeschlossen! Du wirst zum Login weitergeleitet...')
+    
+    // Auto-redirect to login after 2 seconds
     setTimeout(async () => {
-      // Try to navigate to tenant-specific login if we have tenant info
-      if (userData.value?.tenant_slug) {
-        await navigateTo(`/${userData.value.tenant_slug}`)
+      // Get tenant slug from userData or extract from token API response
+      const tenantSlug = userData.value?.tenant_slug || data.value?.tenant_slug
+      
+      if (tenantSlug) {
+        console.log('✅ Redirecting to tenant login:', `/login/${tenantSlug}`)
+        await navigateTo(`/login/${tenantSlug}`)
+      } else if (userData.value?.tenant_id === '64259d68-195a-4c68-8875-f1b44d962830') {
+        // Fallback: Known Driving Team tenant
+        console.log('✅ Redirecting to driving-team login')
+        await navigateTo('/login/driving-team')
       } else {
-        await navigateTo('/')
+        console.log('✅ Redirecting to general login')
+        await navigateTo('/login')
       }
     }, 2000)
 
