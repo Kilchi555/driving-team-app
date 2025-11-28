@@ -220,20 +220,34 @@
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div class="font-medium">
-                      CHF {{ getCategoryTheoryPrice(category.code) || '0.00' }}
-                    </div>
-                    <div class="text-xs text-gray-500">
-                      pro {{ getCategoryTheoryDuration(category.code) }}min
-                    </div>
+                    <template v-if="getCategoryTheoryPrice(category.code) !== '0.00'">
+                      <div class="font-medium">
+                        CHF {{ getCategoryTheoryPrice(category.code) }}
+                      </div>
+                      <div class="text-xs text-gray-500">
+                        pro {{ getCategoryTheoryDuration(category.code) }}min
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="text-gray-400 text-xs">
+                        Nicht aktiviert
+                      </div>
+                    </template>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div class="font-medium">
-                      CHF {{ getCategoryConsultationPrice(category.code) || '0.00' }}
-                    </div>
-                    <div class="text-xs text-gray-500">
-                      pro {{ getCategoryConsultationDuration(category.code) }}min
-                    </div>
+                    <template v-if="getCategoryConsultationPrice(category.code) !== '0.00'">
+                      <div class="font-medium">
+                        CHF {{ getCategoryConsultationPrice(category.code) }}
+                      </div>
+                      <div class="text-xs text-gray-500">
+                        pro {{ getCategoryConsultationDuration(category.code) }}min
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="text-gray-400 text-xs">
+                        Nicht aktiviert
+                      </div>
+                    </template>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div class="font-medium">
@@ -491,8 +505,21 @@
 
               <!-- Theorielektion Preise -->
               <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <h5 class="text-md font-medium text-green-900 mb-3">Theorielektion</h5>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="flex items-center justify-between mb-3">
+                  <h5 class="text-md font-medium text-green-900">Theorielektion</h5>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input
+                      v-model="categoryForm.theory_enabled"
+                      type="checkbox"
+                      class="sr-only peer"
+                    />
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:bg-green-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                    <span class="ml-3 text-sm font-medium text-gray-700">
+                      {{ categoryForm.theory_enabled ? 'Aktiviert' : 'Deaktiviert' }}
+                    </span>
+                  </label>
+                </div>
+                <div class="grid grid-cols-2 gap-4" :class="{ 'opacity-50': !categoryForm.theory_enabled }">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                       Preis pro {{ categoryForm.theory_duration_minutes || 45 }}min (CHF)
@@ -501,7 +528,8 @@
                       v-model.number="categoryForm.theory_price_chf"
                       type="number"
                       step="0.50"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      :disabled="!categoryForm.theory_enabled"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                       placeholder="z.B. 85.00"
                     />
                   </div>
@@ -513,7 +541,8 @@
                       v-model.number="categoryForm.theory_duration_minutes"
                       type="number"
                       step="5"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      :disabled="!categoryForm.theory_enabled"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                       placeholder="45"
                     />
                   </div>
@@ -522,8 +551,21 @@
 
               <!-- Beratung Preise -->
               <div class="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                <h5 class="text-md font-medium text-purple-900 mb-3">Beratung</h5>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="flex items-center justify-between mb-3">
+                  <h5 class="text-md font-medium text-purple-900">Beratung</h5>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input
+                      v-model="categoryForm.consultation_enabled"
+                      type="checkbox"
+                      class="sr-only peer"
+                    />
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                    <span class="ml-3 text-sm font-medium text-gray-700">
+                      {{ categoryForm.consultation_enabled ? 'Aktiviert' : 'Deaktiviert' }}
+                    </span>
+                  </label>
+                </div>
+                <div class="grid grid-cols-2 gap-4" :class="{ 'opacity-50': !categoryForm.consultation_enabled }">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                       Preis pro {{ categoryForm.consultation_duration_minutes || 60 }}min (CHF)
@@ -532,7 +574,8 @@
                       v-model.number="categoryForm.consultation_price_chf"
                       type="number"
                       step="0.50"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      :disabled="!categoryForm.consultation_enabled"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                       placeholder="z.B. 120.00"
                     />
                   </div>
@@ -544,7 +587,8 @@
                       v-model.number="categoryForm.consultation_duration_minutes"
                       type="number"
                       step="5"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      :disabled="!categoryForm.consultation_enabled"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                       placeholder="60"
                     />
                   </div>
@@ -763,8 +807,10 @@ const categoryForm = ref({
   price_per_lesson_chf: 0,
   admin_fee_chf: 0,
   admin_fee_applies_from: 2,
+  theory_enabled: false,
   theory_price_chf: 0,
   theory_duration_minutes: 45,
+  consultation_enabled: false,
   consultation_price_chf: 0,
   consultation_duration_minutes: 60
 })
@@ -1167,8 +1213,10 @@ const openEditModal = async (category: Category) => {
     price_per_lesson_chf: 0,
     admin_fee_chf: 0,
     admin_fee_applies_from: 2,
+    theory_enabled: false,
     theory_price_chf: 0,
     theory_duration_minutes: 45,
+    consultation_enabled: false,
     consultation_price_chf: 0,
     consultation_duration_minutes: 60
   }
@@ -1192,8 +1240,10 @@ const closeModal = () => {
     price_per_lesson_chf: 0,
     admin_fee_chf: 0,
     admin_fee_applies_from: 2,
+    theory_enabled: false,
     theory_price_chf: 0,
     theory_duration_minutes: 45,
+    consultation_enabled: false,
     consultation_price_chf: 0,
     consultation_duration_minutes: 60
   }
@@ -1226,8 +1276,10 @@ const saveCategory = async () => {
     const price_per_lesson_chf = categoryForm.value.price_per_lesson_chf
     const admin_fee_chf = categoryForm.value.admin_fee_chf
     const admin_fee_applies_from = categoryForm.value.admin_fee_applies_from
+    const theory_enabled = categoryForm.value.theory_enabled
     const theory_price_chf = categoryForm.value.theory_price_chf
     const theory_duration_minutes = categoryForm.value.theory_duration_minutes
+    const consultation_enabled = categoryForm.value.consultation_enabled
     const consultation_price_chf = categoryForm.value.consultation_price_chf
     const consultation_duration_minutes = categoryForm.value.consultation_duration_minutes
     
@@ -1261,7 +1313,19 @@ const saveCategory = async () => {
     }
 
     // Sync pricing rules
-    await syncPricingRules(categoryForm.value.code, price_per_lesson_chf, admin_fee_chf, admin_fee_applies_from, theory_price_chf, theory_duration_minutes, consultation_price_chf, consultation_duration_minutes, userProfile.tenant_id)
+    await syncPricingRules(
+      categoryForm.value.code, 
+      price_per_lesson_chf, 
+      admin_fee_chf, 
+      admin_fee_applies_from, 
+      theory_enabled,
+      theory_price_chf, 
+      theory_duration_minutes, 
+      consultation_enabled,
+      consultation_price_chf, 
+      consultation_duration_minutes, 
+      userProfile.tenant_id
+    )
     
     await loadCategories()
     await loadPricingData() // Reload pricing data for table
@@ -1332,10 +1396,12 @@ const loadCategoryPricing = async (categoryCode: string) => {
       const theoryPricePerMinuteChf = theoryRule.price_per_minute_rappen / 100
       const theoryTotalPrice = theoryPricePerMinuteChf * theoryDurationMinutes
       
+      categoryForm.value.theory_enabled = true
       categoryForm.value.theory_price_chf = Math.round(theoryTotalPrice)
       categoryForm.value.theory_duration_minutes = theoryDurationMinutes
     } else {
-      // No theory rule found - keep current form values (don't override with defaults)
+      // No theory rule found - set to disabled
+      categoryForm.value.theory_enabled = false
       console.log('ℹ️ No theory rule found for category:', categoryCode)
     }
     
@@ -1345,10 +1411,12 @@ const loadCategoryPricing = async (categoryCode: string) => {
       const consultationPricePerMinuteChf = consultationRule.price_per_minute_rappen / 100
       const consultationTotalPrice = consultationPricePerMinuteChf * consultationDurationMinutes
       
+      categoryForm.value.consultation_enabled = true
       categoryForm.value.consultation_price_chf = Math.round(consultationTotalPrice)
       categoryForm.value.consultation_duration_minutes = consultationDurationMinutes
     } else {
-      // No consultation rule found - keep current form values (don't override with defaults)
+      // No consultation rule found - set to disabled
+      categoryForm.value.consultation_enabled = false
       console.log('ℹ️ No consultation rule found for category:', categoryCode)
     }
     
@@ -1408,14 +1476,28 @@ const copyStandardPricingRules = async (categoryCode: string, tenantId: string) 
   }
 }
 
-const syncPricingRules = async (categoryCode: string, pricePerLessonChf: number, adminFeeChf: number, adminFeeAppliesFrom: number, theoryPriceChf: number, theoryDurationMinutes: number, consultationPriceChf: number, consultationDurationMinutes: number, tenantId: string) => {
+const syncPricingRules = async (
+  categoryCode: string, 
+  pricePerLessonChf: number, 
+  adminFeeChf: number, 
+  adminFeeAppliesFrom: number, 
+  theoryEnabled: boolean,
+  theoryPriceChf: number, 
+  theoryDurationMinutes: number, 
+  consultationEnabled: boolean,
+  consultationPriceChf: number, 
+  consultationDurationMinutes: number, 
+  tenantId: string
+) => {
   try {
     console.log('🔄 Syncing pricing rules for category:', categoryCode, {
       pricePerLessonChf,
       adminFeeChf,
       adminFeeAppliesFrom,
+      theoryEnabled,
       theoryPriceChf,
       theoryDurationMinutes,
+      consultationEnabled,
       consultationPriceChf,
       consultationDurationMinutes,
       tenantId
@@ -1481,37 +1563,41 @@ const syncPricingRules = async (categoryCode: string, pricePerLessonChf: number,
       })
     }
     
-    // Add theory pricing rule (always create, even for 0 CHF)
-    const theoryPricePerMinuteRappen = Math.round((theoryPriceChf / theoryDurationMinutes) * 100)
-    pricingRules.push({
-      rule_name: `Kategorie ${categoryCode} - Theorielektion`,
-      rule_type: 'theory',
-      category_code: categoryCode,
-      price_per_minute_rappen: theoryPricePerMinuteRappen,
-      base_duration_minutes: theoryDurationMinutes,
-      admin_fee_rappen: 0,
-      admin_fee_applies_from: 999,
-      valid_from: new Date().toISOString().split('T')[0],
-      valid_until: null,
-      is_active: true,
-      tenant_id: tenantId
-    })
+    // Add theory pricing rule ONLY if enabled
+    if (theoryEnabled && theoryPriceChf > 0) {
+      const theoryPricePerMinuteRappen = Math.round((theoryPriceChf / theoryDurationMinutes) * 100)
+      pricingRules.push({
+        rule_name: `Kategorie ${categoryCode} - Theorielektion`,
+        rule_type: 'theory',
+        category_code: categoryCode,
+        price_per_minute_rappen: theoryPricePerMinuteRappen,
+        base_duration_minutes: theoryDurationMinutes,
+        admin_fee_rappen: 0,
+        admin_fee_applies_from: 999,
+        valid_from: new Date().toISOString().split('T')[0],
+        valid_until: null,
+        is_active: true,
+        tenant_id: tenantId
+      })
+    }
     
-    // Add consultation pricing rule (always create, even for 0 CHF)
-    const consultationPricePerMinuteRappen = Math.round((consultationPriceChf / consultationDurationMinutes) * 100)
-    pricingRules.push({
-      rule_name: `Kategorie ${categoryCode} - Beratung`,
-      rule_type: 'consultation',
-      category_code: categoryCode,
-      price_per_minute_rappen: consultationPricePerMinuteRappen,
-      base_duration_minutes: consultationDurationMinutes,
-      admin_fee_rappen: 0,
-      admin_fee_applies_from: 999,
-      valid_from: new Date().toISOString().split('T')[0],
-      valid_until: null,
-      is_active: true,
-      tenant_id: tenantId
-    })
+    // Add consultation pricing rule ONLY if enabled
+    if (consultationEnabled && consultationPriceChf > 0) {
+      const consultationPricePerMinuteRappen = Math.round((consultationPriceChf / consultationDurationMinutes) * 100)
+      pricingRules.push({
+        rule_name: `Kategorie ${categoryCode} - Beratung`,
+        rule_type: 'consultation',
+        category_code: categoryCode,
+        price_per_minute_rappen: consultationPricePerMinuteRappen,
+        base_duration_minutes: consultationDurationMinutes,
+        admin_fee_rappen: 0,
+        admin_fee_applies_from: 999,
+        valid_from: new Date().toISOString().split('T')[0],
+        valid_until: null,
+        is_active: true,
+        tenant_id: tenantId
+      })
+    }
     
     // Insert pricing rules
     console.log('📊 Inserting pricing rules:', pricingRules)
