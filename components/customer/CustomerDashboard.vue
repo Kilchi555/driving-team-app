@@ -869,7 +869,7 @@ import ProfileModal from './ProfileModal.vue'
 const authStore = useAuthStore()
 const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
 const { loadTenantBrandingById, primaryColor, secondaryColor, accentColor, currentTenantBranding } = useTenantBranding()
-const { currentTenant, loadTenant } = useTenant()
+const { currentTenant, loadTenant, setTenant } = useTenant()
 
 // State
 const isLoading = ref(true)
