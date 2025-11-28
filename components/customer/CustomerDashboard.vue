@@ -723,8 +723,8 @@
           </div>
 
           <!-- School Contact Info -->
-          <div v-if="!isLoading && currentTenant" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <h3 class="font-semibold text-blue-900 mb-3">Fahrschule Kontaktdaten</h3>
+          <div v-if="!isLoading && currentTenant" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h3 class="font-semibold text-blue-900 mb-3">Meine Fahrschule</h3>
             <div class="space-y-2">
               <div class="flex items-start gap-2">
                 <svg class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -756,6 +756,7 @@
 
           <!-- Instructors List -->
           <div v-if="instructors && instructors.length > 0" class="space-y-2">
+            <h3 class="font-semibold text-gray-900 mb-3">Meine Fahrlehrer</h3>
             <div 
               v-for="instructor in instructors" 
               :key="instructor.id"
