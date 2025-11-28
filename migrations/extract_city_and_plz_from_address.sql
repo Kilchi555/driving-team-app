@@ -3,41 +3,50 @@
 -- Format: "Street, NNNN City" or "Street NNNN City"
 
 -- Step 1: Extract postal code (4 digits) from address
+-- Format: "Street, 9100 City" or "Street 9100 City"
 UPDATE locations
-SET postal_code = (
-  -- Extract 4-digit number from address
-  (regexp_matches(address, '\b(\d{4})\b', 'g'))[1]
+SET postal_code = SUBSTRING(
+  address,
+  (position(' ' || substring(address FROM '(\d{4})') || ' ' in address) - 
+   position(substring(address FROM '(\d{4})') in address)),
+  4
 )
 WHERE postal_code IS NULL 
   AND address IS NOT NULL 
   AND address ~ '\d{4}';
 
--- Step 2: Extract city (everything after the postal code)
+-- Simpler approach: Use substring with pattern matching
 UPDATE locations
-SET city = TRIM(
-  -- Get everything after the postal code
-  substring(
-    address,
-    position(regexp_substr(address, '\b\d{4}\b') || ' ' in address) + 5
-  )
-)
-WHERE city IS NULL 
+SET postal_code = SUBSTRING(address, '\d{4}')
+WHERE postal_code IS NULL 
   AND address IS NOT NULL 
   AND address ~ '\d{4}';
 
--- Step 3: Handle special case where no postal code in address
--- Try to extract city as the last word or last part
+-- Step 2: Extract city (everything after the postal code and comma/space)
 UPDATE locations
 SET city = TRIM(
-  -- Get the last part (after comma or last space)
   CASE 
-    WHEN address LIKE '%,%' THEN TRIM(substring(address FROM position(',' in address) + 1))
-    ELSE TRIM(split_part(address, ' ', -1))
+    -- If format is "Street, NNNN City"
+    WHEN address ~ ', \d{4} ' THEN 
+      SUBSTRING(address FROM '\d{4}\s+(.+)$')
+    -- If format is "Street NNNN City" (no comma)
+    WHEN address ~ ' \d{4} ' THEN 
+      SUBSTRING(address FROM '\d{4}\s+(.+)$')
+    ELSE NULL
   END
 )
 WHERE city IS NULL 
-  AND postal_code IS NULL 
+  AND postal_code IS NOT NULL 
   AND address IS NOT NULL;
+
+-- Step 3: Handle special case where no postal code in address
+-- Try to extract city as the last part after comma
+UPDATE locations
+SET city = TRIM(SUBSTRING(address FROM position(',' in address) + 1))
+WHERE city IS NULL 
+  AND postal_code IS NULL 
+  AND address IS NOT NULL 
+  AND address LIKE '%,%';
 
 -- Verify results
 SELECT 
