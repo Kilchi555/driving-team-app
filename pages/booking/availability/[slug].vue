@@ -847,10 +847,10 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
     }
     
     // Use API data if available, otherwise use direct queries
-    if (workingHoursFromAPI && workingHoursFromAPI.length > 0) workingHours.value = workingHoursFromAPI
-    if (appointmentsFromAPI && appointmentsFromAPI.length > 0) appointments.value = appointmentsFromAPI
+    const finalWorkingHours = (workingHoursFromAPI && workingHoursFromAPI.length > 0) ? workingHoursFromAPI : (workingHours || [])
+    const finalAppointments = (appointmentsFromAPI && appointmentsFromAPI.length > 0) ? appointmentsFromAPI : (appointments || [])
     
-    console.log('📅 Found', appointments.value?.length || 0, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', workingHours.value?.length || 0, 'working hours')
+    console.log('📅 Found', finalAppointments.length, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', finalWorkingHours.length, 'working hours')
     
     // Check each slot against appointments and working hours
     const availabilityResults = timeSlots.map(slot => {
@@ -861,7 +861,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       const slotTimeMinutes = slotHour * 60 + slotMinute
       
       // Find working hours for this day
-      const dayWorkingHours = workingHours.value?.find(wh => wh.day_of_week === dayOfWeek)
+      const dayWorkingHours = finalWorkingHours.find((wh: any) => wh.day_of_week === dayOfWeek)
       
       if (!dayWorkingHours) {
         console.log('🚫 No working hours for day', dayOfWeek, '(Sunday=0)', slot.startTime.toLocaleDateString('de-DE'))
@@ -903,7 +903,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       }
       
       // Check for conflicts with any appointment OR external busy time
-      const hasConflict = (appointments?.some(apt => {
+      const hasConflict = (finalAppointments.some(apt => {
         // Parse appointment times - DB may return in ISO format (2025-11-20T08:00:00+00:00) or space format (2025-11-20 08:00:00+00)
         let aptStartISO = apt.start_time
         let aptEndISO = apt.end_time
