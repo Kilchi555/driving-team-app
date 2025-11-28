@@ -40,15 +40,15 @@
           <button
             v-if="availableServices.includes('fahrlektion')"
             @click="selectService('fahrlektion')"
-            class="w-full p-6 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-left group"
+            class="w-full p-6 bg-white border-2 rounded-lg hover:bg-blue-50 transition-all duration-200 text-left group"
+            :style="{ borderColor: tenantPrimaryColor }"
           >
             <div class="flex items-center space-x-4">
               <div class="text-4xl">🚗</div>
               <div class="flex-1">
-                <h3 class="text-xl font-semibold text-gray-900 group-hover:text-blue-700">Fahrlektionen</h3>
-                <p class="text-gray-600 mt-1">Praktische Fahrlektionen für alle Kategorien</p>
+                <h3 class="text-xl font-semibold text-gray-900">Fahrlektionen</h3>
               </div>
-              <div class="text-2xl text-gray-400 group-hover:text-blue-500">→</div>
+              <div class="text-2xl text-gray-400">→</div>
             </div>
           </button>
 
@@ -56,15 +56,15 @@
           <button
             v-if="availableServices.includes('theorie')"
             @click="selectService('theorie')"
-            class="w-full p-6 bg-white border-2 border-gray-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all duration-200 text-left group"
+            class="w-full p-6 bg-white border-2 rounded-lg hover:bg-green-50 transition-all duration-200 text-left group"
+            :style="{ borderColor: tenantSecondaryColor }"
           >
             <div class="flex items-center space-x-4">
               <div class="text-4xl">📚</div>
               <div class="flex-1">
-                <h3 class="text-xl font-semibold text-gray-900 group-hover:text-green-700">Theorielektionen</h3>
-                <p class="text-gray-600 mt-1">Theorielektionen für effizientes Lernen</p>
+                <h3 class="text-xl font-semibold text-gray-900">Theorielektionen</h3>
               </div>
-              <div class="text-2xl text-gray-400 group-hover:text-green-500">→</div>
+              <div class="text-2xl text-gray-400">→</div>
             </div>
           </button>
 
@@ -72,15 +72,15 @@
           <button
             v-if="availableServices.includes('beratung')"
             @click="selectService('beratung')"
-            class="w-full p-6 bg-white border-2 border-gray-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all duration-200 text-left group"
+            class="w-full p-6 bg-white border-2 rounded-lg hover:bg-purple-50 transition-all duration-200 text-left group"
+            :style="{ borderColor: tenantPrimaryColor }"
           >
             <div class="flex items-center space-x-4">
               <div class="text-4xl">💬</div>
               <div class="flex-1">
-                <h3 class="text-xl font-semibold text-gray-900 group-hover:text-purple-700">Beratung</h3>
-                <p class="text-gray-600 mt-1">Persönliche Beratung zur Fahrausbildung</p>
+                <h3 class="text-xl font-semibold text-gray-900">Beratung</h3>
               </div>
-              <div class="text-2xl text-gray-400 group-hover:text-purple-500">→</div>
+              <div class="text-2xl text-gray-400">→</div>
             </div>
           </button>
 
@@ -92,17 +92,6 @@
                 <p class="font-medium">Keine Dienstleistungen verfügbar</p>
                 <p class="mt-1">Derzeit sind keine Services für diese Fahrschule aktiv. Bitte kontaktieren Sie die Fahrschule direkt.</p>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Info Box -->
-        <div v-if="!isLoading && availableServices.length > 0" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div class="flex items-start space-x-3">
-            <div class="text-blue-500 text-xl">ℹ️</div>
-            <div class="text-sm text-blue-800">
-              <p class="font-medium">Hinweis:</p>
-              <p>Nach der Service-Auswahl werden Sie zur Registrierung weitergeleitet. Dort können Sie Ihre persönlichen Daten eingeben und einen Account erstellen.</p>
             </div>
           </div>
         </div>
@@ -129,7 +118,7 @@ const supabase = getSupabase()
 const tenantSlug = computed(() => route.params.tenant as string)
 
 // Tenant Management
-const { loadTenant, tenantId, currentTenant } = useTenant()
+const { loadTenant, tenantId, currentTenant, tenantPrimaryColor, tenantSecondaryColor } = useTenant()
 
 // State for available services
 const availableServices = ref<string[]>([])
