@@ -1405,7 +1405,7 @@ const generateTimeSlotsForStaffLocation = async (staff: any, location: any) => {
     // Get tenant settings
     const workingStart = tenantSettings.value.default_working_start || '08:00'
     const workingEnd = tenantSettings.value.default_working_end || '18:00'
-    const slotInterval = parseInt(tenantSettings.value.slot_interval_minutes || '15')
+    const slotInterval = 15 // Hardcoded: Always 15 minutes (quarter-hourly slots)
     const bufferMinutes = parseInt(tenantSettings.value.default_buffer_minutes || '15')
     const minAdvanceHours = parseInt(tenantSettings.value.min_advance_booking_hours || '2')
     const maxAdvanceDays = parseInt(tenantSettings.value.max_advance_booking_days || '30')
