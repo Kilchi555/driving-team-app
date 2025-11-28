@@ -2,26 +2,30 @@
 -- Populates city and postal_code columns from existing address data
 -- Format: "Street, NNNN City" or "Street NNNN City"
 
--- Step 1: Extract postal code (4 digits) from address
--- Find first 4-digit sequence in the address string
+-- Migration: Extract city and postal_code from address string
+-- Populates city and postal_code columns from existing address data
+-- Format: "Street, NNNN City" or "Street NNNN City"
+
+-- Step 1: Extract postal code - take characters after last comma/space that contain 4 digits
+-- Example: "Cilanderstrasse, 9100 Herisau" -> postal_code = "9100"
 UPDATE locations
-SET postal_code = SUBSTRING(address FROM '\d{4}')
+SET postal_code = SUBSTRING(
+  address,
+  POSITION(SUBSTRING(address, '\d{4}') IN address),
+  4
+)
 WHERE postal_code IS NULL 
   AND address IS NOT NULL 
-  AND address ~ '\d{4}';
+  AND LENGTH(address) > 0;
 
--- Step 2: Extract city (everything after the postal code and comma/space)
+-- Step 2: Extract city - take everything after the postal code + space
+-- Example: "Cilanderstrasse, 9100 Herisau" -> city = "Herisau"
 UPDATE locations
 SET city = TRIM(
-  CASE 
-    -- If format is "Street, NNNN City"
-    WHEN address ~ ', \d{4} ' THEN 
-      SUBSTRING(address FROM '\d{4}\s+(.+)$')
-    -- If format is "Street NNNN City" (no comma)
-    WHEN address ~ ' \d{4} ' THEN 
-      SUBSTRING(address FROM '\d{4}\s+(.+)$')
-    ELSE NULL
-  END
+  SUBSTRING(
+    address,
+    POSITION(SUBSTRING(address, '\d{4}') IN address) + 5
+  )
 )
 WHERE city IS NULL 
   AND postal_code IS NOT NULL 
