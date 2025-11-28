@@ -2485,6 +2485,8 @@ onMounted(async () => {
       
       if (!tenantError && tenantData) {
         console.log('✅ Tenant loaded:', tenantData.name)
+        // Update the useTenant composable with the loaded tenant
+        setTenant(tenantData)
       } else {
         console.warn('⚠️ Error loading tenant:', tenantError?.message)
       }
