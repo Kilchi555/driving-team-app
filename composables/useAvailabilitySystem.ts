@@ -1020,17 +1020,34 @@ export const useAvailabilitySystem = () => {
     console.log(`🚗 Starting travel-time validation for ${slots.length} slots`)
     const validSlots: AvailableSlot[] = []
     
-    // Get only INTERNAL appointments (not external busy times) for this staff member
-    // External busy times don't have locations, so we can't calculate travel time
+    // Get BOTH internal appointments AND external busy times with postal codes
+    // For external events, we need postal_code to calculate travel time
     const staffAppointments = appointmentsCache.value
-      .filter(apt => 
-        apt.staff_id === staffId && 
-        apt.type !== 'external' && // Exclude external busy times
-        apt.location_id // Must have a location
-      )
+      .filter(apt => apt.staff_id === staffId)
+      .map(apt => {
+        // For external busy times with postal codes, use that for travel calculation
+        if (apt.type === 'external' && (apt as any).postal_code) {
+          return {
+            ...apt,
+            hasPLZForTravelCalc: true,
+            location_plz: (apt as any).postal_code
+          }
+        }
+        // For internal appointments, must have a location_id
+        if (apt.type !== 'external' && apt.location_id) {
+          return {
+            ...apt,
+            hasPLZForTravelCalc: false, // Will use location_id instead
+            location_plz: undefined
+          }
+        }
+        return null
+      })
+      .filter(apt => apt !== null)
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
     
-    console.log(`📅 Found ${staffAppointments.length} internal appointments for staff (excluding ${appointmentsCache.value.filter(apt => apt.staff_id === staffId).length - staffAppointments.length} external busy times)`)
+    console.log(`📅 Found ${staffAppointments.length} appointments for staff (internal + external with PLZ)`)
+    console.log(`📍 External busy times with PLZ: ${staffAppointments.filter((apt: any) => apt.hasPLZForTravelCalc).length}`)
     
     // If no appointments, all slots are valid
     if (staffAppointments.length === 0) {
@@ -1120,23 +1137,41 @@ export const useAvailabilitySystem = () => {
       
       // Extract PLZ from previous appointment
       if (previousAppointment) {
-        const prevAddress = previousAppointment.custom_location_address || previousAppointment.locations?.address
-        if (prevAddress) {
-          prevPLZ = extractPLZFromAddress(prevAddress)
-          if (prevPLZ && prevPLZ !== locationPLZ) {
-            plzPairsNeeded.add(`${prevPLZ}|${locationPLZ}`)
+        // First, check if it's an external busy time with postal_code
+        if ((previousAppointment as any).hasPLZForTravelCalc && (previousAppointment as any).location_plz) {
+          prevPLZ = (previousAppointment as any).location_plz
+          console.log(`✅ Using postal_code from external busy time: ${prevPLZ}`)
+        } else {
+          // Fall back to address extraction from internal appointments
+          const prevAddress = previousAppointment.custom_location_address || previousAppointment.locations?.address
+          if (prevAddress) {
+            prevPLZ = extractPLZFromAddress(prevAddress)
+            console.log(`✅ Extracted PLZ from address: ${prevAddress} → ${prevPLZ}`)
           }
+        }
+        
+        if (prevPLZ && prevPLZ !== locationPLZ) {
+          plzPairsNeeded.add(`${prevPLZ}|${locationPLZ}`)
         }
       }
       
       // Extract PLZ from next appointment
       if (nextAppointment) {
-        const nextAddress = nextAppointment.custom_location_address || nextAppointment.locations?.address
-        if (nextAddress) {
-          nextPLZ = extractPLZFromAddress(nextAddress)
-          if (nextPLZ && nextPLZ !== locationPLZ) {
-            plzPairsNeeded.add(`${locationPLZ}|${nextPLZ}`)
+        // First, check if it's an external busy time with postal_code
+        if ((nextAppointment as any).hasPLZForTravelCalc && (nextAppointment as any).location_plz) {
+          nextPLZ = (nextAppointment as any).location_plz
+          console.log(`✅ Using postal_code from external busy time: ${nextPLZ}`)
+        } else {
+          // Fall back to address extraction from internal appointments
+          const nextAddress = nextAppointment.custom_location_address || nextAppointment.locations?.address
+          if (nextAddress) {
+            nextPLZ = extractPLZFromAddress(nextAddress)
+            console.log(`✅ Extracted PLZ from address: ${nextAddress} → ${nextPLZ}`)
           }
+        }
+        
+        if (nextPLZ && nextPLZ !== locationPLZ) {
+          plzPairsNeeded.add(`${locationPLZ}|${nextPLZ}`)
         }
       }
       
