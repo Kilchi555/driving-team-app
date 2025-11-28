@@ -27,16 +27,22 @@ export async function lookupPLZFromLocationName(
       .from('locations')
       .select('postal_code, city, name')
       .eq('tenant_id', tenantId)
-      .or(`name.ilike.%${locationName}%,city.ilike.%${locationName}%`)
-      .single()
+      .or(`city.ilike.${locationName},name.ilike.${locationName}`)
+      .limit(1)
 
-    if (error || !data) {
-      console.log(`⚠️  No location found for: "${locationName}"`)
+    if (error) {
+      console.warn(`⚠️ DB query error:`, error)
       return null
     }
 
-    console.log(`✅ Found location: ${data.name} (${data.city}) - PLZ: ${data.postal_code}`)
-    return data.postal_code
+    if (!data || data.length === 0) {
+      console.log(`⚠️ No location found in DB for: "${locationName}"`)
+      return null
+    }
+
+    const location = data[0]
+    console.log(`✅ Found location in DB: ${location.name} (${location.city}) - PLZ: ${location.postal_code}`)
+    return location.postal_code
   } catch (err: any) {
     console.error('❌ Error looking up location:', err)
     return null
