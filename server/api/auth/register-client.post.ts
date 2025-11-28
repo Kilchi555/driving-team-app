@@ -50,6 +50,9 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Erforderliche Felder fehlen'
       })
     }
+    
+    // Debug: Log categories to verify they're being sent correctly
+    console.log('📋 Categories received:', categories, 'Type:', typeof categories, 'Is Array:', Array.isArray(categories))
 
     // Validate email format and check for disposable/spam emails
     console.log('📧 Validating email:', email)
@@ -143,6 +146,11 @@ export default defineEventHandler(async (event) => {
     // 2. Create user profile using service role (bypasses RLS)
     console.log('👤 Creating user profile in users table...')
     const userRole = isAdmin ? 'tenant_admin' : 'client'
+    
+    // Ensure categories is an array
+    const categoryArray = Array.isArray(categories) ? categories : (categories ? [categories] : [])
+    console.log('📋 Category array for DB:', categoryArray)
+    
     const { data: userProfile, error: userError } = await serviceSupabase
       .from('users')
       .insert({
@@ -157,7 +165,7 @@ export default defineEventHandler(async (event) => {
         street_nr: streetNr?.trim() || null,
         zip: zip?.trim() || null,
         city: city?.trim() || null,
-        category: categories || null,
+        category: categoryArray, // Store as array
         lernfahrausweis_nr: lernfahrausweisNr?.trim() || null,
         role: userRole,
         is_active: true
