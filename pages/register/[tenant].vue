@@ -6,7 +6,7 @@
       <div v-if="!registrationComplete" class="bg-gray-100 text-white p-1 rounded-t-xl">
         <div class="text-center">
           <LoadingLogo size="2xl" :tenant-id="activeTenantId || undefined" :tenant-slug="tenantSlug" />
-          <h1 class="text-xl font-bold text-gray-700">
+          <h1 class="text-xl font-bold text-gray-700 p-4">
             {{ isAdminRegistration ? 'Admin-Account erstellen' :
                serviceType === 'fahrlektion' ? 'Registrierung für Fahrlektionen' : 
                serviceType === 'theorie' ? 'Registrierung für Theorielektion' : 
@@ -340,7 +340,7 @@
                 @click="() => triggerCategoryUpload(category)"
               >
                 <input
-                  :ref="`fileInput_${category}`"
+                  :ref="el => { if (el) categoryFileInputs[category] = el as HTMLInputElement }"
                   type="file"
                   accept="image/*,.pdf"
                   @change="(e) => handleCategoryFileUpload(e, category)"
@@ -680,6 +680,7 @@ const registeredTenantSlug = ref<string>('')
 
 // Refs
 const fileInput = ref<HTMLInputElement>()
+const categoryFileInputs = ref<Record<string, HTMLInputElement>>({})
 
 // LocalStorage key for form data
 const FORM_DATA_KEY = 'register_form_data'
@@ -861,9 +862,11 @@ const handleFileUpload = (event: Event) => {
 
 // Trigger file input for specific category
 const triggerCategoryUpload = (category: string) => {
-  const input = (document.querySelector(`[ref="fileInput_${category}"]`) as HTMLElement)?.querySelector('input')
+  const input = categoryFileInputs.value[category]
   if (input) {
     input.click()
+  } else {
+    console.warn('⚠️ File input not found for category:', category)
   }
 }
 
@@ -898,7 +901,7 @@ const handleCategoryFileUpload = (event: Event, category: string) => {
 // Clear image for specific category
 const clearCategoryImage = (category: string) => {
   delete uploadedDocuments.value[category]
-  const input = (document.querySelector(`[ref="fileInput_${category}"]`) as HTMLElement)?.querySelector('input') as HTMLInputElement
+  const input = categoryFileInputs.value[category]
   if (input) {
     input.value = ''
   }
