@@ -47,7 +47,8 @@ export async function lookupPLZFromLocationName(
  * Resolve PLZ from external busy time location
  * 1. Try to extract from event_location string if it contains "NNNN Cityname" format
  * 2. Look up in locations table by city name
- * 3. Return null if nothing found
+ * 3. Use Google Geocoding API as fallback
+ * 4. Return null if nothing found
  */
 export async function resolvePLZForExternalBusyTime(
   eventLocation: string | null,
@@ -64,8 +65,33 @@ export async function resolvePLZForExternalBusyTime(
     return directPLZ
   }
 
-  // Fallback: look up in locations table
+  // Second: look up in locations table
   const lookedUpPLZ = await lookupPLZFromLocationName(eventLocation, tenantId, supabase)
-  return lookedUpPLZ
+  if (lookedUpPLZ) {
+    console.log(`✅ Found PLZ from locations table: ${lookedUpPLZ} for "${eventLocation}"`)
+    return lookedUpPLZ
+  }
+
+  // Third: Use Google Geocoding API as fallback
+  console.log(`🌐 Attempting Google Geocoding API for: "${eventLocation}"`)
+  try {
+    const response = await $fetch<{ success: boolean; postal_code: string | null }>('/api/geocoding/resolve-plz', {
+      method: 'POST',
+      body: {
+        location: eventLocation,
+        tenantId
+      }
+    })
+
+    if (response.success && response.postal_code) {
+      console.log(`✅ Geocoding API resolved: "${eventLocation}" → ${response.postal_code}`)
+      return response.postal_code
+    }
+  } catch (error: any) {
+    console.warn(`⚠️ Geocoding API failed for "${eventLocation}":`, error.message)
+  }
+
+  console.log(`❌ Could not resolve PLZ for: "${eventLocation}"`)
+  return null
 }
 
