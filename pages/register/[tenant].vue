@@ -308,73 +308,84 @@
 
         <!-- Step 2: Lernfahrausweis Upload (only for Fahrlektionen) -->
         <div v-if="!registrationComplete && currentStep === 2 && requiresLernfahrausweis" class="space-y-6">
-          <div class="text-center">
+          <div class="text-center mb-6">
             <h2 class="text-xl font-semibold text-gray-900 mb-2">Lernfahr- oder Führerausweis hochladen</h2>
+            <p class="text-gray-600 text-sm">Bitte laden Sie für jede Kategorie einen Ausweis hoch</p>
           </div>
 
-          <!-- Upload Area -->
-          <div 
-            class="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-blue-400 transition-colors cursor-pointer"
-            @click="fileInput?.click()"
-          >
-            <input
-              ref="fileInput"
-              type="file"
-              accept="image/*,.pdf"
-              @change="handleFileUpload"
-              class="hidden"
-            />
-            
-            <!-- Upload Prompt -->
-            <div v-if="!uploadedImage" class="text-center">
-              <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              </svg>
-              <p class="text-blue-600 font-medium mb-1">Klicken zum Hochladen</p>
-              <p class="text-xs text-gray-500">Foto aufnehmen oder aus Galerie wählen</p>
-              <p class="text-xs text-gray-400 mt-1">PNG, JPG oder PDF bis 5MB</p>
-            </div>
+          <!-- Upload per Category -->
+          <div class="space-y-6">
+            <div 
+              v-for="category in formData.categories" 
+              :key="category"
+              class="border-2 border-gray-200 rounded-lg p-6"
+            >
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                Kategorie {{ category }}
+              </h3>
 
-            <!-- Uploaded Image Preview -->
-            <div v-if="uploadedImage" class="space-y-4">
-              <div class="text-center">
-                <!-- Image Preview -->
-                <img 
-                  v-if="uploadedFileType && uploadedFileType.startsWith('image/')"
-                  :src="uploadedImage" 
-                  alt="Lernfahrausweis" 
-                  class="max-w-full h-64 object-contain mx-auto rounded-lg shadow-md border border-gray-200"
-                >
-                <!-- PDF Preview -->
-                <div 
-                  v-else 
-                  class="max-w-sm mx-auto bg-red-50 rounded-lg shadow-md border-2 border-red-200 p-8"
-                >
-                  <svg class="w-24 h-24 text-red-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+              <!-- Upload Area -->
+              <div 
+                class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors cursor-pointer"
+                @click="() => triggerCategoryUpload(category)"
+              >
+                <input
+                  :ref="`fileInput_${category}`"
+                  type="file"
+                  accept="image/*,.pdf"
+                  @change="(e) => handleCategoryFileUpload(e, category)"
+                  class="hidden"
+                  :capture="useCamera ? 'environment' : undefined"
+                />
+                
+                <!-- Upload Prompt -->
+                <div v-if="!uploadedDocuments[category]" class="text-center">
+                  <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
                   </svg>
-                  <p class="text-red-600 font-bold text-xl">PDF</p>
-                  <p class="text-red-700 text-sm mt-2">Dokument hochgeladen</p>
+                  <p class="text-blue-600 font-medium mb-1">Klicken zum Hochladen</p>
+                  <p class="text-xs text-gray-500">Foto aufnehmen oder aus Galerie wählen</p>
+                  <p class="text-xs text-gray-400 mt-1">PNG, JPG oder PDF bis 5MB</p>
                 </div>
-              </div>
-              
-              <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div class="flex items-start gap-3">
-                  <div>
-                    <p class="text-green-800 font-semibold">Ausweis hochgeladen</p>
+
+                <!-- Uploaded Document Preview -->
+                <div v-if="uploadedDocuments[category]" class="space-y-3">
+                  <div class="text-center">
+                    <!-- Image Preview -->
+                    <img 
+                      v-if="uploadedDocuments[category].type.startsWith('image/')"
+                      :src="uploadedDocuments[category].data" 
+                      :alt="`Ausweis ${category}`" 
+                      class="max-w-full h-48 object-contain mx-auto rounded-lg shadow-md border border-gray-200"
+                    >
+                    <!-- PDF Preview -->
+                    <div 
+                      v-else 
+                      class="max-w-sm mx-auto bg-red-50 rounded-lg shadow-md border-2 border-red-200 p-6"
+                    >
+                      <svg class="w-16 h-16 text-red-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                      </svg>
+                      <p class="text-red-600 font-bold text-lg">PDF</p>
+                      <p class="text-red-700 text-xs mt-1">{{ uploadedDocuments[category].fileName }}</p>
+                    </div>
+                  </div>
+                  
+                  <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p class="text-green-800 font-semibold text-sm text-center">✓ Ausweis hochgeladen</p>
+                  </div>
+                  
+                  <!-- Change Button -->
+                  <div class="flex justify-center">
+                    <button
+                      @click.stop="() => clearCategoryImage(category)"
+                      class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors text-sm"
+                    >
+                      🔄 Anderes Bild wählen
+                    </button>
                   </div>
                 </div>
-              </div>
-              
-              <!-- Buttons -->
-              <div class="flex justify-center">
-                <button
-                  @click.stop="clearImage"
-                  class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
-                >
-                  🔄 Anderes Bild wählen
-                </button>
               </div>
             </div>
           </div>
@@ -642,6 +653,15 @@ const currentStep = ref(1)
 const isSubmitting = ref(false)
 const uploadedImage = ref<string | null>(null)
 const uploadedFileType = ref<string | null>(null)
+// Camera toggle state
+const useCamera = ref(false)
+// Multiple documents per category
+interface DocumentInfo {
+  data: string
+  type: string
+  fileName: string
+}
+const uploadedDocuments = ref<Record<string, DocumentInfo>>({})
 const showPassword = ref(false)
 const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
@@ -732,8 +752,8 @@ const canProceed = computed(() => {
            formData.value.categories.length > 0
   }
   if (currentStep.value === 2 && requiresLernfahrausweis.value) {
-    // Only uploaded image is required
-    return !!uploadedImage.value
+    // All selected categories must have an uploaded document
+    return formData.value.categories.every(cat => uploadedDocuments.value[cat])
   }
   return true
 })
@@ -803,7 +823,7 @@ const goBack = () => {
   router.back()
 }
 
-// File upload
+// File upload (legacy - keeping for backward compatibility)
 const handleFileUpload = (event: Event) => {
   console.log('📤 File upload started')
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -827,6 +847,51 @@ const handleFileUpload = (event: Event) => {
       console.log('✅ uploadedImage.value set, length:', uploadedImage.value?.length)
     }
     reader.readAsDataURL(file)
+  }
+}
+
+// Trigger file input for specific category
+const triggerCategoryUpload = (category: string) => {
+  const input = (document.querySelector(`[ref="fileInput_${category}"]`) as HTMLElement)?.querySelector('input')
+  if (input) {
+    input.click()
+  }
+}
+
+// Handle file upload for specific category
+const handleCategoryFileUpload = (event: Event, category: string) => {
+  console.log('📤 Category file upload started for:', category)
+  const file = (event.target as HTMLInputElement).files?.[0]
+  console.log('📄 File selected:', file?.name, 'Size:', file?.size, 'Type:', file?.type)
+  
+  if (file) {
+    // Check file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      console.error('❌ File too large')
+      showError('Datei zu groß', 'Maximale Größe: 5MB')
+      return
+    }
+    
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      console.log('✅ File read complete for category:', category)
+      uploadedDocuments.value[category] = {
+        data: e.target?.result as string,
+        type: file.type,
+        fileName: file.name
+      }
+      console.log('✅ uploadedDocuments updated:', Object.keys(uploadedDocuments.value))
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+// Clear image for specific category
+const clearCategoryImage = (category: string) => {
+  delete uploadedDocuments.value[category]
+  const input = (document.querySelector(`[ref="fileInput_${category}"]`) as HTMLElement)?.querySelector('input') as HTMLInputElement
+  if (input) {
+    input.value = ''
   }
 }
 
@@ -951,31 +1016,37 @@ const submitRegistration = async () => {
     
     console.log('✅ User registered successfully:', data.userId)
     
-    // Upload Lernfahrausweis image to Supabase Storage (if exists)
-    if (uploadedImage.value && data.userId) {
-      console.log('📸 Uploading Lernfahrausweis image via backend API...')
+    // Upload Lernfahrausweis documents to Supabase Storage (one per category)
+    if (Object.keys(uploadedDocuments.value).length > 0 && data.userId) {
+      console.log('📸 Uploading documents for categories:', Object.keys(uploadedDocuments.value))
       
-      try {
-        // Generate unique filename
-        const fileName = `${data.userId}_lernfahrausweis_${Date.now()}.jpg`
-        
-        // Upload via backend API (uses service role to bypass RLS)
-        const uploadResponse = await $fetch('/api/auth/upload-document', {
-          method: 'POST',
-          body: {
-            userId: data.userId,
-            tenantId: activeTenantId,
-            fileData: uploadedImage.value,
-            fileName: fileName,
-            bucket: 'user-documents',
-            path: 'lernfahrausweise'
-          }
-        }) as any
-        
-        console.log('✅ Image uploaded successfully:', uploadResponse.path)
-      } catch (imageError: any) {
-        console.error('❌ Image upload failed:', imageError)
-        // Don't fail registration for image upload error
+      for (const [category, docInfo] of Object.entries(uploadedDocuments.value)) {
+        try {
+          // Determine file extension based on type
+          const fileExt = docInfo.type.includes('pdf') ? 'pdf' : 'jpg'
+          const fileName = `${data.userId}_${category}_lernfahrausweis_${Date.now()}.${fileExt}`
+          
+          console.log(`📤 Uploading document for category ${category}...`)
+          
+          // Upload via backend API (uses service role to bypass RLS)
+          const uploadResponse = await $fetch('/api/auth/upload-document', {
+            method: 'POST',
+            body: {
+              userId: data.userId,
+              tenantId: activeTenantId.value,
+              fileData: docInfo.data,
+              fileName: fileName,
+              bucket: 'user-documents',
+              path: 'lernfahrausweise',
+              category: category // Pass category for tracking
+            }
+          }) as any
+          
+          console.log(`✅ Document for category ${category} uploaded successfully:`, uploadResponse.path)
+        } catch (imageError: any) {
+          console.error(`❌ Document upload failed for category ${category}:`, imageError)
+          // Don't fail registration for image upload error
+        }
       }
     }
     
