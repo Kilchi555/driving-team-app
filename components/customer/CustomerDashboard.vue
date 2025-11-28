@@ -755,7 +755,7 @@
           </div>
 
           <!-- Instructors List -->
-          <div v-else-if="instructors && instructors.length > 0" class="space-y-2">
+          <div v-if="instructors && instructors.length > 0" class="space-y-2">
             <div 
               v-for="instructor in instructors" 
               :key="instructor.id"
