@@ -398,14 +398,37 @@ export const useAvailabilitySystem = () => {
       // Load external busy times (only future appointments, at least 24h ahead)
       const { data: externalBusyTimes, error: externalError } = await supabase
         .from('external_busy_times')
-        .select('id, staff_id, start_time, end_time, event_title')
+        .select('id, staff_id, start_time, end_time, event_title, event_location')
         .eq('tenant_id', selectedTenantId)
         .gte('start_time', minFutureTimeUTC) // Only future appointments (UTC)
 
       if (externalError) {
         console.warn('⚠️ Error loading external busy times (with date filters):', externalError)
       } else {
-        console.log('🛰️ External busy times fetched (with date filters):', (externalBusyTimes?.length || 0), (externalBusyTimes || []).slice(0, 3).map(e => ({ id: e.id, staff_id: e.staff_id, start_time: e.start_time, end_time: e.end_time })))
+        console.log('🛰️ External busy times fetched (with date filters):', (externalBusyTimes?.length || 0), (externalBusyTimes || []).slice(0, 3).map(e => ({ id: e.id, staff_id: e.staff_id, start_time: e.start_time, end_time: e.end_time, location: e.event_location })))
+      }
+      
+      // Helper function to convert UTC to Zurich local time
+      const convertUTCToZurichLocal = (utcTimeString: string): string => {
+        if (!utcTimeString) return utcTimeString
+        
+        // Parse the UTC time string
+        const date = new Date(utcTimeString)
+        
+        // Convert to Zurich timezone
+        const zurichTime = date.toLocaleString('sv-SE', {
+          timeZone: 'Europe/Zurich',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        })
+        
+        // Format: "YYYY-MM-DD HH:MM:SS" (no timezone suffix for local time)
+        return zurichTime.replace('T', ' ').replace(',', '')
       }
       
       // Use the future-filtered results for the final data (only appointments at least 24h in the future)
@@ -417,12 +440,14 @@ export const useAvailabilitySystem = () => {
         ...finalExternalBusyTimes.map(ext => ({
           id: ext.id,
           staff_id: ext.staff_id,
-          location_id: null, // External events don't have location
-          start_time: ext.start_time,
-          end_time: ext.end_time,
+          location_id: null, // External events don't have location_id
+          location_name: ext.event_location || null, // Use event_location from external calendar
+          start_time: convertUTCToZurichLocal(ext.start_time), // Convert UTC to Zurich local
+          end_time: convertUTCToZurichLocal(ext.end_time), // Convert UTC to Zurich local
           duration_minutes: Math.round((new Date(ext.end_time).getTime() - new Date(ext.start_time).getTime()) / (1000 * 60)),
           status: 'external_busy',
-          type: 'external'
+          type: 'external',
+          title: ext.event_title || 'Privat'
         }))
       ]
 

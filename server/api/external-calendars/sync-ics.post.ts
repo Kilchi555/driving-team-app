@@ -160,6 +160,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
         external_calendar_id: calendar_id,
         external_event_id: ((event.uid || `event_${Date.now()}_${Math.random()}`) + '').slice(0, 255),
         event_title: 'Privat', // Anonymisiert für Datenschutz
+        event_location: event.location || null, // Extract location from ICS event
         start_time: convertToUTC(event.start),
         end_time: convertToUTC(event.end),
         sync_source: 'ics'
