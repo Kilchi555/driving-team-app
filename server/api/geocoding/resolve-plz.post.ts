@@ -1,7 +1,7 @@
 /**
  * API Endpoint: Geocode Location to Postal Code
  * Uses Google Geocoding API to resolve location name to postal code
- * Caches results in database to avoid repeated API calls
+ * Stores results directly in plz_distance_cache for unified caching
  */
 
 import { getSupabaseAdmin } from '~/utils/supabase'
@@ -11,8 +11,6 @@ interface GeocodeResult {
   location: string
   postal_code: string | null
   address: string | null
-  latitude?: number
-  longitude?: number
   error?: string
 }
 
@@ -22,7 +20,7 @@ interface GeocodeResult {
 async function callGoogleGeocodingAPI(
   locationName: string,
   googleApiKey: string
-): Promise<{ postal_code: string | null; address: string | null; latitude?: number; longitude?: number } | null> {
+): Promise<{ postal_code: string | null; address: string | null } | null> {
   try {
     const query = `${locationName}, Switzerland`
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${googleApiKey}&language=de`
@@ -37,7 +35,6 @@ async function callGoogleGeocodingAPI(
 
     const result = response.results[0]
     const address = result.formatted_address
-    const { lat, lng } = result.geometry.location
 
     // Extract postal code from address components
     let postal_code: string | null = null
@@ -51,13 +48,10 @@ async function callGoogleGeocodingAPI(
     console.log(`✅ Geocoding result for "${locationName}":`)
     console.log(`   Address: ${address}`)
     console.log(`   PLZ: ${postal_code}`)
-    console.log(`   Lat/Lng: ${lat}, ${lng}`)
 
     return {
       postal_code,
-      address,
-      latitude: lat,
-      longitude: lng
+      address
     }
   } catch (error: any) {
     console.error('❌ Error calling Google Geocoding API:', error)
@@ -68,7 +62,7 @@ async function callGoogleGeocodingAPI(
 export default defineEventHandler(async (event): Promise<GeocodeResult> => {
   try {
     const body = await readBody(event)
-    const { location, tenantId } = body
+    const { location } = body
 
     if (!location) {
       throw createError({
@@ -86,29 +80,25 @@ export default defineEventHandler(async (event): Promise<GeocodeResult> => {
 
     const supabase = getSupabaseAdmin()
 
-    // Check cache first
-    console.log('🔍 Checking cache for geocoding result...')
+    // Check if we have a cached result in plz_distance_cache
+    // Use location name as from_plz and '0000' as to_plz to mark as geocoding cache entry
+    console.log('🔍 Checking cache in plz_distance_cache...')
     const { data: cached, error: cacheError } = await supabase
-      .from('location_geocoding_cache')
-      .select('postal_code, address, latitude, longitude, cached_at')
-      .eq('location_name', normalizedLocation)
+      .from('plz_distance_cache')
+      .select('from_plz, distance_km')
+      .eq('from_plz', normalizedLocation)
+      .eq('to_plz', '0000') // Special marker for geocoding results
       .single()
 
     if (!cacheError && cached) {
-      const cachedDate = new Date(cached.cached_at)
-      const ageMinutes = (Date.now() - cachedDate.getTime()) / (1000 * 60)
-      
-      // Use cache if less than 30 days old
-      if (ageMinutes < 30 * 24 * 60) {
-        console.log(`✅ Cache hit for "${normalizedLocation}" (${Math.round(ageMinutes)} minutes old)`)
-        return {
-          success: true,
-          location: normalizedLocation,
-          postal_code: cached.postal_code,
-          address: cached.address,
-          latitude: cached.latitude,
-          longitude: cached.longitude
-        }
+      const postal_code = cached.from_plz
+      const address = cached.distance_km // We'll store the address as a string here as a hack
+      console.log(`✅ Cache hit for "${normalizedLocation}" → ${postal_code}`)
+      return {
+        success: true,
+        location: normalizedLocation,
+        postal_code,
+        address
       }
     }
 
@@ -127,26 +117,8 @@ export default defineEventHandler(async (event): Promise<GeocodeResult> => {
     console.log(`🌐 Cache miss, calling Google Geocoding API...`)
     const result = await callGoogleGeocodingAPI(normalizedLocation, googleApiKey)
 
-    if (!result) {
-      // Save as failed attempt
-      console.log(`💾 Saving failed geocoding attempt to cache`)
-      const { error: saveError } = await supabase
-        .from('location_geocoding_cache')
-        .upsert({
-          location_name: normalizedLocation,
-          postal_code: null,
-          address: null,
-          latitude: null,
-          longitude: null,
-          cached_at: new Date().toISOString()
-        }, {
-          onConflict: 'location_name'
-        })
-
-      if (saveError) {
-        console.warn('⚠️ Failed to save geocoding cache:', saveError)
-      }
-
+    if (!result || !result.postal_code) {
+      console.log(`⚠️ Could not geocode: "${normalizedLocation}"`)
       return {
         success: false,
         location: normalizedLocation,
@@ -156,19 +128,21 @@ export default defineEventHandler(async (event): Promise<GeocodeResult> => {
       }
     }
 
-    // Save to cache
-    console.log(`💾 Saving geocoding result to cache`)
+    // Save to plz_distance_cache with special marker
+    console.log(`💾 Saving geocoding result to plz_distance_cache`)
     const { error: saveError } = await supabase
-      .from('location_geocoding_cache')
+      .from('plz_distance_cache')
       .upsert({
-        location_name: normalizedLocation,
+        from_plz: normalizedLocation,
+        to_plz: '0000', // Special marker for geocoding results
         postal_code: result.postal_code,
-        address: result.address,
-        latitude: result.latitude,
-        longitude: result.longitude,
-        cached_at: new Date().toISOString()
+        driving_time_minutes: 0, // Not used for geocoding
+        driving_time_minutes_peak: 0,
+        driving_time_minutes_offpeak: 0,
+        distance_km: 0,
+        last_updated: new Date().toISOString()
       }, {
-        onConflict: 'location_name'
+        onConflict: 'from_plz,to_plz'
       })
 
     if (saveError) {
@@ -179,9 +153,7 @@ export default defineEventHandler(async (event): Promise<GeocodeResult> => {
       success: true,
       location: normalizedLocation,
       postal_code: result.postal_code,
-      address: result.address,
-      latitude: result.latitude,
-      longitude: result.longitude
+      address: result.address
     }
   } catch (error: any) {
     console.error('❌ Error in geocode-location API:', error)
@@ -196,4 +168,5 @@ export default defineEventHandler(async (event): Promise<GeocodeResult> => {
     })
   }
 })
+
 
