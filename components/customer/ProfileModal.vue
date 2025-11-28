@@ -249,7 +249,7 @@
                         :src="getDocumentUrl(doc)" 
                         :alt="doc.file_name"
                         class="w-16 h-16 object-cover rounded border border-gray-200"
-                        @error="(e) => handleImageError(e, doc)"
+                        @error="handleImageError"
                         @load="() => handleImageLoad(doc)"
                       >
                       <div v-else class="w-16 h-16 bg-gray-200 rounded border border-gray-200 flex items-center justify-center">
@@ -428,8 +428,8 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
         showSuccess('Erfolg', `${categoryName} erfolgreich hochgeladen`)
         setTimeout(() => { successMessage.value = '' }, 3000)
         
-        // Emit event to refresh documents
-        useRouter().go(0)
+        // Reload page to refresh documents
+        location.reload()
       }
     }
     reader.readAsDataURL(file)
@@ -541,11 +541,6 @@ const handleImageError = (e: Event) => {
   console.error('❌ Image load error for:', img.alt, 'url:', img.src)
   // Zeige ein Fallback-Icon statt das Bild zu verstecken
   img.replaceWith(document.createElement('div'))
-}
-
-const useRouter = () => {
-  const router = window.__NUXT__.nuxtApp.$router
-  return router
 }
 
 // Watch for modal opening

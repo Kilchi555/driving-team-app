@@ -27,8 +27,8 @@
               <button
                 @click="refreshData"
                 :disabled="isLoading"
-                class="flex items-center space-x-2 px-4 py-2 text-white rounded-lg disabled:opacity-50 transition-colors"
-                :style="{ background: `${primaryColor}cc`, 'hover:background': primaryColor }"
+                class="flex items-center space-x-2 px-4 py-2 text-white rounded-lg disabled:opacity-50 transition-colors hover:opacity-90"
+                :style="{ background: `${primaryColor}cc` }"
               >
                 <!-- ✅ SVG Refresh Icon -->
                 <svg 
@@ -720,6 +720,38 @@
           <div v-if="isLoading" class="text-center py-8">
             <LoadingLogo size="md" />
             <p class="text-gray-500 mt-2">Fahrlehrer werden geladen...</p>
+          </div>
+
+          <!-- School Contact Info -->
+          <div v-if="!isLoading && currentTenant" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <h3 class="font-semibold text-blue-900 mb-3">Fahrschule Kontaktdaten</h3>
+            <div class="space-y-2">
+              <div class="flex items-start gap-2">
+                <svg class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                </svg>
+                <div class="text-sm">
+                  <p class="text-blue-900 font-medium">{{ currentTenant.name }}</p>
+                  <p class="text-blue-800">{{ currentTenant.address }}</p>
+                </div>
+              </div>
+              <div v-if="currentTenant.contact_email" class="flex items-center gap-2 text-sm text-blue-800">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <a :href="`mailto:${currentTenant.contact_email}`" class="text-blue-600 hover:text-blue-800">
+                  {{ currentTenant.contact_email }}
+                </a>
+              </div>
+              <div v-if="currentTenant.contact_phone" class="flex items-center gap-2 text-sm text-blue-800">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <a :href="`tel:${currentTenant.contact_phone}`" class="text-blue-600 hover:text-blue-800">
+                  {{ currentTenant.contact_phone }}
+                </a>
+              </div>
+            </div>
           </div>
 
           <!-- Instructors List -->
@@ -1503,12 +1535,12 @@ const loadPendingConfirmations = async () => {
     }
 
     // Load tenant payment settings for automatic payment hours (from payment_settings JSON)
-    if (userData.tenant_id) {
+    if (userData.value?.tenant_id) {
       try {
         const { data: paymentSettings } = await supabase
           .from('tenant_settings')
           .select('setting_value')
-          .eq('tenant_id', userData.tenant_id)
+          .eq('tenant_id', userData.value.tenant_id)
           .eq('category', 'payment')
           .eq('setting_key', 'payment_settings')
           .maybeSingle()
@@ -2379,9 +2411,9 @@ onMounted(async () => {
     console.log('✅ Auth verified, loading data...')
     
     // Load tenant branding
-    if (currentUser.value?.tenant_id) {
-      console.log('🎨 Loading tenant branding for:', currentUser.value.tenant_id)
-      await loadTenantBrandingById(currentUser.value.tenant_id)
+    if (userData.value?.tenant_id) {
+      console.log('🎨 Loading tenant branding for:', userData.value.tenant_id)
+      await loadTenantBrandingById(userData.value.tenant_id)
     }
     
     await loadAllData()

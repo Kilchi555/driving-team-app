@@ -847,10 +847,10 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
     }
     
     // Use API data if available, otherwise use direct queries
-    if (workingHoursFromAPI.length > 0) workingHours = workingHoursFromAPI
-    if (appointmentsFromAPI.length > 0) appointments = appointmentsFromAPI
+    if (workingHoursFromAPI && workingHoursFromAPI.length > 0) workingHours.value = workingHoursFromAPI
+    if (appointmentsFromAPI && appointmentsFromAPI.length > 0) appointments.value = appointmentsFromAPI
     
-    console.log('📅 Found', appointments?.length || 0, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', workingHours?.length || 0, 'working hours')
+    console.log('📅 Found', appointments.value?.length || 0, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', workingHours.value?.length || 0, 'working hours')
     
     // Check each slot against appointments and working hours
     const availabilityResults = timeSlots.map(slot => {
@@ -861,7 +861,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       const slotTimeMinutes = slotHour * 60 + slotMinute
       
       // Find working hours for this day
-      const dayWorkingHours = workingHours?.find(wh => wh.day_of_week === dayOfWeek)
+      const dayWorkingHours = workingHours.value?.find(wh => wh.day_of_week === dayOfWeek)
       
       if (!dayWorkingHours) {
         console.log('🚫 No working hours for day', dayOfWeek, '(Sunday=0)', slot.startTime.toLocaleDateString('de-DE'))
@@ -1226,7 +1226,9 @@ const loadStaffForCategory = async () => {
     // Build a map of staff_id -> [categories] from locations
     const staffCategoryMap = new Map<string, string[]>()
     
+    // @ts-ignore
     if (locations.value) {
+      // @ts-ignore
       locations.value.forEach((location: any) => {
         const availableCategories = location.available_categories || []
         const staffIds = location.staff_ids || []
