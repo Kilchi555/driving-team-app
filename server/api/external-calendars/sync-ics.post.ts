@@ -95,6 +95,11 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     
     // Parse ICS data
     const events = parseICSData(icsData)
+    console.log('📋 Parsed events:', events.length)
+    console.log('🔍 Events with location data:')
+    events.forEach((e, i) => {
+      console.log(`  [${i}] LOCATION: "${e.location || 'KEINE'}" | START: ${e.start} | END: ${e.end}`)
+    })
     
     if (events.length === 0) {
       return {
@@ -168,9 +173,17 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       // Only add event_location if event has location data
       if (event.location) {
         busyTime.event_location = event.location
+        console.log(`✅ Adding location to event: "${event.location}"`)
+      } else {
+        console.log(`⏭️  No location for event: ${event.start} - ${event.end}`)
       }
       
       return busyTime
+    })
+    
+    console.log('📊 Final busyTimes to insert:')
+    busyTimes.slice(0, 3).forEach((bt, i) => {
+      console.log(`  [${i}] event_location: "${bt.event_location || 'UNDEFINED'}" | start: ${bt.start_time}`)
     })
 
     // Deduplicate by conflict key to avoid "ON CONFLICT ... cannot affect row a second time"
@@ -266,6 +279,7 @@ function parseICSData(icsData: string): Array<{
         events.push({
           uid: currentEvent.uid,
           summary: currentEvent.summary,
+          location: currentEvent.location,
           start: currentEvent.start,
           end: currentEvent.end
         })
@@ -292,6 +306,8 @@ function parseICSData(icsData: string): Array<{
           break
         case 'LOCATION':
           currentEvent.location = value
+          console.log(`🗺️  Parsed LOCATION from ICS: "${value}"`)
+          console.log(`🔍 Full line: "${line}"`)
           break
         case 'DTSTART': {
           const tzidParam = params.find(p => p.toUpperCase().startsWith('TZID='))
@@ -306,7 +322,10 @@ function parseICSData(icsData: string): Array<{
           break
         }
         default:
-          // ignore other properties
+          // Log all other properties to see what we're missing
+          if (upperName && upperName.length > 0) {
+            console.log(`📋 Other property: ${upperName} = ${value.substring(0, 50)}`)
+          }
           break
       }
     }
