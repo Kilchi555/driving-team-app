@@ -9,9 +9,11 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     let currentRoute = route
     if (!currentRoute) {
       try {
-        const $router = useRouter()
+        // Use nuxtApp.$router instead of useRouter() to avoid setup context issues
+        const $router = nuxtApp.$router
         currentRoute = $router?.currentRoute?.value
       } catch (e) {
+        console.log('⚠️ Router not available in getTenantInfo:', e)
         // Router not ready yet
       }
     }
