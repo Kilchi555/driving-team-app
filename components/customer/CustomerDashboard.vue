@@ -1320,7 +1320,7 @@ const navigateToLessonBooking = async () => {
     const supabase = getSupabase()
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('tenant_id, assigned_staff_ids, category')
+      .select('id, tenant_id, assigned_staff_ids, category')
       .eq('auth_user_id', currentUser.value?.id)
       .single()
     
@@ -1329,6 +1329,8 @@ const navigateToLessonBooking = async () => {
       await navigateTo('/booking/availability-test')
       return
     }
+    
+    console.log('👤 User data loaded:', userData)
     
     // Get tenant slug from tenant_id
     const { data: tenantData, error: tenantError } = await supabase
@@ -1344,10 +1346,11 @@ const navigateToLessonBooking = async () => {
     }
     
     // Load last confirmed appointment to pre-fill booking data
+    // Use userData.id (user_id from users table), not currentUser.value.id (auth_user_id)
     const { data: lastAppointment, error: appointmentError } = await supabase
       .from('appointments')
       .select('type, staff_id, location_id, duration_minutes')
-      .eq('user_id', currentUser.value?.id)
+      .eq('user_id', userData.id)
       .eq('tenant_id', userData.tenant_id)
       .in('status', ['confirmed', 'completed'])
       .order('created_at', { ascending: false })
@@ -1357,6 +1360,8 @@ const navigateToLessonBooking = async () => {
     if (appointmentError && appointmentError.code !== 'PGRST116') {
       console.warn('⚠️ Error loading last appointment:', appointmentError)
     }
+    
+    console.log('📅 Last appointment:', lastAppointment)
     
     // Build query parameters
     const query: any = { referrer: '/customer-dashboard' }
@@ -1379,6 +1384,8 @@ const navigateToLessonBooking = async () => {
       }
       query.staff = userData.assigned_staff_ids[0] // Use first assigned staff
     }
+    
+    console.log('🚀 Navigating with query:', query)
     
     // Navigate with tenant slug and query parameters
     await navigateTo({
