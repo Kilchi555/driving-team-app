@@ -3,21 +3,9 @@
 -- Format: "Street, NNNN City" or "Street NNNN City"
 
 -- Step 1: Extract postal code (4 digits) from address
--- Format: "Street, 9100 City" or "Street 9100 City"
+-- Find first 4-digit sequence in the address string
 UPDATE locations
-SET postal_code = SUBSTRING(
-  address,
-  (position(' ' || substring(address FROM '(\d{4})') || ' ' in address) - 
-   position(substring(address FROM '(\d{4})') in address)),
-  4
-)
-WHERE postal_code IS NULL 
-  AND address IS NOT NULL 
-  AND address ~ '\d{4}';
-
--- Simpler approach: Use substring with pattern matching
-UPDATE locations
-SET postal_code = SUBSTRING(address, '\d{4}')
+SET postal_code = SUBSTRING(address FROM '\d{4}')
 WHERE postal_code IS NULL 
   AND address IS NOT NULL 
   AND address ~ '\d{4}';
