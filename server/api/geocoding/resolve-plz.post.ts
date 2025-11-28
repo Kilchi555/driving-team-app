@@ -1,5 +1,5 @@
 import { defineEventHandler, readBody } from 'h3';
-import { getSupabaseAdmin } from '~/server/utils/supabase';
+import { getSupabaseAdmin } from '../../../server/utils/supabase';
 
 const GOOGLE_GEOCODING_API_KEY = process.env.GOOGLE_GEOCODING_API_KEY;
 
