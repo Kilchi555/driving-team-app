@@ -659,9 +659,17 @@
                       </div>
                     </template>
                   </div>
-                  <div class="border-t border-gray-300 mt-2 pt-2 flex justify-between items-center">
-                    <span class="font-semibold text-gray-900 text-xs">Total</span>
-                    <span class="font-bold text-gray-900 text-sm">CHF {{ formatPrice(appointment.total_amount_rappen || 0) }}</span>
+                  <div class="border-t border-gray-300 mt-2 pt-2 space-y-2">
+                    <!-- Total -->
+                    <div class="flex justify-between items-center">
+                      <span class="font-semibold text-gray-900 text-xs">Total</span>
+                      <span class="font-bold text-gray-900 text-sm">CHF {{ formatPrice(appointment.total_amount_rappen || 0) }}</span>
+                    </div>
+                    <!-- Payment Method -->
+                    <div v-if="getPaymentMethod(appointment)" class="flex items-center justify-between text-xs">
+                      <span class="text-gray-600">Zahlungsmethode:</span>
+                      <span class="text-gray-900 font-medium">{{ getPaymentMethodLabel(getPaymentMethod(appointment)) }}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -1711,6 +1719,27 @@ const hasPaymentDetails = (appointment: any) => {
 // Helper: Get payment field value
 const getPaymentField = (appointment: any, fieldName: string) => {
   return appointment[fieldName] || 0
+}
+
+// ✅ Get payment method from appointment
+const getPaymentMethod = (appointment: any) => {
+  // Try to get payment method from first payment
+  if (appointment.payments && appointment.payments.length > 0) {
+    return appointment.payments[0].payment_method
+  }
+  return null
+}
+
+// ✅ Get payment method label
+const getPaymentMethodLabel = (method: string) => {
+  const labels: Record<string, string> = {
+    'wallee': 'Kreditkarte',
+    'invoice': 'Rechnung',
+    'cash': 'Barzahlung',
+    'twint': 'TWINT',
+    'bank_transfer': 'Banküberweisung'
+  }
+  return labels[method] || method
 }
 
 // ✅ Confirm appointment and redirect directly to Wallee (skip extra confirmation page)
