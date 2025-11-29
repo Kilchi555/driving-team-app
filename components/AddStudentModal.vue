@@ -565,19 +565,28 @@ const submitForm = async () => {
     // Success feedback
     console.log('Schüler erfolgreich hinzugefügt:', newStudent)
     
-    // ✅ Schöne Erfolgs-Benachrichtigung mit SMS-Status
+    // ✅ Benachrichtigung basierend auf Versandmethode
     if (newStudent.smsSuccess) {
       uiStore.addNotification({
         type: 'success',
         title: 'Schüler erfolgreich erstellt!',
         message: `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet. Der Schüler kann sein Konto jetzt aktivieren.`
       })
+    } else if (newStudent.emailSuccess) {
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Schüler erfolgreich erstellt!',
+        message: `Eine E-Mail mit Onboarding-Link wurde an ${form.value.email} gesendet. Der Schüler kann sein Konto jetzt aktivieren.`
+      })
     } else {
-      // SMS fehlgeschlagen - zeige Link zum manuellen Kopieren
+      // SMS/Email fehlgeschlagen - zeige Link zum manuellen Kopieren
+      const contactInfo = form.value.phone || form.value.email
+      const contactType = form.value.phone ? 'SMS' : 'E-Mail'
+      
       uiStore.addNotification({
         type: 'warning',
-        title: 'Schüler erstellt, aber SMS fehlgeschlagen',
-        message: `Bitte senden Sie den Onboarding-Link manuell an ${form.value.phone}`
+        title: `Schüler erstellt, aber ${contactType} fehlgeschlagen`,
+        message: `Bitte senden Sie den Onboarding-Link manuell an ${contactInfo}`
       })
       
       // Zeige den Link in der Konsole für Copy/Paste

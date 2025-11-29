@@ -283,34 +283,62 @@ export const useStudents = () => {
         onboarding_token_expires: tokenExpires.toISOString()
       }
 
-      // 2. Sende SMS mit Onboarding-Link (client-seitig via useSmsService)
+      // 2. Sende SMS oder E-Mail mit Onboarding-Link
       let smsSuccess = false
+      let emailSuccess = false
       let onboardingLink = ''
       
       try {
         onboardingLink = `https://simy.ch/onboarding/${onboardingToken}`
         
-        // ✅ Verwende useSmsService wie im Admin Dashboard
-        const { sendSms } = useSmsService()
-        const message = `Hallo ${data.first_name}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
-        
-        const smsResult = await sendSms(data.phone, message)
-        
-        if (smsResult.success) {
-          console.log('✅ Onboarding SMS sent to:', data.phone, 'SID:', smsResult.data?.sid)
-          smsSuccess = true
-        } else {
-          console.warn('⚠️ SMS sending failed:', smsResult.error)
-          smsSuccess = false
+        // Entscheide: SMS wenn Telefon vorhanden, sonst E-Mail
+        if (data.phone && data.phone.trim() !== '') {
+          // ✅ SMS-Versand
+          const { sendSms } = useSmsService()
+          const message = `Hallo ${data.first_name}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+          
+          const smsResult = await sendSms(data.phone, message)
+          
+          if (smsResult.success) {
+            console.log('✅ Onboarding SMS sent to:', data.phone, 'SID:', smsResult.data?.sid)
+            smsSuccess = true
+          } else {
+            console.warn('⚠️ SMS sending failed:', smsResult.error)
+            smsSuccess = false
+          }
+        } else if (data.email && data.email.trim() !== '') {
+          // ✅ E-Mail-Versand
+          console.log('📧 Sending onboarding email to:', data.email)
+          
+          const emailResponse = await $fetch('/api/students/send-onboarding-email', {
+            method: 'POST',
+            body: {
+              email: data.email,
+              firstName: data.first_name || 'Kunde',
+              lastName: data.last_name || '',
+              onboardingLink: onboardingLink,
+              tenantId: tenantId
+            }
+          })
+          
+          if (emailResponse.success) {
+            console.log('✅ Onboarding email sent to:', data.email)
+            emailSuccess = true
+          } else {
+            console.warn('⚠️ Email sending failed')
+            emailSuccess = false
+          }
         }
         
-      } catch (smsError: any) {
-        console.error('⚠️ SMS sending error:', smsError)
+      } catch (sendError: any) {
+        console.error('⚠️ Onboarding notification sending error:', sendError)
         smsSuccess = false
+        emailSuccess = false
       }
       
-      // Füge SMS-Status und Link zu den Daten hinzu
+      // Füge Status und Link zu den Daten hinzu
       data.smsSuccess = smsSuccess
+      data.emailSuccess = emailSuccess
       data.onboardingLink = onboardingLink
 
       // Zur lokalen Liste hinzufügen
