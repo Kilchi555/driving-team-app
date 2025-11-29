@@ -84,8 +84,9 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- First Name -->
               <div>
+                <span class="text-gray-400 text-xs">Entweder Vorname oder Nachname</span>
                 <label for="firstName" class="block text-sm font-medium text-gray-700 mb-1">
-                  Vorname *
+                  Vorname
                 </label>
                 <input
                   id="firstName"
@@ -94,7 +95,6 @@
                   required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.first_name }"
-                  placeholder="Max"
                 >
                 <p v-if="errors.first_name" class="text-red-600 text-xs mt-1">{{ errors.first_name }}</p>
               </div>
@@ -102,7 +102,7 @@
               <!-- Last Name -->
               <div>
                 <label for="lastName" class="block text-sm font-medium text-gray-700 mb-1">
-                  Nachname *
+                  Nachname
                 </label>
                 <input
                   id="lastName"
@@ -111,15 +111,15 @@
                   required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.last_name }"
-                  placeholder="Mustermann"
                 >
                 <p v-if="errors.last_name" class="text-red-600 text-xs mt-1">{{ errors.last_name }}</p>
               </div>
 
               <!-- Email (Optional) -->
               <div class="md:col-span-2">
+                <span class="text-gray-400 text-xs">Entweder E-Mail oder Telefonnummer</span>
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                  E-Mail Adresse <span class="text-gray-400">(optional)</span>
+                  E-Mail Adresse
                 </label>
                 <input
                   id="email"
@@ -135,7 +135,7 @@
               <!-- Phone -->
               <div>
                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                  Telefonnummer *
+                  Telefonnummer
                 </label>
                 <input
                   id="phone"
@@ -158,7 +158,8 @@
                   id="birthdate"
                   v-model="form.birthdate"
                   type="date"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none"
+                  style="min-height: 42px; appearance: none; -webkit-appearance: none; -moz-appearance: none;"
                 >
               </div>
 
@@ -217,7 +218,7 @@
               <!-- Street (Optional) -->
               <div class="md:col-span-2">
                 <label for="street" class="block text-sm font-medium text-gray-700 mb-1">
-                  Strasse <span class="text-gray-400">(optional)</span>
+                  Strasse
                 </label>
                 <input
                   id="street"
@@ -277,9 +278,6 @@
                 >
                 <p v-if="errors.city" class="text-red-600 text-xs mt-1">{{ errors.city }}</p>
               </div>
-              <p class="text-sm text-gray-600">
-                * Pflichtfelder
-              </p>
             </div>
           </div>
 
