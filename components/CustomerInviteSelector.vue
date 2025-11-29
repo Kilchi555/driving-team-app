@@ -78,9 +78,14 @@
           
           <!-- Eingabefeld für neue Kunden -->
           <div class="space-y-4">
+            <!-- Hinweis: Mindestens ein Name erforderlich -->
+            <div class="mb-2 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
+              ℹ️ Mindestens Vor- oder Nachname erforderlich
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              <!-- Vorname (optional) -->
+              <!-- Vorname -->
               <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">
                   Vorname
@@ -95,7 +100,7 @@
                 />
               </div>
 
-              <!-- Nachname (optional) -->
+              <!-- Nachname -->
               <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">
                   Nachname
@@ -608,7 +613,23 @@ const loadCategories = async () => {
 
 const addCustomer = async () => {
   if (!isNewCustomerValid.value) {
-    error.value = 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
+    // Spezifische Fehlermeldung basierend auf fehlenden Feldern
+    const hasName = newCustomer.value.first_name?.trim() || newCustomer.value.last_name?.trim()
+    const hasContact = invitationMethod.value === 'sms' 
+      ? (newCustomer.value.phone?.trim() && isValidPhone(newCustomer.value.phone))
+      : (newCustomer.value.email?.trim() && isValidEmail(newCustomer.value.email))
+    
+    if (!hasName && !hasContact) {
+      error.value = 'Bitte geben Sie mindestens Vor- oder Nachname und eine Kontaktmöglichkeit (Telefon oder E-Mail) an'
+    } else if (!hasName) {
+      error.value = 'Bitte geben Sie mindestens den Vor- oder Nachnamen an'
+    } else if (!hasContact) {
+      error.value = invitationMethod.value === 'sms' 
+        ? 'Bitte geben Sie eine gültige Telefonnummer an' 
+        : 'Bitte geben Sie eine gültige E-Mail-Adresse an'
+    } else {
+      error.value = 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
+    }
     return
   }
 
