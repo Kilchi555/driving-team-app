@@ -134,6 +134,53 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    console.log('✅ User profile updated successfully')
+
+    // 5. Send pending payment reminders
+    // After onboarding is complete, send first reminder for any payments that were skipped
+    try {
+      console.log('📧 Checking for pending payment reminders...')
+      
+      // Find all pending payments for this user where first reminder was not sent
+      const { data: pendingPayments, error: paymentsError } = await supabaseAdmin
+        .from('payments')
+        .select('id, tenant_id')
+        .eq('user_id', user.id)
+        .eq('payment_status', 'pending')
+        .is('first_reminder_sent_at', null)
+      
+      if (paymentsError) {
+        console.error('⚠️ Error checking pending payments:', paymentsError)
+      } else if (pendingPayments && pendingPayments.length > 0) {
+        console.log(`📧 Found ${pendingPayments.length} pending payment(s) without reminder, sending now...`)
+        
+        // Send first reminder for each pending payment
+        for (const payment of pendingPayments) {
+          try {
+            // Call the reminder API endpoint
+            const reminderResponse = await $fetch('/api/reminders/send-payment-confirmation', {
+              method: 'POST',
+              body: {
+                paymentId: payment.id,
+                userId: user.id,
+                tenantId: payment.tenant_id
+              }
+            })
+            
+            console.log(`✅ First reminder sent for payment ${payment.id}:`, reminderResponse)
+          } catch (reminderError: any) {
+            console.error(`⚠️ Error sending reminder for payment ${payment.id}:`, reminderError)
+            // Don't fail the onboarding if reminder fails
+          }
+        }
+      } else {
+        console.log('ℹ️ No pending payments found without reminder')
+      }
+    } catch (reminderCheckError) {
+      console.error('⚠️ Error in reminder check (non-critical):', reminderCheckError)
+      // Don't fail the onboarding if reminder check fails
+    }
+
     return {
       success: true,
       message: 'Onboarding completed successfully',
