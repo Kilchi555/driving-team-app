@@ -1531,10 +1531,15 @@ const useEventModalForm = (currentUser?: any, refs?: {
         query = query.eq('user_id', studentId)
       }
       
-      const { data: lastAppointment, error } = await query.limit(1).single()
+      const { data: lastAppointment, error } = await query.limit(1).maybeSingle()
 
       if (error) {
         console.error('❌ Error loading last appointment location:', error)
+        return { location_id: null, custom_location_address: null }
+      }
+
+      if (!lastAppointment) {
+        console.log('ℹ️ No previous appointments found for this user')
         return { location_id: null, custom_location_address: null }
       }
 
