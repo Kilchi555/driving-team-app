@@ -80,11 +80,14 @@
           <!-- Personal Information -->
           <div>
             <h3 class="text-lg font-medium text-gray-900 mb-4">Persönliche Angaben</h3>
+            <!-- Info Banner -->
+            <div class="mb-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
+              ℹ️ Mindestens Vor- oder Nachname + E-Mail oder Telefonnummer erforderlich
+            </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- First Name -->
               <div>
-                <span class="text-gray-400 text-xs">Entweder Vorname oder Nachname</span>
                 <label for="firstName" class="block text-sm font-medium text-gray-700 mb-1">
                   Vorname
                 </label>
@@ -92,7 +95,6 @@
                   id="firstName"
                   v-model="form.first_name"
                   type="text"
-                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.first_name }"
                 >
@@ -108,7 +110,6 @@
                   id="lastName"
                   v-model="form.last_name"
                   type="text"
-                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.last_name }"
                 >
@@ -117,7 +118,6 @@
 
               <!-- Email (Optional) -->
               <div class="md:col-span-2">
-                <span class="text-gray-400 text-xs">Entweder E-Mail oder Telefonnummer</span>
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
                   E-Mail Adresse
                 </label>
@@ -141,7 +141,6 @@
                   id="phone"
                   v-model="form.phone"
                   type="tel"
-                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.phone }"
                   placeholder="+41 79 123 45 67"
@@ -378,10 +377,13 @@ const form = ref({
 const errors = ref<Record<string, string>>({})
 
 const isFormValid = computed(() => {
-  return form.value.first_name.trim() && 
-         form.value.last_name.trim() && 
-         form.value.phone.trim() &&
-         form.value.phone.trim().length >= 12
+  // Mindestens ein Name (Vor- ODER Nachname)
+  const hasName = form.value.first_name.trim() || form.value.last_name.trim()
+  
+  // Mindestens eine Kontaktmöglichkeit (E-Mail ODER Telefon)
+  const hasContact = form.value.email.trim() || (form.value.phone.trim() && form.value.phone.trim().length >= 12)
+  
+  return hasName && hasContact
 })
 
 // Methods
@@ -417,24 +419,27 @@ const formatPhoneNumber = (phone: string) => {
 const validateForm = () => {
   errors.value = {}
 
-  if (!form.value.first_name.trim()) {
-    errors.value.first_name = 'Vorname ist erforderlich'
+  // Mindestens ein Name erforderlich
+  const hasName = form.value.first_name.trim() || form.value.last_name.trim()
+  if (!hasName) {
+    errors.value.first_name = 'Mindestens Vor- oder Nachname erforderlich'
   }
 
-  if (!form.value.last_name.trim()) {
-    errors.value.last_name = 'Nachname ist erforderlich'
-  }
-
-  // ✅ Email ist jetzt optional - wird vom Schüler ergänzt
+  // E-Mail-Validierung (nur wenn angegeben)
   if (form.value.email && !isValidEmail(form.value.email)) {
     errors.value.email = 'Ungültige E-Mail-Adresse'
   }
 
-  if (!form.value.phone.trim()) {
-    errors.value.phone = 'Telefonnummer ist erforderlich'
+  // Telefon-Validierung (nur wenn angegeben)
+  if (form.value.phone.trim() && form.value.phone.trim().length < 12) {
+    errors.value.phone = 'Telefonnummer ist zu kurz'
   }
 
-  // ✅ Alle anderen Felder sind jetzt optional - Schüler ergänzt sie via Onboarding-Link
+  // Mindestens eine Kontaktmöglichkeit erforderlich
+  const hasContact = form.value.email.trim() || form.value.phone.trim()
+  if (!hasContact) {
+    errors.value.phone = 'E-Mail oder Telefonnummer erforderlich'
+  }
 
   return Object.keys(errors.value).length === 0
 }
