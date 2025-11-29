@@ -82,7 +82,7 @@
             <h3 class="text-lg font-medium text-gray-900 mb-4">Persönliche Angaben</h3>
             <!-- Info Banner -->
             <div class="mb-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
-              ℹ️ Mindestens Vor- oder Nachname + E-Mail oder Telefonnummer erforderlich
+              ℹ️ Mindestens Vor- oder Nachname
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -115,6 +115,10 @@
                 >
                 <p v-if="errors.last_name" class="text-red-600 text-xs mt-1">{{ errors.last_name }}</p>
               </div>
+
+              <div class="mb-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
+              ℹ️ Mindestens E-Mail oder Telefonnummer
+            </div>
 
               <!-- Email (Optional) -->
               <div class="md:col-span-2">
@@ -534,10 +538,22 @@ const submitForm = async () => {
   isSubmitting.value = true
 
   try {
-    // Prepare form data - remove empty strings
-    const studentData = Object.fromEntries(
-      Object.entries(form.value).filter(([key, value]) => value !== '')
-    )
+    // Prepare form data - ensure at least empty strings for required DB fields
+    const studentData: any = {
+      first_name: form.value.first_name.trim() || '',
+      last_name: form.value.last_name.trim() || '',
+      email: form.value.email.trim() || '',
+      phone: form.value.phone.trim() || ''
+    }
+    
+    // Add optional fields only if they have values
+    if (form.value.birthdate) studentData.birthdate = form.value.birthdate
+    if (form.value.street) studentData.street = form.value.street.trim()
+    if (form.value.street_nr) studentData.street_nr = form.value.street_nr.trim()
+    if (form.value.zip) studentData.zip = form.value.zip.trim()
+    if (form.value.city) studentData.city = form.value.city.trim()
+    if (form.value.category) studentData.category = form.value.category
+    if (form.value.assigned_staff_id) studentData.assigned_staff_id = form.value.assigned_staff_id
 
     // Auto-assign to current user if staff
     if (props.currentUser?.role === 'staff') {
