@@ -11,31 +11,46 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const { email, firstName, lastName, onboardingLink, tenantId } = body
 
+    console.log('📧 Onboarding email request received:', { email, firstName, lastName, tenantId })
+
     if (!email || !onboardingLink || !tenantId) {
+      console.error('❌ Missing required fields:', { email: !!email, onboardingLink: !!onboardingLink, tenantId: !!tenantId })
       throw createError({
         statusCode: 400,
         message: 'Missing required fields: email, onboardingLink, tenantId'
       })
     }
 
-    console.log('📧 Sending onboarding email to:', email)
+    console.log('✅ All required fields present')
+    console.log('🔗 Onboarding link:', onboardingLink)
 
     const supabase = getSupabaseAdmin()
 
     // Get tenant information
+    console.log('🏢 Loading tenant information for:', tenantId)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
       .select('name, primary_color')
       .eq('id', tenantId)
       .single()
 
-    if (tenantError || !tenant) {
-      console.error('❌ Tenant not found:', tenantId)
+    if (tenantError) {
+      console.error('❌ Tenant query error:', tenantError)
+      throw createError({
+        statusCode: 404,
+        message: `Tenant query failed: ${tenantError.message}`
+      })
+    }
+
+    if (!tenant) {
+      console.error('❌ Tenant not found for ID:', tenantId)
       throw createError({
         statusCode: 404,
         message: 'Tenant not found'
       })
     }
+
+    console.log('✅ Tenant loaded:', tenant.name)
 
     const tenantName = tenant.name || 'Ihre Fahrschule'
     const primaryColor = tenant.primary_color || '#2563eb'
@@ -120,6 +135,13 @@ export default defineEventHandler(async (event) => {
     `
 
     // Send email
+    console.log('📧 Attempting to send email via Resend...')
+    console.log('📧 Email config:', {
+      to: email,
+      subject: `Willkommen bei ${tenantName} - Registrierung abschließen`,
+      from: process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
+    })
+    
     await sendEmail({
       to: email,
       subject: `Willkommen bei ${tenantName} - Registrierung abschließen`,
@@ -134,8 +156,14 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error: any) {
     console.error('❌ Error sending onboarding email:', error)
+    console.error('❌ Error stack:', error.stack)
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      statusCode: error.statusCode
+    })
     throw createError({
-      statusCode: 500,
+      statusCode: error.statusCode || 500,
       message: `Failed to send onboarding email: ${error.message}`
     })
   }
