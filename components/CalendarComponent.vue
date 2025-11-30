@@ -969,18 +969,37 @@ const loadRegularAppointments = async () => {
       const parseUTCTime = (utcTimeString: string) => {
         // Parse UTC ISO string and convert to local time
         const utcDate = new Date(utcTimeString)
-        // Use toLocaleString to convert UTC to local timezone (Europe/Zurich)
-        const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
-        const localDate = new Date(localDateStr)
         
-        // Create local date string for calendar display
-        const localYear = localDate.getFullYear()
-        const localMonth = String(localDate.getMonth() + 1).padStart(2, '0')
-        const localDay = String(localDate.getDate()).padStart(2, '0')
-        const localHour = String(localDate.getHours()).padStart(2, '0')
-        const localMinute = String(localDate.getMinutes()).padStart(2, '0')
-        const localSecond = String(localDate.getSeconds()).padStart(2, '0')
-        return `${localYear}-${localMonth}-${localDay}T${localHour}:${localMinute}:${localSecond}`
+        // Get UTC components
+        const utcYear = utcDate.getUTCFullYear()
+        const utcMonth = String(utcDate.getUTCMonth() + 1).padStart(2, '0')
+        const utcDay = String(utcDate.getUTCDate()).padStart(2, '0')
+        const utcHour = String(utcDate.getUTCHours()).padStart(2, '0')
+        const utcMinute = String(utcDate.getUTCMinutes()).padStart(2, '0')
+        const utcSecond = String(utcDate.getUTCSeconds()).padStart(2, '0')
+        
+        // Create UTC date string
+        const utcDateStr = `${utcYear}-${utcMonth}-${utcDay}T${utcHour}:${utcMinute}:${utcSecond}`
+        
+        // Convert to local time using Zurich timezone
+        const formatter = new Intl.DateTimeFormat('sv-SE', {
+          timeZone: 'Europe/Zurich',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        })
+        
+        const localDateStr = formatter.format(utcDate)
+        // localDateStr format: "2025-01-15 14:30:45"
+        const [localDate, localTime] = localDateStr.split(' ')
+        const [localYear, localMonth, localDay] = localDate.split('-')
+        const [localHour, localMin, localSec] = localTime.split(':')
+        
+        return `${localYear}-${localMonth}-${localDay}T${localHour}:${localMin}:${localSec}`
       }
       
       const event = {
@@ -2297,6 +2316,17 @@ defineExpose({
         <h3 class="text-lg font-semibold text-gray-900 mb-2">
             Kopierter Termin        
         </h3>
+      </div>
+
+      <!-- Geklickter Zeitslot Info -->
+      <div v-if="pendingSlotClick" class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+        <div class="text-sm">
+          <div class="font-medium text-green-900 mb-1">Einfügen am:</div>
+          <div class="text-green-700 text-xs space-y-1">
+            <div>📅 {{ pendingSlotClick.date.toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</div>
+            <div>🕐 {{ pendingSlotClick.date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }}</div>
+          </div>
+        </div>
       </div>
 
       <!-- Kopierter Termin Info -->
