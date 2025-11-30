@@ -1740,7 +1740,15 @@ const confirmAppointment = async (appointment: any) => {
       // Termin ist bereits bestätigt (siehe weiter oben)
       confirmingAppointments.value.delete(appointment.id)
       
-      // Refresh pending confirmations
+      // ✅ Entferne bestätigten Termin aus der pendingConfirmations Liste
+      const index = pendingConfirmations.value.findIndex((apt: any) => apt.id === appointment.id)
+      if (index !== -1) {
+        pendingConfirmations.value.splice(index, 1)
+        console.log('✅ Removed confirmed appointment from pending list')
+      }
+      
+      // ✅ Force refresh pending confirmations - load all remaining
+      console.log('🔄 Refreshing pending confirmations after confirmation...')
       await loadPendingConfirmations()
       
       return // Fertig, nicht zu Wallee weiterleiten!
