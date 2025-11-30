@@ -1295,6 +1295,7 @@ const updateModalFieldsIfOpen = (event: any) => {
 const eventModalRef = ref()
 const isUpdating = ref(false)
 const modalEventType = ref<'lesson' | 'staff_meeting'>('lesson')
+const sendSmsOnDrop = ref(true) // ✅ NEU: State für SMS-Checkbox beim Verschieben
 
 // Neue Hilfsfunktion:
 const openNewAppointmentModal = (arg: any) => {
@@ -1386,28 +1387,30 @@ const handleEventDrop = async (dropInfo: any) => {
 
       console.log('✅ Appointment moved in database:', dropInfo.event.title)
       
-      // ✅ NEW: Check if SMS should be sent
-      const sendSmsCheckbox = document.getElementById('sendSms') as HTMLInputElement
-      const shouldSendSms = sendSmsCheckbox?.checked ?? true // Default to true if not found
-      
-      if (shouldSendSms && dropInfo.event.extendedProps?.phone) {
+      // ✅ NEW: Check if SMS should be sent (use state instead of DOM lookup)
+      if (sendSmsOnDrop.value && dropInfo.event.extendedProps?.phone) {
         console.log('📱 Sending SMS notification for rescheduled appointment...')
         try {
           const phoneNumber = dropInfo.event.extendedProps.phone
+          const studentName = dropInfo.event.extendedProps?.student || 'Fahrschüler'
           const newTime = newStartTime
           
           // Send SMS via API
-          await $fetch('/api/sms/send', {
+          const result = await $fetch('/api/sms/send', {
             method: 'POST',
             body: {
               phone: phoneNumber,
-              message: `Hallo ${dropInfo.event.extendedProps?.student || 'Fahrschüler'},\n\nIhr Termin wurde verschoben:\nNeue Zeit: ${newTime}\n\nViele Grüße`
+              message: `Hallo ${studentName},\n\nIhr Termin wurde verschoben:\nNeue Zeit: ${newTime}\n\nViele Grüße`
             }
           })
-          console.log('✅ SMS sent successfully')
+          console.log('✅ SMS sent successfully:', result)
         } catch (smsError: any) {
-          console.warn('⚠️ Failed to send SMS:', smsError)
+          console.error('❌ Failed to send SMS:', smsError)
         }
+      } else if (!dropInfo.event.extendedProps?.phone) {
+        console.log('⚠️ No phone number available for SMS')
+      } else {
+        console.log('ℹ️ SMS sending disabled by user')
       }
       
       // Modal aktualisieren falls offen
@@ -1449,35 +1452,38 @@ const handleEventDrop = async (dropInfo: any) => {
     }
   }
 
-const studentName = dropInfo.event.extendedProps?.student || 'Unbekannt'
-const studentPhone = dropInfo.event.extendedProps?.phone || 'Keine Nummer'
+  const studentName = dropInfo.event.extendedProps?.student || 'Unbekannt'
+  const studentPhone = dropInfo.event.extendedProps?.phone || 'Keine Nummer'
 
-showConfirmDialog({
-  title: 'Termin verschieben',
-  message: 'Möchten Sie diesen Termin wirklich verschieben?',
-  details: `
-    <strong>Termin:</strong> ${dropInfo.event.title}<br>
-    <strong>Neue Zeit:</strong> ${newStartTime} - ${newEndTime}<br>
-    <strong>Fahrschüler:</strong> ${studentName}<br><br>
-    
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-      <div class="flex items-center gap-2 mb-2">
-        <input type="checkbox" id="sendSms" checked class="rounded border-gray-300">
-        <label for="sendSms" class="font-medium text-blue-800">
-          📱 SMS-Benachrichtigung senden
-        </label>
+  // ✅ Reset the state before showing dialog
+  sendSmsOnDrop.value = true
+
+  showConfirmDialog({
+    title: 'Termin verschieben',
+    message: 'Möchten Sie diesen Termin wirklich verschieben?',
+    details: `
+      <strong>Termin:</strong> ${dropInfo.event.title}<br>
+      <strong>Neue Zeit:</strong> ${newStartTime} - ${newEndTime}<br>
+      <strong>Fahrschüler:</strong> ${studentName}<br><br>
+      
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div class="flex items-center gap-2 mb-2">
+          <input type="checkbox" id="sendSmsCheckbox" checked class="rounded border-gray-300" @change="(e) => sendSmsOnDrop = (e.target as HTMLInputElement).checked">
+          <label for="sendSmsCheckbox" class="font-medium text-blue-800">
+            📱 SMS-Benachrichtigung senden
+          </label>
+        </div>
+        <div class="text-xs text-blue-600">
+          Der Fahrschüler wird über die Terminverschiebung informiert.
+        </div>
       </div>
-      <div class="text-xs text-blue-600">
-        Der Fahrschüler wird über die Terminverschiebung informiert.
-      </div>
-    </div>
-  `,
-  icon: '🔄',
-  type: 'warning',
-  confirmText: 'Verschieben & Benachrichtigen',
-  cancelText: 'Abbrechen',
-  action: moveAction
-})
+    `,
+    icon: '🔄',
+    type: 'warning',
+    confirmText: 'Verschieben & Benachrichtigen',
+    cancelText: 'Abbrechen',
+    action: moveAction
+  })
 
   // Verschieben erstmal rückgängig machen, wird nur bei Bestätigung durchgeführt
   dropInfo.revert()
