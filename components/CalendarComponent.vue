@@ -1867,9 +1867,11 @@ const pasteAppointmentDirectly = async () => {
     // wir müssen sie in UTC konvertieren für die Datenbank
     const convertToUTC = (localDate: Date) => {
       // localDate ist lokale Zeit (Europe/Zurich)
-      // Konvertiere zu UTC für Datenbank-Speicherung
-      const offset = localDate.getTimezoneOffset() * 60000 // Offset in ms
-      const utcDate = new Date(localDate.getTime() + offset)
+      // getTimezoneOffset() gibt Minuten zurück (negative für east of UTC)
+      // Für GMT+0100: getTimezoneOffset() = -60 (negative!)
+      // Um zu UTC zu konvertieren: UTC = Local - offset
+      const offset = localDate.getTimezoneOffset() * 60000 // Offset in ms (z.B. -60 * 60000 für GMT+0100)
+      const utcDate = new Date(localDate.getTime() - offset) // Subtrahiere (weil offset negativ)
       return utcDate.toISOString()
     }
     
