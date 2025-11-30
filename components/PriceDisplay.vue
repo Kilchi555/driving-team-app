@@ -801,8 +801,8 @@ watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
 })
 
 // ✅ NEU: Watcher für Duration-Änderung im Edit-Modus - recalculate price
-watch(() => props.durationMinutes, (newDuration: number, oldDuration: number) => {
-  if (newDuration !== oldDuration && props.isEditMode) {
+watch(() => props.durationMinutes, async (newDuration: number, oldDuration: number) => {
+  if (newDuration !== oldDuration && props.isEditMode && props.appointmentId) {
     console.log('⏱️ Duration changed in edit mode:', `${oldDuration}min -> ${newDuration}min`)
     console.log('💰 Old stored price:', (existingPayment.value?.lesson_price_rappen || 0) / 100)
     
@@ -810,7 +810,7 @@ watch(() => props.durationMinutes, (newDuration: number, oldDuration: number) =>
     const newPrice = newDuration * props.pricePerMinute
     console.log('💰 New calculated price:', newPrice)
     
-    // Update the stored payment with new lesson price
+    // Update the stored payment with new lesson price locally first
     if (existingPayment.value) {
       const oldTotalRappen = existingPayment.value.total_amount_rappen || 0
       const oldLessonPrice = existingPayment.value.lesson_price_rappen || 0
@@ -834,6 +834,34 @@ watch(() => props.durationMinutes, (newDuration: number, oldDuration: number) =>
         adminFee: (adminFee / 100).toFixed(2),
         discount: (discount / 100).toFixed(2)
       })
+      
+      // ✅ NEU: Call API endpoint to handle payment reconciliation
+      try {
+        console.log('📡 Calling adjust-duration endpoint...')
+        const result = await $fetch('/api/appointments/adjust-duration', {
+          method: 'POST',
+          body: {
+            appointmentId: props.appointmentId,
+            oldDurationMinutes: oldDuration,
+            newDurationMinutes: newDuration,
+            pricePerMinute: props.pricePerMinute
+          }
+        })
+        
+        console.log('✅ Duration adjustment processed:', result)
+        
+        // Show notification based on result
+        if (result.action === 'additional_payment') {
+          console.log(`💳 Additional payment created: CHF ${result.details.amount}`)
+          // Could show toast here if needed
+        } else if (result.action === 'credit_applied') {
+          console.log(`💰 Credit applied to student: CHF ${result.details.refundAmount}`)
+          // Could show toast here if needed
+        }
+      } catch (error: any) {
+        console.error('❌ Error calling adjust-duration endpoint:', error)
+        // Show error notification
+      }
     }
   }
 }, { immediate: false })
