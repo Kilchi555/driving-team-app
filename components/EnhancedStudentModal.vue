@@ -429,6 +429,19 @@
 
         <!-- Payments Tab -->
         <div v-if="activeTab === 'payments'" class="p-4">
+          <!-- Student Credit Balance Card -->
+          <div v-if="studentBalance !== undefined" class="mb-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 p-4">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-xs text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
+                <p class="text-2xl font-bold text-green-600">CHF {{ (studentBalance / 100).toFixed(2) }}</p>
+              </div>
+              <svg class="w-8 h-8 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+              </svg>
+            </div>
+          </div>
+
           <!-- Loading State -->
           <div v-if="isLoadingPayments" class="flex items-center justify-center py-8">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -1162,6 +1175,7 @@ const payments = ref<any[]>([])
 const studentDocuments = ref<any[]>([])
 const examResults = ref<any[]>([])
 const cancellationPolicies = ref<any[]>([])
+const studentBalance = ref<number | undefined>(undefined) // ✅ NEU: Student credit balance
 const isLoadingLessons = ref(false)
 const isLoadingExamResults = ref(false)
 const sortMode = ref<'newest' | 'worst'>('newest') // Toggle zwischen neueste und schlechteste Bewertungen
@@ -2105,6 +2119,20 @@ const loadPayments = async () => {
     console.log('💰 Loading payments for student:', props.selectedStudent.id)
     
     const supabase = getSupabase()
+    
+    // ✅ NEU: Lade Student Credit Balance
+    const { data: creditData, error: creditError } = await supabase
+      .from('student_credits')
+      .select('balance_rappen')
+      .eq('user_id', props.selectedStudent.id)
+      .single()
+    
+    if (creditError && creditError.code !== 'PGRST116') {
+      console.warn('⚠️ Could not load student credit:', creditError)
+    } else if (creditData) {
+      studentBalance.value = creditData.balance_rappen || 0
+      console.log('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
+    }
     
     // Lade Zahlungen über appointments - RLS filtert automatisch nach tenant_id
     const { data: paymentsData, error: paymentsError } = await supabase
