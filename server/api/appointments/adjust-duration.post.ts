@@ -42,8 +42,13 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!payment) {
-      console.log('⚠️ No payment found for appointment')
-      return { success: false, message: 'No payment found for this appointment' }
+      console.log('⚠️ No payment found for appointment - this is OK, just update the appointment duration locally')
+      return { 
+        success: true, 
+        message: 'No payment found - duration change noted but no payment reconciliation needed',
+        priceDifference: 0,
+        action: 'no_payment'
+      }
     }
 
     // 2. Calculate price difference
