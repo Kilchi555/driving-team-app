@@ -1920,7 +1920,7 @@ const pasteAppointmentDirectly = async () => {
     
     console.log('✅ Appointment pasted successfully:', newAppointment.id)
     
-    // ✅ Payment erstellen (ohne Discounts/Products, status: pending)
+    // ✅ Payment erstellen (basierend auf pricing_rules)
     const basePriceMapping: Record<string, number> = {
       'B': 95, 'A': 95, 'A1': 95, 'BE': 120, 'C': 170, 
       'C1': 150, 'D': 200, 'CE': 200, 'Motorboot': 120, 'BPT': 95
@@ -1930,16 +1930,59 @@ const pasteAppointmentDirectly = async () => {
     const basePriceChf = (basePriceMapping[category] || 95) * durationUnits
     const lessonPriceRappen = Math.round(basePriceChf * 100)
     
+    // ✅ NEU: Admin Fee basierend auf pricing_rules berechnen
+    let adminFeeRappen = 0
+    try {
+      // Zähle wie viele Termine dieser Kunde bereits hat (für diesen Staff)
+      const { data: existingAppointments, error: countError } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('user_id', newAppointment.user_id)
+        .eq('staff_id', newAppointment.staff_id)
+        .is('deleted_at', null)
+        .neq('id', newAppointment.id) // Exclude the one we just created
+      
+      const appointmentCount = existingAppointments?.length || 0
+      console.log('📊 Existing appointments for user:', appointmentCount)
+      
+      // Lade pricing rule für diese Kategorie
+      const { data: pricingRules, error: rulesError } = await supabase
+        .from('pricing_rules')
+        .select('admin_fee_rappen, admin_fee_applies_from')
+        .eq('category_code', category)
+        .eq('rule_type', 'admin_fee')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      
+      if (pricingRules && pricingRules.admin_fee_applies_from) {
+        // Admin Fee wird ab Termin N verrechnet (z.B. ab 2. Termin)
+        // appointmentCount ist die Anzahl BESTEHENDER Termine
+        // Der neue Termin ist Termin Nummer: appointmentCount + 1
+        const newAppointmentNumber = appointmentCount + 1
+        
+        if (newAppointmentNumber >= pricingRules.admin_fee_applies_from) {
+          adminFeeRappen = pricingRules.admin_fee_rappen || 0
+          console.log('✅ Admin fee applies (appointment #' + newAppointmentNumber + '):', adminFeeRappen)
+        } else {
+          console.log('ℹ️ Admin fee does not apply yet (appointment #' + newAppointmentNumber + ', applies from #' + pricingRules.admin_fee_applies_from + ')')
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error calculating admin fee:', err)
+    }
+    
     const paymentData = {
       appointment_id: newAppointment.id,
       user_id: newAppointment.user_id,
       staff_id: newAppointment.staff_id,
       tenant_id: newAppointment.tenant_id,
       lesson_price_rappen: lessonPriceRappen,
-      admin_fee_rappen: clipboardAppointment.value.admin_fee_rappen || 0, // ✅ Übernehme admin_fee vom Original
+      admin_fee_rappen: adminFeeRappen, // ✅ Berechnet basierend auf pricing_rules
       products_price_rappen: 0,
       discount_amount_rappen: 0,
-      total_amount_rappen: lessonPriceRappen + (clipboardAppointment.value.admin_fee_rappen || 0), // ✅ Addiere admin_fee zum Total
+      total_amount_rappen: lessonPriceRappen + adminFeeRappen, // ✅ Total mit admin_fee
       payment_method: clipboardAppointment.value.payment_method || 'invoice', // ✅ Verwende kopierten payment_method
       payment_status: 'pending',
       currency: 'CHF',
@@ -2069,13 +2112,12 @@ const handleCopyAppointment = async (copyData: any) => {
                               copyData.eventData.extendedProps?.type || 
                               'B' // Fallback
   
-  // ✅ Fetch payment_method UND admin_fee vom Payment-Record
+  // ✅ Fetch payment_method vom Payment-Record
   let paymentMethod = 'invoice' // Default
-  let adminFeeRappen = 0 // Default
   try {
     const { data: payment, error } = await supabase
       .from('payments')
-      .select('payment_method, admin_fee_rappen')
+      .select('payment_method')
       .eq('appointment_id', copyData.eventData.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -2083,11 +2125,10 @@ const handleCopyAppointment = async (copyData: any) => {
     
     if (!error && payment) {
       paymentMethod = payment.payment_method
-      adminFeeRappen = payment.admin_fee_rappen || 0
-      console.log('✅ Payment details fetched from DB:', { paymentMethod, adminFeeRappen })
+      console.log('✅ Payment method fetched from DB:', paymentMethod)
     }
   } catch (err) {
-    console.warn('⚠️ Could not fetch payment details:', err)
+    console.warn('⚠️ Could not fetch payment method:', err)
   }
   
   // In Zwischenablage speichern
@@ -2104,7 +2145,6 @@ const handleCopyAppointment = async (copyData: any) => {
         duration_minutes: copyData.eventData.duration_minutes || 45,
         price_per_minute: copyData.eventData.price_per_minute,
         payment_method: paymentMethod, // ✅ Von DB geladen
-        admin_fee_rappen: adminFeeRappen, // ✅ Neu: admin_fee übernehmen
   }
   
   console.log('✅ Termin in Zwischenablage gespeichert:', clipboardAppointment.value)
