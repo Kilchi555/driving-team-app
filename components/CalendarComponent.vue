@@ -2046,7 +2046,7 @@ const handleOpenStudentProgress = async (student: any) => {
   showEnhancedStudentModal.value = true
 }
 
-const handleCopyAppointment = (copyData: any) => {
+const handleCopyAppointment = async (copyData: any) => {
   console.log('📋 CALENDAR: Copy event received:', copyData)
   
   // ✅ DEBUG: Alle verfügbaren Kategorie-Felder anzeigen
@@ -2062,6 +2062,25 @@ const handleCopyAppointment = (copyData: any) => {
                               copyData.eventData.extendedProps?.type || 
                               'B' // Fallback
   
+  // ✅ Fetch payment_method vom Payment-Record
+  let paymentMethod = 'invoice' // Default
+  try {
+    const { data: payment, error } = await supabase
+      .from('payments')
+      .select('payment_method')
+      .eq('appointment_id', copyData.eventData.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    
+    if (!error && payment) {
+      paymentMethod = payment.payment_method
+      console.log('✅ Payment method fetched from DB:', paymentMethod)
+    }
+  } catch (err) {
+    console.warn('⚠️ Could not fetch payment method:', err)
+  }
+  
   // In Zwischenablage speichern
   clipboardAppointment.value = {
       id: copyData.eventData.id,
@@ -2075,7 +2094,7 @@ const handleCopyAppointment = (copyData: any) => {
         duration: copyData.eventData.duration_minutes || 45,
         duration_minutes: copyData.eventData.duration_minutes || 45,
         price_per_minute: copyData.eventData.price_per_minute,
-        payment_method: copyData.eventData.payment_method || copyData.eventData.extendedProps?.payment_method || 'invoice', // ✅ Kopiere payment_method
+        payment_method: paymentMethod, // ✅ Von DB geladen
   }
   
   console.log('✅ Termin in Zwischenablage gespeichert:', clipboardAppointment.value)
