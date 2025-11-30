@@ -56,6 +56,21 @@
     <!-- Main Content -->
     <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       
+      <!-- Student Credit Balance Card -->
+      <div class="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-md border border-green-200 p-4 sm:p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm sm:text-base text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
+            <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ (studentBalance / 100).toFixed(2) }}</p>
+            <p class="text-xs sm:text-sm text-green-600 mt-2">Dieses Guthaben kann für zukünftige Zahlungen verwendet werden</p>
+          </div>
+          <div class="flex-shrink-0">
+            <svg class="w-10 h-10 sm:w-12 sm:h-12 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+            </svg>
+          </div>
+        </div>
+      </div>
 
       <!-- Payment List -->
       <div class="bg-white rounded-xl shadow-lg border border-gray-200">
@@ -290,6 +305,7 @@ const preferredPaymentMethod = ref<string | null>(null)
 const expandedPaymentId = ref<string | null>(null)
 const showCancellationModal = ref(false)
 const selectedAppointment = ref<any>(null)
+const studentBalance = ref(0) // ✅ NEU: Student credit balance in Rappen
 
 // Computed properties
 const unpaidPayments = computed(() => 
@@ -393,6 +409,20 @@ const loadAllData = async () => {
     preferredPaymentMethod.value = userData.preferred_payment_method
 
     console.log('🔍 Loading data for user:', userData.id)
+
+    // ✅ Lade Student Credit Balance
+    const { data: creditData, error: creditError } = await supabase
+      .from('student_credits')
+      .select('balance_rappen')
+      .eq('user_id', userData.id)
+      .single()
+    
+    if (creditError && creditError.code !== 'PGRST116') {
+      console.warn('⚠️ Could not load student credit:', creditError)
+    } else if (creditData) {
+      studentBalance.value = creditData.balance_rappen || 0
+      console.log('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
+    }
 
     // ✅ Verwende das neue useCustomerPayments Composable
     await loadCustomerPayments()
