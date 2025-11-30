@@ -800,6 +800,44 @@ watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
   }
 })
 
+// ✅ NEU: Watcher für Duration-Änderung im Edit-Modus - recalculate price
+watch(() => props.durationMinutes, (newDuration: number, oldDuration: number) => {
+  if (newDuration !== oldDuration && props.isEditMode) {
+    console.log('⏱️ Duration changed in edit mode:', `${oldDuration}min -> ${newDuration}min`)
+    console.log('💰 Old stored price:', (existingPayment.value?.lesson_price_rappen || 0) / 100)
+    
+    // Calculate new price based on new duration
+    const newPrice = newDuration * props.pricePerMinute
+    console.log('💰 New calculated price:', newPrice)
+    
+    // Update the stored payment with new lesson price
+    if (existingPayment.value) {
+      const oldTotalRappen = existingPayment.value.total_amount_rappen || 0
+      const oldLessonPrice = existingPayment.value.lesson_price_rappen || 0
+      const productsPrice = (existingPayment.value as any).products_price_rappen || 0
+      const adminFee = existingPayment.value.admin_fee_rappen || 0
+      const discount = existingPayment.value.discount_amount_rappen || 0
+      
+      // Neuer Gesamtbetrag: neue Lektionspreis + Produkte + Admin-Fee - Rabatt
+      const newLessonPriceRappen = Math.round(newPrice * 100)
+      const newTotalRappen = newLessonPriceRappen + productsPrice + adminFee - discount
+      
+      existingPayment.value.lesson_price_rappen = newLessonPriceRappen
+      existingPayment.value.total_amount_rappen = Math.max(0, newTotalRappen)
+      
+      console.log('✅ PriceDisplay: Updated payment price for duration change:', {
+        oldLessonPrice: (oldLessonPrice / 100).toFixed(2),
+        newLessonPrice: (newLessonPriceRappen / 100).toFixed(2),
+        oldTotal: (oldTotalRappen / 100).toFixed(2),
+        newTotal: (newTotalRappen / 100).toFixed(2),
+        productsPrice: (productsPrice / 100).toFixed(2),
+        adminFee: (adminFee / 100).toFixed(2),
+        discount: (discount / 100).toFixed(2)
+      })
+    }
+  }
+}, { immediate: false })
+
 // ✅ NEUE METHODE: Lade verfügbare Gutscheine
 const loadAvailableDiscounts = async () => {
   try {
@@ -886,9 +924,27 @@ const removeProduct = (productId: string) => {
 
 // ✅ NEU: Base Price aus bestehender Payment oder berechnet
 const getBasePrice = () => {
-  // Im Edit-Modus: Verwende den gespeicherten Preis aus der Payment-Tabelle
+  // Im Edit-Modus: Nutze den aktuellen Wert aus existingPayment (der durch den Watch aktualisiert wird)
+  // WICHTIG: Wenn die Duration sich ändert, wird dieser Wert durch den duration-Watcher aktualisiert
   if (props.isEditMode && existingPayment.value) {
-    return (existingPayment.value.lesson_price_rappen || 0) / 100
+    const storedPrice = (existingPayment.value.lesson_price_rappen || 0) / 100
+    const calculatedPrice = props.durationMinutes * props.pricePerMinute
+    
+    // Wenn der Preis nicht mehr der berechneten Duration entspricht, nutze den berechneten
+    // (Dies zeigt, dass die Duration geändert wurde)
+    const storedDurationBasedPrice = Math.round(storedPrice / props.pricePerMinute)
+    if (Math.abs(storedDurationBasedPrice - props.durationMinutes) > 0.1) {
+      // Duration wurde änderung, nutze berechneten Preis
+      console.log('📊 getBasePrice - Duration mismatch detected, using calculated price:', {
+        storedPrice,
+        calculatedPrice,
+        storedDuration: storedDurationBasedPrice,
+        currentDuration: props.durationMinutes
+      })
+      return calculatedPrice
+    }
+    
+    return storedPrice
   }
   
   // Im Create-Modus: Berechne den Preis neu
