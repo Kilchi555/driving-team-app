@@ -404,7 +404,7 @@
     </div>
 
     <!-- Calendar Integration Modal -->
-    <div v-if="showCalendarIntegration" class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div v-if="showCalendarIntegration" class="fixed inset-0 z-100 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
         <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <h3 class="text-lg font-semibold text-gray-900">📅 Kalender-Integration</h3>
@@ -422,7 +422,6 @@
             <div class="flex items-center space-x-2">
               <span class="text-2xl">📱</span>
               <h4 class="text-md font-semibold text-gray-900">Handy-Kalender Integration</h4>
-              <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">🚧 In Entwicklung</span>
             </div>
             
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

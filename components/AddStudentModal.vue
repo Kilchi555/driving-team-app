@@ -123,7 +123,7 @@
               <!-- Email (Optional) -->
               <div class="md:col-span-2">
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                  E-Mail Adresse
+                  E-Mail Adresse <span class="text-gray-400 text-xs">(optional)</span>
                 </label>
                 <input
                   id="email"
@@ -139,12 +139,13 @@
               <!-- Phone -->
               <div>
                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                  Telefonnummer
+                  Telefonnummer *
                 </label>
                 <input
                   id="phone"
                   v-model="form.phone"
                   type="tel"
+                  required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-300': errors.phone }"
                   placeholder="+41 79 123 45 67"
@@ -384,10 +385,10 @@ const isFormValid = computed(() => {
   // Mindestens ein Name (Vor- ODER Nachname)
   const hasName = form.value.first_name.trim() || form.value.last_name.trim()
   
-  // Mindestens eine Kontaktmöglichkeit (E-Mail ODER Telefon)
-  const hasContact = form.value.email.trim() || (form.value.phone.trim() && form.value.phone.trim().length >= 12)
+  // Telefonnummer ist Pflicht
+  const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 12
   
-  return hasName && hasContact
+  return hasName && hasPhone
 })
 
 // Methods
@@ -434,15 +435,11 @@ const validateForm = () => {
     errors.value.email = 'Ungültige E-Mail-Adresse'
   }
 
-  // Telefon-Validierung (nur wenn angegeben)
-  if (form.value.phone.trim() && form.value.phone.trim().length < 12) {
+  // Telefonnummer ist Pflicht
+  if (!form.value.phone.trim()) {
+    errors.value.phone = 'Telefonnummer ist erforderlich'
+  } else if (form.value.phone.trim().length < 12) {
     errors.value.phone = 'Telefonnummer ist zu kurz'
-  }
-
-  // Mindestens eine Kontaktmöglichkeit erforderlich
-  const hasContact = form.value.email.trim() || form.value.phone.trim()
-  if (!hasContact) {
-    errors.value.phone = 'E-Mail oder Telefonnummer erforderlich'
   }
 
   return Object.keys(errors.value).length === 0
