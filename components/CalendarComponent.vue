@@ -1016,6 +1016,7 @@ const loadRegularAppointments = async () => {
           category: (apt as any).user?.category || apt.type || 'B',
           instructor: `${(apt as any).staff?.first_name || ''} ${(apt as any).staff?.last_name || ''}`.trim(),
           student: `${(apt as any).user?.first_name || ''} ${(apt as any).user?.last_name || ''}`.trim(),
+          phone: (apt as any).user?.phone || '', // ✅ NEU: Phone für SMS-Benachrichtigungen
           created_by: `${(apt as any).created_by_user?.first_name || ''} ${(apt as any).created_by_user?.last_name || ''}`.trim() || 'Unbekannt',
           price: 0, // Preis wird nicht mehr in appointments gespeichert
           user_id: apt.user_id,
