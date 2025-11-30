@@ -3368,45 +3368,8 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
       console.log('✅ Payments deleted successfully')
     }
     
-    // 1.2 Product sales und items löschen (inklusive Rabatte)
-    console.log('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
-    
-    // Zuerst alle product_sale_ids sammeln
-    const { data: productSales } = await supabase
-      .from('product_sales')
-      .select('id')
-      .eq('appointment_id', props.eventData.id)
-    
-    if (productSales && productSales.length > 0) {
-      const productSaleIds = productSales.map(ps => ps.id)
-      console.log('🗑️ Found product sales to delete:', productSaleIds)
-      
-      // Product sale items löschen (zuerst)
-      const { error: productSaleItemsError } = await supabase
-        .from('product_sale_items')
-        .delete()
-        .in('product_sale_id', productSaleIds)
-      
-      if (productSaleItemsError) {
-        console.warn('⚠️ Could not delete product sale items:', productSaleItemsError)
-      } else {
-        console.log('✅ Product sale items deleted successfully')
-      }
-      
-      // Dann product_sales löschen (inklusive Rabatte)
-      const { error: productSalesError } = await supabase
-        .from('product_sales')
-        .delete()
-        .eq('appointment_id', props.eventData.id)
-      
-      if (productSalesError) {
-        console.warn('⚠️ Could not delete product sales:', productSalesError)
-      } else {
-        console.log('✅ Product sales (including discounts) deleted successfully')
-      }
-    } else {
-      console.log('ℹ️ No product sales found for appointment')
-    }
+    // ✅ WICHTIG: Product sales NICHT löschen! Sie bleiben für die Kostenverrechnung erhalten!
+    console.log('ℹ️ Product sales are NOT deleted - keeping them for accounting purposes')
     
     // ✅ SCHRITT 2: SOFT DELETE: Termin als gelöscht markieren statt echt löschen
     const eventType = props.eventData.type || props.eventData.event_type_code
