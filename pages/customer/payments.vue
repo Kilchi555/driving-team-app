@@ -169,6 +169,16 @@
                     <div v-if="isAppointmentCancelled(payment)" :class="getCancellationMessageClass(payment)" class="text-xs font-medium">
                       {{ getCancellationMessage(payment) }}
                     </div>
+                    
+                    <!-- Medical Certificate Upload Button (für Unfall/Krankheit) -->
+                    <div v-if="isAppointmentCancelled(payment) && shouldShowMedicalCertificateButton(payment)" class="mt-2">
+                      <button
+                        @click="openMedicalCertificateModal(payment)"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-xs font-medium transition-colors"
+                      >
+                        📋 Arztzeugnis hochladen
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -240,6 +250,15 @@
       @close="closeCancellationModal"
       @cancelled="onAppointmentCancelled"
     />
+    
+    <!-- Medical Certificate Modal -->
+    <CustomerMedicalCertificateModal
+      v-if="selectedPaymentForCertificate"
+      :is-visible="showMedicalCertificateModal"
+      :payment="selectedPaymentForCertificate"
+      @close="closeMedicalCertificateModal"
+      @uploaded="loadAllData"
+    />
   </div>
 </template>
 
@@ -252,6 +271,7 @@ import { useUIStore } from '~/stores/ui'
 import { storeToRefs } from 'pinia'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import CustomerCancellationModal from '~/components/customer/CustomerCancellationModal.vue'
+import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedicalCertificateModal.vue' // ✅ NEU
 import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
 
 
@@ -294,6 +314,8 @@ const expandedPaymentId = ref<string | null>(null)
 const showCancellationModal = ref(false)
 const selectedAppointment = ref<any>(null)
 const studentBalance = ref(0) // ✅ NEU: Student credit balance in Rappen
+const showMedicalCertificateModal = ref(false) // ✅ NEU: Modal für Arztzeugnis
+const selectedPaymentForCertificate = ref<any>(null) // ✅ NEU: Payment für Arztzeugnis-Upload
 
 // Computed properties
 const unpaidPayments = computed(() => 
@@ -814,6 +836,38 @@ const getCancellationMessageClass = (payment: any): string => {
   
   // Orange for partial
   return 'text-orange-600'
+}
+
+// ✅ NEU: Prüfe ob Arztzeugnis-Button angezeigt werden soll
+const shouldShowMedicalCertificateButton = (payment: any): boolean => {
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  if (!appointment) return false
+  
+  const medicalCertStatus = appointment.medical_certificate_status
+  const hasUpload = appointment.medical_certificate_url
+  const chargePercentage = appointment.cancellation_charge_percentage ?? 100
+  
+  // Button nur zeigen wenn:
+  // 1. Termin storniert ist
+  // 2. Noch kein Arztzeugnis hochgeladen wurde ODER es wurde abgelehnt
+  // 3. Es eine Stornogebühr gibt (0 < charge < 100)
+  
+  const needsCertificate = chargePercentage > 0 && chargePercentage < 100
+  const noCertificateYet = !hasUpload || medicalCertStatus === 'rejected'
+  
+  return appointment.status === 'cancelled' && needsCertificate && noCertificateYet
+}
+
+// ✅ NEU: Öffne Arztzeugnis-Modal
+const openMedicalCertificateModal = (payment: any) => {
+  selectedPaymentForCertificate.value = payment
+  showMedicalCertificateModal.value = true
+}
+
+// ✅ NEU: Schließe Arztzeugnis-Modal
+const closeMedicalCertificateModal = () => {
+  showMedicalCertificateModal.value = false
+  selectedPaymentForCertificate.value = null
 }
 
 const canCancelAppointment = (payment: any): boolean => {
