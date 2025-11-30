@@ -1422,9 +1422,11 @@ const handleEventDrop = async (dropInfo: any) => {
       
       // Kalender neu laden
       console.log('🔄 Reloading calendar events...')
+        invalidateCache() // ✅ ADDED: Invalidate cache first
         isUpdating.value = true
         await loadAppointments()
         isUpdating.value = false
+        refreshCalendar() // ✅ ADDED: Refresh the calendar display
 
       
       console.log(`✅ Termin "${dropInfo.event.title}" erfolgreich verschoben`)
