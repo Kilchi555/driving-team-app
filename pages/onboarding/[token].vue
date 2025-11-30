@@ -142,6 +142,34 @@
             </p>
 
             <div class="space-y-4">
+              <!-- First Name and Last Name -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Vorname *
+                  </label>
+                  <input
+                    v-model="form.firstName"
+                    type="text"
+                    required
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Max"
+                  >
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Nachname *
+                  </label>
+                  <input
+                    v-model="form.lastName"
+                    type="text"
+                    required
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Mustermann"
+                  >
+                </div>
+              </div>
+
               <!-- Email -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -551,11 +579,13 @@ const categories = ref<any[]>([])
 const termsText = ref('AGB werden geladen...')
 
 const form = reactive({
+  firstName: '',
+  lastName: '',
   password: '',
   confirmPassword: '',
   email: '',
   birthdate: '',
-  categories: [] as string[], // Changed from category to categories array
+  categories: [] as string[],
   street: '',
   street_nr: '',
   zip: '',
@@ -841,6 +871,8 @@ const completeOnboarding = async () => {
     // Complete onboarding
     const requestBody = {
       token,
+      firstName: form.firstName,
+      lastName: form.lastName,
       password: form.password,
       email: form.email,
       birthdate: form.birthdate,

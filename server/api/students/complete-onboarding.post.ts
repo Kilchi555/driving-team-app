@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     console.log('📝 Complete onboarding request body:', JSON.stringify(body, null, 2))
     
-    const { token, password, email, birthdate, categories, category, street, street_nr, zip, city, documentUrls } = body
+    const { token, firstName, lastName, password, email, birthdate, categories, category, street, street_nr, zip, city, documentUrls } = body
 
     if (!token || !password || !email) {
       console.error('❌ Missing required fields:', { token: !!token, password: !!password, email: !!email })
