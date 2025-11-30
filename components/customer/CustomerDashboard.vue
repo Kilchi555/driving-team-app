@@ -912,11 +912,13 @@ const activeClickDiv = ref<string | null>(null) // Track which div is being clic
 const loadUserDocuments = async () => {
   if (!userData.value?.id || !userData.value?.tenant_id) {
     console.log('⚠️ User data not available for loading documents')
+    console.log('   userData.id:', userData.value?.id)
+    console.log('   userData.tenant_id:', userData.value?.tenant_id)
     return
   }
 
   try {
-    console.log('📄 Loading user documents for user:', userData.value.id)
+    console.log('📄 Loading user documents for user:', userData.value.id, 'tenant:', userData.value.tenant_id)
     const supabase = getSupabase()
 
     // Get all documents for this user
@@ -930,10 +932,18 @@ const loadUserDocuments = async () => {
 
     if (docsError) {
       console.error('❌ Error loading documents:', docsError)
+      console.error('   Error details:', {
+        code: docsError.code,
+        message: docsError.message,
+        details: docsError.details
+      })
       return
     }
 
     console.log('✅ Loaded documents:', docs?.length || 0)
+    if (docs && docs.length > 0) {
+      console.log('📋 First document:', docs[0])
+    }
 
     // Group documents by document_type and category_code
     const groupedDocs: Record<string, any> = {}
@@ -961,8 +971,12 @@ const loadUserDocuments = async () => {
     const categoriesArray = Object.keys(groupedDocs).map(key => groupedDocs[key])
     userDocumentCategories.value = categoriesArray
     console.log('✅ Documents grouped, categories:', categoriesArray.length)
+    if (categoriesArray.length > 0) {
+      console.log('📂 First category:', categoriesArray[0])
+    }
   } catch (err: any) {
     console.error('❌ Error loading user documents:', err)
+    console.error('   Stack:', err.stack)
   }
 }
 
