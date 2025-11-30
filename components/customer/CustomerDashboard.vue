@@ -359,14 +359,14 @@
               </svg>
             </div>
             <h3 class="text-lg font-semibold text-gray-900">
-              Meine Fahrlehrer
+              Kontakt
             </h3>
           </div>
           
           <div class="flex-1 flex items-center justify-center">
             <div class="text-center">
               <p class="text-gray-600 text-sm">
-                Finde die Angaben deiner Fahrlehrer              
+                Finde unsere Kontakt-Angaben              
               </p>
             </div>
           </div>
@@ -713,7 +713,7 @@
         <div class="p-6">
           <!-- Header -->
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl font-bold text-gray-900">Meine Fahrlehrer</h2>
+            <h2 class="text-2xl font-bold text-gray-900"></h2>
             <button 
               @click="showInstructorModal = false"
               class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -738,10 +738,6 @@
                 <svg class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
                 </svg>
-                <div class="text-sm">
-                  <p class="text-blue-900 font-medium">{{ currentTenant.name }}</p>
-                  <p class="text-blue-800">{{ currentTenant.address }}</p>
-                </div>
               </div>
               <div v-if="currentTenant.contact_email" class="flex items-center gap-2 text-sm text-blue-800">
                 <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

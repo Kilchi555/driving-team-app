@@ -2,14 +2,14 @@
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl my-8">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-xl">
+      <div class="bg-gray-100 border-b border-gray-200 p-6 rounded-t-xl">
         <div class="flex justify-between items-center">
-          <h2 class="text-2xl font-bold">Mein Profil</h2>
+          <h2 class="text-2xl font-bold text-gray-900">Mein Profil</h2>
           <div class="flex items-center gap-2">
             <button
               v-if="!isEditMode"
               @click="isEditMode = true"
-              class="text-white hover:text-gray-200 transition-colors p-2"
+              class="text-gray-600 hover:text-gray-900 transition-colors p-2"
               title="Bearbeiten"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,7 +18,7 @@
             </button>
             <button
               @click="$emit('close')"
-              class="text-white hover:text-gray-200 transition-colors"
+              class="text-gray-600 hover:text-gray-900 transition-colors"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
