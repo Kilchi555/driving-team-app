@@ -55,7 +55,8 @@ export default defineEventHandler(async (event) => {
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
-        phone: user.phone
+        phone: user.phone,
+        tenant_id: user.tenant_id
       },
       tenantName: tenant?.name
     }
