@@ -1844,6 +1844,16 @@ const pasteAppointmentDirectly = async () => {
     console.log('🔍 Final category:', category)
     
     // ✅ APPOINTMENTS-DATEN (alle Pflichtfelder basierend auf Schema)
+    // ⚠️ WICHTIG: clickedDate ist bereits lokale Zeit (vom Calendar),
+    // wir müssen sie in UTC konvertieren für die Datenbank
+    const convertToUTC = (localDate: Date) => {
+      // localDate ist lokale Zeit (Europe/Zurich)
+      // Konvertiere zu UTC für Datenbank-Speicherung
+      const offset = localDate.getTimezoneOffset() * 60000 // Offset in ms
+      const utcDate = new Date(localDate.getTime() + offset)
+      return utcDate.toISOString()
+    }
+    
     const appointmentData = {
       // Basis-Felder (NOT NULL)
       title: clipboardAppointment.value.title || 'Kopierter Termin',
@@ -1852,9 +1862,9 @@ const pasteAppointmentDirectly = async () => {
       staff_id: clipboardAppointment.value.staff_id || props.currentUser?.id,
       location_id: clipboardAppointment.value.location_id,
       
-      // Zeit-Felder (NOT NULL)
-      start_time: toLocalTimeString(clickedDate),
-      end_time: toLocalTimeString(endDate),
+      // Zeit-Felder (NOT NULL) - MUSS UTC sein!
+      start_time: convertToUTC(clickedDate),
+      end_time: convertToUTC(endDate),
       duration_minutes: clipboardAppointment.value.duration || 45,
       
       // Typ-Felder (NOT NULL)
