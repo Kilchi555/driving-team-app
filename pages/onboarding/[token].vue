@@ -169,32 +169,6 @@
                 >
               </div>
 
-              <!-- Category Selection -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-3">
-                  Führerausweis-Kategorien *
-                </label>
-                <div class="space-y-3">
-                  <div v-for="cat in categories" :key="cat.code || cat.id" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div class="flex-1 min-w-0">
-                      <div class="flex items-center space-x-3">
-                        <span class="text-lg font-bold text-gray-800">{{ cat.code || cat.id }}</span>
-                        <span class="text-sm text-gray-600">{{ cat.name }}</span>
-                      </div>
-                    </div>
-                    <label class="relative inline-flex items-start cursor-pointer ml-4 flex-shrink-0">
-                      <input
-                        v-model="form.categories"
-                        :value="cat.code || cat.id"
-                        type="checkbox"
-                        class="sr-only peer"
-                      />
-                      <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
               <!-- Address -->
               <div class="grid grid-cols-3 gap-4">
                 <div class="col-span-2">
@@ -251,6 +225,34 @@
                   >
                 </div>
               </div>
+
+              <!-- Category Selection -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                  Führerausweis-Kategorien *
+                </label>
+                <div class="space-y-3">
+                  <div v-for="cat in categories" :key="cat.code || cat.id" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center space-x-3">
+                        <span class="text-lg font-bold text-gray-800">{{ cat.code || cat.id }}</span>
+                        <span class="text-sm text-gray-600">{{ cat.name }}</span>
+                      </div>
+                    </div>
+                    <label class="relative inline-flex items-start cursor-pointer ml-4 flex-shrink-0">
+                      <input
+                        v-model="form.categories"
+                        :value="cat.code || cat.id"
+                        type="checkbox"
+                        class="sr-only peer"
+                      />
+                      <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Address - REMOVED from here, moved above categories -->
             </div>
           </div>
 
@@ -320,7 +322,7 @@
                   
                   <!-- File Preview -->
                   <div v-else class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-3 min-w-0 flex-1">
                       <div class="flex-shrink-0">
                         <svg v-if="uploadedFiles[category].type.startsWith('image/')" class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -330,7 +332,7 @@
                         </svg>
                       </div>
                       <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-green-900 truncate">
+                        <p class="text-sm font-medium text-green-900 truncate break-words" :title="uploadedFiles[category].name">
                           {{ uploadedFiles[category].name }}
                         </p>
                         <p class="text-xs text-green-600">

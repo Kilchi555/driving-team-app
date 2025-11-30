@@ -116,9 +116,6 @@
                 <p v-if="errors.last_name" class="text-red-600 text-xs mt-1">{{ errors.last_name }}</p>
               </div>
 
-              <div class="mb-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
-              ℹ️ Mindestens E-Mail oder Telefonnummer
-            </div>
 
               <!-- Email (Optional) -->
               <div class="md:col-span-2">
