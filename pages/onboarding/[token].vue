@@ -723,11 +723,12 @@ const openRegulationModal = async (type: string) => {
     const supabase = getSupabase()
     const activeTenantId = userData.value?.tenant_id
     
+    const typeLabel = type === 'nutzungsbedingungen' ? 'Nutzungsbedingungen' : 'Datenschutzerklärung'
     console.log('📋 Loading regulation:', type, 'for tenant:', activeTenantId)
     
     if (!activeTenantId) {
       console.error('❌ No tenant_id available')
-      showErrorMessage('Tenant-Daten fehlen')
+      showErrorMessage(`Fehler: Die Tenant-Informationen fehlen. Bitte kontaktiere die Fahrschule.`)
       return
     }
     
@@ -745,7 +746,7 @@ const openRegulationModal = async (type: string) => {
     
     if (error) {
       console.error('❌ Error loading reglement:', error)
-      showErrorMessage('Fehler beim Laden der Dokumente: ' + error.message)
+      showErrorMessage(`Fehler beim Laden der ${typeLabel}. Bitte versuche es später erneut oder kontaktiere die Fahrschule.`)
       return
     }
     
@@ -755,11 +756,11 @@ const openRegulationModal = async (type: string) => {
       console.log('✅ Opened reglement modal:', type, regulations[0].title)
     } else {
       console.warn('⚠️ Reglement not found:', type)
-      showErrorMessage(`${type === 'nutzungsbedingungen' ? 'Nutzungsbedingungen' : 'Datenschutzerklärung'} nicht gefunden`)
+      showErrorMessage(`${typeLabel} sind noch nicht verfügbar. Bitte kontaktiere die Fahrschule.`)
     }
   } catch (err: any) {
     console.error('❌ Error opening reglement modal:', err)
-    showErrorMessage('Fehler beim Laden der Dokumente: ' + err.message)
+    showErrorMessage('Fehler beim Laden der Dokumente. Bitte versuche es später erneut.')
   }
 }
 
@@ -816,13 +817,23 @@ const completeOnboarding = async () => {
         formData.append('type', type)
         formData.append('userId', userData.value.id)
 
-        const { data: uploadData } = await useFetch('/api/students/upload-document', {
-          method: 'POST',
-          body: formData
-        })
+        try {
+          const { data: uploadData, error: uploadError } = await useFetch('/api/students/upload-document', {
+            method: 'POST',
+            body: formData
+          })
 
-        if (uploadData.value?.url) {
-          documentUrls[type] = uploadData.value.url
+          if (uploadError.value) {
+            console.error('❌ Document upload error:', uploadError.value)
+            throw new Error(`Dokument-Upload fehlgeschlagen: ${uploadError.value.message || 'Unbekannter Fehler'}`)
+          }
+
+          if (uploadData.value?.url) {
+            documentUrls[type] = uploadData.value.url
+          }
+        } catch (uploadErr: any) {
+          console.error('❌ Error uploading document for category', type, ':', uploadErr)
+          throw new Error(`Fehler beim Upload der Dokumente (${type}): ${uploadErr.message}`)
         }
       }
     }
@@ -833,7 +844,7 @@ const completeOnboarding = async () => {
       password: form.password,
       email: form.email,
       birthdate: form.birthdate,
-      categories: form.categories, // Changed from category to categories
+      categories: form.categories,
       street: form.street,
       street_nr: form.street_nr,
       zip: form.zip,
@@ -852,12 +863,22 @@ const completeOnboarding = async () => {
 
     if (completeError.value) {
       console.error('❌ Complete error details:', completeError.value)
-      const errorMessage = completeError.value.data?.message || completeError.value.message || 'Unbekannter Fehler'
-      throw new Error(`Registrierung fehlgeschlagen: ${errorMessage}`)
+      let errorMessage = completeError.value.data?.message || completeError.value.message || 'Unbekannter Fehler'
+      
+      // Provide more helpful error messages
+      if (errorMessage.includes('duplicate') || errorMessage.includes('Email')) {
+        errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere E-Mail oder kontaktiere die Fahrschule.'
+      } else if (errorMessage.includes('password')) {
+        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (min. 8 Zeichen, groß- und kleinbuchstaben, zahlen)'
+      } else if (errorMessage.includes('Token')) {
+        errorMessage = 'Der Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'
+      }
+      
+      throw new Error(errorMessage)
     }
 
     if (!data.value?.success) {
-      throw new Error('Registrierung fehlgeschlagen: Server hat keinen Erfolg zurückgegeben')
+      throw new Error('Registrierung fehlgeschlagen: Die Daten konnten nicht gespeichert werden. Bitte versuche es erneut.')
     }
 
     // Success - show success message and redirect
@@ -883,7 +904,8 @@ const completeOnboarding = async () => {
 
   } catch (err: any) {
     console.error('❌ Onboarding completion error:', err)
-    showErrorMessage(err.message || 'Fehler beim Abschliessen der Registrierung')
+    console.error('❌ Error details:', err.stack)
+    showErrorMessage(err.message || 'Fehler beim Abschliessen der Registrierung. Bitte versuche es später erneut oder kontaktiere die Fahrschule.')
   } finally {
     isSubmitting.value = false
   }
