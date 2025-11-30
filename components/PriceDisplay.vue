@@ -952,26 +952,14 @@ const removeProduct = (productId: string) => {
 
 // ✅ NEU: Base Price aus bestehender Payment oder berechnet
 const getBasePrice = () => {
-  // Im Edit-Modus: Nutze den aktuellen Wert aus existingPayment (der durch den Watch aktualisiert wird)
-  // WICHTIG: Wenn die Duration sich ändert, wird dieser Wert durch den duration-Watcher aktualisiert
+  // Im Edit-Modus: Verwende den Wert aus existingPayment (wird durch den Watch aktualisiert)
   if (props.isEditMode && existingPayment.value) {
     const storedPrice = (existingPayment.value.lesson_price_rappen || 0) / 100
-    const calculatedPrice = props.durationMinutes * props.pricePerMinute
-    
-    // Wenn der Preis nicht mehr der berechneten Duration entspricht, nutze den berechneten
-    // (Dies zeigt, dass die Duration geändert wurde)
-    const storedDurationBasedPrice = Math.round(storedPrice / props.pricePerMinute)
-    if (Math.abs(storedDurationBasedPrice - props.durationMinutes) > 0.1) {
-      // Duration wurde änderung, nutze berechneten Preis
-      console.log('📊 getBasePrice - Duration mismatch detected, using calculated price:', {
-        storedPrice,
-        calculatedPrice,
-        storedDuration: storedDurationBasedPrice,
-        currentDuration: props.durationMinutes
-      })
-      return calculatedPrice
-    }
-    
+    console.log('📊 getBasePrice (edit mode):', {
+      storedPrice,
+      durationMinutes: props.durationMinutes,
+      pricePerMinute: props.pricePerMinute
+    })
     return storedPrice
   }
   

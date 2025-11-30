@@ -62,7 +62,6 @@
           <div>
             <p class="text-sm sm:text-base text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
             <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ (studentBalance / 100).toFixed(2) }}</p>
-            <p class="text-xs sm:text-sm text-green-600 mt-2">Dieses Guthaben kann für zukünftige Zahlungen verwendet werden</p>
           </div>
           <div class="flex-shrink-0">
             <svg class="w-10 h-10 sm:w-12 sm:h-12 text-green-500" fill="currentColor" viewBox="0 0 20 20">
