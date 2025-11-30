@@ -1956,9 +1956,15 @@ const pasteAppointmentDirectly = async () => {
     showClipboardChoice.value = false
     pendingSlotClick.value = null
     
-    // Kalender neu laden
-    await loadAppointments()
-        
+    // ✅ Cache invalidieren damit loadAppointments nicht gecacht wird
+    invalidateCache()
+    
+    // Kalender neu laden und direkt aktualisieren
+    console.log('🔄 Reloading calendar after paste...')
+    await loadAppointments(true) // Force reload
+    
+    // ✅ Erfolgs-Nachricht
+    showToast('✅ Termin erfolgreich eingefügt')
   } catch (error: any) {
     console.error('❌ Error pasting appointment:', error)
     showToast('❌ Fehler beim Einfügen: ' + error.message)
