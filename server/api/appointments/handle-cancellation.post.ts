@@ -6,13 +6,27 @@ import { getSupabase } from '~/utils/supabase'
 export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabase()
-    const { appointmentId, deletionReason, lessonPriceRappen, adminFeeRappen } = await readBody(event)
+    const { 
+      appointmentId, 
+      deletionReason, 
+      lessonPriceRappen, 
+      adminFeeRappen,
+      // ✅ NEW: Cancellation policy info
+      shouldCreditHours,
+      chargePercentage,
+      originalLessonPrice,
+      originalAdminFee
+    } = await readBody(event)
 
     console.log('🗑️ Processing appointment cancellation:', {
       appointmentId,
       deletionReason,
       lessonPriceRappen,
-      adminFeeRappen
+      adminFeeRappen,
+      shouldCreditHours,
+      chargePercentage,
+      originalLessonPrice,
+      originalAdminFee
     })
 
     // Validate input
@@ -42,15 +56,29 @@ export default defineEventHandler(async (event) => {
     }
 
     // 2. Determine refund amount
-    // Refund only lesson price + admin fee (NOT products - those stay with the booking)
-    const refundableAmount = (lessonPriceRappen || 0) + (adminFeeRappen || 0)
-
-    console.log('💰 Refund calculation:', {
-      lessonPrice: ((lessonPriceRappen || 0) / 100).toFixed(2),
-      adminFee: ((adminFeeRappen || 0) / 100).toFixed(2),
-      totalRefund: (refundableAmount / 100).toFixed(2),
-      paymentStatus: payment?.payment_status
-    })
+    // ✅ NEW: If shouldCreditHours is true, use original prices for full refund
+    let refundableAmount: number
+    
+    if (shouldCreditHours && chargePercentage === 0) {
+      // Staff cancellation (no charge) - refund original prices
+      const originalLesson = originalLessonPrice || (lessonPriceRappen || 0)
+      const originalAdmin = originalAdminFee || (adminFeeRappen || 0)
+      refundableAmount = originalLesson + originalAdmin
+      console.log('💚 Staff cancellation - refunding full original prices:', {
+        originalLesson: (originalLesson / 100).toFixed(2),
+        originalAdmin: (originalAdmin / 100).toFixed(2),
+        total: (refundableAmount / 100).toFixed(2)
+      })
+    } else {
+      // Regular cancellation - use the passed amounts
+      refundableAmount = (lessonPriceRappen || 0) + (adminFeeRappen || 0)
+      console.log('💰 Regular cancellation refund calculation:', {
+        lessonPrice: ((lessonPriceRappen || 0) / 100).toFixed(2),
+        adminFee: ((adminFeeRappen || 0) / 100).toFixed(2),
+        totalRefund: (refundableAmount / 100).toFixed(2),
+        chargePercentage
+      })
+    }
 
     if (!payment) {
       console.log('⚠️ No payment found for appointment')

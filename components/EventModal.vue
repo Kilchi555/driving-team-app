@@ -3379,13 +3379,20 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     // ✅ SCHRITT 1.5: Call API endpoint to handle refund if needed
     console.log('📡 Calling handle-cancellation endpoint...')
     try {
+      // ✅ NEW: Pass the full payment info and cancellation policy to handle-cancellation
       const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
         method: 'POST',
         body: {
           appointmentId: props.eventData.id,
           deletionReason,
           lessonPriceRappen,
-          adminFeeRappen
+          adminFeeRappen,
+          // ✅ NEW: Pass cancellation policy info
+          shouldCreditHours: cancellationPolicyResult.value?.shouldCreditHours || false,
+          chargePercentage: cancellationPolicyResult.value?.chargePercentage || 100,
+          // ✅ NEW: Pass the original payment info for full refund calculation
+          originalLessonPrice: payments?.[0]?.lesson_price_rappen || lessonPriceRappen,
+          originalAdminFee: payments?.[0]?.admin_fee_rappen || adminFeeRappen
         }
       })
       
