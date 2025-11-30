@@ -59,11 +59,13 @@ export default defineEventHandler(async (event) => {
       // Convert base64 to buffer
       const buffer = Buffer.from(base64Data.split(',')[1] || base64Data, 'base64')
       
-      // Generate filename
+      // Generate filename - standardized structure
       const timestamp = Date.now()
-      const filename = `user-documents/${user.id}/${categoryCode}/${documentType}_${timestamp}.jpg`
+      // Extract original filename if available, or use a default
+      const originalFilename = documentType || 'document'
+      const filename = `user-documents/${user.id}/${categoryCode}/${timestamp}_${originalFilename}.jpg`
 
-      console.log('📤 Uploading document:', filename)
+      console.log('📤 Uploading document with standardized path:', filename)
 
       // Upload to storage
       const { error: uploadError } = await serviceSupabase.storage
@@ -132,25 +134,25 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // Get document path from database or from documentId
+      // Get document path from database
       const { data: doc, error: docError } = await serviceSupabase
         .from('user_documents')
-        .select('file_path')
+        .select('storage_path, id')
         .eq('id', documentId)
         .eq('user_id', userProfile.id)
         .single()
 
-      if (docError || !doc) {
+      if (docError || !doc || !doc.storage_path) {
         throw createError({
           statusCode: 404,
           statusMessage: 'Dokument nicht gefunden'
         })
       }
 
-      // Delete from storage
+      // Delete from storage using storage_path
       const { error: deleteError } = await serviceSupabase.storage
         .from('user-documents')
-        .remove([doc.file_path])
+        .remove([doc.storage_path])
 
       if (deleteError) {
         console.error('❌ Delete error:', deleteError)
@@ -164,9 +166,9 @@ export default defineEventHandler(async (event) => {
       await serviceSupabase
         .from('user_documents')
         .delete()
-        .eq('id', documentId)
+        .eq('id', doc.id)
 
-      console.log('✅ Document deleted:', doc.file_path)
+      console.log('✅ Document deleted:', doc.storage_path)
 
       return {
         success: true,
