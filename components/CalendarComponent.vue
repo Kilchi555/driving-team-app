@@ -1837,6 +1837,16 @@ const pasteAppointmentDirectly = async () => {
   try {
     // Kopierte Daten mit neuer Zeit vorbereiten
     const clickedDate = pendingSlotClick.value.date
+    
+    // 🔍 DEBUG: Was exakt ist clickedDate?
+    console.log('🔍 DEBUG clickedDate:', {
+      clickedDateObj: clickedDate,
+      clickedDateString: clickedDate.toString(),
+      clickedDateISO: clickedDate.toISOString(),
+      clickedDateLocale: clickedDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' }),
+      timezone_offset_minutes: clickedDate.getTimezoneOffset()
+    })
+    
     const endDate = new Date(clickedDate.getTime() + clipboardAppointment.value.duration * 60000)
     
     // ✅ EXPLIZITE KATEGORIE-ERMITTLUNG
@@ -1848,16 +1858,12 @@ const pasteAppointmentDirectly = async () => {
     console.log('🔍 Final category:', category)
     
     // ✅ APPOINTMENTS-DATEN (alle Pflichtfelder basierend auf Schema)
-    // ⚠️ WICHTIG: clickedDate ist bereits lokale Zeit (vom Calendar),
-    // wir müssen sie in UTC konvertieren für die Datenbank
-    const convertToUTC = (localDate: Date) => {
-      // localDate ist lokale Zeit (Europe/Zurich)
-      // getTimezoneOffset() gibt Minuten zurück (negative für east of UTC)
-      // Für GMT+0100: getTimezoneOffset() = -60 (negative!)
-      // Um zu UTC zu konvertieren: UTC = Local - offset
-      const offset = localDate.getTimezoneOffset() * 60000 // Offset in ms (z.B. -60 * 60000 für GMT+0100)
-      const utcDate = new Date(localDate.getTime() - offset) // Subtrahiere (weil offset negativ)
-      return utcDate.toISOString()
+    // ⚠️ WICHTIG: clickedDate vom FullCalendar ist bereits UTC!
+    // Deshalb können wir es direkt als ISO String verwenden
+    const convertToUTC = (dateFromCalendar: Date) => {
+      // FullCalendar gibt UTC-Zeiten zurück
+      // Wir können direkt toISOString() verwenden
+      return dateFromCalendar.toISOString()
     }
     
     const appointmentData = {
