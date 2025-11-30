@@ -1883,18 +1883,64 @@ const pasteAppointmentDirectly = async () => {
     // ✅ APPOINTMENTS-DATEN (alle Pflichtfelder basierend auf Schema)
     // ⚠️ WICHTIG: FullCalendar gibt lokale Zeit zurück (z.B. 09:00 GMT+0100)
     // Wir müssen das in UTC konvertieren für die Datenbank
-    // UTC = Local - Offset (wichtig: getTimezoneOffset() gibt Minuten zurück, negative für Osten)
+    // UTC = Local - Offset (mit Zurich offset als POSITIVE Zahl berechnet, nicht getTimezoneOffset!)
     const convertToUTC = (localDate: Date): string => {
-      const offset = localDate.getTimezoneOffset() * 60000 // in Millisekunden
-      const utcTime = localDate.getTime() + offset
-      const result = new Date(utcTime).toISOString()
+      // Get Zurich timezone offset at this date (1 for winter, 2 for summer)
+      const year = localDate.getFullYear()
+      const month = localDate.getMonth()
+      const day = localDate.getDate()
+      const midnightUTC = new Date(Date.UTC(year, month, day, 0, 0, 0))
+      
+      // Calculate what Zurich time is when UTC is midnight
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Zurich',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      })
+      
+      const zurichMidnightStr = formatter.format(midnightUTC)
+      const match = zurichMidnightStr.match(/(\d{2}):(\d{2}):(\d{2})$/)
+      const zurichHour = match ? parseInt(match[1]) : 1 // 1 for winter, 2 for summer
+      
+      // Parse local time
+      const hours = localDate.getHours()
+      const minutes = localDate.getMinutes()
+      const seconds = localDate.getSeconds()
+      
+      // Convert: UTC = Local - Offset
+      let utcHours = hours - zurichHour
+      let utcDay = day
+      
+      // Handle day wrap-around
+      if (utcHours < 0) {
+        utcHours += 24
+        utcDay -= 1
+      }
+      if (utcHours >= 24) {
+        utcHours -= 24
+        utcDay += 1
+      }
+      
+      const paddedYear = year
+      const paddedMonth = String(month + 1).padStart(2, '0')
+      const paddedDay = String(utcDay).padStart(2, '0')
+      const paddedHours = String(utcHours).padStart(2, '0')
+      const paddedMinutes = String(minutes).padStart(2, '0')
+      const paddedSeconds = String(seconds).padStart(2, '0')
+      
+      const result = `${paddedYear}-${paddedMonth}-${paddedDay}T${paddedHours}:${paddedMinutes}:${paddedSeconds}`
       
       console.log('🔄 convertToUTC:', {
         input: localDate.toString(),
-        input_timestamp: localDate.getTime(),
-        offset_minutes: localDate.getTimezoneOffset(),
-        offset_ms: offset,
-        utcTime: utcTime,
+        zurichOffset: zurichHour,
+        hours: hours,
+        utcHours: utcHours,
+        utcDay: utcDay,
         output: result,
         expected_local_time: localDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
       })
