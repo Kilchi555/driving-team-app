@@ -1375,7 +1375,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // Check if payment already exists
       const { data: existingPayment, error: fetchError } = await supabase
         .from('payments')
-        .select('id')
+        .select('*')
         .eq('appointment_id', appointmentId)
         .single()
 
@@ -1391,27 +1391,37 @@ const useEventModalForm = (currentUser?: any, refs?: {
 
       console.log('🔄 Updating existing payment:', existingPayment.id)
       
-      // Calculate new payment data (same logic as createPaymentEntry)
-      const durationMinutes = formData.value.duration_minutes || 45
-      const appointmentType = formData.value.appointment_type || 'lesson'
-      
+      // ✅ WICHTIG: Nutze die aktuell in PriceDisplay gespeicherte Price aus der DB
+      // nicht die alten Refs, da PriceDisplay den Preis bereits aktualisiert hat
       let lessonPriceRappen: number
-      if (appointmentType === 'theory') {
-        lessonPriceRappen = 8500
-        console.log('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
+      
+      // Check if PriceDisplay already updated the payment with new price
+      if (existingPayment.lesson_price_rappen && existingPayment.lesson_price_rappen > 0) {
+        // Use the current payment price (already updated by PriceDisplay watcher)
+        lessonPriceRappen = existingPayment.lesson_price_rappen
+        console.log('💾 Using existing payment price from DB (updated by PriceDisplay):', lessonPriceRappen)
       } else {
-        const dynamicPrice = refs?.dynamicPricing?.value
+        // Fallback: calculate based on current data
+        const appointmentType = formData.value.appointment_type || 'lesson'
+        const durationMinutes = formData.value.duration_minutes || 45
         
-        if (dynamicPrice && dynamicPrice.totalPriceChf) {
-          const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
-          const adminFeeChf = dynamicPrice.adminFeeChf || 0
-          const basePriceChf = totalChf - adminFeeChf
-          lessonPriceRappen = Math.round(basePriceChf * 100)
+        if (appointmentType === 'theory') {
+          lessonPriceRappen = 8500
+          console.log('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
         } else {
-          console.warn('⚠️ No dynamic pricing available, using fallback')
-          const pricePerMinute = 2.11
-          const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
-          lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+          const dynamicPrice = refs?.dynamicPricing?.value
+          
+          if (dynamicPrice && dynamicPrice.totalPriceChf) {
+            const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
+            const adminFeeChf = dynamicPrice.adminFeeChf || 0
+            const basePriceChf = totalChf - adminFeeChf
+            lessonPriceRappen = Math.round(basePriceChf * 100)
+          } else {
+            console.warn('⚠️ No dynamic pricing available, using fallback')
+            const pricePerMinute = 2.11
+            const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
+            lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+          }
         }
       }
       
@@ -1424,11 +1434,18 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       const discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
       
+      // ✅ WICHTIG: Nutze admin fee aus DB wenn bereits dort, sonst berechne neu
       let adminFeeRappen: number
       if (appointmentType === 'theory') {
         adminFeeRappen = 0
       } else {
-        adminFeeRappen = Math.round((refs?.dynamicPricing?.value?.adminFeeRappen || 0))
+        // Use existing admin fee from DB (already updated by PriceDisplay if needed)
+        adminFeeRappen = existingPayment.admin_fee_rappen || 0
+        
+        // If still 0 and not theory, check dynamic pricing
+        if (adminFeeRappen === 0) {
+          adminFeeRappen = Math.round((refs?.dynamicPricing?.value?.adminFeeRappen || 0))
+        }
       }
       
       const rawPaymentMethod = refs?.selectedPaymentMethod?.value || 'wallee'
