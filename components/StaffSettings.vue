@@ -422,20 +422,33 @@
             <div class="flex items-center space-x-2">
               <span class="text-2xl">📱</span>
               <h4 class="text-md font-semibold text-gray-900">Handy-Kalender Integration</h4>
+              <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">🚧 In Entwicklung</span>
             </div>
             
-            <div class="space-y-3">
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div class="flex items-start space-x-2">
+                <span class="text-yellow-600 text-lg">⚠️</span>
+                <div class="text-sm text-yellow-800">
+                  <strong>Feature in Entwicklung</strong><br>
+                  Die Handy-Kalender Integration wird aktuell entwickelt und ist noch nicht verfügbar. 
+                  Diese Funktion wird in einem zukünftigen Update freigeschaltet.
+                </div>
+              </div>
+            </div>
+            
+            <div class="space-y-3 opacity-50 pointer-events-none">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Kalender-Link:</label>
                 <div class="flex space-x-2">
                   <input
                     :value="calendarLink"
                     readonly
+                    disabled
                     class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   >
                   <button
-                    @click="copyToClipboard(calendarLink, 'Kalender-Link')"
-                    class="px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
+                    disabled
+                    class="px-4 py-2 bg-gray-400 text-white rounded text-sm cursor-not-allowed"
                   >
                     Kopieren
                   </button>
