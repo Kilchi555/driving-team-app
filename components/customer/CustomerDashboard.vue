@@ -1324,92 +1324,13 @@ const navigateToPayments = async () => {
 }
 
 const navigateToLessonBooking = async () => {
-  try {
-    // Get user's tenant_id from database
-    const supabase = getSupabase()
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, tenant_id, assigned_staff_ids, category')
-      .eq('auth_user_id', currentUser.value?.id)
-      .single()
-    
-    if (userError || !userData) {
-      console.error('❌ Error getting user tenant:', userError)
-      await navigateTo('/booking/availability-test')
-      return
-    }
-    
-    console.log('👤 User data loaded:', userData)
-    
-    // Get tenant slug from tenant_id
-    const { data: tenantData, error: tenantError } = await supabase
-      .from('tenants')
-      .select('slug')
-      .eq('id', userData.tenant_id)
-      .single()
-    
-    if (tenantError || !tenantData) {
-      console.error('❌ Error getting tenant slug:', tenantError)
-      await navigateTo('/booking/availability-test')
-      return
-    }
-    
-    // Load last confirmed appointment to pre-fill booking data
-    // Use userData.id (user_id from users table), not currentUser.value.id (auth_user_id)
-    const { data: lastAppointment, error: appointmentError } = await supabase
-      .from('appointments')
-      .select('type, staff_id, location_id, duration_minutes')
-      .eq('user_id', userData.id)
-      .eq('tenant_id', userData.tenant_id)
-      .in('status', ['confirmed', 'completed'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-    
-    if (appointmentError && appointmentError.code !== 'PGRST116') {
-      console.warn('⚠️ Error loading last appointment:', appointmentError)
-    }
-    
-    console.log('📅 Last appointment:', lastAppointment)
-    
-    // Build query parameters
-    const query: any = { referrer: '/customer-dashboard' }
-    
-    // If user has previous appointments, pre-fill the data
-    if (lastAppointment) {
-      console.log('✅ Found previous appointment, pre-filling:', lastAppointment)
-      query.prefill = 'true'
-      query.category = lastAppointment.type
-      query.staff = lastAppointment.staff_id
-      query.location = lastAppointment.location_id
-      query.duration = lastAppointment.duration_minutes
-    } 
-    // Otherwise, use assigned_staff_ids and category from user profile
-    else if (userData.assigned_staff_ids && userData.assigned_staff_ids.length > 0) {
-      console.log('✅ No previous appointments, using assigned staff and category')
-      query.prefill = 'partial'
-      if (userData.category && userData.category.length > 0) {
-        query.category = userData.category[0] // Use first category
-      }
-      query.staff = userData.assigned_staff_ids[0] // Use first assigned staff
-    }
-    
-    console.log('🚀 Navigating with query:', query)
-    
-    // Navigate with tenant slug and query parameters
-    await navigateTo({
-      path: `/booking/availability/${tenantData.slug}`,
-      query
-    })
-  } catch (err) {
-    console.error('❌ Error navigating to lesson booking:', err)
-    await navigateTo('/booking/availability-test')
-  }
+  // Navigiere zur Coming Soon Seite
+  await navigateTo('/customer/coming-soon')
 }
 
 const navigateToCourseBooking = async () => {
-  // Navigiere zur Customer Kurs-Übersicht
-  await navigateTo('/customer/courses')
+  // Navigiere zur Coming Soon Seite
+  await navigateTo('/customer/coming-soon')
 }
 
 const navigateToReglement = async (type: string) => {

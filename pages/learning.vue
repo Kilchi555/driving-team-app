@@ -52,9 +52,6 @@
           <h2 class="text-lg font-semibold">Hier erscheinen deine Lerninhalte</h2>
           <p class="text-sm text-gray-500 mt-1">Sobald ein Thema in deinen Fahrstunden bewertet wurde und Lerntext oder Bilder hinterlegt sind, findest du es hier.</p>
           <div class="mt-4">
-            <button @click="goToLessonBooking" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow">
-              🚗 Jetzt Fahrstunde buchen
-            </button>
           </div>
         </div>
 
