@@ -1838,16 +1838,9 @@ const pasteAppointmentDirectly = async () => {
     // Kopierte Daten mit neuer Zeit vorbereiten
     const clickedDate = pendingSlotClick.value.date
     
-    // 🔍 DEBUG: Was exakt ist clickedDate?
-    console.log('🔍 DEBUG clickedDate:', {
-      clickedDateObj: clickedDate,
-      clickedDateString: clickedDate.toString(),
-      clickedDateISO: clickedDate.toISOString(),
-      clickedDateLocale: clickedDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' }),
-      timezone_offset_minutes: clickedDate.getTimezoneOffset()
-    })
-    
-    const endDate = new Date(clickedDate.getTime() + clipboardAppointment.value.duration * 60000)
+    // ✅ ADD 1 HOUR AS QUICK FIX FOR TIMEZONE ISSUE
+    const clickedDatePlusOneHour = new Date(clickedDate.getTime() + 3600000) // Add 1 hour
+    const endDatePlusOneHour = new Date(clickedDatePlusOneHour.getTime() + clipboardAppointment.value.duration * 60000)
     
     // ✅ EXPLIZITE KATEGORIE-ERMITTLUNG
     const rawCategory = clipboardAppointment.value.category || clipboardAppointment.value.type
@@ -1886,8 +1879,8 @@ const pasteAppointmentDirectly = async () => {
       location_id: clipboardAppointment.value.location_id,
       
       // Zeit-Felder (NOT NULL) - MUSS UTC sein!
-      start_time: convertToUTC(clickedDate),
-      end_time: convertToUTC(endDate),
+      start_time: convertToUTC(clickedDatePlusOneHour), // ✅ Use +1 hour version
+      end_time: convertToUTC(endDatePlusOneHour), // ✅ Use +1 hour version
       duration_minutes: clipboardAppointment.value.duration || 45,
       
       // Typ-Felder (NOT NULL)
