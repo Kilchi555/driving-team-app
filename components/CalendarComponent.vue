@@ -1912,7 +1912,7 @@ const pasteAppointmentDirectly = async () => {
       products_price_rappen: 0,
       discount_amount_rappen: 0,
       total_amount_rappen: lessonPriceRappen,
-      payment_method: 'invoice',
+      payment_method: clipboardAppointment.value.payment_method || 'invoice', // ✅ Verwende kopierten payment_method
       payment_status: 'pending',
       currency: 'CHF',
       description: `Kopierter Termin: ${newAppointment.title}`,
@@ -2048,6 +2048,7 @@ const handleCopyAppointment = (copyData: any) => {
         duration: copyData.eventData.duration_minutes || 45,
         duration_minutes: copyData.eventData.duration_minutes || 45,
         price_per_minute: copyData.eventData.price_per_minute,
+        payment_method: copyData.eventData.payment_method || copyData.eventData.extendedProps?.payment_method || 'invoice', // ✅ Kopiere payment_method
   }
   
   console.log('✅ Termin in Zwischenablage gespeichert:', clipboardAppointment.value)
