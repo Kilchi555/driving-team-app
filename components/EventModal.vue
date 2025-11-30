@@ -3458,8 +3458,13 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     const eventType = props.eventData.type || props.eventData.event_type_code
     const isLessonType = ['lesson', 'exam', 'theory'].includes(eventType)
     
-    if (isLessonType) {
-      console.log('💳 Cleaning up payment data for lesson appointment:', props.eventData.id)
+    if (isLessonType && withCosts) {
+      console.log('💳 Appointment will be charged cancellation fee - keeping all payment data')
+      console.log('   - lesson_price_rappen: KEPT (for cancellation fee)')
+      console.log('   - products_price_rappen: KEPT (for cancellation fee)')
+      console.log('   - product_sales: KEPT (for accounting)')
+    } else if (isLessonType && !withCosts) {
+      console.log('💳 Appointment cancelled without charge - cleaning up payment data')
       
       // ✅ 1.0: Prüfe ob Payment autorisiert ist und storniere bei Absage >24h vor Termin
       const appointmentTime = new Date(props.eventData.start || props.eventData.start_time)
@@ -3491,7 +3496,6 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
               console.log(`✅ Payment ${payment.id} voided successfully`)
             } catch (voidError: any) {
               console.warn(`⚠️ Could not void payment ${payment.id}:`, voidError.message)
-              // Continue with deletion even if void fails
             }
           }
         }
