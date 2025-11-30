@@ -3212,6 +3212,7 @@ const handleCopy = () => {
   emit('copy-appointment', {
     mode: 'create',
     eventData: {
+      id: props.eventData?.id, // ✅ ADDED: Must include the ID!
       ...copiedData,
       title: `${formData.value.title} (Kopie)`,
       start: `${copiedData.startDate}T${copiedData.startTime}:00`,
