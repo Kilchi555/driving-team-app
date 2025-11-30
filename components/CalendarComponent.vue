@@ -1872,7 +1872,14 @@ const pasteAppointmentDirectly = async () => {
       
       const offset = localDate.getTimezoneOffset() * 60000 // in Millisekunden
       const utcTime = localDate.getTime() + offset
-      return new Date(utcTime).toISOString()
+      const result = new Date(utcTime).toISOString()
+      console.log('🔄 convertToUTC:', {
+        input: localDate.toString(),
+        offset_minutes: localDate.getTimezoneOffset(),
+        offset_ms: offset,
+        output: result
+      })
+      return result
     }
     
     const appointmentData = {
@@ -1929,10 +1936,10 @@ const pasteAppointmentDirectly = async () => {
       staff_id: newAppointment.staff_id,
       tenant_id: newAppointment.tenant_id,
       lesson_price_rappen: lessonPriceRappen,
-      admin_fee_rappen: 0,
+      admin_fee_rappen: clipboardAppointment.value.admin_fee_rappen || 0, // ✅ Übernehme admin_fee vom Original
       products_price_rappen: 0,
       discount_amount_rappen: 0,
-      total_amount_rappen: lessonPriceRappen,
+      total_amount_rappen: lessonPriceRappen + (clipboardAppointment.value.admin_fee_rappen || 0), // ✅ Addiere admin_fee zum Total
       payment_method: clipboardAppointment.value.payment_method || 'invoice', // ✅ Verwende kopierten payment_method
       payment_status: 'pending',
       currency: 'CHF',
@@ -2062,12 +2069,13 @@ const handleCopyAppointment = async (copyData: any) => {
                               copyData.eventData.extendedProps?.type || 
                               'B' // Fallback
   
-  // ✅ Fetch payment_method vom Payment-Record
+  // ✅ Fetch payment_method UND admin_fee vom Payment-Record
   let paymentMethod = 'invoice' // Default
+  let adminFeeRappen = 0 // Default
   try {
     const { data: payment, error } = await supabase
       .from('payments')
-      .select('payment_method')
+      .select('payment_method, admin_fee_rappen')
       .eq('appointment_id', copyData.eventData.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -2075,10 +2083,11 @@ const handleCopyAppointment = async (copyData: any) => {
     
     if (!error && payment) {
       paymentMethod = payment.payment_method
-      console.log('✅ Payment method fetched from DB:', paymentMethod)
+      adminFeeRappen = payment.admin_fee_rappen || 0
+      console.log('✅ Payment details fetched from DB:', { paymentMethod, adminFeeRappen })
     }
   } catch (err) {
-    console.warn('⚠️ Could not fetch payment method:', err)
+    console.warn('⚠️ Could not fetch payment details:', err)
   }
   
   // In Zwischenablage speichern
@@ -2095,6 +2104,7 @@ const handleCopyAppointment = async (copyData: any) => {
         duration_minutes: copyData.eventData.duration_minutes || 45,
         price_per_minute: copyData.eventData.price_per_minute,
         payment_method: paymentMethod, // ✅ Von DB geladen
+        admin_fee_rappen: adminFeeRappen, // ✅ Neu: admin_fee übernehmen
   }
   
   console.log('✅ Termin in Zwischenablage gespeichert:', clipboardAppointment.value)
