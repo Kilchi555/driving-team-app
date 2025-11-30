@@ -88,6 +88,34 @@ export default defineEventHandler(async (event) => {
 
       console.log('✅ Document uploaded:', publicUrl.publicUrl)
 
+      // Save document record in user_documents table
+      try {
+        const { error: docError } = await serviceSupabase
+          .from('user_documents')
+          .insert({
+            user_id: userProfile.id,
+            tenant_id: userProfile.tenant_id,
+            document_type: documentType,
+            category_code: categoryCode,
+            file_name: filename.split('/').pop() || 'document.jpg',
+            file_size: buffer.length,
+            file_type: 'image/jpeg',
+            storage_path: filename,
+            title: `${documentType} - ${categoryCode}`,
+            is_verified: false
+          })
+
+        if (docError) {
+          console.warn('⚠️ Could not create user_documents record:', docError)
+          // Continue - document is uploaded even if DB record fails
+        } else {
+          console.log('✅ Document record created in user_documents table')
+        }
+      } catch (recordErr: any) {
+        console.error('⚠️ Error creating document record:', recordErr)
+        // Continue - document is uploaded even if DB record fails
+      }
+
       return {
         success: true,
         message: 'Dokument erfolgreich hochgeladen',
