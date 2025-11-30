@@ -1388,6 +1388,24 @@ const handleEventDrop = async (dropInfo: any) => {
 
       console.log('✅ Appointment moved in database:', dropInfo.event.title)
       
+      // ✅ NEW: Reload the specific appointment from DB to get fresh extendedProps including phone
+      const { data: updatedAppointment, error: fetchError } = await supabase
+        .from('appointments')
+        .select(`
+          id,
+          user:users!appointments_user_id_fkey(first_name, last_name, category, phone)
+        `)
+        .eq('id', dropInfo.event.id)
+        .single()
+      
+      if (!fetchError && updatedAppointment?.user?.phone) {
+        // Update extendedProps with fresh phone number from DB
+        dropInfo.event.extendedProps.phone = updatedAppointment.user.phone
+        console.log('📱 Phone number refreshed from database:', updatedAppointment.user.phone)
+      } else if (fetchError) {
+        console.warn('⚠️ Could not refresh phone from database:', fetchError)
+      }
+      
       // ✅ NEW: Check if SMS should be sent (use state instead of DOM lookup)
       if (sendSmsOnDrop.value && dropInfo.event.extendedProps?.phone) {
         console.log('📱 Sending SMS notification for rescheduled appointment...')
