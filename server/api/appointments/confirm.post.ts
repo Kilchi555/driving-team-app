@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     const { data, error } = await supabase
       .from('appointments')
       .update({
-        status: 'scheduled',
+        status: 'confirmed', // ✅ FIXED: Should be 'confirmed', not 'scheduled'
         updated_at: new Date().toISOString()
       })
       .eq('id', body.appointmentId)
