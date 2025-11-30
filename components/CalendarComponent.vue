@@ -811,7 +811,7 @@ const loadRegularAppointments = async () => {
         staff_id,
         created_by,
         description,
-        user:users!appointments_user_id_fkey(first_name, last_name, category),
+        user:users!appointments_user_id_fkey(first_name, last_name, category, phone),
         staff:users!appointments_staff_id_fkey(first_name, last_name),
         created_by_user:users!appointments_created_by_fkey(first_name, last_name)
       `)
