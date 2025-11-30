@@ -1386,6 +1386,30 @@ const handleEventDrop = async (dropInfo: any) => {
 
       console.log('✅ Appointment moved in database:', dropInfo.event.title)
       
+      // ✅ NEW: Check if SMS should be sent
+      const sendSmsCheckbox = document.getElementById('sendSms') as HTMLInputElement
+      const shouldSendSms = sendSmsCheckbox?.checked ?? true // Default to true if not found
+      
+      if (shouldSendSms && dropInfo.event.extendedProps?.phone) {
+        console.log('📱 Sending SMS notification for rescheduled appointment...')
+        try {
+          const phoneNumber = dropInfo.event.extendedProps.phone
+          const newTime = newStartTime
+          
+          // Send SMS via API
+          await $fetch('/api/sms/send', {
+            method: 'POST',
+            body: {
+              phone: phoneNumber,
+              message: `Hallo ${dropInfo.event.extendedProps?.student || 'Fahrschüler'},\n\nIhr Termin wurde verschoben:\nNeue Zeit: ${newTime}\n\nViele Grüße`
+            }
+          })
+          console.log('✅ SMS sent successfully')
+        } catch (smsError: any) {
+          console.warn('⚠️ Failed to send SMS:', smsError)
+        }
+      }
+      
       // Modal aktualisieren falls offen
       if (isModalVisible.value && modalEventData.value?.id === dropInfo.event.id) {
         console.log('📝 Updating modal data...')
