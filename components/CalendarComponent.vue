@@ -1957,16 +1957,16 @@ const pasteAppointmentDirectly = async () => {
         .maybeSingle()
       
       if (pricingRules && pricingRules.admin_fee_applies_from) {
-        // Admin Fee wird ab Termin N verrechnet (z.B. ab 2. Termin)
+        // Admin Fee wird NUR bei Termin N verrechnet (z.B. nur beim 2. Termin)
         // appointmentCount ist die Anzahl BESTEHENDER Termine
         // Der neue Termin ist Termin Nummer: appointmentCount + 1
         const newAppointmentNumber = appointmentCount + 1
         
-        if (newAppointmentNumber >= pricingRules.admin_fee_applies_from) {
+        if (newAppointmentNumber === pricingRules.admin_fee_applies_from) {
           adminFeeRappen = pricingRules.admin_fee_rappen || 0
           console.log('✅ Admin fee applies (appointment #' + newAppointmentNumber + '):', adminFeeRappen)
         } else {
-          console.log('ℹ️ Admin fee does not apply yet (appointment #' + newAppointmentNumber + ', applies from #' + pricingRules.admin_fee_applies_from + ')')
+          console.log('ℹ️ Admin fee does not apply (appointment #' + newAppointmentNumber + ', only applies at #' + pricingRules.admin_fee_applies_from + ')')
         }
       }
     } catch (err) {
