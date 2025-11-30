@@ -1870,10 +1870,7 @@ const pasteAppointmentDirectly = async () => {
   try {
     // Kopierte Daten mit neuer Zeit vorbereiten
     const clickedDate = pendingSlotClick.value.date
-    
-    // ✅ ADD 1 HOUR AS QUICK FIX FOR TIMEZONE ISSUE
-    const clickedDatePlusOneHour = new Date(clickedDate.getTime() + 3600000) // Add 1 hour
-    const endDatePlusOneHour = new Date(clickedDatePlusOneHour.getTime() + clipboardAppointment.value.duration * 60000)
+    const endDate = new Date(clickedDate.getTime() + clipboardAppointment.value.duration * 60000)
     
     // ✅ EXPLIZITE KATEGORIE-ERMITTLUNG
     const rawCategory = clipboardAppointment.value.category || clipboardAppointment.value.type
@@ -1886,7 +1883,8 @@ const pasteAppointmentDirectly = async () => {
     // ✅ APPOINTMENTS-DATEN (alle Pflichtfelder basierend auf Schema)
     // ⚠️ WICHTIG: FullCalendar gibt lokale Zeit zurück (z.B. 09:00 GMT+0100)
     // Wir müssen das in UTC konvertieren für die Datenbank
-    const convertToUTC = (localDate: Date) => {
+    // UTC = Local - Offset (wichtig: getTimezoneOffset() gibt Minuten zurück, negative für Osten)
+    const convertToUTC = (localDate: Date): string => {
       const offset = localDate.getTimezoneOffset() * 60000 // in Millisekunden
       const utcTime = localDate.getTime() + offset
       const result = new Date(utcTime).toISOString()
@@ -1912,8 +1910,8 @@ const pasteAppointmentDirectly = async () => {
       location_id: clipboardAppointment.value.location_id,
       
       // Zeit-Felder (NOT NULL) - MUSS UTC sein!
-      start_time: convertToUTC(clickedDatePlusOneHour), // ✅ Use +1 hour version
-      end_time: convertToUTC(endDatePlusOneHour), // ✅ Use +1 hour version
+      start_time: convertToUTC(clickedDate), // ✅ Removed +1 hour quick fix - use exact clicked time
+      end_time: convertToUTC(endDate), // ✅ Removed +1 hour quick fix - use exact end time
       duration_minutes: clipboardAppointment.value.duration || 45,
       
       // Typ-Felder (NOT NULL)
