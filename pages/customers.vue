@@ -118,6 +118,27 @@
       </div>
     </div>
 
+    <!-- Student Credit Balance Card (wenn ein Student ausgewählt ist) -->
+    <div v-if="selectedStudent && selectedStudent.student_credits" class="bg-white border-b shadow-sm px-4 py-3">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex-1">
+            <p class="text-xs sm:text-sm text-gray-600 mb-1">
+              Guthaben von <span class="font-semibold text-gray-900">{{ selectedStudent.first_name }} {{ selectedStudent.last_name }}</span>
+            </p>
+            <p class="text-lg sm:text-2xl font-bold text-green-600">
+              CHF {{ (selectedStudent.student_credits.balance_rappen / 100).toFixed(2) }}
+            </p>
+          </div>
+          <div class="flex-shrink-0">
+            <svg class="w-8 h-8 sm:w-10 sm:h-10 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Content -->
     <div class="flex-1 overflow-hidden">
       <!-- Error Loading Students -->
@@ -680,7 +701,11 @@ const loadStudents = async (loadAppointments = true) => {
       auth_user_id,
       onboarding_status,
       onboarding_token,
-      onboarding_token_expires
+      onboarding_token_expires,
+      student_credits (
+        id,
+        balance_rappen
+      )
     `
     
     // Only add appointments if specifically requested
@@ -773,7 +798,11 @@ const loadStudents = async (loadAppointments = true) => {
         auth_user_id,
         onboarding_status,
         onboarding_token,
-        onboarding_token_expires
+        onboarding_token_expires,
+        student_credits (
+          id,
+          balance_rappen
+        )
       `)
       .eq('role', 'client')
       .eq('tenant_id', tenantId)
