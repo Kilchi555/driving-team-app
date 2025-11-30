@@ -3353,19 +3353,43 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
   try {
     isLoading.value = true
     
-    // ✅ SCHRITT 1: Alle zugehörigen Zahlungsdaten löschen
-    console.log('💳 Cleaning up payment data for appointment:', props.eventData.id)
+    // ✅ SCHRITT 1: Payment anpassen - nur Lektionspreis entfernen, Produktpreis behalten
+    console.log('💳 Updating payment for appointment:', props.eventData.id)
     
-    // 1.1 Payments löschen
-    const { error: paymentsError } = await supabase
+    // Hole das Payment für diesen Termin
+    const { data: payments, error: getPaymentError } = await supabase
       .from('payments')
-      .delete()
+      .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen')
       .eq('appointment_id', props.eventData.id)
     
-    if (paymentsError) {
-      console.warn('⚠️ Could not delete payments:', paymentsError)
+    if (getPaymentError) {
+      console.warn('⚠️ Could not fetch payment:', getPaymentError)
+    } else if (payments && payments.length > 0) {
+      const payment = payments[0]
+      console.log('📋 Current payment:', payment)
+      
+      // Berechne neuen Total: products_price - discount (OHNE lesson_price und admin_fee!)
+      const newTotalRappen = payment.products_price_rappen - payment.discount_amount_rappen
+      
+      // Update Payment: Setze lesson_price auf 0 und admin_fee auf 0, berechne total neu
+      const { error: updatePaymentError } = await supabase
+        .from('payments')
+        .update({
+          lesson_price_rappen: 0, // ✅ Lektionspreis wird entfernt
+          admin_fee_rappen: 0,     // ✅ Admin Fee wird entfernt
+          total_amount_rappen: Math.max(newTotalRappen, 0) // ✅ Total wird neu berechnet (mindestens 0)
+        })
+        .eq('id', payment.id)
+      
+      if (updatePaymentError) {
+        console.warn('⚠️ Could not update payment:', updatePaymentError)
+      } else {
+        console.log('✅ Payment updated - lesson_price and admin_fee removed, total recalculated')
+        console.log('   Old total:', payment.lesson_price_rappen + payment.admin_fee_rappen + payment.products_price_rappen - payment.discount_amount_rappen)
+        console.log('   New total:', newTotalRappen)
+      }
     } else {
-      console.log('✅ Payments deleted successfully')
+      console.log('ℹ️ No payment found for appointment')
     }
     
     // ✅ WICHTIG: Product sales NICHT löschen! Sie bleiben für die Kostenverrechnung erhalten!
