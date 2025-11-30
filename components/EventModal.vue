@@ -3354,31 +3354,61 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
   try {
     isLoading.value = true
     
-    // ✅ SCHRITT 1: Payment anpassen - nur Lektionspreis entfernen, Produktpreis behalten
-    console.log('💳 Updating payment for appointment:', props.eventData.id)
+    // ✅ SCHRITT 1: Hole Payment-Infos für Refund-Berechnung
+    console.log('💳 Fetching payment for appointment:', props.eventData.id)
     
-    // Hole das Payment für diesen Termin
     const { data: payments, error: getPaymentError } = await supabase
       .from('payments')
-      .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen')
+      .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_status')
       .eq('appointment_id', props.eventData.id)
+    
+    let lessonPriceRappen = 0
+    let adminFeeRappen = 0
     
     if (getPaymentError) {
       console.warn('⚠️ Could not fetch payment:', getPaymentError)
     } else if (payments && payments.length > 0) {
       const payment = payments[0]
       console.log('📋 Current payment:', payment)
+      lessonPriceRappen = payment.lesson_price_rappen || 0
+      adminFeeRappen = payment.admin_fee_rappen || 0
+    } else {
+      console.log('ℹ️ No payment found for appointment')
+    }
+    
+    // ✅ SCHRITT 1.5: Call API endpoint to handle refund if needed
+    console.log('📡 Calling handle-cancellation endpoint...')
+    try {
+      const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
+        method: 'POST',
+        body: {
+          appointmentId: props.eventData.id,
+          deletionReason,
+          lessonPriceRappen,
+          adminFeeRappen
+        }
+      })
       
-      // Berechne neuen Total: products_price - discount (OHNE lesson_price und admin_fee!)
-      const newTotalRappen = payment.products_price_rappen - payment.discount_amount_rappen
+      console.log('✅ Cancellation processed:', cancellationResult)
+      if (cancellationResult.action === 'refund_processed') {
+        console.log(`💰 Refund applied: CHF ${cancellationResult.details.refundAmount}`)
+      }
+    } catch (error: any) {
+      console.warn('⚠️ Error calling handle-cancellation endpoint:', error)
+      // Continue anyway - still delete the appointment
+    }
+    
+    // ✅ SCHRITT 2: Update Payment - setze lesson_price auf 0 und admin_fee auf 0
+    if (payments && payments.length > 0) {
+      const payment = payments[0]
+      const newTotalRappen = (payment.products_price_rappen || 0) - (payment.discount_amount_rappen || 0)
       
-      // Update Payment: Setze lesson_price auf 0 und admin_fee auf 0, berechne total neu
       const { error: updatePaymentError } = await supabase
         .from('payments')
         .update({
-          lesson_price_rappen: 0, // ✅ Lektionspreis wird entfernt
-          admin_fee_rappen: 0,     // ✅ Admin Fee wird entfernt
-          total_amount_rappen: Math.max(newTotalRappen, 0) // ✅ Total wird neu berechnet (mindestens 0)
+          lesson_price_rappen: 0,
+          admin_fee_rappen: 0,
+          total_amount_rappen: Math.max(newTotalRappen, 0)
         })
         .eq('id', payment.id)
       
@@ -3386,17 +3416,13 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
         console.warn('⚠️ Could not update payment:', updatePaymentError)
       } else {
         console.log('✅ Payment updated - lesson_price and admin_fee removed, total recalculated')
-        console.log('   Old total:', payment.lesson_price_rappen + payment.admin_fee_rappen + payment.products_price_rappen - payment.discount_amount_rappen)
-        console.log('   New total:', newTotalRappen)
       }
-    } else {
-      console.log('ℹ️ No payment found for appointment')
     }
     
     // ✅ WICHTIG: Product sales NICHT löschen! Sie bleiben für die Kostenverrechnung erhalten!
     console.log('ℹ️ Product sales are NOT deleted - keeping them for accounting purposes')
     
-    // ✅ SCHRITT 2: SOFT DELETE: Termin als gelöscht markieren statt echt löschen
+    // ✅ SCHRITT 3: SOFT DELETE: Termin als gelöscht markieren
     const eventType = props.eventData.type || props.eventData.event_type_code
     const isOtherEventType = !['lesson', 'exam', 'theory'].includes(eventType)
     
