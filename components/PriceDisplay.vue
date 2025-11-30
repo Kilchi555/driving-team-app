@@ -835,7 +835,31 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
         discount: (discount / 100).toFixed(2)
       })
       
-      // ✅ NEU: Call API endpoint to handle payment reconciliation
+      // ✅ NEU: Update payment in database directly
+      try {
+        console.log('💾 Saving updated payment to database...')
+        const supabase = getSupabase()
+        
+        const { error: updateError } = await supabase
+          .from('payments')
+          .update({
+            lesson_price_rappen: newLessonPriceRappen,
+            total_amount_rappen: Math.max(0, newTotalRappen),
+            updated_at: new Date().toISOString(),
+            notes: `Dauer angepasst: ${oldDuration}min → ${newDuration}min (Preis: CHF ${(oldLessonPrice / 100).toFixed(2)} → CHF ${(newLessonPriceRappen / 100).toFixed(2)})`
+          })
+          .eq('id', existingPayment.value.id)
+        
+        if (updateError) {
+          console.error('❌ Failed to save payment to database:', updateError)
+        } else {
+          console.log('✅ Payment saved to database')
+        }
+      } catch (error: any) {
+        console.error('❌ Error saving payment:', error)
+      }
+      
+      // ✅ Call API endpoint to handle payment reconciliation (for completed/authorized payments)
       try {
         console.log('📡 Calling adjust-duration endpoint...')
         const result = await $fetch('/api/appointments/adjust-duration', {
