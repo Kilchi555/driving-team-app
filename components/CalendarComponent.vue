@@ -1858,26 +1858,21 @@ const pasteAppointmentDirectly = async () => {
     console.log('🔍 Final category:', category)
     
     // ✅ APPOINTMENTS-DATEN (alle Pflichtfelder basierend auf Schema)
-    // ⚠️ WICHTIG: FullCalendar gibt lokale Zeit zurück (z.B. 11:00 GMT+0100)
+    // ⚠️ WICHTIG: FullCalendar gibt lokale Zeit zurück (z.B. 09:00 GMT+0100)
     // Wir müssen das in UTC konvertieren für die Datenbank
     const convertToUTC = (localDate: Date) => {
-      // FullCalendar gibt Date-Objekt in lokaler Zeit zurück
-      // Beispiel: User klickt 11:00 Zurich (GMT+0100)
-      // localDate = Date Objekt mit 11:00 GMT+0100
-      // getTimezoneOffset() = -60 (negativ für east of UTC)
-      // 
-      // Zu UTC konvertieren:
-      // UTC = Local + offset (weil offset negativ ist!)
-      // UTC = 11:00 + (-60min) = 10:00 UTC ✅
-      
       const offset = localDate.getTimezoneOffset() * 60000 // in Millisekunden
       const utcTime = localDate.getTime() + offset
       const result = new Date(utcTime).toISOString()
+      
       console.log('🔄 convertToUTC:', {
         input: localDate.toString(),
+        input_timestamp: localDate.getTime(),
         offset_minutes: localDate.getTimezoneOffset(),
         offset_ms: offset,
-        output: result
+        utcTime: utcTime,
+        output: result,
+        expected_local_time: localDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
       })
       return result
     }
@@ -2114,6 +2109,7 @@ const handleCopyAppointment = async (copyData: any) => {
   
   // ✅ Fetch payment_method vom Payment-Record
   let paymentMethod = 'invoice' // Default
+  console.log('🔍 Fetching payment for appointment:', copyData.eventData.id)
   try {
     const { data: payment, error } = await supabase
       .from('payments')
@@ -2123,9 +2119,15 @@ const handleCopyAppointment = async (copyData: any) => {
       .limit(1)
       .maybeSingle()
     
+    console.log('💳 Payment fetch result:', { payment, error })
+    
     if (!error && payment) {
       paymentMethod = payment.payment_method
       console.log('✅ Payment method fetched from DB:', paymentMethod)
+    } else if (error) {
+      console.warn('⚠️ Error fetching payment:', error)
+    } else {
+      console.warn('⚠️ No payment found for appointment')
     }
   } catch (err) {
     console.warn('⚠️ Could not fetch payment method:', err)
