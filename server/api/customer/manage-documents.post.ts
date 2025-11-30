@@ -59,13 +59,13 @@ export default defineEventHandler(async (event) => {
       // Convert base64 to buffer
       const buffer = Buffer.from(base64Data.split(',')[1] || base64Data, 'base64')
       
-      // Generate filename - standardized structure
+      // Generate filename with organized folder structure
       const timestamp = Date.now()
-      // Extract original filename if available, or use a default
       const originalFilename = documentType || 'document'
-      const filename = `user-documents/${user.id}/${categoryCode}/${timestamp}_${originalFilename}.jpg`
+      // New structure: user-documents/customer-licenses/{user_id}/{category_code}/{timestamp}_{filename}.jpg
+      const filename = `user-documents/customer-licenses/${user.id}/${categoryCode}/${timestamp}_${originalFilename}.jpg`
 
-      console.log('📤 Uploading document with standardized path:', filename)
+      console.log('📤 Uploading document with organized path:', filename)
 
       // Upload to storage
       const { error: uploadError } = await serviceSupabase.storage
