@@ -851,11 +851,11 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
         console.log('✅ Duration adjustment processed:', result)
         
         // Show notification based on result
-        if (result.action === 'additional_payment') {
-          console.log(`💳 Additional payment created: CHF ${result.details.amount}`)
+        if ((result as any).action === 'additional_payment') {
+          console.log(`💳 Additional payment created: CHF ${(result as any).details.amount}`)
           // Could show toast here if needed
-        } else if (result.action === 'credit_applied') {
-          console.log(`💰 Credit applied to student: CHF ${result.details.refundAmount}`)
+        } else if ((result as any).action === 'credit_applied') {
+          console.log(`💰 Credit applied to student: CHF ${(result as any).details.refundAmount}`)
           // Could show toast here if needed
         }
       } catch (error: any) {
