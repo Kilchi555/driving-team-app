@@ -1724,16 +1724,27 @@ const confirmAppointment = async (appointment: any) => {
       return
     }
 
-    // ✅ SCHRITT 2: Hole Payment und starte Zahlung
-    // Der Termin ist jetzt bereits 'confirmed', unabhängig davon, ob die Zahlung sofort abgebucht wird
-
     // Hole Payment für diesen Termin (Betrag)
     const { data: payment } = await supabase
       .from('payments')
-      .select('id, total_amount_rappen')
+      .select('id, total_amount_rappen, payment_method')
       .eq('appointment_id', appointment.id)
       .order('created_at', { ascending: false })
       .maybeSingle()
+
+    // ✅ NEU: Wenn payment_method 'cash' oder 'invoice' ist, NICHT zu Wallee weiterleiten!
+    if (payment?.payment_method === 'cash' || payment?.payment_method === 'invoice') {
+      console.log('✅ Payment method is', payment.payment_method, '- no online payment needed')
+      displayToast('success', 'Termin bestätigt!', `Zahlungsart: ${getPaymentMethodLabel(payment.payment_method)}`)
+      
+      // Termin ist bereits bestätigt (siehe weiter oben)
+      confirmingAppointments.value.delete(appointment.id)
+      
+      // Refresh pending confirmations
+      await loadPendingConfirmations()
+      
+      return // Fertig, nicht zu Wallee weiterleiten!
+    }
 
     const amountRappen = payment?.total_amount_rappen || 0
     if (!amountRappen || amountRappen <= 0) {
