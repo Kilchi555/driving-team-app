@@ -1858,12 +1858,21 @@ const pasteAppointmentDirectly = async () => {
     console.log('🔍 Final category:', category)
     
     // ✅ APPOINTMENTS-DATEN (alle Pflichtfelder basierend auf Schema)
-    // ⚠️ WICHTIG: clickedDate vom FullCalendar ist bereits UTC!
-    // Deshalb können wir es direkt als ISO String verwenden
-    const convertToUTC = (dateFromCalendar: Date) => {
-      // FullCalendar gibt UTC-Zeiten zurück
-      // Wir können direkt toISOString() verwenden
-      return dateFromCalendar.toISOString()
+    // ⚠️ WICHTIG: FullCalendar gibt lokale Zeit zurück (z.B. 11:00 GMT+0100)
+    // Wir müssen das in UTC konvertieren für die Datenbank
+    const convertToUTC = (localDate: Date) => {
+      // FullCalendar gibt Date-Objekt in lokaler Zeit zurück
+      // Beispiel: User klickt 11:00 Zurich (GMT+0100)
+      // localDate = Date Objekt mit 11:00 GMT+0100
+      // getTimezoneOffset() = -60 (negativ für east of UTC)
+      // 
+      // Zu UTC konvertieren:
+      // UTC = Local + offset (weil offset negativ ist!)
+      // UTC = 11:00 + (-60min) = 10:00 UTC ✅
+      
+      const offset = localDate.getTimezoneOffset() * 60000 // in Millisekunden
+      const utcTime = localDate.getTime() + offset
+      return new Date(utcTime).toISOString()
     }
     
     const appointmentData = {
