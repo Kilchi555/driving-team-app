@@ -970,19 +970,8 @@ const loadRegularAppointments = async () => {
         // Parse UTC ISO string and convert to local time
         const utcDate = new Date(utcTimeString)
         
-        // Get UTC components
-        const utcYear = utcDate.getUTCFullYear()
-        const utcMonth = String(utcDate.getUTCMonth() + 1).padStart(2, '0')
-        const utcDay = String(utcDate.getUTCDate()).padStart(2, '0')
-        const utcHour = String(utcDate.getUTCHours()).padStart(2, '0')
-        const utcMinute = String(utcDate.getUTCMinutes()).padStart(2, '0')
-        const utcSecond = String(utcDate.getUTCSeconds()).padStart(2, '0')
-        
-        // Create UTC date string
-        const utcDateStr = `${utcYear}-${utcMonth}-${utcDay}T${utcHour}:${utcMinute}:${utcSecond}`
-        
-        // Convert to local time using Zurich timezone
-        const formatter = new Intl.DateTimeFormat('sv-SE', {
+        // Create a date object and format using toLocaleString with Zurich timezone
+        const localString = utcDate.toLocaleString('sv-SE', {
           timeZone: 'Europe/Zurich',
           year: 'numeric',
           month: '2-digit',
@@ -993,13 +982,9 @@ const loadRegularAppointments = async () => {
           hour12: false
         })
         
-        const localDateStr = formatter.format(utcDate)
-        // localDateStr format: "2025-01-15 14:30:45"
-        const [localDate, localTime] = localDateStr.split(' ')
-        const [localYear, localMonth, localDay] = localDate.split('-')
-        const [localHour, localMin, localSec] = localTime.split(':')
-        
-        return `${localYear}-${localMonth}-${localDay}T${localHour}:${localMin}:${localSec}`
+        // localString format: "2025-11-29 10:00:00"
+        // Replace space with T to get ISO format: "2025-11-29T10:00:00"
+        return localString.replace(' ', 'T')
       }
       
       const event = {
