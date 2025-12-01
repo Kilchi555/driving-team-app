@@ -1664,7 +1664,7 @@ const getPaymentMethod = (appointment: any) => {
 // ✅ Get payment method label
 const getPaymentMethodLabel = (method: string) => {
   const labels: Record<string, string> = {
-    'wallee': 'Kreditkarte',
+    'wallee': 'Omline',
     'invoice': 'Rechnung',
     'cash': 'Barzahlung',
     'twint': 'TWINT',

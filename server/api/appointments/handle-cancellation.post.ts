@@ -81,7 +81,93 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!payment) {
-      console.log('⚠️ No payment found for appointment')
+      console.log('⚠️ No payment found for appointment - check if shouldCreditHours is true')
+      
+      // ✅ NEW: If shouldCreditHours is true but no payment found, still create credit!
+      // This happens when appointment has no associated payment (e.g., free lessons)
+      if (shouldCreditHours && chargePercentage === 0) {
+        const refundAmount = (originalLessonPrice || 0) + (originalAdminFee || 0)
+        
+        if (refundAmount > 0) {
+          console.log('💚 No payment but shouldCreditHours=true, creating credit anyway:', {
+            refundAmount: (refundAmount / 100).toFixed(2)
+          })
+          
+          // Fetch appointment for user_id
+          const { data: apt } = await supabase
+            .from('appointments')
+            .select('user_id')
+            .eq('id', appointmentId)
+            .single()
+          
+          if (apt) {
+            // Create credit directly
+            const { data: { user: authUser } } = await supabase.auth.getUser()
+            const { data: currentUser } = await supabase
+              .from('users')
+              .select('id')
+              .eq('auth_user_id', authUser?.id)
+              .single()
+            
+            if (currentUser) {
+              // Load current balance
+              const { data: studentCredit } = await supabase
+                .from('student_credits')
+                .select('id, balance_rappen')
+                .eq('user_id', apt.user_id)
+                .single()
+              
+              if (studentCredit) {
+                const oldBalance = studentCredit.balance_rappen || 0
+                const newBalance = oldBalance + refundAmount
+                
+                await supabase
+                  .from('student_credits')
+                  .update({
+                    balance_rappen: newBalance,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', studentCredit.id)
+                
+                await supabase
+                  .from('credit_transactions')
+                  .insert([{
+                    user_id: apt.user_id,
+                    transaction_type: 'cancellation',
+                    amount_rappen: refundAmount,
+                    balance_before_rappen: oldBalance,
+                    balance_after_rappen: newBalance,
+                    payment_method: 'refund',
+                    reference_id: appointmentId,
+                    reference_type: 'appointment',
+                    created_by: currentUser.id,
+                    notes: `Rückerstattung für Terminabsage: ${deletionReason} (CHF ${(refundAmount / 100).toFixed(2)})`
+                  }])
+                
+                console.log('✅ Credit created despite no payment:', {
+                  oldBalance: (oldBalance / 100).toFixed(2),
+                  newBalance: (newBalance / 100).toFixed(2),
+                  refund: (refundAmount / 100).toFixed(2)
+                })
+                
+                return {
+                  success: true,
+                  message: 'Appointment cancelled - credit applied to student balance (no payment found)',
+                  refundAmount: (refundAmount / 100),
+                  action: 'credit_created_no_payment',
+                  details: {
+                    oldBalance: (oldBalance / 100).toFixed(2),
+                    newBalance: (newBalance / 100).toFixed(2),
+                    refundAmount: (refundAmount / 100).toFixed(2),
+                    deletionReason
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      
       return { success: false, message: 'No payment found for this appointment' }
     }
 

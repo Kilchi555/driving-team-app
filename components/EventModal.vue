@@ -3492,13 +3492,57 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     const eventType = props.eventData.type || props.eventData.event_type_code
     const isLessonType = ['lesson', 'exam', 'theory'].includes(eventType)
     
+    // ✅ STEP 0: Fetch payment info for handle-cancellation endpoint
+    let lessonPriceRappen = 0
+    let adminFeeRappen = 0
+    let chargePercentage = 100
+    
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_status')
+      .eq('appointment_id', props.eventData.id)
+      .limit(1)
+    
+    if (payments && payments.length > 0) {
+      const payment = payments[0]
+      lessonPriceRappen = payment.lesson_price_rappen || 0
+      adminFeeRappen = payment.admin_fee_rappen || 0
+    }
+    
     if (isLessonType && withCosts) {
       console.log('💳 Appointment will be charged cancellation fee - keeping all payment data')
       console.log('   - lesson_price_rappen: KEPT (for cancellation fee)')
       console.log('   - products_price_rappen: KEPT (for cancellation fee)')
       console.log('   - product_sales: KEPT (for accounting)')
+      chargePercentage = 100 // Full charge
     } else if (isLessonType && !withCosts) {
-      console.log('💳 Appointment cancelled without charge - cleaning up payment data')
+      console.log('💳 Appointment cancelled without charge - processing refund via handle-cancellation')
+      chargePercentage = 0 // No charge
+      
+      // ✅ NEW: Call handle-cancellation endpoint to process refunds
+      console.log('📡 Calling handle-cancellation endpoint for refund processing...')
+      try {
+        const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
+          method: 'POST',
+          body: {
+            appointmentId: props.eventData.id,
+            deletionReason,
+            lessonPriceRappen,
+            adminFeeRappen,
+            shouldCreditHours: true,
+            chargePercentage: 0,
+            originalLessonPrice: lessonPriceRappen,
+            originalAdminFee: adminFeeRappen
+          }
+        })
+        
+        console.log('✅ Cancellation refund processed:', cancellationResult)
+        if (cancellationResult.action === 'refund_processed' || cancellationResult.action === 'credit_created_no_payment') {
+          console.log(`💰 Refund/Credit applied: CHF ${cancellationResult.details?.refundAmount || cancellationResult.refundAmount}`)
+        }
+      } catch (error: any) {
+        console.warn('⚠️ Error calling handle-cancellation endpoint:', error)
+      }
       
       // ✅ 1.0: Prüfe ob Payment autorisiert ist und storniere bei Absage >24h vor Termin
       const appointmentTime = new Date(props.eventData.start || props.eventData.start_time)
@@ -3535,7 +3579,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
         }
       }
       
-      // 1.1 Payments löschen (nach Void)
+      // 1.1 Payments löschen (nach Void / Refund-Verarbeitung)
       const { error: paymentsError } = await supabase
         .from('payments')
         .delete()
