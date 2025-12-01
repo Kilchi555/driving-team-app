@@ -436,6 +436,7 @@ export const usePayments = () => {
       const { error: updateError } = await supabase
         .from('payments')
         .update({
+          wallee_transaction_id: walleeResponse.transactionId, // ✅ Store in main field
           metadata: {
             ...paymentData.metadata,
             wallee_transaction_id: walleeResponse.transactionId
@@ -607,6 +608,7 @@ export const usePayments = () => {
       const { error: updateError } = await supabase
         .from('payments')
         .update({
+          wallee_transaction_id: walleeResponse.transactionId, // ✅ Store in main field
           metadata: {
             ...paymentData.metadata,
             wallee_transaction_id: walleeResponse.transactionId
