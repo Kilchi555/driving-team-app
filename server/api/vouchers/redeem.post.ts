@@ -1,157 +1,231 @@
-// server/api/vouchers/redeem.post.ts
-// Gutschein-Einlösung mit Termin-Zuordnung
+// API Endpoint: Redeem Voucher Code
+// Description: Allows students to redeem voucher codes for credit top-up
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
-interface RedeemVoucherRequest {
-  voucherCode: string
-  appointmentId?: string
-  redeemerId: string
-  redeemerName?: string
-}
-
-interface RedeemVoucherResponse {
-  success: boolean
-  message?: string
-  voucher?: {
-    id: string
-    code: string
-    name: string
-    amount_chf: number
-    redeemed_at: string
-    redeemed_for?: string
-    redeemed_by: string
-  }
-  error?: string
-}
-
-export default defineEventHandler(async (event): Promise<RedeemVoucherResponse> => {
+export default defineEventHandler(async (event) => {
   try {
-    const { voucherCode, appointmentId, redeemerId, redeemerName }: RedeemVoucherRequest = await readBody(event)
-    
-    if (!voucherCode || !redeemerId) {
-      throw new Error('Voucher code and redeemer ID are required')
+    const body = await readBody(event)
+    const { code } = body
+
+    if (!code || typeof code !== 'string') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Voucher code is required'
+      })
     }
 
-    console.log('🎁 Redeeming voucher:', { voucherCode, appointmentId, redeemerId })
+    const supabase = getSupabaseAdmin()
 
-    const supabase = getSupabase()
-    
-    // Finde den Gutschein
+    // Get current user
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Not authenticated'
+      })
+    }
+
+    // Get user profile with tenant_id
+    const { data: userProfile, error: userError } = await supabase
+      .from('users')
+      .select('id, tenant_id, first_name, last_name')
+      .eq('auth_user_id', authUser.id)
+      .single()
+
+    if (userError || !userProfile) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'User profile not found'
+      })
+    }
+
+    console.log('🎫 Redeeming voucher:', {
+      code: code.toUpperCase(),
+      userId: userProfile.id,
+      tenantId: userProfile.tenant_id
+    })
+
+    // 1. Find and validate voucher
     const { data: voucher, error: voucherError } = await supabase
-      .from('discounts')
-      .select(`
-        id,
-        code,
-        name,
-        discount_value,
-        max_discount_rappen,
-        remaining_amount_rappen,
-        usage_count,
-        is_active,
-        valid_until,
-        voucher_recipient_name,
-        voucher_recipient_email,
-        redeemed_at,
-        redeemed_by,
-        redeemed_for,
-        created_at
-      `)
-      .eq('code', voucherCode)
-      .eq('is_voucher', true)
+      .from('voucher_codes')
+      .select('*')
+      .eq('code', code.toUpperCase())
+      .eq('tenant_id', userProfile.tenant_id)
+      .eq('is_active', true)
       .single()
 
     if (voucherError || !voucher) {
-      return {
-        success: false,
-        error: 'Gutschein nicht gefunden'
-      }
-    }
-
-    // Validiere Gutschein
-    const now = new Date()
-    const validUntil = voucher.valid_until ? new Date(voucher.valid_until) : null
-    
-    if (!voucher.is_active) {
-      return {
-        success: false,
-        error: 'Gutschein ist nicht aktiv'
-      }
-    }
-
-    if (voucher.usage_count > 0) {
-      return {
-        success: false,
-        error: 'Gutschein wurde bereits eingelöst'
-      }
-    }
-
-    if (validUntil && now > validUntil) {
-      return {
-        success: false,
-        error: 'Gutschein ist abgelaufen'
-      }
-    }
-
-    // Löse Gutschein ein
-    const { data: updatedVoucher, error: redeemError } = await supabase
-      .from('discounts')
-      .update({
-        usage_count: 1,
-        redeemed_at: now.toISOString(),
-        redeemed_by: redeemerId,
-        redeemed_for: appointmentId || null,
-        is_active: false,
-        remaining_amount_rappen: 0,
-        updated_at: now.toISOString()
+      console.error('❌ Voucher not found:', voucherError)
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Ungültiger Gutschein-Code'
       })
-      .eq('id', voucher.id)
-      .select()
+    }
+
+    // 2. Validate voucher conditions
+    const now = new Date()
+
+    // Check validity period
+    if (voucher.valid_from && new Date(voucher.valid_from) > now) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Dieser Gutschein ist erst ab ${new Date(voucher.valid_from).toLocaleDateString('de-CH')} gültig`
+      })
+    }
+
+    if (voucher.valid_until && new Date(voucher.valid_until) < now) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Dieser Gutschein ist abgelaufen (gültig bis ${new Date(voucher.valid_until).toLocaleDateString('de-CH')})`
+      })
+    }
+
+    // Check redemption limit
+    if (voucher.current_redemptions >= voucher.max_redemptions) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Dieser Gutschein wurde bereits vollständig eingelöst'
+      })
+    }
+
+    // Check if user already redeemed this voucher (if single-use)
+    const { data: existingRedemption } = await supabase
+      .from('voucher_redemptions')
+      .select('id')
+      .eq('voucher_id', voucher.id)
+      .eq('user_id', userProfile.id)
       .single()
 
-    if (redeemError) {
-      console.error('❌ Error redeeming voucher:', redeemError)
-      return {
-        success: false,
-        error: 'Fehler beim Einlösen des Gutscheins'
-      }
+    if (existingRedemption) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Sie haben diesen Gutschein bereits eingelöst'
+      })
     }
 
-    // Log die Einlösung für Audit-Zwecke
-    console.log('✅ Voucher redeemed successfully:', {
-      voucherCode: updatedVoucher.code,
-      voucherId: updatedVoucher.id,
-      amount: updatedVoucher.discount_value,
-      appointmentId,
-      redeemerId,
-      redeemedAt: updatedVoucher.redeemed_at,
-      redeemedBy: updatedVoucher.redeemed_by,
-      redeemedFor: updatedVoucher.redeemed_for
+    console.log('✅ Voucher is valid:', {
+      code: voucher.code,
+      creditAmount: (voucher.credit_amount_rappen / 100).toFixed(2)
     })
 
-    const redemptionMessage = appointmentId 
-      ? `Gutschein erfolgreich für Termin ${appointmentId} eingelöst`
-      : 'Gutschein erfolgreich eingelöst'
+    // 3. Get current student credit
+    const { data: studentCredit, error: creditError } = await supabase
+      .from('student_credits')
+      .select('id, balance_rappen')
+      .eq('user_id', userProfile.id)
+      .single()
+
+    if (creditError) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Fehler beim Laden des Guthabens'
+      })
+    }
+
+    const oldBalance = studentCredit.balance_rappen || 0
+    const newBalance = oldBalance + voucher.credit_amount_rappen
+
+    // 4. Update student credit balance
+    const { error: updateError } = await supabase
+      .from('student_credits')
+      .update({
+        balance_rappen: newBalance,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', studentCredit.id)
+
+    if (updateError) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Fehler beim Aktualisieren des Guthabens'
+      })
+    }
+
+    console.log('💰 Credit balance updated:', {
+      oldBalance: (oldBalance / 100).toFixed(2),
+      creditAdded: (voucher.credit_amount_rappen / 100).toFixed(2),
+      newBalance: (newBalance / 100).toFixed(2)
+    })
+
+    // 5. Create credit transaction
+    const { data: creditTransaction, error: txError } = await supabase
+      .from('credit_transactions')
+      .insert({
+        user_id: userProfile.id,
+        transaction_type: 'voucher',
+        amount_rappen: voucher.credit_amount_rappen,
+        balance_before_rappen: oldBalance,
+        balance_after_rappen: newBalance,
+        payment_method: 'voucher',
+        reference_id: voucher.id,
+        reference_type: 'voucher',
+        created_by: userProfile.id,
+        notes: `Gutschein eingelöst: ${voucher.code} - ${voucher.description || 'Guthaben-Aufladung'}`,
+        tenant_id: userProfile.tenant_id
+      })
+      .select('id')
+      .single()
+
+    if (txError) {
+      console.error('❌ Error creating credit transaction:', txError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Fehler beim Erstellen der Transaktion'
+      })
+    }
+
+    // 6. Create voucher redemption record (trigger will auto-increment counter)
+    const { error: redemptionError } = await supabase
+      .from('voucher_redemptions')
+      .insert({
+        voucher_id: voucher.id,
+        user_id: userProfile.id,
+        credit_transaction_id: creditTransaction.id,
+        credit_amount_rappen: voucher.credit_amount_rappen,
+        redeemed_at: new Date().toISOString(),
+        tenant_id: userProfile.tenant_id
+      })
+
+    if (redemptionError) {
+      console.error('❌ Error creating redemption record:', redemptionError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Fehler beim Speichern der Einlösung'
+      })
+    }
+
+    console.log('✅ Voucher redeemed successfully:', {
+      voucherId: voucher.id,
+      userId: userProfile.id,
+      creditAdded: (voucher.credit_amount_rappen / 100).toFixed(2)
+    })
 
     return {
       success: true,
-      message: redemptionMessage,
+      message: `Gutschein erfolgreich eingelöst! CHF ${(voucher.credit_amount_rappen / 100).toFixed(2)} wurden Ihrem Guthaben gutgeschrieben.`,
       voucher: {
-        id: updatedVoucher.id,
-        code: updatedVoucher.code,
-        name: updatedVoucher.name,
-        amount_chf: updatedVoucher.discount_value,
-        redeemed_at: updatedVoucher.redeemed_at,
-        redeemed_for: updatedVoucher.redeemed_for,
-        redeemed_by: updatedVoucher.redeemed_by
+        code: voucher.code,
+        description: voucher.description,
+        credit_amount_chf: (voucher.credit_amount_rappen / 100).toFixed(2)
+      },
+      credit: {
+        old_balance_chf: (oldBalance / 100).toFixed(2),
+        new_balance_chf: (newBalance / 100).toFixed(2),
+        added_chf: (voucher.credit_amount_rappen / 100).toFixed(2)
       }
     }
 
   } catch (error: any) {
-    console.error('❌ Error in voucher redemption:', error)
-    return {
-      success: false,
-      error: error.message || 'Fehler bei der Gutschein-Einlösung'
+    console.error('❌ Error redeeming voucher:', error)
+    
+    if (error.statusCode) {
+      throw error
     }
+    
+    throw createError({
+      statusCode: 500,
+      statusMessage: error.message || 'Ein Fehler ist beim Einlösen des Gutscheins aufgetreten'
+    })
   }
 })

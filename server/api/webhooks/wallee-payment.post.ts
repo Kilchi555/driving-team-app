@@ -448,6 +448,13 @@ export default defineEventHandler(async (event) => {
         } catch (voucherErr) {
           console.warn('⚠️ Could not create vouchers for payment:', payment.id, voucherErr)
         }
+        
+        // ✅ NEW: Auto-credit for credit products (5er/10er Abos)
+        try {
+          await processCreditProductPurchase(payment)
+        } catch (creditErr) {
+          console.warn('⚠️ Could not process credit product purchase:', payment.id, creditErr)
+        }
       }
     }
 
@@ -570,5 +577,146 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
     } else {
       console.log('✅ Voucher created:', voucher.id)
     }
+  }
+}
+
+// ✅ NEW: Helper function to process credit product purchases
+async function processCreditProductPurchase(payment: any) {
+  console.log('💰 Checking for credit product purchase:', payment.id)
+  
+  if (!payment.user_id) {
+    console.log('ℹ️ No user_id in payment, skipping credit processing')
+    return
+  }
+
+  const supabase = getSupabaseAdmin()
+  
+  // Load product_sales for this payment via appointment_id
+  if (!payment.appointment_id) {
+    console.log('ℹ️ No appointment_id, checking metadata for products...')
+    // TODO: Handle standalone product purchases
+    return
+  }
+
+  // Load discount_sale to find product_sales
+  const { data: discountSale, error: dsError } = await supabase
+    .from('discount_sales')
+    .select('id')
+    .eq('appointment_id', payment.appointment_id)
+    .maybeSingle()
+
+  if (dsError || !discountSale) {
+    console.log('ℹ️ No discount_sale found, skipping')
+    return
+  }
+
+  // Load product_sales with product details
+  const { data: productSales, error: psError } = await supabase
+    .from('product_sales')
+    .select(`
+      id,
+      quantity,
+      unit_price_rappen,
+      products (
+        id,
+        name,
+        is_credit_product,
+        credit_amount_rappen
+      )
+    `)
+    .eq('product_sale_id', discountSale.id)
+
+  if (psError || !productSales || productSales.length === 0) {
+    console.log('ℹ️ No product_sales found, skipping')
+    return
+  }
+
+  // Find credit products
+  const creditProducts = productSales.filter(ps => 
+    ps.products && (ps.products as any).is_credit_product === true
+  )
+
+  if (creditProducts.length === 0) {
+    console.log('ℹ️ No credit products in purchase, skipping')
+    return
+  }
+
+  console.log(`💳 Found ${creditProducts.length} credit product(s) in purchase`)
+
+  // Process each credit product
+  for (const productSale of creditProducts) {
+    const product = productSale.products as any
+    const creditAmount = (product.credit_amount_rappen || 0) * productSale.quantity
+
+    if (creditAmount <= 0) {
+      console.warn('⚠️ Credit amount is 0 or negative, skipping product:', product.id)
+      continue
+    }
+
+    console.log('💰 Processing credit product:', {
+      productName: product.name,
+      quantity: productSale.quantity,
+      creditPerUnit: (product.credit_amount_rappen / 100).toFixed(2),
+      totalCredit: (creditAmount / 100).toFixed(2)
+    })
+
+    // Load current student credit
+    const { data: studentCredit, error: creditError } = await supabase
+      .from('student_credits')
+      .select('id, balance_rappen')
+      .eq('user_id', payment.user_id)
+      .single()
+
+    if (creditError || !studentCredit) {
+      console.error('❌ Error loading student credit:', creditError)
+      continue
+    }
+
+    const oldBalance = studentCredit.balance_rappen || 0
+    const newBalance = oldBalance + creditAmount
+
+    // Update student credit balance
+    const { error: updateError } = await supabase
+      .from('student_credits')
+      .update({
+        balance_rappen: newBalance,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', studentCredit.id)
+
+    if (updateError) {
+      console.error('❌ Error updating student credit:', updateError)
+      continue
+    }
+
+    console.log('✅ Credit balance updated:', {
+      oldBalance: (oldBalance / 100).toFixed(2),
+      creditAdded: (creditAmount / 100).toFixed(2),
+      newBalance: (newBalance / 100).toFixed(2)
+    })
+
+    // Create credit transaction
+    const { error: txError } = await supabase
+      .from('credit_transactions')
+      .insert({
+        user_id: payment.user_id,
+        transaction_type: 'purchase',
+        amount_rappen: creditAmount,
+        balance_before_rappen: oldBalance,
+        balance_after_rappen: newBalance,
+        payment_method: 'purchase',
+        reference_id: payment.id,
+        reference_type: 'payment',
+        created_by: payment.user_id,
+        notes: `Guthaben-Produkt gekauft: ${product.name} (${productSale.quantity}x)`,
+        tenant_id: payment.tenant_id
+      })
+
+    if (txError) {
+      console.error('❌ Error creating credit transaction:', txError)
+      continue
+    }
+
+    console.log('✅ Credit transaction created for product:', product.name)
   }
 }
