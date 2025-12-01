@@ -1065,6 +1065,9 @@ const getUsedCredit = () => {
   return 0
 }
 
+// ✅ NEW: Expose usedCredit as computed for external access
+const usedCredit = computed(() => getUsedCredit())
+
 const calculateTotalPrice = () => {
   const basePrice = getBasePrice()
   const discountAmount = getDiscountAmount()
@@ -1072,12 +1075,12 @@ const calculateTotalPrice = () => {
     return total + getProductPrice(product)
   }, 0)
   const adminFeeAmount = getAdminFee()
-  const usedCredit = getUsedCredit()
+  const creditUsed = usedCredit.value // Use computed value
   
   const totalBeforeCredit = basePrice - discountAmount + productsTotal + adminFeeAmount
   
   // Guthaben abziehen (entweder aus Payment-Tabelle oder aktuelles Guthaben)
-  return Math.max(0, totalBeforeCredit - usedCredit)
+  return Math.max(0, totalBeforeCredit - creditUsed)
 }
 
 const calculatePriceBeforeCredit = () => {
@@ -1651,5 +1654,12 @@ const saveInvoiceAddress = async () => {
   }
 }
 
+
+// ✅ Expose usedCredit for external access (useEventModalForm)
+defineExpose({
+  usedCredit,
+  savedCompanyBillingAddressId,
+  invoiceData
+})
 
 </script>
