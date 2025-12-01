@@ -1,7 +1,7 @@
 // composables/useVouchers.ts
 // Gutschein-Management Composable
 
-import { ref, computed } from 'vue'
+import { ref, computed, readonly } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { generateVoucherPDFContent, generateVoucherEmailContent } from '~/utils/voucherGenerator'
 
