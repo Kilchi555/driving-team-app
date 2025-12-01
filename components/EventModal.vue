@@ -3596,17 +3596,11 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
         }
       }
       
-      // 1.1 Payments löschen (nach Void / Refund-Verarbeitung)
-      const { error: paymentsError } = await supabase
-        .from('payments')
-        .delete()
-        .eq('appointment_id', props.eventData.id)
-      
-      if (paymentsError) {
-        console.warn('⚠️ Could not delete payments:', paymentsError)
-      } else {
-        console.log('✅ Payments deleted successfully')
-      }
+      // ✅ NOTE: Payments are NOT deleted! The handle-cancellation endpoint already:
+      // - Updates payment_status to 'refunded'
+      // - Sets refunded_at timestamp
+      // - Keeps payment record for audit trail and accounting
+      // This allows full tracking of all financial transactions
       
       // 1.2 Product sales und items löschen (inklusive Rabatte)
       console.log('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
