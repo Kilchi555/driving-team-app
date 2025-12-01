@@ -294,6 +294,7 @@ import { storeToRefs } from 'pinia'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import CustomerCancellationModal from '~/components/customer/CustomerCancellationModal.vue'
 import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedicalCertificateModal.vue' // ✅ NEU
+import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue' // ✅ NEW: Voucher Modal
 import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
 
 
