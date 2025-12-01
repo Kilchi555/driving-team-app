@@ -5,6 +5,5 @@ SELECT u.id, u.tenant_id, 0, 'Auto-created via migration for existing user'
 FROM users u
 WHERE u.role = 'client'
   AND u.id NOT IN (SELECT DISTINCT user_id FROM student_credits)
-  AND u.deleted_at IS NULL
-ON CONFLICT (user_id) DO NOTHING;
+  AND u.deleted_at IS NULL;
 

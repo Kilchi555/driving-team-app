@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
       
       // Create student_credits for each missing user
       for (const user of usersNeedingCredits) {
-        const { error: createError } = await supabase
+        const { error: insertError } = await supabase
           .from('student_credits')
           .insert({
             user_id: user.id,
@@ -59,8 +59,8 @@ export default defineEventHandler(async (event) => {
             notes: 'Auto-created via migration for existing user'
           })
         
-        if (createError) {
-          console.warn(`⚠️ Failed to create student_credits for user ${user.email}:`, createError)
+        if (insertError) {
+          console.warn(`⚠️ Failed to create student_credits for user ${user.email}:`, insertError)
           skippedCount++
         } else {
           console.log(`✅ Created student_credits for: ${user.email}`)
