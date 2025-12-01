@@ -691,14 +691,36 @@ async function processCreditProductPurchase(payment: any) {
     console.log(`✅ Found ${creditProducts.length} credit product(s) in standalone purchase`)
     
     // Get student_credits
-    const { data: studentCredit, error: scError } = await supabase
+    let { data: studentCredit, error: scError } = await supabase
       .from('student_credits')
       .select('id, balance_rappen')
       .eq('user_id', payment.user_id)
       .single()
     
-    if (scError || !studentCredit) {
-      console.error('❌ Could not load student_credits:', scError)
+    // ✅ NEW: If student_credits doesn't exist, create it
+    if (scError && scError.code === 'PGRST116') { // No row found
+      console.warn('⚠️ student_credits not found, creating new entry...')
+      
+      const { data: newStudentCredit, error: createError } = await supabase
+        .from('student_credits')
+        .insert({
+          user_id: payment.user_id,
+          balance_rappen: 0,
+          tenant_id: payment.tenant_id,
+          notes: 'Auto-created for credit product purchase'
+        })
+        .select('id, balance_rappen')
+        .single()
+      
+      if (createError) {
+        console.error('❌ Error creating student_credits:', createError)
+        return
+      }
+      
+      studentCredit = newStudentCredit
+      console.log('✅ student_credits created:', studentCredit.id)
+    } else if (scError) {
+      console.error('❌ Error loading student_credits:', scError)
       return
     }
     
@@ -729,7 +751,7 @@ async function processCreditProductPurchase(payment: any) {
         .from('credit_transactions')
         .insert({
           user_id: payment.user_id,
-          transaction_type: 'purchase',
+          transaction_type: 'credit_product_purchase',
           amount_rappen: creditAmount,
           balance_before_rappen: oldBalance,
           balance_after_rappen: newBalance,
@@ -863,7 +885,7 @@ async function processCreditProductPurchase(payment: any) {
       .from('credit_transactions')
       .insert({
         user_id: payment.user_id,
-        transaction_type: 'purchase',
+        transaction_type: 'credit_product_purchase',
         amount_rappen: creditAmount,
         balance_before_rappen: oldBalance,
         balance_after_rappen: newBalance,

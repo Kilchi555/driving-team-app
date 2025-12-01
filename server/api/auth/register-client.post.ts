@@ -193,7 +193,29 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ User profile created:', userProfile.id)
 
-    // 3. Send verification email via Supabase (confirmation email automatically sent)
+    // 3. Create student_credits record for new client
+    if (userRole === 'client') {
+      console.log('💰 Creating student_credits record...')
+      const { data: studentCredit, error: creditError } = await serviceSupabase
+        .from('student_credits')
+        .insert({
+          user_id: userProfile.id,
+          tenant_id: tenantId,
+          balance_rappen: 0,
+          notes: 'Automatisch erstellt bei Schüler-Registrierung'
+        })
+        .select()
+        .single()
+
+      if (creditError) {
+        console.warn('⚠️ Error creating student_credits (non-critical):', creditError)
+        // Don't fail the whole registration if this fails
+      } else {
+        console.log('✅ student_credits record created:', studentCredit.id)
+      }
+    }
+
+    // 4. Send verification email via Supabase (confirmation email automatically sent)
     console.log('📧 Sending verification email...')
     try {
       // Supabase automatically sends a confirmation email after user creation

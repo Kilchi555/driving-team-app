@@ -136,7 +136,35 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ User profile updated successfully')
 
-    // 5. Send pending payment reminders
+    // 5. Create student_credits record
+    console.log('💰 Creating student_credits record...')
+    const { data: studentCredit, error: creditError } = await supabaseAdmin
+      .from('student_credits')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!studentCredit) {
+      const { error: createCreditError } = await supabaseAdmin
+        .from('student_credits')
+        .insert({
+          user_id: user.id,
+          tenant_id: user.tenant_id,
+          balance_rappen: 0,
+          notes: 'Automatisch erstellt bei Schüler-Onboarding'
+        })
+
+      if (createCreditError) {
+        console.warn('⚠️ Error creating student_credits (non-critical):', createCreditError)
+        // Don't fail the whole onboarding if this fails
+      } else {
+        console.log('✅ student_credits record created')
+      }
+    } else {
+      console.log('ℹ️ student_credits already exists for user:', user.id)
+    }
+
+    // 6. Send pending payment reminders
     // After onboarding is complete, send first reminder for any payments that were skipped
     try {
       console.log('📧 Checking for pending payment reminders...')

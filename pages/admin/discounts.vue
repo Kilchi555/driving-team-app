@@ -760,8 +760,8 @@ const openCreateModal = () => {
   if (activeTab.value === 'vouchers') {
     openCreateVoucherModal()
   } else {
-    editingDiscount.value = null
-    showModal.value = true
+  editingDiscount.value = null
+  showModal.value = true
   }
 }
 

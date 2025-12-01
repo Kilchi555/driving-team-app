@@ -1496,25 +1496,25 @@ const useEventModalForm = (currentUser?: any, refs?: {
         console.log('💾 Using existing payment price from DB (updated by PriceDisplay):', lessonPriceRappen)
       } else {
         // Fallback: calculate based on current data
-        const appointmentType = formData.value.appointment_type || 'lesson'
+      const appointmentType = formData.value.appointment_type || 'lesson'
         const durationMinutes = formData.value.duration_minutes || 45
+      
+      if (appointmentType === 'theory') {
+        lessonPriceRappen = 8500
+        console.log('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
+      } else {
+        const dynamicPrice = refs?.dynamicPricing?.value
         
-        if (appointmentType === 'theory') {
-          lessonPriceRappen = 8500
-          console.log('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
+        if (dynamicPrice && dynamicPrice.totalPriceChf) {
+          const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
+          const adminFeeChf = dynamicPrice.adminFeeChf || 0
+          const basePriceChf = totalChf - adminFeeChf
+          lessonPriceRappen = Math.round(basePriceChf * 100)
         } else {
-          const dynamicPrice = refs?.dynamicPricing?.value
-          
-          if (dynamicPrice && dynamicPrice.totalPriceChf) {
-            const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
-            const adminFeeChf = dynamicPrice.adminFeeChf || 0
-            const basePriceChf = totalChf - adminFeeChf
-            lessonPriceRappen = Math.round(basePriceChf * 100)
-          } else {
-            console.warn('⚠️ No dynamic pricing available, using fallback')
-            const pricePerMinute = 2.11
-            const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
-            lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+          console.warn('⚠️ No dynamic pricing available, using fallback')
+          const pricePerMinute = 2.11
+          const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
+          lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
           }
         }
       }
@@ -1538,7 +1538,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         
         // If still 0 and not theory, check dynamic pricing
         if (adminFeeRappen === 0) {
-          adminFeeRappen = Math.round((refs?.dynamicPricing?.value?.adminFeeRappen || 0))
+        adminFeeRappen = Math.round((refs?.dynamicPricing?.value?.adminFeeRappen || 0))
         }
       }
       
