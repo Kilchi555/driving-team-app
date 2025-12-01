@@ -225,6 +225,12 @@
                   <span class="text-gray-600">Rabatt</span>
                   <span class="font-medium text-green-600">- CHF {{ (payment.discount_amount_rappen / 100).toFixed(2) }}</span>
                 </div>
+                
+                <!-- ✅ NEW: Show credit used -->
+                <div v-if="payment.credit_used_rappen > 0" class="flex justify-between border-t pt-2 mt-2">
+                  <span class="text-green-600 font-medium">Verwendetes Guthaben</span>
+                  <span class="font-medium text-green-600">- CHF {{ (payment.credit_used_rappen / 100).toFixed(2) }}</span>
+                </div>
               </div>
             </div>
             
