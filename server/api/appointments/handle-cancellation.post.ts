@@ -246,15 +246,30 @@ async function processRefund(
 ) {
   try {
     // Get current user for created_by
-    const { data: { user: authUser } } = await supabase.auth.getUser()
+    // Note: We can't use supabase.auth.getUser() with admin context
+    // Instead, we'll use the staff_id from the payment if available
+    let currentUserId = payment.staff_id || null
     
-    const { data: currentUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-
-    if (!currentUser) throw new Error('Current user not found')
+    if (!currentUserId) {
+      // Fallback: try to get from auth context (if available)
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          const { data: user } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_user_id', authUser.id)
+            .single()
+          currentUserId = user?.id || null
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not get current user from auth context:', (e as any).message)
+      }
+    }
+    
+    if (!currentUserId) {
+      console.warn('⚠️ Could not determine current user, using null for created_by')
+    }
 
     // Load current student credit balance
     const { data: studentCredit, error: creditError } = await supabase
@@ -297,7 +312,7 @@ async function processRefund(
         payment_method: 'refund',
         reference_id: appointmentId,
         reference_type: 'appointment',
-        created_by: currentUser.id,
+        created_by: currentUserId,
         notes: `Rückerstattung für Terminabsage: ${deletionReason} (CHF ${(refundAmountRappen / 100).toFixed(2)})`
       }])
       .select()
