@@ -585,7 +585,7 @@
                           'text-xl font-bold',
                           payment.appointments?.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
                         ]">
-                          {{ (payment.total_amount_rappen / 100).toFixed(2) }}
+                          {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
                         </span>
                         <span class="text-xs font-semibold text-gray-500">CHF</span>
                         
@@ -640,7 +640,7 @@
                 </div>
                 
                 <!-- Product Sales & Discounts Section -->
-                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale || (payment.admin_fee_rappen && payment.admin_fee_rappen > 0)" class="px-4 py-3 bg-gray-50 border-t border-gray-200 space-y-2 text-sm">
+                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale || (payment.admin_fee_rappen && payment.admin_fee_rappen > 0) || (payment.credit_used_rappen && payment.credit_used_rappen > 0)" class="px-4 py-3 bg-gray-50 border-t border-gray-200 space-y-2 text-sm">
                   <!-- Product Sales -->
                   <div v-for="productSale in (payment.product_sales || [])" :key="productSale.id" class="flex justify-between items-center">
                     <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
@@ -677,6 +677,19 @@
                       payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
                     ]">
                       -{{ ((payment.discount_sale.discount_amount_rappen || 0) / 100).toFixed(2) }} CHF
+                    </span>
+                  </div>
+                  
+                  <!-- ✅ NEW: Credit Used -->
+                  <div v-if="payment.credit_used_rappen && payment.credit_used_rappen > 0" class="flex justify-between items-center border-t pt-2 mt-2">
+                    <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'" class="font-medium">
+                      Verwendetes Guthaben
+                    </span>
+                    <span :class="[
+                      'font-semibold',
+                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
+                    ]">
+                      -{{ (payment.credit_used_rappen / 100).toFixed(2) }} CHF
                     </span>
                   </div>
                 </div>
