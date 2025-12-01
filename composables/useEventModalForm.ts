@@ -1001,6 +1001,23 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       console.log('✅ Appointment saved:', result.id)
       
+      // ✅ NEW: Send appointment confirmation email with token
+      if (mode === 'create' && result.status === 'pending_confirmation') {
+        try {
+          console.log('📧 Sending appointment confirmation email...')
+          const confirmationResponse = await $fetch('/api/reminders/send-appointment-confirmation', {
+            method: 'POST',
+            body: {
+              appointmentId: result.id
+            }
+          })
+          console.log('✅ Confirmation email sent:', confirmationResponse)
+        } catch (emailError: any) {
+          console.warn('⚠️ Error sending confirmation email (non-critical):', emailError.message)
+          // Non-critical - don't fail the appointment creation
+        }
+      }
+      
       // ✅ Auto-assign staff to customer (add to assigned_staff_ids array)
       if (mode === 'create' && result.staff_id && result.user_id) {
         try {
