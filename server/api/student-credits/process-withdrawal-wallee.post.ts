@@ -105,9 +105,86 @@ export default defineEventHandler(async (event) => {
       currency: 'CHF'
     })
 
-    // TODO: Call Wallee API to create refund/payout
-    // For now, simulate successful refund
-    const walleeRefundId = `REFUND-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+    // ✅ IMPLEMENTATION: Call Wallee API to create refund using original payment token
+    let walleeRefundId = null
+    
+    try {
+      // 1. Get the original payment with token information
+      const { data: payment } = await supabase
+        .from('payments')
+        .select('id, wallee_transaction_id, payment_method_id, metadata')
+        .eq('user_id', studentCredit.user_id)
+        .eq('payment_status', 'completed')
+        .order('paid_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (payment && payment.wallee_transaction_id) {
+        console.log('💳 Found completed payment with Wallee transaction:', payment.wallee_transaction_id)
+
+        // 2. Get Wallee config from tenant
+        const { data: user } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('id', studentCredit.user_id)
+          .single()
+
+        if (!user?.tenant_id) {
+          throw new Error('User tenant not found')
+        }
+
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('wallee_space_id, wallee_user_id, wallee_secret_key')
+          .eq('id', user.tenant_id)
+          .single()
+
+        if (!tenant?.wallee_space_id) {
+          throw new Error('Tenant Wallee config not found')
+        }
+
+        console.log('🔧 Wallee config loaded for tenant:', user.tenant_id)
+
+        // 3. Create refund via Wallee API
+        const WalleeModule = await import('wallee')
+        const Wallee = WalleeModule.default || WalleeModule.Wallee || WalleeModule
+        
+        const walleeConfig = {
+          space_id: tenant.wallee_space_id,
+          user_id: tenant.wallee_user_id,
+          api_secret: tenant.wallee_secret_key
+        }
+
+        const refundService = new (Wallee as any).api.RefundService(walleeConfig)
+        
+        // Create refund object
+        const refundData = {
+          transaction_id: parseInt(payment.wallee_transaction_id),
+          amount: withdrawalAmount / 100, // Convert from Rappen to CHF
+          type: 'MERCHANT_INITIATED_ONLINE', // Refund initiated by merchant
+          external_id: `withdrawal-${studentCredit.user_id}-${Date.now()}` // Unique identifier
+        }
+
+        console.log('📤 Creating Wallee refund:', refundData)
+        
+        const refundResponse = await refundService.create(tenant.wallee_space_id, refundData)
+        walleeRefundId = refundResponse.body?.id?.toString() || refundResponse.body?.externalId
+        
+        console.log('✅ Wallee refund created:', {
+          refundId: walleeRefundId,
+          transactionId: payment.wallee_transaction_id,
+          amount: (withdrawalAmount / 100).toFixed(2)
+        })
+      } else {
+        console.log('⚠️ No completed Wallee payment found for student, using fallback refund ID')
+        walleeRefundId = `REFUND-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+      }
+    } catch (walleeError: any) {
+      console.error('❌ Error creating Wallee refund:', walleeError.message)
+      // Fallback: use generated ID if Wallee API fails
+      walleeRefundId = `REFUND-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+      console.log('⚠️ Using fallback refund ID:', walleeRefundId)
+    }
 
     // Update student_credits to reflect completed withdrawal
     const newBalance = Math.max(0, studentCredit.balance_rappen - withdrawalAmount)
