@@ -37,16 +37,18 @@ export default defineEventHandler(async (event) => {
     // 1. Fetch the appointment and its payment
     const { data: appointment, error: aptError } = await supabase
       .from('appointments')
-      .select('user_id, duration_minutes, type')
+      .select('user_id, duration_minutes, type, tenant_id')
       .eq('id', appointmentId)
       .single()
 
     if (aptError) throw new Error(`Appointment not found: ${aptError.message}`)
 
+    // Get payment with tenant_id filter to bypass RLS issues
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .select('*')
       .eq('appointment_id', appointmentId)
+      .eq('tenant_id', appointment.tenant_id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
