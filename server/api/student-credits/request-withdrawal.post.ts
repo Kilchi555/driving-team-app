@@ -61,11 +61,31 @@ export default defineEventHandler(async (event) => {
     // 2. Validate sufficient balance
     const availableBalance = (studentCredit.balance_rappen || 0) - (studentCredit.pending_withdrawal_rappen || 0)
     
-    console.log('💰 Balance check:', {
+    // ✅ NEW: Check for pending/unpaid payments and deduct from withdrawal amount
+    const { data: pendingPayments } = await supabase
+      .from('payments')
+      .select('total_amount_rappen, payment_status')
+      .eq('user_id', userData.id)
+      .in('payment_status', ['pending', 'processing', 'confirmed'])
+      .eq('payment_method', 'wallee')  // Only Wallee payments (online invoices)
+    
+    const pendingPaymentAmount = (pendingPayments || []).reduce(
+      (sum, p) => sum + (p.total_amount_rappen || 0),
+      0
+    )
+    
+    // ✅ Calculate actual withdrawal amount after paying off pending invoices
+    const amountTowardsPending = Math.min(amount_rappen, pendingPaymentAmount)
+    const actualWithdrawalAmount = amount_rappen - amountTowardsPending
+    
+    console.log('💰 Balance & Pending Payments check:', {
       totalBalance: (studentCredit.balance_rappen / 100).toFixed(2),
       pendingWithdrawal: ((studentCredit.pending_withdrawal_rappen || 0) / 100).toFixed(2),
       availableBalance: (availableBalance / 100).toFixed(2),
-      requestedAmount: (amount_rappen / 100).toFixed(2)
+      requestedAmount: (amount_rappen / 100).toFixed(2),
+      pendingPaymentAmount: (pendingPaymentAmount / 100).toFixed(2),
+      amountTowardsPending: (amountTowardsPending / 100).toFixed(2),
+      actualWithdrawalAmount: (actualWithdrawalAmount / 100).toFixed(2)
     })
 
     if (availableBalance < amount_rappen) {
@@ -75,8 +95,40 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 3. Update student_credits with pending withdrawal
-    const newPendingWithdrawal = (studentCredit.pending_withdrawal_rappen || 0) + amount_rappen
+    // ✅ NEW: Apply pending payments automatically using student credit
+    if (amountTowardsPending > 0) {
+      console.log('📋 Applying credit to pending payments:', {
+        amount: (amountTowardsPending / 100).toFixed(2),
+        pendingPayments: pendingPayments?.length || 0
+      })
+      
+      // Update pending payments to use credit (reduce by credit amount)
+      for (const payment of pendingPayments || []) {
+        if (amountTowardsPending <= 0) break
+        
+        const paymentAmount = payment.total_amount_rappen || 0
+        const appliedCredit = Math.min(amountTowardsPending, paymentAmount)
+        const newTotalAmount = Math.max(0, paymentAmount - appliedCredit)
+        
+        await supabase
+          .from('payments')
+          .update({
+            total_amount_rappen: newTotalAmount,
+            credit_used_rappen: (payment.credit_used_rappen || 0) + appliedCredit,
+            notes: `Credit applied: CHF ${(appliedCredit / 100).toFixed(2)} (updated_at: ${new Date().toISOString()})`
+          })
+          .eq('id', payment.id)
+        
+        console.log('✅ Payment updated with credit:', {
+          paymentId: payment.id,
+          creditApplied: (appliedCredit / 100).toFixed(2),
+          newTotal: (newTotalAmount / 100).toFixed(2)
+        })
+      }
+    }
+    
+    // 3. Update student_credits with actual withdrawal amount (after pending deduction)
+    const newPendingWithdrawal = (studentCredit.pending_withdrawal_rappen || 0) + actualWithdrawalAmount
     
     const { error: updateError } = await supabase
       .from('student_credits')
@@ -129,10 +181,16 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      message: 'Withdrawal request created successfully',
+      message: amountTowardsPending > 0 
+        ? `Auszahlung verarbeitet. CHF ${(amountTowardsPending / 100).toFixed(2)} wurden auf offene Rechnungen angerechnet.`
+        : 'Withdrawal request created successfully',
       withdrawal: {
-        amount_rappen,
-        amount_chf: (amount_rappen / 100).toFixed(2),
+        requested_amount_rappen: amount_rappen,
+        requested_amount_chf: (amount_rappen / 100).toFixed(2),
+        applied_to_pending_rappen: amountTowardsPending,
+        applied_to_pending_chf: (amountTowardsPending / 100).toFixed(2),
+        actual_withdrawal_rappen: actualWithdrawalAmount,
+        actual_withdrawal_chf: (actualWithdrawalAmount / 100).toFixed(2),
         status: 'pending',
         createdAt: new Date().toISOString()
       },
