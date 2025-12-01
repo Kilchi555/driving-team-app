@@ -690,15 +690,27 @@ async function processCreditProductPurchase(payment: any) {
     
     console.log(`✅ Found ${creditProducts.length} credit product(s) in standalone purchase`)
     
-    // Get student_credits
+    // Get student_credits (with tenant_id filter for RLS)
+    console.log('💳 Fetching student_credits for user:', {
+      user_id: payment.user_id,
+      tenant_id: payment.tenant_id
+    })
+    
     let { data: studentCredit, error: scError } = await supabase
       .from('student_credits')
       .select('id, balance_rappen')
       .eq('user_id', payment.user_id)
+      .eq('tenant_id', payment.tenant_id)
       .single()
     
+    console.log('📊 student_credits query result:', {
+      found: !!studentCredit,
+      error: scError?.message,
+      errorCode: scError?.code
+    })
+    
     // ✅ NEW: If student_credits doesn't exist, create it
-    if (scError && scError.code === 'PGRST116') { // No row found
+    if (scError && (scError.code === 'PGRST116' || scError.message?.includes('0 rows'))) { // No row found
       console.warn('⚠️ student_credits not found, creating new entry...')
       
       const { data: newStudentCredit, error: createError } = await supabase
@@ -845,11 +857,12 @@ async function processCreditProductPurchase(payment: any) {
       totalCredit: (creditAmount / 100).toFixed(2)
     })
 
-    // Load current student credit
+    // Load current student credit (with tenant_id filter for RLS)
     const { data: studentCredit, error: creditError } = await supabase
       .from('student_credits')
       .select('id, balance_rappen')
       .eq('user_id', payment.user_id)
+      .eq('tenant_id', payment.tenant_id)
       .single()
 
     if (creditError || !studentCredit) {
