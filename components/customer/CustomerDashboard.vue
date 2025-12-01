@@ -285,6 +285,35 @@
           </div>
         </div>
 
+        <!-- ✅ NEW: Shop / Abos Karte -->
+        <div 
+          @click="handleClickWithDelay('shop', navigateToShop)"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'shop' }"
+          :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
+        >
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900">
+                Shop / Abos kaufen
+              </h3>
+            </div>
+            
+            <div class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <p class="text-gray-600 text-sm">
+                  5er/10er Abos und mehr
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Lernbereich - Uses Accent Color -->
         <div 
           @click="handleClickWithDelay('learning', () => navigateTo('/learning'))"
@@ -1341,6 +1370,12 @@ const navigateToLessonBooking = async () => {
 const navigateToCourseBooking = async () => {
   // Navigiere zur Coming Soon Seite
   await navigateTo('/customer/coming-soon')
+}
+
+const navigateToShop = async () => {
+  // Navigiere zum Shop mit Tenant-Parameter
+  const tenantSlug = currentTenant.value?.slug || 'driving-team'
+  await navigateTo(`/shop?tenant=${tenantSlug}`)
 }
 
 const navigateToReglement = async (type: string) => {
