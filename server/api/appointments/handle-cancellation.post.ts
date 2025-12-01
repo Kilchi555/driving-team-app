@@ -292,6 +292,27 @@ async function processRefund(
 
     console.log('✅ Credit transaction created:', transaction.id)
 
+    // ✅ NEW: Update payment record to mark it as refunded
+    const refundedAt = new Date().toISOString()
+    const { error: updatePaymentError } = await supabase
+      .from('payments')
+      .update({
+        payment_status: 'refunded',
+        refunded_at: refundedAt,
+        notes: `${payment.notes ? payment.notes + ' | ' : ''}Refunded: ${deletionReason} (CHF ${(refundAmountRappen / 100).toFixed(2)})`
+      })
+      .eq('id', payment.id)
+    
+    if (updatePaymentError) {
+      console.warn('⚠️ Could not update payment refunded status:', updatePaymentError)
+    } else {
+      console.log('✅ Payment marked as refunded:', {
+        paymentId: payment.id,
+        refundedAt,
+        refundAmount: (refundAmountRappen / 100).toFixed(2)
+      })
+    }
+
     // ✅ NEW: Update appointment to mark credit_created as true
     const { error: updateAptError } = await supabase
       .from('appointments')
