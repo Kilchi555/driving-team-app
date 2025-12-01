@@ -1978,6 +1978,20 @@ onMounted(async () => {
       if (userData) {
         customerData.value = userData
         console.log('✅ Customer data loaded:', userData.email)
+        
+        // ✅ NEW: Pre-fill form data with customer information
+        formData.value = {
+          firstName: userData.first_name || '',
+          lastName: userData.last_name || '',
+          email: userData.email || user.email || '',
+          phone: userData.phone || '',
+          street: userData.street || '',
+          streetNumber: userData.street_number || '',
+          zip: userData.zip || '',
+          city: userData.city || '',
+          notes: ''
+        }
+        console.log('✅ Form data pre-filled with customer info')
       }
     }
   } catch (error) {
