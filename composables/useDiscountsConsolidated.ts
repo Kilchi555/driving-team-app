@@ -1,5 +1,6 @@
-import { ref, computed } from 'vue'
-import { supabase } from '~/utils/supabase'
+import { ref, computed, readonly } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+import type { Discount } from '~/types/payment'
 
 export interface ConsolidatedDiscount {
   id: string
@@ -263,9 +264,9 @@ export const useDiscountsConsolidated = () => {
 
       if (dbError) throw dbError
 
-      const totalDiscount = data?.reduce((sum, d) => sum + d.discount_amount_rappen, 0) || 0
+      const totalDiscount = data?.reduce((sum: number, d: any) => sum + d.discount_amount_rappen, 0) || 0
       const discountCount = data?.length || 0
-      const discountTypes = data?.reduce((acc, d) => {
+      const discountTypes = data?.reduce((acc: Record<string, number>, d: any) => {
         acc[d.discount_type] = (acc[d.discount_type] || 0) + 1
         return acc
       }, {} as Record<string, number>) || {}

@@ -822,16 +822,6 @@ const getTypeBadgeClass = (type: string) => {
   return classes[type] || 'bg-gray-100 text-gray-800'
 }
 
-const getTypeBadgeClass = (type: string) => {
-  const classes: Record<string, string> = {
-    percentage: 'bg-blue-100 text-blue-800',
-    fixed: 'bg-green-100 text-green-800',
-    free_lesson: 'bg-purple-100 text-purple-800',
-    free_product: 'bg-orange-100 text-orange-800'
-  }
-  return classes[type] || 'bg-gray-100 text-gray-800'
-}
-
 // ✅ NEW: Voucher Methods
 const loadVouchers = async () => {
   isLoadingVouchers.value = true

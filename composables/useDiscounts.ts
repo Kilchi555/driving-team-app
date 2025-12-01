@@ -1,6 +1,7 @@
 // composables/useDiscounts.ts
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import type { Discount } from '~/types/payment'
 
 export interface DiscountCode {
   id: string
@@ -251,10 +252,19 @@ export const useDiscounts = () => {
 
   const applyDiscount = async (discountId: string) => {
     try {
+      // First get current usage_count
+      const { data: currentDiscount } = await supabase
+        .from('discounts')
+        .select('usage_count')
+        .eq('id', discountId)
+        .single()
+      
+      const newCount = (currentDiscount?.usage_count || 0) + 1
+      
       const { error: dbError } = await supabase
         .from('discounts')
         .update({ 
-          usage_count: supabase.sql`usage_count + 1`,
+          usage_count: newCount,
           updated_at: new Date().toISOString()
         })
         .eq('id', discountId)
