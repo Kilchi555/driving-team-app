@@ -628,7 +628,7 @@ const addCustomer = async () => {
         ? 'Bitte geben Sie eine gültige Telefonnummer an' 
         : 'Bitte geben Sie eine gültige E-Mail-Adresse an'
     } else {
-      error.value = 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
+    error.value = 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
     }
     return
   }

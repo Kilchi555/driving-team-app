@@ -849,17 +849,17 @@ const completeOnboarding = async () => {
 
         try {
           const { data: uploadData, error: uploadError } = await useFetch('/api/students/upload-document', {
-            method: 'POST',
-            body: formData
-          })
+          method: 'POST',
+          body: formData
+        })
 
           if (uploadError.value) {
             console.error('❌ Document upload error:', uploadError.value)
             throw new Error(`Dokument-Upload fehlgeschlagen: ${uploadError.value.message || 'Unbekannter Fehler'}`)
           }
 
-          if (uploadData.value?.url) {
-            documentUrls[type] = uploadData.value.url
+        if (uploadData.value?.url) {
+          documentUrls[type] = uploadData.value.url
           }
         } catch (uploadErr: any) {
           console.error('❌ Error uploading document for category', type, ':', uploadErr)

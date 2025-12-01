@@ -1321,6 +1321,81 @@ const useEventModalForm = (currentUser?: any, refs?: {
         .eq('auth_user_id', user.id)
         .single()
 
+      // ✅ NEW: Check if student credit is being used
+      let creditUsedRappen = 0
+      let creditTransactionId = null
+      
+      // Check if PriceDisplay has credit usage info
+      if (refs?.priceDisplayRef?.value) {
+        const priceDisplay = refs.priceDisplayRef.value
+        // Check if credit is being used (from PriceDisplay calculation)
+        if (priceDisplay.usedCredit && priceDisplay.usedCredit > 0) {
+          creditUsedRappen = Math.round(priceDisplay.usedCredit * 100)
+          console.log('💳 Credit being used from PriceDisplay:', {
+            creditChf: priceDisplay.usedCredit,
+            creditRappen: creditUsedRappen
+          })
+        }
+      }
+      
+      // If credit is used, create credit transaction and update balance
+      if (creditUsedRappen > 0 && formData.value.user_id) {
+        try {
+          // Load current student credit
+          const { data: studentCredit, error: creditError } = await supabase
+            .from('student_credits')
+            .select('id, balance_rappen')
+            .eq('user_id', formData.value.user_id)
+            .single()
+          
+          if (studentCredit && !creditError) {
+            const oldBalance = studentCredit.balance_rappen || 0
+            const newBalance = oldBalance - creditUsedRappen
+            
+            // Update student credit balance
+            await supabase
+              .from('student_credits')
+              .update({
+                balance_rappen: newBalance,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', studentCredit.id)
+            
+            // Create credit transaction
+            const { data: creditTransaction, error: txError } = await supabase
+              .from('credit_transactions')
+              .insert({
+                user_id: formData.value.user_id,
+                transaction_type: 'appointment_payment',
+                amount_rappen: -creditUsedRappen, // Negative for usage
+                balance_before_rappen: oldBalance,
+                balance_after_rappen: newBalance,
+                payment_method: 'credit',
+                reference_id: appointmentId,
+                reference_type: 'appointment',
+                created_by: formData.value.staff_id || null,
+                notes: `Guthaben für Termin verwendet: ${formData.value.title}`,
+                tenant_id: userData?.tenant_id || null
+              })
+              .select('id')
+              .single()
+            
+            if (!txError && creditTransaction) {
+              creditTransactionId = creditTransaction.id
+              console.log('✅ Credit transaction created:', {
+                transactionId: creditTransaction.id,
+                creditUsed: (creditUsedRappen / 100).toFixed(2),
+                oldBalance: (oldBalance / 100).toFixed(2),
+                newBalance: (newBalance / 100).toFixed(2)
+              })
+            }
+          }
+        } catch (creditErr) {
+          console.error('⚠️ Error processing credit transaction (non-critical):', creditErr)
+          // Don't fail the entire payment creation
+        }
+      }
+
       const paymentData = {
         appointment_id: appointmentId,
         user_id: formData.value.user_id || null,
@@ -1338,7 +1413,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
         notes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
         company_billing_address_id: companyBillingAddressId || null, // ✅ NEU: Referenz zu company_billing_addresses
         invoice_address: invoiceAddress, // ✅ Fallback: Rechnungsadresse als JSONB
-        tenant_id: userData?.tenant_id || null // ✅ WICHTIG: tenant_id hinzufügen
+        tenant_id: userData?.tenant_id || null, // ✅ WICHTIG: tenant_id hinzufügen
+        credit_used_rappen: creditUsedRappen, // ✅ NEW: Credit used amount
+        credit_transaction_id: creditTransactionId // ✅ NEW: Link to credit transaction
       }
       
       console.log('💳 Creating payment entry:', paymentData)

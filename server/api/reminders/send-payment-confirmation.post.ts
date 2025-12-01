@@ -192,7 +192,7 @@ export default defineEventHandler(async (event) => {
         metadata: {
           sent_to: user.email,
           sent_at: now.toISOString()
-        }
+    }
       })
 
     // 10. Update payment

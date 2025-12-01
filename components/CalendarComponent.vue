@@ -1471,38 +1471,38 @@ const handleEventDrop = async (dropInfo: any) => {
     }
   }
 
-  const studentName = dropInfo.event.extendedProps?.student || 'Unbekannt'
-  const studentPhone = dropInfo.event.extendedProps?.phone || 'Keine Nummer'
+const studentName = dropInfo.event.extendedProps?.student || 'Unbekannt'
+const studentPhone = dropInfo.event.extendedProps?.phone || 'Keine Nummer'
 
   // ✅ Reset the state before showing dialog
   sendSmsOnDrop.value = true
 
-  showConfirmDialog({
-    title: 'Termin verschieben',
-    message: 'Möchten Sie diesen Termin wirklich verschieben?',
-    details: `
-      <strong>Termin:</strong> ${dropInfo.event.title}<br>
-      <strong>Neue Zeit:</strong> ${newStartTime} - ${newEndTime}<br>
-      <strong>Fahrschüler:</strong> ${studentName}<br><br>
-      
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div class="flex items-center gap-2 mb-2">
+showConfirmDialog({
+  title: 'Termin verschieben',
+  message: 'Möchten Sie diesen Termin wirklich verschieben?',
+  details: `
+    <strong>Termin:</strong> ${dropInfo.event.title}<br>
+    <strong>Neue Zeit:</strong> ${newStartTime} - ${newEndTime}<br>
+    <strong>Fahrschüler:</strong> ${studentName}<br><br>
+    
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+      <div class="flex items-center gap-2 mb-2">
           <input type="checkbox" id="sendSmsCheckbox" checked class="rounded border-gray-300" @change="(e) => sendSmsOnDrop = (e.target as HTMLInputElement).checked">
           <label for="sendSmsCheckbox" class="font-medium text-blue-800">
-            📱 SMS-Benachrichtigung senden
-          </label>
-        </div>
-        <div class="text-xs text-blue-600">
-          Der Fahrschüler wird über die Terminverschiebung informiert.
-        </div>
+          📱 SMS-Benachrichtigung senden
+        </label>
       </div>
-    `,
-    icon: '🔄',
-    type: 'warning',
-    confirmText: 'Verschieben & Benachrichtigen',
-    cancelText: 'Abbrechen',
-    action: moveAction
-  })
+      <div class="text-xs text-blue-600">
+        Der Fahrschüler wird über die Terminverschiebung informiert.
+      </div>
+    </div>
+  `,
+  icon: '🔄',
+  type: 'warning',
+  confirmText: 'Verschieben & Benachrichtigen',
+  cancelText: 'Abbrechen',
+  action: moveAction
+})
 
   // Verschieben erstmal rückgängig machen, wird nur bei Bestätigung durchgeführt
   dropInfo.revert()

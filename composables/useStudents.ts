@@ -294,18 +294,18 @@ export const useStudents = () => {
         // Entscheide: SMS wenn Telefon vorhanden, sonst E-Mail
         if (data.phone && data.phone.trim() !== '') {
           // ✅ SMS-Versand
-          const { sendSms } = useSmsService()
-          const message = `Hallo ${data.first_name}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
-          
-          const smsResult = await sendSms(data.phone, message)
-          
-          if (smsResult.success) {
-            console.log('✅ Onboarding SMS sent to:', data.phone, 'SID:', smsResult.data?.sid)
-            smsSuccess = true
-          } else {
-            console.warn('⚠️ SMS sending failed:', smsResult.error)
-            smsSuccess = false
-          }
+        const { sendSms } = useSmsService()
+        const message = `Hallo ${data.first_name}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+        
+        const smsResult = await sendSms(data.phone, message)
+        
+        if (smsResult.success) {
+          console.log('✅ Onboarding SMS sent to:', data.phone, 'SID:', smsResult.data?.sid)
+          smsSuccess = true
+        } else {
+          console.warn('⚠️ SMS sending failed:', smsResult.error)
+          smsSuccess = false
+        }
         } else if (data.email && data.email.trim() !== '') {
           // ✅ E-Mail-Versand
           console.log('📧 Sending onboarding email to:', data.email)
