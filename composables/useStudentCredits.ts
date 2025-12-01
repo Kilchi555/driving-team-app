@@ -317,7 +317,7 @@ export const useStudentCredits = () => {
             payment_method: 'credit',
             reference_id: paymentData.appointment_id,
             reference_type: 'appointment',
-            created_by: (await currentUser).data.user?.id,
+            created_by: null, // ✅ FIX: Don't use auth_user_id, use null instead
             notes: paymentData.notes || 'Guthaben für Termin verwendet'
           }])
           .select('id')
