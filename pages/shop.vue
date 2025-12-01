@@ -931,7 +931,9 @@ const stepTitle = computed(() => {
 const getNextStepButtonText = () => {
   switch (currentStep.value) {
     case 0: return 'Weiter'
-    case 1: return 'Zu Kontaktdaten'
+    case 1: 
+      // ✅ NEW: Show "Zur Bezahlung" for logged-in users
+      return isLoggedIn.value && customerData.value ? 'Zur Bezahlung' : 'Zu Kontaktdaten'
     case 2: return 'Zur Bezahlung'
     default: return 'Weiter'
   }
@@ -993,7 +995,14 @@ const nextStep = () => {
   if (currentStep.value < 3) {
     // Speichere sofort beim Wechseln der Steps
     saveImmediately()
-    currentStep.value++
+    
+    // ✅ NEW: Skip step 2 (contact data) for logged-in users
+    if (currentStep.value === 1 && isLoggedIn.value && customerData.value) {
+      console.log('⏭️ Skipping step 2 (contact data) - user is logged in')
+      currentStep.value = 3 // Jump directly to payment
+    } else {
+      currentStep.value++
+    }
     
     // Produkte laden wenn wir zu Schritt 1 gehen
     if (currentStep.value === 1 && availableProducts.value.length === 0) {
