@@ -150,6 +150,18 @@ export default defineEventHandler(async (event) => {
                   refund: (refundAmount / 100).toFixed(2)
                 })
                 
+                // ✅ NEW: Update appointment to mark credit_created as true
+                const { error: updateAptError } = await supabase
+                  .from('appointments')
+                  .update({ credit_created: true })
+                  .eq('id', appointmentId)
+                
+                if (updateAptError) {
+                  console.warn('⚠️ Could not update appointment credit_created flag:', updateAptError)
+                } else {
+                  console.log('✅ Appointment marked as credit_created (no payment case)')
+                }
+                
                 return {
                   success: true,
                   message: 'Appointment cancelled - credit applied to student balance (no payment found)',
@@ -279,6 +291,18 @@ async function processRefund(
     if (transError) throw new Error(`Failed to create credit transaction: ${transError.message}`)
 
     console.log('✅ Credit transaction created:', transaction.id)
+
+    // ✅ NEW: Update appointment to mark credit_created as true
+    const { error: updateAptError } = await supabase
+      .from('appointments')
+      .update({ credit_created: true })
+      .eq('id', appointmentId)
+    
+    if (updateAptError) {
+      console.warn('⚠️ Could not update appointment credit_created flag:', updateAptError)
+    } else {
+      console.log('✅ Appointment marked as credit_created')
+    }
 
     return {
       success: true,

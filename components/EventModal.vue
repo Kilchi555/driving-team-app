@@ -3510,6 +3510,15 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       adminFeeRappen = payment.admin_fee_rappen || 0
     }
     
+    console.log('🔍 DEBUG performSoftDeleteWithReason:', {
+      eventType,
+      isLessonType,
+      withCosts,
+      lessonPriceRappen,
+      adminFeeRappen,
+      chargePercentage
+    })
+    
     if (isLessonType && withCosts) {
       console.log('💳 Appointment will be charged cancellation fee - keeping all payment data')
       console.log('   - lesson_price_rappen: KEPT (for cancellation fee)')
