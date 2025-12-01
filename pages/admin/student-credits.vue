@@ -1,18 +1,46 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <div class="max-w-7xl mx-auto py-4 sm:py-6 px-2 sm:px-6 lg:px-8">
-      <!-- Header -->
-      <div class="px-2 sm:px-4 py-4 sm:py-6 sm:px-0">
+      <!-- Header with Tabs -->
+      <div class="px-2 sm:px-4 py-4 sm:py-6 sm:px-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Schüler-Guthaben</h1>
           <p class="mt-2 text-sm text-gray-600">
             Verwalten Sie das Guthaben aller Schüler für Vorauszahlungen
           </p>
         </div>
+        <!-- Tabs -->
+        <div class="flex gap-2 border-b border-gray-200">
+          <button
+            @click="activeTab = 'students'"
+            :class="[
+              'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
+              activeTab === 'students'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            ]"
+          >
+            Alle Schüler
+          </button>
+          <button
+            @click="activeTab = 'withdrawals'"
+            :class="[
+              'px-4 py-2 text-sm font-medium border-b-2 transition-colors relative',
+              activeTab === 'withdrawals'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            ]"
+          >
+            Ausstehende Auszahlungen
+            <span v-if="pendingWithdrawals.length > 0" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+              {{ pendingWithdrawals.length }}
+            </span>
+          </button>
+        </div>
       </div>
 
-      <!-- Statistics Cards -->
-      <div class="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
+      <!-- Statistics Cards (only show for students tab) -->
+      <div v-if="activeTab === 'students'" class="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
         <div class="bg-white overflow-hidden shadow rounded-lg">
           <div class="p-4 sm:p-5">
             <div class="flex items-center">
@@ -86,8 +114,8 @@
         </div>
       </div>
 
-      <!-- Filters and Search -->
-      <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+      <!-- Filters and Search (only for students tab) -->
+      <div v-if="activeTab === 'students'" class="bg-white shadow rounded-lg mb-4 sm:mb-6">
         <div class="px-3 sm:px-4 py-4 sm:py-5 sm:p-6">
           <div class="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
             <div>
@@ -128,8 +156,8 @@
         </div>
       </div>
 
-      <!-- Students Table -->
-      <div class="bg-white shadow rounded-lg">
+      <!-- Students Table (only for students tab) -->
+      <div v-if="activeTab === 'students'" class="bg-white shadow rounded-lg">
         <div class="px-4 py-5 sm:p-6">
           <div v-if="isLoading" class="text-center py-8">
             <svg class="animate-spin h-8 w-8 text-gray-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -221,9 +249,107 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
 
-    <!-- Student Credit Manager Modal -->
+    <!-- Pending Withdrawals Table (only for withdrawals tab) -->
+    <div v-if="activeTab === 'withdrawals'" class="bg-white shadow rounded-lg">
+      <div class="px-4 py-5 sm:p-6">
+        <div v-if="isLoadingWithdrawals" class="text-center py-8">
+          <svg class="animate-spin h-8 w-8 text-gray-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p class="mt-2 text-sm text-gray-500">Lade ausstehende Auszahlungen...</p>
+        </div>
+
+        <div v-else-if="pendingWithdrawals.length === 0" class="text-center py-8">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">Keine ausstehenden Auszahlungen</h3>
+          <p class="mt-1 text-sm text-gray-500">Alle Auszahlungsanforderungen wurden verarbeitet.</p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Schüler
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Betrag
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Verfügbares Guthaben
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Angefordert am
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Aktionen
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="withdrawal in pendingWithdrawals" :key="withdrawal.id" class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="flex-shrink-0 h-10 w-10">
+                      <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                        <span class="text-sm font-medium text-gray-700">
+                          {{ withdrawal.user.first_name?.charAt(0) }}{{ withdrawal.user.last_name?.charAt(0) }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="ml-4">
+                      <div class="text-sm font-medium text-gray-900">
+                        {{ withdrawal.user.first_name }} {{ withdrawal.user.last_name }}
+                      </div>
+                      <div class="text-sm text-gray-500">{{ withdrawal.user.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">
+                    CHF {{ (withdrawal.pending_withdrawal_rappen / 100).toFixed(2) }}
+                  </div>
+                </td>
+
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">
+                    CHF {{ ((withdrawal.balance_rappen - withdrawal.pending_withdrawal_rappen) / 100).toFixed(2) }}
+                  </div>
+                </td>
+                
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ formatDate(withdrawal.last_withdrawal_at) }}
+                </td>
+
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <button
+                    @click="processWithdrawal(withdrawal)"
+                    :disabled="processingWithdrawalId === withdrawal.id"
+                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <span v-if="processingWithdrawalId !== withdrawal.id">Verarbeiten</span>
+                    <span v-else class="flex items-center gap-1">
+                      <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Verarbeite...
+                    </span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
     <div v-if="showCreditManagerModal" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
@@ -402,6 +528,10 @@ const statistics = ref({
 const searchQuery = ref('')
 const balanceFilter = ref('')
 const sortBy = ref('name')
+const activeTab = ref<'students' | 'withdrawals'>('students')
+const pendingWithdrawals = ref<any[]>([])
+const isLoadingWithdrawals = ref(false)
+const processingWithdrawalId = ref<string | null>(null)
 
 const showCreditManagerModal = ref(false)
 const showTransactionsModal = ref(false)
@@ -532,6 +662,92 @@ const handleCreditUpdated = async () => {
   await loadStatistics()
 }
 
+const loadPendingWithdrawals = async () => {
+  try {
+    isLoadingWithdrawals.value = true
+    const supabase = getSupabase()
+    
+    // Get current user's tenant_id
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', currentUser?.id)
+      .single()
+    
+    const tenantId = userProfile?.tenant_id
+    
+    // Get all student credits with pending withdrawals
+    const { data, error: fetchError } = await supabase
+      .from('student_credits')
+      .select(`
+        id,
+        user_id,
+        balance_rappen,
+        pending_withdrawal_rappen,
+        last_withdrawal_at,
+        users (
+          id,
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .gt('pending_withdrawal_rappen', 0)
+      .eq('users.tenant_id', tenantId)
+
+    if (fetchError) throw fetchError
+
+    pendingWithdrawals.value = data?.map(credit => ({
+      id: credit.id,
+      user_id: credit.user_id,
+      balance_rappen: credit.balance_rappen,
+      pending_withdrawal_rappen: credit.pending_withdrawal_rappen,
+      last_withdrawal_at: credit.last_withdrawal_at,
+      user: credit.users
+    })) || []
+
+    console.log('✅ Loaded pending withdrawals:', pendingWithdrawals.value.length)
+  } catch (err: any) {
+    console.error('❌ Error loading pending withdrawals:', err)
+  } finally {
+    isLoadingWithdrawals.value = false
+  }
+}
+
+const processWithdrawal = async (withdrawal: any) => {
+  try {
+    processingWithdrawalId.value = withdrawal.id
+    
+    console.log('💳 Processing withdrawal:', {
+      userId: withdrawal.user_id,
+      amount: (withdrawal.pending_withdrawal_rappen / 100).toFixed(2)
+    })
+
+    const response = await $fetch('/api/student-credits/process-withdrawal-wallee', {
+      method: 'POST',
+      body: {
+        studentId: withdrawal.user_id
+      }
+    })
+
+    if (response.success) {
+      console.log('✅ Withdrawal processed successfully:', response)
+      // Reload withdrawals list
+      await loadPendingWithdrawals()
+      // Show success notification
+      alert(`✅ Auszahlung verarbeitet!\n\nBetrag: CHF ${(withdrawal.pending_withdrawal_rappen / 100).toFixed(2)}\nWallee Refund ID: ${response.walleeRefundId}`)
+    } else {
+      alert(`❌ Fehler: ${response.error}`)
+    }
+  } catch (err: any) {
+    console.error('❌ Error processing withdrawal:', err)
+    alert(`❌ Fehler beim Verarbeiten der Auszahlung: ${err.message}`)
+  } finally {
+    processingWithdrawalId.value = null
+  }
+}
+
 // Utility functions
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('de-CH', {
@@ -611,5 +827,6 @@ onMounted(async () => {
   // Original onMounted logic
   await loadStudents()
   await loadStatistics()
+  await loadPendingWithdrawals()
 })
 </script>
