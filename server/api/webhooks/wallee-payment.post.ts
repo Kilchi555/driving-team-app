@@ -522,9 +522,11 @@ export default defineEventHandler(async (event) => {
         
         // ✅ NEW: Auto-credit for credit products (5er/10er Abos)
         try {
+          console.log('🎁 Processing credit product purchase for payment:', payment.id)
           await processCreditProductPurchase(payment)
+          console.log('✅ Credit product purchase processed successfully')
         } catch (creditErr) {
-          console.warn('⚠️ Could not process credit product purchase:', payment.id, creditErr)
+          console.error('❌ ERROR in processCreditProductPurchase:', creditErr)
         }
       }
     }
@@ -653,10 +655,16 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
 
 // ✅ NEW: Helper function to process credit product purchases
 async function processCreditProductPurchase(payment: any) {
-  console.log('💰 Checking for credit product purchase:', payment.id)
+  console.log('💰 [processCreditProductPurchase] Starting for payment:', {
+    id: payment.id,
+    user_id: payment.user_id,
+    appointment_id: payment.appointment_id,
+    hasMetadata: !!payment.metadata,
+    metadataProducts: payment.metadata?.products?.length || 0
+  })
   
   if (!payment.user_id) {
-    console.log('ℹ️ No user_id in payment, skipping credit processing')
+    console.log('ℹ️ [processCreditProductPurchase] No user_id in payment, skipping')
     return
   }
 
@@ -664,28 +672,37 @@ async function processCreditProductPurchase(payment: any) {
   
   // ✅ NEW: Check for standalone product purchases (from shop)
   if (!payment.appointment_id && payment.metadata?.products) {
-    console.log('🛍️ Standalone product purchase detected, checking for credit products...')
+    console.log('🛍️ [processCreditProductPurchase] Standalone product purchase detected')
     
     const metadataProducts = payment.metadata.products
     
     // ✅ Look up actual product details from database (metadata might be incomplete)
     const productIds = metadataProducts.map((p: any) => p.id)
+    console.log('📊 [processCreditProductPurchase] Looking up products from DB:', productIds)
+    
     const { data: dbProducts, error: dbError } = await supabase
       .from('products')
       .select('id, name, is_credit_product, credit_amount_rappen')
       .in('id', productIds)
     
     if (dbError) {
-      console.error('❌ Error fetching products from DB:', dbError)
+      console.error('❌ [processCreditProductPurchase] Error fetching products from DB:', dbError)
       return
     }
     
-    console.log('📊 Products from DB:', dbProducts)
+    console.log('📊 [processCreditProductPurchase] Products from DB:', dbProducts)
     
     // Find credit products
     const creditProducts: any[] = []
     for (const metaProduct of metadataProducts) {
       const dbProduct = dbProducts?.find((p: any) => p.id === metaProduct.id)
+      console.log('🔍 [processCreditProductPurchase] Checking product:', {
+        metaProductId: metaProduct.id,
+        metaProductName: metaProduct.name,
+        found: !!dbProduct,
+        isCreditProduct: dbProduct?.is_credit_product
+      })
+      
       if (dbProduct?.is_credit_product === true) {
         creditProducts.push({
           ...metaProduct,
@@ -696,14 +713,14 @@ async function processCreditProductPurchase(payment: any) {
     }
     
     if (creditProducts.length === 0) {
-      console.log('ℹ️ No credit products in standalone purchase')
+      console.log('ℹ️ [processCreditProductPurchase] No credit products in standalone purchase')
       return
     }
     
-    console.log(`✅ Found ${creditProducts.length} credit product(s) in standalone purchase`)
+    console.log(`✅ [processCreditProductPurchase] Found ${creditProducts.length} credit product(s)`)
     
     // Get student_credits (with tenant_id filter for RLS)
-    console.log('💳 Fetching student_credits for user:', {
+    console.log('💳 [processCreditProductPurchase] Fetching student_credits for user:', {
       user_id: payment.user_id,
       tenant_id: payment.tenant_id
     })
@@ -715,7 +732,7 @@ async function processCreditProductPurchase(payment: any) {
       .eq('tenant_id', payment.tenant_id)
       .single()
     
-    console.log('📊 student_credits query result:', {
+    console.log('📊 [processCreditProductPurchase] student_credits query result:', {
       found: !!studentCredit,
       error: scError?.message,
       errorCode: scError?.code
@@ -723,7 +740,7 @@ async function processCreditProductPurchase(payment: any) {
     
     // ✅ NEW: If student_credits doesn't exist, create it
     if (scError && (scError.code === 'PGRST116' || scError.message?.includes('0 rows'))) { // No row found
-      console.warn('⚠️ student_credits not found, creating new entry...')
+      console.warn('⚠️ [processCreditProductPurchase] student_credits not found, creating new entry...')
       
       const { data: newStudentCredit, error: createError } = await supabase
         .from('student_credits')
@@ -737,21 +754,21 @@ async function processCreditProductPurchase(payment: any) {
         .single()
       
       if (createError) {
-        console.error('❌ Error creating student_credits:', createError)
+        console.error('❌ [processCreditProductPurchase] Error creating student_credits:', createError)
         return
       }
       
       studentCredit = newStudentCredit
-      console.log('✅ student_credits created:', studentCredit.id)
+      console.log('✅ [processCreditProductPurchase] student_credits created:', studentCredit.id)
     } else if (scError) {
-      console.error('❌ Error loading student_credits:', scError)
+      console.error('❌ [processCreditProductPurchase] Error loading student_credits:', scError)
       return
     }
     
     // Process each credit product
     for (const product of creditProducts) {
       const creditAmount = (product.credit_amount_rappen || 0) * (product.quantity || 1)
-      console.log(`💰 Adding ${creditAmount / 100} CHF from ${product.name}`)
+      console.log(`💰 [processCreditProductPurchase] Adding ${creditAmount / 100} CHF from ${product.name}`)
       
       const oldBalance = studentCredit.balance_rappen
       const newBalance = oldBalance + creditAmount
@@ -766,9 +783,15 @@ async function processCreditProductPurchase(payment: any) {
         .eq('id', studentCredit.id)
       
       if (updateError) {
-        console.error('❌ Could not update student credit balance:', updateError)
+        console.error('❌ [processCreditProductPurchase] Could not update student credit balance:', updateError)
         continue
       }
+      
+      console.log('✅ [processCreditProductPurchase] Credit balance updated:', {
+        oldBalance: (oldBalance / 100).toFixed(2),
+        creditAdded: (creditAmount / 100).toFixed(2),
+        newBalance: (newBalance / 100).toFixed(2)
+      })
       
       // Create credit_transaction
       const { error: txError } = await supabase
@@ -789,15 +812,16 @@ async function processCreditProductPurchase(payment: any) {
         })
       
       if (txError) {
-        console.error('❌ Could not create credit transaction:', txError)
+        console.error('❌ [processCreditProductPurchase] Could not create credit transaction:', txError)
       } else {
-        console.log('✅ Credit added and transaction created')
+        console.log('✅ [processCreditProductPurchase] Credit transaction created')
       }
       
       // Update balance for next iteration
       studentCredit.balance_rappen = newBalance
     }
     
+    console.log('✅ [processCreditProductPurchase] Standalone purchase processing complete')
     return
   }
   
