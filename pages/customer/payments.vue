@@ -187,7 +187,7 @@
               <div class="text-left sm:ml-6">
                 <div class="flex items-center justify-between sm:justify-end space-x-4">
                   <div class="text-xl sm:text-2xl font-bold text-gray-900">
-                    CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}
+                    CHF {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
                   </div>
                   <div class="text-xs sm:text-sm text-gray-500">
                     {{ getPaymentMethodLabel(payment.payment_method) }}
