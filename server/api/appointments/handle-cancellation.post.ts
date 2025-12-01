@@ -1,11 +1,11 @@
 // server/api/appointments/handle-cancellation.post.ts
 // Handles appointment cancellation with automatic refund processing
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const { 
       appointmentId, 
       deletionReason, 
