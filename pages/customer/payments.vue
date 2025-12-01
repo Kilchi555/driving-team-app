@@ -225,7 +225,7 @@
                 </div>
                 
                 <div v-if="payment.products_price_rappen > 0" class="flex justify-between">
-                  <span class="text-gray-600">Produkte</span>
+                  <span class="text-gray-600">{{ getProductsLabel(payment) }}</span>
                   <span class="font-medium text-gray-600">CHF {{ (payment.products_price_rappen / 100).toFixed(2) }}</span>
                 </div>
                 
@@ -723,6 +723,19 @@ const togglePaymentDetails = (payment: any) => {
   } else {
     expandedPaymentId.value = payment.id
   }
+}
+
+// ✅ NEW: Get product names from metadata
+const getProductsLabel = (payment: any): string => {
+  if (!payment.metadata?.products || payment.metadata.products.length === 0) {
+    return 'Produkte'
+  }
+  
+  const productNames = payment.metadata.products
+    .map((p: any) => p.name)
+    .join(', ')
+  
+  return productNames || 'Produkte'
 }
 
 const formatPaymentTimeline = (dateString: string): string => {
