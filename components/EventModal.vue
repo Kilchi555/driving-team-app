@@ -3490,7 +3490,8 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     isLoading.value = true
     
     // ✅ SCHRITT 1: Alle zugehörigen Zahlungsdaten löschen (nur für Lektionen)
-    const eventType = props.eventData.type || props.eventData.event_type_code
+    // ✅ WICHTIG: Use event_type_code first (lesson/exam/theory), not type (B/A/C - Fahrkategorie)
+    const eventType = props.eventData.event_type_code || props.eventData.type
     const isLessonType = ['lesson', 'exam', 'theory'].includes(eventType)
     
     // ✅ STEP 0: Fetch payment info for handle-cancellation endpoint
