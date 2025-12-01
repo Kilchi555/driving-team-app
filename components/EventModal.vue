@@ -3476,7 +3476,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
 }
 
 // ✅ NEUE SOFT-DELETE FUNKTION mit Absage-Grund
-const performSoftDeleteWithReason = async (deletionReason: string, cancellationReasonId: string, status: string = 'cancelled', cancellationType: 'student' | 'staff') => {
+const performSoftDeleteWithReason = async (deletionReason: string, cancellationReasonId: string, status: string = 'cancelled', cancellationType: 'student' | 'staff', withCosts: boolean = true) => {
   if (!props.eventData?.id) return
   
   console.log('🗑️ Performing soft delete with reason for appointment:', props.eventData.id)
@@ -3484,6 +3484,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
   console.log('🗑️ Cancellation reason ID:', cancellationReasonId)
   console.log('🗑️ Status:', status)
   console.log('🗑️ Current user:', props.currentUser?.id)
+  console.log('💳 withCosts parameter:', withCosts)
   
   try {
     isLoading.value = true
@@ -3819,12 +3820,19 @@ const proceedWithCancellation = async (selectedReason: any) => {
     // Erstelle einen detaillierten Lösch-Grund
     const deletionReason = `Termin abgesagt: ${selectedReason.name_de} - ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'})`
     
+    // ✅ NEW: Determine withCosts based on cancellation policy
+    const withCosts = (cancellationPolicyResult.value?.chargeAmountRappen || 0) > 0
+    console.log('💳 Determining withCosts from policy:', {
+      chargeAmountRappen: cancellationPolicyResult.value?.chargeAmountRappen,
+      withCosts: withCosts
+    })
+    
     // Führe Soft Delete mit Grund durch
     if (!cancellationType.value) {
       console.error('❌ Cancellation type is null')
       return
     }
-    await performSoftDeleteWithReason(deletionReason, selectedReason.id, 'cancelled', cancellationType.value)
+    await performSoftDeleteWithReason(deletionReason, selectedReason.id, 'cancelled', cancellationType.value, withCosts)
     
   } catch (err: any) {
     console.error('❌ Error cancelling appointment with reason:', err)
