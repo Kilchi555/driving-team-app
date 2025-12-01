@@ -51,13 +51,15 @@ export default defineEventHandler(async (event) => {
     })
     
     // Map Wallee state to our payment status
+    // NOTE: Wallee webhook is configured to report: Fulfill, Authorized, Decline, Voided
+    // But we only care about Fulfill (completed) and Decline (failed) for this webhook listener
     const statusMapping: Record<string, string> = {
       'PENDING': 'pending',
       'CONFIRMED': 'processing',
       'PROCESSING': 'processing',
-      'AUTHORIZED': 'authorized', // Provisorische Belastung
-      'FULFILL': 'completed', // Wallee meldet erfolgreiche Belastung
-      'COMPLETED': 'completed', // Finale Abbuchung (Capture) durchgeführt
+      'AUTHORIZED': 'authorized', // May appear in API, but webhook is configured for Fulfill
+      'FULFILL': 'completed', // Final settlement - money actually charged
+      'COMPLETED': 'completed',
       'SUCCESSFUL': 'completed',
       'FAILED': 'failed',
       'CANCELED': 'cancelled',
@@ -69,66 +71,73 @@ export default defineEventHandler(async (event) => {
     
     console.log(`🔄 Mapping Wallee state "${walleeState}" to payment status "${paymentStatus}"`)
     
-    // ✅ WICHTIG: Fetch actual transaction state from Wallee API BEFORE processing
-    // FULFILL ist the final state, not just AUTHORIZED
+    // ✅ WICHTIG: FULFILL ist der final state - glaube dem Webhook!
+    // Wenn Wallee FULFILL sagt, ist die Transaktion fertig und Geld wurde abgebucht
     let actualPaymentStatus = paymentStatus
     let walleeTransaction: any = null
     
-    try {
-      console.log('🔍 Fetching actual transaction state from Wallee API...')
-      
-      // Get Wallee settings for the first payment we find (or use default)
-      const { data: firstPaymentForSettings } = await supabase
-        .from('payments')
-        .select('tenant_id')
-        .eq('wallee_transaction_id', transactionId)
-        .limit(1)
-        .maybeSingle()
-      
-      const tenantIdForSettings = firstPaymentForSettings?.tenant_id
-      let spaceId = body.spaceId || parseInt(process.env.WALLEE_SPACE_ID || '82592')
-      let userId = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
-      let apiSecret = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
-      
-      if (tenantIdForSettings) {
-        const { data: walleeSettings } = await supabase
-          .from('tenant_settings')
-          .select('setting_value')
-          .eq('tenant_id', tenantIdForSettings)
-          .eq('setting_key', 'wallee_credentials')
-          .single()
+    // ✅ If webhook says FULFILL, trust it! Don't double-check with API
+    if (walleeState === 'FULFILL') {
+      console.log('✅ Webhook reports FULFILL - payment is completed')
+      actualPaymentStatus = 'completed'
+    } else {
+      // For other states, try to fetch actual state from API for verification
+      try {
+        console.log('🔍 Fetching actual transaction state from Wallee API for non-FULFILL state...')
         
-        if (walleeSettings?.setting_value) {
-          const creds = walleeSettings.setting_value as any
-          spaceId = creds.space_id
-          userId = creds.user_id
-          apiSecret = creds.api_secret
+        // Get Wallee settings for the first payment we find (or use default)
+        const { data: firstPaymentForSettings } = await supabase
+          .from('payments')
+          .select('tenant_id')
+          .eq('wallee_transaction_id', transactionId)
+          .limit(1)
+          .maybeSingle()
+        
+        const tenantIdForSettings = firstPaymentForSettings?.tenant_id
+        let spaceId = body.spaceId || parseInt(process.env.WALLEE_SPACE_ID || '82592')
+        let userId = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
+        let apiSecret = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+        
+        if (tenantIdForSettings) {
+          const { data: walleeSettings } = await supabase
+            .from('tenant_settings')
+            .select('setting_value')
+            .eq('tenant_id', tenantIdForSettings)
+            .eq('setting_key', 'wallee_credentials')
+            .single()
+          
+          if (walleeSettings?.setting_value) {
+            const creds = walleeSettings.setting_value as any
+            spaceId = creds.space_id
+            userId = creds.user_id
+            apiSecret = creds.api_secret
+          }
         }
+        
+        const config = {
+          space_id: spaceId,
+          user_id: userId,
+          api_secret: apiSecret
+        }
+        
+        const WalleeModule = await import('wallee')
+        const Wallee = WalleeModule.default || WalleeModule.Wallee || WalleeModule
+        const transactionService = new (Wallee as any).api.TransactionService(config)
+        const transactionResponse = await transactionService.read(spaceId, parseInt(transactionId))
+        walleeTransaction = transactionResponse.body
+        
+        const actualWalleeState = (walleeTransaction as any).state || walleeState
+        actualPaymentStatus = statusMapping[actualWalleeState] || 'pending'
+        
+        console.log('✅ Actual payment status from API:', {
+          webhookState: walleeState,
+          actualApiState: actualWalleeState,
+          webhookPaymentStatus: paymentStatus,
+          actualPaymentStatus: actualPaymentStatus
+        })
+      } catch (apiError) {
+        console.warn('⚠️ Could not fetch actual state from Wallee API, using webhook state:', apiError)
       }
-      
-      const config = {
-        space_id: spaceId,
-        user_id: userId,
-        api_secret: apiSecret
-      }
-      
-      const WalleeModule = await import('wallee')
-      const Wallee = WalleeModule.default || WalleeModule.Wallee || WalleeModule
-      const transactionService = new (Wallee as any).api.TransactionService(config)
-      const transactionResponse = await transactionService.read(spaceId, parseInt(transactionId))
-      walleeTransaction = transactionResponse.body
-      
-      const actualWalleeState = (walleeTransaction as any).state || walleeState
-      actualPaymentStatus = statusMapping[actualWalleeState] || 'pending'
-      
-      console.log('✅ Actual payment status from API:', {
-        webhookState: walleeState,
-        actualApiState: actualWalleeState,
-        webhookPaymentStatus: paymentStatus,
-        actualPaymentStatus: actualPaymentStatus
-      })
-    } catch (apiError) {
-      console.warn('⚠️ Could not fetch actual state from Wallee API, using webhook state:', apiError)
     }
     
     // Find ALL payments by Wallee transaction ID (there might be multiple)
