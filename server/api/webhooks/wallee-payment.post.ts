@@ -591,10 +591,88 @@ async function processCreditProductPurchase(payment: any) {
 
   const supabase = getSupabaseAdmin()
   
-  // Load product_sales for this payment via appointment_id
+  // ✅ NEW: Check for standalone product purchases (from shop)
+  if (!payment.appointment_id && payment.metadata?.products) {
+    console.log('🛍️ Standalone product purchase detected, checking for credit products...')
+    
+    const products = payment.metadata.products
+    const creditProducts = products.filter((p: any) => p.is_credit_product === true)
+    
+    if (creditProducts.length === 0) {
+      console.log('ℹ️ No credit products in standalone purchase')
+      return
+    }
+    
+    console.log(`✅ Found ${creditProducts.length} credit product(s) in standalone purchase`)
+    
+    // Get student_credits
+    const { data: studentCredit, error: scError } = await supabase
+      .from('student_credits')
+      .select('id, balance_rappen')
+      .eq('user_id', payment.user_id)
+      .single()
+    
+    if (scError || !studentCredit) {
+      console.error('❌ Could not load student_credits:', scError)
+      return
+    }
+    
+    // Process each credit product
+    for (const product of creditProducts) {
+      const creditAmount = (product.credit_amount_rappen || 0) * (product.quantity || 1)
+      console.log(`💰 Adding ${creditAmount / 100} CHF from ${product.name}`)
+      
+      const oldBalance = studentCredit.balance_rappen
+      const newBalance = oldBalance + creditAmount
+      
+      // Update balance
+      const { error: updateError } = await supabase
+        .from('student_credits')
+        .update({
+          balance_rappen: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', studentCredit.id)
+      
+      if (updateError) {
+        console.error('❌ Could not update student credit balance:', updateError)
+        continue
+      }
+      
+      // Create credit_transaction
+      const { error: txError } = await supabase
+        .from('credit_transactions')
+        .insert({
+          user_id: payment.user_id,
+          transaction_type: 'purchase',
+          amount_rappen: creditAmount,
+          balance_before_rappen: oldBalance,
+          balance_after_rappen: newBalance,
+          payment_method: 'online',
+          reference_id: payment.id,
+          reference_type: 'payment',
+          created_by: null,
+          notes: `Guthaben-Produkt gekauft: ${product.name} (CHF ${(creditAmount / 100).toFixed(2)})`,
+          tenant_id: payment.tenant_id,
+          status: 'completed'
+        })
+      
+      if (txError) {
+        console.error('❌ Could not create credit transaction:', txError)
+      } else {
+        console.log('✅ Credit added and transaction created')
+      }
+      
+      // Update balance for next iteration
+      studentCredit.balance_rappen = newBalance
+    }
+    
+    return
+  }
+  
+  // Original logic for appointment-based purchases
   if (!payment.appointment_id) {
-    console.log('ℹ️ No appointment_id, checking metadata for products...')
-    // TODO: Handle standalone product purchases
+    console.log('ℹ️ No appointment_id and no metadata products, skipping')
     return
   }
 
