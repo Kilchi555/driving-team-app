@@ -471,6 +471,17 @@ export const usePayments = () => {
     isProcessing.value = true
 
     try {
+      // ✅ NEW: Get tenant_id from user or current tenant
+      let tenantId: string | null = null
+      if (userId) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('id', userId)
+          .single()
+        tenantId = userData?.tenant_id || null
+      }
+      
       // Calculate total
       const subtotal = products.reduce((sum, product) => 
         sum + (product.price_rappen), 0
@@ -537,7 +548,8 @@ export const usePayments = () => {
           payment_status: 'pending',
           currency: 'CHF',
           description: 'Produktkauf',
-          metadata: paymentData.metadata
+          metadata: paymentData.metadata,
+          tenant_id: tenantId // ✅ NEW: Include tenant_id for RLS
         })
         .select()
         .single()
