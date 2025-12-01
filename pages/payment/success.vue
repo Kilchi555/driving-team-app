@@ -163,14 +163,20 @@ const checkStatus = async () => {
       
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        console.log('👤 Auth user:', user.id)
+        
         const { data: userData } = await supabase
           .from('users')
-          .select('id')
+          .select('id, tenant_id')
           .eq('auth_user_id', user.id)
           .single()
         
         if (userData) {
-          // Find the most recent completed payment
+          console.log('🏢 User data found:', { user_id: userData.id, tenant_id: userData.tenant_id })
+          
+          // Find the most recent completed payment (created within last 5 minutes)
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+          
           const { data: recentPayment, error: recentError } = await supabase
             .from('payments')
             .select(`
@@ -186,10 +192,14 @@ const checkStatus = async () => {
               )
             `)
             .eq('user_id', userData.id)
+            .eq('tenant_id', userData.tenant_id)
             .eq('payment_status', 'completed')
+            .gte('created_at', fiveMinutesAgo)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
+          
+          console.log('📊 Query result:', { payment: recentPayment, error: recentError })
           
           if (recentPayment) {
             console.log('✅ Found recent payment:', recentPayment.id)
@@ -198,8 +208,14 @@ const checkStatus = async () => {
             isLoading.value = false
             startCountdown()
             return
+          } else {
+            console.warn('⚠️ No recent completed payment found within 5 minutes')
           }
+        } else {
+          console.warn('⚠️ User data not found')
         }
+      } else {
+        console.warn('⚠️ No authenticated user')
       }
       
       console.error('No payment ID or transaction ID provided and could not find recent payment')
