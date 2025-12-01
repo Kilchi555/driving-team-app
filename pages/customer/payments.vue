@@ -59,9 +59,17 @@
       <!-- Student Credit Balance Card -->
       <div class="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-md border border-green-200 p-4 sm:p-6">
         <div class="flex items-center justify-between">
-          <div>
+          <div class="flex-1">
             <p class="text-sm sm:text-base text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
             <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ (studentBalance / 100).toFixed(2) }}</p>
+            <!-- ✅ NEW: Redeem Voucher Button -->
+            <button
+              @click="showRedeemVoucherModal = true"
+              class="mt-3 inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+            >
+              <span class="mr-2">🎫</span>
+              Gutschein einlösen
+            </button>
           </div>
           <div class="flex-shrink-0">
             <svg class="w-10 h-10 sm:w-12 sm:h-12 text-green-500" fill="currentColor" viewBox="0 0 20 20">
@@ -265,6 +273,14 @@
       @close="closeMedicalCertificateModal"
       @uploaded="loadAllData"
     />
+
+    <!-- ✅ NEW: Redeem Voucher Modal -->
+    <RedeemVoucherModal
+      v-if="showRedeemVoucherModal"
+      :current-balance="studentBalance"
+      @close="showRedeemVoucherModal = false"
+      @success="handleVoucherRedeemed"
+    />
   </div>
 </template>
 
@@ -322,6 +338,7 @@ const selectedAppointment = ref<any>(null)
 const studentBalance = ref(0) // ✅ NEU: Student credit balance in Rappen
 const showMedicalCertificateModal = ref(false) // ✅ NEU: Modal für Arztzeugnis
 const selectedPaymentForCertificate = ref<any>(null) // ✅ NEU: Payment für Arztzeugnis-Upload
+const showRedeemVoucherModal = ref(false) // ✅ NEW: Voucher Modal
 
 // Computed properties
 const unpaidPayments = computed(() => 
@@ -874,6 +891,14 @@ const openMedicalCertificateModal = (payment: any) => {
 const closeMedicalCertificateModal = () => {
   showMedicalCertificateModal.value = false
   selectedPaymentForCertificate.value = null
+}
+
+// ✅ NEW: Voucher redemption handler
+const handleVoucherRedeemed = async (newBalance: number) => {
+  console.log('✅ Voucher redeemed, new balance:', newBalance)
+  studentBalance.value = newBalance
+  // Refresh all data to show updated balance
+  await loadAllData()
 }
 
 const canCancelAppointment = (payment: any): boolean => {
