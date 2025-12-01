@@ -412,30 +412,26 @@ const saveDiscount = async () => {
     isLoading.value = true
     
     // Convert amounts to rappen and clean up data
-    const discountData = {
+    const discountData: any = {
       ...form.value,
-      min_amount_rappen: Math.round((parseFloat(form.value.min_amount_rappen) || 0) * 100),
-      max_discount_rappen: form.value.max_discount_rappen ? Math.round(parseFloat(form.value.max_discount_rappen) * 100) : null,
-      discount_value: parseFloat(form.value.discount_value) || 0,
-      usage_limit: form.value.usage_limit ? parseInt(form.value.usage_limit) : null,
-      max_per_user: form.value.max_per_user ? parseInt(form.value.max_per_user) : null,
-      usage_count: form.value.usage_count ? parseInt(form.value.usage_count) : 0
+      min_amount_rappen: Math.round((parseFloat(String(form.value.min_amount_rappen || 0)) || 0) * 100),
+      max_discount_rappen: form.value.max_discount_rappen ? Math.round(parseFloat(String(form.value.max_discount_rappen)) * 100) : undefined,
+      discount_value: parseFloat(String(form.value.discount_value)) || 0,
+      usage_limit: form.value.usage_limit ? parseInt(String(form.value.usage_limit)) : undefined,
+      max_per_user: form.value.max_per_user ? parseInt(String(form.value.max_per_user)) : undefined,
+      usage_count: undefined // Don't include usage_count in updates/creates
     }
 
     // Remove any empty strings or undefined values that could cause SQL errors
     Object.keys(discountData).forEach(key => {
       if (discountData[key] === '' || discountData[key] === undefined) {
-        if (typeof discountData[key] === 'number') {
-          discountData[key] = 0
-        } else {
-          discountData[key] = null
-        }
+        delete discountData[key]
       }
     })
 
     // For non-driving schools, always set category_filter to null
     if (!isDrivingSchool.value) {
-      discountData.category_filter = null
+      discountData.category_filter = undefined
     }
 
     if (props.isEdit && props.discount) {
