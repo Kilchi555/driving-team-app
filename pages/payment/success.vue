@@ -174,7 +174,7 @@ const checkStatus = async () => {
         if (userData) {
           console.log('🏢 User data found:', { user_id: userData.id, tenant_id: userData.tenant_id })
           
-          // Find the most recent completed payment (created within last 5 minutes)
+          // Find the most recent completed OR authorized payment (created within last 5 minutes)
           const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
           
           const { data: recentPayment, error: recentError } = await supabase
@@ -193,7 +193,7 @@ const checkStatus = async () => {
             `)
             .eq('user_id', userData.id)
             .eq('tenant_id', userData.tenant_id)
-            .eq('payment_status', 'completed')
+            .in('payment_status', ['completed', 'authorized'])
             .gte('created_at', fiveMinutesAgo)
             .order('created_at', { ascending: false })
             .limit(1)

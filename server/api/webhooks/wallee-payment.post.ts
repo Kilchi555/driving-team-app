@@ -69,8 +69,11 @@ export default defineEventHandler(async (event) => {
     
     console.log(`🔄 Mapping Wallee state "${walleeState}" to payment status "${paymentStatus}"`)
     
-    // ✅ IMPORTANT: Fetch actual transaction state from Wallee API BEFORE processing
+    // ✅ WICHTIG: Fetch actual transaction state from Wallee API BEFORE processing
+    // FULFILL ist the final state, not just AUTHORIZED
     let actualPaymentStatus = paymentStatus
+    let walleeTransaction: any = null
+    
     try {
       console.log('🔍 Fetching actual transaction state from Wallee API...')
       
@@ -113,7 +116,7 @@ export default defineEventHandler(async (event) => {
       const Wallee = WalleeModule.default || WalleeModule.Wallee || WalleeModule
       const transactionService = new (Wallee as any).api.TransactionService(config)
       const transactionResponse = await transactionService.read(spaceId, parseInt(transactionId))
-      const walleeTransaction = transactionResponse.body
+      walleeTransaction = transactionResponse.body
       
       const actualWalleeState = (walleeTransaction as any).state || walleeState
       actualPaymentStatus = statusMapping[actualWalleeState] || 'pending'
