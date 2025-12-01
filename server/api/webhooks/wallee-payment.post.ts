@@ -69,6 +69,65 @@ export default defineEventHandler(async (event) => {
     
     console.log(`🔄 Mapping Wallee state "${walleeState}" to payment status "${paymentStatus}"`)
     
+    // ✅ IMPORTANT: Fetch actual transaction state from Wallee API BEFORE processing
+    let actualPaymentStatus = paymentStatus
+    try {
+      console.log('🔍 Fetching actual transaction state from Wallee API...')
+      
+      // Get Wallee settings for the first payment we find (or use default)
+      const { data: firstPaymentForSettings } = await supabase
+        .from('payments')
+        .select('tenant_id')
+        .eq('wallee_transaction_id', transactionId)
+        .limit(1)
+        .maybeSingle()
+      
+      const tenantIdForSettings = firstPaymentForSettings?.tenant_id
+      let spaceId = body.spaceId || parseInt(process.env.WALLEE_SPACE_ID || '82592')
+      let userId = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
+      let apiSecret = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+      
+      if (tenantIdForSettings) {
+        const { data: walleeSettings } = await supabase
+          .from('tenant_settings')
+          .select('setting_value')
+          .eq('tenant_id', tenantIdForSettings)
+          .eq('setting_key', 'wallee_credentials')
+          .single()
+        
+        if (walleeSettings?.setting_value) {
+          const creds = walleeSettings.setting_value as any
+          spaceId = creds.space_id
+          userId = creds.user_id
+          apiSecret = creds.api_secret
+        }
+      }
+      
+      const config = {
+        space_id: spaceId,
+        user_id: userId,
+        api_secret: apiSecret
+      }
+      
+      const WalleeModule = await import('wallee')
+      const Wallee = WalleeModule.default || WalleeModule.Wallee || WalleeModule
+      const transactionService = new (Wallee as any).api.TransactionService(config)
+      const transactionResponse = await transactionService.read(spaceId, parseInt(transactionId))
+      const walleeTransaction = transactionResponse.body
+      
+      const actualWalleeState = (walleeTransaction as any).state || walleeState
+      actualPaymentStatus = statusMapping[actualWalleeState] || 'pending'
+      
+      console.log('✅ Actual payment status from API:', {
+        webhookState: walleeState,
+        actualApiState: actualWalleeState,
+        webhookPaymentStatus: paymentStatus,
+        actualPaymentStatus: actualPaymentStatus
+      })
+    } catch (apiError) {
+      console.warn('⚠️ Could not fetch actual state from Wallee API, using webhook state:', apiError)
+    }
+    
     // Find ALL payments by Wallee transaction ID (there might be multiple)
     console.log(`🔍 Searching for payment with wallee_transaction_id: "${transactionId}" (type: ${typeof transactionId})`)
     
@@ -327,7 +386,7 @@ export default defineEventHandler(async (event) => {
         success: true,
         message: 'Payments status not downgraded',
         transactionId,
-        paymentStatus
+        paymentStatus: actualPaymentStatus // ✅ Use actualPaymentStatus
       }
     }
     
@@ -335,12 +394,12 @@ export default defineEventHandler(async (event) => {
     
     // Update ALL payments with this transaction ID
     const updateData: any = {
-      payment_status: paymentStatus,
+      payment_status: actualPaymentStatus, // ✅ Use actualPaymentStatus from API
       updated_at: new Date().toISOString()
     }
     
     // Set completion timestamp if successful
-    if (paymentStatus === 'completed') {
+    if (actualPaymentStatus === 'completed') {
       updateData.paid_at = new Date().toISOString()
     }
     
@@ -361,13 +420,13 @@ export default defineEventHandler(async (event) => {
         })
       }
       
-      console.log(`✅ ${paymentsToUpdate.length} payment(s) updated to status: ${paymentStatus}`)
+      console.log(`✅ ${paymentsToUpdate.length} payment(s) updated to status: ${actualPaymentStatus}`)
     }
     
     // Update appointments ONLY if payments were actually updated AND (completed or authorized)
     // ✅ NUR 'completed' oder 'authorized' = Zahlung wurde tatsächlich verarbeitet
     // 'processing' oder 'pending' oder 'confirmed' = Noch nicht fertig, daher Termin noch NICHT bestätigen
-    if ((paymentStatus === 'completed' || paymentStatus === 'authorized') && paymentsToUpdate.length > 0) {
+    if ((actualPaymentStatus === 'completed' || actualPaymentStatus === 'authorized') && paymentsToUpdate.length > 0) {
       const appointmentIds = paymentsToUpdate
         .filter(p => p.appointment_id)
         .map(p => p.appointment_id)
@@ -376,7 +435,7 @@ export default defineEventHandler(async (event) => {
         const { error: appointmentError } = await supabase
           .from('appointments')
           .update({
-            status: paymentStatus === 'completed' ? 'confirmed' : 'scheduled',
+            status: actualPaymentStatus === 'completed' ? 'confirmed' : 'scheduled',
             updated_at: new Date().toISOString()
           })
           .in('id', appointmentIds)
@@ -441,7 +500,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create vouchers if payment completed and products are vouchers
-    if (paymentStatus === 'completed') {
+    if (actualPaymentStatus === 'completed') {
       for (const payment of payments) {
         try {
           await createVouchersAfterPayment(payment.id, payment.metadata)
@@ -459,7 +518,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Send notification email if payment completed (use first payment)
-    if (paymentStatus === 'completed' && payments.length > 0) {
+    if (actualPaymentStatus === 'completed' && payments.length > 0) {
       try {
         await sendPaymentConfirmationEmail({
           payment: payments[0],
@@ -472,7 +531,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Send notification email if payment failed
-    if (paymentStatus === 'failed' && payments.length > 0) {
+    if (actualPaymentStatus === 'failed' && payments.length > 0) {
       try {
         await sendPaymentFailedEmail({
           payment: payments[0],
@@ -492,7 +551,7 @@ export default defineEventHandler(async (event) => {
       payment_ids: payments.map(p => p.id),
       payments_count: payments.length,
       old_status: payments[0]?.payment_status,
-      new_status: paymentStatus
+      new_status: actualPaymentStatus // ✅ Use actualPaymentStatus
     }
     
   } catch (error: any) {
