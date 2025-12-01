@@ -118,8 +118,17 @@ export default defineEventHandler(async (event) => {
         const transactionResponse = await transactionService.read(spaceId, parseInt(transactionId))
         const walleeTransaction = transactionResponse.body
         
+        // ✅ WICHTIG: Use the ACTUAL transaction state from API, not the webhook event state!
+        // The webhook might say AUTHORIZED, but API might already say FULFILL
+        const actualWalleeState = (walleeTransaction as any).state || walleeState
+        const actualPaymentStatus = statusMapping[actualWalleeState] || 'pending'
+        
         console.log('📋 Wallee transaction details:', {
           id: walleeTransaction.id,
+          webhookState: walleeState,
+          actualApiState: actualWalleeState,
+          webhookPaymentStatus: paymentStatus,
+          actualPaymentStatus: actualPaymentStatus,
           merchantReference: (walleeTransaction as any).merchantReference,
           customerId: (walleeTransaction as any).customerId,
           amount: (walleeTransaction as any).lineItems?.[0]?.amountIncludingTax
@@ -155,11 +164,11 @@ export default defineEventHandler(async (event) => {
                 tenant_id: appointment.tenant_id,
                 total_amount_rappen: amountInRappen,
                 payment_method: 'wallee',
-                payment_status: paymentStatus,
+                payment_status: actualPaymentStatus,  // ✅ Use actual API state, not webhook state
                 wallee_transaction_id: transactionId,
                 currency: 'CHF',
                 description: `Termin: ${appointment.title || 'Fahrstunde'}`,
-                paid_at: paymentStatus === 'completed' ? new Date().toISOString() : null,
+                paid_at: actualPaymentStatus === 'completed' ? new Date().toISOString() : null,
                 metadata: {
                   created_from: 'webhook_auto_create',
                   merchant_reference: merchantRef
