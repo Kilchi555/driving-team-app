@@ -471,9 +471,30 @@ export const usePayments = () => {
     isProcessing.value = true
 
     try {
-      // ✅ NEW: Get tenant_id from user or current tenant
+      // ✅ NEW: Get tenant_id from current auth user
+      const { data: { user: authUser } } = await supabase.auth.getUser()
       let tenantId: string | null = null
-      if (userId) {
+      let actualUserId: string | null = userId
+      
+      if (authUser) {
+        console.log('🔍 Auth user found:', authUser.id)
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id, tenant_id')
+          .eq('auth_user_id', authUser.id)
+          .single()
+        
+        if (userError) {
+          console.error('❌ Error fetching user data:', userError)
+        } else if (userData) {
+          tenantId = userData.tenant_id
+          actualUserId = userData.id
+          console.log('✅ User data loaded:', { userId: userData.id, tenantId })
+        }
+      }
+      
+      // Fallback: try to get tenant_id from userId if provided
+      if (!tenantId && userId) {
         const { data: userData } = await supabase
           .from('users')
           .select('tenant_id')
@@ -481,6 +502,8 @@ export const usePayments = () => {
           .single()
         tenantId = userData?.tenant_id || null
       }
+      
+      console.log('💳 Creating payment with:', { userId: actualUserId, tenantId })
       
       // Calculate total
       const subtotal = products.reduce((sum, product) => 
@@ -536,7 +559,7 @@ export const usePayments = () => {
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
-          user_id: userId || null,
+          user_id: actualUserId || null, // ✅ Use actualUserId instead of userId
           staff_id: staffId || null,
           appointment_id: null,
           lesson_price_rappen: 0,
