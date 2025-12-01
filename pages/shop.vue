@@ -1956,6 +1956,13 @@ onMounted(async () => {
     // Produkte laden nachdem Tenant geladen ist
     console.log('🛍️ Shop mounted - Step-by-step process started')
     await loadProducts()
+    
+    // ✅ NEW: Skip step 0 if user is already logged in
+    if (isLoggedIn.value) {
+      console.log('👤 User is already logged in, skipping customer type selection')
+      customerType.value = 'existing'
+      currentStep.value = 1 // Jump directly to product selection
+    }
   } catch (error) {
     console.error('❌ Error in shop onMounted:', error)
     // Fallback: Produkte trotzdem laden (mit Fallback-Produkten)
