@@ -654,8 +654,34 @@ async function processCreditProductPurchase(payment: any) {
   if (!payment.appointment_id && payment.metadata?.products) {
     console.log('🛍️ Standalone product purchase detected, checking for credit products...')
     
-    const products = payment.metadata.products
-    const creditProducts = products.filter((p: any) => p.is_credit_product === true)
+    const metadataProducts = payment.metadata.products
+    
+    // ✅ Look up actual product details from database (metadata might be incomplete)
+    const productIds = metadataProducts.map((p: any) => p.id)
+    const { data: dbProducts, error: dbError } = await supabase
+      .from('products')
+      .select('id, name, is_credit_product, credit_amount_rappen')
+      .in('id', productIds)
+    
+    if (dbError) {
+      console.error('❌ Error fetching products from DB:', dbError)
+      return
+    }
+    
+    console.log('📊 Products from DB:', dbProducts)
+    
+    // Find credit products
+    const creditProducts: any[] = []
+    for (const metaProduct of metadataProducts) {
+      const dbProduct = dbProducts?.find((p: any) => p.id === metaProduct.id)
+      if (dbProduct?.is_credit_product === true) {
+        creditProducts.push({
+          ...metaProduct,
+          is_credit_product: dbProduct.is_credit_product,
+          credit_amount_rappen: dbProduct.credit_amount_rappen
+        })
+      }
+    }
     
     if (creditProducts.length === 0) {
       console.log('ℹ️ No credit products in standalone purchase')

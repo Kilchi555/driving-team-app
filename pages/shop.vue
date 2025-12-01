@@ -573,6 +573,8 @@
                   allow_custom_amount: false,
                   min_amount_rappen: 0,
                   max_amount_rappen: 0,
+                  is_credit_product: item.product.is_credit_product || false, // ✅ NEW
+                  credit_amount_rappen: item.product.credit_amount_rappen || 0, // ✅ NEW
                   display_order: item.product.display_order || 0,
                   created_at: item.product.created_at || new Date().toISOString(),
                   updated_at: new Date().toISOString(),
