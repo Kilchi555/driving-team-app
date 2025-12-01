@@ -595,6 +595,8 @@ export const usePayments = () => {
           customerEmail: customerEmail,
           customerName: customerName,
           description: 'Produktkauf',
+          userId: actualUserId, // ✅ Pass userId for Wallee config lookup
+          tenantId: tenantId, // ✅ Pass tenantId for Wallee config lookup
           successUrl: `${window.location.origin}/payment/success?transaction_id=${payment.id}`,
           failedUrl: `${window.location.origin}/payment/failed?transaction_id=${payment.id}`
         }

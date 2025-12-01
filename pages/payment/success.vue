@@ -157,6 +157,56 @@ const checkStatus = async () => {
     isLoading.value = true
     const supabase = getSupabase()
     
+    // ✅ NEW: If no payment/transaction ID, try to find the most recent completed payment for logged-in user
+    if (!paymentId && !transactionId) {
+      console.log('🔍 No payment ID provided, trying to find recent payment for current user...')
+      
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .single()
+        
+        if (userData) {
+          // Find the most recent completed payment
+          const { data: recentPayment, error: recentError } = await supabase
+            .from('payments')
+            .select(`
+              id,
+              payment_status,
+              total_amount_rappen,
+              wallee_transaction_id,
+              created_at,
+              appointments (
+                id,
+                start_time,
+                title
+              )
+            `)
+            .eq('user_id', userData.id)
+            .eq('payment_status', 'completed')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          
+          if (recentPayment) {
+            console.log('✅ Found recent payment:', recentPayment.id)
+            paymentDetails.value = recentPayment
+            paymentStatus.value = recentPayment.payment_status
+            isLoading.value = false
+            startCountdown()
+            return
+          }
+        }
+      }
+      
+      console.error('No payment ID or transaction ID provided and could not find recent payment')
+      isLoading.value = false
+      return
+    }
+    
     let query = supabase
       .from('payments')
       .select(`
@@ -175,10 +225,6 @@ const checkStatus = async () => {
       query = query.eq('id', paymentId)
     } else if (transactionId) {
       query = query.eq('wallee_transaction_id', transactionId)
-    } else {
-      console.error('No payment ID or transaction ID provided')
-      isLoading.value = false
-      return
     }
     
     const { data, error } = await query.single()
