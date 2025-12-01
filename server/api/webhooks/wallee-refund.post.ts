@@ -1,7 +1,7 @@
 // server/api/webhooks/wallee-refund.post.ts
 // Webhook handler for Wallee refund/payout confirmations
 
-import { getSupabaseAdmin } from '~/utils/supabase-admin'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {

@@ -1,7 +1,7 @@
 // server/api/student-credits/process-withdrawal-wallee.post.ts
 // Admin endpoint to process pending withdrawals via Wallee refund
 
-import { getSupabaseAdmin } from '~/utils/supabase-admin'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
