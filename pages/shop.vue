@@ -1957,11 +1957,28 @@ onMounted(async () => {
     console.log('🛍️ Shop mounted - Step-by-step process started')
     await loadProducts()
     
-    // ✅ NEW: Skip step 0 if user is already logged in
-    if (isLoggedIn.value) {
+    // ✅ NEW: Check auth status and skip step 0 if user is already logged in
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
       console.log('👤 User is already logged in, skipping customer type selection')
+      isLoggedIn.value = true
       customerType.value = 'existing'
       currentStep.value = 1 // Jump directly to product selection
+      
+      // Load customer data
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', user.id)
+        .single()
+      
+      if (userData) {
+        customerData.value = userData
+        console.log('✅ Customer data loaded:', userData.email)
+      }
     }
   } catch (error) {
     console.error('❌ Error in shop onMounted:', error)
