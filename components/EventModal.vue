@@ -3552,7 +3552,13 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
           console.log(`💰 Refund/Credit applied: CHF ${cancellationResult.details?.refundAmount || cancellationResult.refundAmount}`)
         }
       } catch (error: any) {
-        console.warn('⚠️ Error calling handle-cancellation endpoint:', error)
+        console.error('❌ Error calling handle-cancellation endpoint:', {
+          message: error.message,
+          statusCode: error.statusCode,
+          statusMessage: error.statusMessage,
+          data: error.data,
+          fullError: error
+        })
       }
       
       // ✅ 1.0: Prüfe ob Payment autorisiert ist und storniere bei Absage >24h vor Termin
