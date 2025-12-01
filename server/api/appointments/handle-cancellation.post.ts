@@ -52,8 +52,21 @@ export default defineEventHandler(async (event) => {
       .maybeSingle()
 
     if (paymentError && paymentError.code !== 'PGRST116') {
+      console.error('❌ ERROR fetching payment (not just "not found"):', {
+        code: paymentError.code,
+        message: paymentError.message,
+        details: paymentError.details
+      })
       throw new Error(`Error fetching payment: ${paymentError.message}`)
     }
+    
+    console.log('🔍 Payment query result:', {
+      appointmentId,
+      paymentFound: !!payment,
+      paymentId: payment?.id,
+      lessonPrice: payment?.lesson_price_rappen,
+      adminFee: payment?.admin_fee_rappen
+    })
 
     // 2. Determine refund amount
     // ✅ NEW: If shouldCreditHours is true, use original prices for full refund
