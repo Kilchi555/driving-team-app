@@ -514,6 +514,13 @@ export default defineEventHandler(async (event) => {
     // Create vouchers if payment completed and products are vouchers
     if (actualPaymentStatus === 'completed') {
       for (const payment of payments) {
+        console.log(`🎁 [createVouchersAfterPayment] Called for payment: ${payment.id}`)
+        console.log(`   - Has metadata: ${!!payment.metadata}`)
+        if (payment.metadata) {
+          console.log(`   - Metadata type: ${typeof payment.metadata}`)
+          console.log(`   - Metadata: ${JSON.stringify(payment.metadata).substring(0, 200)}...`)
+        }
+        
         try {
           await createVouchersAfterPayment(payment.id, payment.metadata)
         } catch (voucherErr) {
