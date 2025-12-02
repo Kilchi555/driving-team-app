@@ -680,6 +680,13 @@ export const usePayments = () => {
         description: 'Produktkauf',
         is_standalone: true,
         metadata: {
+          products: products.map(p => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            price_rappen: p.price_rappen,
+            is_voucher: p.is_voucher || false
+          })),
           products_count: products.length,
           discounts_count: discounts.length,
           price_breakdown: {

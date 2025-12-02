@@ -1,6 +1,16 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+    <div class="max-w-md w-full">
+      <!-- Voucher Download Modal -->
+      <VoucherDownloadModal
+        v-if="paymentDetails && hasVouchers"
+        :show-modal="showVoucherModal"
+        :vouchers="vouchers"
+        @close="showVoucherModal = false; startCountdown()"
+      />
+
+      <!-- Main Success Card -->
+      <div class="bg-white rounded-2xl shadow-xl p-8">
       <!-- Loading State -->
       <div v-if="isLoading" class="text-center">
         <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mb-4"></div>
@@ -122,9 +132,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getSupabase } from '~/utils/supabase'
+import VoucherDownloadModal from '~/components/VoucherDownloadModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -133,11 +144,19 @@ const isLoading = ref(true)
 const paymentStatus = ref<string | null>(null)
 const paymentDetails = ref<any>(null)
 const countdown = ref(5)
+const showVoucherModal = ref(false)
+const vouchers = ref<any[]>([])
 let countdownInterval: NodeJS.Timeout | null = null
 let statusCheckInterval: NodeJS.Timeout | null = null
 
 const transactionId = route.query.transactionId as string
 const paymentId = route.query.paymentId as string
+
+// ✅ Check if payment contains vouchers
+const hasVouchers = computed(() => {
+  if (!paymentDetails.value?.product_sales) return false
+  return paymentDetails.value.product_sales.some((ps: any) => ps.product?.is_voucher)
+})
 
 const formatDate = (dateStr: string) => {
   const parts = dateStr.replace('T', ' ').replace('Z', '').split(/[-: ]/)
@@ -185,6 +204,15 @@ const checkStatus = async () => {
               total_amount_rappen,
               wallee_transaction_id,
               created_at,
+              product_sales (
+                id,
+                product:products (
+                  id,
+                  name,
+                  price_rappen,
+                  is_voucher
+                )
+              ),
               appointments (
                 id,
                 start_time,
