@@ -69,10 +69,11 @@
 
               <!-- Price Breakdown -->
               <div class="bg-gray-50 rounded-lg p-3 space-y-2">
-                                  <div class="flex justify-between text-sm">
-                    <span class="text-gray-600 flex-1 mr-2">{{ getLessonTypeTitle(payment.appointments?.event_type_code) }}</span>
-                    <span class="font-medium text-gray-600 whitespace-nowrap">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
-                  </div>
+                <!-- Fahrlektion (nur anzeigen wenn > 0 CHF oder es ein Termin ist) -->
+                <div v-if="payment.lesson_price_rappen > 0 || payment.appointments" class="flex justify-between text-sm">
+                  <span class="text-gray-600 flex-1 mr-2">{{ getLessonTypeTitle(payment.appointments?.event_type_code) }}</span>
+                  <span class="font-medium text-gray-600 whitespace-nowrap">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
+                </div>
                 
                 <!-- Administrationsgebühr -->
                 <div v-if="payment.admin_fee_rappen && payment.admin_fee_rappen > 0" class="flex justify-between text-sm">
