@@ -151,7 +151,48 @@ export const useDiscounts = () => {
 
       if (!userProfile?.tenant_id) throw new Error('No tenant_id found for user')
 
-      const { data, error: dbError } = await supabase
+      // ✅ FIRST: Try voucher_codes table (credit/gift vouchers)
+      const { data: voucherData, error: voucherError } = await supabase
+        .from('voucher_codes')
+        .select('*')
+        .ilike('code', code) // Case-insensitive comparison
+        .eq('tenant_id', userProfile.tenant_id)
+        .eq('is_active', true)
+        .single()
+      
+      if (!voucherError && voucherData) {
+        const now = new Date()
+        const validFrom = new Date(voucherData.valid_from)
+        const validUntil = voucherData.valid_until ? new Date(voucherData.valid_until) : null
+        
+        // Check valid period
+        if (now < validFrom || (validUntil && now > validUntil)) {
+          return {
+            isValid: false,
+            discount_amount_rappen: 0,
+            error: 'Gutschein ist nicht gültig'
+          }
+        }
+        
+        // Check redemption limit
+        if (voucherData.max_redemptions && voucherData.current_redemptions >= voucherData.max_redemptions) {
+          return {
+            isValid: false,
+            discount_amount_rappen: 0,
+            error: 'Gutschein hat das Nutzungslimit erreicht'
+          }
+        }
+        
+        // Return voucher credit as discount
+        return {
+          isValid: true,
+          discount_amount_rappen: voucherData.credit_amount_rappen,
+          discount: voucherData as any
+        }
+      }
+      
+      // ✅ SECOND: Try discounts table (percentage/fixed discounts)
+      const { data: discountData, error: discountError } = await supabase
         .from('discounts')
         .select('*')
         .ilike('code', code) // Case-insensitive comparison
@@ -159,7 +200,7 @@ export const useDiscounts = () => {
         .eq('is_active', true)
         .single()
       
-      if (dbError || !data) {
+      if (discountError || !discountData) {
         return {
           isValid: false,
           discount_amount_rappen: 0,
@@ -167,7 +208,7 @@ export const useDiscounts = () => {
         }
       }
 
-      const discount = data as Discount
+      const discount = discountData as Discount
       
       // Prüfe Gültigkeitszeitraum
       const now = new Date()
