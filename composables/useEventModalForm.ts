@@ -1338,63 +1338,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         }
       }
       
-      // If credit is used, create credit transaction and update balance
-      if (creditUsedRappen > 0 && formData.value.user_id) {
-        try {
-          // Load current student credit
-          const { data: studentCredit, error: creditError } = await supabase
-            .from('student_credits')
-            .select('id, balance_rappen')
-            .eq('user_id', formData.value.user_id)
-            .single()
-          
-          if (studentCredit && !creditError) {
-            const oldBalance = studentCredit.balance_rappen || 0
-            const newBalance = oldBalance - creditUsedRappen
-            
-            // Update student credit balance
-            await supabase
-              .from('student_credits')
-              .update({
-                balance_rappen: newBalance,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', studentCredit.id)
-            
-            // Create credit transaction
-            const { data: creditTransaction, error: txError } = await supabase
-              .from('credit_transactions')
-              .insert({
-                user_id: formData.value.user_id,
-                transaction_type: 'appointment_payment',
-                amount_rappen: -creditUsedRappen, // Negative for usage
-                balance_before_rappen: oldBalance,
-                balance_after_rappen: newBalance,
-                payment_method: 'credit',
-                reference_id: appointmentId,
-                reference_type: 'appointment',
-                created_by: formData.value.staff_id || null,
-                notes: `Guthaben für Termin verwendet: ${formData.value.title}`,
-                tenant_id: userData?.tenant_id || null
-              })
-              .select('id')
-              .single()
-            
-            if (!txError && creditTransaction) {
-              creditTransactionId = creditTransaction.id
-              console.log('✅ Credit transaction created:', {
-                transactionId: creditTransaction.id,
-                creditUsed: (creditUsedRappen / 100).toFixed(2),
-                oldBalance: (oldBalance / 100).toFixed(2),
-                newBalance: (newBalance / 100).toFixed(2)
-              })
-            }
-          }
-        } catch (creditErr) {
-          console.error('⚠️ Error processing credit transaction (non-critical):', creditErr)
-          // Don't fail the entire payment creation
-        }
-      }
+      // ✅ NOTE: Credit transaction handling is now done by useStudentCredits
+      // when the payment is confirmed, not during creation
 
       const paymentData = {
         appointment_id: appointmentId,
