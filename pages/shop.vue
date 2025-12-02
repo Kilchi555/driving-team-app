@@ -1539,7 +1539,7 @@ const selectInvoicePayment = async () => {
 const handleVoucherCreated = (voucherData: any) => {
   console.log('🎁 Voucher created:', voucherData)
   
-  // Gutschein als Produkt hinzufügen
+  // Gutschein als Produkt hinzufügen - mit ALLEN benötigten Fields
   const voucherProduct = {
     id: `voucher-${Date.now()}`,
     name: voucherData.name,
@@ -1547,8 +1547,17 @@ const handleVoucherCreated = (voucherData: any) => {
     price_rappen: voucherData.price_rappen,
     category: 'Gutscheine',
     is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
     display_order: 999,
-    is_voucher: true
+    is_voucher: true,
+    is_credit_product: false,
+    credit_amount_rappen: 0,
+    min_amount_rappen: 0,
+    max_amount_rappen: 0,
+    allow_custom_amount: false,
+    unit_price_rappen: voucherData.price_rappen,
+    total_price_rappen: voucherData.price_rappen
   }
   
   addProduct(voucherProduct)
