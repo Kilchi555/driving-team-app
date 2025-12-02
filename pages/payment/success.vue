@@ -155,8 +155,15 @@ const paymentId = route.query.paymentId as string
 
 // ✅ Check if payment contains vouchers
 const hasVouchers = computed(() => {
-  if (!paymentDetails.value?.product_sales) return false
-  return paymentDetails.value.product_sales.some((ps: any) => ps.product?.is_voucher)
+  if (!paymentDetails.value?.metadata) return false
+  try {
+    const metadata = typeof paymentDetails.value.metadata === 'string' 
+      ? JSON.parse(paymentDetails.value.metadata) 
+      : paymentDetails.value.metadata
+    return metadata.products?.some((p: any) => p.is_voucher)
+  } catch {
+    return false
+  }
 })
 
 const formatDate = (dateStr: string) => {
@@ -205,15 +212,7 @@ const checkStatus = async () => {
               total_amount_rappen,
               wallee_transaction_id,
               created_at,
-              product_sales (
-                id,
-                product:products (
-                  id,
-                  name,
-                  price_rappen,
-                  is_voucher
-                )
-              ),
+              metadata,
               appointments (
                 id,
                 start_time,
@@ -259,6 +258,7 @@ const checkStatus = async () => {
         payment_status,
         total_amount_rappen,
         wallee_transaction_id,
+        metadata,
         appointments (
           id,
           start_time,
