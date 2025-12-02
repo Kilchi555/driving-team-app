@@ -685,9 +685,27 @@ async function processCreditProductPurchase(payment: any) {
 // Helper function to create vouchers after successful payment
 async function createVouchersAfterPayment(paymentId: string, metadata: any) {
   console.log('🎁 Creating vouchers for payment:', paymentId)
+  console.log('📦 Metadata:', metadata)
+  
+  if (!metadata) {
+    console.log('ℹ️ Metadata is null/undefined, skipping voucher creation')
+    return
+  }
   
   if (!metadata?.products) {
     console.log('ℹ️ No products in metadata, skipping voucher creation')
+    return
+  }
+
+  console.log('🎁 Found products in metadata:', metadata.products.length)
+  const voucherProducts = metadata.products.filter((p: any) => {
+    console.log(`  - Checking product: ${p.id} (is_voucher=${p.is_voucher})`)
+    return p.is_voucher
+  })
+  console.log(`🎁 Found ${voucherProducts.length} voucher products`)
+
+  if (voucherProducts.length === 0) {
+    console.log('ℹ️ No voucher products found, skipping')
     return
   }
 
@@ -705,14 +723,7 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
     return
   }
   
-  for (const product of metadata.products) {
-    // Check if this product is a voucher by checking the metadata directly
-    // (vouchers created in shop have is_voucher in metadata, not in products table)
-    if (!product.is_voucher) {
-      console.log('ℹ️ Product is not a voucher, skipping:', product.id)
-      continue
-    }
-
+  for (const product of voucherProducts) {
     try {
       // Generate voucher code
       const { generateVoucherCode } = await import('~/utils/voucherGenerator')
@@ -733,6 +744,8 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
         is_active: true,
         tenant_id: payment.tenant_id
       }
+
+      console.log('💾 Creating voucher with data:', voucherData)
 
       const { data: voucher, error: voucherError } = await supabase
         .from('vouchers')
