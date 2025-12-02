@@ -11,12 +11,12 @@
 
       <!-- Main Success Card -->
       <div class="bg-white rounded-2xl shadow-xl p-8">
-      <!-- Loading State -->
-      <div v-if="isLoading" class="text-center">
-        <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mb-4"></div>
-        <h2 class="text-xl font-semibold text-gray-900 mb-2">Zahlung wird verarbeitet...</h2>
-        <p class="text-gray-600">Bitte warten Sie einen Moment.</p>
-      </div>
+        <!-- Loading State -->
+        <div v-if="isLoading" class="text-center">
+          <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mb-4"></div>
+          <h2 class="text-xl font-semibold text-gray-900 mb-2">Zahlung wird verarbeitet...</h2>
+          <p class="text-gray-600">Bitte warten Sie einen Moment.</p>
+        </div>
 
       <!-- Success State -->
       <div v-else-if="paymentStatus === 'completed' || paymentStatus === 'authorized'" class="text-center">
@@ -126,6 +126,7 @@
         >
           Zum Dashboard
         </button>
+      </div>
       </div>
     </div>
   </div>
