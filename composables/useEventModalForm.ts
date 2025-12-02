@@ -1351,7 +1351,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         discount_amount_rappen: discountAmountRappen,
         total_amount_rappen: Math.max(0, totalAmountRappen), // Ensure no negative totals
         payment_method: paymentMethod,
-        payment_status: 'pending',
+        // ✅ If credit covers the entire payment, mark as completed
+        payment_status: creditUsedRappen >= Math.max(0, totalAmountRappen) ? 'completed' : 'pending',
         currency: 'CHF',
         description: `Payment for appointment: ${formData.value.title}`,
         created_by: formData.value.staff_id || null,
@@ -1360,7 +1361,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
         invoice_address: invoiceAddress, // ✅ Fallback: Rechnungsadresse als JSONB
         tenant_id: userData?.tenant_id || null, // ✅ WICHTIG: tenant_id hinzufügen
         credit_used_rappen: creditUsedRappen, // ✅ NEW: Credit used amount
-        credit_transaction_id: creditTransactionId // ✅ NEW: Link to credit transaction
+        credit_transaction_id: creditTransactionId, // ✅ NEW: Link to credit transaction
+        // ✅ If credit covers everything, mark as paid
+        paid_at: creditUsedRappen >= Math.max(0, totalAmountRappen) ? new Date().toISOString() : null
       }
       
       console.log('💳 Creating payment entry:', paymentData)
