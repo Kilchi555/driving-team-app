@@ -1326,8 +1326,21 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let creditTransactionId = null
       
       // Check if PriceDisplay has credit usage info
+      console.log('🔍 DEBUG createPaymentEntry - checking priceDisplayRef:', {
+        hasRef: !!refs,
+        hasDisplayRef: !!refs?.priceDisplayRef,
+        hasValue: !!refs?.priceDisplayRef?.value,
+        displayRefKeys: refs?.priceDisplayRef?.value ? Object.keys(refs.priceDisplayRef.value) : 'no keys'
+      })
+      
       if (refs?.priceDisplayRef?.value) {
         const priceDisplay = refs.priceDisplayRef.value
+        console.log('🔍 DEBUG priceDisplay object:', {
+          usedCredit: priceDisplay.usedCredit,
+          type: typeof priceDisplay.usedCredit,
+          keys: Object.keys(priceDisplay)
+        })
+        
         // Check if credit is being used (from PriceDisplay calculation)
         if (priceDisplay.usedCredit && priceDisplay.usedCredit > 0) {
           creditUsedRappen = Math.round(priceDisplay.usedCredit * 100)
@@ -1335,7 +1348,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
             creditChf: priceDisplay.usedCredit,
             creditRappen: creditUsedRappen
           })
+        } else {
+          console.log('⚠️ usedCredit is falsy or <= 0:', priceDisplay.usedCredit)
         }
+      } else {
+        console.log('⚠️ priceDisplayRef not available')
       }
       
       // ✅ NOTE: Credit transaction handling is now done by useStudentCredits
@@ -1367,7 +1384,15 @@ const useEventModalForm = (currentUser?: any, refs?: {
         paid_at: creditUsedRappen >= Math.max(0, totalAmountRappen) ? new Date().toISOString() : null
       }
       
-      console.log('💳 Creating payment entry:', paymentData)
+      console.log('💳 Creating payment entry:', {
+        paymentData,
+        creditUsedRappen,
+        totalAmountRappen: Math.max(0, totalAmountRappen),
+        willSetToCredit: creditUsedRappen >= Math.max(0, totalAmountRappen),
+        willSetToCompleted: creditUsedRappen >= Math.max(0, totalAmountRappen),
+        finalPaymentMethod: creditUsedRappen >= Math.max(0, totalAmountRappen) ? 'credit' : paymentMethod,
+        finalPaymentStatus: creditUsedRappen >= Math.max(0, totalAmountRappen) ? 'completed' : 'pending'
+      })
       
       const { data: payment, error } = await supabase
         .from('payments')
