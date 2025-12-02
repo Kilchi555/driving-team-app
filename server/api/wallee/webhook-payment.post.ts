@@ -446,6 +446,7 @@ export default defineEventHandler(async (event) => {
     }
     
     console.log(`📋 CHECKPOINT: After payment update - actualPaymentStatus is: "${actualPaymentStatus}"`)
+    console.log(`📋 IMPORTANT: Now proceeding to voucher and credit product processing...`)
     
     // Update appointments ONLY if payments were actually updated AND (completed or authorized)
     // ✅ NUR 'completed' oder 'authorized' = Zahlung wurde tatsächlich verarbeitet
