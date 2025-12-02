@@ -251,6 +251,7 @@ const getPaymentMethodText = (method: string) => {
     'cash': 'Bar',
     'invoice': 'Rechnung',
     'wallee': 'Online',
+    'credit': 'Guthaben',
     'keine': 'Keine'
   }
   return texts[method] || method

@@ -757,6 +757,7 @@
                     {{ payment.payment_method === 'cash' ? 'Bar' :
                        payment.payment_method === 'invoice' ? 'Rechnung' :
                        payment.payment_method === 'wallee' ? 'Online' :
+                       payment.payment_method === 'credit' ? 'Guthaben' :
                        payment.payment_method }}
                   </span>
                 </div>

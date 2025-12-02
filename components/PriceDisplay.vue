@@ -251,11 +251,13 @@
                 existingPayment?.payment_method === 'wallee' ? 'bg-blue-100 text-blue-800' :
                 existingPayment?.payment_method === 'cash' ? 'bg-green-100 text-green-800' :
                 existingPayment?.payment_method === 'invoice' ? 'bg-purple-100 text-purple-800' :
+                existingPayment?.payment_method === 'credit' ? 'bg-yellow-100 text-yellow-800' :
                 'bg-gray-100 text-gray-800'
               ]">
                 {{ existingPayment?.payment_method === 'wallee' ? 'Online-Zahlung' :
                    existingPayment?.payment_method === 'cash' ? 'Bar' :
-                   existingPayment?.payment_method === 'invoice' ? 'Rechnung' : 
+                   existingPayment?.payment_method === 'invoice' ? 'Rechnung' :
+                   existingPayment?.payment_method === 'credit' ? 'Guthaben' : 
                    'Unbekannt' }}
               </span>
               

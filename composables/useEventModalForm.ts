@@ -1349,19 +1349,20 @@ const useEventModalForm = (currentUser?: any, refs?: {
         admin_fee_rappen: adminFeeRappen,
         products_price_rappen: productsPriceRappen,
         discount_amount_rappen: discountAmountRappen,
-        total_amount_rappen: Math.max(0, totalAmountRappen), // Ensure no negative totals
-        payment_method: paymentMethod,
+        total_amount_rappen: Math.max(0, totalAmountRappen),
+        // ✅ If credit covers the entire payment, set payment_method to 'credit'
+        payment_method: creditUsedRappen >= Math.max(0, totalAmountRappen) ? 'credit' : paymentMethod,
         // ✅ If credit covers the entire payment, mark as completed
         payment_status: creditUsedRappen >= Math.max(0, totalAmountRappen) ? 'completed' : 'pending',
         currency: 'CHF',
         description: `Payment for appointment: ${formData.value.title}`,
         created_by: formData.value.staff_id || null,
         notes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
-        company_billing_address_id: companyBillingAddressId || null, // ✅ NEU: Referenz zu company_billing_addresses
-        invoice_address: invoiceAddress, // ✅ Fallback: Rechnungsadresse als JSONB
-        tenant_id: userData?.tenant_id || null, // ✅ WICHTIG: tenant_id hinzufügen
-        credit_used_rappen: creditUsedRappen, // ✅ NEW: Credit used amount
-        credit_transaction_id: creditTransactionId, // ✅ NEW: Link to credit transaction
+        company_billing_address_id: companyBillingAddressId || null,
+        invoice_address: invoiceAddress,
+        tenant_id: userData?.tenant_id || null,
+        credit_used_rappen: creditUsedRappen,
+        credit_transaction_id: creditTransactionId,
         // ✅ If credit covers everything, mark as paid
         paid_at: creditUsedRappen >= Math.max(0, totalAmountRappen) ? new Date().toISOString() : null
       }

@@ -1702,6 +1702,7 @@ const getPaymentMethodLabel = (method: string) => {
     'wallee': 'Online',
     'invoice': 'Rechnung',
     'cash': 'Barzahlung',
+    'credit': 'Guthaben',
     'twint': 'TWINT',
     'bank_transfer': 'Banküberweisung'
   }

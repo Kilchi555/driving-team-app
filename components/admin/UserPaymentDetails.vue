@@ -2029,6 +2029,7 @@ const getPaymentMethodLabel = (method: string): string => {
     'cash': 'Bar',
     'invoice': 'Rechnung', 
     'wallee': 'Online-Zahlung',
+    'credit': 'Guthaben',
     'twint': 'Online-Zahlung',
     'stripe_card': 'Online-Zahlung',
     'debit_card': 'Online-Zahlung'
@@ -2041,6 +2042,7 @@ const getPaymentMethodClass = (method: string): string => {
     'cash': 'bg-yellow-100 text-yellow-800',
     'invoice': 'bg-blue-100 text-blue-800',
     'wallee': 'bg-green-100 text-green-800',
+    'credit': 'bg-yellow-100 text-yellow-800',
     'twint': 'bg-green-100 text-green-800', 
     'stripe_card': 'bg-green-100 text-green-800',
     'debit_card': 'bg-green-100 text-green-800'

@@ -141,7 +141,7 @@ export interface CreateDiscountRequest {
 }
 
 // Enums
-export type PaymentMethod = 'cash' | 'invoice' | 'online' | 'wallee' | 'twint' | 'apple_pay' | 'google_pay'
+export type PaymentMethod = 'cash' | 'invoice' | 'online' | 'wallee' | 'credit' | 'twint' | 'apple_pay' | 'google_pay'
 
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded'
 
@@ -220,6 +220,7 @@ export const PAYMENT_METHODS: Record<PaymentMethod, string> = {
   invoice: 'Rechnung',
   online: 'Online-Zahlung',
   wallee: 'Wallee',
+  credit: 'Guthaben',
   twint: 'Twint',
   apple_pay: 'Apple Pay',
   google_pay: 'Google Pay'
