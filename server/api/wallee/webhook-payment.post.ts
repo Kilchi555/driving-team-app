@@ -388,13 +388,13 @@ export default defineEventHandler(async (event) => {
       'cancelled': 0
     }
     
-    const newStatusPriority = statusPriority[paymentStatus] ?? -1
+    const newStatusPriority = statusPriority[actualPaymentStatus] ?? -1
     const shouldUpdatePayment = (currentStatus: string) => {
       const currentPriority = statusPriority[currentStatus] ?? -1
       const shouldUpdate = newStatusPriority >= currentPriority
       
       if (!shouldUpdate) {
-        console.log(`⏭️ Ignoring status downgrade: ${currentStatus} (${currentPriority}) -> ${paymentStatus} (${newStatusPriority})`)
+        console.log(`⏭️ Ignoring status downgrade: ${currentStatus} (${currentPriority}) -> ${actualPaymentStatus} (${newStatusPriority})`)
       }
       return shouldUpdate
     }
