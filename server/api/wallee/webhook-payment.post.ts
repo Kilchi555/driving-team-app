@@ -524,8 +524,13 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create vouchers if payment completed and products are vouchers
-    console.log(`🔍 [DEBUG] actualPaymentStatus value: "${actualPaymentStatus}" (type: ${typeof actualPaymentStatus})`)
-    console.log(`🔍 [DEBUG] Comparison: actualPaymentStatus === 'completed' is ${actualPaymentStatus === 'completed'}`)
+    console.log(`🔍 [CRITICAL DEBUG] About to check voucher processing:`)
+    console.log(`   - actualPaymentStatus: "${actualPaymentStatus}" (typeof: ${typeof actualPaymentStatus})`)
+    console.log(`   - Is string 'completed'?: ${actualPaymentStatus === 'completed'}`)
+    console.log(`   - Actual length: ${actualPaymentStatus?.length}`)
+    console.log(`   - Charcode at 0: ${actualPaymentStatus?.charCodeAt(0)}`)
+    console.log(`   - Trimmed: "${actualPaymentStatus?.trim()}"`)
+    console.log(`   - Trimmed === 'completed': ${actualPaymentStatus?.trim() === 'completed'}`)
     
     if (actualPaymentStatus === 'completed') {
       console.log(`✅ [Voucher Processing] Payment status is 'completed', processing vouchers...`)
@@ -553,7 +558,10 @@ export default defineEventHandler(async (event) => {
         }
       }
     } else {
-      console.log(`ℹ️ [Voucher Processing] Skipping voucher processing - payment status is '${actualPaymentStatus}' (not 'completed')`)
+      console.log(`❌ [Voucher Processing] SKIPPED - payment status is NOT 'completed'!`)
+      console.log(`   - actualPaymentStatus: "${actualPaymentStatus}"`)
+      console.log(`   - Type: ${typeof actualPaymentStatus}`)
+      console.log(`   - Length: ${actualPaymentStatus?.length}`)
     }
 
     // Send notification email if payment completed (use first payment)
