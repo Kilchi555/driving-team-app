@@ -234,6 +234,28 @@ const checkStatus = async () => {
             paymentDetails.value = recentPayment
             paymentStatus.value = recentPayment.payment_status
             isLoading.value = false
+            
+            // ✅ NEW: Extract vouchers from metadata if they exist
+            if (recentPayment.metadata) {
+              try {
+                const metadata = typeof recentPayment.metadata === 'string' 
+                  ? JSON.parse(recentPayment.metadata) 
+                  : recentPayment.metadata
+                if (metadata.products && Array.isArray(metadata.products)) {
+                  const voucherProducts = metadata.products.filter((p: any) => p.is_voucher)
+                  if (voucherProducts.length > 0) {
+                    vouchers.value = voucherProducts
+                    console.log('🎁 Found vouchers in metadata:', voucherProducts)
+                    // Show voucher modal instead of countdown if vouchers exist
+                    showVoucherModal.value = true
+                    return
+                  }
+                }
+              } catch (err) {
+                console.error('Error parsing vouchers from metadata:', err)
+              }
+            }
+            
             startCountdown()
             return
           } else {
@@ -284,6 +306,28 @@ const checkStatus = async () => {
     paymentDetails.value = data
     paymentStatus.value = data.payment_status
     isLoading.value = false
+    
+    // ✅ NEW: Extract vouchers from metadata if they exist
+    if (data.metadata) {
+      try {
+        const metadata = typeof data.metadata === 'string' 
+          ? JSON.parse(data.metadata) 
+          : data.metadata
+        if (metadata.products && Array.isArray(metadata.products)) {
+          const voucherProducts = metadata.products.filter((p: any) => p.is_voucher)
+          if (voucherProducts.length > 0) {
+            vouchers.value = voucherProducts
+            console.log('🎁 Found vouchers in metadata:', voucherProducts)
+            // Show voucher modal instead of countdown if vouchers exist
+            showVoucherModal.value = true
+            isLoading.value = false
+            return
+          }
+        }
+      } catch (err) {
+        console.error('Error parsing vouchers from metadata:', err)
+      }
+    }
     
     // Start countdown if payment is completed or authorized
     if ((data.payment_status === 'completed' || data.payment_status === 'authorized') && !countdownInterval) {
