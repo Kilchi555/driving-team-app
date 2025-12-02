@@ -706,14 +706,9 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
   }
   
   for (const product of metadata.products) {
-    // Check if this product is a voucher
-    const { data: productData, error: productError } = await supabase
-      .from('products')
-      .select('is_voucher')
-      .eq('id', product.id)
-      .single()
-    
-    if (productError || !productData?.is_voucher) {
+    // Check if this product is a voucher by checking the metadata directly
+    // (vouchers created in shop have is_voucher in metadata, not in products table)
+    if (!product.is_voucher) {
       console.log('ℹ️ Product is not a voucher, skipping:', product.id)
       continue
     }
