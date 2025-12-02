@@ -1768,8 +1768,8 @@ const confirmAppointment = async (appointment: any) => {
       .order('created_at', { ascending: false })
       .maybeSingle()
 
-    // ✅ NEU: Wenn payment_method 'cash' oder 'invoice' ist, NICHT zu Wallee weiterleiten!
-    if (payment?.payment_method === 'cash' || payment?.payment_method === 'invoice') {
+    // ✅ NEU: Wenn payment_method 'cash', 'invoice' oder 'credit' ist, NICHT zu Wallee weiterleiten!
+    if (payment?.payment_method === 'cash' || payment?.payment_method === 'invoice' || payment?.payment_method === 'credit') {
       console.log('✅ Payment method is', payment.payment_method, '- no online payment needed')
       displayToast('success', 'Termin bestätigt!', `Zahlungsart: ${getPaymentMethodLabel(payment.payment_method)}`)
       
