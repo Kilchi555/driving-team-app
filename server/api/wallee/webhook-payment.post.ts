@@ -600,6 +600,88 @@ async function sendAnonymousSaleConfirmationEmail(data: any) {
   // TODO: Implement email service
 }
 
+// ✅ NEW: Helper function to process credit product purchases
+async function processCreditProductPurchase(payment: any) {
+  console.log('🎁 Processing credit product purchase for payment:', payment.id)
+  
+  if (!payment.metadata?.products || !Array.isArray(payment.metadata.products)) {
+    console.log('ℹ️ No products in metadata, skipping credit product processing')
+    return
+  }
+
+  const supabase = getSupabaseAdmin()
+  
+  for (const product of payment.metadata.products) {
+    try {
+      // Check if this product is a credit product (5er/10er Abo)
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('is_credit_product, credit_amount_rappen')
+        .eq('id', product.id)
+        .single()
+      
+      if (productError || !productData?.is_credit_product) {
+        console.log('ℹ️ Product is not a credit product, skipping:', product.id)
+        continue
+      }
+
+      // Add credit to student_credits
+      const { data: currentCredit, error: creditError } = await supabase
+        .from('student_credits')
+        .select('balance_rappen')
+        .eq('user_id', payment.user_id)
+        .eq('tenant_id', payment.tenant_id)
+        .single()
+
+      if (creditError) {
+        console.error('❌ Error fetching student credit:', creditError)
+        continue
+      }
+
+      const newBalance = (currentCredit?.balance_rappen || 0) + productData.credit_amount_rappen
+
+      // Update balance
+      const { error: updateError } = await supabase
+        .from('student_credits')
+        .update({ balance_rappen: newBalance })
+        .eq('user_id', payment.user_id)
+        .eq('tenant_id', payment.tenant_id)
+
+      if (updateError) {
+        console.error('❌ Error updating student credit balance:', updateError)
+        continue
+      }
+
+      // Create credit transaction
+      const { error: txError } = await supabase
+        .from('credit_transactions')
+        .insert({
+          user_id: payment.user_id,
+          transaction_type: 'credit_product_purchase',
+          amount_rappen: productData.credit_amount_rappen,
+          balance_before_rappen: currentCredit?.balance_rappen || 0,
+          balance_after_rappen: newBalance,
+          reference_id: payment.id,
+          reference_type: 'payment',
+          notes: `Credit from ${product.name}`,
+          tenant_id: payment.tenant_id
+        })
+
+      if (txError) {
+        console.error('❌ Error creating credit transaction:', txError)
+      } else {
+        console.log('✅ Credit added to student:', {
+          userId: payment.user_id,
+          amountRappen: productData.credit_amount_rappen,
+          newBalance
+        })
+      }
+    } catch (err) {
+      console.error('❌ Error processing credit product:', err)
+    }
+  }
+}
+
 // Helper function to create vouchers after successful payment
 async function createVouchersAfterPayment(paymentId: string, metadata: any) {
   console.log('🎁 Creating vouchers for payment:', paymentId)
@@ -610,6 +692,18 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
   }
 
   const supabase = getSupabaseAdmin()
+  
+  // Fetch payment for tenant_id and user_id
+  const { data: payment, error: paymentError } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('id', paymentId)
+    .single()
+
+  if (paymentError || !payment) {
+    console.error('❌ Payment not found:', paymentError)
+    return
+  }
   
   for (const product of metadata.products) {
     // Check if this product is a voucher
@@ -624,31 +718,40 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
       continue
     }
 
-    // Create voucher in discounts table
-    const voucherData = {
-      name: product.name,
-      description: product.description || '',
-      discount_value: product.price_rappen / 100, // Convert to CHF
-      discount_type: 'fixed',
-      is_voucher: true,
-      voucher_recipient_name: metadata.customer_name || 'Inhaber',
-      voucher_recipient_email: metadata.customer_email,
-      valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
-      payment_id: paymentId,
-      is_active: true,
-      created_at: new Date().toISOString()
-    }
+    try {
+      // Generate voucher code
+      const { generateVoucherCode } = await import('~/utils/voucherGenerator')
+      const voucherCode = generateVoucherCode()
+      
+      // Create voucher in NEW vouchers table
+      const voucherData = {
+        code: voucherCode,
+        name: product.name,
+        description: product.description || '',
+        amount_rappen: product.price_rappen,
+        recipient_name: metadata.recipient_name,
+        recipient_email: metadata.customer_email,
+        buyer_name: metadata.customer_name,
+        buyer_email: metadata.customer_email,
+        payment_id: paymentId,
+        valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
+        is_active: true,
+        tenant_id: payment.tenant_id
+      }
 
-    const { data: voucher, error: voucherError } = await supabase
-      .from('discounts')
-      .insert(voucherData)
-      .select()
-      .single()
+      const { data: voucher, error: voucherError } = await supabase
+        .from('vouchers')
+        .insert(voucherData)
+        .select()
+        .single()
 
-    if (voucherError) {
-      console.error('❌ Error creating voucher:', voucherError)
-    } else {
-      console.log('✅ Voucher created:', voucher.id)
+      if (voucherError) {
+        console.error('❌ Error creating voucher:', voucherError)
+      } else {
+        console.log('✅ Voucher created:', { code: voucher.code, id: voucher.id })
+      }
+    } catch (err) {
+      console.error('❌ Error processing voucher:', err)
     }
   }
 }
