@@ -512,6 +512,9 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create vouchers if payment completed and products are vouchers
+    console.log(`🔍 [DEBUG] actualPaymentStatus value: "${actualPaymentStatus}" (type: ${typeof actualPaymentStatus})`)
+    console.log(`🔍 [DEBUG] Comparison: actualPaymentStatus === 'completed' is ${actualPaymentStatus === 'completed'}`)
+    
     if (actualPaymentStatus === 'completed') {
       console.log(`✅ [Voucher Processing] Payment status is 'completed', processing vouchers...`)
       for (const payment of payments) {
