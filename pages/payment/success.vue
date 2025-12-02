@@ -291,7 +291,9 @@ const checkStatus = async () => {
     if (paymentId) {
       query = query.eq('id', paymentId)
     } else if (transactionId) {
-      query = query.eq('wallee_transaction_id', transactionId)
+      // transactionId could be either a payment ID or wallee_transaction_id
+      // Try payment ID first, then wallee_transaction_id
+      query = query.or(`id.eq.${transactionId},wallee_transaction_id.eq.${transactionId}`)
     }
     
     const { data, error } = await query.single()
