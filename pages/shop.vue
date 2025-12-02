@@ -1019,6 +1019,10 @@ const previousStep = () => {
     saveImmediately()
     currentStep.value--
     console.log('🔙 Shop - Previous step to:', currentStep.value)
+  } else if (currentStep.value === 0 && isLoggedIn.value) {
+    // ✅ Wenn User eingeloggt ist und auf "Zurück" drückt bei Step 0, zurück zum Dashboard
+    console.log('🔙 Shop - User is logged in, going back to dashboard')
+    navigateTo('/customer')
   }
 }
 
