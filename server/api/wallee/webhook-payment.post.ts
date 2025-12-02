@@ -137,8 +137,18 @@ export default defineEventHandler(async (event) => {
         })
       } catch (apiError) {
         console.warn('⚠️ Could not fetch actual state from Wallee API, using webhook state:', apiError)
+        console.warn('⚠️ Defaulting actualPaymentStatus to webhook state:', paymentStatus)
+        actualPaymentStatus = paymentStatus
       }
     }
+    
+    console.log(`📋 FINAL STATE BEFORE PAYMENT LOOKUP:`, {
+      webhookState: walleeState,
+      webhookPaymentStatus: paymentStatus,
+      actualPaymentStatus: actualPaymentStatus,
+      actualPaymentStatusIsCompleted: actualPaymentStatus === 'completed',
+      walleeTransactionFetched: !!walleeTransaction
+    })
     
     // Find ALL payments by Wallee transaction ID (there might be multiple)
     console.log(`🔍 Searching for payment with wallee_transaction_id: "${transactionId}" (type: ${typeof transactionId})`)
@@ -434,6 +444,8 @@ export default defineEventHandler(async (event) => {
       
       console.log(`✅ ${paymentsToUpdate.length} payment(s) updated to status: ${actualPaymentStatus}`)
     }
+    
+    console.log(`📋 CHECKPOINT: After payment update - actualPaymentStatus is: "${actualPaymentStatus}"`)
     
     // Update appointments ONLY if payments were actually updated AND (completed or authorized)
     // ✅ NUR 'completed' oder 'authorized' = Zahlung wurde tatsächlich verarbeitet
