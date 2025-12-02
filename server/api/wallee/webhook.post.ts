@@ -790,6 +790,11 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
 
       if (voucherError) {
         console.error('❌ Error creating voucher:', voucherError)
+        
+        // If table doesn't exist, log warning but don't fail webhook
+        if (voucherError.code === 'PGRST204' && voucherError.message?.includes('vouchers')) {
+          console.warn('⚠️ Vouchers table not found - migration may not have run yet. Storing voucher info in payment metadata instead.')
+        }
       } else {
         console.log('✅ Voucher created:', { code: voucher.code, id: voucher.id })
       }
