@@ -33,7 +33,7 @@
             <div class="flex items-center justify-between mb-2">
               <h4 class="font-semibold text-gray-900">{{ voucher.name }}</h4>
               <span class="bg-green-100 text-green-800 px-2 py-1 text-xs font-semibold rounded-full">
-                CHF {{ voucher.amount_chf.toFixed(2) }}
+                CHF {{ (voucher.amount_chf || (voucher.amount_rappen ? voucher.amount_rappen / 100 : 0)).toFixed(2) }}
               </span>
             </div>
             
