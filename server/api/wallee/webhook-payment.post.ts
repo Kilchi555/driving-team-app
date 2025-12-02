@@ -513,6 +513,7 @@ export default defineEventHandler(async (event) => {
 
     // Create vouchers if payment completed and products are vouchers
     if (actualPaymentStatus === 'completed') {
+      console.log(`✅ [Voucher Processing] Payment status is 'completed', processing vouchers...`)
       for (const payment of payments) {
         console.log(`🎁 [createVouchersAfterPayment] Called for payment: ${payment.id}`)
         console.log(`   - Has metadata: ${!!payment.metadata}`)
@@ -536,6 +537,8 @@ export default defineEventHandler(async (event) => {
           console.error('❌ ERROR in processCreditProductPurchase:', creditErr)
         }
       }
+    } else {
+      console.log(`ℹ️ [Voucher Processing] Skipping voucher processing - payment status is '${actualPaymentStatus}' (not 'completed')`)
     }
 
     // Send notification email if payment completed (use first payment)
