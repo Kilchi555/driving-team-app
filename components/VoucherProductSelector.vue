@@ -41,6 +41,19 @@
           </p>
         </div>
 
+        <!-- Empfänger (optional) - MOVED BEFORE DESCRIPTION -->
+        <div>
+          <label class="block text-sm font-medium text-blue-800 mb-2">
+            Empfänger (optional)
+          </label>
+          <input
+            v-model="voucherRecipient"
+            type="text"
+            placeholder="z.B. Max Mustermann"
+            class="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
         <!-- Beschreibung (optional) -->
         <div>
           <label class="block text-sm font-medium text-blue-800 mb-2">
@@ -75,19 +88,6 @@
           <p class="text-xs text-gray-500 mt-2 text-center">
             So wird der Gutschein in der Bestellung angezeigt
           </p>
-        </div>
-
-        <!-- Empfänger (optional) -->
-        <div>
-          <label class="block text-sm font-medium text-blue-800 mb-2">
-            Empfänger (optional)
-          </label>
-          <input
-            v-model="voucherRecipient"
-            type="text"
-            placeholder="z.B. Max Mustermann"
-            class="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
         </div>
 
         <!-- Buttons -->
