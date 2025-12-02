@@ -523,6 +523,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // ✅ VOUCHER & CREDIT PRODUCT PROCESSING
     // Create vouchers if payment completed and products are vouchers
     console.log(`🔍 [CRITICAL DEBUG] About to check voucher processing:`)
     console.log(`   - actualPaymentStatus: "${actualPaymentStatus}" (typeof: ${typeof actualPaymentStatus})`)
