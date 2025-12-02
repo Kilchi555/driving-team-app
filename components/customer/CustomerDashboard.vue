@@ -1787,6 +1787,9 @@ const confirmAppointment = async (appointment: any) => {
       console.log('🔄 Refreshing pending confirmations after confirmation...')
       await loadPendingConfirmations()
       
+      // ✅ Schließe das Modal
+      showConfirmationModal.value = false
+      
       return // Fertig, nicht zu Wallee weiterleiten!
     }
 
