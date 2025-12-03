@@ -2,11 +2,12 @@
 
 import { setHeader, send, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import chromium from '@sparticuz/chromium'
 
 let puppeteer: any
 async function getPuppeteer() {
   if (!puppeteer) {
-    puppeteer = await import('puppeteer')
+    puppeteer = await import('puppeteer-core')
   }
   return puppeteer
 }
@@ -612,8 +613,10 @@ export default defineEventHandler(async (event) => {
       console.log('✅ Puppeteer loaded successfully')
       
       browser = await Puppeteer.launch({ 
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        headless: true
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
       })
       console.log('✅ Browser launched successfully')
       
