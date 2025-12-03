@@ -640,7 +640,8 @@ export default defineEventHandler(async (event) => {
         ? `Quittung_${payments[0].id}_${new Date().toISOString().split('T')[0]}.pdf`
         : `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
       
-      const filepath = `receipts/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${filename}`
+      // Don't include 'receipts/' in path since bucket is already named 'receipts'
+      const filepath = `${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${filename}`
       
       console.log('📤 Uploading PDF to Supabase Storage:', filepath)
       
