@@ -212,11 +212,15 @@
                     <div class="text-gray-900 font-medium mb-1">
                       {{ getAppointmentTitle(payment) }}
                     </div>
-                    <div class="text-gray-500 text-xs">
-                      {{ getAppointmentDateTime(payment) }}
-                    </div>
+                  <div class="text-gray-500 text-xs">
+                    {{ getAppointmentDateTime(payment) }}
                   </div>
+                </div>
+                
+                <div v-if="payment.lesson_price_rappen > 0" class="flex justify-between">
+                  <span class="text-gray-600">Fahrlektion</span>
                   <span class="font-medium text-gray-600 ml-4">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
+                </div>
                 </div>
                 
                 <div v-if="payment.admin_fee_rappen > 0" class="flex justify-between">
