@@ -298,8 +298,11 @@ export const useVouchers = () => {
 
   const generateVoucherPDF = async (voucherId: string): Promise<Blob | null> => {
     try {
+      // Try to find in local vouchers first (for local state)
       const voucher = vouchers.value.find(v => v.id === voucherId)
-      if (!voucher) return null
+      
+      // If not found locally, still proceed with API call (voucher might be from payment)
+      console.log(`📄 Generating PDF for voucher: ${voucherId} (found locally: ${!!voucher})`)
 
       // Verwende die API-Route für PDF-Generierung
       const response = await $fetch('/api/vouchers/download-pdf', {
