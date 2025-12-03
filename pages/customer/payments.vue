@@ -564,34 +564,25 @@ const downloadAllReceipts = async () => {
   
   try {
     const paymentIds = paidPayments.value.map(p => p.id)
-    const res = await fetch('/api/payments/receipt', {
+    const response = await $fetch('/api/payments/receipt', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentIds })
-    })
+      body: { paymentIds }
+    }) as { success: boolean; pdfUrl?: string; filename?: string; error?: string }
     
-    if (!res.ok) {
-      const msg = await res.text()
-      throw new Error(`Serverfehler: ${res.status} ${msg}`)
+    if (!response.success || !response.pdfUrl) {
+      throw new Error(response.error || 'PDF konnte nicht generiert werden')
     }
     
-    const contentType = res.headers.get('content-type') || ''
-    if (!contentType.includes('application/pdf')) {
-      const text = await res.text()
-      throw new Error(text || 'Unerwartetes Antwortformat')
-    }
+    console.log('✅ Receipt PDF URL:', response.pdfUrl)
     
-    const blob = await res.blob()
-    if (!blob || blob.size === 0) throw new Error('Leere PDF erhalten')
-    
-    const url = URL.createObjectURL(blob)
+    // Download the PDF from the URL
     const link = document.createElement('a')
-    link.href = url
-    link.download = `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
+    link.href = response.pdfUrl
+    link.download = response.filename || `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
+    link.target = '_blank'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    URL.revokeObjectURL(url)
   } catch (err: any) {
     console.error('❌ Error downloading receipts:', err)
     alert('Fehler beim Erstellen der Quittungen. Bitte versuchen Sie es erneut.')
