@@ -4,13 +4,13 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { generateVoucherPDFContent, type VoucherBranding } from '~/utils/voucherGenerator'
 import { setHeader, send } from 'h3'
+import chromium from '@sparticuz/chromium'
 
 // Use dynamic import for puppeteer to avoid issues in some environments
 let puppeteer: any
 async function getPuppeteer() {
   if (!puppeteer) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    puppeteer = await import('puppeteer')
+    puppeteer = await import('puppeteer-core')
   }
   return puppeteer
 }
@@ -87,11 +87,16 @@ export default defineEventHandler(async (event) => {
       description
     }, branding)
 
-    // ECHTES PDF mit Puppeteer rendern
+    // ECHTES PDF mit Puppeteer rendern (mit Vercel Chromium Support)
     const { default: Puppeteer } = await getPuppeteer()
+    
     const browser = await Puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
     })
+    
     const page = await browser.newPage()
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
 
