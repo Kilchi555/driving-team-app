@@ -581,13 +581,31 @@ const downloadAllReceipts = async () => {
     console.log('✅ Receipt PDF URL:', response.pdfUrl)
     console.log('📄 Filename:', response.filename)
     
-    // Try to open the PDF in a new tab first (for testing)
-    window.open(response.pdfUrl, '_blank')
+    // Fetch the PDF as a blob and trigger download
+    console.log('📥 Fetching PDF from URL...')
+    const pdfResponse = await fetch(response.pdfUrl)
     
-    console.log('✅ PDF should be opening in new tab')
+    if (!pdfResponse.ok) {
+      throw new Error(`PDF download failed: ${pdfResponse.status} ${pdfResponse.statusText}`)
+    }
+    
+    const blob = await pdfResponse.blob()
+    console.log('✅ PDF blob received, size:', blob.size, 'bytes')
+    
+    // Create download link
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = response.filename || `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    
+    console.log('✅ Download triggered!')
   } catch (err: any) {
     console.error('❌ Error downloading receipts:', err)
-    alert('Fehler beim Erstellen der Quittungen. Bitte versuchen Sie es erneut.')
+    alert(`Fehler beim Erstellen der Quittungen: ${err.message}`)
   } finally {
     isProcessingReceipt.value = false
   }
