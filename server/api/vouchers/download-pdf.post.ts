@@ -32,10 +32,9 @@ export default defineEventHandler(async (event) => {
     // Gutschein-Daten aus der Datenbank abrufen (server-side admin client to bypass RLS)
     const supabase = getSupabaseAdmin()
     const { data: voucher, error: voucherError } = await supabase
-      .from('discounts')
+      .from('vouchers')
       .select('*')
       .eq('id', voucherId)
-      .eq('is_voucher', true)
       .single()
 
     if (voucherError || !voucher) {
@@ -68,31 +67,15 @@ export default defineEventHandler(async (event) => {
 
     let amountChf: number | undefined
 
-    // 1) Feste Beträge werden in discount_value (CHF) gespeichert
-    if (voucher.discount_type === 'fixed') {
-      const dv = parseNum(voucher.discount_value)
-      if (dv && dv > 0) amountChf = dv
-    }
+    // 1) Vouchers Tabelle: amount_rappen (neu)
+    const amountRappen = parseNum(voucher.amount_rappen)
+    if (amountRappen && amountRappen > 0) amountChf = amountRappen / 100
 
-    // 2) Fallbacks auf Rappen-Felder
-    if (amountChf === undefined) {
-      const remaining = parseNum(voucher.remaining_amount_rappen)
-      if (remaining && remaining > 0) amountChf = remaining / 100
-    }
-    if (amountChf === undefined) {
-      const maxDisc = parseNum(voucher.max_discount_rappen)
-      if (maxDisc && maxDisc > 0) amountChf = maxDisc / 100
-    }
-    if (amountChf === undefined) {
-      const valueRappen = parseNum(voucher.value_rappen)
-      if (valueRappen && valueRappen > 0) amountChf = valueRappen / 100
-    }
-
-    // 3) Letzter Fallback: 0
+    // 2) Fallback: 0
     if (amountChf === undefined) amountChf = 0
 
-    const recipient: string | undefined = voucher.voucher_recipient_name || undefined
-    const description: string | undefined = voucher.description || voucher.voucher_note || undefined
+    const recipient: string | undefined = voucher.recipient_name || undefined
+    const description: string | undefined = voucher.description || undefined
 
     // HTML für PDF generieren
     const htmlContent = generateVoucherPDFContent({
