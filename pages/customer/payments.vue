@@ -563,26 +563,28 @@ const downloadAllReceipts = async () => {
   isProcessingReceipt.value = true
   
   try {
+    console.log('📄 Starting receipt download...')
     const paymentIds = paidPayments.value.map(p => p.id)
+    console.log('📄 Payment IDs:', paymentIds.length)
+    
     const response = await $fetch('/api/payments/receipt', {
       method: 'POST',
       body: { paymentIds }
     }) as { success: boolean; pdfUrl?: string; filename?: string; error?: string }
+    
+    console.log('📄 API Response:', response)
     
     if (!response.success || !response.pdfUrl) {
       throw new Error(response.error || 'PDF konnte nicht generiert werden')
     }
     
     console.log('✅ Receipt PDF URL:', response.pdfUrl)
+    console.log('📄 Filename:', response.filename)
     
-    // Download the PDF from the URL
-    const link = document.createElement('a')
-    link.href = response.pdfUrl
-    link.download = response.filename || `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
-    link.target = '_blank'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    // Try to open the PDF in a new tab first (for testing)
+    window.open(response.pdfUrl, '_blank')
+    
+    console.log('✅ PDF should be opening in new tab')
   } catch (err: any) {
     console.error('❌ Error downloading receipts:', err)
     alert('Fehler beim Erstellen der Quittungen. Bitte versuchen Sie es erneut.')
