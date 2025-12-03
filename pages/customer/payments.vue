@@ -221,7 +221,6 @@
                   <span class="text-gray-600">Fahrlektion</span>
                   <span class="font-medium text-gray-600 ml-4">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
                 </div>
-                </div>
                 
                 <div v-if="payment.admin_fee_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">Administrationsgebühr</span>
