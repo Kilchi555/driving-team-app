@@ -169,6 +169,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     }
   }
 
+  // Load products from appointment if available
   if (payment.appointment_id) {
     try {
       const { data: discountSale } = await supabase
@@ -193,6 +194,26 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     } catch (productErr) {
       console.warn('⚠️ Could not load products:', productErr)
     }
+  }
+
+  // Load vouchers directly linked to payment
+  try {
+    const { data: vouchersData } = await supabase
+      .from('vouchers')
+      .select('name, description, amount_rappen, recipient_name')
+      .eq('payment_id', payment.id)
+
+    if (vouchersData && vouchersData.length > 0) {
+      const voucherProducts = vouchersData.map((voucher: any) => ({
+        name: voucher.name || 'Gutschein',
+        description: voucher.recipient_name ? `Für: ${voucher.recipient_name}` : (voucher.description || ''),
+        quantity: 1,
+        totalCHF: (voucher.amount_rappen || 0) / 100
+      }))
+      products = [...products, ...voucherProducts]
+    }
+  } catch (voucherErr) {
+    console.warn('⚠️ Could not load vouchers:', voucherErr)
   }
 
   const customerName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Kunde' : 'Kunde'
