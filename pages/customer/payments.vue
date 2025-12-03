@@ -212,8 +212,9 @@
                     <div class="text-gray-900 font-medium mb-1">
                       {{ getAppointmentTitle(payment) }}
                     </div>
-                  <div class="text-gray-500 text-xs">
-                    {{ getAppointmentDateTime(payment) }}
+                    <div class="text-gray-500 text-xs">
+                      {{ getAppointmentDateTime(payment) }}
+                    </div>
                   </div>
                 </div>
                 
