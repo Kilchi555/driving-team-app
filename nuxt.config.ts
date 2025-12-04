@@ -93,7 +93,7 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: '/login',
       callback: '/auth/callback',
-      exclude: ['/', '/login', '/driving-team']  // Exclude public pages from auth redirect
+      exclude: ['/', '/login', '/driving-team', '/dashboard', '/customer-dashboard', '/admin']  // Exclude all main pages from auth redirect
     }
   },
 
