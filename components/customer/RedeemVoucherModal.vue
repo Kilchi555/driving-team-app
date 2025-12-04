@@ -179,6 +179,7 @@ const redeemVoucher = async () => {
 
     const response = await $fetch('/api/vouchers/redeem', {
       method: 'POST',
+      credentials: 'include',
       body: {
         code: voucherCode.value.trim().toUpperCase()
       }

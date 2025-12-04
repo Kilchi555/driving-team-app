@@ -478,6 +478,7 @@ const saveProfile = async () => {
     
     const response = await $fetch('/api/customer/update-profile', {
       method: 'POST',
+      credentials: 'include',
       body: {
         firstName: formData.value.firstName,
         lastName: formData.value.lastName,
