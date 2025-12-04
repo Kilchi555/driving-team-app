@@ -337,8 +337,8 @@ function renderHeader(customer: CustomerInfo, dateLabelKey: string, dateValue: s
         </div>
       </div>
       <div class="header-right">
-        ${assets.logoSrc ? `<img class="logo" src="${assets.logoDataUrl || assets.logoSrc}" alt="Logo"/>` : ''}
-        ${companyName ? `<div class="value">${companyName}</div>` : ''}
+        ${assets.logoDataUrl ? `<img class="logo" src="${assets.logoDataUrl}" alt="Logo"/>` : `<div class="company-name-large">${companyName}</div>`}
+        ${companyName && assets.logoDataUrl ? `<div class="value">${companyName}</div>` : ''}
         ${tenantAddress ? `<div class="address">${tenantAddress}</div>` : ''}
         ${(tenantEmail || tenantPhone) ? `<div class="contact">${tenantEmail || ''}${tenantEmail && tenantPhone ? '<br/>' : ''}${tenantPhone || ''}</div>` : ''}
       </div>
@@ -516,6 +516,7 @@ function wrapHtml(body: string, primary: string, secondary: string) {
         .header-left { display:flex; flex-direction:column; gap:8px; }
         .header-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
         .logo { height:60px; width:auto; object-fit:contain; max-width:150px; }
+        .company-name-large { font-size:22px; font-weight:800; color:var(--primary); text-align:right; max-width:200px; line-height:1.2; }
         .title { font-size:24px; font-weight:800; color:var(--primary); }
         .subtitle { font-size:14px; color:var(--secondary); margin-top:2px; }
         .address { font-size:12px; color:#6b7280; line-height:1.3; text-align:right; }
