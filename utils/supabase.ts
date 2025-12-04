@@ -132,6 +132,53 @@ export const getSupabaseAdmin = (): SupabaseClient => {
   return supabaseAdminInstance
 }
 
+// Server-side helper to create a Supabase client with user session from cookies
+export const getSupabaseServerWithSession = (event: any): SupabaseClient => {
+  if (!process.server) {
+    throw new Error('getSupabaseServerWithSession can only be used on the server')
+  }
+
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+  const supabaseKey = process.env.SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Missing Supabase configuration')
+    throw new Error('Missing Supabase configuration')
+  }
+
+  // Try to get access token from cookies
+  const cookies = event.node.req.headers.cookie || ''
+  let accessToken: string | null = null
+
+  try {
+    const cookieList = cookies.split(';')
+    for (const cookie of cookieList) {
+      const [name, value] = cookie.trim().split('=')
+      if (name === 'sb-access-token') {
+        accessToken = decodeURIComponent(value)
+        break
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error parsing cookies:', error)
+  }
+
+  // Create Supabase client - if we have an access token, use it; otherwise use anon key
+  let headers: Record<string, string> = {}
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`
+  }
+
+  return createClient(supabaseUrl, supabaseKey, {
+    global: { headers },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    }
+  })
+}
+
 export default getSupabase
 
 /**

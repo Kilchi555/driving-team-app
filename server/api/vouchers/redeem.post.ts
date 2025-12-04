@@ -2,8 +2,7 @@
 // Description: Allows students to redeem voucher codes for credit top-up
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin, getSupabaseServerWithSession } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -19,17 +18,11 @@ export default defineEventHandler(async (event) => {
 
     console.log('🎫 Redeeming voucher:', code)
 
-    // Get Supabase client (browser-side, has auth)
-    const supabaseClient = getSupabase()
-    if (!supabaseClient) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Supabase client not available'
-      })
-    }
+    // Get Supabase client with user session from cookies
+    const userClient = getSupabaseServerWithSession(event)
 
     // Get current authenticated user
-    const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser()
+    const { data: { user: authUser }, error: authError } = await userClient.auth.getUser()
     
     if (authError || !authUser) {
       console.error('❌ Auth error:', authError)

@@ -1,6 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseServerWithSession } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -17,17 +17,11 @@ export default defineEventHandler(async (event) => {
       city 
     } = body
 
-    // Get Supabase client (browser-side, has auth)
-    const supabaseClient = getSupabase()
-    if (!supabaseClient) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Supabase client not available'
-      })
-    }
+    // Get Supabase client with user session from cookies
+    const userClient = getSupabaseServerWithSession(event)
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
+    const { data: { user }, error: authError } = await userClient.auth.getUser()
 
     if (authError || !user) {
       console.error('❌ Auth error:', authError)
