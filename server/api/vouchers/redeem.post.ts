@@ -1,6 +1,7 @@
 // API Endpoint: Redeem Voucher Code
 // Description: Allows students to redeem voucher codes for credit top-up
 
+import { getSupabase } from '~/server/utils/supabase'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
@@ -15,7 +16,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabase = getSupabaseAdmin()
+    // Use user client to get authenticated user
+    const supabase = getSupabase()
 
     // Get current user
     const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -46,8 +48,11 @@ export default defineEventHandler(async (event) => {
       tenantId: userProfile.tenant_id
     })
 
+    // Use admin client for database operations to bypass RLS
+    const supabaseAdmin = getSupabaseAdmin()
+
     // 1. Find and validate voucher
-    const { data: voucher, error: voucherError } = await supabase
+    const { data: voucher, error: voucherError } = await supabaseAdmin
       .from('voucher_codes')
       .select('*')
       .eq('code', code.toUpperCase())
@@ -90,7 +95,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Check if user already redeemed this voucher (if single-use)
-    const { data: existingRedemption } = await supabase
+    const { data: existingRedemption } = await supabaseAdmin
       .from('voucher_redemptions')
       .select('id')
       .eq('voucher_id', voucher.id)
@@ -110,7 +115,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // 3. Get current student credit
-    const { data: studentCredit, error: creditError } = await supabase
+    const { data: studentCredit, error: creditError } = await supabaseAdmin
       .from('student_credits')
       .select('id, balance_rappen')
       .eq('user_id', userProfile.id)
@@ -127,7 +132,7 @@ export default defineEventHandler(async (event) => {
     const newBalance = oldBalance + voucher.credit_amount_rappen
 
     // 4. Update student credit balance
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('student_credits')
       .update({
         balance_rappen: newBalance,
@@ -149,7 +154,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // 5. Create credit transaction
-    const { data: creditTransaction, error: txError } = await supabase
+    const { data: creditTransaction, error: txError } = await supabaseAdmin
       .from('credit_transactions')
       .insert({
         user_id: userProfile.id,
@@ -176,7 +181,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // 6. Create voucher redemption record (trigger will auto-increment counter)
-    const { error: redemptionError } = await supabase
+    const { error: redemptionError } = await supabaseAdmin
       .from('voucher_redemptions')
       .insert({
         voucher_id: voucher.id,
