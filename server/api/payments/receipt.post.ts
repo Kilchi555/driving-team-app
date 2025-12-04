@@ -68,7 +68,7 @@ interface TenantAssets {
   logoDataUrl: string | null
 }
 
-async function loadTenantAssets(tenant: any): Promise<TenantAssets> {
+async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAssets> {
   // Try logo_square_url first, then logo_url, then logo_wide_url
   const logoUrl = tenant?.logo_square_url || tenant?.logo_url || tenant?.logo_wide_url
   
@@ -79,12 +79,43 @@ async function loadTenantAssets(tenant: any): Promise<TenantAssets> {
 
   try {
     console.log('📷 Loading logo from:', logoUrl)
+    
+    // Extract bucket and path from Supabase URL
+    // URL format: https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
+    const urlMatch = logoUrl.match(/storage\/v1\/object\/public\/([^/]+)\/(.+)$/)
+    
+    if (urlMatch) {
+      const bucket = urlMatch[1]
+      const path = urlMatch[2]
+      
+      console.log('📷 Extracted bucket:', bucket, 'path:', path)
+      
+      // Try to download using Supabase client
+      const { data: logoData, error: logoError } = await supabase.storage
+        .from(bucket)
+        .download(path)
+      
+      if (logoError) {
+        console.warn('⚠️ Logo download error:', logoError)
+      } else if (logoData) {
+        const arrayBuffer = await logoData.arrayBuffer()
+        const logoBase64 = Buffer.from(arrayBuffer).toString('base64')
+        const logoMime = logoData.type || 'image/png'
+        console.log('✅ Logo loaded successfully via Supabase client')
+        return {
+          logoSrc: logoUrl,
+          logoDataUrl: `data:${logoMime};base64,${logoBase64}`
+        }
+      }
+    }
+    
+    // Fallback to fetch if Supabase download fails
     const logoRes = await fetch(logoUrl)
     if (logoRes.ok) {
       const logoBuffer = await logoRes.arrayBuffer()
       const logoBase64 = Buffer.from(logoBuffer).toString('base64')
       const logoMime = logoRes.headers.get('content-type') || 'image/png'
-      console.log('✅ Logo loaded successfully')
+      console.log('✅ Logo loaded successfully via fetch')
       return {
         logoSrc: logoUrl,
         logoDataUrl: `data:${logoMime};base64,${logoBase64}`
@@ -615,7 +646,7 @@ export default defineEventHandler(async (event) => {
       return value
     }
 
-    const tenantAssets = await loadTenantAssets(tenant)
+    const tenantAssets = await loadTenantAssets(tenant, supabase)
     const contexts = await Promise.all(
       payments.map(payment => loadPaymentContext(payment, supabase, translateFn))
     )
