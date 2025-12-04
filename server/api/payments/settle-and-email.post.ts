@@ -273,8 +273,11 @@ export default defineEventHandler(async (event) => {
         const payment = payments.find(p => p.appointment_id === appointment.id)
         const amount = payment ? ((payment.total_amount_rappen || 0) / 100).toFixed(2) : '0.00'
 
-        const appointmentDate = new Date(appointment.start_time).toLocaleDateString('de-CH')
+        const appointmentDate = new Date(appointment.start_time).toLocaleDateString('de-CH', {
+          timeZone: 'Europe/Zurich'
+        })
         const appointmentTime = new Date(appointment.start_time).toLocaleTimeString('de-CH', {
+          timeZone: 'Europe/Zurich',
           hour: '2-digit',
           minute: '2-digit'
         })

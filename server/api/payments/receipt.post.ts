@@ -228,8 +228,8 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   const total = lesson + adminFee + productsTotal - discountAmount
 
   const appointmentDateObj = appointment?.start_time ? new Date(appointment.start_time) : null
-  const appointmentDate = appointmentDateObj ? appointmentDateObj.toLocaleDateString('de-CH') : ''
-  const appointmentTime = appointmentDateObj ? appointmentDateObj.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) : ''
+  const appointmentDate = appointmentDateObj ? appointmentDateObj.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich' }) : ''
+  const appointmentTime = appointmentDateObj ? appointmentDateObj.toLocaleTimeString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' }) : ''
   const appointmentDuration = appointment?.duration_minutes || 0
   const appointmentTitle = appointment?.title || payment.description || translateFn('eventType.lesson')
   const appointmentTimestamp = appointmentDateObj ? appointmentDateObj.getTime() : null

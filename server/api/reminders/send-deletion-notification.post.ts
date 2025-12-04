@@ -71,12 +71,14 @@ export default defineEventHandler(async (event) => {
     // 3. Format appointment data
     const startTime = new Date(appointment.start_time)
     const appointmentDate = startTime.toLocaleDateString('de-CH', {
+      timeZone: 'Europe/Zurich',
       weekday: 'short',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     })
     const appointmentTime = startTime.toLocaleTimeString('de-CH', {
+      timeZone: 'Europe/Zurich',
       hour: '2-digit',
       minute: '2-digit'
     })

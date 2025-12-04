@@ -182,7 +182,7 @@ export default defineEventHandler(async (event) => {
       <h3 style="margin-top: 0; color: #2563eb;">Zahlungsdetails</h3>
       <p style="margin: 5px 0;"><strong>Betrag:</strong> CHF ${(payment.total_amount_rappen / 100).toFixed(2)}</p>
       <p style="margin: 5px 0;"><strong>Termin:</strong> ${appointment?.title || 'Fahrstunde'}</p>
-      ${appointment?.start_time ? `<p style="margin: 5px 0;"><strong>Datum:</strong> ${new Date(appointment.start_time).toLocaleDateString('de-CH')}</p>` : ''}
+      ${appointment?.start_time ? `<p style="margin: 5px 0;"><strong>Datum:</strong> ${new Date(appointment.start_time).toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich' })}</p>` : ''}
     </div>
     
     <div style="text-align: center; margin: 30px 0;">
