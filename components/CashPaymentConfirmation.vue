@@ -115,6 +115,7 @@ const confirmPayment = async () => {
         updated_at: new Date().toISOString()
       })
       .eq('id', props.payment.id)
+      .eq('tenant_id', props.payment.tenant_id) // ← RLS Filter erforderlich
     
     if (paymentError) throw paymentError
     
