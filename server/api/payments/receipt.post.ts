@@ -229,19 +229,27 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
 
   // Load vouchers directly linked to payment
   try {
-    const { data: vouchersData } = await supabase
+    console.log('🎫 Loading vouchers for payment:', payment.id)
+    const { data: vouchersData, error: voucherError } = await supabase
       .from('vouchers')
       .select('name, description, amount_rappen, recipient_name')
       .eq('payment_id', payment.id)
 
-    if (vouchersData && vouchersData.length > 0) {
-      const voucherProducts = vouchersData.map((voucher: any) => ({
-        name: voucher.name || 'Gutschein',
-        description: voucher.recipient_name ? `Für: ${voucher.recipient_name}` : (voucher.description || ''),
-        quantity: 1,
-        totalCHF: (voucher.amount_rappen || 0) / 100
-      }))
-      products = [...products, ...voucherProducts]
+    if (voucherError) {
+      console.error('❌ Voucher query error:', voucherError)
+    } else {
+      console.log('🎫 Vouchers found:', vouchersData?.length || 0)
+      if (vouchersData && vouchersData.length > 0) {
+        console.log('🎫 Voucher details:', vouchersData)
+        const voucherProducts = vouchersData.map((voucher: any) => ({
+          name: voucher.name || 'Gutschein',
+          description: voucher.recipient_name ? `Für: ${voucher.recipient_name}` : (voucher.description || ''),
+          quantity: 1,
+          totalCHF: (voucher.amount_rappen || 0) / 100
+        }))
+        products = [...products, ...voucherProducts]
+        console.log('✅ Added vouchers to products, total products:', products.length)
+      }
     }
   } catch (voucherErr) {
     console.warn('⚠️ Could not load vouchers:', voucherErr)
