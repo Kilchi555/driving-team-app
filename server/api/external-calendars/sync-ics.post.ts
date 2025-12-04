@@ -412,7 +412,7 @@ function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?:
     return `${year}-${month}-${day}T00:00:00`
   }
 
-  // UTC format: 20231215T120000Z - Umrechnung in lokale Schweizer Zeit
+  // UTC format: 20231215T120000Z - Behalte UTC bei (DB erwartet TIMESTAMPTZ)
   if (/^\d{8}T\d{6}Z$/.test(clean)) {
     const year = clean.substring(0, 4)
     const month = clean.substring(4, 6)
@@ -421,12 +421,70 @@ function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?:
     const minute = clean.substring(11, 13)
     const second = clean.substring(13, 15)
     
-    // Parse als UTC Date
-    const utcDate = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`)
+    // Gebe als ISO 8601 UTC String zurück (mit Z)
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}Z`
+  }
+
+  // Local format without Z: 20231215T120000
+  // Wenn TZID angegeben ist, interpretiere als lokale Zeit in dieser Zone und konvertiere zu UTC
+  if (/^\d{8}T\d{6}$/.test(clean)) {
+    const year = clean.substring(0, 4)
+    const month = clean.substring(4, 6)
+    const day = clean.substring(6, 8)
+    const hour = clean.substring(9, 11)
+    const minute = clean.substring(11, 13)
+    const second = clean.substring(13, 15)
     
-    // Konvertiere in lokale Schweizer Zeit (Europe/Zurich)
-    const localDateStr = utcDate.toLocaleString('en-CA', { 
-      timeZone: 'Europe/Zurich',
+    const localTimeString = `${year}-${month}-${day}T${hour}:${minute}:${second}`
+    
+    // Wenn TZID vorhanden, konvertiere von lokaler Zeit in dieser Zone nach UTC
+    if (opts?.tzid) {
+      try {
+        // Für Europe/Zurich: Die Zeit ist bereits lokal, wir müssen sie zu UTC konvertieren
+        // Erstelle ein Date-Objekt das die lokale Zeit als UTC interpretiert
+        const localAsUTC = new Date(`${localTimeString}Z`)
+        
+        // Hole die UTC-Repräsentation dieser Zeit wenn sie in der angegebenen Zone ist
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'UTC',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+          timeZoneName: 'short'
+        })
+        
+        // Berechne den Offset zwischen der angegebenen Zone und UTC
+        const dateInZone = new Date(localTimeString)
+        const utcOffset = getUTCOffsetForTimezone(opts.tzid, dateInZone)
+        
+        // Ziehe den Offset ab um von lokaler Zeit zu UTC zu kommen
+        const utcTime = dateInZone.getTime() - utcOffset
+        const utcDate = new Date(utcTime)
+        
+        return utcDate.toISOString()
+      } catch (e) {
+        console.warn(`⚠️  Failed to convert TZID ${opts.tzid}, falling back to UTC assumption`, e)
+      }
+    }
+    
+    // Fallback: Nimm an, dass es bereits UTC ist
+    return `${localTimeString}Z`
+  }
+
+  // Fallback: return current time in UTC
+  return new Date().toISOString()
+}
+
+// Helper: Berechne UTC Offset für eine Zeitzone in Millisekunden
+function getUTCOffsetForTimezone(tzid: string, date: Date): number {
+  try {
+    // Erstelle zwei Formatter: einer für UTC, einer für die Zielzone
+    const utcFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'UTC',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -436,29 +494,29 @@ function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?:
       hour12: false
     })
     
-    // Format: "2025-11-12, 08:00:00" -> "2025-11-12T08:00:00"
-    const [datePart, timePart] = localDateStr.split(', ')
-    return `${datePart}T${timePart}`
+    const zoneFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tzid,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+    
+    // Formatiere das gleiche Date-Objekt in beiden Zonen
+    const utcString = utcFormatter.format(date)
+    const zoneString = zoneFormatter.format(date)
+    
+    // Parse zurück zu Date-Objekten
+    const utcTime = new Date(utcString).getTime()
+    const zoneTime = new Date(zoneString).getTime()
+    
+    // Der Unterschied ist der Offset
+    return zoneTime - utcTime
+  } catch (e) {
+    console.warn(`⚠️  Failed to calculate offset for ${tzid}`, e)
+    return 0
   }
-
-  // Local format without Z: 20231215T120000
-  if (/^\d{8}T\d{6}$/.test(clean)) {
-    const year = clean.substring(0, 4)
-    const month = clean.substring(4, 6)
-    const day = clean.substring(6, 8)
-    const hour = clean.substring(9, 11)
-    const minute = clean.substring(11, 13)
-    const second = clean.substring(13, 15)
-    return `${year}-${month}-${day}T${hour}:${minute}:${second}`
-  }
-
-  // Fallback: return as-is
-  const now = new Date()
-  const yyyy = now.getFullYear()
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const dd = String(now.getDate()).padStart(2, '0')
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mi = String(now.getMinutes()).padStart(2, '0')
-  const ss = String(now.getSeconds()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}`
 }
