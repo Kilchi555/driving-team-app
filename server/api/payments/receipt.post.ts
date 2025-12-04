@@ -420,6 +420,15 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
     })
     .join('')
 
+  // Calculate actual lesson count (only for event_type_code 'lesson', duration / 45)
+  const totalLessonCount = sorted.reduce((count, ctx) => {
+    // Only count if it's a lesson (not exam, theory, etc.)
+    if (ctx.appointment?.event_type_code === 'lesson' && ctx.appointmentInfo.duration > 0) {
+      return count + (ctx.appointmentInfo.duration / 45)
+    }
+    return count
+  }, 0)
+
   return `
     <div class="doc">
       ${renderHeader(customer, 'receipt.generatedOn', new Date().toLocaleDateString('de-CH'), tenant, assets, translateFn)}
@@ -428,7 +437,7 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
         <div class="section-title">${translateFn('receipt.lessonsOverview')}</div>
         <div class="row">
           <div class="label">${translateFn('receipt.lessonCount')}</div>
-          <div class="value">${sorted.length}</div>
+          <div class="value">${totalLessonCount}</div>
         </div>
         <div class="row">
           <div class="label">${translateFn('receipt.period')}</div>
