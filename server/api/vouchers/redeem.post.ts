@@ -6,6 +6,8 @@ import { getSupabaseAdmin, getSupabaseServerWithSession } from '~/utils/supabase
 
 export default defineEventHandler(async (event) => {
   try {
+    console.log('🎫 [redeem] Handler started')
+    
     const body = await readBody(event)
     const { code } = body
 
@@ -16,13 +18,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🎫 Redeeming voucher:', code)
+    console.log('🎫 [redeem] Redeeming voucher:', code)
 
     // Get Supabase client with user session from cookies
+    console.log('🎫 [redeem] Calling getSupabaseServerWithSession')
     const userClient = getSupabaseServerWithSession(event)
+    console.log('🎫 [redeem] Got userClient')
 
     // Get current authenticated user
+    console.log('🎫 [redeem] Getting user from auth')
     const { data: { user: authUser }, error: authError } = await userClient.auth.getUser()
+    console.log('🎫 [redeem] Auth result:', { hasUser: !!authUser, hasError: !!authError })
     
     if (authError || !authUser) {
       console.error('❌ Auth error:', authError)

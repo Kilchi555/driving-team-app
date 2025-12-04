@@ -4,7 +4,11 @@ import { getSupabaseServerWithSession } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
+    console.log('🔄 [update-profile] Handler started')
+    
     const body = await readBody(event)
+    console.log('🔄 [update-profile] Body received:', { firstName: body.firstName, lastName: body.lastName })
+    
     const { 
       firstName, 
       lastName, 
@@ -17,11 +21,15 @@ export default defineEventHandler(async (event) => {
       city 
     } = body
 
+    console.log('🔄 [update-profile] Calling getSupabaseServerWithSession')
     // Get Supabase client with user session from cookies
     const userClient = getSupabaseServerWithSession(event)
+    console.log('🔄 [update-profile] Got userClient')
 
     // Get authenticated user
+    console.log('🔄 [update-profile] Getting user from auth')
     const { data: { user }, error: authError } = await userClient.auth.getUser()
+    console.log('🔄 [update-profile] Auth result:', { hasUser: !!user, hasError: !!authError })
 
     if (authError || !user) {
       console.error('❌ Auth error:', authError)
