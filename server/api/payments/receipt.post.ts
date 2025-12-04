@@ -127,7 +127,7 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
     console.warn('⚠️ Could not load logo:', logoErr)
   }
 
-  return { logoSrc: logoUrl, logoDataUrl: null }
+  return { logoSrc: null, logoDataUrl: null }
 }
 
 async function loadPaymentContext(payment: any, supabase: any, translateFn: any): Promise<PaymentContext> {
