@@ -1,16 +1,15 @@
 // plugins/auth-restore.client.ts
 import { defineNuxtPlugin } from '#app'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
 
-export default defineNuxtPlugin(async () => {
+export default defineNuxtPlugin(async (nuxtApp) => {
   // Nur im Browser
   if (!process.client) return
 
   console.log('🔄 Auth restore plugin starting...')
 
   try {
-    const supabase = getSupabase()
+    const supabase = useSupabaseClient()  // Use Supabase module's client
     const authStore = useAuthStore()
 
     console.log('🔄 Getting session...')
