@@ -292,6 +292,33 @@ onMounted(async () => {
   console.log('🔥 Current user after fetch:', currentUser.value)
   console.log('Debug - profileExists:', profileExists?.value)
   console.log('Debug - userError:', userError.value)
+  
+  // KRITISCH: Prüfe auf kaputte Session (Session existiert aber kein Profil)
+  if (!currentUser.value && userError.value === 'Nicht eingeloggt') {
+    console.error('❌ Dashboard: Broken session detected! User is null but trying to access dashboard.')
+    console.log('🧹 Clearing broken session and redirecting to login...')
+    
+    // Session bereinigen
+    const authStore = useAuthStore()
+    await authStore.logout()
+    
+    // Redirect zum Login
+    await navigateTo('/login')
+    return
+  }
+  // KRITISCH: Prüfe auf kaputte Session (Session existiert aber kein Profil)
+  if (!currentUser.value && userError.value === 'Nicht eingeloggt') {
+    console.error('❌ Dashboard: Broken session detected! User is null but trying to access dashboard.')
+    console.log('🧹 Clearing broken session and redirecting to login...')
+    
+    // Session bereinigen
+    const authStore = useAuthStore()
+    await authStore.logout()
+    
+    // Redirect zum Login
+    await navigateTo('/login')
+    return
+  }
 
 
   if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
