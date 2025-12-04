@@ -9,8 +9,8 @@ export default defineNuxtPlugin(async () => {
     const { currentUser, fetchCurrentUser } = useCurrentUser()
     const { loadTenantBrandingById } = useTenantBranding()
 
-    // Warte bis Auth-State wiederhergestellt ist
-    const supabase = getSupabase()
+    // Warte bis Auth-State wiederhergestellt ist - nutze Supabase-Modul Client
+    const supabase = useSupabaseClient()
     
     // Prüfe ob bereits ein User eingeloggt ist
     const { data: { user }, error } = await supabase.auth.getUser()

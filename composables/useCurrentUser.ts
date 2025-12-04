@@ -1,6 +1,5 @@
 // composables/useCurrentUser.ts
 import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 
 export const useCurrentUser = () => {
@@ -21,7 +20,8 @@ export const useCurrentUser = () => {
     profileExists.value = false // 🆕 Reset
 
     try {
-      const supabase = getSupabase()
+      // Nutze Supabase-Modul Client
+      const supabase = useSupabaseClient()
       
       // 1. Auth-User holen
       const { data: authData, error: authError } = await supabase.auth.getUser()

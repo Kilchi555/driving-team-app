@@ -83,7 +83,8 @@ export const useTenant = () => {
     error.value = null
     
     try {
-      const supabase = getSupabase()
+      // Nutze Supabase-Modul Client
+      const supabase = useSupabaseClient()
       
       // Versuche zuerst per Slug zu finden
       let query = supabase
