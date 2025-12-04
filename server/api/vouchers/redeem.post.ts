@@ -1,7 +1,8 @@
 // API Endpoint: Redeem Voucher Code
 // Description: Allows students to redeem voucher codes for credit top-up
 
-import { serverSupabaseClient } from '#supabase/server'
+import { defineEventHandler, readBody, createError, getCookie } from 'h3'
+import { createClient } from '@supabase/supabase-js'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
@@ -16,11 +17,38 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get Supabase client - use Nuxt Supabase module which handles auth automatically
-    const client = await serverSupabaseClient(event)
+    // Get access token from cookies
+    const accessToken = getCookie(event, 'sb-access-token')
+    
+    if (!accessToken) {
+      console.error('❌ No access token in cookies')
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Not authenticated'
+      })
+    }
+
+    // Create client with user's access token
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
+
+    if (!supabaseAnonKey) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Server configuration error'
+      })
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      }
+    })
     
     // Get current authenticated user
-    const { data: { user: authUser }, error: authError } = await client.auth.getUser()
+    const { data: { user: authUser }, error: authError } = await userClient.auth.getUser()
     
     if (authError || !authUser) {
       console.error('❌ Auth error:', authError)
