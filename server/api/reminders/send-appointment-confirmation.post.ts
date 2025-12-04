@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
           first_name,
           last_name
         ),
-        locations (
+        locations:location_id (
           name,
           address
         )
@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
 
     const user = (appointment as any).users
     const staff = (appointment as any).staff
-    const location = (appointment as any).locations?.[0]
+    const location = (appointment as any).locations
 
     // Check if user has email
     if (!user?.email) {
