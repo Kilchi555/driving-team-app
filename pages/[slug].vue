@@ -407,7 +407,7 @@ const reservedRoutes = [
 // Meta
 definePageMeta({
   layout: false,
-  middleware: [],  // Disable ALL middleware including Supabase auth
+  // No middleware restriction - let it be public
   validate: async (route: any) => {
     const slug = route.params.slug as string
     

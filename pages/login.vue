@@ -263,8 +263,8 @@ import { getSupabase } from '~/utils/supabase'
 
 // Meta
 definePageMeta({
-  layout: false,
-  middleware: []  // Disable ALL middleware including Supabase auth
+  layout: false
+  // No middleware restriction - let it be public
 })
 
 // Composables
