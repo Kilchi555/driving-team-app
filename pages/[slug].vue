@@ -812,9 +812,26 @@ onMounted(async () => {
     
     // Prüfe ob bereits angemeldet
     if (isAuthenticated.value && !isLoading.value) {
-      console.log('🔄 User already authenticated, redirecting...')
+      console.log('🔄 User already authenticated, checking profile...')
       const authStore = useAuthStore()
+      
+      // Warte kurz auf User-Profil
+      let attempts = 0
+      while (!authStore.userProfile && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        attempts++
+      }
+      
       const user = authStore.userProfile
+      
+      if (!user) {
+        console.error('❌ Session exists but no user profile! Clearing broken session...')
+        await logout()
+        isCheckingSession.value = false
+        return
+      }
+      
+      console.log('✅ User profile found, redirecting...')
       if (user?.role === 'admin' || user?.role === 'tenant_admin') {
         router.push('/admin')
       } else if (user?.role === 'staff') {
