@@ -1,4 +1,6 @@
 // plugins/tenant-restore.client.ts
+import { getSupabase } from '~/utils/supabase'
+
 export default defineNuxtPlugin(async () => {
   // Nur auf Client-Seite ausführen
   if (process.server) return
@@ -10,7 +12,7 @@ export default defineNuxtPlugin(async () => {
     const { loadTenantBrandingById } = useTenantBranding()
 
     // Warte bis Auth-State wiederhergestellt ist - nutze Supabase-Modul Client
-    const supabase = useSupabaseClient()
+    const supabase = getSupabase()
     
     // Prüfe ob bereits ein User eingeloggt ist
     const { data: { user }, error } = await supabase.auth.getUser()

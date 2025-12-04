@@ -3,10 +3,11 @@
 
 import { ref, watch } from 'vue'
 import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
 
 export const useTenantConsistency = () => {
   // Use the Nuxt Supabase client composable instead of getSupabase
-  const supabase = useSupabaseClient()
+  const supabase = getSupabase()
   const authStore = useAuthStore()
   
   const currentTenantId = ref<string | null>(null)

@@ -610,7 +610,7 @@ if (typeof window !== 'undefined') {
   })
 }
 
-const supabase = useSupabaseClient()
+const supabase = getSupabase()
 const route = useRoute()
 const router = useRouter()
 const { showError, showSuccess } = useUIStore()

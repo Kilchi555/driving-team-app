@@ -150,6 +150,8 @@ LIMIT 10;</pre>
 </template>
 
 <script setup lang="ts">
+import { getSupabase } from '~/utils/supabase'
+
 definePageMeta({
   middleware: 'admin'
 })
@@ -188,7 +190,7 @@ const loadPayments = async () => {
   isLoadingPayments.value = true
 
   try {
-    const supabase = useSupabaseClient()
+    const supabase = getSupabase()
     
     const { data, error } = await supabase
       .from('payments')

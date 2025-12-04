@@ -756,7 +756,7 @@ const isOnlineBookingEnabled = computed(() => {
 })
 
 const route = useRoute()
-const supabase = useSupabaseClient()
+const supabase = getSupabase()
 
 // Optimized batch availability check function with local time handling and working hours
 const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: Date, endTime: Date }[]): Promise<boolean[]> => {
@@ -2288,7 +2288,7 @@ const confirmBooking = async () => {
     console.log('🎯 Starting booking confirmation...')
     
     // Step 1: Check if user is authenticated
-    const supabase = useSupabaseClient()
+    const supabase = getSupabase()
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
@@ -2372,7 +2372,7 @@ const createAppointment = async (userData: any) => {
     console.log('🔄 Creating appointment...')
     
     // Check for collision one more time before creating
-    const supabase = useSupabaseClient()
+    const supabase = getSupabase()
     const startTime = new Date(selectedSlot.value.start_time).toISOString()
     const endTime = new Date(selectedSlot.value.end_time).toISOString()
     
@@ -2441,7 +2441,7 @@ const createAppointment = async (userData: any) => {
       console.log('💳 Payment created, checking payment details...')
       
       // Get payment and user details
-      const supabase = useSupabaseClient()
+      const supabase = getSupabase()
       const { data: paymentData } = await supabase
         .from('payments')
         .select('payment_method, payment_status, payment_method_id')
