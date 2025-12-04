@@ -150,12 +150,24 @@ export const getSupabaseServerWithSession = (event: any): SupabaseClient => {
   const cookies = event.node.req.headers.cookie || ''
   let accessToken: string | null = null
 
+  console.log('🔐 DEBUG: Incoming headers:', {
+    cookie: cookies ? '✓ Present' : '✗ Missing',
+    cookieLength: cookies.length,
+    cookieFirst100: cookies.substring(0, 100)
+  })
+
   try {
     const cookieList = cookies.split(';')
-    for (const cookie of cookieList) {
+    console.log('🔐 DEBUG: Cookie list length:', cookieList.length)
+    
+    for (let i = 0; i < cookieList.length; i++) {
+      const cookie = cookieList[i]
       const [name, value] = cookie.trim().split('=')
+      console.log(`🔐 DEBUG: Cookie ${i}:`, { name, hasValue: !!value })
+      
       if (name === 'sb-access-token') {
         accessToken = decodeURIComponent(value)
+        console.log('🔐 DEBUG: Found sb-access-token!')
         break
       }
     }
@@ -163,10 +175,15 @@ export const getSupabaseServerWithSession = (event: any): SupabaseClient => {
     console.error('❌ Error parsing cookies:', error)
   }
 
+  console.log('🔐 DEBUG: Final accessToken:', accessToken ? `✓ Found (${accessToken.length} chars)` : '✗ Not found')
+
   // Create Supabase client - if we have an access token, use it; otherwise use anon key
   let headers: Record<string, string> = {}
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`
+    console.log('🔐 DEBUG: Using Bearer token auth')
+  } else {
+    console.log('🔐 DEBUG: Using anon key auth (no token found)')
   }
 
   return createClient(supabaseUrl, supabaseKey, {
