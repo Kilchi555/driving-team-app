@@ -80,9 +80,6 @@ export default defineEventHandler(async (event) => {
       tenantId: userProfile.tenant_id
     })
 
-    // Use admin client for database operations to bypass RLS
-    const supabaseAdmin = getSupabaseAdmin()
-
     // 1. Find and validate voucher
     const { data: voucher, error: voucherError } = await supabaseAdmin
       .from('voucher_codes')
