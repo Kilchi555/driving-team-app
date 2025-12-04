@@ -92,7 +92,8 @@ export default defineNuxtConfig({
     key: process.env.SUPABASE_ANON_KEY,
     redirectOptions: {
       login: '/login',
-      callback: '/auth/callback'
+      callback: '/auth/callback',
+      exclude: ['/', '/login', '/driving-team']  // Exclude public pages from auth redirect
     }
   },
 
