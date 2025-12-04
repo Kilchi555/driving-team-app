@@ -121,6 +121,7 @@
                   type="text"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Vorname"
+                  @input="scheduleAutoSave"
                 />
               </div>
 
@@ -132,6 +133,7 @@
                   type="text"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Nachname"
+                  @input="scheduleAutoSave"
                 />
               </div>
 
@@ -143,8 +145,9 @@
                   type="email"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="email@example.com"
+                  @input="scheduleAutoSave"
                 />
-                <p class="text-xs text-gray-500 mt-1">📧 Email-Änderungen werden sofort übernommen</p>
+                <p class="text-xs text-gray-500 mt-1">📧 Email-Änderungen werden automatisch gespeichert</p>
               </div>
 
               <!-- Telefon -->
@@ -155,6 +158,7 @@
                   type="tel"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="+41 79 123 45 67"
+                  @input="scheduleAutoSave"
                 />
               </div>
 
@@ -165,6 +169,7 @@
                   v-model="formData.birthdate"
                   type="date"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  @input="scheduleAutoSave"
                 />
               </div>
             </div>
@@ -178,6 +183,7 @@
                   type="text"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Strasse"
+                  @input="scheduleAutoSave"
                 />
               </div>
               <div>
@@ -187,6 +193,7 @@
                   type="text"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Nr."
+                  @input="scheduleAutoSave"
                 />
               </div>
               <div>
@@ -196,29 +203,34 @@
                   type="text"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="PLZ"
+                  @input="scheduleAutoSave"
                 />
               </div>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Stadt</label>
-              <input
-                v-model="formData.city"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Stadt"
-              />
+            <!-- Stadt and Stadt Feld nebeneinander -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
+                <input
+                  v-model="formData.zip"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="PLZ"
+                  @input="scheduleAutoSave"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Stadt</label>
+                <input
+                  v-model="formData.city"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Stadt"
+                  @input="scheduleAutoSave"
+                />
+              </div>
             </div>
-
-            <!-- Save Button for Personal Data -->
-            <button
-              @click="saveProfile"
-              :disabled="isSaving"
-              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-            >
-              <span v-if="isSaving">Wird gespeichert...</span>
-              <span v-else>Persönliche Daten speichern</span>
-            </button>
           </div>
 
           <!-- Documents Section -->
@@ -391,6 +403,19 @@ const isUploading = ref(false)
 const error = ref('')
 const successMessage = ref('')
 const categories = ref<any[]>([])
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+
+const scheduleAutoSave = () => {
+  // Clear existing timer
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer)
+  }
+  
+  // Set new timer for 2 seconds
+  autoSaveTimer = setTimeout(() => {
+    saveProfile()
+  }, 2000)
+}
 
 const triggerFileInput = (categoryCode: string) => {
   const input = document.querySelector(`input[ref*="${categoryCode}"]`) as HTMLInputElement
