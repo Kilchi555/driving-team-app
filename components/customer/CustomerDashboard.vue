@@ -950,7 +950,21 @@ const loadUserDocuments = async () => {
     console.log('📄 Loading user documents for user:', userData.value.id, 'tenant:', userData.value.tenant_id)
     const supabase = getSupabase()
 
-    // Get all documents for this user
+    // 1. Load document categories for this tenant
+    const { data: categories, error: catError } = await supabase
+      .from('document_categories')
+      .select('*')
+      .eq('tenant_id', userData.value.tenant_id)
+      .order('display_order', { ascending: true })
+
+    if (catError) {
+      console.error('❌ Error loading categories:', catError)
+      return
+    }
+
+    console.log('✅ Loaded categories:', categories?.length || 0)
+
+    // 2. Get all documents for this user
     const { data: docs, error: docsError } = await supabase
       .from('user_documents')
       .select('*')
@@ -961,47 +975,25 @@ const loadUserDocuments = async () => {
 
     if (docsError) {
       console.error('❌ Error loading documents:', docsError)
-      console.error('   Error details:', {
-        code: docsError.code,
-        message: docsError.message,
-        details: docsError.details
-      })
       return
     }
 
     console.log('✅ Loaded documents:', docs?.length || 0)
-    if (docs && docs.length > 0) {
-      console.log('📋 First document:', docs[0])
-    }
 
-    // Group documents by document_type and category_code
-    const groupedDocs: Record<string, any> = {}
-    
-    if (docs && docs.length > 0) {
-      docs.forEach((doc: any) => {
-        const key = doc.category_code 
-          ? `${doc.document_type}_${doc.category_code}` 
-          : doc.document_type
-        
-        if (!groupedDocs[key]) {
-          groupedDocs[key] = {
-            id: key,
-            code: key,
-            name: doc.title || `${doc.document_type}${doc.category_code ? ` - ${doc.category_code}` : ''}`,
-            document_type: doc.document_type,
-            category_code: doc.category_code,
-            documents: []
-          }
-        }
-        groupedDocs[key].documents.push(doc)
-      })
-    }
+    // 3. Map categories with their documents
+    userDocumentCategories.value = (categories || []).map((cat: any) => {
+      const categoryDocs = (docs || []).filter((doc: any) => doc.category_code === cat.code)
+      return {
+        code: cat.code,
+        name: cat.name,
+        description: cat.description,
+        documents: categoryDocs
+      }
+    })
 
-    const categoriesArray = Object.keys(groupedDocs).map(key => groupedDocs[key])
-    userDocumentCategories.value = categoriesArray
-    console.log('✅ Documents grouped, categories:', categoriesArray.length)
-    if (categoriesArray.length > 0) {
-      console.log('📂 First category:', categoriesArray[0])
+    console.log('✅ Documents grouped, categories:', userDocumentCategories.value.length)
+    if (userDocumentCategories.value.length > 0) {
+      console.log('📂 First category:', userDocumentCategories.value[0])
     }
   } catch (err: any) {
     console.error('❌ Error loading user documents:', err)
