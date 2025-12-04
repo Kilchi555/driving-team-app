@@ -77,57 +77,14 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
     return { logoSrc: null, logoDataUrl: null }
   }
 
-  try {
-    console.log('📷 Loading logo from:', logoUrl)
-    
-    // Extract bucket and path from Supabase URL
-    // URL format: https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
-    const urlMatch = logoUrl.match(/storage\/v1\/object\/public\/([^/]+)\/(.+)$/)
-    
-    if (urlMatch) {
-      const bucket = urlMatch[1]
-      const path = urlMatch[2]
-      
-      console.log('📷 Extracted bucket:', bucket, 'path:', path)
-      
-      // Try to download using Supabase client
-      const { data: logoData, error: logoError } = await supabase.storage
-        .from(bucket)
-        .download(path)
-      
-      if (logoError) {
-        console.warn('⚠️ Logo download error:', logoError)
-      } else if (logoData) {
-        const arrayBuffer = await logoData.arrayBuffer()
-        const logoBase64 = Buffer.from(arrayBuffer).toString('base64')
-        const logoMime = logoData.type || 'image/png'
-        console.log('✅ Logo loaded successfully via Supabase client')
-        return {
-          logoSrc: logoUrl,
-          logoDataUrl: `data:${logoMime};base64,${logoBase64}`
-        }
-      }
-    }
-    
-    // Fallback to fetch if Supabase download fails
-    const logoRes = await fetch(logoUrl)
-    if (logoRes.ok) {
-      const logoBuffer = await logoRes.arrayBuffer()
-      const logoBase64 = Buffer.from(logoBuffer).toString('base64')
-      const logoMime = logoRes.headers.get('content-type') || 'image/png'
-      console.log('✅ Logo loaded successfully via fetch')
-      return {
-        logoSrc: logoUrl,
-        logoDataUrl: `data:${logoMime};base64,${logoBase64}`
-      }
-    } else {
-      console.warn('⚠️ Logo fetch failed:', logoRes.status)
-    }
-  } catch (logoErr) {
-    console.warn('⚠️ Could not load logo:', logoErr)
+  console.log('📷 Using logo URL directly:', logoUrl)
+  
+  // Simply use the public URL directly - no need to download and convert to base64
+  // The PDF generator can fetch it directly
+  return {
+    logoSrc: logoUrl,
+    logoDataUrl: logoUrl
   }
-
-  return { logoSrc: null, logoDataUrl: null }
 }
 
 async function loadPaymentContext(payment: any, supabase: any, translateFn: any): Promise<PaymentContext> {
