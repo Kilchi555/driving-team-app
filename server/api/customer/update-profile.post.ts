@@ -19,12 +19,19 @@ export default defineEventHandler(async (event) => {
     // Get access token from cookies or Authorization header
     let accessToken = getCookie(event, 'sb-access-token')
     
+    console.log('🔐 Auth check:')
+    console.log('  - Cookies:', Object.keys(event.node.req.headers.cookie?.split(';').map(c => c.trim().split('=')[0]) || []))
+    
     if (!accessToken) {
       // Try Authorization header
       const authHeader = getHeader(event, 'authorization')
+      console.log('  - Auth header:', authHeader ? '✓ Present' : '✗ Missing')
       if (authHeader && authHeader.startsWith('Bearer ')) {
         accessToken = authHeader.substring(7)
+        console.log('  - Token from header: ✓ Extracted')
       }
+    } else {
+      console.log('  - Token from cookie: ✓ Found')
     }
     
     if (!accessToken) {
