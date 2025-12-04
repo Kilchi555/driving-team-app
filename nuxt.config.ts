@@ -90,7 +90,10 @@ export default defineNuxtConfig({
   supabase: {
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_ANON_KEY,
-    redirect: false  // Disable automatic redirects - we handle this in our own middleware
+    redirectOptions: {
+      login: '/login',
+      callback: '/auth/callback'
+    }
   },
 
   app: {

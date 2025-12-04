@@ -263,7 +263,8 @@ import { getSupabase } from '~/utils/supabase'
 
 // Meta
 definePageMeta({
-  layout: false
+  layout: false,
+  auth: false  // Disable Supabase auth redirect for login page
 })
 
 // Composables
