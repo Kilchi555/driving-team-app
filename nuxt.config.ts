@@ -92,7 +92,7 @@ export default defineNuxtConfig({
     key: process.env.SUPABASE_ANON_KEY,
     redirectOptions: {
       login: '/login',
-      callback: '/customer-dashboard'
+      callback: '/auth/callback'
     }
   },
 
