@@ -1473,10 +1473,10 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
     
     // Update payment_method for all selected payments
     for (const paymentId of selectedPayments.value) {
-      // Get the payment to find the associated appointment
+      // Get the payment to find the associated appointment and tenant_id
       const { data: paymentData, error: paymentError } = await supabase
         .from('payments')
-        .select('appointment_id')
+        .select('appointment_id, tenant_id')
         .eq('id', paymentId)
         .single()
       
@@ -1494,6 +1494,7 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
           paid_at: method === 'cash' ? new Date().toISOString() : null
         })
         .eq('id', paymentId)
+        .eq('tenant_id', paymentData.tenant_id)
       
       if (updatePaymentError) {
         console.error(`❌ Error updating payment ${paymentId}:`, updatePaymentError)
@@ -1502,16 +1503,26 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
       
       // If payment is being marked as paid (cash), also confirm the appointment if it's pending
       if (method === 'cash' && paymentData?.appointment_id) {
-        const { error: updateAppointmentError } = await supabase
+        // First get the appointment to find tenant_id
+        const { data: appointmentData, error: aptFetchError } = await supabase
           .from('appointments')
-          .update({ status: 'confirmed' })
+          .select('tenant_id')
           .eq('id', paymentData.appointment_id)
-          .eq('status', 'pending_confirmation') // Only update if still pending
+          .single()
         
-        if (updateAppointmentError) {
-          console.error(`❌ Error confirming appointment ${paymentData.appointment_id}:`, updateAppointmentError)
-        } else {
-          console.log(`✅ Appointment ${paymentData.appointment_id} confirmed`)
+        if (!aptFetchError && appointmentData) {
+          const { error: updateAppointmentError } = await supabase
+            .from('appointments')
+            .update({ status: 'confirmed' })
+            .eq('id', paymentData.appointment_id)
+            .eq('status', 'pending_confirmation') // Only update if still pending
+            .eq('tenant_id', appointmentData.tenant_id) // RLS filter
+          
+          if (updateAppointmentError) {
+            console.error(`❌ Error confirming appointment ${paymentData.appointment_id}:`, updateAppointmentError)
+          } else {
+            console.log(`✅ Appointment ${paymentData.appointment_id} confirmed`)
+          }
         }
       }
       
