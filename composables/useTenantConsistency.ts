@@ -2,11 +2,11 @@
 // Überwacht und verhindert ungewollte Tenant-Wechsel
 
 import { ref, watch } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 
 export const useTenantConsistency = () => {
-  const supabase = getSupabase()
+  // Use the Nuxt Supabase client composable instead of getSupabase
+  const supabase = useSupabaseClient()
   const authStore = useAuthStore()
   
   const currentTenantId = ref<string | null>(null)
