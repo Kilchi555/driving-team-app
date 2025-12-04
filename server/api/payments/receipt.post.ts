@@ -317,6 +317,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
 
 function renderHeader(customer: CustomerInfo, dateLabelKey: string, dateValue: string, tenant: any, assets: TenantAssets, translateFn: any) {
   const companyName = tenant?.legal_company_name || tenant?.name || 'Unternehmen'
+  const brandName = tenant?.name || tenant?.legal_company_name || 'Unternehmen'
   const tenantAddress = tenant?.address || ''
   const tenantEmail = tenant?.contact_email || tenant?.email || ''
   const tenantPhone = tenant?.contact_phone || tenant?.phone || ''
@@ -337,7 +338,7 @@ function renderHeader(customer: CustomerInfo, dateLabelKey: string, dateValue: s
         </div>
       </div>
       <div class="header-right">
-        ${assets.logoDataUrl ? `<img class="logo" src="${assets.logoDataUrl}" alt="Logo"/>` : `<div class="company-name-large">${companyName}</div>`}
+        ${assets.logoDataUrl ? `<img class="logo" src="${assets.logoDataUrl}" alt="Logo"/>` : `<div class="company-name-large">${brandName}</div>`}
         ${companyName && assets.logoDataUrl ? `<div class="value">${companyName}</div>` : ''}
         ${tenantAddress ? `<div class="address">${tenantAddress}</div>` : ''}
         ${(tenantEmail || tenantPhone) ? `<div class="contact">${tenantEmail || ''}${tenantEmail && tenantPhone ? '<br/>' : ''}${tenantPhone || ''}</div>` : ''}
