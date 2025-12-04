@@ -484,6 +484,23 @@ const handleLogin = async () => {
     
     console.log('✅ Login successful')
     
+    // Wait for auth store to update with user profile
+    console.log('⏳ Waiting for user profile to load...')
+    let attempts = 0
+    while (!authStore.userProfile && attempts < 20) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
+    }
+    
+    if (!authStore.userProfile) {
+      console.error('❌ User profile not loaded after login!')
+      loginError.value = 'Fehler beim Laden des Benutzerprofils. Bitte erneut einloggen.'
+      await logout()
+      return
+    }
+    
+    console.log('✅ User profile loaded:', authStore.userProfile.email)
+    
     // Device security temporarily disabled - will be re-enabled with logging functionality
     
     // ✅ Erfolgsmeldung und sofortiger Redirect - Device-Check blockiert NICHT

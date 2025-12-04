@@ -354,14 +354,25 @@ const handleLogin = async () => {
     
     console.log('✅ Login successful')
     
-    // Hole User-Daten um tenant_id zu bekommen
+    // Wait for auth store to update with user profile
     const authStore = useAuthStore()
+    console.log('⏳ Waiting for user profile to load...')
+    let attempts = 0
+    while (!authStore.userProfile && attempts < 20) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
+    }
+    
     const user = authStore.userProfile
     
     if (!user) {
-      loginError.value = 'Fehler beim Laden des Benutzerprofils.'
+      console.error('❌ User profile not loaded after login!')
+      loginError.value = 'Fehler beim Laden des Benutzerprofils. Bitte erneut einloggen.'
+      await logout()
       return
     }
+    
+    console.log('✅ User profile loaded:', user.email)
 
     // Lade Tenant-Informationen
     let redirectPath = '/dashboard' // Fallback
