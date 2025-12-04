@@ -77,6 +77,13 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       return navigateTo('/dashboard')
     }
     
+    // WICHTIG: Nicht umleiten wenn wir gerade von /login oder /driving-team kommen!
+    // Das würde eine Endlosschleife verursachen
+    if (from.path === '/login' || from.path.match(/^\/[^\/]+$/)) {
+      console.log('Auth middleware: Coming from login page, allowing through to prevent loop')
+      return
+    }
+    
     if (to.path !== '/') {
       return navigateTo('/')
     }
