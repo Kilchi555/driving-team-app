@@ -132,7 +132,7 @@ export const getSupabaseAdmin = (): SupabaseClient => {
   return supabaseAdminInstance
 }
 
-// Server-side helper to create a Supabase client with user session from cookies
+// Server-side helper to create a Supabase client with user session from Authorization header
 export const getSupabaseServerWithSession = (event: any): SupabaseClient => {
   if (!process.server) {
     throw new Error('getSupabaseServerWithSession can only be used on the server')
@@ -146,38 +146,23 @@ export const getSupabaseServerWithSession = (event: any): SupabaseClient => {
     throw new Error('Missing Supabase configuration')
   }
 
-  // Try to get access token from cookies
-  const cookies = event.node.req.headers.cookie || ''
+  // Try to get access token from Authorization header
+  const authHeader = event.node.req.headers.authorization || ''
   let accessToken: string | null = null
 
   console.log('🔐 DEBUG: Incoming headers:', {
-    cookie: cookies ? '✓ Present' : '✗ Missing',
-    cookieLength: cookies.length,
-    cookieFirst100: cookies.substring(0, 100)
+    authHeader: authHeader ? '✓ Present' : '✗ Missing',
+    authHeaderFirst50: authHeader.substring(0, 50)
   })
 
-  try {
-    const cookieList = cookies.split(';')
-    console.log('🔐 DEBUG: Cookie list length:', cookieList.length)
-    
-    for (let i = 0; i < cookieList.length; i++) {
-      const cookie = cookieList[i]
-      const [name, value] = cookie.trim().split('=')
-      console.log(`🔐 DEBUG: Cookie ${i}:`, { name, hasValue: !!value })
-      
-      if (name === 'sb-access-token') {
-        accessToken = decodeURIComponent(value)
-        console.log('🔐 DEBUG: Found sb-access-token!')
-        break
-      }
-    }
-  } catch (error) {
-    console.error('❌ Error parsing cookies:', error)
+  if (authHeader.startsWith('Bearer ')) {
+    accessToken = authHeader.substring(7)
+    console.log('🔐 DEBUG: Extracted token from Authorization header:', accessToken ? `✓ (${accessToken.length} chars)` : '✗')
   }
 
   console.log('🔐 DEBUG: Final accessToken:', accessToken ? `✓ Found (${accessToken.length} chars)` : '✗ Not found')
 
-  // Create Supabase client - if we have an access token, use it; otherwise use anon key
+  // Create Supabase client with the access token if available
   let headers: Record<string, string> = {}
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`

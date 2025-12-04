@@ -476,9 +476,18 @@ const saveProfile = async () => {
   try {
     console.log('💾 Saving profile with data:', formData.value)
     
+    // Get auth token from Supabase
+    const supabase = useSupabaseClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    const accessToken = session?.access_token
+    
+    console.log('💾 Access token:', accessToken ? '✓ Found' : '✗ Missing')
+    
     const response = await $fetch('/api/customer/update-profile', {
       method: 'POST',
-      credentials: 'include',
+      headers: accessToken ? {
+        'Authorization': `Bearer ${accessToken}`
+      } : {},
       body: {
         firstName: formData.value.firstName,
         lastName: formData.value.lastName,
