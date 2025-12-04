@@ -177,18 +177,8 @@ const redeemVoucher = async () => {
   try {
     console.log('🎫 Redeeming voucher:', voucherCode.value)
 
-    // Get auth token from Supabase
-    const supabase = useSupabaseClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    const accessToken = session?.access_token
-    
-    console.log('🎫 Access token:', accessToken ? '✓ Found' : '✗ Missing')
-
     const response = await $fetch('/api/vouchers/redeem', {
       method: 'POST',
-      headers: accessToken ? {
-        'Authorization': `Bearer ${accessToken}`
-      } : {},
       body: {
         code: voucherCode.value.trim().toUpperCase()
       }

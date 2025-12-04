@@ -1,6 +1,5 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
-import { getSupabaseServerWithSession } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -21,15 +20,46 @@ export default defineEventHandler(async (event) => {
       city 
     } = body
 
-    console.log('🔄 [update-profile] Calling getSupabaseServerWithSession')
-    // Get Supabase client with user session from cookies
-    const userClient = getSupabaseServerWithSession(event)
-    console.log('🔄 [update-profile] Got userClient')
+    // Get auth token from Authorization header (set by @nuxtjs/supabase module)
+    console.log('🔄 [update-profile] Getting auth header')
+    const authHeader = getHeader(event, 'authorization') || ''
+    let accessToken: string | null = null
+    
+    if (authHeader.startsWith('Bearer ')) {
+      accessToken = authHeader.substring(7)
+      console.log('🔄 [update-profile] Found Bearer token')
+    }
+
+    if (!accessToken) {
+      console.error('❌ No access token found')
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Nicht authentifiziert'
+      })
+    }
+
+    // Create Supabase client with the access token
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+    const supabaseKey = process.env.SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Server configuration error'
+      })
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      }
+    })
 
     // Get authenticated user
     console.log('🔄 [update-profile] Getting user from auth')
     const { data: { user }, error: authError } = await userClient.auth.getUser()
-    console.log('🔄 [update-profile] Auth result:', { hasUser: !!user, hasError: !!authError })
 
     if (authError || !user) {
       console.error('❌ Auth error:', authError)
@@ -42,7 +72,6 @@ export default defineEventHandler(async (event) => {
     console.log('🔄 Updating profile for user:', user.id)
 
     // Create service role client to bypass RLS
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!serviceRoleKey) {

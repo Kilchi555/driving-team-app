@@ -11,6 +11,7 @@ export default defineNuxtConfig({
   
   // --- Module Configuration ---
   modules: [
+    '@nuxtjs/supabase',
     '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxt/eslint'
@@ -85,6 +86,16 @@ export default defineNuxtConfig({
     }
   },
   
+  // --- Supabase Configuration ---
+  supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_ANON_KEY,
+    redirectOptions: {
+      login: '/login',
+      callback: '/customer-dashboard'
+    }
+  },
+
   app: {
     head: {
       script: [

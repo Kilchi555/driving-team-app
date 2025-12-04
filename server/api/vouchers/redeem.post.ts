@@ -1,8 +1,9 @@
 // API Endpoint: Redeem Voucher Code
 // Description: Allows students to redeem voucher codes for credit top-up
 
-import { defineEventHandler, readBody, createError } from 'h3'
-import { getSupabaseAdmin, getSupabaseServerWithSession } from '~/utils/supabase'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -20,10 +21,42 @@ export default defineEventHandler(async (event) => {
 
     console.log('🎫 [redeem] Redeeming voucher:', code)
 
-    // Get Supabase client with user session from cookies
-    console.log('🎫 [redeem] Calling getSupabaseServerWithSession')
-    const userClient = getSupabaseServerWithSession(event)
-    console.log('🎫 [redeem] Got userClient')
+    // Get auth token from Authorization header (set by @nuxtjs/supabase module)
+    console.log('🎫 [redeem] Getting auth header')
+    const authHeader = getHeader(event, 'authorization') || ''
+    let accessToken: string | null = null
+    
+    if (authHeader.startsWith('Bearer ')) {
+      accessToken = authHeader.substring(7)
+      console.log('🎫 [redeem] Found Bearer token')
+    }
+
+    if (!accessToken) {
+      console.error('❌ No access token found')
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Not authenticated'
+      })
+    }
+
+    // Create Supabase client with the access token
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+    const supabaseKey = process.env.SUPABASE_ANON_KEY
+
+    if (!supabaseKey) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Server configuration error'
+      })
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      }
+    })
 
     // Get current authenticated user
     console.log('🎫 [redeem] Getting user from auth')
