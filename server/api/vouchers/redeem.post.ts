@@ -1,9 +1,9 @@
 // API Endpoint: Redeem Voucher Code
 // Description: Allows students to redeem voucher codes for credit top-up
 
-import { defineEventHandler, readBody, createError, getCookie, getHeader } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getSupabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -17,53 +17,19 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get access token from cookies or Authorization header
-    let accessToken = getCookie(event, 'sb-access-token')
-    
-    console.log('🔐 Auth check for redeem:')
-    console.log('  - Cookies:', Object.keys(event.node.req.headers.cookie?.split(';').map(c => c.trim().split('=')[0]) || []))
-    
-    if (!accessToken) {
-      // Try Authorization header
-      const authHeader = getHeader(event, 'authorization')
-      console.log('  - Auth header:', authHeader ? '✓ Present' : '✗ Missing')
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        accessToken = authHeader.substring(7)
-        console.log('  - Token from header: ✓ Extracted')
-      }
-    } else {
-      console.log('  - Token from cookie: ✓ Found')
-    }
-    
-    if (!accessToken) {
-      console.error('❌ No access token in cookies or headers')
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Not authenticated'
-      })
-    }
+    console.log('🎫 Redeeming voucher:', code)
 
-    // Create client with user's access token
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-
-    if (!supabaseAnonKey) {
+    // Get Supabase client (browser-side, has auth)
+    const supabaseClient = getSupabase()
+    if (!supabaseClient) {
       throw createError({
         statusCode: 500,
-        statusMessage: 'Server configuration error'
+        statusMessage: 'Supabase client not available'
       })
     }
 
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      }
-    })
-    
     // Get current authenticated user
-    const { data: { user: authUser }, error: authError } = await userClient.auth.getUser()
+    const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser()
     
     if (authError || !authUser) {
       console.error('❌ Auth error:', authError)

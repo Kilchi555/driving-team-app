@@ -1,5 +1,6 @@
-import { defineEventHandler, readBody, createError, getCookie, getHeader } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { getSupabase } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -16,55 +17,17 @@ export default defineEventHandler(async (event) => {
       city 
     } = body
 
-    // Get access token from cookies or Authorization header
-    let accessToken = getCookie(event, 'sb-access-token')
-    
-    console.log('🔐 Auth check:')
-    console.log('  - Cookies:', Object.keys(event.node.req.headers.cookie?.split(';').map(c => c.trim().split('=')[0]) || []))
-    
-    if (!accessToken) {
-      // Try Authorization header
-      const authHeader = getHeader(event, 'authorization')
-      console.log('  - Auth header:', authHeader ? '✓ Present' : '✗ Missing')
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        accessToken = authHeader.substring(7)
-        console.log('  - Token from header: ✓ Extracted')
-      }
-    } else {
-      console.log('  - Token from cookie: ✓ Found')
-    }
-    
-    if (!accessToken) {
-      console.error('❌ No access token in cookies or headers')
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Nicht authentifiziert'
-      })
-    }
-
-    // Get Supabase URL and keys
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseAnonKey || !serviceRoleKey) {
+    // Get Supabase client (browser-side, has auth)
+    const supabaseClient = getSupabase()
+    if (!supabaseClient) {
       throw createError({
         statusCode: 500,
-        statusMessage: 'Server configuration error'
+        statusMessage: 'Supabase client not available'
       })
     }
 
-    // Create user client with access token
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      }
-    })
-
     // Get authenticated user
-    const { data: { user }, error: authError } = await userClient.auth.getUser()
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
 
     if (authError || !user) {
       console.error('❌ Auth error:', authError)
@@ -77,6 +40,16 @@ export default defineEventHandler(async (event) => {
     console.log('🔄 Updating profile for user:', user.id)
 
     // Create service role client to bypass RLS
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!serviceRoleKey) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Server configuration error'
+      })
+    }
+
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
     // Update user profile
@@ -155,4 +128,3 @@ export default defineEventHandler(async (event) => {
     throw error
   }
 })
-
