@@ -181,21 +181,7 @@ export default defineEventHandler(async (event) => {
       html: emailHtml
     })
 
-    // 9. Save reminder to DB
-    await supabase
-      .from('payment_reminders')
-      .insert({
-        payment_id: paymentId,
-        reminder_type: 'email',
-        reminder_number: 1,
-        status: 'sent',
-        metadata: {
-          sent_to: user.email,
-          sent_at: now.toISOString()
-    }
-      })
-
-    // 10. Update payment
+    // 9. Update payment with reminder info
     await supabase
       .from('payments')
       .update({
