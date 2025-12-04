@@ -62,14 +62,14 @@
           <div class="flex-1">
             <p class="text-sm sm:text-base text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
             <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ (studentBalance / 100).toFixed(2) }}</p>
-            <!-- ✅ NEW: Redeem Voucher Button -->
-            <button
+            <!-- ✅ DISABLED FOR PRODUCTION: Redeem Voucher Button (enable on preview branch) -->
+            <!-- <button
               @click="showRedeemVoucherModal = true"
               class="mt-3 inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm"
             >
               <span class="mr-2">🎫</span>
               Gutschein einlösen
-            </button>
+            </button> -->
           </div>
           <div class="flex-shrink-0">
             <svg class="w-10 h-10 sm:w-12 sm:h-12 text-green-500" fill="currentColor" viewBox="0 0 20 20">
