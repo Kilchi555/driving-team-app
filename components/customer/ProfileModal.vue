@@ -6,7 +6,8 @@
         <div class="flex justify-between items-center">
           <h2 class="text-2xl font-bold text-gray-900">Mein Profil</h2>
           <div class="flex items-center gap-3">
-            <button
+            <!-- ✅ DISABLED FOR PRODUCTION: Edit Profile Button (enable on preview branch) -->
+            <!-- <button
               v-if="!isEditMode"
               @click="isEditMode = true"
               class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
@@ -14,7 +15,7 @@
             >
   
               <span>Bearbeiten</span>
-            </button>
+            </button> -->
             <button
               @click="$emit('close')"
               class="text-gray-600 hover:text-gray-900 transition-colors p-2"
