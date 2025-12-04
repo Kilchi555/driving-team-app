@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError, getCookie } from 'h3'
+import { defineEventHandler, readBody, createError, getCookie, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 
 export default defineEventHandler(async (event) => {
@@ -16,11 +16,19 @@ export default defineEventHandler(async (event) => {
       city 
     } = body
 
-    // Get access token from cookies
-    const accessToken = getCookie(event, 'sb-access-token')
+    // Get access token from cookies or Authorization header
+    let accessToken = getCookie(event, 'sb-access-token')
     
     if (!accessToken) {
-      console.error('❌ No access token in cookies')
+      // Try Authorization header
+      const authHeader = getHeader(event, 'authorization')
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        accessToken = authHeader.substring(7)
+      }
+    }
+    
+    if (!accessToken) {
+      console.error('❌ No access token in cookies or headers')
       throw createError({
         statusCode: 401,
         statusMessage: 'Nicht authentifiziert'
