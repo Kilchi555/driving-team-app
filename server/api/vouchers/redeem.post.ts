@@ -1,8 +1,6 @@
 // API Endpoint: Redeem Voucher Code
 // Description: Allows students to redeem voucher codes for credit top-up
 
-import { createClient } from '@supabase/supabase-js'
-import { getCookie } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
@@ -17,45 +15,21 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get Supabase URL and keys
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-
-    if (!supabaseAnonKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    // Get access token from cookies
-    const accessToken = getCookie(event, 'sb-access-token')
-
-    if (!accessToken) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Not authenticated'
-      })
-    }
-
-    // Create client with user's session
-    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      }
-    })
-
-    // Get current user
-    const { data: { user: authUser }, error: authError } = await userSupabase.auth.getUser(accessToken)
+    // Get Supabase client - use Nuxt Supabase module which handles auth automatically
+    const client = await serverSupabaseClient(event)
+    
+    // Get current authenticated user
+    const { data: { user: authUser }, error: authError } = await client.auth.getUser()
     
     if (authError || !authUser) {
+      console.error('❌ Auth error:', authError)
       throw createError({
         statusCode: 401,
         statusMessage: 'Not authenticated'
       })
     }
+
+    console.log('✅ Authenticated user:', authUser.id, authUser.email)
 
     // Use admin client for database operations to bypass RLS
     const supabaseAdmin = getSupabaseAdmin()
