@@ -436,7 +436,7 @@ const authStore = useAuthStore()
 const { login, logout, isLoggedIn, loading } = authStore
 const { showError, showSuccess } = useUIStore()
 const { currentTenant } = useTenant()
-const supabase = getSupabase()
+const supabase = useSupabaseClient()
 
 // Methods
 const handleLogin = async () => {

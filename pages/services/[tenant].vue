@@ -117,7 +117,7 @@ definePageMeta({
 })
 
 const route = useRoute()
-const supabase = getSupabase()
+const supabase = useSupabaseClient()
 
 // Get tenant slug from URL parameter
 const tenantSlug = computed(() => route.params.tenant as string)

@@ -272,7 +272,7 @@ const route = useRoute()
 const { login, logout, isLoggedIn, loading } = useAuthStore()
 const { showError, showSuccess } = useUIStore()
 const { loadTenant, currentTenant } = useTenant()
-const supabase = getSupabase()
+const supabase = useSupabaseClient()
 
 // Get tenant from URL parameter or route params
 const tenantParam = ref(
