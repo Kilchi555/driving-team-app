@@ -1,7 +1,8 @@
 // API Endpoint: Redeem Voucher Code
 // Description: Allows students to redeem voucher codes for credit top-up
 
-import { getSupabase } from '~/server/utils/supabase'
+import { createClient } from '@supabase/supabase-js'
+import { getCookie } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
@@ -16,20 +17,51 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Use user client to get authenticated user
-    const supabase = getSupabase()
+    // Get Supabase URL and keys
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
 
-    // Get current user
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) {
+    if (!supabaseAnonKey) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Server configuration error'
+      })
+    }
+
+    // Get access token from cookies
+    const accessToken = getCookie(event, 'sb-access-token')
+
+    if (!accessToken) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Not authenticated'
       })
     }
 
+    // Create client with user's session
+    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      }
+    })
+
+    // Get current user
+    const { data: { user: authUser }, error: authError } = await userSupabase.auth.getUser(accessToken)
+    
+    if (authError || !authUser) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Not authenticated'
+      })
+    }
+
+    // Use admin client for database operations to bypass RLS
+    const supabaseAdmin = getSupabaseAdmin()
+
     // Get user profile with tenant_id
-    const { data: userProfile, error: userError } = await supabase
+    const { data: userProfile, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, tenant_id, first_name, last_name')
       .eq('auth_user_id', authUser.id)
