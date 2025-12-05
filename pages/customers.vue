@@ -694,6 +694,7 @@ const loadStudents = async (loadAppointments = true) => {
       street_nr,
       zip,
       city,
+      invoice_address,
       is_active,
       category,
       assigned_staff_id,
