@@ -96,7 +96,7 @@
 
           <div class="space-y-3">
             <div
-              v-for="(criteriaId, index) in sortedCriteriaOrder"
+              v-for="(criteriaId, index) in selectedCriteriaOrder"
               :key="criteriaId"
               class="bg-gray-50 rounded-lg p-4 border border-gray-200"
             >
