@@ -563,14 +563,14 @@ const submitForm = async () => {
     if (newStudent.smsSuccess) {
       uiStore.addNotification({
         type: 'success',
-        title: 'Schüler erfolgreich erstellt!',
-        message: `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet. Der Schüler kann sein Konto jetzt aktivieren.`
+        title: 'Einladung versendet!',
+        message: `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet.`
       })
     } else if (newStudent.emailSuccess) {
       uiStore.addNotification({
         type: 'success',
-        title: 'Schüler erfolgreich erstellt!',
-        message: `Eine E-Mail mit Onboarding-Link wurde an ${form.value.email} gesendet. Der Schüler kann sein Konto jetzt aktivieren.`
+        title: 'Einladung versendet!',
+        message: `Eine E-Mail mit Onboarding-Link wurde an ${form.value.email} gesendet.`
       })
     } else {
       // SMS/Email fehlgeschlagen - zeige Link zum manuellen Kopieren
@@ -597,10 +597,14 @@ const submitForm = async () => {
       }
     }
     
-    // Reset form and close modal
+    // Reset form and close modal - mit kleiner Verzögerung damit Toast sichtbar wird
     resetForm()
     emit('added', newStudent)
-    emit('close')
+    
+    // Gebe der Toast-Notification Zeit, angezeigt zu werden (300ms)
+    setTimeout(() => {
+      emit('close')
+    }, 300)
 
   } catch (error: any) {
     console.error('Fehler beim Hinzufügen des Schülers:', error)

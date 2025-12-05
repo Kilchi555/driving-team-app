@@ -101,6 +101,8 @@ export default defineEventHandler(async (event) => {
       .from('users')
       .update({
         auth_user_id: authData.user.id,
+        first_name: firstName,  // ✅ NEU: Speichere Vornamen
+        last_name: lastName,    // ✅ NEU: Speichere Nachnamen
         email: email,
         birthdate: birthdate,
         category: categoryValue,

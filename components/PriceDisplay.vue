@@ -1690,8 +1690,25 @@ const saveInvoiceAddress = async () => {
           emit('billing-address-id-saved', result.data.id)
         }
         
-        // ✅ NEU: Update studentBillingAddress und exit edit mode
+        // ✅ NEU: Update studentBillingAddress und invoiceData mit den gespeicherten Daten
         studentBillingAddress.value = result.data
+        
+        // ✅ Sync invoiceData mit den gespeicherten Daten
+        invoiceData.value = {
+          company_name: result.data.company_name || '',
+          contact_person: result.data.contact_person || '',
+          email: result.data.email || '',
+          phone: result.data.phone || '',
+          street: result.data.street || '',
+          street_number: result.data.street_number || '',
+          zip: result.data.zip || '',
+          city: result.data.city || '',
+          country: result.data.country || 'Schweiz',
+          vat_number: result.data.vat_number || '',
+          company_register_number: result.data.company_register_number || '',
+          notes: result.data.notes || ''
+        }
+        
         isEditingBillingAddress.value = false
         
         // Form zurücksetzen
