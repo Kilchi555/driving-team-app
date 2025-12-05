@@ -993,7 +993,7 @@ const checkAndShowCashPaymentConfirmation = async (appointmentId: string) => {
       
       const { data: payments, error } = await supabase
         .from('payments')
-        .select('id, payment_method, payment_status, total_amount_rappen, metadata')
+        .select('id, payment_method, payment_status, total_amount_rappen, metadata, tenant_id')
         .eq('appointment_id', appointmentId)
         .eq('payment_method', 'cash')
         .eq('payment_status', 'pending')
