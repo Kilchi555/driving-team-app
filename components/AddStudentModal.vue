@@ -532,6 +532,7 @@ const submitForm = async () => {
   if (!validateForm()) return
 
   isSubmitting.value = true
+  console.log('🚀🚀🚀 Starting form submission...')
 
   try {
     // Prepare form data - ensure at least empty strings for required DB fields
@@ -556,21 +557,24 @@ const submitForm = async () => {
       studentData.assigned_staff_id = props.currentUser.id
     }
 
+    console.log('📝 Calling addStudent with:', studentData)
     const newStudent = await addStudent(studentData) as any
     
-    // Success feedback
-    console.log('Schüler erfolgreich hinzugefügt:', newStudent)
+    console.log('✅✅✅ Schüler erfolgreich hinzugefügt:', newStudent)
+    console.log('📱 SMS Success:', newStudent?.smsSuccess)
+    console.log('📧 Email Success:', newStudent?.emailSuccess)
+    console.log('🔗 Onboarding Link:', newStudent?.onboardingLink)
     
     // ✅ Benachrichtigung basierend auf Versandmethode
-    if (newStudent.smsSuccess) {
-      console.log('📲 SMS success notification triggered')
+    if (newStudent?.smsSuccess) {
+      console.log('📲📲📲 SMS success notification triggered')
       uiStore.addNotification({
         type: 'success',
         title: 'Einladung versendet!',
         message: `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet.`
       })
-    } else if (newStudent.emailSuccess) {
-      console.log('📧 Email success notification triggered')
+    } else if (newStudent?.emailSuccess) {
+      console.log('📧📧📧 Email success notification triggered')
       uiStore.addNotification({
         type: 'success',
         title: 'Einladung versendet!',
@@ -581,7 +585,7 @@ const submitForm = async () => {
       const contactInfo = form.value.phone || form.value.email
       const contactType = form.value.phone ? 'SMS' : 'E-Mail'
       
-      console.log('⚠️ Contact method failed:', { contactType, contactInfo })
+      console.log('⚠️⚠️⚠️ Contact method failed:', { contactType, contactInfo, smsSuccess: newStudent?.smsSuccess, emailSuccess: newStudent?.emailSuccess })
       uiStore.addNotification({
         type: 'warning',
         title: `Schüler erstellt, aber ${contactType} fehlgeschlagen`,
@@ -589,10 +593,10 @@ const submitForm = async () => {
       })
       
       // Zeige den Link in der Konsole für Copy/Paste
-      console.log('🔗 Onboarding-Link:', newStudent.onboardingLink)
+      console.log('🔗 Onboarding-Link:', newStudent?.onboardingLink)
       
       // Optional: Kopiere Link in Zwischenablage
-      if (newStudent.onboardingLink && navigator.clipboard) {
+      if (newStudent?.onboardingLink && navigator.clipboard) {
         try {
           await navigator.clipboard.writeText(newStudent.onboardingLink)
           console.log('✅ Link wurde in Zwischenablage kopiert')
@@ -613,7 +617,8 @@ const submitForm = async () => {
     }, 800)
 
   } catch (error: any) {
-    console.error('Fehler beim Hinzufügen des Schülers:', error)
+    console.error('❌❌❌ Fehler beim Hinzufügen des Schülers:', error)
+    console.error('Error details:', error)
     
     // ✅ Verständliche Fehlermeldungen mit schönem Modal
     // Prüfe auch auf Datenbank-Constraint-Fehler (code: 23505)
