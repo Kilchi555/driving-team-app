@@ -606,15 +606,15 @@ const submitForm = async () => {
       }
     }
     
-    // Reset form and close modal - mit längerer Verzögerung damit Toast sichtbar wird
+    // Reset form and close modal - mit VIEL längerer Verzögerung damit Toast sichtbar wird
     resetForm()
     emit('added', newStudent)
     
-    // Gebe der Toast-Notification Zeit, angezeigt zu werden (800ms)
+    // Gebe der Toast-Notification Zeit, angezeigt zu werden (2 Sekunden mindestens)
     setTimeout(() => {
-      console.log('🚀 Closing modal after toast display')
+      console.log('🚀 Closing modal after toast display (2000ms delay)')
       emit('close')
-    }, 800)
+    }, 2000)
 
   } catch (error: any) {
     console.error('❌❌❌ Fehler beim Hinzufügen des Schülers:', error)
