@@ -143,55 +143,103 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ Auth user created:', authData.user.id)
 
-    // 2. Create user profile using service role (bypasses RLS)
-    console.log('👤 Creating user profile in users table...')
-    const userRole = isAdmin ? 'tenant_admin' : 'client'
-    
-    // Ensure categories is an array
-    const categoryArray = Array.isArray(categories) ? categories : (categories ? [categories] : [])
-    console.log('📋 Category array for DB:', categoryArray)
-    
-    const { data: userProfile, error: userError } = await serviceSupabase
+    // 2. Check if user already exists (from invitation)
+    console.log('👤 Checking for existing user with email:', email)
+    const { data: existingUser, error: existingUserError } = await serviceSupabase
       .from('users')
-      .insert({
-        auth_user_id: authData.user.id,
-        tenant_id: tenantId,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        email: email.toLowerCase().trim(),
-        phone: phone?.trim() || null,
-        birthdate: birthDate || null,
-        street: street?.trim() || null,
-        street_nr: streetNr?.trim() || null,
-        zip: zip?.trim() || null,
-        city: city?.trim() || null,
-        category: categoryArray, // Store as array
-        lernfahrausweis_nr: lernfahrausweisNr?.trim() || null,
-        role: userRole,
-        is_active: true
-      })
-      .select()
+      .select('id, email')
+      .eq('email', email.toLowerCase().trim())
+      .eq('tenant_id', tenantId)
       .single()
 
-    if (userError) {
-      // Delete the auth user if profile creation fails
-      await serviceSupabase.auth.admin.deleteUser(authData.user.id)
-      console.error('❌ Error creating user profile:', JSON.stringify(userError, null, 2))
-      console.error('📋 Attempted insert data:', {
-        auth_user_id: authData.user.id,
-        tenant_id: tenantId,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        email: email.toLowerCase().trim(),
-        role: userRole
-      })
-      throw createError({
-        statusCode: 400,
-        statusMessage: `Fehler beim Erstellen des Benutzerprofils: ${userError.message}`
-      })
-    }
+    let userProfile
+    const userRole = isAdmin ? 'tenant_admin' : 'client'
+    const categoryArray = Array.isArray(categories) ? categories : (categories ? [categories] : [])
+    console.log('📋 Category array for DB:', categoryArray)
 
-    console.log('✅ User profile created:', userProfile.id)
+    if (existingUser && existingUser.id) {
+      // UPDATE existing user (from invitation)
+      console.log('🔄 Updating existing user profile from invitation:', existingUser.id)
+      
+      const { data: updatedUser, error: updateError } = await serviceSupabase
+        .from('users')
+        .update({
+          auth_user_id: authData.user.id,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          phone: phone?.trim() || null,
+          birthdate: birthDate || null,
+          street: street?.trim() || null,
+          street_nr: streetNr?.trim() || null,
+          zip: zip?.trim() || null,
+          city: city?.trim() || null,
+          category: categoryArray,
+          lernfahrausweis_nr: lernfahrausweisNr?.trim() || null,
+          role: userRole,
+          is_active: true
+        })
+        .eq('id', existingUser.id)
+        .select()
+        .single()
+
+      if (updateError) {
+        await serviceSupabase.auth.admin.deleteUser(authData.user.id)
+        console.error('❌ Error updating user profile:', JSON.stringify(updateError, null, 2))
+        throw createError({
+          statusCode: 400,
+          statusMessage: `Fehler beim Aktualisieren des Benutzerprofils: ${updateError.message}`
+        })
+      }
+
+      userProfile = updatedUser
+      console.log('✅ User profile updated:', userProfile.id)
+    } else {
+      // CREATE new user profile
+      console.log('➕ Creating new user profile in users table...')
+      
+      const { data: newUser, error: userError } = await serviceSupabase
+        .from('users')
+        .insert({
+          auth_user_id: authData.user.id,
+          tenant_id: tenantId,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          email: email.toLowerCase().trim(),
+          phone: phone?.trim() || null,
+          birthdate: birthDate || null,
+          street: street?.trim() || null,
+          street_nr: streetNr?.trim() || null,
+          zip: zip?.trim() || null,
+          city: city?.trim() || null,
+          category: categoryArray, // Store as array
+          lernfahrausweis_nr: lernfahrausweisNr?.trim() || null,
+          role: userRole,
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (userError) {
+        // Delete the auth user if profile creation fails
+        await serviceSupabase.auth.admin.deleteUser(authData.user.id)
+        console.error('❌ Error creating user profile:', JSON.stringify(userError, null, 2))
+        console.error('📋 Attempted insert data:', {
+          auth_user_id: authData.user.id,
+          tenant_id: tenantId,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          email: email.toLowerCase().trim(),
+          role: userRole
+        })
+        throw createError({
+          statusCode: 400,
+          statusMessage: `Fehler beim Erstellen des Benutzerprofils: ${userError.message}`
+        })
+      }
+
+      userProfile = newUser
+      console.log('✅ User profile created:', userProfile.id)
+    }
 
     // 3. Create student_credits record for new client
     if (userRole === 'client') {

@@ -426,53 +426,31 @@ const useEventModalForm = (currentUser?: any, refs?: {
       console.log('🏢 Loading student billing address for:', studentId)
       
       const supabaseClient = getSupabase()
-      console.log('🔍 Supabase client check:', { 
-        hasSupabase: !!supabaseClient,
-        hasFrom: typeof supabaseClient?.from,
-        supabaseType: typeof supabaseClient
-      })
       
-      // ✅ DEBUG: Erst schauen welche Spalten es gibt und alle Adressen laden
-      console.log('🔍 Looking for billing addresses with created_by =', studentId)
+      // ✅ Lade die neueste Rechnungsadresse für diesen Student (user_id)
+      console.log('🔍 Looking for billing address with user_id =', studentId)
       
-      // Alle aktiven Adressen laden um die Struktur zu sehen
-      const { data: allData, error: allError } = await supabaseClient
+      const { data: addressData, error: addressError } = await supabaseClient
         .from('company_billing_addresses')
         .select('*')
-        .eq('is_active', true)
-        .limit(5)
-        
-      if (!allError && allData) {
-        console.log('🔍 Sample billing addresses (to check structure):', allData)
-      }
-      
-      // Jetzt spezifisch für diesen User suchen
-      const { data, error } = await supabaseClient
-        .from('company_billing_addresses')
-        .select('*')
-        .eq('created_by', studentId)
+        .eq('user_id', studentId)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
+        .limit(1)
 
-      if (error) {
-        console.error('❌ Database error:', error)
-        throw error
+      if (addressError) {
+        console.warn('⚠️ Error querying billing addresses:', addressError)
+        return null
       }
 
-      console.log('🔍 Found billing addresses:', { 
-        count: data?.length || 0, 
-        addresses: data 
-      })
-
-      // Die neueste Adresse zurückgeben (falls vorhanden)
-      const latestAddress = data && data.length > 0 ? data[0] : null
-      if (latestAddress) {
-        console.log('✅ Student billing address loaded:', latestAddress)
-      } else {
-        console.log('💡 No billing address found for student')
+      if (addressData && addressData.length > 0) {
+        const address = addressData[0]
+        console.log('✅ Student billing address loaded:', address)
+        return address
       }
-      
-      return latestAddress
+
+      console.log('💡 No active billing address found for student')
+      return null
     } catch (error) {
       console.error('❌ Error loading student billing address:', error)
       return null

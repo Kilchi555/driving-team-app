@@ -1051,6 +1051,18 @@ const handleSaveAppointment = async () => {
     isLoading.value = true
     error.value = ''
     
+    // ✅ NEU: Auto-save billing address before saving appointment
+    if (selectedStudent.value && priceDisplayRef.value) {
+      try {
+        console.log('💾 Auto-saving billing address before appointment save...')
+        await priceDisplayRef.value.saveInvoiceAddress()
+        console.log('✅ Billing address auto-saved')
+      } catch (billingError) {
+        console.warn('⚠️ Could not auto-save billing address:', billingError)
+        // Nicht den Termin-Speicher abbrechen, nur loggen
+      }
+    }
+    
     // Call the saveAppointment function from the composable
     const savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
     

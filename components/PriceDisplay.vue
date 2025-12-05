@@ -486,26 +486,12 @@
                 ></textarea>
               </div>
               
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  @click="saveInvoiceAddress"
-                  :disabled="!isInvoiceFormValid || isSavingInvoice"
-                  class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="isSavingInvoice">💾 Speichere...</span>
-                  <span v-else>💾 {{ isEditingBillingAddress ? 'Änderungen speichern' : 'Rechnungsadresse speichern' }}</span>
-                </button>
-                
-                <!-- Abbrechen-Button nur im Bearbeitungsmodus -->
-                <button
-                  v-if="isEditingBillingAddress"
-                  type="button"
-                  @click="cancelEditingBillingAddress"
-                  class="px-4 py-2 bg-gray-500 text-white text-sm font-medium rounded-md hover:bg-gray-600"
-                >
-                  ❌ Abbrechen
-                </button>
+              <!-- Auto-save indicator -->
+              <div v-if="isSavingInvoice" class="text-sm text-center text-blue-600">
+                💾 Speichere automatisch...
+              </div>
+              <div v-if="invoiceSaveMessage" class="text-sm text-center p-2 rounded-md" :class="invoiceSaveMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                {{ invoiceSaveMessage.text }}
               </div>
               
               <div v-if="invoiceSaveMessage" class="text-sm text-center p-2 rounded-md" :class="invoiceSaveMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
@@ -783,6 +769,31 @@ watch(() => studentBillingAddress.value, (newAddress: any) => {
     }
   }
 }, { immediate: false })
+
+// ✅ NEU: Auto-save Watcher - speichere Rechnungsadresse bei Änderungen
+let autoSaveTimeout: NodeJS.Timeout | null = null
+watch(() => invoiceData.value, (newData: any) => {
+  // Skip if form is invalid or already saving
+  if (!isInvoiceFormValid.value || isSavingInvoice.value) {
+    return
+  }
+  
+  // Skip initial load
+  if (!newData.contact_person) {
+    return
+  }
+  
+  // Clear existing timeout
+  if (autoSaveTimeout) {
+    clearTimeout(autoSaveTimeout)
+  }
+  
+  // Auto-save nach 2 Sekunden Inaktivität
+  autoSaveTimeout = setTimeout(() => {
+    console.log('⏱️ Auto-saving invoice address after inactivity...')
+    saveInvoiceAddress()
+  }, 2000)
+}, { deep: true })
 
 // ✅ NEU: Watcher für Toggle - füllt Formular mit Kundendaten wenn ON
 watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
@@ -1615,8 +1626,14 @@ const saveInvoiceAddress = async () => {
     
     let result
     
-    // ✅ NEU: Falls wir im Bearbeitungsmodus sind, UPDATE statt INSERT
-    if (isEditingBillingAddress.value && studentBillingAddress.value?.id) {
+    // ✅ NEU: Immer UPDATE wenn eine Adresse existiert, ansonsten CREATE
+    console.log('📝 saveInvoiceAddress check:', {
+      hasBillingAddress: !!studentBillingAddress.value,
+      billingAddressId: studentBillingAddress.value?.id,
+      fullAddress: studentBillingAddress.value
+    })
+    
+    if (studentBillingAddress.value?.id) {
       console.log('✏️ Updating existing billing address:', studentBillingAddress.value.id)
       
       const updateData = {
@@ -1639,11 +1656,12 @@ const saveInvoiceAddress = async () => {
       console.log('✅ Billing address updated successfully')
       
     } else {
-      // ✅ NEU: Neuen Eintrag erstellen
-      console.log('➕ Creating new billing address')
+      // ✅ NEU: Neuen Eintrag erstellen (nur wenn keine existiert)
+      console.log('➕ Creating new billing address for student:', props.selectedStudent?.id)
       
       const addressData = {
         ...invoiceData.value,
+        user_id: props.selectedStudent?.id, // ✅ Link to student
         created_by: currentUserId, // ✅ Business User ID aus users Tabelle
         is_active: true,
         is_verified: false
@@ -1697,11 +1715,12 @@ const saveInvoiceAddress = async () => {
 }
 
 
-// ✅ Expose usedCredit for external access (useEventModalForm)
+// ✅ Expose functions and data for external access
 defineExpose({
   usedCredit,
   savedCompanyBillingAddressId,
-  invoiceData
+  invoiceData,
+  saveInvoiceAddress  // ✅ Export für EventModal zum Auto-save
 })
 
 </script>
