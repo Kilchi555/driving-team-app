@@ -987,6 +987,31 @@ const loadStudents = async (loadAppointments = true) => {
     console.log('📊 Sample student:', students.value[0])
     console.log('🔍 Final students list:', students.value.map((s: any) => ({ name: `${s.first_name} ${s.last_name}`, instructor: s.assignedInstructor })))
 
+    // Load billing addresses for students
+    const { data: billingAddresses, error: billingError } = await supabase
+      .from('company_billing_addresses')
+      .select('id, contact_person, email, phone, street, street_number, zip, city, country')
+      .eq('tenant_id', tenantId)
+
+    if (!billingError && billingAddresses && billingAddresses.length > 0) {
+      // Add first billing address to each student as invoice_address
+      enrichedStudents.forEach((student: any) => {
+        if (billingAddresses.length > 0) {
+          const addr = billingAddresses[0]
+          student.invoice_address = [
+            addr.street,
+            addr.street_number,
+            addr.zip,
+            addr.city
+          ].filter(Boolean).join(' ')
+          
+          console.log('📋 Added invoice address to student:', student.id, student.invoice_address)
+        }
+      })
+      students.value = enrichedStudents
+    }
+
+
   } catch (err: any) {
     console.error('❌ Error loading students:', err)
     error.value = err.message || 'Fehler beim Laden der Schüler'
