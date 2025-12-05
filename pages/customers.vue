@@ -1000,22 +1000,22 @@ const loadStudents = async (loadAppointments = true) => {
 
     // Load billing addresses for students
     console.log('📋 Loading billing addresses')
-    const { data: billingAddresses, error: billingError } = await supabase
+    const { data: companyBillingAddresses, error: billingError } = await supabase
       .from('company_billing_addresses')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(1) // Get the most recent one
 
-    console.log('📋 Billing addresses result:', { billingAddresses, billingError })
+    console.log('📋 Billing addresses result:', { companyBillingAddresses, billingError })
 
-    if (!billingError && billingAddresses && billingAddresses.length > 0) {
-      console.log('📋 Found', billingAddresses.length, 'billing addresses')
-      console.log('📋 First address:', billingAddresses[0])
+    if (!billingError && companyBillingAddresses && companyBillingAddresses.length > 0) {
+      console.log('📋 Found', companyBillingAddresses.length, 'billing addresses')
+      console.log('📋 First address:', companyBillingAddresses[0])
       
       // Add first billing address to each student as invoice_address - formatted nicely
       enrichedStudents.forEach((student: any) => {
-        if (billingAddresses.length > 0) {
-          const addr = billingAddresses[0]
+        if (companyBillingAddresses.length > 0) {
+          const addr = companyBillingAddresses[0]
           
           // Format as multi-line address
           const addressLines = [
