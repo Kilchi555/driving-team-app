@@ -168,7 +168,7 @@
         </div>
 
         <!-- Pending Appointments List (Bewertungen) -->
-        <div v-else-if="activeTab === 'bewertungen'" class="p-4 space-y-3">
+        <div v-else-if="activeTab === 'bewertungen'" class="p-4 space-y-4">
           <div v-if="evaluationAppointments.length === 0" class="flex items-center justify-center py-8">
             <div class="text-center px-4">
               <div class="text-6xl mb-4">✅</div>
