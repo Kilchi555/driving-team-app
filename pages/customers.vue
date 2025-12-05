@@ -1000,15 +1000,15 @@ const loadStudents = async (loadAppointments = true) => {
 
     // Load billing addresses for students
     console.log('📋 Loading billing addresses')
-    const { data: companyBillingAddresses, error: billingError } = await supabase
+    const { data: companyBillingAddresses, error: billingAddressError } = await supabase
       .from('company_billing_addresses')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(1) // Get the most recent one
 
-    console.log('📋 Billing addresses result:', { companyBillingAddresses, billingError })
+    console.log('📋 Billing addresses result:', { companyBillingAddresses, billingAddressError })
 
-    if (!billingError && companyBillingAddresses && companyBillingAddresses.length > 0) {
+    if (!billingAddressError && companyBillingAddresses && companyBillingAddresses.length > 0) {
       console.log('📋 Found', companyBillingAddresses.length, 'billing addresses')
       console.log('📋 First address:', companyBillingAddresses[0])
       
@@ -1032,7 +1032,7 @@ const loadStudents = async (loadAppointments = true) => {
       })
       students.value = enrichedStudents
     } else {
-      console.log('⚠️ No billing addresses found or error:', billingError?.message)
+      console.log('⚠️ No billing addresses found or error:', billingAddressError?.message)
     }
 
 
