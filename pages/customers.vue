@@ -988,27 +988,51 @@ const loadStudents = async (loadAppointments = true) => {
     console.log('🔍 Final students list:', students.value.map((s: any) => ({ name: `${s.first_name} ${s.last_name}`, instructor: s.assignedInstructor })))
 
     // Load billing addresses for students
+    console.log('📋 Loading billing addresses for tenantId:', tenantId)
     const { data: billingAddresses, error: billingError } = await supabase
       .from('company_billing_addresses')
       .select('id, contact_person, email, phone, street, street_number, zip, city, country')
-      .eq('tenant_id', tenantId)
+      // Don't filter by tenant_id - billing addresses may have null tenant_id
+      .order('created_at', { ascending: false })
+      .limit(1) // Get the most recent one
+
+    console.log('📋 Billing addresses result:', { billingAddresses, billingError })
+
+    // Load billing addresses for students
+    console.log('📋 Loading billing addresses')
+    const { data: billingAddresses, error: billingError } = await supabase
+      .from('company_billing_addresses')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1) // Get the most recent one
+
+    console.log('📋 Billing addresses result:', { billingAddresses, billingError })
 
     if (!billingError && billingAddresses && billingAddresses.length > 0) {
-      // Add first billing address to each student as invoice_address
+      console.log('📋 Found', billingAddresses.length, 'billing addresses')
+      console.log('📋 First address:', billingAddresses[0])
+      
+      // Add first billing address to each student as invoice_address - formatted nicely
       enrichedStudents.forEach((student: any) => {
         if (billingAddresses.length > 0) {
           const addr = billingAddresses[0]
-          student.invoice_address = [
-            addr.street,
-            addr.street_number,
-            addr.zip,
-            addr.city
-          ].filter(Boolean).join(' ')
           
-          console.log('📋 Added invoice address to student:', student.id, student.invoice_address)
+          // Format as multi-line address
+          const addressLines = [
+            addr.contact_person,
+            addr.street && addr.street_number ? `${addr.street} ${addr.street_number}` : addr.street,
+            addr.zip && addr.city ? `${addr.zip} ${addr.city}` : (addr.zip || addr.city),
+            addr.country
+          ].filter(Boolean)
+          
+          student.invoice_address = addressLines.join('\n')
+          
+          console.log('📋 Added invoice address to student:', student.id, '\n', student.invoice_address)
         }
       })
       students.value = enrichedStudents
+    } else {
+      console.log('⚠️ No billing addresses found or error:', billingError?.message)
     }
 
 
