@@ -704,26 +704,32 @@ const processPayment = async (success: boolean) => {
 const formatAppointmentDate = (dateString: string): string => {
   if (!dateString) return '-'
   
-  // Da die DB lokale Zeit speichert, aber das Format UTC suggeriert,
-  // müssen wir das Datum explizit als lokale Zeit behandeln
-  
-  // Entferne das +00:00 und behandle es als lokale Zeit
-  const localDateString = dateString.replace('+00:00', '').replace('Z', '')
-  const date = new Date(localDateString)
+  // Die DB speichert UTC Zeit, wir müssen sie zu Europe/Zurich konvertieren
+  const utcDate = new Date(dateString)
   
   // Prüfe ob das Datum gültig ist
-  if (isNaN(date.getTime())) return '-'
+  if (isNaN(utcDate.getTime())) return '-'
   
-  // Extrahiere die lokalen Komponenten direkt
-  const day = date.getDate().toString().padStart(2, '0')
-  const month = (date.getMonth() + 1).toString().padStart(2, '0')
-  const year = date.getFullYear()
-  const hour = date.getHours().toString().padStart(2, '0')
-  const minute = date.getMinutes().toString().padStart(2, '0')
+  // Konvertiere UTC zu Europe/Zurich Timezone
+  const localDateStr = utcDate.toLocaleString('sv-SE', { 
+    timeZone: 'Europe/Zurich',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+  
+  // Parse die formatierte lokale Zeit: "2025-11-29 10:00:00"
+  const [datePart, timePart] = localDateStr.split(' ')
+  const [year, month, day] = datePart.split('-')
+  const [hour, minute] = timePart.split(':')
   
   // Wochentag auf Deutsch
   const weekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
-  const weekday = weekdays[date.getDay()]
+  const localDate = new Date(`${year}-${month}-${day}T${hour}:${minute}:00`)
+  const weekday = weekdays[localDate.getDay()]
   
   // Formatiere: "Sa., 23.08.2025, 22:00"
   return `${weekday}., ${day}.${month}.${year}, ${hour}:${minute}`
