@@ -1139,6 +1139,25 @@ const selectPaymentMethod = (method: string) => {
       existingPayment: !!existingPayment.value,
       isEditMode: props.isEditMode
     })
+    
+    // ✅ NEU: Automatisch die gespeicherte Rechnungsadresse ins Formular laden
+    if (studentBillingAddress.value && !isEditingBillingAddress.value) {
+      console.log('✅ Auto-filling invoice form with studentBillingAddress')
+      invoiceData.value = {
+        company_name: studentBillingAddress.value.company_name || '',
+        contact_person: studentBillingAddress.value.contact_person || '',
+        email: studentBillingAddress.value.email || '',
+        phone: studentBillingAddress.value.phone || '',
+        street: studentBillingAddress.value.street || '',
+        street_number: studentBillingAddress.value.street_number || '',
+        zip: studentBillingAddress.value.zip || '',
+        city: studentBillingAddress.value.city || '',
+        country: studentBillingAddress.value.country || 'Schweiz',
+        vat_number: studentBillingAddress.value.vat_number || '',
+        company_register_number: studentBillingAddress.value.company_register_number || '',
+        notes: studentBillingAddress.value.notes || ''
+      }
+    }
   }
 }
 
