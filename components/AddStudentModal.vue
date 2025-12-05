@@ -82,7 +82,7 @@
             <h3 class="text-lg font-medium text-gray-900 mb-4">Persönliche Angaben</h3>
             <!-- Info Banner -->
             <div class="mb-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
-              ℹ️ Mindestens Vor- oder Nachname
+              ℹ️ Mindestens Vor- oder Nachname + Telefon oder E-Mail erforderlich
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -117,10 +117,26 @@
               </div>
 
 
-              <!-- Email (Optional) -->
+              <!-- Phone -->
+              <div class="md:col-span-2">
+                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
+                  Telefonnummer <span class="text-gray-400 text-xs">(oder E-Mail)</span>
+                </label>
+                <input
+                  id="phone"
+                  v-model="form.phone"
+                  type="tel"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-300': errors.phone }"
+                  placeholder="+41 79 123 45 67"
+                >
+                <p v-if="errors.phone" class="text-red-600 text-xs mt-1">{{ errors.phone }}</p>
+              </div>
+
+              <!-- Email -->
               <div class="md:col-span-2">
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                  E-Mail Adresse <span class="text-gray-400 text-xs">(optional)</span>
+                  E-Mail Adresse <span class="text-gray-400 text-xs">(oder Telefonnummer)</span>
                 </label>
                 <input
                   id="email"
@@ -131,23 +147,6 @@
                   placeholder="max.mustermann@example.com"
                 >
                 <p v-if="errors.email" class="text-red-600 text-xs mt-1">{{ errors.email }}</p>
-              </div>
-
-              <!-- Phone -->
-              <div>
-                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                  Telefonnummer *
-                </label>
-                <input
-                  id="phone"
-                  v-model="form.phone"
-                  type="tel"
-                  required
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-300': errors.phone }"
-                  placeholder="+41 79 123 45 67"
-                >
-                <p v-if="errors.phone" class="text-red-600 text-xs mt-1">{{ errors.phone }}</p>
               </div>
 
               <!-- Birthdate (Optional) -->
@@ -382,10 +381,11 @@ const isFormValid = computed(() => {
   // Mindestens ein Name (Vor- ODER Nachname)
   const hasName = form.value.first_name.trim() || form.value.last_name.trim()
   
-  // Telefonnummer ist Pflicht
+  // Mindestens Telefon ODER Email
   const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 12
+  const hasEmail = form.value.email && isValidEmail(form.value.email)
   
-  return hasName && hasPhone
+  return hasName && (hasPhone || hasEmail)
 })
 
 // Methods
@@ -427,16 +427,18 @@ const validateForm = () => {
     errors.value.first_name = 'Mindestens Vor- oder Nachname erforderlich'
   }
 
+  // Mindestens Telefon ODER Email erforderlich
+  const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 12
+  const hasEmail = form.value.email && isValidEmail(form.value.email)
+  
+  if (!hasPhone && !hasEmail) {
+    errors.value.phone = 'Telefonnummer oder E-Mail erforderlich'
+    errors.value.email = 'Telefonnummer oder E-Mail erforderlich'
+  }
+
   // E-Mail-Validierung (nur wenn angegeben)
   if (form.value.email && !isValidEmail(form.value.email)) {
     errors.value.email = 'Ungültige E-Mail-Adresse'
-  }
-
-  // Telefonnummer ist Pflicht
-  if (!form.value.phone.trim()) {
-    errors.value.phone = 'Telefonnummer ist erforderlich'
-  } else if (form.value.phone.trim().length < 12) {
-    errors.value.phone = 'Telefonnummer ist zu kurz'
   }
 
   return Object.keys(errors.value).length === 0
