@@ -763,6 +763,27 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
   }
 }, { immediate: false })
 
+// ✅ NEU: Watcher für studentBillingAddress - automatisch Form füllen wenn Invoice ausgewählt
+watch(() => studentBillingAddress.value, (newAddress: any) => {
+  if (newAddress && selectedPaymentMethod.value === 'invoice' && !isEditingBillingAddress.value) {
+    console.log('✅ Watcher: Auto-filling invoice form with loaded billing address')
+    invoiceData.value = {
+      company_name: newAddress.company_name || '',
+      contact_person: newAddress.contact_person || '',
+      email: newAddress.email || '',
+      phone: newAddress.phone || '',
+      street: newAddress.street || '',
+      street_number: newAddress.street_number || '',
+      zip: newAddress.zip || '',
+      city: newAddress.city || '',
+      country: newAddress.country || 'Schweiz',
+      vat_number: newAddress.vat_number || '',
+      company_register_number: newAddress.company_register_number || '',
+      notes: newAddress.notes || ''
+    }
+  }
+}, { immediate: false })
+
 // ✅ NEU: Watcher für Toggle - füllt Formular mit Kundendaten wenn ON
 watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
   console.log('🔄 Toggle watcher triggered, isOn:', isOn)
