@@ -342,7 +342,7 @@
     v-if="showCashPaymentModal"
     :is-visible="showCashPaymentModal"
     :payment="currentPayment"
-    :current-user-id="currentUser?.id"
+    :current-user-id="props.currentUser?.id"
     @close="showCashPaymentModal = false"
     @payment-confirmed="onCashPaymentConfirmed"
   />
