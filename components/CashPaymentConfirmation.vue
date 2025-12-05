@@ -96,42 +96,69 @@ const closeModal = () => {
 }
 
 const confirmPayment = async () => {
-  if (!props.payment?.id || !props.currentUserId) return
+  console.log('💰 [CashPayment] confirmPayment called')
+  console.log('💰 [CashPayment] props.payment:', props.payment)
+  console.log('💰 [CashPayment] props.currentUserId:', props.currentUserId)
+  
+  if (!props.payment?.id || !props.currentUserId) {
+    console.error('❌ [CashPayment] Missing payment.id or currentUserId - returning')
+    return
+  }
   
   isProcessing.value = true
+  console.log('💰 [CashPayment] isProcessing set to true')
   
   try {
-    console.log('💰 Confirming cash payment:', props.payment.id)
+    console.log('💰 [CashPayment] Starting payment confirmation for:', props.payment.id)
+    console.log('💰 [CashPayment] tenant_id:', props.payment.tenant_id)
+    console.log('💰 [CashPayment] payment_status:', props.payment.payment_status)
+    console.log('💰 [CashPayment] total_amount_rappen:', props.payment.total_amount_rappen)
     
     // Direkt in der Datenbank speichern
     const supabase = getSupabase()
+    console.log('💰 [CashPayment] Supabase client created')
+    
+    const updateData = {
+      payment_status: 'completed',
+      paid_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    console.log('💰 [CashPayment] Update data:', updateData)
     
     // Payment als completed markieren
-    const { error: paymentError } = await supabase
+    const { data, error: paymentError } = await supabase
       .from('payments')
-      .update({
-        payment_status: 'completed',
-        paid_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', props.payment.id)
       .eq('tenant_id', props.payment.tenant_id) // ← RLS Filter erforderlich
+      .select() // Return the updated row
     
-    if (paymentError) throw paymentError
+    console.log('💰 [CashPayment] Update response:', { data, error: paymentError })
     
-    console.log('✅ Cash payment confirmed successfully')
+    if (paymentError) {
+      console.error('❌ [CashPayment] Supabase error:', paymentError)
+      throw paymentError
+    }
+    
+    console.log('✅ [CashPayment] Cash payment confirmed successfully')
+    console.log('✅ [CashPayment] Updated data:', data)
     
     // Emit success
     emit('payment-confirmed', props.payment)
+    console.log('✅ [CashPayment] Emitted payment-confirmed event')
     
     // Close modal
     closeModal()
+    console.log('✅ [CashPayment] Modal closed')
     
   } catch (error: any) {
-    console.error('❌ Cash payment confirmation failed:', error)
+    console.error('❌ [CashPayment] Cash payment confirmation failed:', error)
+    console.error('❌ [CashPayment] Error message:', error.message)
+    console.error('❌ [CashPayment] Error details:', error)
     alert(`Fehler bei der Zahlungsbestätigung: ${error.message}`)
   } finally {
     isProcessing.value = false
+    console.log('💰 [CashPayment] isProcessing set to false')
   }
 }
 </script>

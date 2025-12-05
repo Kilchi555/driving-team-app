@@ -965,31 +965,35 @@ const refreshData = async () => {
  */
 const checkAndShowCashPaymentConfirmation = async (appointmentId: string) => {
   try {
-    console.log('💰 Checking for cash payment confirmation...')
+    console.log('💰 [PendenzenModal] Checking for cash payment confirmation for appointment:', appointmentId)
     
     // ✅ ZUERST: Prüfe die Zahlungsmethode aus der payments Tabelle
     const supabase = getSupabase()
+    console.log('💰 [PendenzenModal] Supabase client ready')
+    
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .select('payment_method, payment_status')
       .eq('appointment_id', appointmentId)
       .maybeSingle() // ← .maybeSingle() da möglicherweise noch kein Payment existiert
     
+    console.log('💰 [PendenzenModal] First query result:', { payment, error: paymentError })
+    
     if (paymentError) {
-      console.log('💰 Error checking payment:', paymentError.message)
+      console.log('💰 [PendenzenModal] Error checking payment:', paymentError.message)
       return
     }
     
     if (!payment) {
-      console.log('💰 No payment record found for appointment - skipping cash payment check')
+      console.log('💰 [PendenzenModal] No payment record found for appointment - skipping cash payment check')
       return
     }
     
-    console.log('💰 Payment method:', payment.payment_method, 'status:', payment.payment_status)
+    console.log('💰 [PendenzenModal] Payment method:', payment.payment_method, 'status:', payment.payment_status)
     
     // ✅ NUR bei Barzahlung nach pending payment suchen
     if (payment.payment_method === 'cash' && payment.payment_status === 'pending') {
-      console.log('💰 Looking for pending cash payment...')
+      console.log('💰 [PendenzenModal] Looking for pending cash payment...')
       
       const { data: payments, error } = await supabase
         .from('payments')
@@ -999,19 +1003,24 @@ const checkAndShowCashPaymentConfirmation = async (appointmentId: string) => {
         .eq('payment_status', 'pending')
         .maybeSingle() // ← .maybeSingle() statt .single() um 406 Fehler zu vermeiden
       
+      console.log('💰 [PendenzenModal] Cash payment query result:', { payments, error })
+      
       if (payments) {
-        console.log('💰 Found pending cash payment:', payments)
+        console.log('💰 [PendenzenModal] Found pending cash payment:', payments)
+        console.log('💰 [PendenzenModal] tenant_id in payment:', payments.tenant_id)
         currentPayment.value = payments
         showCashPaymentModal.value = true
+        console.log('💰 [PendenzenModal] Modal shown, currentPayment set')
       } else {
-        console.log('💰 No pending cash payment found in payments table')
+        console.log('💰 [PendenzenModal] No pending cash payment found in payments table')
       }
     } else {
-      console.log('💰 No cash payment confirmation needed - method:', payment.payment_method, 'status:', payment.payment_status)
+      console.log('💰 [PendenzenModal] No cash payment confirmation needed - method:', payment.payment_method, 'status:', payment.payment_status)
     }
     
   } catch (err: any) {
-    console.error('❌ Error checking cash payment:', err)
+    console.error('❌ [PendenzenModal] Error checking cash payment:', err)
+    console.error('❌ [PendenzenModal] Error details:', err.message)
   }
 }
 
@@ -1020,15 +1029,20 @@ const checkAndShowCashPaymentConfirmation = async (appointmentId: string) => {
  */
 const onCashPaymentConfirmed = async (payment: any) => {
   try {
-    console.log('✅ Cash payment confirmed for:', payment.id)
+    console.log('✅ [PendenzenModal] Cash payment confirmed for:', payment.id)
+    console.log('✅ [PendenzenModal] Payment details:', payment)
     showCashPaymentModal.value = false
+    console.log('✅ [PendenzenModal] Modal closed')
     currentPayment.value = null
+    console.log('✅ [PendenzenModal] currentPayment cleared')
     
     // Lade Pendenzen neu um die aktualisierten Zahlungsinformationen zu sehen
+    console.log('✅ [PendenzenModal] Refreshing data...')
     await refreshData()
+    console.log('✅ [PendenzenModal] Data refreshed')
     
   } catch (err: any) {
-    console.error('❌ Error handling cash payment confirmation:', err)
+    console.error('❌ [PendenzenModal] Error handling cash payment confirmation:', err)
   }
 }
 
