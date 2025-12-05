@@ -61,9 +61,7 @@
                 placeholder="Thema suchen und hinzufügen..."
                 class="search-input w-full pl-10 pr-2 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               >
-              <div class="absolute left-3 top-3.5 text-gray-400">
-                🔍
-              </div>
+          
             </div>
 
             <div 
@@ -96,7 +94,7 @@
 
           <div class="space-y-3">
             <div
-              v-for="(criteriaId, index) in selectedCriteriaOrder"
+              v-for="(criteriaId, index) in sortedCriteriaOrder"
               :key="criteriaId"
               class="bg-gray-50 rounded-lg p-4 border border-gray-200"
             >
@@ -107,7 +105,7 @@
                   </h4>
                       <!-- NEU: Lektionsdatum hinzufügen -->
                   <p v-if="criteriaAppointments[criteriaId]?.start_time" class="text-xs text-gray-500 mt-1">
-                    📅 Bewertung vom {{ formatLessonDate(criteriaId) }}
+                    Bewertung vom {{ formatLessonDate(criteriaId) }}
                   </p>
                 </div>
                 
@@ -337,19 +335,22 @@ const missingRequiredRatings = computed(() => {
 // Verbesserte sortedCriteriaOrder mit Lektionsdatum
 const sortedCriteriaOrder = computed(() => {
   console.log('🔍 SORT DEBUG - sortByNewest:', sortByNewest.value)
-  console.log('🔍 SORT DEBUG - criteriaAppointments:', criteriaAppointments.value)
+  console.log('🔍 SORT DEBUG - selectedCriteriaOrder:', selectedCriteriaOrder.value)
+  console.log('🔍 SORT DEBUG - criteriaRatings:', criteriaRatings.value)
   
   if (!sortByNewest.value) {
     // Sortiere nach Bewertung (schlechteste zuerst)
-    return [...selectedCriteriaOrder.value].sort((a, b) => {
+    const sorted = [...selectedCriteriaOrder.value].sort((a, b) => {
       const ratingA = criteriaRatings.value[a] || 7
       const ratingB = criteriaRatings.value[b] || 7
-      console.log('🔍 RATING SORT:', a, ratingA, 'vs', b, ratingB)
+      console.log('🔍 RATING SORT:', a, 'rating:', ratingA, 'vs', b, 'rating:', ratingB, 'result:', ratingA - ratingB)
       return ratingA - ratingB
     })
+    console.log('🔍 AFTER RATING SORT:', sorted)
+    return sorted
   } else {
     // Sortiere nach Lektionsdatum (neueste Lektionen zuerst)
-    return [...selectedCriteriaOrder.value].sort((a, b) => {
+    const sorted = [...selectedCriteriaOrder.value].sort((a, b) => {
       const appointmentA = criteriaAppointments.value[a]
       const appointmentB = criteriaAppointments.value[b]
       
@@ -363,6 +364,8 @@ const sortedCriteriaOrder = computed(() => {
       const indexB = selectedCriteriaOrder.value.indexOf(b)
       return indexA - indexB
     })
+    console.log('🔍 AFTER DATE SORT:', sorted)
+    return sorted
   }
 })
 

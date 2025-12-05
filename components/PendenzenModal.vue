@@ -168,7 +168,7 @@
         </div>
 
         <!-- Pending Appointments List (Bewertungen) -->
-        <div v-else-if="activeTab === 'bewertungen'" class="p-4 space-y-4">
+        <div v-else-if="activeTab === 'bewertungen'" class="p-3">
           <div v-if="evaluationAppointments.length === 0" class="flex items-center justify-center py-8">
             <div class="text-center px-4">
               <div class="text-6xl mb-4">✅</div>
@@ -177,12 +177,12 @@
             </div>
           </div>
 
-          <div v-else>
+          <div v-else class="space-y-2">
             <div
               v-for="appointment in evaluationAppointments"
             :key="appointment.id"
             :class="[
-              'rounded-lg border p-4 hover:shadow-md transition-all cursor-pointer relative',
+              'rounded-lg border p-3 hover:shadow-md transition-all cursor-pointer relative',
               getAppointmentBackgroundClass(appointment),
               appointment.status === 'pending_confirmation' ? 'border-red-300 bg-red-50' : ''
             ]"
