@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     console.log('📝 Complete onboarding request body:', JSON.stringify(body, null, 2))
     
-    const { token, firstName, lastName, password, email, birthdate, categories, category, street, street_nr, zip, city, documentUrls } = body
+    const { token, firstName, lastName, phone, password, email, birthdate, categories, category, street, street_nr, zip, city, documentUrls } = body
 
     if (!token || !password || !email) {
       console.error('❌ Missing required fields:', { token: !!token, password: !!password, email: !!email })
@@ -103,6 +103,7 @@ export default defineEventHandler(async (event) => {
         auth_user_id: authData.user.id,
         first_name: firstName,  // ✅ NEU: Speichere Vornamen
         last_name: lastName,    // ✅ NEU: Speichere Nachnamen
+        phone: phone,           // ✅ NEU: Speichere Telefonnummer
         email: email,
         birthdate: birthdate,
         category: categoryValue,
@@ -138,7 +139,22 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ User profile updated successfully')
 
-    // 5. Create student_credits record
+    // ✅ NEU: Aktualisiere auch den Auth User mit den korrekten Namen (Display Name)
+    console.log('🔐 Updating auth user display name...')
+    const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(authData.user.id, {
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName
+      }
+    })
+    
+    if (authUpdateError) {
+      console.warn('⚠️ Auth user update warning (non-critical):', authUpdateError)
+      // Nicht den ganzen Prozess abbrechen, nur warnen
+    } else {
+      console.log('✅ Auth user display name updated')
+    }
+
     console.log('💰 Creating student_credits record...')
     const { data: studentCredit, error: creditError } = await supabaseAdmin
       .from('student_credits')

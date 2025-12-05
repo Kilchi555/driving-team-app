@@ -563,12 +563,14 @@ const submitForm = async () => {
     
     // ✅ Benachrichtigung basierend auf Versandmethode
     if (newStudent.smsSuccess) {
+      console.log('📲 SMS success notification triggered')
       uiStore.addNotification({
         type: 'success',
         title: 'Einladung versendet!',
         message: `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet.`
       })
     } else if (newStudent.emailSuccess) {
+      console.log('📧 Email success notification triggered')
       uiStore.addNotification({
         type: 'success',
         title: 'Einladung versendet!',
@@ -579,6 +581,7 @@ const submitForm = async () => {
       const contactInfo = form.value.phone || form.value.email
       const contactType = form.value.phone ? 'SMS' : 'E-Mail'
       
+      console.log('⚠️ Contact method failed:', { contactType, contactInfo })
       uiStore.addNotification({
         type: 'warning',
         title: `Schüler erstellt, aber ${contactType} fehlgeschlagen`,
@@ -599,14 +602,15 @@ const submitForm = async () => {
       }
     }
     
-    // Reset form and close modal - mit kleiner Verzögerung damit Toast sichtbar wird
+    // Reset form and close modal - mit längerer Verzögerung damit Toast sichtbar wird
     resetForm()
     emit('added', newStudent)
     
-    // Gebe der Toast-Notification Zeit, angezeigt zu werden (300ms)
+    // Gebe der Toast-Notification Zeit, angezeigt zu werden (800ms)
     setTimeout(() => {
+      console.log('🚀 Closing modal after toast display')
       emit('close')
-    }, 300)
+    }, 800)
 
   } catch (error: any) {
     console.error('Fehler beim Hinzufügen des Schülers:', error)
