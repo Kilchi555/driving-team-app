@@ -107,7 +107,7 @@ const TEMPLATES = {
               
               <p>Falls du Fragen hast, kontaktiere uns bitte per E-Mail oder Telefon.</p>
               
-              <p>Viele Grüße,<br>dein ${data.tenantName || 'Driving'} Team</p>
+              <p>Beste Grüsse,<br>${data.tenantName || ''}</p>
             </div>
             
             <div class="footer">
@@ -156,9 +156,9 @@ const TEMPLATES = {
                 ${data.location ? `<strong>Ort:</strong> ${data.location}<br>` : ''}
               </div>
               
-              <p>Bitte notiere dir den neuen Termin. Falls du Fragen hast, kontaktiere uns bitte.</p>
+              <p>Du findest den neuen Termin in deinem Kundenkonto. Falls du Fragen hast, kontaktiere uns bitte.</p>
               
-              <p>Viele Grüße,<br>dein ${data.tenantName || 'Driving'} Team</p>
+              <p>Freundliche Grüsse,<br>${data.tenantName || ''}</p>
             </div>
             
             <div class="footer">
@@ -176,7 +176,7 @@ const TEMPLATES = {
 
 export default defineEventHandler(async (event) => {
   try {
-    const body = await readBody<AppointmentNotificationBody>(event)
+    const body = await readBody(event) as AppointmentNotificationBody
     
     const { email, studentName, type } = body
     

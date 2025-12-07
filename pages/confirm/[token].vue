@@ -171,7 +171,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       <h2 class="mt-4 text-2xl font-bold text-gray-900">Termin bestätigt!</h2>
-      <p class="mt-2 text-gray-600">Ihr Termin wurde erfolgreich bestätigt.</p>
+      <p class="mt-2 text-gray-600">Dein Termin wurde erfolgreich bestätigt.</p>
       <button
         @click="goToDashboard"
         class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
@@ -735,7 +735,7 @@ const processImmediatePaymentWithTokenization = async () => {
         currency: 'CHF',
         customerEmail: (appointment.value.users as any)?.email || '',
         customerName: `${(appointment.value.users as any)?.first_name || ''} ${(appointment.value.users as any)?.last_name || ''}`.trim(),
-        description: `${(appointment.value as any).event_type_name || appointment.value.event_type_code || 'Termin'} - Mit ${appointmentDetails.staff_first_name || 'Fahrlehrer'} - Kategorie ${appointment.value.type || 'Offen'}`,
+        description: `${(appointment.value as any).event_type_name || appointment.value.event_type_code || 'Termin'} - Mit ${(appointment.value as any).staff_first_name || 'Fahrlehrer'} - Kategorie ${appointment.value.type || 'Offen'}`,
         successUrl: `${window.location.origin}/confirm/${token}?payment=success`,
         failedUrl: `${window.location.origin}/confirm/${token}?payment=failed`,
         // Für pseudonyme Customer-ID

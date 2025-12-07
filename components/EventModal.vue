@@ -3485,7 +3485,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${firstName},\n\ndein Termin wurde storniert.\nGrund: ${deletionReason}\n\nViele 'Beste Grüsse, Dein ${tenantName}`
+            message: `Hallo ${firstName},\n\ndein Termin wurde storniert.\nGrund: ${deletionReason}\n\nViele Grüße`
           }
         })
         console.log('✅ SMS sent successfully:', result)

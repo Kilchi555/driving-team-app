@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     if (!appointmentId) {
       throw createError({
         statusCode: 400,
-        message: 'Missing required field: appointmentId'
+        statusMessage: 'Missing required field: appointmentId'
       })
     }
 
@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
       console.error('❌ Appointment not found:', aptError)
       throw createError({
         statusCode: 404,
-        message: 'Appointment not found'
+        statusMessage: 'Appointment not found'
       })
     }
 
@@ -80,8 +80,8 @@ export default defineEventHandler(async (event) => {
       minute: '2-digit'
     })
 
-    const customerName = `${user.first_name} ${user.last_name}`
-    const staffName = staff ? `${staff.first_name} ${staff.last_name}` : 'Ihr Fahrlehrer'
+    const customerName = `${user.first_name}`
+    const staffName = staff ? `${staff.first_name} ${staff.last_name}` : 'dein Fahrlehrer'
     const locationName = location?.name || appointment.title || 'Standort'
     const confirmationLink = `${CUSTOMER_PORTAL_BASE_URL}/confirm/${appointment.confirmation_token}`
 
@@ -110,7 +110,7 @@ export default defineEventHandler(async (event) => {
             <div class="content">
               <p>Hallo ${customerName},</p>
               
-              <p>Danke, dass Sie einen Termin mit ${staffName} gebucht haben. Um Ihren Termin zu bestätigen, klicken Sie bitte auf den untenstehenden Button.</p>
+              <p>Danke, dass du einen Termin mit ${staffName} gebucht hast. Um Deinen Termin zu bestätigen, klicke bitte auf den untenstehenden Button.</p>
               
               <div class="appointment-details">
                 <strong>Termindetails:</strong><br>

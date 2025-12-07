@@ -303,6 +303,8 @@ type CalendarEvent = {
     category?: string
     instructor?: string
     student?: string
+    email?: string
+    phone?: string
     price?: number
     user_id?: string
     staff_id?: string
@@ -316,6 +318,7 @@ type CalendarEvent = {
     original_type?: string
     type?: string
     isNonWorkingHours?: boolean
+    isClickThrough?: boolean
   }
 }
 
@@ -1413,7 +1416,7 @@ const handleEventDrop = async (dropInfo: any) => {
             method: 'POST',
             body: {
               phone: phoneNumber,
-              message: `Hallo ${firstName},\n\ndein Termin wurde verschoben auf:\n${newTime}\n\nBeste Grüsse, Dein ${tenantName}`
+              message: `Hallo ${firstName},\n\ndein Termin wurde verschoben auf:\n${newTime}\n\nViele Grüße`
             }
           })
           console.log('✅ SMS sent successfully:', result)
