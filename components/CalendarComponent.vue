@@ -811,7 +811,7 @@ const loadRegularAppointments = async () => {
         staff_id,
         created_by,
         description,
-        user:users!appointments_user_id_fkey(first_name, last_name, category, phone),
+        user:users!appointments_user_id_fkey(first_name, last_name, category, phone, email),
         staff:users!appointments_staff_id_fkey(first_name, last_name),
         created_by_user:users!appointments_created_by_fkey(first_name, last_name)
       `)
@@ -1017,6 +1017,7 @@ const loadRegularAppointments = async () => {
           instructor: `${(apt as any).staff?.first_name || ''} ${(apt as any).staff?.last_name || ''}`.trim(),
           student: `${(apt as any).user?.first_name || ''} ${(apt as any).user?.last_name || ''}`.trim(),
           phone: (apt as any).user?.phone || '', // ✅ NEU: Phone für SMS-Benachrichtigungen
+          email: (apt as any).user?.email || '', // ✅ NEU: Email für Email-Benachrichtigungen
           created_by: `${(apt as any).created_by_user?.first_name || ''} ${(apt as any).created_by_user?.last_name || ''}`.trim() || 'Unbekannt',
           price: 0, // Preis wird nicht mehr in appointments gespeichert
           user_id: apt.user_id,
