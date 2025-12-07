@@ -2511,11 +2511,11 @@ onMounted(async () => {
     
     // Show payment status toast
     if (paymentSuccess) {
-      displayToast('success', 'Zahlung erfolgreich!', 'Ihr Termin wurde bestätigt.')
+      displayToast('success', 'Zahlung erfolgreich!', 'Dein Termin wurde bestätigt.')
       // Clean up query parameter
       await navigateTo('/customer-dashboard', { replace: true })
     } else if (paymentFailed) {
-      displayToast('error', 'Zahlung fehlgeschlagen', 'Bitte versuchen Sie es später erneut.')
+      displayToast('error', 'Zahlung fehlgeschlagen', 'Bitte versuche es später erneut.')
       // Clean up query parameter
       await navigateTo('/customer-dashboard', { replace: true })
     }

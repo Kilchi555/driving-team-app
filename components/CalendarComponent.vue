@@ -1402,6 +1402,7 @@ const handleEventDrop = async (dropInfo: any) => {
       const phoneNumber = dropInfo.event.extendedProps?.phone
       const studentEmail = dropInfo.event.extendedProps?.email
       const studentName = dropInfo.event.extendedProps?.student || 'Fahrschüler'
+      const firstName = studentName?.split(' ')[0] || studentName
       const newTime = newStartTime
       
       // SMS versenden
@@ -1412,7 +1413,7 @@ const handleEventDrop = async (dropInfo: any) => {
             method: 'POST',
             body: {
               phone: phoneNumber,
-              message: `Hallo ${studentName},\n\nIhr Termin wurde verschoben:\nNeue Zeit: ${newTime}\n\nViele Grüße`
+              message: `Hallo ${firstName},\n\ndein Termin wurde verschoben auf:\n${newTime}\n\nViele Grüße`
             }
           })
           console.log('✅ SMS sent successfully:', result)

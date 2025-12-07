@@ -12,6 +12,7 @@ interface AppointmentNotificationBody {
   newTime?: string
   staffName?: string
   location?: string
+  tenantName?: string
 }
 
 // ========== TEMPLATES - Hier kannst du die Texte anpassen ==========
@@ -19,7 +20,9 @@ interface AppointmentNotificationBody {
 const TEMPLATES = {
   pending_confirmation: {
     subject: 'Terminbestätigung erforderlich',
-    getHtml: (data: AppointmentNotificationBody) => `
+    getHtml: (data: AppointmentNotificationBody) => {
+      const firstName = data.studentName?.split(' ')[0] || data.studentName
+      return `
       <!DOCTYPE html>
       <html>
         <head>
@@ -40,9 +43,9 @@ const TEMPLATES = {
             </div>
             
             <div class="content">
-              <p>Hallo ${data.studentName},</p>
+              <p>Hallo ${firstName},</p>
               
-              <p>ein neuer Termin wurde für Sie erstellt. Bitte überprüfen Sie die Details und bestätigen Sie den Termin.</p>
+              <p>ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details und bestätige den Termin.</p>
               
               <div class="appointment-box">
                 <strong>Termin-Details:</strong><br>
@@ -51,23 +54,26 @@ const TEMPLATES = {
                 ${data.location ? `<strong>Ort:</strong> ${data.location}<br>` : ''}
               </div>
               
-              <p>Bitte loggen Sie sich in Ihr Kundenkonto ein um den Termin zu bestätigen.</p>
+              <p>Bitte melde dich in dein Kundenkonto an um den Termin zu bestätigen.</p>
               
-              <p>Freundliche Grüße,<br>Ihr Driving Team</p>
+              <p>Viele Grüße,<br>dein ${data.tenantName || 'Driving'} Team</p>
             </div>
             
             <div class="footer">
-              <p>Dies ist eine automatisch generierte E-Mail. Bitte antworten Sie nicht auf diese E-Mail.</p>
+              <p>Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
             </div>
           </div>
         </body>
       </html>
-    `
+      `
+    }
   },
   
   cancelled: {
     subject: 'Termin storniert',
-    getHtml: (data: AppointmentNotificationBody) => `
+    getHtml: (data: AppointmentNotificationBody) => {
+      const firstName = data.studentName?.split(' ')[0] || data.studentName
+      return `
       <!DOCTYPE html>
       <html>
         <head>
@@ -88,9 +94,9 @@ const TEMPLATES = {
             </div>
             
             <div class="content">
-              <p>Hallo ${data.studentName},</p>
+              <p>Hallo ${firstName},</p>
               
-              <p>leider wurde Ihr Termin storniert.</p>
+              <p>leider wurde dein Termin storniert.</p>
               
               ${data.appointmentTime ? `
               <div class="reason-box">
@@ -99,23 +105,26 @@ const TEMPLATES = {
               </div>
               ` : ''}
               
-              <p>Falls Sie Fragen haben, kontaktieren Sie uns bitte per E-Mail oder Telefon.</p>
+              <p>Falls du Fragen hast, kontaktiere uns bitte per E-Mail oder Telefon.</p>
               
-              <p>Freundliche Grüße,<br>Ihr Driving Team</p>
+              <p>Viele Grüße,<br>dein ${data.tenantName || 'Driving'} Team</p>
             </div>
             
             <div class="footer">
-              <p>Dies ist eine automatisch generierte E-Mail. Bitte antworten Sie nicht auf diese E-Mail.</p>
+              <p>Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
             </div>
           </div>
         </body>
       </html>
-    `
+      `
+    }
   },
   
   rescheduled: {
     subject: 'Termin verschoben - Neue Zeit',
-    getHtml: (data: AppointmentNotificationBody) => `
+    getHtml: (data: AppointmentNotificationBody) => {
+      const firstName = data.studentName?.split(' ')[0] || data.studentName
+      return `
       <!DOCTYPE html>
       <html>
         <head>
@@ -136,9 +145,9 @@ const TEMPLATES = {
             </div>
             
             <div class="content">
-              <p>Hallo ${data.studentName},</p>
+              <p>Hallo ${firstName},</p>
               
-              <p>Ihr Termin wurde auf einen neuen Zeitpunkt verschoben.</p>
+              <p>dein Termin wurde auf einen neuen Zeitpunkt verschoben.</p>
               
               <div class="time-box">
                 <strong>Neue Termin-Zeit:</strong><br>
@@ -147,18 +156,19 @@ const TEMPLATES = {
                 ${data.location ? `<strong>Ort:</strong> ${data.location}<br>` : ''}
               </div>
               
-              <p>Bitte notieren Sie sich den neuen Termin. Falls Sie Fragen haben, kontaktieren Sie uns bitte.</p>
+              <p>Bitte notiere dir den neuen Termin. Falls du Fragen hast, kontaktiere uns bitte.</p>
               
-              <p>Freundliche Grüße,<br>Ihr Driving Team</p>
+              <p>Viele Grüße,<br>dein ${data.tenantName || 'Driving'} Team</p>
             </div>
             
             <div class="footer">
-              <p>Dies ist eine automatisch generierte E-Mail. Bitte antworten Sie nicht auf diese E-Mail.</p>
+              <p>Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
             </div>
           </div>
         </body>
       </html>
-    `
+      `
+    }
   }
 }
 

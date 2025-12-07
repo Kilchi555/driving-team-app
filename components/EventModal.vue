@@ -3475,6 +3475,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     const phoneNumber = props.eventData?.phone
     const studentEmail = props.eventData?.email
     const studentName = props.eventData?.user_name || props.eventData?.student || 'Fahrschüler'
+    const firstName = studentName?.split(' ')[0] || studentName
     
     // SMS versenden
     if (phoneNumber) {
@@ -3484,7 +3485,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${studentName},\n\nIhr Termin wurde storniert.\nAbsage-Grund: ${deletionReason}\n\nViele Grüße`
+            message: `Hallo ${firstName},\n\ndein Termin wurde storniert.\nGrund: ${deletionReason}\n\nViele Grüße`
           }
         })
         console.log('✅ SMS sent successfully:', result)
