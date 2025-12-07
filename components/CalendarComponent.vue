@@ -1388,25 +1388,16 @@ const handleEventDrop = async (dropInfo: any) => {
 
       console.log('✅ Appointment moved in database:', dropInfo.event.title)
       
-      // ✅ NEW: Reload the specific appointment from DB to get fresh extendedProps including phone
-      const { data: updatedAppointment, error: fetchError } = await supabase
-        .from('appointments')
-        .select(`
-          id,
-          user:users!appointments_user_id_fkey(first_name, last_name, category, phone)
-        `)
-        .eq('id', dropInfo.event.id)
-        .single()
+      // ✅ WICHTIG: Nicht versuchen, extendedProps direkt zu mutieren (read-only!)
+      // Stattdessen: Kalender neu laden um frische Daten zu bekommen
+      console.log('🔄 Invalidating cache and reloading appointments...')
+      invalidateCache()
+      isUpdating.value = true
+      await loadAppointments()
+      isUpdating.value = false
+      refreshCalendar()
       
-      if (!fetchError && updatedAppointment?.user?.phone) {
-        // Update extendedProps with fresh phone number from DB
-        dropInfo.event.extendedProps.phone = updatedAppointment.user.phone
-        console.log('📱 Phone number refreshed from database:', updatedAppointment.user.phone)
-      } else if (fetchError) {
-        console.warn('⚠️ Could not refresh phone from database:', fetchError)
-      }
-      
-      // ✅ NEW: Check if SMS should be sent (use state instead of DOM lookup)
+      // ✅ SMS senden mit den original-Daten (vor dem reload)
       if (sendSmsOnDrop.value && dropInfo.event.extendedProps?.phone) {
         console.log('📱 Sending SMS notification for rescheduled appointment...')
         try {
@@ -1441,15 +1432,6 @@ const handleEventDrop = async (dropInfo: any) => {
           end: dropInfo.event.endStr
         }
       }
-      
-      // Kalender neu laden
-      console.log('🔄 Reloading calendar events...')
-        invalidateCache() // ✅ ADDED: Invalidate cache first
-        isUpdating.value = true
-        await loadAppointments()
-        isUpdating.value = false
-        refreshCalendar() // ✅ ADDED: Refresh the calendar display
-
       
       console.log(`✅ Termin "${dropInfo.event.title}" erfolgreich verschoben`)
       
