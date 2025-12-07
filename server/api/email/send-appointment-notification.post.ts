@@ -97,13 +97,12 @@ const TEMPLATES = {
             <div class="content">
               <p>Hallo ${firstName},</p>
               
-              <p>leider wurde dein Termin storniert.</p>
+              <p>leider wurde dein Termin mit <strong>${data.staffName}</strong> storniert.</p>
               
               ${data.appointmentTime ? `
               <div class="reason-box">
                 <strong>Stornierter Termin:</strong><br>
                 ${data.appointmentTime}<br>
-                ${data.staffName ? `<strong>Fahrlehrer:</strong> ${data.staffName}<br>` : ''}
                 ${data.cancellationReason ? `<strong>Grund:</strong> ${data.cancellationReason}<br>` : ''}
               </div>
               ` : ''}
@@ -150,15 +149,14 @@ const TEMPLATES = {
             <div class="content">
               <p>Hallo ${firstName},</p>
               
-              <p>dein Termin wurde auf einen neuen Zeitpunkt verschoben.</p>
+              <p>dein Termin mit ${data.staffName} wurde auf einen neuen Zeitpunkt verschoben.</p>
               
               <div class="time-box">
                 <strong>📅 ALT:</strong><br>
                 ${data.appointmentTime || 'Zeit wird mitgeteilt'}<br><br>
                 <strong>📌 NEU:</strong><br>
                 ${data.newTime || 'Zeit wird mitgeteilt'}<br><br>
-                ${data.staffName ? `<strong>Fahrlehrer:</strong> ${data.staffName}<br>` : ''}
-                ${data.location ? `<strong>Ort:</strong> ${data.location}<br>` : ''}
+             
               </div>
               
               <p>Du findest den neuen Termin in deinem Kundenkonto. Falls du Fragen hast, kontaktiere uns bitte.</p>
