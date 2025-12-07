@@ -983,25 +983,42 @@ const useEventModalForm = (currentUser?: any, refs?: {
       if (mode === 'create' && result.status === 'pending_confirmation') {
         try {
           console.log('📧 Sending appointment confirmation email...')
-          const confirmationResponse = await $fetch('/api/email/send-appointment-notification', {
-            method: 'POST',
-            body: {
-              email: result.users?.[0]?.email || '',
-              studentName: `${result.users?.[0]?.first_name || ''} ${result.users?.[0]?.last_name || ''}`.trim(),
-              appointmentTime: new Date(result.start_time).toLocaleString('de-CH', {
-                weekday: 'short',
-                day: '2-digit',
-                month: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              }),
-              type: 'pending_confirmation',
-              staffName: result.staff?.[0] ? `${result.staff[0].first_name} ${result.staff[0].last_name}` : undefined,
-              location: result.locations?.[0]?.name || undefined,
-              tenantName: result.tenant_name || 'Driving'
-            }
-          })
-          console.log('✅ Confirmation email sent:', confirmationResponse)
+          
+          // Fetch student data for email
+          const { data: appointmentData } = await supabase
+            .from('appointments')
+            .select(`
+              *,
+              users:user_id (first_name, last_name, email),
+              staff:staff_id (first_name, last_name),
+              locations:location_id (name)
+            `)
+            .eq('id', result.id)
+            .single()
+          
+          if (appointmentData?.users?.[0]?.email) {
+            const confirmationResponse = await $fetch('/api/email/send-appointment-notification', {
+              method: 'POST',
+              body: {
+                email: appointmentData.users[0].email,
+                studentName: `${appointmentData.users[0].first_name || ''} ${appointmentData.users[0].last_name || ''}`.trim(),
+                appointmentTime: new Date(result.start_time).toLocaleString('de-CH', {
+                  weekday: 'short',
+                  day: '2-digit',
+                  month: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }),
+                type: 'pending_confirmation',
+                staffName: appointmentData.staff?.[0] ? `${appointmentData.staff[0].first_name} ${appointmentData.staff[0].last_name}` : undefined,
+                location: appointmentData.locations?.[0]?.name || undefined,
+                tenantName: 'Driving'
+              }
+            })
+            console.log('✅ Confirmation email sent:', confirmationResponse)
+          } else {
+            console.log('ℹ️ No email found for student, skipping confirmation email')
+          }
         } catch (emailError: any) {
           console.warn('⚠️ Error sending confirmation email (non-critical):', emailError.message)
           // Non-critical - don't fail the appointment creation
