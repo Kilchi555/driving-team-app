@@ -1364,9 +1364,10 @@ const openNewAppointmentModal = (arg: any) => {
 // Überarbeitete handleEventDrop mit schönem Dialog
 const handleEventDrop = async (dropInfo: any) => {
   const newStartTime = new Date(dropInfo.event.start).toLocaleString('de-CH', {
-    weekday: 'short',
+    weekday: 'long',
     day: '2-digit',
     month: '2-digit',
+    year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   })
@@ -1426,7 +1427,7 @@ const handleEventDrop = async (dropInfo: any) => {
             method: 'POST',
             body: {
               phone: phoneNumber,
-              message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} wurde verschoben:\n\n📅 ALT:\n${oldStartTime}\n\n📌 NEU:\n${newTime}\n\nBeste Grüsse\nFahrschule Team`
+              message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} wurde verschoben:\n\n📅 ALT:\n${oldStartTime}\n\n📌 NEU:\n${newTime}\n\nBeste Grüsse\n{tenantName}`
             }
           })
           console.log('✅ SMS sent successfully:', result)
