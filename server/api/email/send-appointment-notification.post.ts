@@ -10,6 +10,7 @@ interface AppointmentNotificationBody {
   type: 'pending_confirmation' | 'cancelled' | 'rescheduled'
   cancellationReason?: string
   newTime?: string
+  oldTime?: string
   staffName?: string
   location?: string
   tenantName?: string
@@ -100,7 +101,9 @@ const TEMPLATES = {
               
               ${data.appointmentTime ? `
               <div class="reason-box">
-                <strong>Stornierter Termin:</strong> ${data.appointmentTime}<br>
+                <strong>Stornierter Termin:</strong><br>
+                ${data.appointmentTime}<br>
+                ${data.staffName ? `<strong>Fahrlehrer:</strong> ${data.staffName}<br>` : ''}
                 ${data.cancellationReason ? `<strong>Grund:</strong> ${data.cancellationReason}<br>` : ''}
               </div>
               ` : ''}
@@ -150,8 +153,10 @@ const TEMPLATES = {
               <p>dein Termin wurde auf einen neuen Zeitpunkt verschoben.</p>
               
               <div class="time-box">
-                <strong>Neue Termin-Zeit:</strong><br>
-                ${data.newTime || 'Zeit wird mitgeteilt'}<br>
+                <strong>📅 ALT:</strong><br>
+                ${data.appointmentTime || 'Zeit wird mitgeteilt'}<br><br>
+                <strong>📌 NEU:</strong><br>
+                ${data.newTime || 'Zeit wird mitgeteilt'}<br><br>
                 ${data.staffName ? `<strong>Fahrlehrer:</strong> ${data.staffName}<br>` : ''}
                 ${data.location ? `<strong>Ort:</strong> ${data.location}<br>` : ''}
               </div>
