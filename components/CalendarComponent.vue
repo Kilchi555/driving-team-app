@@ -1406,7 +1406,17 @@ const handleEventDrop = async (dropInfo: any) => {
       const studentEmail = dropInfo.event.extendedProps?.email
       const studentName = dropInfo.event.extendedProps?.student || 'Fahrschüler'
       const firstName = studentName?.split(' ')[0] || studentName
+      const instructorName = dropInfo.event.extendedProps?.instructor || 'dein Fahrlehrer'
       const newTime = newStartTime
+      
+      // Alter Termin (vor der Verschiebung)
+      const oldStartTime = new Date(dropInfo.event.start).toLocaleString('de-CH', {
+        weekday: 'short',
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
       
       // SMS versenden
       if (phoneNumber) {
@@ -1416,7 +1426,7 @@ const handleEventDrop = async (dropInfo: any) => {
             method: 'POST',
             body: {
               phone: phoneNumber,
-              message: `Hallo ${firstName},\n\ndein Termin wurde verschoben auf:\n${newTime}\n\nViele Grüße`
+              message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} wurde verschoben:\n\n📅 ALT:\n${oldStartTime}\n\n📌 NEU:\n${newTime}\n\nBeste Grüsse\nFahrschule Team`
             }
           })
           console.log('✅ SMS sent successfully:', result)
