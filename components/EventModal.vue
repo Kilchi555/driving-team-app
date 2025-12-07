@@ -3478,6 +3478,14 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     const studentEmail = props.eventData?.email
     const studentName = props.eventData?.user_name || props.eventData?.student || 'Fahrschüler'
     const firstName = studentName?.split(' ')[0] || studentName
+    const instructorName = props.eventData?.instructor || 'dein Fahrlehrer'
+    const appointmentTime = new Date(props.eventData.start || props.eventData.start_time).toLocaleString('de-CH', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
     
     // SMS versenden
     if (phoneNumber) {
@@ -3487,7 +3495,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${firstName},\n\ndein Termin wurde storniert.\nGrund: ${deletionReason}\n\nViele Grüße`
+            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\nFahrschule Team`
           }
         })
         console.log('✅ SMS sent successfully:', result)
@@ -3506,9 +3514,12 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           method: 'POST',
           body: {
             email: studentEmail,
-            studentName: studentName,
+            studentName: firstName,
+            appointmentTime: appointmentTime,
+            staffName: instructorName,
             cancellationReason: deletionReason,
-            type: 'cancelled'
+            type: 'cancelled',
+            tenantName: 'Fahrschule Team'
           }
         })
         console.log('✅ Email sent successfully:', result)
