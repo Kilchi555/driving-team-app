@@ -3485,7 +3485,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${firstName},\n\ndein Termin wurde storniert.\nGrund: ${deletionReason}\n\nViele Grüße`
+            message: `Hallo ${firstName},\n\ndein Termin wurde storniert.\nGrund: ${deletionReason}\n\nViele 'Beste Grüsse, Dein ${tenantName}`
           }
         })
         console.log('✅ SMS sent successfully:', result)
@@ -5393,8 +5393,8 @@ watch(() => props.isVisible, async (newVisible) => {
             })
             
             const startParts = zurichDateFormatter.formatToParts(startDateTime)
-            startDate = `${startParts.find(p => p.type === 'year').value}-${startParts.find(p => p.type === 'month').value}-${startParts.find(p => p.type === 'day').value}`
-            startTime = `${startParts.find(p => p.type === 'hour').value}:${startParts.find(p => p.type === 'minute').value}`
+            startDate = `${startParts.find(p => p.type === 'year')?.value}-${startParts.find(p => p.type === 'month')?.value}-${startParts.find(p => p.type === 'day')?.value}`
+            startTime = `${startParts.find(p => p.type === 'hour')?.value}:${startParts.find(p => p.type === 'minute')?.value}`
             
             console.log('⏰ UTC from DB → Zurich local:', {
               inputUTC: eventData.start,
@@ -5405,7 +5405,7 @@ watch(() => props.isVisible, async (newVisible) => {
             if (eventData.end) {
               const endDateTime = new Date(eventData.end)
               const endParts = zurichDateFormatter.formatToParts(endDateTime)
-              endTime = `${endParts.find(p => p.type === 'hour').value}:${endParts.find(p => p.type === 'minute').value}`
+              endTime = `${endParts.find(p => p.type === 'hour')?.value}:${endParts.find(p => p.type === 'minute')?.value}`
               
               const diffMs = endDateTime.getTime() - startDateTime.getTime()
               duration = Math.round(diffMs / (1000 * 60))

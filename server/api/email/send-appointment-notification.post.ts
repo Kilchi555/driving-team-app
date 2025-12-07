@@ -56,7 +56,7 @@ const TEMPLATES = {
               
               <p>Bitte melde dich in dein Kundenkonto an um den Termin zu bestätigen.</p>
               
-              <p>Viele Grüße,<br>dein ${data.tenantName || 'Driving'} Team</p>
+              <p>Freundliche Grüsse,<br>Dein ${data.tenantName || 'Driving'} Team</p>
             </div>
             
             <div class="footer">

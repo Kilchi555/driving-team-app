@@ -1413,7 +1413,7 @@ const handleEventDrop = async (dropInfo: any) => {
             method: 'POST',
             body: {
               phone: phoneNumber,
-              message: `Hallo ${firstName},\n\ndein Termin wurde verschoben auf:\n${newTime}\n\nViele Grüße`
+              message: `Hallo ${firstName},\n\ndein Termin wurde verschoben auf:\n${newTime}\n\nBeste Grüsse, Dein ${tenantName}`
             }
           })
           console.log('✅ SMS sent successfully:', result)
