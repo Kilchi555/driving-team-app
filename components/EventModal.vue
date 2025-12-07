@@ -3812,6 +3812,65 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       }
     }
     
+    // ✅ NEU: SMS und Email versenden bei Löschung
+    const phoneNumber = props.eventData?.phone
+    const studentEmail = props.eventData?.email
+    const studentName = props.eventData?.user_name || props.eventData?.student || 'Fahrschüler'
+    const firstName = studentName?.split(' ')[0] || studentName
+    const instructorName = props.eventData?.instructor || 'dein Fahrlehrer'
+    const appointmentTime = new Date(props.eventData.start || props.eventData.start_time).toLocaleString('de-CH', {
+      weekday: 'long',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    const reasonForNotification = pendingCancellationReason.value?.name_de || deletionReason || 'Termin abgesagt'
+    
+    // SMS versenden
+    if (phoneNumber) {
+      console.log('📱 Sending SMS notification for cancelled appointment...')
+      try {
+        const result = await $fetch('/api/sms/send', {
+          method: 'POST',
+          body: {
+            phone: phoneNumber,
+            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${reasonForNotification}\n\nBeste Grüsse\n{tenantName}`
+          }
+        })
+        console.log('✅ SMS sent successfully:', result)
+      } catch (smsError: any) {
+        console.error('❌ Failed to send SMS:', smsError)
+      }
+    } else {
+      console.log('⚠️ No phone number available for SMS')
+    }
+    
+    // Email versenden
+    if (studentEmail) {
+      console.log('📧 Sending Email notification for cancelled appointment...')
+      try {
+        const result = await $fetch('/api/email/send-appointment-notification', {
+          method: 'POST',
+          body: {
+            email: studentEmail,
+            studentName: firstName,
+            appointmentTime: appointmentTime,
+            staffName: instructorName,
+            cancellationReason: reasonForNotification,
+            type: 'cancelled',
+            tenantName: 'Fahrschule Team'
+          }
+        })
+        console.log('✅ Email sent successfully:', result)
+      } catch (emailError: any) {
+        console.error('❌ Failed to send Email:', emailError)
+      }
+    } else {
+      console.log('⚠️ No email address available for email notification')
+    }
+    
     // Events emittieren
     emit('appointment-deleted', props.eventData.id)
     emit('save-event', { type: 'deleted', id: props.eventData.id })
