@@ -3471,6 +3471,51 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     console.log('✅ Deletion reason:', deletionReason)
     console.log('✅ Database response:', data)
     
+    // ✅ NEU: SMS und Email versenden bei Löschung
+    const phoneNumber = props.eventData?.phone
+    const studentEmail = props.eventData?.email
+    const studentName = props.eventData?.user_name || props.eventData?.student || 'Fahrschüler'
+    
+    // SMS versenden
+    if (phoneNumber) {
+      console.log('📱 Sending SMS notification for cancelled appointment...')
+      try {
+        const result = await $fetch('/api/sms/send', {
+          method: 'POST',
+          body: {
+            phone: phoneNumber,
+            message: `Hallo ${studentName},\n\nIhr Termin wurde storniert.\nAbsage-Grund: ${deletionReason}\n\nViele Grüße`
+          }
+        })
+        console.log('✅ SMS sent successfully:', result)
+      } catch (smsError: any) {
+        console.error('❌ Failed to send SMS:', smsError)
+      }
+    } else {
+      console.log('⚠️ No phone number available for SMS')
+    }
+    
+    // Email versenden
+    if (studentEmail) {
+      console.log('📧 Sending Email notification for cancelled appointment...')
+      try {
+        const result = await $fetch('/api/email/send-appointment-notification', {
+          method: 'POST',
+          body: {
+            email: studentEmail,
+            studentName: studentName,
+            cancellationReason: deletionReason,
+            type: 'cancelled'
+          }
+        })
+        console.log('✅ Email sent successfully:', result)
+      } catch (emailError: any) {
+        console.error('❌ Failed to send Email:', emailError)
+      }
+    } else {
+      console.log('⚠️ No email address available for email notification')
+    }
+    
     // Events emittieren
     emit('appointment-deleted', props.eventData.id)
     emit('save-event', { type: 'deleted', id: props.eventData.id })

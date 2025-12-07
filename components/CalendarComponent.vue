@@ -1397,15 +1397,16 @@ const handleEventDrop = async (dropInfo: any) => {
       isUpdating.value = false
       refreshCalendar()
       
-      // ✅ SMS senden mit den original-Daten (vor dem reload)
-      if (sendSmsOnDrop.value && dropInfo.event.extendedProps?.phone) {
+      // ✅ NEU: Immer SMS UND EMAIL versenden (kein Checkbox mehr)
+      const phoneNumber = dropInfo.event.extendedProps?.phone
+      const studentEmail = dropInfo.event.extendedProps?.email
+      const studentName = dropInfo.event.extendedProps?.student || 'Fahrschüler'
+      const newTime = newStartTime
+      
+      // SMS versenden
+      if (phoneNumber) {
         console.log('📱 Sending SMS notification for rescheduled appointment...')
         try {
-          const phoneNumber = dropInfo.event.extendedProps.phone
-          const studentName = dropInfo.event.extendedProps?.student || 'Fahrschüler'
-          const newTime = newStartTime
-          
-          // Send SMS via API
           const result = await $fetch('/api/sms/send', {
             method: 'POST',
             body: {
@@ -1417,10 +1418,29 @@ const handleEventDrop = async (dropInfo: any) => {
         } catch (smsError: any) {
           console.error('❌ Failed to send SMS:', smsError)
         }
-      } else if (!dropInfo.event.extendedProps?.phone) {
-        console.log('⚠️ No phone number available for SMS')
       } else {
-        console.log('ℹ️ SMS sending disabled by user')
+        console.log('⚠️ No phone number available for SMS')
+      }
+      
+      // Email versenden
+      if (studentEmail) {
+        console.log('📧 Sending Email notification for rescheduled appointment...')
+        try {
+          const result = await $fetch('/api/email/send-appointment-notification', {
+            method: 'POST',
+            body: {
+              email: studentEmail,
+              studentName: studentName,
+              appointmentTime: newTime,
+              type: 'rescheduled'
+            }
+          })
+          console.log('✅ Email sent successfully:', result)
+        } catch (emailError: any) {
+          console.error('❌ Failed to send Email:', emailError)
+        }
+      } else {
+        console.log('⚠️ No email address available for email notification')
       }
       
       // Modal aktualisieren falls offen
@@ -1456,8 +1476,7 @@ const handleEventDrop = async (dropInfo: any) => {
 const studentName = dropInfo.event.extendedProps?.student || 'Unbekannt'
 const studentPhone = dropInfo.event.extendedProps?.phone || 'Keine Nummer'
 
-  // ✅ Reset the state before showing dialog
-  sendSmsOnDrop.value = true
+  // ✅ ENTFERNT: sendSmsOnDrop.value = true (nicht mehr nötig, SMS wird immer versendet)
 
 showConfirmDialog({
   title: 'Termin verschieben',
@@ -1468,14 +1487,8 @@ showConfirmDialog({
     <strong>Fahrschüler:</strong> ${studentName}<br><br>
     
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-      <div class="flex items-center gap-2 mb-2">
-          <input type="checkbox" id="sendSmsCheckbox" checked class="rounded border-gray-300" @change="(e) => sendSmsOnDrop = (e.target as HTMLInputElement).checked">
-          <label for="sendSmsCheckbox" class="font-medium text-blue-800">
-          📱 SMS-Benachrichtigung senden
-        </label>
-      </div>
-      <div class="text-xs text-blue-600">
-        Der Fahrschüler wird über die Terminverschiebung informiert.
+      <div class="text-sm text-blue-800">
+        📱 Der Fahrschüler wird per SMS und E-Mail über die Terminverschiebung informiert.
       </div>
     </div>
   `,
@@ -1984,6 +1997,38 @@ const pasteAppointmentDirectly = async () => {
     if (error) throw error
     
     console.log('✅ Appointment pasted successfully:', newAppointment.id)
+    
+    // ✅ NEU: Email "Bestätigung erforderlich" versenden
+    const studentEmail = clipboardAppointment.value.email
+    const studentName = clipboardAppointment.value.student || 'Fahrschüler'
+    const appointmentTime = new Date(clickedDate).toLocaleString('de-CH', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    
+    if (studentEmail) {
+      console.log('📧 Sending confirmation email for pasted appointment...')
+      try {
+        const result = await $fetch('/api/email/send-appointment-notification', {
+          method: 'POST',
+          body: {
+            email: studentEmail,
+            studentName: studentName,
+            appointmentTime: appointmentTime,
+            type: 'pending_confirmation'
+          }
+        })
+        console.log('✅ Confirmation email sent successfully:', result)
+      } catch (emailError: any) {
+        console.error('❌ Failed to send confirmation email:', emailError)
+        // Nicht kritisch, Termin wurde trotzdem erstellt
+      }
+    } else {
+      console.log('⚠️ No email address available for confirmation email')
+    }
     
     // ✅ Payment erstellen (basierend auf pricing_rules)
     const basePriceMapping: Record<string, number> = {
