@@ -1,5 +1,15 @@
 <!-- components/AddStudentModal.vue -->
 <template>
+  <!-- Toast Notification -->
+  <Toast
+    :show="showToast"
+    :type="toastType"
+    :title="toastTitle"
+    :message="toastMessage"
+    :duration="3000"
+    @close="showToast = false"
+  />
+
   <!-- Duplicate Warning Modal (higher z-index) -->
   <div v-if="showDuplicateWarning" class="fixed inset-0 z-[60] flex items-center justify-center">
     <!-- Backdrop -->
@@ -326,8 +336,34 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useStudents } from '~/composables/useStudents'
 import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
+import Toast from '~/components/Toast.vue'
 
 const uiStore = useUIStore()
+
+// ✅ NEU: Toast State
+const showToast = ref(false)
+const toastType = ref<'success' | 'error' | 'warning' | 'info'>('success')
+const toastTitle = ref('')
+const toastMessage = ref('')
+
+// Toast Helper Functions
+const showSuccessToast = (title: string, message: string = '') => {
+  console.log('🔔 showSuccessToast called:', { title, message })
+  toastType.value = 'success'
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+  console.log('🔔 Toast state updated:', { showToast: showToast.value })
+}
+
+const showWarningToast = (title: string, message: string = '') => {
+  console.log('🔔 showWarningToast called:', { title, message })
+  toastType.value = 'warning'
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+  console.log('🔔 Toast state updated:', { showToast: showToast.value })
+}
 
 const emit = defineEmits<{
   close: []
@@ -568,29 +604,26 @@ const submitForm = async () => {
     // ✅ Benachrichtigung basierend auf Versandmethode
     if (newStudent?.smsSuccess) {
       console.log('📲📲📲 SMS success notification triggered')
-      uiStore.addNotification({
-        type: 'success',
-        title: 'Einladung versendet!',
-        message: `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet.`
-      })
+      showSuccessToast(
+        'Einladung versendet!',
+        `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet.`
+      )
     } else if (newStudent?.emailSuccess) {
       console.log('📧📧📧 Email success notification triggered')
-      uiStore.addNotification({
-        type: 'success',
-        title: 'Einladung versendet!',
-        message: `Eine E-Mail mit Onboarding-Link wurde an ${form.value.email} gesendet.`
-      })
+      showSuccessToast(
+        'Einladung versendet!',
+        `Eine E-Mail mit Onboarding-Link wurde an ${form.value.email} gesendet.`
+      )
     } else {
       // SMS/Email fehlgeschlagen - zeige Link zum manuellen Kopieren
       const contactInfo = form.value.phone || form.value.email
       const contactType = form.value.phone ? 'SMS' : 'E-Mail'
       
       console.log('⚠️⚠️⚠️ Contact method failed:', { contactType, contactInfo, smsSuccess: newStudent?.smsSuccess, emailSuccess: newStudent?.emailSuccess })
-      uiStore.addNotification({
-        type: 'warning',
-        title: `Schüler erstellt, aber ${contactType} fehlgeschlagen`,
-        message: `Bitte senden Sie den Onboarding-Link manuell an ${contactInfo}`
-      })
+      showWarningToast(
+        `Schüler erstellt, aber ${contactType} fehlgeschlagen`,
+        `Bitte senden Sie den Onboarding-Link manuell an ${contactInfo}`
+      )
       
       // Zeige den Link in der Konsole für Copy/Paste
       console.log('🔗 Onboarding-Link:', newStudent?.onboardingLink)

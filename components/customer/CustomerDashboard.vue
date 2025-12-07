@@ -225,7 +225,7 @@
       </div>
 
       <!-- Booking Sections -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-4">
         
         <!-- Fahrstunden buchen -->
         <div 
@@ -464,7 +464,7 @@
 
         <!-- Content -->
         <div class="p-6 overflow-y-auto flex-1">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button
               @click="navigateToReglement('datenschutz'); showReglementeModal = false"
               class="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors border border-gray-200 hover:border-indigo-300"
@@ -626,7 +626,7 @@
                 </div>
 
                 <!-- Details Grid -->
-                <div class="grid grid-cols-2 gap-2 text-sm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
 
                   <!-- Fahrlehrer -->
                   <div class="flex items-center text-gray-600">
