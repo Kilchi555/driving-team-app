@@ -83,10 +83,10 @@ interface PaymentReminderEmailData {
 
 export function generatePaymentReminderEmail(data: PaymentReminderEmailData): string {
   const urgencyText = data.reminderNumber === 1 
-    ? 'Bitte bestätigen Sie Ihren Termin'
+    ? 'Bitte bestätige deinen Termin'
     : data.reminderNumber === 2
-    ? 'Erinnerung: Bitte bestätigen Sie Ihren Termin'
-    : 'Letzte Erinnerung: Bitte bestätigen Sie Ihren Termin'
+    ? 'Erinnerung: Bitte bestätige deinen Termin'
+    : 'Letzte Erinnerung: Bitte bestätige deinen Termin'
 
   const primaryColor = data.primaryColor || '#2563eb'
 

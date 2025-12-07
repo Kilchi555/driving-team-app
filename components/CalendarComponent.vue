@@ -1363,6 +1363,16 @@ const openNewAppointmentModal = (arg: any) => {
 
 // Überarbeitete handleEventDrop mit schönem Dialog
 const handleEventDrop = async (dropInfo: any) => {
+  // ✅ WICHTIG: Speichere die ALT-Zeit BEVOR der Event verändert wird
+  const oldStartTime = new Date(dropInfo.oldEvent.start).toLocaleString('de-CH', {
+    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  
   const newStartTime = new Date(dropInfo.event.start).toLocaleString('de-CH', {
     weekday: 'long',
     day: '2-digit',
@@ -1410,15 +1420,7 @@ const handleEventDrop = async (dropInfo: any) => {
       const instructorName = dropInfo.event.extendedProps?.instructor || 'dein Fahrlehrer'
       const newTime = newStartTime
       
-      // Alter Termin (vor der Verschiebung)
-      const oldStartTime = new Date(dropInfo.event.start).toLocaleString('de-CH', {
-        weekday: 'long',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      console.log('📅 Time details:', { oldStartTime, newTime })
       
       // SMS versenden
       if (phoneNumber) {

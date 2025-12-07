@@ -83,7 +83,7 @@ export function generateAppointmentDeletedSMS(data: AppointmentDeletedSMSData): 
   const contactInfo = data.tenantPhone ? ` Kontakt: ${data.tenantPhone}` : ''
   
   return `
-${data.tenantName}: Ihr Termin am ${data.appointmentDate} wurde storniert (keine Bestätigung).${contactInfo}
+${data.tenantName}: Dein Termin am ${data.appointmentDate} wurde storniert (keine Bestätigung).${contactInfo}
   `.trim()
 }
 

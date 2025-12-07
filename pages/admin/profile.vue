@@ -2059,7 +2059,7 @@ Freundliche Grüsse
     },
     'first_push': {
       subject: 'Terminbestätigung erforderlich',
-      body: '{{tenant_name}} bittet Sie, Ihren Termin am {{appointment_datetime}} zu bestätigen.'
+      body: '{{tenant_name}} bittet dich, deinen Termin am {{appointment_datetime}} zu bestätigen.'
     },
     'second_email': {
       subject: 'Erinnerung: Terminbestätigung noch ausstehend - {{tenant_name}}',
