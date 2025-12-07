@@ -3474,11 +3474,11 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     console.log('✅ Database response:', data)
     
     // ✅ NEU: SMS und Email versenden bei Löschung
-    const phoneNumber = props.eventData?.phone
-    const studentEmail = props.eventData?.email
-    const studentName = props.eventData?.user_name || props.eventData?.student || 'Fahrschüler'
+    const phoneNumber = props.eventData?.phone || props.eventData?.extendedProps?.phone
+    const studentEmail = props.eventData?.email || props.eventData?.extendedProps?.email
+    const studentName = (props.eventData?.user_name || props.eventData?.student || props.eventData?.extendedProps?.student || 'Fahrschüler')
     const firstName = studentName?.split(' ')[0] || studentName
-    const instructorName = props.eventData?.instructor || 'dein Fahrlehrer'
+    const instructorName = (props.eventData?.instructor || props.eventData?.extendedProps?.instructor || 'dein Fahrlehrer')
     const appointmentTime = new Date(props.eventData.start || props.eventData.start_time).toLocaleString('de-CH', {
       weekday: 'long',
       day: '2-digit',
@@ -3496,7 +3496,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n{tenantName}`
+            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\nFahrschule Team`
           }
         })
         console.log('✅ SMS sent successfully:', result)
@@ -3504,7 +3504,10 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
         console.error('❌ Failed to send SMS:', smsError)
       }
     } else {
-      console.log('⚠️ No phone number available for SMS')
+      console.log('⚠️ No phone number available for SMS', { 
+        'eventData.phone': props.eventData?.phone,
+        'extendedProps.phone': props.eventData?.extendedProps?.phone 
+      })
     }
     
     // Email versenden
@@ -3528,7 +3531,10 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
         console.error('❌ Failed to send Email:', emailError)
       }
     } else {
-      console.log('⚠️ No email address available for email notification')
+      console.log('⚠️ No email address available for email notification', {
+        'eventData.email': props.eventData?.email,
+        'extendedProps.email': props.eventData?.extendedProps?.email
+      })
     }
     
     // Events emittieren
@@ -3813,11 +3819,11 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     }
     
     // ✅ NEU: SMS und Email versenden bei Löschung
-    const phoneNumber = props.eventData?.phone
-    const studentEmail = props.eventData?.email
-    const studentName = props.eventData?.user_name || props.eventData?.student || 'Fahrschüler'
+    const phoneNumber = props.eventData?.phone || props.eventData?.extendedProps?.phone
+    const studentEmail = props.eventData?.email || props.eventData?.extendedProps?.email
+    const studentName = (props.eventData?.user_name || props.eventData?.student || props.eventData?.extendedProps?.student || 'Fahrschüler')
     const firstName = studentName?.split(' ')[0] || studentName
-    const instructorName = props.eventData?.instructor || 'dein Fahrlehrer'
+    const instructorName = (props.eventData?.instructor || props.eventData?.extendedProps?.instructor || 'dein Fahrlehrer')
     const appointmentTime = new Date(props.eventData.start || props.eventData.start_time).toLocaleString('de-CH', {
       weekday: 'long',
       day: '2-digit',
@@ -3826,7 +3832,6 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       hour: '2-digit',
       minute: '2-digit'
     })
-    const reasonForNotification = pendingCancellationReason.value?.name_de || deletionReason || 'Termin abgesagt'
     
     // SMS versenden
     if (phoneNumber) {
@@ -3836,7 +3841,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${reasonForNotification}\n\nBeste Grüsse\n{tenantName}`
+            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\nFahrschule Team`
           }
         })
         console.log('✅ SMS sent successfully:', result)
@@ -3844,7 +3849,10 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
         console.error('❌ Failed to send SMS:', smsError)
       }
     } else {
-      console.log('⚠️ No phone number available for SMS')
+      console.log('⚠️ No phone number available for SMS', { 
+        'eventData.phone': props.eventData?.phone,
+        'extendedProps.phone': props.eventData?.extendedProps?.phone 
+      })
     }
     
     // Email versenden
@@ -3858,7 +3866,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
             studentName: firstName,
             appointmentTime: appointmentTime,
             staffName: instructorName,
-            cancellationReason: reasonForNotification,
+            cancellationReason: deletionReason,
             type: 'cancelled',
             tenantName: 'Fahrschule Team'
           }
@@ -3868,7 +3876,10 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
         console.error('❌ Failed to send Email:', emailError)
       }
     } else {
-      console.log('⚠️ No email address available for email notification')
+      console.log('⚠️ No email address available for email notification', {
+        'eventData.email': props.eventData?.email,
+        'extendedProps.email': props.eventData?.extendedProps?.email
+      })
     }
     
     // Events emittieren

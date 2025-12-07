@@ -57,7 +57,7 @@ const TEMPLATES = {
               
               <p>Bitte melde dich in dein Kundenkonto an um den Termin zu bestätigen.</p>
               
-              <p>Freundliche Grüsse,<br>Dein ${data.tenantName || 'Driving'} Team</p>
+              <p>Freundliche Grüsse,<br>Dein ${data.tenantName || ''}</p>
             </div>
             
             <div class="footer">
@@ -153,9 +153,9 @@ const TEMPLATES = {
               
               <div class="time-box">
                 <strong>📅 ALT:</strong><br>
-                ${data.appointmentTime || 'Zeit wird mitgeteilt'}<br><br>
+                ${data.appointmentTime || 'Findest du in deinem Kundenkonto' || 'Zeit wird mitgeteilt'}<br><br>
                 <strong>📌 NEU:</strong><br>
-                ${data.newTime || 'Zeit wird mitgeteilt'}<br><br>
+                ${data.newTime || 'Findest du in deinem Kundenkonto' || 'Zeit wird mitgeteilt'}<br><br>
              
               </div>
               
