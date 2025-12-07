@@ -983,10 +983,22 @@ const useEventModalForm = (currentUser?: any, refs?: {
       if (mode === 'create' && result.status === 'pending_confirmation') {
         try {
           console.log('📧 Sending appointment confirmation email...')
-          const confirmationResponse = await $fetch('/api/reminders/send-appointment-confirmation', {
+          const confirmationResponse = await $fetch('/api/email/send-appointment-notification', {
             method: 'POST',
             body: {
-              appointmentId: result.id
+              email: result.users?.[0]?.email || '',
+              studentName: `${result.users?.[0]?.first_name || ''} ${result.users?.[0]?.last_name || ''}`.trim(),
+              appointmentTime: new Date(result.start_time).toLocaleString('de-CH', {
+                weekday: 'short',
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              }),
+              type: 'pending_confirmation',
+              staffName: result.staff?.[0] ? `${result.staff[0].first_name} ${result.staff[0].last_name}` : undefined,
+              location: result.locations?.[0]?.name || undefined,
+              tenantName: result.tenant_name || 'Driving'
             }
           })
           console.log('✅ Confirmation email sent:', confirmationResponse)
