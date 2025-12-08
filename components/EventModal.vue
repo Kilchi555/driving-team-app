@@ -840,6 +840,7 @@ const pendingCancellationReason = ref<any>(null) // Speichert den ausgewählten 
 const selectedCancellationPolicyId = ref<string>('')
 const cancellationPolicyResult = ref<any>(null)
 const timeUntilAppointment = ref({ hours: 0, days: 0, isOverdue: false, description: '' })
+const isResetingPolicy = ref(false) // ✅ NEU: Flag to prevent onPolicyChanged from being called during reset
 const appointmentNumber = ref(1)
 const availableDurations = ref([45] as number[])
 const customerInviteSelectorRef = ref()
@@ -4130,9 +4131,14 @@ const goBackInCancellationFlow = () => {
     cancellationStep.value = 2
   } else if (cancellationStep.value === 2) {
     // Go back from policy selection to reason selection
+    isResetingPolicy.value = true // ✅ Set flag before resetting
     cancellationStep.value = 1
     // ✅ Reset policy result when going back (but keep selectedCancellationPolicyId to remember choice)
     cancellationPolicyResult.value = null
+    selectedCancellationPolicyId.value = '' // ✅ Also reset the selected policy ID
+    nextTick(() => {
+      isResetingPolicy.value = false // ✅ Clear flag after reset
+    })
   } else if (cancellationStep.value === 1) {
     // Go back from reason selection to type selection
     cancellationStep.value = 0
@@ -4142,6 +4148,12 @@ const goBackInCancellationFlow = () => {
 }
 
 const onPolicyChanged = (result: any) => {
+  // ✅ Skip if we're in the middle of resetting the policy
+  if (isResetingPolicy.value) {
+    console.log('⏭️ Skipping onPolicyChanged during policy reset')
+    return
+  }
+  
   console.log('📋 Policy changed:', result)
   cancellationPolicyResult.value = result
   
