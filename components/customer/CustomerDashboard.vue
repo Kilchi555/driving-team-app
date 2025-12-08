@@ -988,10 +988,15 @@ const loadUserDocuments = async () => {
         console.log('   First doc:', documents[0])
       }
       const categoryDocs = (documents || []).filter((doc: any) => {
-        // Match documents by category_code extracted from filename
-        const matches = doc.document_type === 'lernfahrausweis' || doc.category_code === cat.code
+        // Documents from Storage have: documentType, category_code (parsed from filename)
+        // We just match all student-document type (they're all from student uploads)
+        // Or match by category if it exists
+        const isStudentDoc = doc.documentType === 'student-document'
+        const matchesCategory = doc.category_code === cat.code
+        const matches = isStudentDoc || matchesCategory
+        
         if (matches) {
-          console.log('   ✅ Found matching doc:', doc.name, 'type:', doc.document_type, 'category:', doc.category_code)
+          console.log('   ✅ Found matching doc:', doc.name, 'type:', doc.documentType, 'category:', doc.category_code)
         }
         return matches
       })
