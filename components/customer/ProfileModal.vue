@@ -6,16 +6,31 @@
         <div class="flex justify-between items-center">
           <h2 class="text-2xl font-bold text-gray-900">Mein Profil</h2>
           <div class="flex items-center gap-3">
-            <!-- ✅ DISABLED FOR PRODUCTION: Edit Profile Button (enable on preview branch) -->
-            <!-- <button
+            <!-- Edit Profile Button -->
+            <button
               v-if="!isEditMode"
               @click="isEditMode = true"
               class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
               title="Bearbeiten"
             >
-  
               <span>Bearbeiten</span>
-            </button> -->
+            </button>
+            <!-- Save/Cancel Buttons in Edit Mode -->
+            <div v-else class="flex gap-2">
+              <button
+                @click="saveProfile"
+                :disabled="isSaving"
+                class="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {{ isSaving ? 'Speichert...' : 'Speichern' }}
+              </button>
+              <button
+                @click="isEditMode = false"
+                class="px-4 py-2 bg-gray-400 text-white font-medium rounded-lg hover:bg-gray-500 transition-colors shadow-sm"
+              >
+                Abbrechen
+              </button>
+            </div>
             <button
               @click="$emit('close')"
               class="text-gray-600 hover:text-gray-900 transition-colors p-2"
