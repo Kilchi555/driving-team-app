@@ -2508,7 +2508,10 @@ const handleDocumentUpload = async (event: Event) => {
 
 // ===== STUDENT DOCUMENTS (Ausweise) =====
 const loadStudentDocuments = async () => {
-  if (!props.selectedStudent) return
+  if (!props.selectedStudent) {
+    console.log('⚠️ No student selected')
+    return
+  }
   
   try {
     console.log('📄 Loading student documents for:', props.selectedStudent.id)
@@ -2527,6 +2530,13 @@ const loadStudentDocuments = async () => {
     
     studentDocuments.value = docs || []
     console.log('✅ Loaded student documents:', studentDocuments.value.length)
+    console.log('📋 Document details:', studentDocuments.value.map(doc => ({
+      type: doc.document_type,
+      category: doc.category_code,
+      side: doc.side,
+      storagePath: doc.storage_path,
+      fileName: doc.file_name
+    })))
   } catch (err) {
     console.error('❌ Error in loadStudentDocuments:', err)
   }
@@ -2534,17 +2544,17 @@ const loadStudentDocuments = async () => {
 
 // Watch for tab changes to load documents when Documents tab is opened
 watch(() => activeTab.value, (newTab) => {
-  if (newTab === 'documents' && studentDocuments.value.length === 0) {
+  if (newTab === 'documents') {
     loadStudentDocuments()
   }
 })
 
 // Load documents when modal opens
-watch(() => props.selectedStudent, () => {
-  if (props.selectedStudent && activeTab.value === 'documents') {
-    loadStudentDocuments()
+watch(() => props.selectedStudent, async () => {
+  if (props.selectedStudent) {
+    await loadStudentDocuments()
   }
-})
+}, { immediate: true })
 
 </script>
 
