@@ -3973,11 +3973,11 @@ const proceedWithCancellation = async (selectedReason: any) => {
     
     // ✅ Determine who is cancelling (student or staff)
     const cancellerName = cancellationType.value === 'student' 
-      ? (student.value?.first_name || 'Schüler') 
+      ? (selectedStudent.value?.first_name || 'Schüler') 
       : (props.currentUser?.first_name || 'Fahrlehrer')
     
     const cancellerEmail = cancellationType.value === 'student' 
-      ? (student.value?.email || props.eventData?.extendedProps?.email || 'unbekannt')
+      ? (selectedStudent.value?.email || props.eventData?.extendedProps?.email || 'unbekannt')
       : (props.currentUser?.email || 'unbekannt')
     
     // Erstelle einen detaillierten Lösch-Grund
@@ -4310,11 +4310,11 @@ const confirmDeleteWithRefund = async (refundType: 'full_refund' | 'partial_refu
   
   // ✅ Determine who is deleting (student or staff)
   const deleterName = cancellationType.value === 'student' 
-    ? (student.value?.first_name || 'Schüler') 
+    ? (selectedStudent.value?.first_name || 'Schüler') 
     : (props.currentUser?.first_name || 'Benutzer')
   
   const deleterEmail = cancellationType.value === 'student' 
-    ? (student.value?.email || props.eventData?.extendedProps?.email || 'unbekannt')
+    ? (selectedStudent.value?.email || props.eventData?.extendedProps?.email || 'unbekannt')
     : (props.currentUser?.email || 'unbekannt')
   
   const refundReason = getRefundReason(refundType)
