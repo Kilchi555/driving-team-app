@@ -410,7 +410,7 @@
             <div class="bg-gray-50 rounded-lg p-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="font-medium text-gray-900">{{ props.eventData?.title || 'Termin' }}</h4>
+                  <h4 class="font-medium text-gray-900">{{ props.eventData?.event_type_code || 'Termin' }} - {{ selectedStudent?.first_name || 'Kunde' }}</h4>
                   <p class="text-sm text-gray-600">
                     {{ formatDate(props.eventData?.start) }} • 
                     {{ props.eventData?.duration_minutes || 45 }} Min • 
@@ -420,7 +420,7 @@
                 <div class="text-right">
                   <div class="text-sm text-gray-500">Zeit bis Termin</div>
                   <div class="font-medium text-gray-900">
-                    {{ timeUntilAppointment?.description || 'Berechne...' }}
+                    {{ timeUntilAppointment?.hours || 0 }}h
                   </div>
                 </div>
               </div>
@@ -473,7 +473,7 @@
             <div class="bg-gray-50 rounded-lg p-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="font-medium text-gray-900">{{ props.eventData?.title || 'Termin' }}</h4>
+                  <h4 class="font-medium text-gray-900">{{ props.eventData?.event_type_code || 'Termin' }} - {{ selectedStudent?.first_name || 'Kunde' }}</h4>
                   <p class="text-sm text-gray-600">
                     {{ formatDate(props.eventData?.start) }} • 
                     {{ props.eventData?.duration_minutes || 45 }} Min • 
