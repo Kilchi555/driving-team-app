@@ -86,9 +86,9 @@
       <div v-if="!shouldAutoLoadComputed && availableStudents.length === 0 && !isLoading && !selectedStudent" class="mb-3">
         <button 
           @click="loadStudents()"
-          class="w-full px-4 py-3 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors"
+          class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Schüler:in laden
+          Schüler laden
         </button>
       </div>
 

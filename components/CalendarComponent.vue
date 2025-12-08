@@ -2284,9 +2284,9 @@ const handleCopyAppointment = async (copyData: any) => {
         duration_minutes: copyData.eventData.duration_minutes || 45,
         price_per_minute: copyData.eventData.price_per_minute,
         payment_method: paymentMethod, // ✅ Von DB geladen
-        email: copyData.eventData.email, // ✅ NEU: Email für Benachrichtigungen
-        student: copyData.eventData.student, // ✅ NEU: Student name für Benachrichtigungen
-        event_type_code: copyData.eventData.event_type_code || 'lesson', // ✅ NEU: Event type code
+        email: copyData.eventData.extendedProps?.email || copyData.eventData.email, // ✅ Email aus extendedProps ODER direkt
+        student: copyData.eventData.extendedProps?.student || copyData.eventData.student, // ✅ Student name aus extendedProps ODER direkt
+        event_type_code: copyData.eventData.event_type_code || 'lesson', // ✅ Event type code
   }
   
   console.log('✅ Termin in Zwischenablage gespeichert:', clipboardAppointment.value)
