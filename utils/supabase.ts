@@ -4,9 +4,9 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 let supabaseInstance: SupabaseClient | null = null
 let supabaseAdminInstance: SupabaseClient | null = null
 
-// Custom Storage Adapter für fenster-spezifische Sessions
-// Jedes Browser-Fenster bekommt eine eigene Session
-function createWindowSpecificStorage() {
+// Custom Storage Adapter für normales localStorage
+// Supabase speichert Sessions direkt im localStorage ohne Prefix
+function createNormalStorage() {
   if (typeof window === 'undefined') {
     // Fallback für Server-Side: normales localStorage-Verhalten
     return {
@@ -16,20 +16,10 @@ function createWindowSpecificStorage() {
     }
   }
 
-  // Generiere eine fenster-spezifische ID (bleibt für die Lebensdauer des Fensters)
-  let windowId = sessionStorage.getItem('supabase_window_id')
-  if (!windowId) {
-    windowId = `window_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    sessionStorage.setItem('supabase_window_id', windowId)
-  }
-
-  const getStorageKey = (key: string) => `${windowId}_${key}`
-
   return {
     getItem: (key: string): string | null => {
       try {
-        const prefixedKey = getStorageKey(key)
-        return localStorage.getItem(prefixedKey)
+        return localStorage.getItem(key)
       } catch (error) {
         console.error('❌ Error reading from storage:', error)
         return null
@@ -37,16 +27,14 @@ function createWindowSpecificStorage() {
     },
     setItem: (key: string, value: string): void => {
       try {
-        const prefixedKey = getStorageKey(key)
-        localStorage.setItem(prefixedKey, value)
+        localStorage.setItem(key, value)
       } catch (error) {
         console.error('❌ Error writing to storage:', error)
       }
     },
     removeItem: (key: string): void => {
       try {
-        const prefixedKey = getStorageKey(key)
-        localStorage.removeItem(prefixedKey)
+        localStorage.removeItem(key)
       } catch (error) {
         console.error('❌ Error removing from storage:', error)
       }
@@ -94,8 +82,8 @@ export const getSupabase = (): SupabaseClient => {
 
     console.log('🔗 Initializing Supabase client with URL:', supabaseUrl)
     
-    // Use custom storage for client-side to support multiple windows with different users
-    const storageAdapter = process.client ? createWindowSpecificStorage() : undefined
+    // Use normal localStorage for session persistence across browser windows
+    const storageAdapter = process.client ? createNormalStorage() : undefined
     
     supabaseInstance = createClient(supabaseUrl, supabaseKey, {
       auth: {
