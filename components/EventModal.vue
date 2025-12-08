@@ -4131,14 +4131,13 @@ const goBackInCancellationFlow = () => {
     cancellationStep.value = 2
   } else if (cancellationStep.value === 2) {
     // Go back from policy selection to reason selection
-    isResetingPolicy.value = true // ✅ Set flag before resetting
-    cancellationStep.value = 1
-    // ✅ Reset policy result when going back (but keep selectedCancellationPolicyId to remember choice)
+    isResetingPolicy.value = true // ✅ Set flag FIRST
     cancellationPolicyResult.value = null
-    selectedCancellationPolicyId.value = '' // ✅ Also reset the selected policy ID
-    nextTick(() => {
-      isResetingPolicy.value = false // ✅ Clear flag after reset
-    })
+    // ✅ DON'T reset selectedCancellationPolicyId - keep the user's choice
+    // This prevents CancellationPolicySelector from triggering onPolicyChanged
+    cancellationStep.value = 1
+    // ✅ Clear flag immediately (don't wait for nextTick)
+    isResetingPolicy.value = false
   } else if (cancellationStep.value === 1) {
     // Go back from reason selection to type selection
     cancellationStep.value = 0
