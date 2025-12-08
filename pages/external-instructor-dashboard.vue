@@ -236,7 +236,7 @@ const loadMyCourses = async () => {
 
 const logout = async () => {
   await authStore.logout()
-  await navigateTo('/login')
+  return await redirectToSlugOrLogin()
 }
 
 const redirectToSlugOrLogin = async () => {
