@@ -939,6 +939,10 @@ const activeClickDiv = ref<string | null>(null) // Track which div is being clic
 
 // Load user documents
 const loadUserDocuments = async () => {
+  console.log('🔥 loadUserDocuments called')
+  console.log('   userData.value?.id:', userData.value?.id)
+  console.log('   userData.value?.tenant_id:', userData.value?.tenant_id)
+  
   if (!userData.value?.id) {
     console.log('⚠️ User data not available for loading documents')
     return
@@ -948,13 +952,14 @@ const loadUserDocuments = async () => {
     console.log('📄 Loading user documents for user:', userData.value.id)
     
     // Call new endpoint that lists documents directly from Storage
+    console.log('🌐 Calling /api/documents/list-user-documents with userId:', userData.value.id)
     const documents = await $fetch('/api/documents/list-user-documents', {
       query: {
         userId: userData.value.id
       }
     }) as any[]
 
-    console.log('✅ Loaded documents from Storage:', documents?.length || 0)
+    console.log('✅ Loaded documents from Storage:', documents?.length || 0, 'docs:', documents)
 
     // Load document categories for this tenant
     const supabase = getSupabase()
