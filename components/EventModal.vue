@@ -410,7 +410,7 @@
             <div class="bg-gray-50 rounded-lg p-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="font-medium text-gray-900">{{ props.eventData?.event_type_code || 'Termin' }} - {{ selectedStudent?.first_name || 'Kunde' }}</h4>
+                  <h4 class="font-medium text-gray-900">{{ translateEventTypeCode(props.eventData?.event_type_code) }} - {{ selectedStudent?.first_name || 'Kunde' }}</h4>
                   <p class="text-sm text-gray-600">
                     {{ formatDate(props.eventData?.start) }} • 
                     {{ props.eventData?.duration_minutes || 45 }} Min • 
@@ -473,7 +473,7 @@
             <div class="bg-gray-50 rounded-lg p-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="font-medium text-gray-900">{{ props.eventData?.event_type_code || 'Termin' }} - {{ selectedStudent?.first_name || 'Kunde' }}</h4>
+                  <h4 class="font-medium text-gray-900">{{ translateEventTypeCode(props.eventData?.event_type_code) }} - {{ selectedStudent?.first_name || 'Kunde' }}</h4>
                   <p class="text-sm text-gray-600">
                     {{ formatDate(props.eventData?.start) }} • 
                     {{ props.eventData?.duration_minutes || 45 }} Min • 
@@ -1329,6 +1329,16 @@ const handleProductAdded = (product: any) => {
 const isLessonType = (eventType: string) => {
   const lessonTypes = ['lesson', 'exam', 'theory']
   return lessonTypes.includes(eventType)
+}
+
+// ✅ NEU: Hilfsfunktion zur Übersetzung von event_type_code
+const translateEventTypeCode = (code: string): string => {
+  const translations: { [key: string]: string } = {
+    'lesson': 'Fahrlektion',
+    'theory': 'Theorielektion',
+    'exam': 'Prüfung'
+  }
+  return translations[code] || code || 'Termin'
 }
 
 const eventTypeForTitle = computed((): 'lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite' | 'nothelfer' | 'vku' => {
