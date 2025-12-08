@@ -433,38 +433,54 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
   error.value = ''
 
   try {
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      const base64Data = e.target?.result as string
-      
-      console.log('📤 Uploading document for category:', categoryCode)
-      
-      const response = await $fetch('/api/customer/manage-documents', {
-        method: 'POST',
-        body: {
-          action: 'upload',
-          base64Data,
-          documentType: categoryCode,
-          categoryCode
-        }
-      }) as any
-
-      if (response?.success) {
-        successMessage.value = `${categoryName} erfolgreich hochgeladen`
-        showSuccess('Erfolg', `${categoryName} erfolgreich hochgeladen`)
-        setTimeout(() => { successMessage.value = '' }, 3000)
-        
-        // Reload page to refresh documents
-        location.reload()
-      }
+    const currentUser = authStore.user
+    if (!currentUser) {
+      throw new Error('Kein Benutzer angemeldet')
     }
-    reader.readAsDataURL(file)
+
+    console.log('📤 Uploading document for category:', categoryCode, 'File:', file.name)
+    
+    // Create FormData
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('userId', currentUser.id)
+    formData.append('type', 'student-document') // Document type
+    
+    console.log('📝 FormData prepared with keys:', Array.from(formData.keys()))
+    
+    // Upload via API
+    console.log('🌐 Sending request to /api/students/upload-document')
+    const response = await $fetch('/api/students/upload-document', {
+      method: 'POST',
+      body: formData
+    }) as any
+    
+    console.log('✅ Upload response received:', response)
+    
+    if (response?.success) {
+      console.log('✅ Document uploaded successfully to Storage:', response.url)
+      successMessage.value = `${categoryName} erfolgreich hochgeladen`
+      showSuccess('Erfolg', `${categoryName} erfolgreich hochgeladen`)
+      setTimeout(() => { successMessage.value = '' }, 3000)
+      
+      // Reload page to refresh documents
+      setTimeout(() => {
+        location.reload()
+      }, 1000)
+    } else {
+      console.error('❌ Upload failed - no success flag:', response)
+      error.value = response?.message || 'Unbekannter Fehler beim Upload'
+      showError('Fehler', error.value)
+    }
   } catch (err: any) {
-    console.error('❌ Upload error:', err)
-    error.value = err?.data?.statusMessage || 'Fehler beim Hochladen'
+    console.error('❌ Error uploading document:', err)
+    console.error('   Error details:', { message: err.message, status: err.status, data: err.data })
+    error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Hochladen'
     showError('Fehler', error.value)
   } finally {
     isUploading.value = false
+    // Reset input
+    input.value = ''
   }
 }
 
