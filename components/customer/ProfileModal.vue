@@ -251,40 +251,38 @@
               </div>
 
               <!-- Current Documents -->
-              <div v-if="category.documents && category.documents.length > 0" class="mb-3 space-y-2">
-                <div v-for="doc in category.documents" :key="doc.id" class="p-3 bg-gray-50 rounded-lg">
-                  <div class="flex gap-3">
-                    <!-- Thumbnail Preview -->
-                    <div class="flex-shrink-0">
-                      <img 
-                        v-if="doc.file_type && doc.file_type.startsWith('image/')"
-                        :src="getDocumentUrl(doc)" 
-                        :alt="doc.file_name"
-                        class="w-16 h-16 object-cover rounded border border-gray-200"
-                        @error="handleImageError"
-                        @load="() => handleImageLoad(doc)"
-                      >
-                      <div v-else class="w-16 h-16 bg-red-50 rounded border border-red-200 flex flex-col items-center justify-center">
-                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                        </svg>
-                        <span class="text-xs text-red-600 font-medium">PDF</span>
-                      </div>
+              <div v-if="category.documents && category.documents.length > 0" class="mb-4 space-y-4">
+                <div v-for="doc in category.documents" :key="doc.id" class="w-full">
+                  <!-- Large Preview -->
+                  <div class="w-full bg-gray-50 rounded-lg border border-gray-200 p-2 overflow-auto">
+                    <img 
+                      v-if="doc.file_type && doc.file_type.startsWith('image/')"
+                      :src="getDocumentUrl(doc)" 
+                      :alt="doc.file_name"
+                      class="w-full h-auto object-contain rounded"
+                      @error="handleImageError"
+                      @load="() => handleImageLoad(doc)"
+                    >
+                    <div v-else class="w-full h-64 bg-red-50 rounded flex flex-col items-center justify-center">
+                      <svg class="w-16 h-16 text-red-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                      </svg>
+                      <span class="text-sm text-red-600 font-medium">PDF</span>
                     </div>
-                    
-                    <!-- Document Info -->
-                    <div class="flex-1 min-w-0">
-                      <p class="text-sm font-medium text-gray-900 truncate">{{ doc.file_name }}</p>
-                      <p class="text-xs text-gray-500 mt-1">{{ formatDate(doc.created_at) }}</p>
-                      <div class="flex gap-2 mt-2">
-                        <a 
-                          :href="getDocumentUrl(doc)" 
-                          target="_blank"
-                          class="text-xs text-blue-600 hover:text-blue-800"
-                        >
-                          Öffnen
-                        </a>
-                      </div>
+                  </div>
+                  
+                  <!-- Document Info -->
+                  <div class="mt-2">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ doc.file_name }}</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ formatDate(doc.created_at) }}</p>
+                    <div class="flex gap-2 mt-2">
+                      <a 
+                        :href="getDocumentUrl(doc)" 
+                        target="_blank"
+                        class="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Öffnen
+                      </a>
                     </div>
                   </div>
                 </div>
