@@ -860,6 +860,7 @@ const { loadProducts, activeProducts, isLoading: isLoadingProducts } = useProduc
 const invitedCustomers = ref([] as any[])
 const priceDisplayRef = ref()
 const savedCompanyBillingAddressId = ref<string | null>(null) // ✅ NEU: Company Billing Address ID
+const tenantName = ref('Fahrschule') // ✅ NEU: Tenant name for SMS/Email
 
 // Student Credit Management
 const { getStudentCredit, useCreditForAppointment } = useStudentCredits()
@@ -3494,7 +3495,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\nFahrschule Team`
+            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`
           }
         })
         console.log('✅ SMS sent successfully:', result)
@@ -3521,7 +3522,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
             staffName: instructorName,
             cancellationReason: deletionReason,
             type: 'cancelled',
-            tenantName: 'Fahrschule Team'
+            tenantName: tenantName.value
           }
         })
         console.log('✅ Email sent successfully:', result)
@@ -3839,7 +3840,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\nFahrschule Team`
+            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`
           }
         })
         console.log('✅ SMS sent successfully:', result)
@@ -3866,7 +3867,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
             staffName: instructorName,
             cancellationReason: deletionReason,
             type: 'cancelled',
-            tenantName: 'Fahrschule Team'
+            tenantName: tenantName.value
           }
         })
         console.log('✅ Email sent successfully:', result)
@@ -5394,6 +5395,26 @@ watch(() => props.isVisible, async (newVisible) => {
       eventData: props.eventData,
       isNewAppointment: props.eventData?.isNewAppointment
     })
+    
+    // ✅ Load tenant name for SMS/Email
+    try {
+      const tenantId = currentUser.value?.tenant_id
+      if (tenantId) {
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('name')
+          .eq('id', tenantId)
+          .single()
+        
+        if (tenantData?.name) {
+          tenantName.value = tenantData.name
+          console.log('🏢 Tenant name loaded:', tenantName.value)
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not load tenant name:', error)
+      tenantName.value = 'Fahrschule'
+    }
     
     try {
       if (props.eventData && props.eventData.id) {

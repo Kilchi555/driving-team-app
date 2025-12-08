@@ -347,6 +347,7 @@ const isLoadingEvents = ref(false)
 const isInitialLoad = ref(true) // Flag für ersten Load
 const showDatePicker = ref(false) // Für Monatskalender-Dropdown
 const currentYear = ref(new Date().getFullYear())
+const tenantName = ref('Fahrschule') // ✅ NEU: Tenant name for SMS/Email
 let syncInterval: NodeJS.Timeout | null = null // Interval für Auto-Sync
 
 // Working Hours Management
@@ -1430,7 +1431,7 @@ const handleEventDrop = async (dropInfo: any) => {
             method: 'POST',
             body: {
               phone: phoneNumber,
-              message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} wurde verschoben:\n\n📅 ALT:\n${oldStartTime}\n\n📌 NEU:\n${newTime}\n\nBeste Grüsse\nFahrschule Team`
+              message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} wurde verschoben:\n\n📅 ALT:\n${oldStartTime}\n\n📌 NEU:\n${newTime}\n\nBeste Grüsse\n${tenantName.value}`
             }
           })
           console.log('✅ SMS sent successfully:', result)
@@ -2319,6 +2320,26 @@ onMounted(async () => {
     console.log('📅 CalendarComponent mounted')
     isCalendarReady.value = true
     attachSwipe()
+    
+    // ✅ Load tenant name for SMS/Email
+    try {
+      const tenantId = props.currentUser?.tenant_id
+      if (tenantId) {
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('name')
+          .eq('id', tenantId)
+          .single()
+        
+        if (tenantData?.name) {
+          tenantName.value = tenantData.name
+          console.log('🏢 Tenant name loaded:', tenantName.value)
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not load tenant name:', error)
+      tenantName.value = 'Fahrschule'
+    }
     
     // 🔥 NEU: Calendar API Setup
     await nextTick()
