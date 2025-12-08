@@ -1539,11 +1539,26 @@ const paymentSettings = ref({
 
 // Reminder Settings (NEW: Payment Confirmation Reminders)
 const reminderSettings = ref({
+  is_enabled: false,
   reminder_email_count: 3,
   reminder_email_interval_days: 2,
   reminder_sms_enabled: false,
   reminder_sms_after_emails: true,
+  first_after_hours: 24,
+  second_after_hours: 48,
+  final_after_hours: 72,
+  first_email: true,
+  first_push: false,
+  first_sms: false,
+  second_email: true,
+  second_push: false,
+  second_sms: false,
+  final_email: true,
+  final_push: false,
+  final_sms: false,
   auto_delete_enabled: false,
+  auto_delete: false,
+  auto_delete_after_hours: 72,
   auto_delete_hours_after_auth_deadline: 72,
   notify_staff_on_auto_delete: true
 })
