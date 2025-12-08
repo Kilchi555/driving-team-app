@@ -939,18 +939,25 @@ const activeClickDiv = ref<string | null>(null) // Track which div is being clic
 
 // Load user documents
 const loadUserDocuments = async () => {
-  if (!userData.value?.id || !userData.value?.tenant_id) {
+  if (!userData.value?.id) {
     console.log('⚠️ User data not available for loading documents')
-    console.log('   userData.id:', userData.value?.id)
-    console.log('   userData.tenant_id:', userData.value?.tenant_id)
     return
   }
 
   try {
-    console.log('📄 Loading user documents for user:', userData.value.id, 'tenant:', userData.value.tenant_id)
-    const supabase = getSupabase()
+    console.log('📄 Loading user documents for user:', userData.value.id)
+    
+    // Call new endpoint that lists documents directly from Storage
+    const documents = await $fetch('/api/documents/list-user-documents', {
+      query: {
+        userId: userData.value.id
+      }
+    }) as any[]
 
-    // 1. Load document categories for this tenant
+    console.log('✅ Loaded documents from Storage:', documents?.length || 0)
+
+    // Load document categories for this tenant
+    const supabase = getSupabase()
     const { data: categories, error: catError } = await supabase
       .from('document_categories')
       .select('*')
@@ -964,25 +971,12 @@ const loadUserDocuments = async () => {
 
     console.log('✅ Loaded categories:', categories?.length || 0)
 
-    // 2. Get all documents for this user
-    const { data: docs, error: docsError } = await supabase
-      .from('user_documents')
-      .select('*')
-      .eq('user_id', userData.value.id)
-      .eq('tenant_id', userData.value.tenant_id)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-
-    if (docsError) {
-      console.error('❌ Error loading documents:', docsError)
-      return
-    }
-
-    console.log('✅ Loaded documents:', docs?.length || 0)
-
-    // 3. Map categories with their documents
+    // Map categories with their documents
     userDocumentCategories.value = (categories || []).map((cat: any) => {
-      const categoryDocs = (docs || []).filter((doc: any) => doc.category_code === cat.code)
+      const categoryDocs = (documents || []).filter((doc: any) => {
+        // Match documents by category_code extracted from filename
+        return doc.document_type === 'lernfahrausweis' || doc.category_code === cat.code
+      })
       return {
         code: cat.code,
         name: cat.name,
@@ -996,8 +990,7 @@ const loadUserDocuments = async () => {
       console.log('📂 First category:', userDocumentCategories.value[0])
     }
   } catch (err: any) {
-    console.error('❌ Error loading user documents:', err)
-    console.error('   Stack:', err.stack)
+    console.error('❌ Error loading documents:', err)
   }
 }
 
