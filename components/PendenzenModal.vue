@@ -701,7 +701,7 @@ const sendManualReminder = async () => {
             email: studentEmail,
             studentName: studentName,
             appointmentTime: appointmentTime,
-            type: 'pending_confirmation',
+            type: 'pending_payment',
             tenantName: 'Fahrschule Team',
             tenantId: props.currentUser?.tenant_id
           }

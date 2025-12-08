@@ -1009,11 +1009,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
                   hour: '2-digit',
                   minute: '2-digit'
                 }),
-                type: 'pending_confirmation',
+                type: 'pending_payment',
                 staffName: appointmentData.staff?.[0] ? `${appointmentData.staff[0].first_name} ${appointmentData.staff[0].last_name}` : undefined,
                 location: appointmentData.locations?.[0]?.name || undefined,
                 tenantName: 'Driving',
-                tenantId: currentUser.value?.tenant_id
+                tenantId: currentUser.value?.tenant_id,
+                amount: '(wird berechnet)'
               }
             })
             console.log('✅ Confirmation email sent:', confirmationResponse)

@@ -8,7 +8,7 @@ interface AppointmentNotificationBody {
   email: string
   studentName: string
   appointmentTime?: string
-  type: 'pending_confirmation' | 'pending_payment' | 'cancelled' | 'rescheduled'
+  type: 'pending_payment' | 'cancelled' | 'rescheduled'
   cancellationReason?: string
   newTime?: string
   oldTime?: string
@@ -22,52 +22,6 @@ interface AppointmentNotificationBody {
 // ========== TEMPLATES - Dynamic with tenant colors ==========
 
 const TEMPLATES = {
-  pending_confirmation: {
-    subject: 'Terminbestätigung erforderlich',
-    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
-      const firstName = data.studentName?.split(' ')[0] || data.studentName
-      return `
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
-    <tr>
-      <td>
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
-          <tr>
-            <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Terminbestätigung erforderlich</h1>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 30px;">
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
-              
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details:</p>
-              
-              <div style="background-color: #f8f9fa; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Zeit:</strong> ${data.appointmentTime}</p>` : ''}
-                ${data.staffName ? `<p style="margin: 5px 0; color: #374151;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
-                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}</p>` : ''}
-              </div>
-              
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte melde dich in dein Kundenkonto an um den Termin zu bestätigen.</p>
-              
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 8px 8px;">
-              <p style="color: #6b7280; font-size: 12px; margin: 0;">Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-      `
-    }
-  },
-
   pending_payment: {
     subject: 'Terminbestätigung erforderlich',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
