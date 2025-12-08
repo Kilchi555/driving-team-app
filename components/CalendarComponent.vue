@@ -2284,6 +2284,10 @@ const handleCopyAppointment = async (copyData: any) => {
   }
   
   // In Zwischenablage speichern
+  console.log('🔍 DEBUG copyData.eventData.extendedProps:', copyData.eventData.extendedProps)
+  console.log('🔍 DEBUG copyData.eventData.extendedProps?.email:', copyData.eventData.extendedProps?.email)
+  console.log('🔍 DEBUG copyData.eventData.extendedProps?.student:', copyData.eventData.extendedProps?.student)
+  
   clipboardAppointment.value = {
       id: copyData.eventData.id,
         title: copyData.eventData.title?.replace(' (Kopie)', '') || 'Kopierter Termin',
