@@ -14,7 +14,6 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Skip auth middleware for public pages
   const publicRoutes = [
     '/',
-    '/auswahl',
     '/tenant-register',
     '/tenant-start',
     '/tenant-demo',
@@ -84,9 +83,17 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       return
     }
     
-    if (to.path !== '/') {
-      return navigateTo('/')
+    // ✅ NEU: Versuche zur Slug-Route weiterzuleiten, ansonsten zum Login
+    // Extract slug from current path if available
+    const slugMatch = to.path.match(/^\/([^\/]+)/)
+    if (slugMatch && slugMatch[1]) {
+      const slug = slugMatch[1]
+      console.log('Auth middleware: Redirecting to slug route:', `/${slug}`)
+      return navigateTo(`/${slug}`)
     }
-    return
+    
+    // Fallback: Leite zum Login weiter
+    console.log('Auth middleware: No slug found, redirecting to login')
+    return navigateTo('/login')
   }
 })

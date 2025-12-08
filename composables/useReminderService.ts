@@ -350,7 +350,7 @@ export const useReminderService = () => {
       const dashboardUrl = encodeURIComponent(`${baseUrl}/customer-dashboard`)
       // Use dynamically loaded tenant slug (with fallback)
       const finalTenantSlug = tenantSlug || 'driving-team'
-      const paymentLink = `${baseUrl}/login/${finalTenantSlug}?redirect=${dashboardUrl}`
+      const paymentLink = `${baseUrl}/${finalTenantSlug}?redirect=${dashboardUrl}`
       
       console.log('🔗 Payment link constructed:', {
         tenantSlug,
