@@ -953,12 +953,16 @@ const loadUserDocuments = async () => {
     
     // Call new endpoint that lists documents directly from Storage
     console.log('🌐 Calling /api/documents/list-user-documents with userId:', userData.value.id)
-    const documents = await $fetch('/api/documents/list-user-documents', {
+    const response = await $fetch('/api/documents/list-user-documents', {
       query: {
         userId: userData.value.id
       }
-    }) as any[]
+    }) as any
 
+    // The API returns {success: true, documents: [...], count: N}
+    // Extract the documents array
+    const documents = response?.documents || response || []
+    
     console.log('✅ Loaded documents from Storage:', documents?.length || 0, 'docs:', documents)
 
     // Load document categories for this tenant
