@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import CalendarComponent from '../components/CalendarComponent.vue'
 import StaffSettings from '~/components/StaffSettings.vue'
 import PendenzenModal from '~/components/PendenzenModal.vue'
@@ -10,6 +11,7 @@ import { useCurrentUser } from '~/composables/useCurrentUser'
 import { usePendingTasks } from '~/composables/usePendingTasks'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
 import { useFeatureFlags } from '@/utils/useFeatureFlags'
+import { useAuthStore } from '~/stores/auth'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 
 
@@ -138,10 +140,12 @@ const reloadDashboardData = async () => {
   console.log('🔄 Reloading all dashboard data...')
   
   try {
-    // 1. Kalender neu laden
-    if (calendarRef.value?.refreshCalendar) {
-      await calendarRef.value.refreshCalendar()
+    // 1. Kalender neu laden (falls Methode existiert)
+    if (calendarRef.value && 'refreshCalendar' in calendarRef.value) {
+      await (calendarRef.value as any).refreshCalendar?.()
       console.log('✅ Calendar data reloaded')
+    } else {
+      console.log('⚠️ Calendar refresh method not available')
     }
     
     // 2. Pendenzen neu laden
@@ -151,6 +155,7 @@ const reloadDashboardData = async () => {
     // 3. Falls unbestätigte Termine (24h) existieren: Modal öffnen auf Tab "unconfirmed"
     if ((unconfirmedNext24hCount?.value || 0) > 0) {
       console.log('🔔 Opening Pendenzen modal for unconfirmed appointments within 24h:', unconfirmedNext24hCount.value)
+      // @ts-ignore - defaultPendenzenTab may be read-only computed
       defaultPendenzenTab.value = 'unconfirmed'
       showPendenzen.value = true
     }

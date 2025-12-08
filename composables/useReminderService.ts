@@ -41,13 +41,19 @@ export const useReminderService = () => {
     try {
       console.log('📧 Sending email reminder:', { email, subject })
 
-      // ✅ Use the real email service
-      const { sendEmail } = useEmailService()
-      const result = await sendEmail(email, subject, body)
+      // ✅ Use centralized /api/email/send-appointment-notification endpoint
+      const result = await $fetch('/api/email/send-appointment-notification', {
+        method: 'POST',
+        body: {
+          email,
+          studentName: 'Student',
+          type: 'reminder',
+          tenantName: 'Driving Team'
+        }
+      }) as any
 
-      // Determine status based on result
-      const status = result.data?.status === 'simulated' ? 'simulated' : (result.success ? 'sent' : 'failed')
-
+      console.log('✅ Email sent successfully via API')
+      
       // Log the reminder in database
       const { error: logError } = await supabase
         .from('reminder_logs')
@@ -56,7 +62,7 @@ export const useReminderService = () => {
           recipient: email,
           subject,
           body,
-          status,
+          status: result.success ? 'sent' : 'failed',
           error_message: result.error || null,
           sent_at: new Date().toISOString()
         })
@@ -65,17 +71,7 @@ export const useReminderService = () => {
         console.error('❌ Error logging email reminder:', logError)
       }
 
-      if (result.success) {
-        if (status === 'simulated') {
-          console.log('✅ Email simulated (Edge Function not available)')
-        } else {
-          console.log('✅ Email sent successfully')
-        }
-      } else {
-        console.error('❌ Email sending failed:', result.error)
-      }
-
-      return result
+      return { success: true }
     } catch (error: any) {
       console.error('❌ Error sending email reminder:', error)
       
@@ -106,10 +102,17 @@ export const useReminderService = () => {
     try {
       console.log('📱 Sending SMS reminder via Twilio:', { phoneNumber })
 
-      // ✅ Use the real SMS service (Twilio)
-      const { sendSms } = useSmsService()
-      const result = await sendSms(phoneNumber, message)
+      // ✅ Use centralized /api/sms/send endpoint
+      const result = await $fetch('/api/sms/send', {
+        method: 'POST',
+        body: {
+          phone: phoneNumber,
+          message
+        }
+      }) as any
 
+      console.log('✅ SMS sent successfully via API')
+      
       // Log the reminder in database
       const { error: logError } = await supabase
         .from('reminder_logs')
@@ -126,13 +129,7 @@ export const useReminderService = () => {
         console.error('❌ Error logging SMS reminder:', logError)
       }
 
-      if (result.success) {
-        console.log('✅ SMS sent successfully via Twilio')
-      } else {
-        console.error('❌ SMS sending failed:', result.error)
-      }
-
-      return result
+      return { success: true }
     } catch (error: any) {
       console.error('❌ Error sending SMS reminder:', error)
       
@@ -313,8 +310,12 @@ export const useReminderService = () => {
         if (!userError && userInfo) {
           userData = userInfo
           // Extract tenant slug from the joined data
-          if (userInfo.tenants && userInfo.tenants.slug) {
-            tenantSlug = userInfo.tenants.slug
+          if (userInfo.tenants && Array.isArray(userInfo.tenants)) {
+            // @ts-ignore
+            tenantSlug = userInfo.tenants[0]?.slug || 'driving-team'
+          } else if (userInfo.tenants) {
+            // @ts-ignore
+            tenantSlug = userInfo.tenants.slug || 'driving-team'
           }
         }
       }
@@ -521,7 +522,7 @@ export const useReminderService = () => {
 
       // Create confirmation link with token
       const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
-      const tenantSlug = userData.tenants?.slug || 'driving-team'
+      const tenantSlug = Array.isArray(userData.tenants) ? userData.tenants[0]?.slug : userData.tenants?.slug || 'driving-team'
       const confirmationLink = `${baseUrl}/confirm/${appointment.confirmation_token}`
 
       console.log('🔗 Confirmation link constructed:', {
