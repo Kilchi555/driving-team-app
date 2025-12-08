@@ -338,7 +338,7 @@
           <div class="flex items-center">
             <div class="text-2xl mr-3">❌</div>
             <h3 class="text-lg font-semibold text-gray-900">
-              {{ cancellationStep === 0 ? 'Wer hat abgesagt?' : cancellationStep === 1 ? 'Absage-Grund auswählen' : cancellationStep === 2 ? 'Absage-Policy auswählen' : 'Bestätigung' }}
+              {{ cancellationStep === 0 ? 'Wer hat abgesagt?' : cancellationStep === 1 ? 'Absage-Grund auswählen' : cancellationStep === 2 ? 'Absage-Policy' : 'Bestätigung' }}
             </h3>
           </div>
           <button
@@ -412,7 +412,7 @@
                 <div>
                   <h4 class="font-medium text-gray-900">{{ translateEventTypeCode(props.eventData?.event_type_code) }} - {{ selectedStudent?.first_name || 'Kunde' }}</h4>
                   <p class="text-sm text-gray-600">
-                    {{ formatDate(props.eventData?.start) }} • 
+                    {{ formatDateWithTime(props.eventData?.start) }} • 
                     {{ props.eventData?.duration_minutes || 45 }} Min • 
                     {{ formatCurrency(appointmentDataForPolicy?.price_rappen || 0) }}
                   </p>
@@ -475,7 +475,7 @@
                 <div>
                   <h4 class="font-medium text-gray-900">{{ translateEventTypeCode(props.eventData?.event_type_code) }} - {{ selectedStudent?.first_name || 'Kunde' }}</h4>
                   <p class="text-sm text-gray-600">
-                    {{ formatDate(props.eventData?.start) }} • 
+                    {{ formatDateWithTime(props.eventData?.start) }} • 
                     {{ props.eventData?.duration_minutes || 45 }} Min • 
                     {{ formatCurrency(appointmentDataForPolicy?.price_rappen || 0) }}
                   </p>
@@ -510,7 +510,7 @@
                       cancellationPolicyResult.calculation.chargePercentage > 0
                         ? 'text-red-900'
                         : 'text-green-900'
-                    ]">Absage-Berechnung</div>
+                    ]">Berechnung</div>
                     <div class="text-sm" :class="[
                       cancellationPolicyResult.calculation.chargePercentage > 0
                         ? 'text-red-700'
@@ -4400,6 +4400,15 @@ const getRefundReason = (refundType: 'full_refund' | 'partial_refund' | 'no_refu
 const formatDate = (dateString: string) => {
   if (!dateString) return 'Unbekannt'
   return new Date(dateString).toLocaleDateString('de-CH')
+}
+
+// ✅ NEU: Formatiere Datum mit Zeit
+const formatDateWithTime = (dateString: string) => {
+  if (!dateString) return 'Unbekannt'
+  const date = new Date(dateString)
+  const dateStr = date.toLocaleDateString('de-CH')
+  const timeStr = date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+  return `${dateStr} ${timeStr}`
 }
 
 const formatCurrency = (rappen: number) => {
