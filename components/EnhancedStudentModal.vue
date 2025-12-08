@@ -105,39 +105,21 @@
               </a>
             </div>
             
-            <!-- Upload Options -->
-            <div class="grid grid-cols-2 gap-3">
-              <!-- Camera Button -->
-              <button
-                @click="cameraInput?.click()"
-                class="relative overflow-hidden rounded-lg border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 text-center transition-all hover:border-blue-400 hover:shadow-lg active:scale-95"
-              >
-                <div class="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-transparent"></div>
-                <div class="relative">
-                  <svg class="mx-auto h-8 w-8 text-blue-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                  </svg>
-                  <p class="text-sm font-semibold text-blue-700">Foto</p>
-                  <p class="text-xs text-blue-600 mt-0.5">Mit Kamera</p>
-                </div>
-              </button>
-              
-              <!-- File Button -->
-              <button
-                @click="documentFileInput?.click()"
-                class="relative overflow-hidden rounded-lg border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 p-4 text-center transition-all hover:border-gray-400 hover:shadow-lg active:scale-95"
-              >
-                <div class="absolute inset-0 bg-gradient-to-br from-gray-400/10 to-transparent"></div>
-                <div class="relative">
-                  <svg class="mx-auto h-8 w-8 text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                  </svg>
-                  <p class="text-sm font-semibold text-gray-700">Datei</p>
-                  <p class="text-xs text-gray-600 mt-0.5">Aus Speicher</p>
-                </div>
-              </button>
-            </div>
+            <!-- Upload Button - Native Device Behavior -->
+            <button
+              @click="cameraInput?.click()"
+              class="w-full relative overflow-hidden rounded-lg border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-6 text-center transition-all hover:border-blue-400 hover:shadow-lg active:scale-95"
+            >
+              <div class="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-transparent"></div>
+              <div class="relative">
+                <svg class="mx-auto h-10 w-10 text-blue-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <p class="text-base font-semibold text-blue-700">Weiteres Dokument hochladen</p>
+                <p class="text-sm text-blue-600 mt-1">Foto oder Datei auswählen</p>
+              </div>
+            </button>
             
             <!-- Hidden file inputs -->
             <input
