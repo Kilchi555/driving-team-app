@@ -92,7 +92,8 @@
                   v-if="doc.file_type && doc.file_type.startsWith('image/')"
                   :src="getStudentDocumentUrl(doc)" 
                   :alt="doc.file_name"
-                  class="w-24 h-24 object-cover rounded border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer"
+                  class="max-h-48 max-w-48 object-contain rounded border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer"
+                  loading="lazy"
                 />
                 <!-- PDF Icon -->
                 <div v-else class="w-24 h-24 bg-red-50 rounded border border-red-200 hover:border-red-400 transition-colors cursor-pointer flex flex-col items-center justify-center">
