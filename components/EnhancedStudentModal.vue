@@ -2484,15 +2484,18 @@ const handleDocumentUpload = async (event: Event) => {
     formData.append('userId', props.selectedStudent.id)
     formData.append('type', 'student-document') // Document type
     
+    console.log('📝 FormData prepared with keys:', Array.from(formData.keys()))
+    
     // Upload via API
+    console.log('🌐 Sending request to /api/students/upload-document')
     const response = await $fetch('/api/students/upload-document', {
       method: 'POST',
       body: formData
     }) as any
     
-    console.log('📤 Upload response:', response)
+    console.log('✅ Upload response received:', response)
     
-    if (response.success) {
+    if (response?.success) {
       console.log('✅ Document uploaded successfully to Storage:', response.url)
       
       // Wait a bit for the file to be fully available in Storage
@@ -2504,12 +2507,13 @@ const handleDocumentUpload = async (event: Event) => {
       
       console.log('✅ Documents reloaded, UI should update')
     } else {
-      console.error('❌ Upload failed:', response.message)
-      alert(`Upload fehlgeschlagen: ${response.message}`)
+      console.error('❌ Upload failed - no success flag:', response)
+      alert(`Upload fehlgeschlagen: ${response?.message || 'Unbekannter Fehler'}`)
     }
   } catch (err: any) {
     console.error('❌ Error uploading document:', err)
-    alert(`Fehler beim Upload: ${err.message}`)
+    console.error('   Error details:', { message: err.message, status: err.status, data: err.data })
+    alert(`Fehler beim Upload: ${err.message || 'Unbekannter Fehler'}`)
   }
   
   // Reset input
