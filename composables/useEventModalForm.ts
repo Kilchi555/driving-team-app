@@ -1471,6 +1471,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ WICHTIG: Nutze die aktuell in PriceDisplay gespeicherte Price aus der DB
       // nicht die alten Refs, da PriceDisplay den Preis bereits aktualisiert hat
       let lessonPriceRappen: number
+      const appointmentType = formData.value.appointment_type || 'lesson'
       
       // Check if PriceDisplay already updated the payment with new price
       if (existingPayment.lesson_price_rappen && existingPayment.lesson_price_rappen > 0) {
@@ -1479,7 +1480,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
         console.log('💾 Using existing payment price from DB (updated by PriceDisplay):', lessonPriceRappen)
       } else {
         // Fallback: calculate based on current data
-      const appointmentType = formData.value.appointment_type || 'lesson'
         const durationMinutes = formData.value.duration_minutes || 45
       
       if (appointmentType === 'theory') {

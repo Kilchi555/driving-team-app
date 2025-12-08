@@ -2090,6 +2090,37 @@ const pasteAppointmentDirectly = async () => {
     const totalAmountRappen = lessonPriceRappen + adminFeeRappen
     const amountForEmail = `CHF ${(totalAmountRappen / 100).toFixed(2)}`
     
+    // ✅ Extract email and student info for notification
+    let studentEmail = clipboardAppointment.value?.email
+    let studentName = clipboardAppointment.value?.student
+    
+    // ✅ If not found in clipboard, fetch from database
+    if (!studentEmail || !studentName) {
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('email, first_name, last_name')
+          .eq('id', newAppointment.user_id)
+          .single()
+        
+        if (userData) {
+          studentEmail = studentEmail || userData.email
+          studentName = studentName || `${userData.first_name} ${userData.last_name}`.trim()
+        }
+      } catch (err) {
+        console.error('❌ Error fetching student data:', err)
+      }
+    }
+    
+    const appointmentTime = new Date(newAppointment.start_time).toLocaleString('de-CH', {
+      timeZone: 'Europe/Zurich',
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    
     // ✅ NEU: Email "Bestätigung erforderlich" versenden (MIT Betrag)
     
     if (studentEmail) {
