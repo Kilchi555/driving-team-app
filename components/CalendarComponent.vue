@@ -2121,6 +2121,24 @@ const pasteAppointmentDirectly = async () => {
       minute: '2-digit'
     })
     
+    // ✅ Extract staff name for email
+    let staffName = clipboardAppointment.value?.staff_first_name
+    if (!staffName) {
+      try {
+        const { data: staffData, error: staffError } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', newAppointment.staff_id)
+          .single()
+        
+        if (staffData) {
+          staffName = `${staffData.first_name} ${staffData.last_name}`.trim()
+        }
+      } catch (err) {
+        console.error('❌ Error fetching staff data:', err)
+      }
+    }
+    
     // ✅ NEU: Email "Bestätigung erforderlich" versenden (MIT Betrag)
     
     if (studentEmail) {
@@ -2134,6 +2152,7 @@ const pasteAppointmentDirectly = async () => {
             appointmentTime: appointmentTime,
             type: 'pending_payment',
             amount: amountForEmail,
+            staffName: staffName,
             tenantId: props.currentUser?.tenant_id
           }
         })
