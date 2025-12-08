@@ -335,6 +335,9 @@ const handleLogin = async () => {
 
   try {
     console.log('🔑 Starting login attempt for:', loginForm.value.email)
+    if (loginForm.value.rememberMe) {
+      console.log('✅ "Angemeldet bleiben" aktiviert - Session wird 7 Tage gespeichert')
+    }
     
     // Login mit Supabase
     const loginSuccess = await login(loginForm.value.email, loginForm.value.password)
