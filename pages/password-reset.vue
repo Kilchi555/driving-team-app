@@ -30,7 +30,7 @@
           
           <div class="space-y-3 pt-4">
             <NuxtLink
-              to="/login"
+              :to="getLoginRoute()"
               class="block text-center text-white font-semibold py-2 px-4 rounded-lg transition-colors hover:opacity-90"
               :style="{ background: primaryColor || '#2563eb' }"
             >
@@ -163,7 +163,7 @@
           <p class="text-gray-600">Sie können sich jetzt mit Ihrem neuen Passwort anmelden.</p>
           
           <NuxtLink
-            to="/login"
+            :to="getLoginRoute()"
             class="block text-white font-semibold py-2 px-4 rounded-lg transition-colors hover:opacity-90"
             :style="{ background: primaryColor || '#2563eb' }"
           >
@@ -287,9 +287,9 @@ const handleReset = async () => {
       isSuccess.value = true
       showSuccess('Passwort erfolgreich zurückgesetzt!', 'Sie können sich jetzt mit Ihrem neuen Passwort anmelden.')
       
-      // Redirect to login after 2 seconds
+      // Redirect to login/slug after 2 seconds
       setTimeout(() => {
-        navigateTo('/login')
+        navigateTo(getLoginRoute())
       }, 2000)
     } else {
       error.value = response?.message || 'Fehler beim Zurücksetzen des Passworts.'
@@ -306,6 +306,14 @@ const handleReset = async () => {
 }
 
 // Lifecycle
+const getLoginRoute = () => {
+  const tenantSlug = route.query.tenant as string
+  if (tenantSlug) {
+    return `/${tenantSlug}`
+  }
+  return '/login'
+}
+
 onMounted(async () => {
   // Load tenant branding if tenant slug is provided
   const tenantSlug = route.query.tenant as string
