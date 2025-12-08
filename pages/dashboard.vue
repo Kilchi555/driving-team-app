@@ -296,28 +296,23 @@ onMounted(async () => {
   // KRITISCH: Prüfe auf kaputte Session (Session existiert aber kein Profil)
   if (!currentUser.value && userError.value === 'Nicht eingeloggt') {
     console.error('❌ Dashboard: Broken session detected! User is null but trying to access dashboard.')
-    console.log('🧹 Clearing broken session and redirecting to login...')
+    console.log('🧹 Clearing broken session and redirecting...')
     
     // Session bereinigen
     const authStore = useAuthStore()
     await authStore.logout()
     
-    // Redirect zum Login
-    await navigateTo('/login')
-    return
-  }
-  // KRITISCH: Prüfe auf kaputte Session (Session existiert aber kein Profil)
-  if (!currentUser.value && userError.value === 'Nicht eingeloggt') {
-    console.error('❌ Dashboard: Broken session detected! User is null but trying to access dashboard.')
-    console.log('🧹 Clearing broken session and redirecting to login...')
+    // ✅ Redirect: Versuche zur Slug-Route, sonst zum Login
+    const route = useRoute()
+    const slugMatch = route.path.match(/^\/([^\/]+)/)
+    if (slugMatch && slugMatch[1] && slugMatch[1] !== 'dashboard') {
+      const slug = slugMatch[1]
+      console.log('Auth: Redirecting to slug route:', `/${slug}`)
+      return await navigateTo(`/${slug}`)
+    }
     
-    // Session bereinigen
-    const authStore = useAuthStore()
-    await authStore.logout()
-    
-    // Redirect zum Login
-    await navigateTo('/login')
-    return
+    console.log('Auth: No slug found, redirecting to login')
+    return await navigateTo('/login')
   }
 
 
