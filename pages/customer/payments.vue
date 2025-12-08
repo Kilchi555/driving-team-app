@@ -828,6 +828,19 @@ const getCancellationMessage = (payment: any): string => {
   const medicalCertStatus = appointment.medical_certificate_status
   const hasUpload = appointment.medical_certificate_url
   
+  // ✅ NEW: Check payment status for free cancellations
+  if (chargePercentage === 0) {
+    if (payment.payment_status === 'refunded') {
+      return 'Auf Guthaben rückvergütet'
+    } else if (payment.payment_status === 'cancelled') {
+      return 'Kostenlos storniert'
+    } else if (payment.payment_status === 'completed') {
+      return 'Als Guthaben gutgeschrieben'
+    } else if (payment.payment_status === 'authorized') {
+      return 'Reservierung aufgehoben'
+    }
+  }
+  
   // Medical Certificate - wenn hochgeladen
   if ((medicalCertStatus === 'uploaded' || medicalCertStatus === 'pending') && hasUpload) {
     return 'Wird geprüft'
@@ -846,15 +859,8 @@ const getCancellationMessage = (payment: any): string => {
     return `Arztzeugnis abgelehnt - ${chargePercentage}% verrechnet`
   }
   
-  // Standard Cancellation - No Upload
-  if (chargePercentage === 0) {
-    if (payment.payment_status === 'completed') {
-      return 'Rückerstattet'
-    } else if (payment.payment_status === 'authorized') {
-      return 'Reservierung aufgehoben'
-    }
-    return 'Kostenlos storniert'
-  } else if (chargePercentage === 100) {
+  // Standard Cancellation with charge
+  if (chargePercentage === 100) {
     // Show reason based on payment status
     if (payment.payment_status === 'completed') {
       return 'Kostenpflichtig (zu spät storniert)'
@@ -862,9 +868,11 @@ const getCancellationMessage = (payment: any): string => {
       return 'Kostenpflichtig (zu spät storniert)'
     }
     return 'Kostenpflichtig (zu spät storniert)'
-  } else {
+  } else if (chargePercentage > 0) {
     return `${chargePercentage}% Stornogebühr (zu spät storniert)`
   }
+  
+  return 'Termin storniert'
 }
 
 const getCancellationMessageClass = (payment: any): string => {
