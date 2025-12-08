@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Generate file name
+    // Generate file name with user folder and timestamp
     const fileExt = file.filename?.split('.').pop() || 'jpg'
     const fileName = `${userId}/${fileType}-${Date.now()}.${fileExt}`
 

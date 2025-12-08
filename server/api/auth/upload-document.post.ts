@@ -41,11 +41,13 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Upload file to storage
-    console.log(`📤 Uploading file: ${fileName} to ${bucket}/${path}`)
+    // Upload file to storage in user-specific folder with timestamp
+    const timestampedFileName = `${path.split('/')[0]}_${Date.now()}.${fileName.split('.').pop()}`
+    const storagePath = `${userId}/${timestampedFileName}`
+    console.log(`📤 Uploading file to ${bucket}/${storagePath}`)
     const { data, error: uploadError } = await serviceSupabase.storage
       .from(bucket)
-      .upload(`${path}/${fileName}`, fileBuffer, {
+      .upload(storagePath, fileBuffer, {
         cacheControl: '3600',
         upsert: false,
         contentType: 'image/jpeg'

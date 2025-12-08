@@ -1017,7 +1017,7 @@ const submitRegistration = async () => {
         try {
           // Determine file extension based on type
           const fileExt = docInfo.type.includes('pdf') ? 'pdf' : 'jpg'
-          const fileName = `${data.userId}_${category}_lernfahrausweis_${Date.now()}.${fileExt}`
+          const fileName = `lernfahrausweis_${category}.${fileExt}`
           
           console.log(`📤 Uploading document for category ${category}...`)
           
@@ -1030,8 +1030,8 @@ const submitRegistration = async () => {
               fileData: docInfo.data,
               fileName: fileName,
               bucket: 'user-documents',
-              path: 'lernfahrausweise',
-              category: category // Pass category for tracking
+              path: category, // Category becomes the document type identifier
+              category: category
             }
           }) as any
           

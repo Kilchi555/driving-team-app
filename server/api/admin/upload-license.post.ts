@@ -65,11 +65,11 @@ export default defineEventHandler(async (event) => {
       backPath: null as string | null
     }
 
-    // Upload front file
+    // Upload front file with timestamp to user-specific folder
     if (frontFile && frontFile.data) {
       const frontExt = frontFile.filename?.split('.').pop() || 'jpg'
-      const frontFileName = `${userId}_license_front.${frontExt}`
-      const frontFilePath = `licenses/${frontFileName}`
+      const frontFileName = `license_front_${Date.now()}.${frontExt}`
+      const frontFilePath = `${userId}/${frontFileName}`
 
       console.log('📄 Uploading front file:', frontFileName)
 
@@ -96,11 +96,11 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Upload back file
+    // Upload back file with timestamp to user-specific folder
     if (backFile && backFile.data) {
       const backExt = backFile.filename?.split('.').pop() || 'jpg'
-      const backFileName = `${userId}_license_back.${backExt}`
-      const backFilePath = `licenses/${backFileName}`
+      const backFileName = `license_back_${Date.now()}.${backExt}`
+      const backFilePath = `${userId}/${backFileName}`
 
       console.log('📄 Uploading back file:', backFileName)
 
