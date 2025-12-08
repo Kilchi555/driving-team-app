@@ -1012,7 +1012,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
                 type: 'pending_confirmation',
                 staffName: appointmentData.staff?.[0] ? `${appointmentData.staff[0].first_name} ${appointmentData.staff[0].last_name}` : undefined,
                 location: appointmentData.locations?.[0]?.name || undefined,
-                tenantName: 'Driving'
+                tenantName: 'Driving',
+                tenantId: currentUser.value?.tenant_id
               }
             })
             console.log('✅ Confirmation email sent:', confirmationResponse)
