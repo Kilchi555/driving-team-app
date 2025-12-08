@@ -2484,10 +2484,13 @@ const handleDocumentUpload = async (event: Event) => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   
-  if (!file || !props.selectedStudent) return
+  if (!file || !props.selectedStudent) {
+    console.warn('⚠️ No file selected or no student')
+    return
+  }
   
   try {
-    console.log('📤 Uploading document for student:', props.selectedStudent.id)
+    console.log('📤 Uploading document for student:', props.selectedStudent.id, 'File:', file.name)
     
     // Create FormData
     const formData = new FormData()
@@ -2500,15 +2503,26 @@ const handleDocumentUpload = async (event: Event) => {
       body: formData
     }) as any
     
+    console.log('📤 Upload response:', response)
+    
     if (response.success) {
-      console.log('✅ Document uploaded successfully')
-      // Reload documents
+      console.log('✅ Document uploaded successfully to Storage:', response.url)
+      
+      // Wait a bit for the file to be fully available in Storage
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Reload documents from Storage
+      console.log('🔄 Reloading documents from Storage...')
       await loadStudentDocuments()
+      
+      console.log('✅ Documents reloaded, UI should update')
     } else {
       console.error('❌ Upload failed:', response.message)
+      alert(`Upload fehlgeschlagen: ${response.message}`)
     }
   } catch (err: any) {
     console.error('❌ Error uploading document:', err)
+    alert(`Fehler beim Upload: ${err.message}`)
   }
   
   // Reset input
