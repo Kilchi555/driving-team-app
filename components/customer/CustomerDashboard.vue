@@ -982,25 +982,11 @@ const loadUserDocuments = async () => {
 
     // Map categories with their documents
     userDocumentCategories.value = (categories || []).map((cat: any) => {
-      console.log('🔍 Processing category:', cat.code, 'looking for documents...')
-      if (documents && documents.length > 0) {
-        console.log('   First doc fields:', Object.keys(documents[0]))
-        console.log('   First doc:', documents[0])
-      }
-      const categoryDocs = (documents || []).filter((doc: any) => {
-        // Documents from Storage have: documentType, category_code (parsed from filename)
-        // We just match all student-document type (they're all from student uploads)
-        // Or match by category if it exists
-        const isStudentDoc = doc.documentType === 'student-document'
-        const matchesCategory = doc.category_code === cat.code
-        const matches = isStudentDoc || matchesCategory
-        
-        if (matches) {
-          console.log('   ✅ Found matching doc:', doc.name, 'type:', doc.documentType, 'category:', doc.category_code)
-        }
-        return matches
-      })
-      console.log('   Result: Found', categoryDocs.length, 'docs for category', cat.code)
+      console.log('🔍 Processing category:', cat.code, 'with', documents?.length || 0, 'documents')
+      // All uploaded documents go to the first category (Ausweise)
+      // Don't filter - just assign all documents to the category
+      const categoryDocs = documents || []
+      console.log('   Assigning', categoryDocs.length, 'docs to category', cat.code)
       return {
         code: cat.code,
         name: cat.name,
