@@ -1003,9 +1003,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
                 email: appointmentData.users[0].email,
                 studentName: `${appointmentData.users[0].first_name || ''} ${appointmentData.users[0].last_name || ''}`.trim(),
                 appointmentTime: new Date(result.start_time).toLocaleString('de-CH', {
-                  weekday: 'short',
+                  weekday: 'long',
                   day: '2-digit',
                   month: '2-digit',
+                  year: 'numeric',
                   hour: '2-digit',
                   minute: '2-digit'
                 }),

@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     if (!paymentId || !userId || !tenantId) {
       throw createError({
         statusCode: 400,
-        message: 'Missing required fields: paymentId, userId, tenantId'
+        statusMessage: 'Missing required fields: paymentId, userId, tenantId'
       })
     }
 
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
       console.error('❌ User not found:', userId)
       throw createError({
         statusCode: 404,
-        message: 'User not found'
+        statusMessage: 'User not found'
       })
     }
 
@@ -102,7 +102,7 @@ export default defineEventHandler(async (event) => {
       console.error('❌ Payment not found:', paymentId)
       throw createError({
         statusCode: 404,
-        message: 'Payment not found'
+        statusMessage: 'Payment not found'
       })
     }
 
@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
       console.error('❌ Appointment not found for payment:', paymentId)
       throw createError({
         statusCode: 404,
-        message: 'Appointment not found'
+        statusMessage: 'Appointment not found'
       })
     }
 
@@ -140,7 +140,7 @@ export default defineEventHandler(async (event) => {
       console.error('❌ Tenant not found:', tenantId)
       throw createError({
         statusCode: 404,
-        message: 'Tenant not found'
+        statusMessage: 'Tenant not found'
       })
     }
 
@@ -223,7 +223,7 @@ export default defineEventHandler(async (event) => {
     console.error('❌ Error sending first reminder:', error)
     throw createError({
       statusCode: 500,
-      message: `Failed to send first reminder: ${error.message}`
+      statusMessage: `Failed to send first reminder: ${error.message}`
     })
   }
 })
