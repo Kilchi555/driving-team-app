@@ -2482,6 +2482,7 @@ const handleDocumentUpload = async (event: Event) => {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('userId', props.selectedStudent.id)
+    formData.append('type', 'student-document') // Document type
     
     // Upload via API
     const response = await $fetch('/api/students/upload-document', {
