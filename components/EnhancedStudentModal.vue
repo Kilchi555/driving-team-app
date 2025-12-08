@@ -108,7 +108,7 @@
             <!-- Upload Button - Native Device Behavior -->
             <button
               @click="cameraInput?.click()"
-              class="w-full relative overflow-hidden rounded-lg border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-6 text-center transition-all hover:border-blue-400 hover:shadow-lg active:scale-95"
+              class="relative overflow-hidden rounded-lg border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 px-4 py-3 text-center transition-all hover:border-blue-400 hover:shadow-md active:scale-95"
             >
               <div class="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-transparent"></div>
               <div class="relative">
@@ -117,7 +117,6 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
                 <p class="text-base font-semibold text-blue-700">Weiteres Dokument hochladen</p>
-                <p class="text-sm text-blue-600 mt-1">Foto oder Datei auswählen</p>
               </div>
             </button>
             
@@ -2485,7 +2484,7 @@ const handleDocumentUpload = async (event: Event) => {
     formData.append('userId', props.selectedStudent.id)
     
     // Upload via API
-    const response = await $fetch('/api/student/upload-document', {
+    const response = await $fetch('/api/students/upload-document', {
       method: 'POST',
       body: formData
     }) as any
