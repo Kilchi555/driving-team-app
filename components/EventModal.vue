@@ -4029,25 +4029,10 @@ const goBackToCancellationType = () => {
 const loadCancellationData = async () => {
   console.log('📋 Loading cancellation data')
   
-  // Determine applies_to based on appointment's course_id
-  let appliesTo: 'appointments' | 'courses' | undefined = undefined
-  if (props.eventData?.id) {
-    try {
-      const supabase = getSupabase()
-      const { data: appointment } = await supabase
-        .from('appointments')
-        .select('course_id')
-        .eq('id', props.eventData.id)
-        .single()
-      
-      // If appointment has course_id, it's a course appointment, otherwise individual appointment
-      appliesTo = appointment?.course_id ? 'courses' : 'appointments'
-      console.log('📋 Appointment type detected:', appliesTo, 'course_id:', appointment?.course_id)
-    } catch (err) {
-      console.warn('⚠️ Could not check appointment course_id, defaulting to appointments:', err)
-      appliesTo = 'appointments'
-    }
-  }
+  // Determine applies_to - appointments table doesn't have course_id field
+  // So we default to 'appointments' and let the policy be determined by appointment type
+  let appliesTo: 'appointments' | 'courses' | undefined = 'appointments'
+  console.log('📋 Using appointments as cancellation policy applies_to')
   
   // Load policies filtered by applies_to
   if (!defaultPolicy.value || (appliesTo && defaultPolicy.value.applies_to !== appliesTo)) {
@@ -4103,25 +4088,9 @@ const goToPolicySelection = async () => {
   cancellationStep.value = 2
   
   // Otherwise, load policies normally
-  // Determine applies_to based on appointment's course_id
-  let appliesTo: 'appointments' | 'courses' | undefined = undefined
-  if (props.eventData?.id) {
-    try {
-      const supabase = getSupabase()
-      const { data: appointment } = await supabase
-        .from('appointments')
-        .select('course_id')
-        .eq('id', props.eventData.id)
-        .single()
-      
-      // If appointment has course_id, it's a course appointment, otherwise individual appointment
-      appliesTo = appointment?.course_id ? 'courses' : 'appointments'
-      console.log('📋 Appointment type detected:', appliesTo, 'course_id:', appointment?.course_id)
-    } catch (err) {
-      console.warn('⚠️ Could not check appointment course_id, defaulting to appointments:', err)
-      appliesTo = 'appointments'
-    }
-  }
+  // Determine applies_to - appointments table doesn't have course_id field
+  let appliesTo: 'appointments' | 'courses' | undefined = 'appointments'
+  console.log('📋 Using appointments as cancellation policy applies_to')
   
   // Load policies filtered by applies_to
   if (!defaultPolicy.value || (appliesTo && defaultPolicy.value.applies_to !== appliesTo)) {
