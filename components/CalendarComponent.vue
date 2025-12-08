@@ -1454,7 +1454,8 @@ const handleEventDrop = async (dropInfo: any) => {
               appointmentTime: oldStartTime,
               newTime: newTime,
               staffName: instructorName,
-              type: 'rescheduled'
+              type: 'rescheduled',
+              tenantId: props.currentUser?.tenant_id
             }
           })
           console.log('✅ Email sent successfully:', result)
@@ -2053,7 +2054,8 @@ const pasteAppointmentDirectly = async () => {
             email: studentEmail,
             studentName: studentName,
             appointmentTime: appointmentTime,
-            type: 'pending_confirmation'
+            type: 'pending_confirmation',
+            tenantId: props.currentUser?.tenant_id
           }
         })
         console.log('✅ Confirmation email sent successfully:', result)

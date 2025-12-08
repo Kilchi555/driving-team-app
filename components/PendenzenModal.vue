@@ -702,7 +702,8 @@ const sendManualReminder = async () => {
             studentName: studentName,
             appointmentTime: appointmentTime,
             type: 'pending_confirmation',
-            tenantName: 'Fahrschule Team'
+            tenantName: 'Fahrschule Team',
+            tenantId: props.currentUser?.tenant_id
           }
         })
         console.log('✅ Confirmation reminder sent:', result)

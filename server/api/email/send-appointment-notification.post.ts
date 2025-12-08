@@ -2,6 +2,7 @@
 // Sends appointment notifications (confirmation, cancellation, move)
 
 import { sendEmail } from '~/server/utils/email'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 interface AppointmentNotificationBody {
   email: string
@@ -14,162 +15,146 @@ interface AppointmentNotificationBody {
   staffName?: string
   location?: string
   tenantName?: string
+  tenantId?: string
 }
 
-// ========== TEMPLATES - Hier kannst du die Texte anpassen ==========
+// ========== TEMPLATES - Dynamic with tenant colors ==========
 
 const TEMPLATES = {
   pending_confirmation: {
     subject: 'Terminbestätigung erforderlich',
-    getHtml: (data: AppointmentNotificationBody) => {
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; }
-            .header { background-color: #2563eb; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; text-align: center; }
-            .content { background-color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
-            .appointment-box { background-color: #f0f9ff; padding: 15px; border-left: 4px solid #2563eb; margin: 15px 0; border-radius: 3px; }
-            .footer { text-align: center; color: #999; font-size: 12px; margin-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Termin Bestätigung erforderlich</h1>
-            </div>
-            
-            <div class="content">
-              <p>Hallo ${firstName},</p>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+    <tr>
+      <td>
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          <tr>
+            <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Terminbestätigung erforderlich</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
               
-              <p>ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details und bestätige den Termin.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details:</p>
               
-              <div class="appointment-box">
-                <strong>Termin-Details:</strong><br>
-                ${data.appointmentTime ? `<strong>Zeit:</strong> ${data.appointmentTime}<br>` : ''}
-                ${data.staffName ? `<strong>Fahrlehrer:</strong> ${data.staffName}<br>` : ''}
-                ${data.location ? `<strong>Ort:</strong> ${data.location}<br>` : ''}
+              <div style="background-color: #f8f9fa; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Zeit:</strong> ${data.appointmentTime}</p>` : ''}
+                ${data.staffName ? `<p style="margin: 5px 0; color: #374151;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}</p>` : ''}
               </div>
               
-              <p>Bitte melde dich in dein Kundenkonto an um den Termin zu bestätigen.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte melde dich in dein Kundenkonto an um den Termin zu bestätigen.</p>
               
-              <p>Freundliche Grüsse,<br>Dein ${data.tenantName || ''}</p>
-            </div>
-            
-            <div class="footer">
-              <p>Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
-            </div>
-          </div>
-        </body>
-      </html>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 8px 8px;">
+              <p style="color: #6b7280; font-size: 12px; margin: 0;">Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
       `
     }
   },
   
   cancelled: {
     subject: 'Termin storniert',
-    getHtml: (data: AppointmentNotificationBody) => {
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; }
-            .header { background-color: #dc2626; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; text-align: center; }
-            .content { background-color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
-            .reason-box { background-color: #fef2f2; padding: 15px; border-left: 4px solid #dc2626; margin: 15px 0; border-radius: 3px; }
-            .footer { text-align: center; color: #999; font-size: 12px; margin-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Termin Storniert</h1>
-            </div>
-            
-            <div class="content">
-              <p>Hallo ${firstName},</p>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+    <tr>
+      <td>
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          <tr>
+            <td style="background-color: #dc2626; padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Termin storniert</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
               
-              <p>leider wurde dein Termin mit <strong>${data.staffName}</strong> storniert.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">leider wurde dein Termin storniert.</p>
               
-              ${data.appointmentTime ? `
-              <div class="reason-box">
-                <strong>Stornierter Termin:</strong><br>
-                ${data.appointmentTime}<br>
-                ${data.cancellationReason ? `<strong>Grund:</strong> ${data.cancellationReason}<br>` : ''}
+              <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Stornierter Termin:</strong> ${data.appointmentTime}</p>` : ''}
+                ${data.cancellationReason ? `<p style="margin: 5px 0; color: #374151;"><strong>Grund:</strong> ${data.cancellationReason}</p>` : ''}
               </div>
-              ` : ''}
               
-              <p>Falls du Fragen hast, kontaktiere uns bitte per E-Mail oder Telefon.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Falls du Fragen hast, kontaktiere uns bitte per E-Mail oder Telefon.</p>
               
-              <p>Beste Grüsse,<br>${data.tenantName || ''}</p>
-            </div>
-            
-            <div class="footer">
-              <p>Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
-            </div>
-          </div>
-        </body>
-      </html>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Beste Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 8px 8px;">
+              <p style="color: #6b7280; font-size: 12px; margin: 0;">Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
       `
     }
   },
   
   rescheduled: {
     subject: 'Termin verschoben - Neue Zeit',
-    getHtml: (data: AppointmentNotificationBody) => {
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; }
-            .header { background-color: #16a34a; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; text-align: center; }
-            .content { background-color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
-            .time-box { background-color: #f0fdf4; padding: 15px; border-left: 4px solid #16a34a; margin: 15px 0; border-radius: 3px; }
-            .footer { text-align: center; color: #999; font-size: 12px; margin-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Termin Verschoben</h1>
-            </div>
-            
-            <div class="content">
-              <p>Hallo ${firstName},</p>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+    <tr>
+      <td>
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          <tr>
+            <td style="background-color: #16a34a; padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Termin verschoben</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
               
-              <p>dein Termin mit ${data.staffName} wurde auf einen neuen Zeitpunkt verschoben.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">dein Termin wurde auf einen neuen Zeitpunkt verschoben:</p>
               
-              <div class="time-box">
-                <strong>📅 ALT:</strong><br>
-                ${data.appointmentTime || 'Findest du in deinem Kundenkonto' || 'Zeit wird mitgeteilt'}<br><br>
-                <strong>📌 NEU:</strong><br>
-                ${data.newTime || 'Findest du in deinem Kundenkonto' || 'Zeit wird mitgeteilt'}<br><br>
-             
+              <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                ${data.oldTime ? `<p style="margin: 5px 0; color: #374151;"><strong>📅 ALT:</strong> ${data.oldTime}</p>` : ''}
+                ${data.newTime ? `<p style="margin: 5px 0; color: #374151;"><strong>📌 NEU:</strong> ${data.newTime}</p>` : ''}
+                ${data.staffName ? `<p style="margin: 5px 0; color: #374151;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}</p>` : ''}
               </div>
               
-              <p>Du findest den neuen Termin in deinem Kundenkonto. Falls du Fragen hast, kontaktiere uns bitte.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Du findest den neuen Termin in deinem Kundenkonto. Falls du Fragen hast, kontaktiere uns bitte.</p>
               
-              <p>Freundliche Grüsse,<br>${data.tenantName || ''}</p>
-            </div>
-            
-            <div class="footer">
-              <p>Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
-            </div>
-          </div>
-        </body>
-      </html>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 8px 8px;">
+              <p style="color: #6b7280; font-size: 12px; margin: 0;">Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
       `
     }
   }
@@ -181,7 +166,7 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event) as AppointmentNotificationBody
     
-    const { email, studentName, type } = body
+    const { email, studentName, type, tenantId } = body
     
     if (!email || !studentName || !type) {
       throw createError({
@@ -199,10 +184,33 @@ export default defineEventHandler(async (event) => {
       })
     }
     
+    // Load tenant primary color if tenantId is provided
+    let primaryColor = '#2563eb' // Default blue
+    if (tenantId) {
+      try {
+        const supabase = getSupabaseAdmin()
+        const { data: tenant, error: tenantError } = await supabase
+          .from('tenants')
+          .select('primary_color')
+          .eq('id', tenantId)
+          .single()
+        
+        if (tenant?.primary_color) {
+          primaryColor = tenant.primary_color
+          console.log(`✅ Loaded tenant color: ${primaryColor}`)
+        } else if (tenantError) {
+          console.warn(`⚠️ Could not load tenant color:`, tenantError.message)
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ Error loading tenant color:`, err.message)
+        // Continue with default color
+      }
+    }
+    
     console.log(`📧 Sending ${type} appointment notification to ${email}`)
     
     const subject = template.subject
-    const html = template.getHtml(body)
+    const html = template.getHtml(body, primaryColor)
     
     await sendEmail({
       to: email,

@@ -3533,7 +3533,8 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
             staffName: instructorName,
             cancellationReason: deletionReason,
             type: 'cancelled',
-            tenantName: tenantName.value
+            tenantName: tenantName.value,
+            tenantId: props.currentUser?.tenant_id
           }
         })
         console.log('✅ Email sent successfully:', result)
@@ -3878,7 +3879,8 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
             staffName: instructorName,
             cancellationReason: deletionReason,
             type: 'cancelled',
-            tenantName: tenantName.value
+            tenantName: tenantName.value,
+            tenantId: props.currentUser?.tenant_id
           }
         })
         console.log('✅ Email sent successfully:', result)
