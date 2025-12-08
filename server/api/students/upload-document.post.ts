@@ -65,17 +65,7 @@ export default defineEventHandler(async (event) => {
       .from('user-documents')
       .getPublicUrl(fileName)
 
-    // Save document reference in database (optional)
-    await supabaseAdmin
-      .from('user_documents')
-      .insert({
-        user_id: userId,
-        document_type: fileType,
-        file_name: file.filename,
-        file_path: fileName,
-        file_url: urlData.publicUrl,
-        uploaded_at: new Date().toISOString()
-      })
+    console.log('✅ Document uploaded to Storage:', fileName)
 
     return {
       success: true,
