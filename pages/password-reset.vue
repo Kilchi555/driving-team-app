@@ -244,7 +244,7 @@ const validateToken = async () => {
     const response = await $fetch('/api/auth/validate-reset-token', {
       method: 'POST',
       body: { token }
-    })
+    }) as any
 
     if (response?.valid) {
       isValidToken.value = true
@@ -280,7 +280,7 @@ const handleReset = async () => {
         token: resetToken.value,
         newPassword: form.value.password
       }
-    })
+    }) as any
 
     if (response?.success) {
       console.log('✅ Password reset successful')
@@ -293,7 +293,7 @@ const handleReset = async () => {
       }, 2000)
     } else {
       error.value = response?.message || 'Fehler beim Zurücksetzen des Passworts.'
-      showError('Fehler', error.value)
+      showError('Fehler', error.value || 'Fehler beim Zurücksetzen des Passworts.')
     }
   } catch (err: any) {
     console.error('❌ Password reset error:', err)
