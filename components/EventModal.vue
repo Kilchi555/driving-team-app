@@ -4142,6 +4142,8 @@ const goBackInCancellationFlow = () => {
   } else if (cancellationStep.value === 2) {
     // Go back from policy selection to reason selection
     cancellationStep.value = 1
+    // ✅ Reset policy result when going back (but keep selectedCancellationPolicyId to remember choice)
+    cancellationPolicyResult.value = null
   } else if (cancellationStep.value === 1) {
     // Go back from reason selection to type selection
     cancellationStep.value = 0
