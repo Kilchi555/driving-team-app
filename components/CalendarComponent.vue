@@ -2020,6 +2020,11 @@ const pasteAppointmentDirectly = async () => {
     
     console.log('✅ Appointment pasted successfully:', newAppointment.id)
     
+    // ✅ DEBUG: Zeige ganzen clipboard content
+    console.log('🔍 DEBUG clipboardAppointment.value:', clipboardAppointment.value)
+    console.log('🔍 DEBUG clipboardAppointment.value.email:', clipboardAppointment.value?.email)
+    console.log('🔍 DEBUG clipboardAppointment.value.student:', clipboardAppointment.value?.student)
+    
     // ✅ NEU: Email "Bestätigung erforderlich" versenden
     const studentEmail = clipboardAppointment.value.email
     const studentName = clipboardAppointment.value.student || 'Fahrschüler'
