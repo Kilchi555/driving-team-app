@@ -2506,7 +2506,7 @@ const handleDocumentUpload = async (event: Event) => {
   input.value = ''
 }
 
-// ===== STUDENT DOCUMENTS (Ausweise) =====
+// ===== STUDENT DOCUMENTS (Ausweise) - Load directly from Storage =====
 const loadStudentDocuments = async () => {
   if (!props.selectedStudent) {
     console.log('⚠️ No student selected')
@@ -2514,30 +2514,46 @@ const loadStudentDocuments = async () => {
   }
   
   try {
-    console.log('📄 Loading student documents for:', props.selectedStudent.id)
+    console.log('📂 Loading student documents from Storage for:', props.selectedStudent.id)
     
-    const { data: docs, error } = await supabase
-      .from('user_documents')
-      .select('*')
-      .eq('user_id', props.selectedStudent.id)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
+    // Call new endpoint that lists documents directly from Storage
+    const { documents, count, error } = await $fetch('/api/documents/list-user-documents', {
+      query: {
+        userId: props.selectedStudent.id,
+        tenantId: props.selectedStudent.tenant_id
+      }
+    }) as any
     
     if (error) {
       console.error('❌ Error loading student documents:', error)
       return
     }
     
-    studentDocuments.value = docs || []
-    console.log('✅ Loaded student documents:', studentDocuments.value.length)
+    // Transform Storage documents to match old format for compatibility
+    studentDocuments.value = (documents || []).map((doc: any) => ({
+      id: doc.id,
+      user_id: props.selectedStudent?.id,
+      document_type: doc.documentType,
+      category_code: doc.category,
+      side: doc.side,
+      file_name: doc.fileName,
+      file_size: doc.fileSize,
+      file_type: doc.fileType,
+      storage_path: doc.storagePath,
+      public_url: doc.publicUrl,
+      created_at: doc.createdAt
+    }))
+    
+    console.log('✅ Loaded student documents from Storage:', count)
     console.log('📋 Document details:', studentDocuments.value.map(doc => ({
       type: doc.document_type,
       category: doc.category_code,
       side: doc.side,
       storagePath: doc.storage_path,
-      fileName: doc.file_name
+      fileName: doc.file_name,
+      size: doc.file_size
     })))
-  } catch (err) {
+  } catch (err: any) {
     console.error('❌ Error in loadStudentDocuments:', err)
   }
 }
