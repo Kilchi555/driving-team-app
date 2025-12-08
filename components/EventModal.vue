@@ -3971,8 +3971,17 @@ const proceedWithCancellation = async (selectedReason: any) => {
   try {
     isLoading.value = true
     
+    // ✅ Determine who is cancelling (student or staff)
+    const cancellerName = cancellationType.value === 'student' 
+      ? (student.value?.first_name || 'Schüler') 
+      : (props.currentUser?.first_name || 'Fahrlehrer')
+    
+    const cancellerEmail = cancellationType.value === 'student' 
+      ? (student.value?.email || props.eventData?.extendedProps?.email || 'unbekannt')
+      : (props.currentUser?.email || 'unbekannt')
+    
     // Erstelle einen detaillierten Lösch-Grund
-    const deletionReason = `Termin abgesagt: ${selectedReason.name_de} - ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'})`
+    const deletionReason = `Termin abgesagt: ${selectedReason.name_de} - ${cancellerName} (${cancellerEmail})`
     
     // ✅ NEW: Determine withCosts based on cancellation policy
     const withCosts = (cancellationPolicyResult.value?.chargeAmountRappen || 0) > 0
@@ -4299,8 +4308,17 @@ const confirmDeleteWithRefund = async (refundType: 'full_refund' | 'partial_refu
     refundType: refundType
   })
   
+  // ✅ Determine who is deleting (student or staff)
+  const deleterName = cancellationType.value === 'student' 
+    ? (student.value?.first_name || 'Schüler') 
+    : (props.currentUser?.first_name || 'Benutzer')
+  
+  const deleterEmail = cancellationType.value === 'student' 
+    ? (student.value?.email || props.eventData?.extendedProps?.email || 'unbekannt')
+    : (props.currentUser?.email || 'unbekannt')
+  
   const refundReason = getRefundReason(refundType)
-  const deletionReason = `Termin gelöscht durch ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'}) - ${refundReason} - ursprünglicher Status: ${props.eventData.status}`
+  const deletionReason = `Termin gelöscht durch ${deleterName} (${deleterEmail}) - ${refundReason} - ursprünglicher Status: ${props.eventData.status}`
   
   await performSoftDelete(deletionReason, 'cancelled')
   
