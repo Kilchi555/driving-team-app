@@ -5,7 +5,7 @@
 // WICHTIG: Prüft ob User eine E-Mail hat (für Neukunden die per SMS registriert werden)
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { sendEmail, generatePaymentReminderEmail } from '~/server/utils/email'
+import { sendEmail } from '~/server/utils/email'
 
 const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://simy.ch').replace(/\/$/, '')
 
@@ -146,39 +146,60 @@ export default defineEventHandler(async (event) => {
 
     // 7. Format data for email
     const startTime = new Date(appointment.start_time)
-    const appointmentDate = startTime.toLocaleDateString('de-CH', {
+    const appointmentDateTime = startTime.toLocaleString('de-CH', {
       timeZone: 'Europe/Zurich',
       weekday: 'short',
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric'
-    })
-    const appointmentTime = startTime.toLocaleTimeString('de-CH', {
-      timeZone: 'Europe/Zurich',
       hour: '2-digit',
       minute: '2-digit'
     })
-    const amount = (payment.total_amount_rappen / 100).toFixed(2)
+    const amount = `CHF ${(payment.total_amount_rappen / 100).toFixed(2)}`
     const customerName = `${user.first_name} ${user.last_name}`
-    const dashboardLink = `${CUSTOMER_PORTAL_BASE_URL}/${tenant.slug}`
 
-    // 8. Generate and send email
-    const emailHtml = generatePaymentReminderEmail({
-      customerName,
-      appointmentDate,
-      appointmentTime,
-      staffName,
-      amount,
-      dashboardLink,
-      tenantName: tenant.name,
-      reminderNumber: 1,
-      primaryColor: tenant.primary_color || '#2563eb'
-    })
-
+    // 8. Send email using centralized endpoint
     await sendEmail({
       to: user.email,
       subject: `Terminbestätigung erforderlich - ${tenant.name}`,
-      html: emailHtml
+      html: `
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+    <tr>
+      <td>
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          <tr>
+            <td style="background-color: ${tenant.primary_color || '#2563eb'}; padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Terminbestätigung erforderlich</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${user.first_name},</p>
+              
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details und bestätige deinen Termin:</p>
+              
+              <div style="background-color: #f8f9fa; border-left: 4px solid ${tenant.primary_color || '#2563eb'}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <p style="margin: 5px 0; color: #374151;"><strong>Zeit:</strong> ${appointmentDateTime}</p>
+                <p style="margin: 5px 0; color: #374151;"><strong>Fahrlehrer:</strong> ${staffName}</p>
+                <p style="margin: 5px 0; color: #374151;"><strong>Betrag:</strong> ${amount}</p>
+              </div>
+              
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte bestätige deinen Termin und bezahle die offene Rechnung in deinem Kundenkonto.</p>
+              
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${tenant.name}</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 8px 8px;">
+              <p style="color: #6b7280; font-size: 12px; margin: 0;">Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+      `
     })
 
     // 9. Update payment with reminder info

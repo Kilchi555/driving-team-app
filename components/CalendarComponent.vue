@@ -2034,40 +2034,7 @@ const pasteAppointmentDirectly = async () => {
     console.log('🔍 DEBUG clipboardAppointment.value.email:', clipboardAppointment.value?.email)
     console.log('🔍 DEBUG clipboardAppointment.value.student:', clipboardAppointment.value?.student)
     
-    // ✅ NEU: Email "Bestätigung erforderlich" versenden
-    const studentEmail = clipboardAppointment.value.email
-    const studentName = clipboardAppointment.value.student || 'Fahrschüler'
-    const appointmentTime = new Date(clickedDate).toLocaleString('de-CH', {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-    
-    if (studentEmail) {
-      console.log('📧 Sending confirmation email for pasted appointment...')
-      try {
-        const result = await $fetch('/api/email/send-appointment-notification', {
-          method: 'POST',
-          body: {
-            email: studentEmail,
-            studentName: studentName,
-            appointmentTime: appointmentTime,
-            type: 'pending_confirmation',
-            tenantId: props.currentUser?.tenant_id
-          }
-        })
-        console.log('✅ Confirmation email sent successfully:', result)
-      } catch (emailError: any) {
-        console.error('❌ Failed to send confirmation email:', emailError)
-        // Nicht kritisch, Termin wurde trotzdem erstellt
-      }
-    } else {
-      console.log('⚠️ No email address available for confirmation email')
-    }
-    
-    // ✅ Payment erstellen (basierend auf pricing_rules)
+    // ✅ FIRST: Calculate payment amount BEFORE sending email
     const basePriceMapping: Record<string, number> = {
       'B': 95, 'A': 95, 'A1': 95, 'BE': 120, 'C': 170, 
       'C1': 150, 'D': 200, 'CE': 200, 'Motorboot': 120, 'BPT': 95
@@ -2120,6 +2087,36 @@ const pasteAppointmentDirectly = async () => {
       console.error('❌ Error calculating admin fee:', err)
     }
     
+    const totalAmountRappen = lessonPriceRappen + adminFeeRappen
+    const amountForEmail = `CHF ${(totalAmountRappen / 100).toFixed(2)}`
+    
+    // ✅ NEU: Email "Bestätigung erforderlich" versenden (MIT Betrag)
+    
+    if (studentEmail) {
+      console.log('📧 Sending confirmation email for pasted appointment...')
+      try {
+        const result = await $fetch('/api/email/send-appointment-notification', {
+          method: 'POST',
+          body: {
+            email: studentEmail,
+            studentName: studentName,
+            appointmentTime: appointmentTime,
+            type: 'pending_payment',
+            amount: amountForEmail,
+            tenantId: props.currentUser?.tenant_id
+          }
+        })
+        console.log('✅ Confirmation email sent successfully:', result)
+      } catch (emailError: any) {
+        console.error('❌ Failed to send confirmation email:', emailError)
+        // Nicht kritisch, Termin wurde trotzdem erstellt
+      }
+    } else {
+      console.log('⚠️ No email address available for confirmation email')
+    }
+    
+    // ✅ Payment erstellen
+    // Note: Price calculation already done above for email
     const paymentData = {
       appointment_id: newAppointment.id,
       user_id: newAppointment.user_id,
@@ -2129,7 +2126,7 @@ const pasteAppointmentDirectly = async () => {
       admin_fee_rappen: adminFeeRappen, // ✅ Berechnet basierend auf pricing_rules
       products_price_rappen: 0,
       discount_amount_rappen: 0,
-      total_amount_rappen: lessonPriceRappen + adminFeeRappen, // ✅ Total mit admin_fee
+      total_amount_rappen: totalAmountRappen, // ✅ Verwende bereits berechneten Wert
       payment_method: clipboardAppointment.value.payment_method || 'invoice', // ✅ Verwende kopierten payment_method
       payment_status: 'pending',
       currency: 'CHF',
