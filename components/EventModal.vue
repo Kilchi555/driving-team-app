@@ -446,7 +446,6 @@
                     <div class="font-medium text-blue-900">Absage-Berechnung</div>
                     <div class="text-sm text-blue-700">
                       {{ cancellationPolicyResult.calculation.chargePercentage }}% verrechnen
-                      {{ cancellationPolicyResult.shouldCreditHours ? '• Stunden gutschreiben' : '' }}
                     </div>
                   </div>
                 </div>
@@ -518,7 +517,6 @@
                         : 'text-green-700'
                     ]">
                       {{ cancellationPolicyResult.calculation.chargePercentage }}% verrechnen
-                      {{ cancellationPolicyResult.shouldCreditHours ? '• Stunden gutschreiben' : '' }}
                     </div>
                   </div>
                 </div>
@@ -4138,7 +4136,10 @@ const goToPolicySelection = async () => {
 }
 
 const goBackInCancellationFlow = () => {
-  if (cancellationStep.value === 2) {
+  if (cancellationStep.value === 3) {
+    // Go back from confirmation to policy selection
+    cancellationStep.value = 2
+  } else if (cancellationStep.value === 2) {
     // Go back from policy selection to reason selection
     cancellationStep.value = 1
   } else if (cancellationStep.value === 1) {
