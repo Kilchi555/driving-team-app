@@ -2165,7 +2165,7 @@ const loadPayments = async () => {
       console.warn('⚠️ Could not load student credit:', creditError)
     } else if (creditData) {
       studentBalance.value = creditData.balance_rappen || 0
-      console.log('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
+      console.log('💰 Student balance loaded:', ((studentBalance.value || 0) / 100).toFixed(2), 'CHF')
     }
     
     // Lade Zahlungen über appointments - RLS filtert automatisch nach tenant_id
