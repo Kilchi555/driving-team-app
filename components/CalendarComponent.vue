@@ -2288,6 +2288,30 @@ const handleCopyAppointment = async (copyData: any) => {
   console.log('🔍 DEBUG copyData.eventData.extendedProps?.email:', copyData.eventData.extendedProps?.email)
   console.log('🔍 DEBUG copyData.eventData.extendedProps?.student:', copyData.eventData.extendedProps?.student)
   
+  // ✅ NEU: Wenn email/student nicht in extendedProps sind, lade sie aus der DB
+  let studentEmail = copyData.eventData.extendedProps?.email
+  let studentName = copyData.eventData.extendedProps?.student
+  
+  // Falls nicht vorhanden, lade vom User
+  if (!studentEmail || !studentName) {
+    console.log('🔍 Email/Student not in extendedProps, loading from database...')
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('first_name, last_name, email')
+        .eq('id', copyData.eventData.user_id)
+        .single()
+      
+      if (userData) {
+        studentEmail = studentEmail || userData.email
+        studentName = studentName || `${userData.first_name} ${userData.last_name}`.trim()
+        console.log('✅ Loaded from DB:', { studentEmail, studentName })
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not load user data:', err)
+    }
+  }
+  
   clipboardAppointment.value = {
       id: copyData.eventData.id,
         title: copyData.eventData.title?.replace(' (Kopie)', '') || 'Kopierter Termin',
@@ -2301,8 +2325,8 @@ const handleCopyAppointment = async (copyData: any) => {
         duration_minutes: copyData.eventData.duration_minutes || 45,
         price_per_minute: copyData.eventData.price_per_minute,
         payment_method: paymentMethod, // ✅ Von DB geladen
-        email: copyData.eventData.extendedProps?.email || copyData.eventData.email, // ✅ Email aus extendedProps ODER direkt
-        student: copyData.eventData.extendedProps?.student || copyData.eventData.student, // ✅ Student name aus extendedProps ODER direkt
+        email: studentEmail || copyData.eventData.extendedProps?.email || copyData.eventData.email, // ✅ Email aus extendedProps ODER DB ODER direkt
+        student: studentName || copyData.eventData.extendedProps?.student || copyData.eventData.student, // ✅ Student name aus extendedProps ODER DB ODER direkt
         event_type_code: copyData.eventData.event_type_code || 'lesson', // ✅ Event type code
   }
   
