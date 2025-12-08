@@ -1897,7 +1897,15 @@ const handleEventDeleted = (id: string) => {
 
 // ✅ NEUE FUNKTION: Direktes Speichern ohne Modal
 const pasteAppointmentDirectly = async () => {
-  if (!clipboardAppointment.value || !pendingSlotClick.value) return
+  console.log('🎯 pasteAppointmentDirectly CALLED - checking if clipboard has data')
+  
+  if (!clipboardAppointment.value || !pendingSlotClick.value) {
+    console.log('⚠️ Early return: clipboard empty?', { 
+      clipboardEmpty: !clipboardAppointment.value,
+      clickEmpty: !pendingSlotClick.value
+    })
+    return
+  }
   
   console.log('📋 Pasting appointment directly...')
   console.log('🔍 FULL clipboardAppointment:', clipboardAppointment.value)
