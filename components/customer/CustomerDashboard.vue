@@ -939,7 +939,7 @@ const activeClickDiv = ref<string | null>(null) // Track which div is being clic
 
 // Load user documents
 const loadUserDocuments = async () => {
-  console.log('🔥 loadUserDocuments called')
+  console.log('🔥 loadUserDocuments called [NEW VERSION 2025-12-08]')
   console.log('   userData.value?.id:', userData.value?.id)
   console.log('   userData.value?.tenant_id:', userData.value?.tenant_id)
   
@@ -949,7 +949,7 @@ const loadUserDocuments = async () => {
   }
 
   try {
-    console.log('📄 Loading user documents for user:', userData.value.id)
+    console.log('📄 [NEW] Loading documents from Storage API for user:', userData.value.id)
     
     // Call new endpoint that lists documents directly from Storage
     console.log('🌐 Calling /api/documents/list-user-documents with userId:', userData.value.id)
