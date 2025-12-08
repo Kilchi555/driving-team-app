@@ -6,31 +6,6 @@
         <div class="flex justify-between items-center">
           <h2 class="text-2xl font-bold text-gray-900">Mein Profil</h2>
           <div class="flex items-center gap-3">
-            <!-- Edit Profile Button -->
-            <button
-              v-if="!isEditMode"
-              @click="isEditMode = true"
-              class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-              title="Bearbeiten"
-            >
-              <span>Bearbeiten</span>
-            </button>
-            <!-- Save/Cancel Buttons in Edit Mode -->
-            <div v-else class="flex gap-2">
-              <button
-                @click="saveProfile"
-                :disabled="isSaving"
-                class="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50"
-              >
-                {{ isSaving ? 'Speichert...' : 'Speichern' }}
-              </button>
-              <button
-                @click="isEditMode = false"
-                class="px-4 py-2 bg-gray-400 text-white font-medium rounded-lg hover:bg-gray-500 transition-colors shadow-sm"
-              >
-                Abbrechen
-              </button>
-            </div>
             <button
               @click="$emit('close')"
               class="text-gray-600 hover:text-gray-900 transition-colors p-2"
@@ -89,33 +64,37 @@
           <!-- Documents Section - Compact -->
           <div v-if="categories.length > 0" class="border-t pt-4">
             <h3 class="text-lg font-semibold text-gray-900 mb-3">Ausweise</h3>
-            <div class="space-y-2">
+            <div class="space-y-4">
               <div v-for="category in categories" :key="category.code" class="text-sm">
-                <p class="text-gray-600">{{ category.name }}</p>
-                <div v-if="category.documents && category.documents.length > 0" class="flex gap-2 mt-1 flex-wrap">
-                <a 
-                  v-for="doc in category.documents" 
-                  :key="doc.id"
-                  :href="getDocumentUrl(doc)" 
-                  target="_blank"
-                  class="relative group"
-                  title="Klicke zum Öffnen"
-                >
-                  <!-- Versuche immer das Bild anzuzeigen, egal ob file_type gesetzt ist -->
-                  <img 
-                    :src="getDocumentUrl(doc)" 
-                    :alt="doc.file_name"
-                    class="w-12 h-12 object-cover rounded border border-blue-200 hover:border-blue-400 transition-colors"
-                    @load="handleImageLoad(doc)"
-                    @error="handleImageError"
-                  />
-                  <div class="absolute left-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <div class="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                      {{ doc.file_name }}
-                    </div>
+                <p class="text-gray-600 font-medium mb-2">{{ category.name }}</p>
+                <div v-if="category.documents && category.documents.length > 0" class="flex gap-3 flex-wrap">
+                  <div 
+                    v-for="doc in category.documents" 
+                    :key="doc.id"
+                    class="flex-1 min-w-[150px]"
+                  >
+                    <a 
+                      :href="getDocumentUrl(doc)" 
+                      target="_blank"
+                      class="relative group block"
+                      title="Klicke zum Öffnen"
+                    >
+                      <!-- Larger preview image -->
+                      <img 
+                        :src="getDocumentUrl(doc)" 
+                        :alt="doc.file_name"
+                        class="w-full h-32 object-contain rounded border border-blue-200 hover:border-blue-400 transition-colors bg-white"
+                        @load="handleImageLoad(doc)"
+                        @error="handleImageError"
+                      />
+                      <div class="absolute left-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <div class="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                          {{ doc.file_name }}
+                        </div>
+                      </div>
+                    </a>
                   </div>
-                </a>
-              </div>
+                </div>
                 <p v-else class="text-gray-400 text-xs mt-1">Kein Dokument hochgeladen</p>
               </div>
             </div>
