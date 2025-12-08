@@ -239,12 +239,24 @@ const logout = async () => {
   await navigateTo('/login')
 }
 
+const redirectToSlugOrLogin = async () => {
+  const route = useRoute()
+  const slugMatch = route.path.match(/^\/([^\/]+)/)
+  if (slugMatch && slugMatch[1] && slugMatch[1] !== 'external-instructor-dashboard') {
+    const slug = slugMatch[1]
+    console.log('Auth: Redirecting to slug route:', `/${slug}`)
+    return await navigateTo(`/${slug}`)
+  }
+  
+  console.log('Auth: No slug found, redirecting to login')
+  return await navigateTo('/login')
+}
+
 onMounted(async () => {
   await fetchCurrentUser()
   
   if (!currentUser.value) {
-    await navigateTo('/login')
-    return
+    return await redirectToSlugOrLogin()
   }
   
   if (currentUser.value.role !== 'externer_instruktor') {
