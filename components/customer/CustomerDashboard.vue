@@ -982,10 +982,20 @@ const loadUserDocuments = async () => {
 
     // Map categories with their documents
     userDocumentCategories.value = (categories || []).map((cat: any) => {
+      console.log('🔍 Processing category:', cat.code, 'looking for documents...')
+      if (documents && documents.length > 0) {
+        console.log('   First doc fields:', Object.keys(documents[0]))
+        console.log('   First doc:', documents[0])
+      }
       const categoryDocs = (documents || []).filter((doc: any) => {
         // Match documents by category_code extracted from filename
-        return doc.document_type === 'lernfahrausweis' || doc.category_code === cat.code
+        const matches = doc.document_type === 'lernfahrausweis' || doc.category_code === cat.code
+        if (matches) {
+          console.log('   ✅ Found matching doc:', doc.name, 'type:', doc.document_type, 'category:', doc.category_code)
+        }
+        return matches
       })
+      console.log('   Result: Found', categoryDocs.length, 'docs for category', cat.code)
       return {
         code: cat.code,
         name: cat.name,
