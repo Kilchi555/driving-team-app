@@ -2429,17 +2429,23 @@ const deleteDocumentFile = async (requirement: DocumentRequirement, side: 'front
 
 // ===== HELPER: Build document URL for user_documents =====
 const getStudentDocumentUrl = (doc: any): string => {
+  // Use public_url if available (from new Storage endpoint)
+  if (doc.public_url) {
+    console.log('🔗 Using public_url from Storage:', doc.public_url)
+    return doc.public_url
+  }
+  
   if (!doc.storage_path) return ''
   
   // Check if it's already a full URL
   if (doc.storage_path.startsWith('http')) return doc.storage_path
   
-  // Build Supabase storage URL
+  // Build Supabase storage URL from path
   const supabaseUrl = 'https://unyjaetebnaexaflpyoc.supabase.co'
   
   let path = doc.storage_path.trim()
   
-  // Remove bucket prefix if it exists
+  // Remove bucket prefix if it exists (for old documents)
   if (path.startsWith('documents/')) {
     path = path.substring('documents/'.length)
   }
@@ -2447,7 +2453,9 @@ const getStudentDocumentUrl = (doc: any): string => {
   // Clean up any double slashes
   path = path.replace(/\/+/g, '/')
   
-  return `${supabaseUrl}/storage/v1/object/public/${path}`
+  const url = `${supabaseUrl}/storage/v1/object/public/user-documents/${path}`
+  console.log('🔗 Built URL from storage_path:', url)
+  return url
 }
 
 // ===== STUDENT DOCUMENTS UPLOAD =====
