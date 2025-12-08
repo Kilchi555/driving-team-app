@@ -212,7 +212,27 @@ export default defineEventHandler(async (event) => {
           deletionReason
         )
       } else {
-        console.log('ℹ️ No refundable amount')
+        // ✅ NEW: If no refund is applicable (chargePercentage = 0), mark payment as completed
+        // This ensures the "Jetzt bezahlen" button disappears from customer payments page
+        console.log('ℹ️ Free cancellation - updating payment status to completed')
+        const { error: updatePaymentError } = await supabase
+          .from('payments')
+          .update({
+            payment_status: 'completed',
+            paid_at: new Date().toISOString(),
+            notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}`
+          })
+          .eq('id', payment.id)
+        
+        if (updatePaymentError) {
+          console.warn('⚠️ Could not update payment status:', updatePaymentError)
+        } else {
+          console.log('✅ Payment marked as completed (free cancellation):', {
+            paymentId: payment.id,
+            reason: deletionReason
+          })
+        }
+        
         return {
           success: true,
           message: 'Appointment cancelled - no refund applicable',
