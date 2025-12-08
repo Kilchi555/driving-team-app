@@ -538,8 +538,14 @@ const getDocumentUrl = (doc: any) => {
   console.log('🔍 getDocumentUrl called with doc:', doc)
   console.log('🔍 doc keys:', Object.keys(doc))
   
-  // Versuche verschiedene Feldnamen
-  const storagePath = doc.storage_path || doc.file_path || doc.path || doc.url
+  // Documents from Storage API already have publicUrl!
+  if (doc.publicUrl) {
+    console.log('✅ Using publicUrl directly:', doc.publicUrl)
+    return doc.publicUrl
+  }
+  
+  // Fallback: try different storage path field names
+  const storagePath = doc.storagePath || doc.storage_path || doc.file_path || doc.path || doc.url
   
   if (!storagePath) {
     console.warn('⚠️ No storage path found in doc:', doc.file_name, 'Available fields:', Object.keys(doc))
@@ -551,9 +557,6 @@ const getDocumentUrl = (doc: any) => {
   
   // Build Supabase storage URL
   const supabaseUrl = 'https://unyjaetebnaexaflpyoc.supabase.co'
-  
-  // The storage_path might be: "user-documents/lernfahrausweise/filename.jpg"
-  // Or it might include the bucket: "documents/user-documents/lernfahrausweise/filename.jpg"
   let path = storagePath.trim()
   
   // Remove bucket prefix if it exists
@@ -566,8 +569,6 @@ const getDocumentUrl = (doc: any) => {
   
   console.log('📷 Building URL for doc:', doc.file_name, 'path:', path)
   
-  // Der Bucket-Name sollte NICHT in der URL sein!
-  // Format: /storage/v1/object/public/{path}
   const finalUrl = `${supabaseUrl}/storage/v1/object/public/${path}`
   console.log('📷 Final URL:', finalUrl)
   
