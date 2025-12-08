@@ -212,14 +212,16 @@ export default defineEventHandler(async (event) => {
           deletionReason
         )
       } else {
-        // ✅ NEW: If no refund is applicable (chargePercentage = 0), mark payment as completed
-        // This ensures the "Jetzt bezahlen" button disappears from customer payments page
-        console.log('ℹ️ Free cancellation - updating payment status to completed')
+        // ✅ FREE CANCELLATION: Update payment status based on current status
+        // completed → refunded (money was returned)
+        // authorized/pending → cancelled (never paid)
+        console.log('ℹ️ Free cancellation - updating payment status')
+        
+        const newStatus = payment.payment_status === 'completed' ? 'refunded' : 'cancelled'
         const { error: updatePaymentError } = await supabase
           .from('payments')
           .update({
-            payment_status: 'completed',
-            paid_at: new Date().toISOString(),
+            payment_status: newStatus,
             notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}`
           })
           .eq('id', payment.id)
@@ -227,8 +229,10 @@ export default defineEventHandler(async (event) => {
         if (updatePaymentError) {
           console.warn('⚠️ Could not update payment status:', updatePaymentError)
         } else {
-          console.log('✅ Payment marked as completed (free cancellation):', {
+          console.log('✅ Payment status updated:', {
             paymentId: payment.id,
+            oldStatus: payment.payment_status,
+            newStatus: newStatus,
             reason: deletionReason
           })
         }
@@ -241,17 +245,15 @@ export default defineEventHandler(async (event) => {
         }
       }
     } else {
-      console.log('ℹ️ Payment was not completed or no refund needed')
+      console.log('ℹ️ Payment was not completed - no refund needed')
       
-      // ✅ NEW: If no refund is applicable (chargePercentage = 0), mark payment as completed
-      // This ensures the "Jetzt bezahlen" button disappears from customer payments page
+      // ✅ FREE CANCELLATION: Update payment status to cancelled
       if (refundableAmount === 0) {
-        console.log('ℹ️ Free cancellation - updating payment status to completed')
+        console.log('ℹ️ Free cancellation - updating payment status to cancelled')
         const { error: updatePaymentError } = await supabase
           .from('payments')
           .update({
-            payment_status: 'completed',
-            paid_at: new Date().toISOString(),
+            payment_status: 'cancelled',
             notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}`
           })
           .eq('id', payment.id)
@@ -259,7 +261,7 @@ export default defineEventHandler(async (event) => {
         if (updatePaymentError) {
           console.warn('⚠️ Could not update payment status:', updatePaymentError)
         } else {
-          console.log('✅ Payment marked as completed (free cancellation):', {
+          console.log('✅ Payment marked as cancelled (free cancellation):', {
             paymentId: payment.id,
             reason: deletionReason
           })

@@ -247,6 +247,7 @@
             </div>
             
             <!-- Action Buttons -->
+            <!-- Hide "Jetzt bezahlen" button if payment is not pending -->
             <div v-if="payment.payment_status === 'pending'" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <!-- Jetzt bezahlen Button -->
               <button @click="payIndividual(payment)"
