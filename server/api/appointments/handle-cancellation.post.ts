@@ -241,10 +241,34 @@ export default defineEventHandler(async (event) => {
         }
       }
     } else {
-      console.log('ℹ️ Payment was not completed - no refund needed')
+      console.log('ℹ️ Payment was not completed or no refund needed')
+      
+      // ✅ NEW: If no refund is applicable (chargePercentage = 0), mark payment as completed
+      // This ensures the "Jetzt bezahlen" button disappears from customer payments page
+      if (refundableAmount === 0) {
+        console.log('ℹ️ Free cancellation - updating payment status to completed')
+        const { error: updatePaymentError } = await supabase
+          .from('payments')
+          .update({
+            payment_status: 'completed',
+            paid_at: new Date().toISOString(),
+            notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}`
+          })
+          .eq('id', payment.id)
+        
+        if (updatePaymentError) {
+          console.warn('⚠️ Could not update payment status:', updatePaymentError)
+        } else {
+          console.log('✅ Payment marked as completed (free cancellation):', {
+            paymentId: payment.id,
+            reason: deletionReason
+          })
+        }
+      }
+      
       return {
         success: true,
-        message: 'Appointment cancelled - payment was not completed',
+        message: 'Appointment cancelled - payment was not completed or no refund applicable',
         refundAmount: 0,
         action: 'cancelled_no_refund'
       }
