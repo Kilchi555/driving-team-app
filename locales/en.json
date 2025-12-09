@@ -1,4 +1,5 @@
 {
+  "test": "This is a test in English",
   "eventType": {
     "lesson": "Driving Lesson",
     "theory": "Theory Lesson",

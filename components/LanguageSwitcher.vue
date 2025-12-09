@@ -19,6 +19,8 @@
     <div class="mt-2 text-xs text-gray-600">
       <p>Current: {{ currentLocale }}</p>
       <p>Cookie: {{ cookieValue }}</p>
+      <p class="mt-2 font-semibold text-gray-900">🌐 Test Translation:</p>
+      <p class="text-gray-700">{{ $t('test') }}</p>
     </div>
   </div>
 </template>
