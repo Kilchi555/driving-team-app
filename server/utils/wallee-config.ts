@@ -14,7 +14,7 @@ export async function getWalleeConfigForTenant(tenantId?: string) {
 
   // If no tenant ID provided, return default
   if (!tenantId) {
-    logger.debug('ℹ️ No tenantId provided, using default Wallee config from env')
+    console.log('⚠️ No tenantId provided, using default Wallee config from env')
     return defaultConfig
   }
 
@@ -32,7 +32,7 @@ export async function getWalleeConfigForTenant(tenantId?: string) {
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
     // Fetch Wallee config for this tenant
-    logger.debug(`🔍 Querying tenants table for tenant ${tenantId}...`)
+    console.log(`🔍 Querying tenants table for tenant ${tenantId}...`)
     const { data: tenant, error } = await serviceSupabase
       .from('tenants')
       .select('id, wallee_space_id, wallee_user_id, wallee_secret_key')
@@ -49,16 +49,18 @@ export async function getWalleeConfigForTenant(tenantId?: string) {
       return defaultConfig
     }
 
-    logger.debug(`🔍 Tenant data fetched:`, {
+    console.log(`🔍 Tenant data fetched:`, {
       id: tenant.id,
       hasSpaceId: !!tenant.wallee_space_id,
       hasUserId: !!tenant.wallee_user_id,
-      hasSecretKey: !!tenant.wallee_secret_key
+      hasSecretKey: !!tenant.wallee_secret_key,
+      spaceId: tenant.wallee_space_id,
+      userId: tenant.wallee_user_id
     })
 
     // If tenant has custom Wallee config, use it
     if (tenant.wallee_space_id && tenant.wallee_user_id && tenant.wallee_secret_key) {
-      logger.debug(`✅ Using tenant-specific Wallee config for tenant ${tenantId}:`, {
+      console.log(`✅ Using tenant-specific Wallee config for tenant ${tenantId}:`, {
         spaceId: tenant.wallee_space_id,
         userId: tenant.wallee_user_id
       })
