@@ -1,0 +1,57 @@
+{
+  "eventType": {
+    "lesson": "Урок вождения",
+    "theory": "Теоретический урок",
+    "exam": "Экзамен по вождению",
+    "WarmUp": "Разминка"
+  },
+  "status": {
+    "scheduled": "Запланировано",
+    "pending_confirmation": "Ожидает подтверждения",
+    "confirmed": "Подтверждено",
+    "cancelled": "Отменено",
+    "completed": "Завершено",
+    "pending": "В ожидании",
+    "in_progress": "В процессе",
+    "no_show": "Не явился"
+  },
+  "receipt": {
+    "title": "Квитанция об оплате",
+    "date": "Дата квитанции",
+    "customer": "Клиент",
+    "paymentInfo": "Информация об оплате",
+    "paymentId": "ID платежа",
+    "paymentMethod": "Способ оплаты",
+    "status": "Статус",
+    "transactionId": "ID транзакции",
+    "appointmentDetails": "Детали записи",
+    "costBreakdown": "Расшифровка стоимости",
+    "baseAmount": "Базовая сумма",
+    "adminFee": "Административный сбор",
+    "products": "Товары",
+    "discount": "Скидка",
+    "totalAmount": "Общая сумма",
+    "cancelled": "Отменено",
+    "cancelledOn": "Отменено",
+    "reason": "Причина",
+    "charged": "Оплачено",
+    "yes": "Да",
+    "no": "Нет",
+    "footer": "Эта квитанция была автоматически создана. По вопросам обращайтесь к {email}."
+  },
+  "common": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "back": "Назад",
+    "next": "Далее",
+    "previous": "Предыдущий",
+    "loading": "Загрузка...",
+    "yes": "Да",
+    "no": "Нет",
+    "close": "Закрыть",
+    "confirm": "Подтвердить"
+  }
+}
+

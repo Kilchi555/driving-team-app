@@ -1,0 +1,57 @@
+{
+  "eventType": {
+    "lesson": "Leçon de conduite",
+    "theory": "Leçon théorique",
+    "exam": "Examen de conduite",
+    "WarmUp": "Échauffement"
+  },
+  "status": {
+    "scheduled": "Planifié",
+    "pending_confirmation": "Confirmation en attente",
+    "confirmed": "Confirmé",
+    "cancelled": "Annulé",
+    "completed": "Terminé",
+    "pending": "En attente",
+    "in_progress": "En cours",
+    "no_show": "Absent"
+  },
+  "receipt": {
+    "title": "Reçu de paiement",
+    "date": "Date du reçu",
+    "customer": "Client",
+    "paymentInfo": "Informations de paiement",
+    "paymentId": "ID de paiement",
+    "paymentMethod": "Méthode de paiement",
+    "status": "Statut",
+    "transactionId": "ID de transaction",
+    "appointmentDetails": "Détails du rendez-vous",
+    "costBreakdown": "Détail des coûts",
+    "baseAmount": "Montant de base",
+    "adminFee": "Frais administratifs",
+    "products": "Produits",
+    "discount": "Remise",
+    "totalAmount": "Montant total",
+    "cancelled": "Annulé",
+    "cancelledOn": "Annulé le",
+    "reason": "Raison",
+    "charged": "Facturé",
+    "yes": "Oui",
+    "no": "Non",
+    "footer": "Ce reçu a été généré automatiquement. Pour toute question, contactez {email}."
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "loading": "Chargement...",
+    "yes": "Oui",
+    "no": "Non",
+    "close": "Fermer",
+    "confirm": "Confirmer"
+  }
+}
+

@@ -1,0 +1,58 @@
+{
+  "eventType": {
+    "lesson": "Fahrlektion",
+    "theory": "Theorielektion",
+    "exam": "Fahrprüfung",
+    "WarmUp": "WarmUp"
+  },
+  "status": {
+    "scheduled": "Geplant",
+    "pending_confirmation": "Bestätigung ausstehend",
+    "confirmed": "Bestätigt",
+    "cancelled": "Storniert",
+    "completed": "Abgeschlossen",
+    "pending": "Ausstehend",
+    "in_progress": "In Bearbeitung",
+    "no_show": "Nicht erschienen"
+  },
+  "receipt": {
+    "title": "Quittung",
+    "date": "Datum",
+    "customer": "Kunde",
+    "paymentInfo": "Zahlungsinformationen",
+    "paymentId": "Zahlungs-ID",
+    "paymentMethod": "Zahlungsart",
+    "status": "Status",
+    "transactionId": "Transaktions-ID",
+    "appointmentDetails": "Termindetails",
+    "costBreakdown": "Kostenaufstellung",
+    "baseAmount": "Grundbetrag",
+    "adminFee": "Admin-Gebühr",
+    "products": "Produkte",
+    "discount": "Rabatt",
+    "totalAmount": "Gesamtbetrag",
+    "cancelled": "Storniert",
+    "cancelledOn": "Storniert am",
+    "reason": "Grund",
+    "charged": "Verrechnet",
+    "yes": "Ja",
+    "no": "Nein",
+    "minutes": "Min.",
+    "footer": "Diese Quittung wurde automatisch erstellt. Bei Fragen wenden Sie sich an {email}."
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "back": "Zurück",
+    "next": "Weiter",
+    "previous": "Vorherige",
+    "loading": "Laden...",
+    "yes": "Ja",
+    "no": "Nein",
+    "close": "Schließen",
+    "confirm": "Bestätigen"
+  }
+}
+
