@@ -318,7 +318,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { ref, onMounted, watch } from 'vue'
 import { useUIStore } from '~/stores/ui'

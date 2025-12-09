@@ -1,5 +1,4 @@
 import { getSupabase } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 interface DebugTenantsResponse {
   success: boolean

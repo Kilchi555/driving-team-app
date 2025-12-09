@@ -4,7 +4,6 @@
 import { getSupabaseAdmin, getSupabase } from '~/utils/supabase'
 import { Wallee } from 'wallee'
 import crypto from 'crypto'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   logger.debug('🔄 Processing automatic payments...')

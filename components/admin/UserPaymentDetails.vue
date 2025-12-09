@@ -1295,7 +1295,6 @@ v-if="(appointment.discount_amount || 0) > 0"
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'

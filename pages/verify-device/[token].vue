@@ -47,7 +47,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

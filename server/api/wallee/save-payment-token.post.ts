@@ -4,7 +4,6 @@
 import { getSupabase } from '~/utils/supabase'
 import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

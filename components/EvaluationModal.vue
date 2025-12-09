@@ -200,7 +200,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { ref, computed, watch, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'

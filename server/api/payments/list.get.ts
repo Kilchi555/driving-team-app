@@ -2,7 +2,6 @@
 // ✅ Payment List API für Abfragen
 
 import { getSupabase } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 interface PaymentListQuery {
   userId?: string

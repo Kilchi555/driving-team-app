@@ -5,7 +5,6 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

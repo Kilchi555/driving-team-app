@@ -263,7 +263,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 definePageMeta({ layout: 'tenant-admin' })
 import { ref, onMounted } from 'vue'

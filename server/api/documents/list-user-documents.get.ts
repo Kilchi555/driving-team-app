@@ -3,7 +3,6 @@
 // No database queries needed - single source of truth is Storage!
 
 import { createClient } from '@supabase/supabase-js'
-import { logger } from '~/utils/logger'
 
 interface DocumentFile {
   id: string

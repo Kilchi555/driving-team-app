@@ -367,7 +367,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'

@@ -1,7 +1,6 @@
 // server/api/medical-certificate/approve.post.ts
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

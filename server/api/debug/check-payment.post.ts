@@ -2,7 +2,6 @@
 // Debug endpoint to check payment status
 
 import { getSupabase } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

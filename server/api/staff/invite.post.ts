@@ -1,6 +1,5 @@
 import { getSupabase } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

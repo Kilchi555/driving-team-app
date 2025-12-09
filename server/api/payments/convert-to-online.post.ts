@@ -2,7 +2,6 @@
 // Convert a payment from pending (cash/invoice) back to online payment
 
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 interface ConvertToOnlineRequest {
   paymentId: string

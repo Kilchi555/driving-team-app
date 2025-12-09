@@ -3,7 +3,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 /**
  * Redirect /login/[tenant] to /[tenant] (which uses [slug].vue with proper branding)

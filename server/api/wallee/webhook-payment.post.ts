@@ -2,7 +2,6 @@
 // ✅ WALLEE WEBHOOK HANDLER für Payment Updates
 
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 interface WalleeWebhookPayload {
   listenerEntityId: number

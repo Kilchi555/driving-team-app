@@ -4,7 +4,6 @@
  * Used on login/register pages where user is not authenticated
  */
 
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

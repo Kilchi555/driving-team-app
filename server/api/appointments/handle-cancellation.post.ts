@@ -2,7 +2,6 @@
 // Handles appointment cancellation with automatic refund processing
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

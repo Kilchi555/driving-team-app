@@ -8,7 +8,6 @@
 import { getCachedTravelTime, isPeakTime } from '~/utils/plzDistanceCache'
 import type { PeakTimeSettings } from '~/utils/plzDistanceCache'
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 /**
  * Calls Google Distance Matrix API directly (server-side only)

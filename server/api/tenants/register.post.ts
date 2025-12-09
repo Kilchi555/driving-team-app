@@ -1,6 +1,5 @@
 // server/api/tenants/register.post.ts
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 interface TenantRegistrationData {
   name: string

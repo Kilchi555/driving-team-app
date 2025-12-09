@@ -2,7 +2,6 @@
 // Confirm an appointment after successful payment
 
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 interface ConfirmAppointmentRequest {
   appointmentId: string

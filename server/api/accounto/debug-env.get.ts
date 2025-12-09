@@ -1,7 +1,6 @@
 // server/api/accounto/debug-env.get.ts
 // Debug Environment Variables für Accounto
 
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   logger.debug('🔍 Debugging Accounto Environment Variables...')

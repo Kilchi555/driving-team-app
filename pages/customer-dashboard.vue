@@ -6,7 +6,6 @@
 </template>
 
 <script setup>
-import { logger } from '~/utils/logger'
 
 import CustomerDashboard from '~/components/customer/CustomerDashboard.vue'
 

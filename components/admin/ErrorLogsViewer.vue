@@ -135,7 +135,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useErrorLogs } from '~/composables/useErrorLogs'
-import { logger } from '~/utils/logger'
 
 // State
 const selectedHours = ref(24)

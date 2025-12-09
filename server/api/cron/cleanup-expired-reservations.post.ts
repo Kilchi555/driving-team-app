@@ -7,7 +7,6 @@
  */
 
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   // Verify Cron Secret if needed (for security)

@@ -99,7 +99,6 @@
 </template>
 
 <script setup>
-import { logger } from '~/utils/logger'
 
 import { ref } from 'vue'
 import { getSupabase } from '~/utils/supabase'

@@ -2,7 +2,6 @@
 // Configure email templates in Supabase
 
 import { defineEventHandler, readBody } from 'h3'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

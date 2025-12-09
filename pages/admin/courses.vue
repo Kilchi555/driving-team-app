@@ -3801,7 +3801,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { navigateTo, useNuxtApp } from '#app'

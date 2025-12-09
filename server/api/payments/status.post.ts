@@ -3,7 +3,6 @@
 
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
-import { logger } from '~/utils/logger'
 
 interface PaymentStatusRequest {
   paymentId: string

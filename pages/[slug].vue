@@ -342,7 +342,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 logger.debug('📄 [slug].vue script setup initializing...')
 

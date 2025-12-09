@@ -3,7 +3,6 @@
 
 import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

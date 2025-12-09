@@ -1,6 +1,5 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { resolvePLZForExternalBusyTime } from '~/utils/postalCodeUtils'
-import { logger } from '~/utils/logger'
 
 interface ICSImportRequest {
   calendar_id: string

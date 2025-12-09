@@ -211,7 +211,6 @@ Content-Type: application/json;charset=utf-8
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { ref } from 'vue'
 

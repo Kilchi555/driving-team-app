@@ -322,7 +322,6 @@ v-if="!user.has_unpaid_appointments && !user.has_company_billing"
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { ref, onMounted, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'

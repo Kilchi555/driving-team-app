@@ -69,7 +69,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 // Props
 interface Props {

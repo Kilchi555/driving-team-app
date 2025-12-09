@@ -851,7 +851,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRuntimeConfig, navigateTo } from '#app'

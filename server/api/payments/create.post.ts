@@ -4,7 +4,6 @@
 import { getSupabase } from '~/utils/supabase'
 import { routeRequiresFeatureFlag, validateFeatureAccess } from '~/utils/featureFlags'
 import { toLocalTimeString } from '~/utils/dateUtils'
-import { logger } from '~/utils/logger'
 
 interface PaymentRequest {
   appointmentId?: string

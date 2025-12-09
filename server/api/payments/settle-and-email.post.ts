@@ -3,7 +3,6 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getHeader } from 'h3'
-import { logger } from '~/utils/logger'
 
 interface SettleEmailData {
   customerName: string

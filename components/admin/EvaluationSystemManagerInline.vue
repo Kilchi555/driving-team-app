@@ -1011,7 +1011,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { ref, onMounted, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'

@@ -2,7 +2,6 @@
 // Send email with Wallee payment link
 
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
 
 interface SendEmailRequest {
   email: string

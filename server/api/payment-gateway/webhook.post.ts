@@ -3,7 +3,6 @@
 
 import { getPaymentProviderForTenant } from '~/server/payment-providers/factory'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   logger.debug('🔔 Universal Payment Gateway - Webhook Received')

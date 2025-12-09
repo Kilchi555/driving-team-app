@@ -45,7 +45,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 import { computed, watch, onMounted } from 'vue'
 import { useDurationManager } from '~/composables/useDurationManager'

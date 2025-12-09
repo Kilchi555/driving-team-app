@@ -2,7 +2,6 @@
 // Webhook handler for Wallee refund/payout confirmations
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

@@ -636,7 +636,6 @@
 </template>
 
 <script setup lang="ts">
-import { logger } from '~/utils/logger'
 
 // Page meta
 definePageMeta({
