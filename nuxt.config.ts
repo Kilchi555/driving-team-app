@@ -14,8 +14,8 @@ export default defineNuxtConfig({
     '@nuxtjs/supabase',
     '@nuxt/ui',
     '@pinia/nuxt',
-    '@nuxt/eslint'
-    // '@nuxtjs/i18n' // Temporarily disabled - path resolution issues
+    '@nuxt/eslint',
+    '@nuxtjs/i18n'
   ],
   
   // --- Build Configuration ---
@@ -109,17 +109,25 @@ export default defineNuxtConfig({
   ],
   
   // --- i18n Configuration ---
-  // Temporarily disabled - will be re-enabled after fixing path resolution
-  // i18n: {
-  //   locales: [
-  //     { code: 'de', iso: 'de-CH', file: 'de.json', name: 'Deutsch' },
-  //     { code: 'en', iso: 'en-US', file: 'en.json', name: 'English' }
-  //   ],
-  //   lazy: true,
-  //   langDir: 'locales',
-  //   defaultLocale: 'de',
-  //   strategy: 'no_prefix',
-  //   detectBrowserLanguage: false,
-  //   vueI18n: './i18n.config.ts'
-  // }
+  // Auto-detect browser language with fallback to English
+  i18n: {
+    locales: [
+      { code: 'de', iso: 'de-CH', file: 'de.json', name: 'Deutsch' },
+      { code: 'en', iso: 'en-US', file: 'en.json', name: 'English' },
+      { code: 'fr', iso: 'fr-CH', file: 'fr.json', name: 'Français' },
+      { code: 'it', iso: 'it-CH', file: 'it.json', name: 'Italiano' }
+    ],
+    lazy: true,
+    langDir: 'locales',
+    defaultLocale: 'de',
+    strategy: 'no_prefix',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'driving_team_language',
+      redirectOn: 'root',
+      alwaysRedirect: false,
+      fallbackLocale: 'en' // 🌐 Fallback to English if device language not supported
+    },
+    vueI18n: './i18n.config.ts'
+  }
 })
