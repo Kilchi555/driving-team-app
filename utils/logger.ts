@@ -18,7 +18,18 @@ export interface LogEntry {
   userAgent?: string
 }
 
-const isDev = process.env.NODE_ENV === 'development'
+// Check isDev at runtime (works in browser and server)
+const isDev = () => {
+  // In Nuxt/Node
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env.NODE_ENV === 'development'
+  }
+  // Fallback: check if running in dev server (localhost)
+  if (typeof window !== 'undefined') {
+    return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  }
+  return false
+}
 
 /**
  * Format timestamp to ISO string
@@ -58,7 +69,7 @@ async function sendErrorToServer(logEntry: LogEntry) {
     }
 
     // Don't send if we're in development and offline
-    if (isDev && !navigator.onLine) {
+    if (isDev() && !navigator.onLine) {
       return
     }
 
@@ -68,7 +79,7 @@ async function sendErrorToServer(logEntry: LogEntry) {
     })
   } catch (err) {
     // Silently fail - don't log the logging error to avoid infinite loops
-    if (isDev) {
+    if (isDev()) {
       console.error('Failed to send error to server:', err)
     }
   }
@@ -82,7 +93,7 @@ export const logger = {
    * Debug logs - only in development
    */
   debug: (component: string, message: string, data?: any) => {
-    if (!isDev) {
+    if (!isDev()) {
       return
     }
 
@@ -131,8 +142,8 @@ export const logger = {
    * Get all console methods (for testing)
    */
   getConfig: () => ({
-    isDev,
-    environment: process.env.NODE_ENV
+    isDev: isDev(),
+    environment: typeof process !== 'undefined' ? process.env.NODE_ENV : 'unknown'
   })
 }
 
