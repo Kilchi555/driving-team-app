@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

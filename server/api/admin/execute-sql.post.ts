@@ -1,6 +1,7 @@
 // server/api/admin/execute-sql.post.ts
 import { createClient } from '@supabase/supabase-js'
 import { routeRequiresFeatureFlag, validateFeatureAccess } from '~/utils/featureFlags'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()

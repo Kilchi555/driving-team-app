@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { routeRequiresFeatureFlag, validateFeatureAccess } from '~/utils/featureFlags'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)

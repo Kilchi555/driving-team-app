@@ -6,6 +6,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail, generateAppointmentDeletedEmail, generateStaffNotificationEmail } from '~/server/utils/email'
 import { sendSMS, generateAppointmentDeletedSMS } from '~/server/utils/sms'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

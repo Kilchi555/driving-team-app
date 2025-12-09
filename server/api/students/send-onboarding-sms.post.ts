@@ -1,5 +1,6 @@
 // server/api/students/send-onboarding-sms.post.ts
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '~/utils/logger'
 
 const supabaseUrl = process.env.SUPABASE_URL!
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!

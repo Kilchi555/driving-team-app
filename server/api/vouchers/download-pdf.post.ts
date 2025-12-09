@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { generateVoucherPDFContent, type VoucherBranding } from '~/utils/voucherGenerator'
 import { setHeader, send } from 'h3'
 import chromium from '@sparticuz/chromium'
+import { logger } from '~/utils/logger'
 
 // Use dynamic import for puppeteer to avoid issues in some environments
 let puppeteer: any

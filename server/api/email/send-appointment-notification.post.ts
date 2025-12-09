@@ -3,6 +3,7 @@
 
 import { sendEmail } from '~/server/utils/email'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { logger } from '~/utils/logger'
 
 interface AppointmentNotificationBody {
   email: string

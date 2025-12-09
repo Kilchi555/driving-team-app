@@ -6,6 +6,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail, generatePaymentReminderEmail } from '~/server/utils/email'
 import { sendSMS, generatePaymentReminderSMS } from '~/server/utils/sms'
+import { logger } from '~/utils/logger'
 
 const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://simy.ch').replace(/\/$/, '')
 

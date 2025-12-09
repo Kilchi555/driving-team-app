@@ -4,6 +4,7 @@
 import { Wallee } from 'wallee'
 import { buildMerchantReference } from '~/utils/merchantReference'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   logger.debug('🚀 Wallee Transaction Creation (SDK)...')

@@ -86,67 +86,54 @@ async function sendErrorToServer(logEntry: LogEntry) {
 }
 
 /**
- * Main logger object
+ * Main logger object - Flexible signatures for both old and new usage
  */
 export const logger = {
   /**
    * Debug logs - only in development
-   * Accepts flexible parameters like old console.log (component, message, ...args)
+   * Flexible: accepts (message, ...args) OR (component, message, ...args)
    */
-  debug: (component: string, message: string, ...args: any[]) => {
+  debug: (...args: any[]) => {
     if (!isDev()) {
       return
     }
-
-    if (args.length > 0) {
-      console.log(`🔍 [${component}] ${message}`, ...args)
-    } else {
-      console.log(`🔍 [${component}] ${message}`)
-    }
+    console.log(...args)
   },
 
   /**
    * Info logs - always shown
+   * Flexible: accepts (message, ...args) OR (component, message, ...args)
    */
-  info: (component: string, message: string, ...args: any[]) => {
-    if (args.length > 0) {
-      console.log(`ℹ️ [${component}] ${message}`, ...args)
-    } else {
-      console.log(`ℹ️ [${component}] ${message}`)
-    }
+  info: (...args: any[]) => {
+    console.log(...args)
   },
 
   /**
    * Warning logs - always shown
+   * Flexible: accepts (message, ...args) OR (component, message, ...args)
    */
-  warn: (component: string, message: string, ...args: any[]) => {
-    if (args.length > 0) {
-      console.warn(`⚠️ [${component}] ${message}`, ...args)
-    } else {
-      console.warn(`⚠️ [${component}] ${message}`)
-    }
+  warn: (...args: any[]) => {
+    console.warn(...args)
   },
 
   /**
    * Error logs - always shown + sent to server
+   * Flexible: accepts (message, data?) OR (component, message, data?)
    */
-  error: (component: string, message: string, data?: any) => {
-    const timestamp = getTimestamp()
-    const logEntry: LogEntry = {
-      level: 'error',
-      component,
-      message,
-      data: data || null,
-      timestamp,
-      url: getPageUrl(),
-      userAgent: getUserAgent()
-    }
-
-    // Log to browser console
-    console.error(`❌ [${component}] ${message}`, data || '')
-
-    // Send to server for persistent logging
-    if (typeof window !== 'undefined') {
+  error: (...args: any[]) => {
+    console.error(...args)
+    
+    // Try to send to server if possible
+    if (typeof window !== 'undefined' && args.length >= 2) {
+      const logEntry: LogEntry = {
+        level: 'error',
+        component: typeof args[0] === 'string' ? args[0] : 'Unknown',
+        message: typeof args[1] === 'string' ? args[1] : String(args[1]),
+        data: args[2] || null,
+        timestamp: getTimestamp(),
+        url: getPageUrl(),
+        userAgent: getUserAgent()
+      }
       sendErrorToServer(logEntry)
     }
   },

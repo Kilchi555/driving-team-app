@@ -1,6 +1,7 @@
 // API-Endpunkt für PDF-Download von Rechnungen
 import { getSupabase } from '~/utils/supabase'
 import type { InvoiceWithDetails } from '~/types/invoice'
+import { logger } from '~/utils/logger'
 
 interface DownloadRequest {
   invoiceId: string

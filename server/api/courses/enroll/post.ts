@@ -1,4 +1,6 @@
 
+import { logger } from '~/utils/logger'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)

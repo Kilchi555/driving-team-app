@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

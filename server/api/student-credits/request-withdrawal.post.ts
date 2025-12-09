@@ -2,6 +2,7 @@
 // Allows students to request withdrawal of their credit balance
 
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
