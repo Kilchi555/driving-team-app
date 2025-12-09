@@ -3,10 +3,15 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 let supabaseInstance: SupabaseClient | null = null
 let supabaseAdminInstance: SupabaseClient | null = null
+let storageAdapter: any | null = null
 
-// Custom Storage Adapter für normales localStorage
+// Custom Storage Adapter für normales localStorage - als Singleton
 // Supabase speichert Sessions direkt im localStorage ohne Prefix
-function createNormalStorage() {
+function getNormalStorage() {
+  if (storageAdapter) {
+    return storageAdapter
+  }
+
   if (typeof window === 'undefined') {
     // Fallback für Server-Side: normales localStorage-Verhalten
     return {
@@ -16,7 +21,7 @@ function createNormalStorage() {
     }
   }
 
-  return {
+  storageAdapter = {
     getItem: (key: string): string | null => {
       try {
         return localStorage.getItem(key)
@@ -40,6 +45,8 @@ function createNormalStorage() {
       }
     }
   }
+  
+  return storageAdapter
 }
 
 export const getSupabase = (): SupabaseClient => {
@@ -83,14 +90,14 @@ export const getSupabase = (): SupabaseClient => {
     logger.debug('🔗 Initializing Supabase client with URL:', supabaseUrl)
     
     // Use normal localStorage for session persistence across browser windows
-    const storageAdapter = process.client ? createNormalStorage() : undefined
+    const storage = process.client ? getNormalStorage() : undefined
     
     supabaseInstance = createClient(supabaseUrl, supabaseKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true,
-        storage: storageAdapter as any // Custom storage adapter für fenster-spezifische Sessions
+        storage: storage as any // Singleton storage adapter
       }
     })
   }
