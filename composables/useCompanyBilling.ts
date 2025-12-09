@@ -134,7 +134,7 @@ export const useCompanyBilling = () => {
 
 const debugAuth = async () => {
   const { data: { user }, error } = await supabase.auth.getUser()
-  console.log('🔍 AUTH DEBUG:', {
+  logger.debug('🔍 AUTH DEBUG:', {
     user: user,
     userId: user?.id,
     email: user?.email,
@@ -145,7 +145,7 @@ const debugAuth = async () => {
   const { data: testData, error: testError } = await supabase
     .rpc('auth.uid')
   
-  console.log('🔍 RLS auth.uid():', testData, testError)
+  logger.debug('🔍 RLS auth.uid():', testData, testError)
   
   return user?.id
 }
@@ -165,7 +165,7 @@ const debugAuth = async () => {
   try {
     // ✅ DEBUG AUTH FIRST
     const authUserId = await debugAuth()
-    console.log('🔍 DEBUG: Passed userId:', userId, 'Auth userId:', authUserId)
+    logger.debug('🔍 DEBUG: Passed userId:', userId, 'Auth userId:', authUserId)
     
     const insertData = convertFormToInsert(userId)
     
@@ -175,7 +175,7 @@ const debugAuth = async () => {
       created_by: authUserId // ← VERWENDE AUTH USER ID STATT USER TABLE ID
     }
     
-    console.log('💾 Creating company billing address with auth ID:', finalInsertData)
+    logger.debug('💾 Creating company billing address with auth ID:', finalInsertData)
 
     const { data, error: supabaseError } = await supabase
       .from('company_billing_addresses')
@@ -193,7 +193,7 @@ const debugAuth = async () => {
     }
 
     currentAddress.value = data
-    console.log('✅ Company billing address created:', data)
+    logger.debug('✅ Company billing address created:', data)
 
     // ✅ NEU: Als Standard-Adresse für User setzen
     try {
@@ -205,7 +205,7 @@ const debugAuth = async () => {
       if (updateError) {
         console.warn('⚠️ Could not set as default address:', updateError)
       } else {
-        console.log('✅ Set as default billing address for user')
+        logger.debug('✅ Set as default billing address for user')
       }
     } catch (updateErr) {
       console.warn('⚠️ Could not set as default address:', updateErr)
@@ -235,7 +235,7 @@ const debugAuth = async () => {
     error.value = ''
 
     try {
-      console.log('🔄 Loading company addresses for user:', userId)
+      logger.debug('🔄 Loading company addresses for user:', userId)
 
       const { data, error: supabaseError } = await supabase
         .from('company_billing_addresses')
@@ -250,7 +250,7 @@ const debugAuth = async () => {
       }
 
       savedAddresses.value = data || []
-      console.log('✅ Company addresses loaded:', savedAddresses.value.length)
+      logger.debug('✅ Company addresses loaded:', savedAddresses.value.length)
 
       return {
         success: true,
@@ -298,7 +298,7 @@ const debugAuth = async () => {
         updated_at: toLocalTimeString(new Date)
       }
 
-      console.log('💾 Updating company billing address:', addressId, updateData)
+      logger.debug('💾 Updating company billing address:', addressId, updateData)
 
       const { data, error: supabaseError } = await supabase
         .from('company_billing_addresses')
@@ -313,7 +313,7 @@ const debugAuth = async () => {
       }
 
       currentAddress.value = data
-      console.log('✅ Company billing address updated:', data)
+      logger.debug('✅ Company billing address updated:', data)
 
       return {
         success: true,
@@ -339,7 +339,7 @@ const debugAuth = async () => {
     error.value = ''
 
     try {
-      console.log('🗑️ Deleting company billing address:', addressId)
+      logger.debug('🗑️ Deleting company billing address:', addressId)
 
       const { error: supabaseError } = await supabase
         .from('company_billing_addresses')
@@ -359,7 +359,7 @@ const debugAuth = async () => {
         resetForm()
       }
 
-      console.log('✅ Company billing address deleted')
+      logger.debug('✅ Company billing address deleted')
 
       return { success: true }
 
@@ -388,7 +388,7 @@ const loadDefaultBillingAddress = async (userId: string): Promise<CompanyBilling
       .single()
 
     if (userError || !userData?.default_company_billing_address_id) {
-      console.log('ℹ️ No default billing address set for user')
+      logger.debug('ℹ️ No default billing address set for user')
       return null
     }
 
@@ -401,11 +401,11 @@ const loadDefaultBillingAddress = async (userId: string): Promise<CompanyBilling
       .single()
 
     if (addressError || !addressData) {
-      console.log('ℹ️ Default billing address not found or inactive')
+      logger.debug('ℹ️ Default billing address not found or inactive')
       return null
     }
 
-    console.log('✅ Default billing address loaded:', addressData.company_name)
+    logger.debug('✅ Default billing address loaded:', addressData.company_name)
     return addressData
 
   } catch (err) {

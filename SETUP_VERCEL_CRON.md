@@ -31,7 +31,7 @@ Führe diesen Befehl im Terminal aus:
 
 ```bash
 # Generiere einen zufälligen 32-Zeichen Key
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+node -e "logger.debug(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 **Oder** verwende einen Online-Generator:

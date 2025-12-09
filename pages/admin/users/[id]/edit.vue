@@ -328,7 +328,7 @@ const loadUserDetails = async () => {
       tenant_id: data.tenant_id
     }
     
-    console.log('✅ User details loaded for editing:', data)
+    logger.debug('✅ User details loaded for editing:', data)
 
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
@@ -348,7 +348,7 @@ const loadTenants = async () => {
     if (error) throw error
 
     tenants.value = data || []
-    console.log('✅ Tenants loaded:', data)
+    logger.debug('✅ Tenants loaded:', data)
 
   } catch (err: unknown) {
     console.error('❌ Error loading tenants:', err)
@@ -382,7 +382,7 @@ const saveChanges = async () => {
     // Reload user details to get updated data
     await loadUserDetails()
     
-    console.log('✅ User updated successfully')
+    logger.debug('✅ User updated successfully')
     
     // Auto-hide success message after 3 seconds
     setTimeout(() => {

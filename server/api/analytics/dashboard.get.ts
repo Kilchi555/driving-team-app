@@ -176,7 +176,7 @@ export default defineEventHandler(async (event) => {
       cacheHitRate = latestMetrics.cache_hit_rate?.metric_value || 0
     } catch (error) {
       // system_metrics Tabelle existiert noch nicht - berechne aus echten Daten
-      console.log('System metrics table not found, calculating from real data')
+      logger.debug('System metrics table not found, calculating from real data')
       
       // Berechne echte Metriken aus deinen Tabellen
       const { count: totalAppointments } = await supabase
@@ -221,7 +221,7 @@ export default defineEventHandler(async (event) => {
       uptime = totalEvents > 0 ? Math.round(((totalEvents - errorEvents) / totalEvents) * 100 * 10) / 10 : 99.9
     } catch (error) {
       // analytics_events Tabelle existiert noch nicht - verwende Standardwerte
-      console.log('Analytics events table not found, using defaults')
+      logger.debug('Analytics events table not found, using defaults')
       apiCallsLastHour = 0
       uptime = 99.9
     }
@@ -292,32 +292,32 @@ export default defineEventHandler(async (event) => {
     )
 
     // Debug: Log echte Daten
-    console.log('🔍 ECHTE ANALYTICS-DATEN mit echten Tenant-IDs:')
-    console.log('- Aktive Tenants:', activeTenants, 'von', totalTenants, 'Gesamt')
-    console.log('- Tenant Growth:', tenantGrowth + '%')
-    console.log('- Tenants Details:')
+    logger.debug('🔍 ECHTE ANALYTICS-DATEN mit echten Tenant-IDs:')
+    logger.debug('- Aktive Tenants:', activeTenants, 'von', totalTenants, 'Gesamt')
+    logger.debug('- Tenant Growth:', tenantGrowth + '%')
+    logger.debug('- Tenants Details:')
     tenants.forEach(tenant => {
       const isRealUUID = tenant.id !== '00000000-0000-0000-0000-000000000000'
-      console.log(`  - ${tenant.name} (${tenant.slug}): ${tenant.subscription_status} - ${tenant.subscription_plan} - Trial: ${tenant.is_trial}`)
-      console.log(`    ID: ${tenant.id} ${isRealUUID ? '✅' : '❌ 00000000'}`)
+      logger.debug(`  - ${tenant.name} (${tenant.slug}): ${tenant.subscription_status} - ${tenant.subscription_plan} - Trial: ${tenant.is_trial}`)
+      logger.debug(`    ID: ${tenant.id} ${isRealUUID ? '✅' : '❌ 00000000'}`)
     })
-    console.log('- Top Tenants mit echten Zählungen:')
+    logger.debug('- Top Tenants mit echten Zählungen:')
     topTenantsWithActivity.forEach(tenant => {
-      console.log(`  - ${tenant.name}: ${tenant.user_count} Users, ${tenant.staff_count} Staff, ${tenant.appointment_count} Termine, ${tenant.payment_count} Payments`)
+      logger.debug(`  - ${tenant.name}: ${tenant.user_count} Users, ${tenant.staff_count} Staff, ${tenant.appointment_count} Termine, ${tenant.payment_count} Payments`)
     })
-    console.log('- Aktive Staff:', activeStaff, 'von', totalStaff, 'Gesamt')
-    console.log('- Staff Growth:', staffGrowth + '%')
-    console.log('- Aktive Admins:', activeAdmins, 'von', totalAdmins, 'Gesamt')
-    console.log('- Gesamt Users:', totalUsers)
-    console.log('- User Growth:', userGrowth + '%')
-    console.log('- Aktive Termine:', activeAppointments)
-    console.log('- Heute Termine:', todayAppointments)
-    console.log('- System Metriken:')
-    console.log('  - CPU:', cpuUsage + '%')
-    console.log('  - Memory:', memoryUsage + '%')
-    console.log('  - Response Time:', avgResponseTime + 'ms')
-    console.log('  - DB Connections:', dbConnections)
-    console.log('  - Cache Hit Rate:', cacheHitRate + '%')
+    logger.debug('- Aktive Staff:', activeStaff, 'von', totalStaff, 'Gesamt')
+    logger.debug('- Staff Growth:', staffGrowth + '%')
+    logger.debug('- Aktive Admins:', activeAdmins, 'von', totalAdmins, 'Gesamt')
+    logger.debug('- Gesamt Users:', totalUsers)
+    logger.debug('- User Growth:', userGrowth + '%')
+    logger.debug('- Aktive Termine:', activeAppointments)
+    logger.debug('- Heute Termine:', todayAppointments)
+    logger.debug('- System Metriken:')
+    logger.debug('  - CPU:', cpuUsage + '%')
+    logger.debug('  - Memory:', memoryUsage + '%')
+    logger.debug('  - Response Time:', avgResponseTime + 'ms')
+    logger.debug('  - DB Connections:', dbConnections)
+    logger.debug('  - Cache Hit Rate:', cacheHitRate + '%')
 
     // Track API performance
     const responseTime = Date.now() - startTime

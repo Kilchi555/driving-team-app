@@ -348,21 +348,21 @@ const toastMessage = ref('')
 
 // Toast Helper Functions
 const showSuccessToast = (title: string, message: string = '') => {
-  console.log('🔔 showSuccessToast called:', { title, message })
+  logger.debug('🔔 showSuccessToast called:', { title, message })
   toastType.value = 'success'
   toastTitle.value = title
   toastMessage.value = message
   showToast.value = true
-  console.log('🔔 Toast state updated:', { showToast: showToast.value })
+  logger.debug('🔔 Toast state updated:', { showToast: showToast.value })
 }
 
 const showWarningToast = (title: string, message: string = '') => {
-  console.log('🔔 showWarningToast called:', { title, message })
+  logger.debug('🔔 showWarningToast called:', { title, message })
   toastType.value = 'warning'
   toastTitle.value = title
   toastMessage.value = message
   showToast.value = true
-  console.log('🔔 Toast state updated:', { showToast: showToast.value })
+  logger.debug('🔔 Toast state updated:', { showToast: showToast.value })
 }
 
 const emit = defineEmits<{
@@ -568,7 +568,7 @@ const submitForm = async () => {
   if (!validateForm()) return
 
   isSubmitting.value = true
-  console.log('🚀🚀🚀 Starting form submission...')
+  logger.debug('🚀🚀🚀 Starting form submission...')
 
   try {
     // Prepare form data - ensure at least empty strings for required DB fields
@@ -593,23 +593,23 @@ const submitForm = async () => {
       studentData.assigned_staff_id = props.currentUser.id
     }
 
-    console.log('📝 Calling addStudent with:', studentData)
+    logger.debug('📝 Calling addStudent with:', studentData)
     const newStudent = await addStudent(studentData) as any
     
-    console.log('✅✅✅ Schüler erfolgreich hinzugefügt:', newStudent)
-    console.log('📱 SMS Success:', newStudent?.smsSuccess)
-    console.log('📧 Email Success:', newStudent?.emailSuccess)
-    console.log('🔗 Onboarding Link:', newStudent?.onboardingLink)
+    logger.debug('✅✅✅ Schüler erfolgreich hinzugefügt:', newStudent)
+    logger.debug('📱 SMS Success:', newStudent?.smsSuccess)
+    logger.debug('📧 Email Success:', newStudent?.emailSuccess)
+    logger.debug('🔗 Onboarding Link:', newStudent?.onboardingLink)
     
     // ✅ Benachrichtigung basierend auf Versandmethode
     if (newStudent?.smsSuccess) {
-      console.log('📲📲📲 SMS success notification triggered')
+      logger.debug('📲📲📲 SMS success notification triggered')
       showSuccessToast(
         'Einladung versendet!',
         `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet.`
       )
     } else if (newStudent?.emailSuccess) {
-      console.log('📧📧📧 Email success notification triggered')
+      logger.debug('📧📧📧 Email success notification triggered')
       showSuccessToast(
         'Einladung versendet!',
         `Eine E-Mail mit Onboarding-Link wurde an ${form.value.email} gesendet.`
@@ -619,22 +619,22 @@ const submitForm = async () => {
       const contactInfo = form.value.phone || form.value.email
       const contactType = form.value.phone ? 'SMS' : 'E-Mail'
       
-      console.log('⚠️⚠️⚠️ Contact method failed:', { contactType, contactInfo, smsSuccess: newStudent?.smsSuccess, emailSuccess: newStudent?.emailSuccess })
+      logger.debug('⚠️⚠️⚠️ Contact method failed:', { contactType, contactInfo, smsSuccess: newStudent?.smsSuccess, emailSuccess: newStudent?.emailSuccess })
       showWarningToast(
         `Schüler erstellt, aber ${contactType} fehlgeschlagen`,
         `Bitte senden Sie den Onboarding-Link manuell an ${contactInfo}`
       )
       
       // Zeige den Link in der Konsole für Copy/Paste
-      console.log('🔗 Onboarding-Link:', newStudent?.onboardingLink)
+      logger.debug('🔗 Onboarding-Link:', newStudent?.onboardingLink)
       
       // Optional: Kopiere Link in Zwischenablage
       if (newStudent?.onboardingLink && navigator.clipboard) {
         try {
           await navigator.clipboard.writeText(newStudent.onboardingLink)
-          console.log('✅ Link wurde in Zwischenablage kopiert')
+          logger.debug('✅ Link wurde in Zwischenablage kopiert')
         } catch (e) {
-          console.log('⚠️ Konnte Link nicht in Zwischenablage kopieren')
+          logger.debug('⚠️ Konnte Link nicht in Zwischenablage kopieren')
         }
       }
     }
@@ -645,7 +645,7 @@ const submitForm = async () => {
     
     // Gebe der Toast-Notification Zeit, angezeigt zu werden (2 Sekunden mindestens)
     setTimeout(() => {
-      console.log('🚀 Closing modal after toast display (2000ms delay)')
+      logger.debug('🚀 Closing modal after toast display (2000ms delay)')
       emit('close')
     }, 2000)
 

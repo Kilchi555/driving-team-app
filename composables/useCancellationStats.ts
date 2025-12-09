@@ -60,7 +60,7 @@ export const useCancellationStats = () => {
         throw new Error('User has no tenant assigned')
       }
 
-      console.log('🔍 Cancellation Stats - Current tenant_id:', tenantId)
+      logger.debug('🔍 Cancellation Stats - Current tenant_id:', tenantId)
 
       // Basis-Query für gelöschte Termine
       let query = supabase
@@ -114,7 +114,7 @@ export const useCancellationStats = () => {
       const processedStats = await processCancellationData(cancellations)
       stats.value = processedStats
 
-      console.log('✅ Cancellation stats loaded:', processedStats.total_cancellations)
+      logger.debug('✅ Cancellation stats loaded:', processedStats.total_cancellations)
     } catch (err: any) {
       console.error('❌ Error loading cancellation stats:', err)
       error.value = err.message || 'Fehler beim Laden der Absage-Statistiken'

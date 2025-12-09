@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabaseAdmin()
     
-    console.log('🔍 Starting migration: Creating missing student_credits records...')
+    logger.debug('🔍 Starting migration: Creating missing student_credits records...')
     
     // Find all client users without student_credits
     const { data: usersWithoutCredits, error: usersError } = await supabase
@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    console.log(`📊 Found ${usersWithoutCredits?.length || 0} client users`)
+    logger.debug(`📊 Found ${usersWithoutCredits?.length || 0} client users`)
     
     let createdCount = 0
     let skippedCount = 0
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
       const existingUserIds = new Set(existingCredits?.map(c => c.user_id) || [])
       const usersNeedingCredits = usersWithoutCredits.filter(u => !existingUserIds.has(u.id))
       
-      console.log(`✅ ${usersNeedingCredits.length} users need student_credits records`)
+      logger.debug(`✅ ${usersNeedingCredits.length} users need student_credits records`)
       
       // Create student_credits for each missing user
       for (const user of usersNeedingCredits) {
@@ -63,13 +63,13 @@ export default defineEventHandler(async (event) => {
           console.warn(`⚠️ Failed to create student_credits for user ${user.email}:`, insertError)
           skippedCount++
         } else {
-          console.log(`✅ Created student_credits for: ${user.email}`)
+          logger.debug(`✅ Created student_credits for: ${user.email}`)
           createdCount++
         }
       }
     }
     
-    console.log(`🎉 Migration complete: Created ${createdCount}, Skipped ${skippedCount}`)
+    logger.debug(`🎉 Migration complete: Created ${createdCount}, Skipped ${skippedCount}`)
     
     return {
       success: true,

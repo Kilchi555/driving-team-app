@@ -574,7 +574,7 @@ const formattedUnconfirmedAppointments = computed(() => {
 
 // Methods
 const closeModal = () => {
-  console.log('🔥 PendenzenModal closing...')
+  logger.debug('🔥 PendenzenModal closing...')
   emit('close')
 }
 
@@ -681,7 +681,7 @@ const sendManualReminder = async () => {
   try {
     // ✅ Check if this is a pending_confirmation appointment
     if (currentReminderAppointment.value.status === 'pending_confirmation') {
-      console.log('📧 Sending confirmation reminder for pending appointment...')
+      logger.debug('📧 Sending confirmation reminder for pending appointment...')
       
       // Get appointment details for email
       const studentEmail = currentReminderAppointment.value.users?.email
@@ -706,7 +706,7 @@ const sendManualReminder = async () => {
             tenantId: props.currentUser?.tenant_id
           }
         })
-        console.log('✅ Confirmation reminder sent:', result)
+        logger.debug('✅ Confirmation reminder sent:', result)
         alert('Bestätigungs-Erinnerung erfolgreich versendet!')
       } else {
         alert('Keine Email-Adresse für den Schüler verfügbar')
@@ -743,7 +743,7 @@ const sendManualReminder = async () => {
       throw reminderError
     }
 
-    console.log('✅ Manual reminder sent:', response)
+    logger.debug('✅ Manual reminder sent:', response)
     alert('Erinnerung erfolgreich versendet!')
     
     // Aktualisiere Historie
@@ -768,7 +768,7 @@ const getStudentCategory = (appointment: any) => {
     category = userCategories[0] // Verwende die erste Kategorie
   }
   
-  console.log('🔥 getStudentCategory called:', {
+  logger.debug('🔥 getStudentCategory called:', {
     userCategory: appointment?.users?.category,
     appointmentType: appointment?.type,
     appointmentTypeField: appointment?.appointment_type,
@@ -779,17 +779,17 @@ const getStudentCategory = (appointment: any) => {
 }
 
 const openEvaluation = (appointment: any) => {
-  console.log('🔥 PendenzenModal - opening evaluation for:', appointment.id)
+  logger.debug('🔥 PendenzenModal - opening evaluation for:', appointment.id)
   
   // ✅ PRÜFE OB TERMIN NICHT BESTÄTIGT IST
   if (appointment.status === 'pending_confirmation') {
-    console.log('⚠️ Appointment not confirmed yet - cannot evaluate')
+    logger.debug('⚠️ Appointment not confirmed yet - cannot evaluate')
     // Zeige Info-Meldung oder öffne Termin-Details
     alert(`Dieser Termin wurde noch nicht vom Schüler bestätigt.\n\nSchüler: ${appointment.studentName}\nDatum: ${appointment.formattedDate} ${appointment.formattedStartTime}\n\nBitte warten Sie auf die Bestätigung des Schülers.`)
     return
   }
   
-  console.log('🔥 Student category debug:', {
+  logger.debug('🔥 Student category debug:', {
     userCategory: appointment.users?.category,
     appointmentType: appointment.type,
     eventTypeCode: appointment.event_type_code,
@@ -799,43 +799,43 @@ const openEvaluation = (appointment: any) => {
   
   // ✅ PRÜFE OB ES EINE PRÜFUNG IST
   if (appointment.event_type_code === 'exam') {
-    console.log('📝 Exam detected - showing exam result modal')
+    logger.debug('📝 Exam detected - showing exam result modal')
     showExamResultModal.value = true
     currentExamAppointment.value = appointment
   } 
   // ✅ PRÜFE OB ES EINE THEORIELEKTION IST
   else if (appointment.appointment_type === 'theory' || appointment.event_type_code === 'theory') {
-    console.log('📚 Theory lesson detected - showing evaluation modal with theory criteria')
+    logger.debug('📚 Theory lesson detected - showing evaluation modal with theory criteria')
     showEvaluationModal.value = true
     selectedAppointment.value = appointment
   } 
   else {
     // Normale Lektion - zeige normale Bewertung
-    console.log('📚 Lesson detected - showing evaluation modal')
+    logger.debug('📚 Lesson detected - showing evaluation modal')
     showEvaluationModal.value = true
     selectedAppointment.value = appointment
   }
 }
 
 const closeEvaluationModal = () => {
-  console.log('🔥 PendenzenModal - closing evaluation modal')
+  logger.debug('🔥 PendenzenModal - closing evaluation modal')
   showEvaluationModal.value = false
   selectedAppointment.value = null
 }
 
 // ✅ EXAM RESULT MODAL FUNKTIONEN
 const closeExamResultModal = () => {
-  console.log('📝 PendenzenModal - closing exam result modal')
+  logger.debug('📝 PendenzenModal - closing exam result modal')
   showExamResultModal.value = false
   currentExamAppointment.value = null
 }
 
 const onExamResultSaved = async (appointmentId: string) => {
-  console.log('🎉 PendenzenModal - exam result saved for:', appointmentId)
+  logger.debug('🎉 PendenzenModal - exam result saved for:', appointmentId)
   
   // Lade Pendenzen neu um die aktualisierten Daten zu sehen
   await refreshData()
-  console.log('✅ New pending count after exam result:', pendingCount.value)
+  logger.debug('✅ New pending count after exam result:', pendingCount.value)
   
   // Prüfe ob es eine Barzahlung gibt, die bestätigt werden muss
   await checkAndShowCashPaymentConfirmation(appointmentId)
@@ -959,11 +959,11 @@ const getEventTypeText = (eventType: string) => {
 }
 
 const onEvaluationSaved = async (appointmentId: string) => {
-  console.log('🎉 PendenzenModal - evaluation saved for:', appointmentId)
+  logger.debug('🎉 PendenzenModal - evaluation saved for:', appointmentId)
   
   // Lade Pendenzen neu um die aktualisierten Daten zu sehen
   await refreshData()
-  console.log('✅ New pending count after evaluation:', pendingCount.value)
+  logger.debug('✅ New pending count after evaluation:', pendingCount.value)
   
   // Prüfe ob es eine Barzahlung gibt, die bestätigt werden muss
   await checkAndShowCashPaymentConfirmation(appointmentId)
@@ -978,7 +978,7 @@ const refreshData = async () => {
     return
   }
   
-  console.log('🔄 PendenzenModal - refreshing data...')
+  logger.debug('🔄 PendenzenModal - refreshing data...')
   clearError()
   
   // Lade Kategorien aus der DB
@@ -993,7 +993,7 @@ const refreshData = async () => {
     await loadPendencies(props.currentUser.tenant_id)
   }
   
-  console.log('✅ PendenzenModal - data refreshed, count:', pendingCount.value)
+  logger.debug('✅ PendenzenModal - data refreshed, count:', pendingCount.value)
 }
 
 /**
@@ -1001,11 +1001,11 @@ const refreshData = async () => {
  */
 const checkAndShowCashPaymentConfirmation = async (appointmentId: string) => {
   try {
-    console.log('💰 [PendenzenModal] Checking for cash payment confirmation for appointment:', appointmentId)
+    logger.debug('💰 [PendenzenModal] Checking for cash payment confirmation for appointment:', appointmentId)
     
     // ✅ ZUERST: Prüfe die Zahlungsmethode aus der payments Tabelle
     const supabase = getSupabase()
-    console.log('💰 [PendenzenModal] Supabase client ready')
+    logger.debug('💰 [PendenzenModal] Supabase client ready')
     
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
@@ -1013,23 +1013,23 @@ const checkAndShowCashPaymentConfirmation = async (appointmentId: string) => {
       .eq('appointment_id', appointmentId)
       .maybeSingle() // ← .maybeSingle() da möglicherweise noch kein Payment existiert
     
-    console.log('💰 [PendenzenModal] First query result:', { payment, error: paymentError })
+    logger.debug('💰 [PendenzenModal] First query result:', { payment, error: paymentError })
     
     if (paymentError) {
-      console.log('💰 [PendenzenModal] Error checking payment:', paymentError.message)
+      logger.debug('💰 [PendenzenModal] Error checking payment:', paymentError.message)
       return
     }
     
     if (!payment) {
-      console.log('💰 [PendenzenModal] No payment record found for appointment - skipping cash payment check')
+      logger.debug('💰 [PendenzenModal] No payment record found for appointment - skipping cash payment check')
       return
     }
     
-    console.log('💰 [PendenzenModal] Payment method:', payment.payment_method, 'status:', payment.payment_status)
+    logger.debug('💰 [PendenzenModal] Payment method:', payment.payment_method, 'status:', payment.payment_status)
     
     // ✅ NUR bei Barzahlung nach pending payment suchen
     if (payment.payment_method === 'cash' && payment.payment_status === 'pending') {
-      console.log('💰 [PendenzenModal] Looking for pending cash payment...')
+      logger.debug('💰 [PendenzenModal] Looking for pending cash payment...')
       
       const { data: payments, error } = await supabase
         .from('payments')
@@ -1039,19 +1039,19 @@ const checkAndShowCashPaymentConfirmation = async (appointmentId: string) => {
         .eq('payment_status', 'pending')
         .maybeSingle() // ← .maybeSingle() statt .single() um 406 Fehler zu vermeiden
       
-      console.log('💰 [PendenzenModal] Cash payment query result:', { payments, error })
+      logger.debug('💰 [PendenzenModal] Cash payment query result:', { payments, error })
       
       if (payments) {
-        console.log('💰 [PendenzenModal] Found pending cash payment:', payments)
-        console.log('💰 [PendenzenModal] tenant_id in payment:', payments.tenant_id)
+        logger.debug('💰 [PendenzenModal] Found pending cash payment:', payments)
+        logger.debug('💰 [PendenzenModal] tenant_id in payment:', payments.tenant_id)
         currentPayment.value = payments
         showCashPaymentModal.value = true
-        console.log('💰 [PendenzenModal] Modal shown, currentPayment set')
+        logger.debug('💰 [PendenzenModal] Modal shown, currentPayment set')
       } else {
-        console.log('💰 [PendenzenModal] No pending cash payment found in payments table')
+        logger.debug('💰 [PendenzenModal] No pending cash payment found in payments table')
       }
     } else {
-      console.log('💰 [PendenzenModal] No cash payment confirmation needed - method:', payment.payment_method, 'status:', payment.payment_status)
+      logger.debug('💰 [PendenzenModal] No cash payment confirmation needed - method:', payment.payment_method, 'status:', payment.payment_status)
     }
     
   } catch (err: any) {
@@ -1065,17 +1065,17 @@ const checkAndShowCashPaymentConfirmation = async (appointmentId: string) => {
  */
 const onCashPaymentConfirmed = async (payment: any) => {
   try {
-    console.log('✅ [PendenzenModal] Cash payment confirmed for:', payment.id)
-    console.log('✅ [PendenzenModal] Payment details:', payment)
+    logger.debug('✅ [PendenzenModal] Cash payment confirmed for:', payment.id)
+    logger.debug('✅ [PendenzenModal] Payment details:', payment)
     showCashPaymentModal.value = false
-    console.log('✅ [PendenzenModal] Modal closed')
+    logger.debug('✅ [PendenzenModal] Modal closed')
     currentPayment.value = null
-    console.log('✅ [PendenzenModal] currentPayment cleared')
+    logger.debug('✅ [PendenzenModal] currentPayment cleared')
     
     // Lade Pendenzen neu um die aktualisierten Zahlungsinformationen zu sehen
-    console.log('✅ [PendenzenModal] Refreshing data...')
+    logger.debug('✅ [PendenzenModal] Refreshing data...')
     await refreshData()
-    console.log('✅ [PendenzenModal] Data refreshed')
+    logger.debug('✅ [PendenzenModal] Data refreshed')
     
   } catch (err: any) {
     console.error('❌ [PendenzenModal] Error handling cash payment confirmation:', err)
@@ -1185,33 +1185,33 @@ const hoursUntil = (appointment: any) => {
 
 // Watch für Modal-Öffnung
 watch(() => props.isOpen, async (newIsOpen) => {
-  console.log('🔥 PendenzenModal isOpen changed:', newIsOpen)
-  console.log('🔥 Current user in modal:', props.currentUser)
+  logger.debug('🔥 PendenzenModal isOpen changed:', newIsOpen)
+  logger.debug('🔥 Current user in modal:', props.currentUser)
   
   if (newIsOpen && props.currentUser?.id) {
-    console.log('🔄 PendenzenModal opened - loading data...')
+    logger.debug('🔄 PendenzenModal opened - loading data...')
     try {
       await refreshData()
-      console.log('✅ refreshData completed')
+      logger.debug('✅ refreshData completed')
     } catch (error) {
       console.error('❌ Error in refreshData:', error)
     }
     
     // Nutze MEHRERE nextTick um sicherzustellen, dass alle computed values aktualisiert sind
-    console.log('⏳ Waiting for nextTick...')
+    logger.debug('⏳ Waiting for nextTick...')
     await nextTick()
-    console.log('⏳ Waiting for timeout...')
+    logger.debug('⏳ Waiting for timeout...')
     await new Promise(resolve => setTimeout(resolve, 100)) // Extra delay
-    console.log('⏳ Waiting for second nextTick...')
+    logger.debug('⏳ Waiting for second nextTick...')
     await nextTick()
-    console.log('✅ All nextTicks completed')
+    logger.debug('✅ All nextTicks completed')
     
     // Setze Tab anhand defaultTab, falls übergeben
     if (props.defaultTab) {
       activeTab.value = props.defaultTab
-      console.log('📌 Using defaultTab:', props.defaultTab)
+      logger.debug('📌 Using defaultTab:', props.defaultTab)
     } else {
-      console.log('🔄 Starting tab selection logic...')
+      logger.debug('🔄 Starting tab selection logic...')
       try {
         // Priorisiere den Tab mit den meisten Pendenzen
         // Direkt vom usePendingTasks composable abfragen, nicht vom computed
@@ -1219,16 +1219,16 @@ watch(() => props.isOpen, async (newIsOpen) => {
         const bewertungenCount = pendingList.value?.length || 0
         const unbestätigtCount = unconfirmedList.value?.length || 0
         
-        console.log('📊 Tab selection - Direct counts:', { bewertungenCount, unbestätigtCount })
-        console.log('🔍 unconfirmedList.value:', unconfirmedList.value)
-        console.log('🔍 pendingList.value:', pendingList.value)
+        logger.debug('📊 Tab selection - Direct counts:', { bewertungenCount, unbestätigtCount })
+        logger.debug('🔍 unconfirmedList.value:', unconfirmedList.value)
+        logger.debug('🔍 pendingList.value:', pendingList.value)
         
         if (unbestätigtCount > 0 && unbestätigtCount > bewertungenCount) {
           activeTab.value = 'unconfirmed'
-          console.log('📌 Switching to Unbestätigt tab (more pending)')
+          logger.debug('📌 Switching to Unbestätigt tab (more pending)')
         } else {
           activeTab.value = 'bewertungen'
-          console.log('📌 Switching to Bewertungen tab')
+          logger.debug('📌 Switching to Bewertungen tab')
         }
       } catch (error) {
         console.error('❌ Error in tab selection:', error)
@@ -1236,7 +1236,7 @@ watch(() => props.isOpen, async (newIsOpen) => {
       }
     }
   } else if (!newIsOpen) {
-    console.log('ℹ️ PendenzenModal closed')
+    logger.debug('ℹ️ PendenzenModal closed')
   } else {
     console.warn('⚠️ Modal opened but no user ID available')
   }
@@ -1244,13 +1244,13 @@ watch(() => props.isOpen, async (newIsOpen) => {
 
 // Debug: Watch pendingCount changes
 watch(pendingCount, (newCount, oldCount) => {
-  console.log(`🔄 PendenzenModal - pending count changed: ${oldCount} → ${newCount}`)
+  logger.debug(`🔄 PendenzenModal - pending count changed: ${oldCount} → ${newCount}`)
 }, { immediate: true })
 
 // Initial load wenn Component gemounted wird UND Modal bereits offen ist
 onMounted(() => {
   if (props.isOpen && props.currentUser?.id) {
-    console.log('🔄 PendenzenModal mounted with open state - loading data...')
+    logger.debug('🔄 PendenzenModal mounted with open state - loading data...')
     refreshData()
   }
 })

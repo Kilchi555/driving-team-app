@@ -531,7 +531,7 @@ const loadStatistics = async () => {
         : 0
     })).filter(product => product.total_quantity > 0) // Nur Produkte mit Verkäufen
     
-    console.log('✅ Product statistics loaded:', productStats.value.length)
+    logger.debug('✅ Product statistics loaded:', productStats.value.length)
     
   } catch (err: any) {
     console.error('❌ Error loading product statistics:', err)

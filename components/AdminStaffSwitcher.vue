@@ -118,7 +118,7 @@ const loadStaffList = async () => {
       throw new Error('User has no tenant assigned')
     }
 
-    console.log('🔍 AdminStaffSwitcher - Current tenant_id:', tenantId)
+    logger.debug('🔍 AdminStaffSwitcher - Current tenant_id:', tenantId)
 
     const { data, error } = await supabase
       .from('users')
@@ -130,7 +130,7 @@ const loadStaffList = async () => {
 
     if (error) throw error
     staffList.value = data || []
-    console.log('✅ Staff list loaded for tenant:', staffList.value.length, 'staff members')
+    logger.debug('✅ Staff list loaded for tenant:', staffList.value.length, 'staff members')
   } catch (err) {
     console.error('❌ Error loading staff list:', err)
   } finally {
@@ -145,7 +145,7 @@ const onStaffChange = () => {
 
 // Initialize
 onMounted(() => {
-  console.log('🔍 AdminStaffSwitcher mounted:', {
+  logger.debug('🔍 AdminStaffSwitcher mounted:', {
     isAdmin: isAdmin.value,
     canUseStaffSwitcher: canUseStaffSwitcher.value,
     currentUser: currentUser.value,
@@ -155,7 +155,7 @@ onMounted(() => {
   // Wait for user to be loaded
   if (currentUser.value) {
     if (canUseStaffSwitcher.value) {
-      console.log('🔥 Loading staff list for admin/staff')
+      logger.debug('🔥 Loading staff list for admin/staff')
       loadStaffList()
       
       // Set initial selection based on user role
@@ -173,18 +173,18 @@ onMounted(() => {
         }
       }
     } else {
-      console.log('⚠️ AdminStaffSwitcher: User cannot use staff switcher, not loading staff list')
+      logger.debug('⚠️ AdminStaffSwitcher: User cannot use staff switcher, not loading staff list')
     }
   } else {
-    console.log('⏳ AdminStaffSwitcher: User not loaded yet, waiting...')
+    logger.debug('⏳ AdminStaffSwitcher: User not loaded yet, waiting...')
   }
 })
 
 // Watch for currentUser changes
 watch(() => currentUser.value, (newUser) => {
-  console.log('🔄 AdminStaffSwitcher - currentUser changed:', newUser)
+  logger.debug('🔄 AdminStaffSwitcher - currentUser changed:', newUser)
   if (newUser && canUseStaffSwitcher.value) {
-    console.log('🔥 User loaded, loading staff list for admin/staff')
+    logger.debug('🔥 User loaded, loading staff list for admin/staff')
     loadStaffList()
     
     // Set initial selection based on user role

@@ -460,7 +460,7 @@ const loadInvitation = async () => {
     lastName.value = data.last_name || ''
     email.value = data.email || ''
     phone.value = data.phone || ''
-    console.log('✅ Invitation loaded:', data)
+    logger.debug('✅ Invitation loaded:', data)
 
     // Load categories if business type is driving_school
     const { data: tenant } = await supabase
@@ -518,7 +518,7 @@ const register = async () => {
     }
 
     const userId = response.userId
-    console.log('✅ Registration successful! User ID:', userId)
+    logger.debug('✅ Registration successful! User ID:', userId)
 
     // Upload license files if present
     if (userId && (licenseFrontFile.value || licenseBackFile.value)) {
@@ -529,7 +529,7 @@ const register = async () => {
         if (licenseBackFile.value) formData.append('backFile', licenseBackFile.value)
         
         const uploadResult = await $fetch('/api/admin/upload-license', { method: 'POST', body: formData })
-        console.log('✅ License files uploaded successfully:', uploadResult)
+        logger.debug('✅ License files uploaded successfully:', uploadResult)
       } catch (uploadErr: any) {
         console.warn('⚠️ License upload failed (non-fatal):', uploadErr)
         // Note: Registration was successful, only file upload failed
@@ -542,7 +542,7 @@ const register = async () => {
     
     // Auto-login after successful registration
     try {
-      console.log('🔑 Auto-login after registration...')
+      logger.debug('🔑 Auto-login after registration...')
       const { error: loginError } = await supabase.auth.signInWithPassword({
         email: email.value,
         password: password.value
@@ -560,7 +560,7 @@ const register = async () => {
           }
         }, 2000)
       } else {
-        console.log('✅ Auto-login successful, redirecting to dashboard...')
+        logger.debug('✅ Auto-login successful, redirecting to dashboard...')
         // Redirect to staff dashboard after short delay
         setTimeout(() => {
           router.push('/dashboard')

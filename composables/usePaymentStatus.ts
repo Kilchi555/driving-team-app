@@ -74,7 +74,7 @@ export const usePaymentStatus = () => {
     isUpdating.value = true
     
     try {
-      console.log('🔄 Updating payment status:', update)
+      logger.debug('🔄 Updating payment status:', update)
       
       // Update payment record
       const { error: paymentError } = await supabase
@@ -117,7 +117,7 @@ export const usePaymentStatus = () => {
         await updateAppointmentPaymentStatus(update.payment_id, true)
       }
       
-      console.log('✅ Payment status updated successfully')
+      logger.debug('✅ Payment status updated successfully')
       return true
       
     } catch (error: any) {
@@ -156,7 +156,7 @@ export const usePaymentStatus = () => {
       if (appointmentError) {
         console.error('❌ Error updating appointment payment status:', appointmentError)
       } else {
-        console.log('✅ Appointment payment status updated')
+        logger.debug('✅ Appointment payment status updated')
       }
       
     } catch (error: any) {

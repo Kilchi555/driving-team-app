@@ -5,10 +5,10 @@ supabase.storage.listBuckets().then(result => {
   if (result.error) {
     console.error('❌ Storage error:', result.error);
   } else {
-    console.log('✅ Available buckets:', result.data.map(b => b.name));
+    logger.debug('✅ Available buckets:', result.data.map(b => b.name));
     const hasUserDocs = result.data.find(b => b.name === 'user-documents');
     if (hasUserDocs) {
-      console.log('✅ user-documents bucket found!');
+      logger.debug('✅ user-documents bucket found!');
     } else {
       console.error('❌ user-documents bucket missing');
     }

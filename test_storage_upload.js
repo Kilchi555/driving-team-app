@@ -2,7 +2,7 @@
 // This tests if the Supabase Storage upload functionality works
 
 async function testStorageUpload() {
-  console.log('🧪 Testing Supabase Storage Upload...');
+  logger.debug('🧪 Testing Supabase Storage Upload...');
   
   try {
     // Get Supabase client
@@ -14,7 +14,7 @@ async function testStorageUpload() {
     }
     
     // Test 1: Check if user-documents bucket exists
-    console.log('📁 Checking user-documents bucket...');
+    logger.debug('📁 Checking user-documents bucket...');
     const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
     
     if (bucketsError) {
@@ -28,14 +28,14 @@ async function testStorageUpload() {
       return;
     }
     
-    console.log('✅ user-documents bucket exists:', userDocsBucket);
+    logger.debug('✅ user-documents bucket exists:', userDocsBucket);
     
     // Test 2: Create a test file
     const testContent = 'Test upload content';
     const testFile = new Blob([testContent], { type: 'text/plain' });
     const testFileName = `test_upload_${Date.now()}.txt`;
     
-    console.log('📤 Testing upload with test file:', testFileName);
+    logger.debug('📤 Testing upload with test file:', testFileName);
     
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('user-documents')
@@ -49,14 +49,14 @@ async function testStorageUpload() {
       return;
     }
     
-    console.log('✅ Upload test successful:', uploadData);
+    logger.debug('✅ Upload test successful:', uploadData);
     
     // Test 3: Get public URL
     const { data: urlData } = supabase.storage
       .from('user-documents')
       .getPublicUrl(`test/${testFileName}`);
     
-    console.log('✅ Public URL generated:', urlData.publicUrl);
+    logger.debug('✅ Public URL generated:', urlData.publicUrl);
     
     // Test 4: Clean up test file
     const { error: deleteError } = await supabase.storage
@@ -66,10 +66,10 @@ async function testStorageUpload() {
     if (deleteError) {
       console.warn('⚠️ Could not delete test file:', deleteError);
     } else {
-      console.log('✅ Test file cleaned up');
+      logger.debug('✅ Test file cleaned up');
     }
     
-    console.log('🎉 Storage upload test completed successfully!');
+    logger.debug('🎉 Storage upload test completed successfully!');
     
   } catch (error) {
     console.error('❌ Storage test failed:', error);

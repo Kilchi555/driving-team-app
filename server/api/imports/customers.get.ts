@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
   const supabaseAdmin = getSupabaseAdmin()
 
   try {
-    console.log('🔍 Search parameters:', { tenantId, batchId, search, searchColumn, limit, offset })
+    logger.debug('🔍 Search parameters:', { tenantId, batchId, search, searchColumn, limit, offset })
     
     // First get the total count
     let countQuery = supabaseAdmin
@@ -44,11 +44,11 @@ export default defineEventHandler(async (event) => {
 
     if (search) {
       if (searchColumn) {
-        console.log('🔎 customers count - column specific search:', searchColumn, search)
+        logger.debug('🔎 customers count - column specific search:', searchColumn, search)
         // Column-specific search
         countQuery = countQuery.ilike(`raw_json->>${searchColumn}`, `%${search}%`)
       } else {
-        console.log('🔎 customers count - general search:', search)
+        logger.debug('🔎 customers count - general search:', search)
         // Search across all major columns dynamically
         const searchTerm = `%${search}%`
         countQuery = countQuery.or(`raw_json->>Id.ilike.${searchTerm},raw_json->>Datum.ilike.${searchTerm},raw_json->>Titel.ilike.${searchTerm},raw_json->>E-Mail.ilike.${searchTerm},raw_json->>Status.ilike.${searchTerm},raw_json->>Schüler.ilike.${searchTerm},raw_json->>Institution.ilike.${searchTerm},raw_json->>Erstellt von.ilike.${searchTerm},raw_json->>Auftragsnummer.ilike.${searchTerm}`)
@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
 
     const { count, error: countError } = await countQuery
 
-    console.log('📊 Count result:', { count, error: countError })
+    logger.debug('📊 Count result:', { count, error: countError })
 
     if (countError) {
       console.error('Error counting imported customers:', countError)
@@ -81,11 +81,11 @@ export default defineEventHandler(async (event) => {
 
     if (search) {
       if (searchColumn) {
-        console.log('🔎 customers data - column specific search:', searchColumn, search)
+        logger.debug('🔎 customers data - column specific search:', searchColumn, search)
         // Column-specific search
         dataQuery = dataQuery.ilike(`raw_json->>${searchColumn}`, `%${search}%`)
       } else {
-        console.log('🔎 customers data - general search:', search)
+        logger.debug('🔎 customers data - general search:', search)
         // Search across all major columns dynamically
         const searchTerm = `%${search}%`
         dataQuery = dataQuery.or(`raw_json->>Id.ilike.${searchTerm},raw_json->>Datum.ilike.${searchTerm},raw_json->>Titel.ilike.${searchTerm},raw_json->>E-Mail.ilike.${searchTerm},raw_json->>Status.ilike.${searchTerm},raw_json->>Schüler.ilike.${searchTerm},raw_json->>Institution.ilike.${searchTerm},raw_json->>Erstellt von.ilike.${searchTerm},raw_json->>Auftragsnummer.ilike.${searchTerm}`)
@@ -96,7 +96,7 @@ export default defineEventHandler(async (event) => {
       .range(offset, offset + limit - 1)
       .order('created_at', { ascending: false })
 
-    console.log('📋 Data result:', { dataLength: data?.length, error })
+    logger.debug('📋 Data result:', { dataLength: data?.length, error })
 
     if (error) {
       console.error('Error fetching imported customers:', error)

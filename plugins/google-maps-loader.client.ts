@@ -15,7 +15,7 @@ export default defineNuxtPlugin(() => {
 
   // Check if script is already loaded
   if (window.google?.maps) {
-    console.log('✅ Google Maps already loaded')
+    logger.debug('✅ Google Maps already loaded')
     return
   }
 
@@ -26,7 +26,7 @@ export default defineNuxtPlugin(() => {
   script.defer = true
 
   script.onload = () => {
-    console.log('✅ Google Maps API loaded successfully')
+    logger.debug('✅ Google Maps API loaded successfully')
   }
 
   script.onerror = () => {

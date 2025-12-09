@@ -37,7 +37,7 @@ export const useDocumentRequirements = () => {
     loading.value = true
 
     try {
-      console.log('🔍 Loading document requirements for categories:', studentCategories)
+      logger.debug('🔍 Loading document requirements for categories:', studentCategories)
 
       // Lade Kategorien mit ihren Dokumentenanforderungen
       const { data: categories, error } = await supabase
@@ -51,7 +51,7 @@ export const useDocumentRequirements = () => {
         throw error
       }
 
-      console.log('✅ Categories loaded:', categories)
+      logger.debug('✅ Categories loaded:', categories)
 
       const allRequirements: DocumentRequirement[] = []
       const addedDocuments = new Set<string>()
@@ -61,7 +61,7 @@ export const useDocumentRequirements = () => {
         const requirements = category.document_requirements as CategoryDocumentRequirements
         if (!requirements) return
 
-        console.log(`📋 Processing requirements for ${category.code}:`, requirements)
+        logger.debug(`📋 Processing requirements for ${category.code}:`, requirements)
 
         // Füge erforderliche Dokumente hinzu
         requirements.required?.forEach(req => {
@@ -116,7 +116,7 @@ export const useDocumentRequirements = () => {
         })
       })
 
-      console.log('📄 Final document requirements:', allRequirements)
+      logger.debug('📄 Final document requirements:', allRequirements)
       return allRequirements
 
     } catch (error) {

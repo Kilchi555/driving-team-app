@@ -22,7 +22,7 @@ const { user, userRole, isClient } = storeToRefs(authStore)
 
 watch([user, userRole], ([newUser, newRole]) => {
   if (newUser && !isClient.value) {
-    console.log('🔄 User is not a client, redirecting to main dashboard')
+    logger.debug('🔄 User is not a client, redirecting to main dashboard')
     navigateTo('/')
   }
 }, { immediate: true })

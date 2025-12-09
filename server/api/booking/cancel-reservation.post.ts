@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const { reservation_id } = body
 
-    console.log('🗑️ Cancelling reservation:', reservation_id)
+    logger.debug('🗑️ Cancelling reservation:', reservation_id)
 
     if (!reservation_id) {
       throw createError({
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Booking reservation cancelled:', reservation_id)
+    logger.debug('✅ Booking reservation cancelled:', reservation_id)
 
     return {
       success: true

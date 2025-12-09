@@ -407,7 +407,7 @@ const applyDiscountCode = async () => {
         discount_amount_rappen: result.discount_amount_rappen
       })
       
-      console.log('✅ Discount code applied:', result.discount.name)
+      logger.debug('✅ Discount code applied:', result.discount.name)
       
       // Clear discount code after successful application
       setTimeout(() => {
@@ -567,11 +567,11 @@ const formatPrice = (rappen: number): string => {
 
 // Recalculate all percentage discounts when subtotal changes
 const recalculateDiscounts = () => {
-  console.log('🔄 Recalculating discounts, subtotal:', subtotalRappen.value)
-  console.log('📋 Applied discounts:', Array.from(appliedDiscounts.value.values()))
+  logger.debug('🔄 Recalculating discounts, subtotal:', subtotalRappen.value)
+  logger.debug('📋 Applied discounts:', Array.from(appliedDiscounts.value.values()))
   
   appliedDiscounts.value.forEach((discount, discountId) => {
-    console.log(`🔍 Checking discount ${discount.name}:`, {
+    logger.debug(`🔍 Checking discount ${discount.name}:`, {
       discount_type: discount.discount_type,
       discount_value: discount.discount_value,
       current_amount: discount.discount_amount_rappen
@@ -586,7 +586,7 @@ const recalculateDiscounts = () => {
         newDiscountAmount = discount.max_discount_rappen
       }
       
-      console.log(`📊 Recalculating ${discount.name}: ${discount.discount_value}% of ${subtotalRappen.value} = ${newDiscountAmount}`)
+      logger.debug(`📊 Recalculating ${discount.name}: ${discount.discount_value}% of ${subtotalRappen.value} = ${newDiscountAmount}`)
       
       // Update the discount amount
       appliedDiscounts.value.set(discountId, {
@@ -594,7 +594,7 @@ const recalculateDiscounts = () => {
         discount_amount_rappen: newDiscountAmount
       })
     } else {
-      console.log(`💰 Fixed discount ${discount.name}: ${discount.discount_amount_rappen} (no recalculation needed)`)
+      logger.debug(`💰 Fixed discount ${discount.name}: ${discount.discount_amount_rappen} (no recalculation needed)`)
     }
   })
   
@@ -654,7 +654,7 @@ watch(() => props.initialDiscounts, (newDiscounts) => {
 
 // Initialize from props
 onMounted(() => {
-  console.log('🔄 PaymentComponent mounted, discountCode:', discountCode.value)
+  logger.debug('🔄 PaymentComponent mounted, discountCode:', discountCode.value)
   
   if (props.initialProducts) {
     props.initialProducts.forEach(product => {

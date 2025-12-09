@@ -37,7 +37,7 @@ export class WalleeProvider implements IPaymentProvider {
 
   async createTransaction(request: CreateTransactionRequest): Promise<TransactionResponse> {
     try {
-      console.log('🔄 [Wallee] Creating transaction...', { orderId: request.orderId })
+      logger.debug('🔄 [Wallee] Creating transaction...', { orderId: request.orderId })
 
       // SDK Konfiguration
       const sdkConfig = getWalleeSDKConfig(this.spaceId, this.userId, this.apiSecret)
@@ -94,7 +94,7 @@ export class WalleeProvider implements IPaymentProvider {
       )
       const paymentPageUrl = paymentPageResponse.body
 
-      console.log('✅ [Wallee] Transaction created:', {
+      logger.debug('✅ [Wallee] Transaction created:', {
         id: transactionCreate.id,
         state: transactionCreate.state
       })
@@ -123,7 +123,7 @@ export class WalleeProvider implements IPaymentProvider {
 
   async processWebhook(payload: any): Promise<WebhookPayload> {
     try {
-      console.log('🔄 [Wallee] Processing webhook...', { entityId: payload.entityId })
+      logger.debug('🔄 [Wallee] Processing webhook...', { entityId: payload.entityId })
 
       // Wallee Webhook Structure
       const entityId = payload.entityId
@@ -172,7 +172,7 @@ export class WalleeProvider implements IPaymentProvider {
 
   async createRefund(request: RefundRequest): Promise<RefundResponse> {
     try {
-      console.log('🔄 [Wallee] Creating refund...', { transactionId: request.transactionId })
+      logger.debug('🔄 [Wallee] Creating refund...', { transactionId: request.transactionId })
 
       const sdkConfig = getWalleeSDKConfig(this.spaceId, this.userId, this.apiSecret)
       const refundService = new Wallee.api.RefundService(sdkConfig)
@@ -188,7 +188,7 @@ export class WalleeProvider implements IPaymentProvider {
       const response = await refundService.refund(this.spaceId, refund)
       const refundResult = response.body
 
-      console.log('✅ [Wallee] Refund created:', refundResult.id)
+      logger.debug('✅ [Wallee] Refund created:', refundResult.id)
 
       return {
         success: true,

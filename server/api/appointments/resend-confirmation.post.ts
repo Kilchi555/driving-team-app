@@ -60,8 +60,8 @@ export default defineEventHandler(async (event) => {
 
     // TODO: Send confirmation email
     // For now, just return success - email can be sent manually
-    console.log('✅ Appointment reset, confirmation email should be sent to:', appointment.users?.email)
-    console.log('📧 Confirmation link:', `/confirm/${confirmationToken}`)
+    logger.debug('✅ Appointment reset, confirmation email should be sent to:', appointment.users?.email)
+    logger.debug('📧 Confirmation link:', `/confirm/${confirmationToken}`)
 
     return {
       success: true,

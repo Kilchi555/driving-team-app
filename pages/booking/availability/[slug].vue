@@ -771,7 +771,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
     minDate.setDate(minDate.getDate() - 1)
     maxDate.setDate(maxDate.getDate() + 1)
     
-    console.log('🔍 Batch checking availability for staff:', staffId, 'from', minDate.toISOString(), 'to', maxDate.toISOString())
+    logger.debug('🔍 Batch checking availability for staff:', staffId, 'from', minDate.toISOString(), 'to', maxDate.toISOString())
     
     // Load all appointments for this staff in the extended date range
     // Include ALL statuses except those that are logically deleted
@@ -790,7 +790,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       return timeSlots.map(() => true) // Assume available on error
     }
     
-    console.log('📊 Appointments loaded for batch check (FULL):', appointments?.map(a => ({
+    logger.debug('📊 Appointments loaded for batch check (FULL):', appointments?.map(a => ({
       id: a.id.substring(0, 8),
       start_time: a.start_time,
       end_time: a.end_time,
@@ -834,7 +834,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
         externalBusyTimes = data.external_busy_times || []
         workingHoursFromAPI = data.working_hours || []
         appointmentsFromAPI = data.appointments || []
-        console.log('✅ Fetched availability data via API:', {
+        logger.debug('✅ Fetched availability data via API:', {
           external_busy_times: externalBusyTimes.length,
           working_hours: workingHoursFromAPI.length,
           appointments: appointmentsFromAPI.length
@@ -850,7 +850,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
     const finalWorkingHours = (workingHoursFromAPI && workingHoursFromAPI.length > 0) ? workingHoursFromAPI : (workingHours || [])
     const finalAppointments = (appointmentsFromAPI && appointmentsFromAPI.length > 0) ? appointmentsFromAPI : (appointments || [])
     
-    console.log('📅 Found', finalAppointments.length, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', finalWorkingHours.length, 'working hours')
+    logger.debug('📅 Found', finalAppointments.length, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', finalWorkingHours.length, 'working hours')
     
     // Check each slot against appointments and working hours
     const availabilityResults = timeSlots.map(slot => {
@@ -864,7 +864,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       const dayWorkingHours = finalWorkingHours.find((wh: any) => wh.day_of_week === dayOfWeek)
       
       if (!dayWorkingHours) {
-        console.log('🚫 No working hours for day', dayOfWeek, '(Sunday=0)', slot.startTime.toLocaleDateString('de-DE'))
+        logger.debug('🚫 No working hours for day', dayOfWeek, '(Sunday=0)', slot.startTime.toLocaleDateString('de-DE'))
         return false // Not available if no working hours defined
       }
       
@@ -880,7 +880,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       
       // Debug 18:00 slot
       if (slot.startTime.getHours() === 17 && slot.startTime.getMinutes() === 0) {
-        console.log('🔍 DEBUG 17:00 UTC (18:00 CET) working hours check:', {
+        logger.debug('🔍 DEBUG 17:00 UTC (18:00 CET) working hours check:', {
           slotHour: slot.startTime.getHours(),
           slotTimeMinutes,
           startTimeMinutes,
@@ -891,7 +891,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
       }
       
       if (!withinWorkingHours) {
-        console.log('🚫 Slot outside working hours:', {
+        logger.debug('🚫 Slot outside working hours:', {
           slot: slot.startTime.toLocaleString('de-DE'),
           workingHours: `${dayWorkingHours.start_time} - ${dayWorkingHours.end_time}`,
           dayOfWeek: dayOfWeek,
@@ -930,7 +930,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
         const overlaps = slot.startTime < aptEndDate && slot.endTime > aptStartDate
         
         if (overlaps) {
-          console.log('⚠️ Time conflict detected (appointment):', {
+          logger.debug('⚠️ Time conflict detected (appointment):', {
             slot: `${slot.startTime.toLocaleString('de-DE')} - ${slot.endTime.toLocaleString('de-DE')}`,
             appointment: `${aptStartDate.toLocaleString('de-DE')} - ${aptEndDate.toLocaleString('de-DE')}`,
             appointmentTitle: apt.title,
@@ -974,7 +974,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
         const overlaps = slot.startTime < ebtEndDate && slot.endTime > ebtStartDate
         
         if (overlaps) {
-          console.log('⚠️ Time conflict detected (external busy time):', {
+          logger.debug('⚠️ Time conflict detected (external busy time):', {
             slot: `${slot.startTime.toLocaleString('de-DE')} - ${slot.endTime.toLocaleString('de-DE')}`,
             externalBusyTime: `${ebtStartDate.toLocaleString('de-DE')} - ${ebtEndDate.toLocaleString('de-DE')}`,
             eventTitle: ebt.event_title,
@@ -992,7 +992,7 @@ const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: D
     
     const availableCount = availabilityResults.filter(result => result).length
     const conflictCount = availabilityResults.filter(result => !result).length
-    console.log('✅ Batch availability check complete:', availableCount, 'available,', conflictCount, 'conflicts out of', timeSlots.length, 'total slots')
+    logger.debug('✅ Batch availability check complete:', availableCount, 'available,', conflictCount, 'conflicts out of', timeSlots.length, 'total slots')
     
     return availabilityResults
   } catch (err) {
@@ -1217,11 +1217,11 @@ const loadStaffForCategory = async () => {
     await loadBaseData(currentTenant.value.id)
     
     // Trigger external calendar sync for all staff
-    console.log('🔄 Triggering external calendar sync...')
+    logger.debug('🔄 Triggering external calendar sync...')
     await autoSyncCalendars()
     
     // Load staff categories from locations (available_categories + staff_ids)
-    console.log('📚 Building staff categories from locations data...')
+    logger.debug('📚 Building staff categories from locations data...')
     
     // Load all tenant locations to build staff category map
     const { data: tenantLocations, error: locationsError } = await supabase
@@ -1258,7 +1258,7 @@ const loadStaffForCategory = async () => {
       })
     }
     
-    console.log('📊 Built staff category map from locations:', Object.fromEntries(staffCategoryMap))
+    logger.debug('📊 Built staff category map from locations:', Object.fromEntries(staffCategoryMap))
     
     // Filter staff who can teach the selected category
     const capableStaff = activeStaff.value.filter((staff: any) => {
@@ -1272,8 +1272,8 @@ const loadStaffForCategory = async () => {
       available_locations: []
     }))
     
-    console.log('✅ Staff for category', filters.value.category_code, ':', availableStaff.value.length)
-    console.log('🔍 Capable staff:', capableStaff.map((s: any) => ({ 
+    logger.debug('✅ Staff for category', filters.value.category_code, ':', availableStaff.value.length)
+    logger.debug('🔍 Capable staff:', capableStaff.map((s: any) => ({ 
       id: s.id, 
       name: `${s.first_name} ${s.last_name}`, 
       categories: staffCategoryMap.get(s.id) || [] 
@@ -1290,7 +1290,7 @@ const loadStaffForCategory = async () => {
 const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
   try {
     isLoadingLocations.value = true
-    console.log('🔄 Loading locations for all staff...')
+    logger.debug('🔄 Loading locations for all staff...')
     
     // Load locations for all available staff in parallel
     const locationPromises = availableStaff.value.map(async (staff) => {
@@ -1320,18 +1320,18 @@ const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
           const hasCategory = availableCategories.includes(filters.value.category_code)
           
           if (!isStaffRegistered) {
-            console.log(`⏭️ Skipping location ${location.name} for ${staff.first_name} - staff not registered`)
+            logger.debug(`⏭️ Skipping location ${location.name} for ${staff.first_name} - staff not registered`)
             return false
           }
           
           if (!hasCategory) {
-            console.log(`⏭️ Skipping location ${location.name} for ${staff.first_name} - category ${filters.value.category_code} not available`)
+            logger.debug(`⏭️ Skipping location ${location.name} for ${staff.first_name} - category ${filters.value.category_code} not available`)
           }
           
           return hasCategory && isStaffRegistered
         })
         
-        console.log(`✅ Loaded ${filteredLocations.length}/${staffLocations?.length || 0} locations for ${staff.first_name} ${staff.last_name} (category: ${filters.value.category_code})`)
+        logger.debug(`✅ Loaded ${filteredLocations.length}/${staffLocations?.length || 0} locations for ${staff.first_name} ${staff.last_name} (category: ${filters.value.category_code})`)
         return { staffId: staff.id, locations: filteredLocations }
       } catch (err) {
         console.error(`❌ Error loading locations for ${staff.first_name}:`, err)
@@ -1353,14 +1353,14 @@ const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
       }
     })
     
-    console.log('✅ All standard locations loaded for staff')
+    logger.debug('✅ All standard locations loaded for staff')
     
     // Only generate time slots if explicitly requested
     if (generateTimeSlots) {
-      console.log('🕒 Generating time slots for all staff-location combinations (explicit)')
+      logger.debug('🕒 Generating time slots for all staff-location combinations (explicit)')
       await loadTimeSlotsForAllStaff()
     } else {
-      console.log('⏭️ Skipping time slot generation at category step')
+      logger.debug('⏭️ Skipping time slot generation at category step')
     }
   } catch (err) {
     console.error('❌ Error loading locations for all staff:', err)
@@ -1372,7 +1372,7 @@ const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
 const loadTimeSlotsForAllStaff = async () => {
   try {
     isLoadingTimeSlots.value = true
-    console.log('🕒 Loading time slots for all staff-location combinations...')
+    logger.debug('🕒 Loading time slots for all staff-location combinations...')
     
     // Generate time slots for the next 4 weeks for each staff-location combination
     const timeSlotPromises: Promise<any>[] = []
@@ -1388,7 +1388,7 @@ const loadTimeSlotsForAllStaff = async () => {
     // Wait for all time slot generation to complete
     await Promise.all(timeSlotPromises)
     
-    console.log('✅ All time slots generated')
+    logger.debug('✅ All time slots generated')
   } catch (err) {
     console.error('❌ Error loading time slots for all staff:', err)
   } finally {
@@ -1410,7 +1410,7 @@ const generateTimeSlotsForStaffLocation = async (staff: any, location: any) => {
     const minAdvanceHours = parseInt(tenantSettings.value.min_advance_booking_hours || '2')
     const maxAdvanceDays = parseInt(tenantSettings.value.max_advance_booking_days || '30')
     
-    console.log(`🕒 Generating slots for ${staff.first_name} at ${location.name} with settings:`, {
+    logger.debug(`🕒 Generating slots for ${staff.first_name} at ${location.name} with settings:`, {
       workingStart, workingEnd, slotInterval, bufferMinutes, minAdvanceHours, maxAdvanceDays
     })
     
@@ -1429,7 +1429,7 @@ const generateTimeSlotsForStaffLocation = async (staff: any, location: any) => {
       
       // Determine day mode: Free-Day or Constrained
       const dayMode = await determineDayMode(staff.id, targetDate)
-      console.log(`📅 ${targetDate.toDateString()}: ${dayMode} mode`)
+      logger.debug(`📅 ${targetDate.toDateString()}: ${dayMode} mode`)
       
       if (dayMode === 'free-day') {
         // Free-Day: Generate slots for entire working day
@@ -1451,7 +1451,7 @@ const generateTimeSlotsForStaffLocation = async (staff: any, location: any) => {
       }
     }
     
-    console.log(`✅ Generated ${timeSlots.length} time slots for ${staff.first_name} at ${location.name}`)
+    logger.debug(`✅ Generated ${timeSlots.length} time slots for ${staff.first_name} at ${location.name}`)
   } catch (err) {
     console.error(`❌ Error generating time slots for ${staff.first_name} at ${location.name}:`, err)
   }
@@ -1460,7 +1460,7 @@ const generateTimeSlotsForStaffLocation = async (staff: any, location: any) => {
 const loadTimeSlotsForStaffLocation = async (staff: any, location: any) => {
   try {
     // This function is now handled by loadTimeSlotsForAllStaff
-    console.log('🕒 Time slots already loaded automatically')
+    logger.debug('🕒 Time slots already loaded automatically')
   } catch (err) {
     console.error('❌ Error loading time slots:', err)
   }
@@ -1665,14 +1665,14 @@ const checkPickupAvailability = async () => {
   
   try {
     const categoryCode = selectedCategory.value.code
-    console.log('🔍 Checking pickup for category:', categoryCode)
-    console.log('📍 Available locations:', availableLocations.value.length)
+    logger.debug('🔍 Checking pickup for category:', categoryCode)
+    logger.debug('📍 Available locations:', availableLocations.value.length)
     
     // Find locations that offer pickup for this category
     const pickupLocations = availableLocations.value.filter((location: any) => {
       const categoryPickupSettings = location.category_pickup_settings || {}
       const hasPickup = categoryPickupSettings[categoryCode]?.enabled === true
-      console.log(`  Location "${location.name}":`, {
+      logger.debug(`  Location "${location.name}":`, {
         address: location.address,
         categoryPickupSettings,
         hasPickupForCategory: hasPickup
@@ -1680,7 +1680,7 @@ const checkPickupAvailability = async () => {
       return hasPickup
     })
     
-    console.log('✅ Locations with pickup for', categoryCode, ':', pickupLocations.length)
+    logger.debug('✅ Locations with pickup for', categoryCode, ':', pickupLocations.length)
     
     if (pickupLocations.length === 0) {
       pickupCheckResult.value = {
@@ -1699,8 +1699,8 @@ const checkPickupAvailability = async () => {
       const categoryPickupSettings = location.category_pickup_settings[categoryCode]
       const maxRadius = categoryPickupSettings.radius_minutes || 15
       
-      console.log(`🚗 Checking location "${location.name}":`)
-      console.log(`  Max radius: ${maxRadius} min`)
+      logger.debug(`🚗 Checking location "${location.name}":`)
+      logger.debug(`  Max radius: ${maxRadius} min`)
       
       // Extract PLZ from location address (assuming format "Street, PLZ City")
       const locationPLZ = extractPLZFromAddress(location.address)
@@ -1710,7 +1710,7 @@ const checkPickupAvailability = async () => {
         continue
       }
       
-      console.log(`  Location PLZ: ${locationPLZ}, Customer PLZ: ${pickupPLZ.value}`)
+      logger.debug(`  Location PLZ: ${locationPLZ}, Customer PLZ: ${pickupPLZ.value}`)
       
       // Call API to get travel time
       const response = await $fetch<{
@@ -1728,10 +1728,10 @@ const checkPickupAvailability = async () => {
         }
       })
       
-      console.log(`  Travel time: ${response.travelTime} min (max: ${maxRadius} min)`)
+      logger.debug(`  Travel time: ${response.travelTime} min (max: ${maxRadius} min)`)
       
       if (response.travelTime !== null && response.travelTime !== undefined && response.travelTime <= maxRadius) {
-        console.log(`  ✅ Within radius!`)
+        logger.debug(`  ✅ Within radius!`)
         if (response.travelTime < shortestTime) {
           shortestTime = response.travelTime
           closestLocation = {
@@ -1741,7 +1741,7 @@ const checkPickupAvailability = async () => {
           }
         }
       } else {
-        console.log(`  ❌ Outside radius (${response.travelTime} > ${maxRadius})`)
+        logger.debug(`  ❌ Outside radius (${response.travelTime} > ${maxRadius})`)
       }
     }
     
@@ -1822,7 +1822,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
     clearAppointmentsCache()
     
     const startTime = Date.now()
-    console.log('🕒 Generating time slots for specific combination...')
+    logger.debug('🕒 Generating time slots for specific combination...')
     
     const timeSlots: any[] = []
     const slotTimes: { startTime: Date, endTime: Date }[] = []
@@ -1833,7 +1833,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
     // Get UTC start of today (00:00 UTC)
     const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))
     
-    console.log('📅 Generating slots starting from:', todayUTC.toISOString(), '(UTC)')
+    logger.debug('📅 Generating slots starting from:', todayUTC.toISOString(), '(UTC)')
     
     // Generate slots for the next 4 weeks starting from today
     for (let week = 0; week < 4; week++) {
@@ -1855,7 +1855,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
             const thirtyMinutesAgo = new Date()
             thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30)
             if (slotTime < thirtyMinutesAgo) {
-              console.log('⏰ Skipping past slot (UTC):', slotTime.toISOString(), '(30+ minutes ago)')
+              logger.debug('⏰ Skipping past slot (UTC):', slotTime.toISOString(), '(30+ minutes ago)')
               continue
             }
             
@@ -1883,7 +1883,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
             
             // Debug: Log slot creation for today
             if (targetDateUTC.toUTCString().split(' ').slice(0, 4).join(' ') === todayUTC.toUTCString().split(' ').slice(0, 4).join(' ')) {
-              console.log('📅 Creating slot for today (UTC):', slotTime.toISOString(), 'Local display:', new Date(slotTime).toLocaleString('de-DE'))
+              logger.debug('📅 Creating slot for today (UTC):', slotTime.toISOString(), 'Local display:', new Date(slotTime).toLocaleString('de-DE'))
             }
             
             // Convert UTC slot time to local Date for display
@@ -1913,12 +1913,12 @@ const generateTimeSlotsForSpecificCombination = async () => {
       }
     }
     
-    console.log('📊 Generated', timeSlots.length, 'time slots for availability check')
+    logger.debug('📊 Generated', timeSlots.length, 'time slots for availability check')
     
     // Debug: Check if 14:00 slots were generated
     const slotsWith14 = timeSlots.filter(s => s.time_formatted === '14:00' || s.time_formatted === '13:00')
     if (slotsWith14.length > 0) {
-      console.log('🔍 Found', slotsWith14.length, '13:00/14:00 slots:', slotsWith14.map(s => ({ date: s.date_formatted, time: s.time_formatted, id: s.id })))
+      logger.debug('🔍 Found', slotsWith14.length, '13:00/14:00 slots:', slotsWith14.map(s => ({ date: s.date_formatted, time: s.time_formatted, id: s.id })))
     }
     
     // Batch check availability for all slots
@@ -1933,17 +1933,17 @@ const generateTimeSlotsForSpecificCombination = async () => {
       // Debug: Check if 14:00 slots are marked as available after batch check
       const slotsWith14After = timeSlots.filter(s => s.time_formatted === '14:00' || s.time_formatted === '13:00')
       if (slotsWith14After.length > 0) {
-        console.log('🔍 After availability check, 13:00/14:00 slots:', slotsWith14After.map(s => ({ date: s.date_formatted, time: s.time_formatted, is_available: s.is_available })))
+        logger.debug('🔍 After availability check, 13:00/14:00 slots:', slotsWith14After.map(s => ({ date: s.date_formatted, time: s.time_formatted, is_available: s.is_available })))
       }
     }
     
     let filteredSlots = timeSlots.filter(slot => slot.is_available)
-    console.log(`✅ Generated ${filteredSlots.length} available time slots (before time windows & travel time validation)`)
+    logger.debug(`✅ Generated ${filteredSlots.length} available time slots (before time windows & travel time validation)`)
     
     // Debug: Check if 18:00 slots exist and their availability
     const slots18 = timeSlots.filter(s => s.time_formatted === '18:00')
     if (slots18.length > 0) {
-      console.log('🔍 18:00 slots found:', slots18.map(s => ({
+      logger.debug('🔍 18:00 slots found:', slots18.map(s => ({
         date: s.date_formatted,
         is_available: s.is_available,
         full: s
@@ -1951,7 +1951,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
     }
     
     // Debug: Check time windows
-    console.log('🔍 Checking time windows:', {
+    logger.debug('🔍 Checking time windows:', {
       hasLocation: !!selectedLocation.value,
       locationName: selectedLocation.value?.name,
       timeWindows: selectedLocation.value?.time_windows,
@@ -1974,14 +1974,14 @@ const generateTimeSlotsForSpecificCombination = async () => {
         const isValid = isWithinTimeWindows(slotDate, selectedLocation.value.time_windows)
         
         if (!isValid) {
-          console.log(`❌ Slot outside time windows: ${slot.start_time}`)
+          logger.debug(`❌ Slot outside time windows: ${slot.start_time}`)
         }
         
         return isValid
       })
       
       const blockedByTimeWindows = beforeTimeWindows - filteredSlots.length
-      console.log(`🕒 Time windows validation: ${blockedByTimeWindows} slots blocked, ${filteredSlots.length} remaining`)
+      logger.debug(`🕒 Time windows validation: ${blockedByTimeWindows} slots blocked, ${filteredSlots.length} remaining`)
     }
     
     // Apply Minimum Lead Time Validation
@@ -1991,9 +1991,9 @@ const generateTimeSlotsForSpecificCombination = async () => {
       const now = new Date()
       const minimumBookingTime = new Date(now.getTime() + minimumLeadTimeHours * 60 * 60 * 1000)
       
-      console.log(`⏰ Applying minimum lead time validation: ${minimumLeadTimeHours} hours`)
-      console.log(`⏰ Current time: ${now.toLocaleString('de-CH')}`)
-      console.log(`⏰ Minimum booking time: ${minimumBookingTime.toLocaleString('de-CH')}`)
+      logger.debug(`⏰ Applying minimum lead time validation: ${minimumLeadTimeHours} hours`)
+      logger.debug(`⏰ Current time: ${now.toLocaleString('de-CH')}`)
+      logger.debug(`⏰ Minimum booking time: ${minimumBookingTime.toLocaleString('de-CH')}`)
       
       filteredSlots = filteredSlots.filter(slot => {
         // Parse the ISO time string to Date
@@ -2006,14 +2006,14 @@ const generateTimeSlotsForSpecificCombination = async () => {
         const isValid = slotDate >= minimumBookingTime
         
         if (!isValid) {
-          console.log(`❌ Slot too soon (minimum ${minimumLeadTimeHours}h lead time): ${slot.start_time}`)
+          logger.debug(`❌ Slot too soon (minimum ${minimumLeadTimeHours}h lead time): ${slot.start_time}`)
         }
         
         return isValid
       })
       
       const blockedByLeadTime = beforeLeadTime - filteredSlots.length
-      console.log(`⏰ Lead time validation: ${blockedByLeadTime} slots blocked, ${filteredSlots.length} remaining`)
+      logger.debug(`⏰ Lead time validation: ${blockedByLeadTime} slots blocked, ${filteredSlots.length} remaining`)
     }
     
     // Apply Travel-Time Validation if location has pickup settings
@@ -2030,7 +2030,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
             const categorySettings = selectedLocation.value.category_pickup_settings[selectedCategory.value.code]
             if (categorySettings && categorySettings.pickup_radius_minutes) {
               maxTravelTime = categorySettings.pickup_radius_minutes
-              console.log(`📍 Using pickup radius for category ${selectedCategory.value.code}: ${maxTravelTime} min`)
+              logger.debug(`📍 Using pickup radius for category ${selectedCategory.value.code}: ${maxTravelTime} min`)
             }
           }
           
@@ -2040,23 +2040,23 @@ const generateTimeSlotsForSpecificCombination = async () => {
           
           // Travel-time validation with proper request batching
           if (googleApiKey && typeof googleApiKey === 'string') {
-            console.log('🚗 Applying travel-time validation...')
+            logger.debug('🚗 Applying travel-time validation...')
             
             // Load appointments for all dates in the current view
             // This populates the appointmentsCache needed for travel time validation
             const uniqueDates = new Set<string>()
-            console.log('📅 Total filteredSlots before date extraction:', filteredSlots.length)
+            logger.debug('📅 Total filteredSlots before date extraction:', filteredSlots.length)
             filteredSlots.forEach(slot => {
               // Extract YYYY-MM-DD from either ISO format (2025-11-11T09:00:00.000Z) or local format (2025-11-11 09:00:00)
               const date = slot.start_time.split(/[T ]/)[0] // Split by T or space
-              console.log('📅 Extracting date from slot:', slot.start_time, '→', date)
+              logger.debug('📅 Extracting date from slot:', slot.start_time, '→', date)
               uniqueDates.add(date)
             })
             
             const datesArray = Array.from(uniqueDates)
-            console.log('📅 Unique dates extracted:', datesArray)
-            console.log('📅 Loading appointments for dates:', datesArray)
-            console.log('📅 Sample slots:', filteredSlots.slice(0, 3).map(s => ({ start: s.start_time, staff: s.staff_id })))
+            logger.debug('📅 Unique dates extracted:', datesArray)
+            logger.debug('📅 Loading appointments for dates:', datesArray)
+            logger.debug('📅 Sample slots:', filteredSlots.slice(0, 3).map(s => ({ start: s.start_time, staff: s.staff_id })))
             for (const date of datesArray) {
               // skipFutureFilter = true to load ALL appointments for travel-time validation
               await loadAppointments(date, currentTenant.value?.id, true)
@@ -2078,7 +2078,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
               )
               
               const validatedSlots = await Promise.race([validationPromise, timeoutPromise])
-              console.log(`✅ After travel-time validation: ${validatedSlots.length} slots remaining (was ${filteredSlots.length})`)
+              logger.debug(`✅ After travel-time validation: ${validatedSlots.length} slots remaining (was ${filteredSlots.length})`)
               filteredSlots = validatedSlots
             } catch (timeoutErr) {
               console.warn('⚠️ Travel-time validation timed out, showing all slots:', timeoutErr)
@@ -2095,7 +2095,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
     }
     
     availableTimeSlots.value = filteredSlots
-    console.log(`✅ Final available slots: ${availableTimeSlots.value.length}`)
+    logger.debug(`✅ Final available slots: ${availableTimeSlots.value.length}`)
   } catch (err) {
     console.error('❌ Error generating time slots:', err)
   } finally {
@@ -2105,7 +2105,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
 
 const selectTimeSlot = async (slot: any) => {
   selectedSlot.value = slot
-  console.log('✅ Time slot selected:', slot)
+  logger.debug('✅ Time slot selected:', slot)
   
   // Reserve the slot for 5 minutes
   const reserved = await reserveSlot()
@@ -2195,10 +2195,10 @@ const initializeAddressAutocomplete = () => {
         geometry: place.geometry
       }
       
-      console.log('✅ Address selected:', pickupAddressDetails.value)
+      logger.debug('✅ Address selected:', pickupAddressDetails.value)
     })
     
-    console.log('✅ Google Places Autocomplete initialized')
+    logger.debug('✅ Google Places Autocomplete initialized')
   } catch (error) {
     console.error('Error initializing autocomplete:', error)
   }
@@ -2279,26 +2279,26 @@ const isCreatingBooking = ref(false)
 const showSuccessModal = ref(false)
 const successMessage = ref({
   title: 'Termin erfolgreich gebucht!',
-  description: 'Ihr Termin wurde bestätigt und die Zahlung verarbeitet.'
+  description: 'Dein Termin wurde bestätigt und die Zahlung verarbeitet.'
 })
 
 // Confirm booking
 const confirmBooking = async () => {
   try {
-    console.log('🎯 Starting booking confirmation...')
+    logger.debug('🎯 Starting booking confirmation...')
     
     // Step 1: Check if user is authenticated
     const supabase = getSupabase()
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
-      console.log('ℹ️ User not authenticated, showing registration modal')
+      logger.debug('ℹ️ User not authenticated, showing registration modal')
       loginModalTab.value = 'register' // Show registration tab
       showLoginModal.value = true
       return
     }
     
-    console.log('✅ User authenticated:', user.id)
+    logger.debug('✅ User authenticated:', user.id)
     
     // Step 2: Get user details
     const { data: userData, error: userError } = await supabase
@@ -2313,7 +2313,7 @@ const confirmBooking = async () => {
       return
     }
     
-    console.log('✅ User data loaded:', userData)
+    logger.debug('✅ User data loaded:', userData)
     
     // Step 3: Check document requirements for category
     const categoryRequirements = selectedCategory.value.document_requirements
@@ -2327,7 +2327,7 @@ const confirmBooking = async () => {
       const alwaysRequired = requiredDocs.filter((doc: any) => doc.when_required === 'always')
       
       if (alwaysRequired.length > 0) {
-        console.log('📄 Category requires documents:', alwaysRequired)
+        logger.debug('📄 Category requires documents:', alwaysRequired)
         
         // Check which documents are missing
         const missingDocs = []
@@ -2344,13 +2344,13 @@ const confirmBooking = async () => {
         }
         
         if (missingDocs.length > 0) {
-          console.log('❌ Missing documents:', missingDocs)
+          logger.debug('❌ Missing documents:', missingDocs)
           requiredDocuments.value = missingDocs
           showDocumentUploadModal.value = true
           return
         }
         
-        console.log('✅ All required documents present')
+        logger.debug('✅ All required documents present')
       }
     }
     
@@ -2369,14 +2369,14 @@ const createAppointment = async (userData: any) => {
   isCreatingBooking.value = true
   
   try {
-    console.log('🔄 Creating appointment...')
+    logger.debug('🔄 Creating appointment...')
     
     // Check for collision one more time before creating
     const supabase = getSupabase()
     const startTime = new Date(selectedSlot.value.start_time).toISOString()
     const endTime = new Date(selectedSlot.value.end_time).toISOString()
     
-    console.log('🔍 Final collision check:', {
+    logger.debug('🔍 Final collision check:', {
       staff_id: selectedInstructor.value.id,
       start_time: startTime,
       end_time: endTime
@@ -2393,7 +2393,7 @@ const createAppointment = async (userData: any) => {
       .lt('start_time', endTime) // apt.start < slot.end
       .gt('end_time', startTime) // apt.end > slot.start
     
-    console.log('📋 Collision check result:', {
+    logger.debug('📋 Collision check result:', {
       conflicting_count: conflictingAppointments?.length || 0,
       conflicts: conflictingAppointments,
       error: collisionError
@@ -2421,7 +2421,7 @@ const createAppointment = async (userData: any) => {
       tenant_id: currentTenant.value.id
     }
     
-    console.log('📝 Appointment data:', appointmentData)
+    logger.debug('📝 Appointment data:', appointmentData)
     
     // Call API to create appointment
     const response = await $fetch<{
@@ -2434,11 +2434,11 @@ const createAppointment = async (userData: any) => {
       body: appointmentData
     })
     
-    console.log('✅ Appointment created:', response)
+    logger.debug('✅ Appointment created:', response)
     
     // If payment was created, check if automatic authorization is possible
     if (response.payment_id) {
-      console.log('💳 Payment created, checking payment details...')
+      logger.debug('💳 Payment created, checking payment details...')
       
       // Get payment and user details
       const supabase = getSupabase()
@@ -2453,7 +2453,7 @@ const createAppointment = async (userData: any) => {
       
       // If no payment_method_id on payment, check if user has a saved token
       if (!hasToken && isWallee) {
-        console.log('ℹ️ No payment_method_id on payment, checking for user tokens...')
+        logger.debug('ℹ️ No payment_method_id on payment, checking for user tokens...')
         
         // Use backend API to find token (server-side bypass for RLS)
         try {
@@ -2466,7 +2466,7 @@ const createAppointment = async (userData: any) => {
           })
           
           if (tokenResponse?.id) {
-            console.log('✅ Found user token:', tokenResponse.id)
+            logger.debug('✅ Found user token:', tokenResponse.id)
             // Link the token to the payment
             await supabase
               .from('payments')
@@ -2474,14 +2474,14 @@ const createAppointment = async (userData: any) => {
               .eq('id', response.payment_id)
             hasToken = true
           } else {
-            console.log('⚠️ No user token found')
+            logger.debug('⚠️ No user token found')
           }
         } catch (err) {
           console.warn('⚠️ Error fetching user token:', err)
         }
       }
       
-      console.log('🔍 Payment check:', {
+      logger.debug('🔍 Payment check:', {
         payment_method: paymentData?.payment_method,
         payment_status: paymentData?.payment_status,
         payment_method_id: paymentData?.payment_method_id,
@@ -2490,7 +2490,7 @@ const createAppointment = async (userData: any) => {
       })
       
       if (isWallee && paymentData?.payment_status === 'pending' && hasToken) {
-        console.log('✅ Token available, attempting automatic authorization & capture...')
+        logger.debug('✅ Token available, attempting automatic authorization & capture...')
         
         // Try automatic authorization and capture
         try {
@@ -2504,7 +2504,7 @@ const createAppointment = async (userData: any) => {
           })
           
           if (authResponse?.success) {
-            console.log('✅ Payment authorized')
+            logger.debug('✅ Payment authorized')
             
             // Try capture immediately if within capture window
             const captureResponse = await $fetch<{success: boolean}>(`/api/wallee/capture-payment`, {
@@ -2517,10 +2517,10 @@ const createAppointment = async (userData: any) => {
             })
             
             if (captureResponse?.success) {
-              console.log('✅ Payment captured successfully!')
+              logger.debug('✅ Payment captured successfully!')
               successMessage.value = {
                 title: 'Termin erfolgreich gebucht!',
-                description: 'Ihr Termin wurde bestätigt und die Zahlung verarbeitet.'
+                description: 'Dein Termin wurde bestätigt und die Zahlung verarbeitet.'
               }
               showSuccessModal.value = true
               await new Promise(resolve => setTimeout(resolve, 3000))
@@ -2536,13 +2536,13 @@ const createAppointment = async (userData: any) => {
       
       // If no token or automatic payment failed, redirect to payment page
       if (isWallee && paymentData?.payment_status === 'pending') {
-        console.log('🔄 Redirecting to payment process page...')
+        logger.debug('🔄 Redirecting to payment process page...')
         await navigateTo(`/customer/payment-process?payments=${response.payment_id}`)
       } else {
-        console.log('✅ Payment already processed or no payment needed')
+        logger.debug('✅ Payment already processed or no payment needed')
         successMessage.value = {
           title: 'Termin erfolgreich gebucht!',
-          description: 'Ihr Termin wurde bestätigt.'
+          description: 'Dein Termin wurde bestätigt.'
         }
         showSuccessModal.value = true
         await new Promise(resolve => setTimeout(resolve, 3000))
@@ -2551,7 +2551,7 @@ const createAppointment = async (userData: any) => {
     } else {
       successMessage.value = {
         title: 'Termin erfolgreich gebucht!',
-        description: 'Ihr Termin wurde bestätigt.'
+        description: 'Dein Termin wurde bestätigt.'
       }
       showSuccessModal.value = true
       await new Promise(resolve => setTimeout(resolve, 3000))
@@ -2678,7 +2678,7 @@ const reserveSlot = async (userId?: string) => {
   }
   
   try {
-    console.log('🔄 Reserving slot...')
+    logger.debug('🔄 Reserving slot...')
     
     // Server will determine user_id from auth token or generate session ID
     const response = await $fetch<{
@@ -2699,7 +2699,7 @@ const reserveSlot = async (userId?: string) => {
     })
 
     if (response.success) {
-      console.log('✅ Slot reserved:', response.reservation_id)
+      logger.debug('✅ Slot reserved:', response.reservation_id)
       currentReservationId.value = response.reservation_id
       reservedUntil.value = new Date(response.reserved_until)
       startCountdown()
@@ -2719,7 +2719,7 @@ const cancelReservation = async (silent: boolean = false) => {
   if (!currentReservationId.value) return
 
   try {
-    console.log('🗑️ Cancelling reservation...')
+    logger.debug('🗑️ Cancelling reservation...')
     
     await $fetch('/api/booking/cancel-reservation', {
       method: 'POST',
@@ -2728,7 +2728,7 @@ const cancelReservation = async (silent: boolean = false) => {
       }
     })
 
-    console.log('✅ Reservation cancelled')
+    logger.debug('✅ Reservation cancelled')
   } catch (error: any) {
     console.error('❌ Error cancelling reservation:', error)
     // Silently ignore cancellation errors - the reservation might already be gone
@@ -2761,11 +2761,11 @@ const startCountdown = () => {
     
     if (diff <= 0) {
       // Zeit abgelaufen
-      console.log('⏰ Reservation expired')
+      logger.debug('⏰ Reservation expired')
       // Cancel silently - just clean up state
       await cancelReservation(true)
       // Notify user without alert - just go back
-      console.log('🔄 Going back to step 5 due to reservation expiry')
+      logger.debug('🔄 Going back to step 5 due to reservation expiry')
       goBackToStep(5)
     } else {
       remainingSeconds.value = Math.ceil(diff / 1000)
@@ -2811,7 +2811,7 @@ const setTenantFromSlug = async (slugOrId: string) => {
     
     // If not found by slug, try by id (UUID format)
     if (error && error.code === 'PGRST116') {
-      console.log('🔍 Tenant not found by slug, trying by ID:', slugOrId)
+      logger.debug('🔍 Tenant not found by slug, trying by ID:', slugOrId)
       const result = await supabase
         .from('tenants')
         .select('id, name, slug, business_type, primary_color, secondary_color, accent_color')
@@ -2842,7 +2842,7 @@ const setTenantFromSlug = async (slugOrId: string) => {
       loadCategories()
     ])
     
-    console.log('✅ Tenant set from slug/ID:', tenantData?.name)
+    logger.debug('✅ Tenant set from slug/ID:', tenantData?.name)
   } catch (err) {
     console.error('❌ Error setting tenant from slug/ID:', err)
   }
@@ -2866,7 +2866,7 @@ const loadTenantSettings = async () => {
     })
 
     tenantSettings.value = settings
-    console.log('✅ Tenant settings loaded:', settings)
+    logger.debug('✅ Tenant settings loaded:', settings)
   } catch (err) {
     console.error('❌ Error loading tenant settings:', err)
     // Set defaults if loading fails
@@ -2884,14 +2884,14 @@ const loadTenantSettings = async () => {
 const loadCategories = async () => {
   try {
     if (!currentTenant.value) {
-      console.log('🚫 No current tenant selected')
+      logger.debug('🚫 No current tenant selected')
       categories.value = []
       return
     }
 
     // Only load categories if business_type is driving_school
     if (currentTenant.value.business_type !== 'driving_school') {
-      console.log('🚫 Categories not available for business_type:', currentTenant.value.business_type)
+      logger.debug('🚫 Categories not available for business_type:', currentTenant.value.business_type)
       categories.value = []
       return
     }
@@ -3271,7 +3271,7 @@ const generateSlotsInRange = async (staff: any, location: any, targetDate: Date,
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🎯 onMounted called!')
+  logger.debug('🎯 onMounted called!')
   try {
     // Check screen size for responsive step scrolling
     const checkScreenSize = () => {
@@ -3281,15 +3281,15 @@ onMounted(async () => {
     window.addEventListener('resize', checkScreenSize)
     
     // Load referrer URL from query parameter
-    console.log('🔍 Route query params:', route.query)
-    console.log('🔍 Route full URL:', window.location.href)
+    logger.debug('🔍 Route query params:', route.query)
+    logger.debug('🔍 Route full URL:', window.location.href)
     const refParam = route.query.referrer as string
-    console.log('🔍 Referrer param value:', refParam)
+    logger.debug('🔍 Referrer param value:', refParam)
     if (refParam) {
       referrerUrl.value = refParam
-      console.log('🔄 Referrer URL set:', referrerUrl.value)
+      logger.debug('🔄 Referrer URL set:', referrerUrl.value)
     } else {
-      console.log('⚠️ No referrer parameter found')
+      logger.debug('⚠️ No referrer parameter found')
     }
     
     // Lade Features um Prüfung durchführen zu können
@@ -3302,12 +3302,12 @@ onMounted(async () => {
       if (slug) {
         // Set the tenant from slug
         await setTenantFromSlug(slug)
-        console.log('✅ Tenant set from slug:', slug)
+        logger.debug('✅ Tenant set from slug:', slug)
         
         // Check for pre-fill parameters (from returning customer)
         const prefill = route.query.prefill as string
         if (prefill === 'true' && route.query.category && route.query.staff && route.query.location && route.query.duration) {
-          console.log('🎯 Pre-filling booking from previous appointment:', {
+          logger.debug('🎯 Pre-filling booking from previous appointment:', {
             category: route.query.category,
             staff: route.query.staff,
             location: route.query.location,
@@ -3346,7 +3346,7 @@ onMounted(async () => {
                 // Call the actual selectInstructor to load time slots
                 await selectInstructor(instructorToSelect)
                 
-                console.log('✅ Pre-filled all data, jumped to step 5 (time selection)')
+                logger.debug('✅ Pre-filled all data, jumped to step 5 (time selection)')
               } else {
                 console.warn('⚠️ Instructor not found, staying at step 3')
                 currentStep.value = 3
@@ -3357,7 +3357,7 @@ onMounted(async () => {
             }
           }
         } else if (prefill === 'partial' && route.query.category) {
-          console.log('🎯 Partial pre-fill: category and/or staff')
+          logger.debug('🎯 Partial pre-fill: category and/or staff')
           
           // Load categories and find the one to pre-select
           await loadCategories()
@@ -3367,7 +3367,7 @@ onMounted(async () => {
             // Pre-select category
             await selectCategory(categoryToSelect)
             currentStep.value = 2
-            console.log('✅ Pre-selected category, user can continue from step 2')
+            logger.debug('✅ Pre-selected category, user can continue from step 2')
           }
         }
       } else {
@@ -3375,7 +3375,7 @@ onMounted(async () => {
       }
     }
     
-    console.log('✅ Availability page loaded')
+    logger.debug('✅ Availability page loaded')
   } catch (err) {
     console.error('❌ Error initializing availability page:', err)
   }

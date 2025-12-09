@@ -623,16 +623,16 @@ const tenantSocial = computed(() => currentTenantBranding.value?.social || {})
 // Tenant-Branding und Logo preloading laden wenn User verfügbar ist
 watch(() => currentUser.value?.tenant_id, async (tenantId) => {
   if (tenantId && (!currentTenantBranding.value || currentTenantBranding.value.id !== tenantId)) {
-    console.log('🎨 Loading tenant branding for user tenant_id:', tenantId)
+    logger.debug('🎨 Loading tenant branding for user tenant_id:', tenantId)
     try {
       await loadTenantBrandingById(tenantId)
-      console.log('✅ Tenant branding loaded:', currentTenantBranding.value?.name)
+      logger.debug('✅ Tenant branding loaded:', currentTenantBranding.value?.name)
       
       // Preload tenant logo for instant loading in components
       const { getTenantLogo } = useLoadingLogo()
       try {
         const logoUrl = await getTenantLogo(tenantId)
-        console.log('⚡ Admin layout: Preloaded tenant logo:', logoUrl)
+        logger.debug('⚡ Admin layout: Preloaded tenant logo:', logoUrl)
       } catch (err) {
         console.warn('⚠️ Admin layout: Failed to preload logo:', err)
       }
@@ -645,11 +645,11 @@ watch(() => currentUser.value?.tenant_id, async (tenantId) => {
 // Watch für Branding-Änderungen - Header und Footer automatisch aktualisieren
 watch(() => currentTenantBranding.value, (newBranding) => {
   if (newBranding) {
-    console.log('🔄 Tenant branding updated, refreshing layout colors:', newBranding.name)
-    console.log('🎨 Raw branding colors:', newBranding.colors)
+    logger.debug('🔄 Tenant branding updated, refreshing layout colors:', newBranding.name)
+    logger.debug('🎨 Raw branding colors:', newBranding.colors)
     // Trigger reactivity für computed properties
     nextTick(() => {
-      console.log('✨ Layout colors updated:', {
+      logger.debug('✨ Layout colors updated:', {
         primary: primaryColor.value,
         secondary: secondaryColor.value,
         rawPrimary: newBranding.colors?.primary,
@@ -661,7 +661,7 @@ watch(() => currentTenantBranding.value, (newBranding) => {
 
 // Watch für Farb-Änderungen separat (für bessere Reaktivität)
 watch([primaryColor, secondaryColor], ([newPrimary, newSecondary]) => {
-  console.log('🎨 Layout colors changed:', {
+  logger.debug('🎨 Layout colors changed:', {
     primary: newPrimary,
     secondary: newSecondary,
     tenant: currentTenantBranding.value?.name
@@ -709,7 +709,7 @@ const onFooterNav = async (to) => {
 
 // Debug: Log when menu state changes
 watch(() => showMobileMenu.value, (newValue) => {
-  console.log('📱 Mobile menu state:', newValue)
+  logger.debug('📱 Mobile menu state:', newValue)
 })
 
 // Simple watch for route changes
@@ -724,7 +724,7 @@ watchEffect(() => {
 // Load features when user is available
 watchEffect(async () => {
   if (currentUser.value?.tenant_id) {
-    console.log('🔧 Loading features for navigation')
+    logger.debug('🔧 Loading features for navigation')
     await loadFeatures()
   }
 })
@@ -732,7 +732,7 @@ watchEffect(async () => {
 // Logout function
 const handleLogout = async () => {
   try {
-    console.log('🚪 Logging out user...')
+    logger.debug('🚪 Logging out user...')
     await logout()
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
     

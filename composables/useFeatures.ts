@@ -23,26 +23,26 @@ const cache = {
 
 export function useFeatures() {
   const load = async (tenantId?: string) => {
-    console.log('🔍 useFeatures.load() called with tenantId:', tenantId)
+    logger.debug('🔍 useFeatures.load() called with tenantId:', tenantId)
     if (cache.isLoading.value) {
-      console.log('🔍 useFeatures.load() skipped - already loading')
+      logger.debug('🔍 useFeatures.load() skipped - already loading')
       return
     }
     const auth = useAuthStore()
     const supabase = getSupabase()
     const currentTenantId = tenantId || (auth.userProfile as any)?.tenant_id
-    console.log('🔍 useFeatures.load() currentTenantId:', currentTenantId)
+    logger.debug('🔍 useFeatures.load() currentTenantId:', currentTenantId)
     if (!currentTenantId) {
-      console.log('🔍 useFeatures.load() skipped - no tenant ID')
+      logger.debug('🔍 useFeatures.load() skipped - no tenant ID')
       return
     }
 
     if (cache.loadedForTenant.value === currentTenantId && Object.keys(cache.flags.value).length > 0) {
-      console.log('🔍 useFeatures.load() skipped - already loaded for tenant:', currentTenantId)
+      logger.debug('🔍 useFeatures.load() skipped - already loaded for tenant:', currentTenantId)
       return
     }
 
-    console.log('🔍 useFeatures.load() starting to load features for tenant:', currentTenantId)
+    logger.debug('🔍 useFeatures.load() starting to load features for tenant:', currentTenantId)
     cache.isLoading.value = true
     try {
       // Load feature definitions for current tenant
@@ -55,7 +55,7 @@ export function useFeatures() {
 
       if (definitionsError) throw definitionsError
 
-      console.log('🔍 useFeatures.load() loaded definitionsData:', definitionsData?.length || 0, definitionsData)
+      logger.debug('🔍 useFeatures.load() loaded definitionsData:', definitionsData?.length || 0, definitionsData)
 
       // Build feature definitions from the loaded data
       const definitions: FeatureDefinition[] = []
@@ -89,14 +89,14 @@ export function useFeatures() {
             if (drivingSchoolOnlyFeatures.includes(row.setting_key)) {
               // Only show driving school specific features for driving_school business_type
               if (tenantData?.business_type !== 'driving_school') {
-                console.log('🚫 Hiding driving school feature', row.setting_key, 'for business_type:', tenantData?.business_type)
+                logger.debug('🚫 Hiding driving school feature', row.setting_key, 'for business_type:', tenantData?.business_type)
                 return // Skip this feature
               }
             }
             
             // courses_enabled is available for all business types
             if (row.setting_key === 'courses_enabled') {
-              console.log('✅ Processing courses_enabled feature:', {
+              logger.debug('✅ Processing courses_enabled feature:', {
                 tenantBusinessType: tenantData?.business_type,
                 metadata,
                 isEnabled,
@@ -128,8 +128,8 @@ export function useFeatures() {
       // Sort definitions by sortOrder
       definitions.sort((a, b) => a.sortOrder - b.sortOrder)
 
-      console.log('🔍 useFeatures.load() final definitions:', definitions.length, definitions.map(d => d.key))
-      console.log('🔍 useFeatures.load() final flags:', flags)
+      logger.debug('🔍 useFeatures.load() final definitions:', definitions.length, definitions.map(d => d.key))
+      logger.debug('🔍 useFeatures.load() final flags:', flags)
 
       cache.flags.value = flags
       cache.definitions.value = definitions
@@ -204,7 +204,7 @@ export function useFeatures() {
         if (error) throw error
       }
       
-      console.log(`✅ Feature ${key} ${value ? 'enabled' : 'disabled'} successfully`)
+      logger.debug(`✅ Feature ${key} ${value ? 'enabled' : 'disabled'} successfully`)
     } catch (e) {
       // revert on failure
       cache.flags.value = { ...cache.flags.value, [key]: prev }

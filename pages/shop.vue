@@ -760,16 +760,16 @@ const tenantParam = ref(route.query.tenant as string || '')
 watch(() => route.query.tenant, (newTenant) => {
   if (newTenant && newTenant !== tenantParam.value) {
     tenantParam.value = newTenant as string
-    console.log('🏢 Shop - Tenant updated from URL:', tenantParam.value)
+    logger.debug('🏢 Shop - Tenant updated from URL:', tenantParam.value)
     loadTenant(tenantParam.value)
   }
 }, { immediate: true })
 
 // Watch for tenantId changes to debug
 watch(tenantId, async (newTenantId, oldTenantId) => {
-  console.log('🔄 Tenant ID changed:', { from: oldTenantId, to: newTenantId })
+  logger.debug('🔄 Tenant ID changed:', { from: oldTenantId, to: newTenantId })
   if (newTenantId) {
-    console.log('🔍 Loading features for new tenant:', newTenantId)
+    logger.debug('🔍 Loading features for new tenant:', newTenantId)
     await loadFeatures(newTenantId)
   }
 })
@@ -865,7 +865,7 @@ const registerForm = ref({
 })
 
 // Debug: Log initial state
-console.log('🔔 Initial toast state:', { showToast: showToast.value, message: toastMessage.value })
+logger.debug('🔔 Initial toast state:', { showToast: showToast.value, message: toastMessage.value })
 
 // Gutschein-Funktionalität
 const availableVouchers = ref<any[]>([])
@@ -1000,7 +1000,7 @@ const nextStep = () => {
     
     // ✅ NEW: Skip step 2 (contact data) for logged-in users
     if (currentStep.value === 1 && isLoggedIn.value && customerData.value) {
-      console.log('⏭️ Skipping step 2 (contact data) - user is logged in')
+      logger.debug('⏭️ Skipping step 2 (contact data) - user is logged in')
       currentStep.value = 3 // Jump directly to payment
     } else {
       currentStep.value++
@@ -1018,10 +1018,10 @@ const previousStep = () => {
     // Speichere sofort beim Wechseln der Steps
     saveImmediately()
     currentStep.value--
-    console.log('🔙 Shop - Previous step to:', currentStep.value)
+    logger.debug('🔙 Shop - Previous step to:', currentStep.value)
   } else if (currentStep.value === 0 && isLoggedIn.value) {
     // ✅ Wenn User eingeloggt ist und auf "Zurück" drückt bei Step 0, zurück zum Dashboard
-    console.log('🔙 Shop - User is logged in, going back to dashboard')
+    logger.debug('🔙 Shop - User is logged in, going back to dashboard')
     navigateTo('/customer')
   }
 }
@@ -1031,13 +1031,13 @@ const goBack = () => {
   if (currentStep.value > 0) {
     // Gehe einen Schritt zurück im Shop
     currentStep.value--
-    console.log('🔙 Shop - Going back to step:', currentStep.value)
+    logger.debug('🔙 Shop - Going back to step:', currentStep.value)
   } else {
     // Nur wenn wir bereits in Schritt 0 sind, zurück zur Auswahl
     const tenant = tenantParam.value || tenantSlug.value
     if (tenant) {
       const url = `/auswahl?tenant=${tenant}`
-      console.log('🔙 Shop - Going back to tenant selection:', url)
+      logger.debug('🔙 Shop - Going back to tenant selection:', url)
       
       if (typeof navigateTo !== 'undefined') {
         navigateTo(url)
@@ -1047,7 +1047,7 @@ const goBack = () => {
     } else {
       // Fallback ohne spezifischen Tenant
       const url = '/auswahl'
-      console.log('🔙 Shop - Going back to general selection:', url)
+      logger.debug('🔙 Shop - Going back to general selection:', url)
       
       if (typeof navigateTo !== 'undefined') {
         navigateTo(url)
@@ -1094,7 +1094,7 @@ const applyDiscountCode = async () => {
         max_discount_rappen: result.discount.max_discount_rappen
       })
       
-      console.log('✅ Discount code applied:', result.discount.name)
+      logger.debug('✅ Discount code applied:', result.discount.name)
       discountCode.value = ''
       showToastMessage(`Rabatt "${result.discount.name}" angewendet!`)
       
@@ -1140,7 +1140,7 @@ const handleLogin = async () => {
   
   try {
     // TODO: Implement actual login logic with Supabase Auth
-    console.log('🔐 Login attempt:', loginForm.value.email)
+    logger.debug('🔐 Login attempt:', loginForm.value.email)
     
     // Simulate successful login for now
     isLoggedIn.value = true
@@ -1185,7 +1185,7 @@ const handleRegister = async () => {
   
   try {
     // TODO: Implement actual registration logic with Supabase Auth
-    console.log('🆕 Registration attempt:', registerForm.value.email)
+    logger.debug('🆕 Registration attempt:', registerForm.value.email)
     
     // Simulate successful registration for now
     isLoggedIn.value = true
@@ -1236,12 +1236,12 @@ const addProduct = (product: Product) => {
   // Speichere sofort bei Produktänderungen
   saveImmediately()
   
-  console.log('✅ Product added:', product.name)
+  logger.debug('✅ Product added:', product.name)
   // ProductSelectorModal was removed
 }
 
 const handleProductsSelected = (products: any[]) => {
-  console.log('🔄 handleProductsSelected called with products:', products)
+  logger.debug('🔄 handleProductsSelected called with products:', products)
   
   // Konvertiere die Produkte vom neuen Format zurück zum bestehenden Format
   selectedProducts.value = products.map(item => ({
@@ -1260,7 +1260,7 @@ const handleProductsSelected = (products: any[]) => {
     customAmount: item.customAmount || 0
   }))
   
-  console.log('🔄 Updated selectedProducts:', selectedProducts.value)
+  logger.debug('🔄 Updated selectedProducts:', selectedProducts.value)
   
   // Recalculate discounts when products are selected
   recalculateDiscounts()
@@ -1269,7 +1269,7 @@ const handleProductsSelected = (products: any[]) => {
   saveImmediately()
   
   // ProductSelectorModal was removed
-  console.log('✅ Products selected:', products.length)
+  logger.debug('✅ Products selected:', products.length)
 }
 
 const handleDiscountsSelected = (discounts: any[]) => {
@@ -1287,19 +1287,19 @@ const handleDiscountsSelected = (discounts: any[]) => {
   // Speichere sofort bei Rabattänderungen
   saveImmediately()
   
-  console.log('✅ Discounts updated from PaymentComponent:', discounts.length)
+  logger.debug('✅ Discounts updated from PaymentComponent:', discounts.length)
 }
 
 // Recalculate percentage discounts when subtotal changes
 const recalculateDiscounts = () => {
-  console.log('🔄 Recalculating discounts in shop.vue')
+  logger.debug('🔄 Recalculating discounts in shop.vue')
   
   // Calculate current subtotal
   const currentSubtotal = selectedProducts.value.reduce((sum, item) => {
     return sum + (item.product.price_rappen * item.quantity)
   }, 0)
   
-  console.log('💰 Current subtotal:', currentSubtotal)
+  logger.debug('💰 Current subtotal:', currentSubtotal)
   
   appliedDiscounts.value.forEach((discount, index) => {
     if (discount.discount_type === 'percentage') {
@@ -1311,7 +1311,7 @@ const recalculateDiscounts = () => {
         newDiscountAmount = discount.max_discount_rappen
       }
       
-      console.log(`📊 Recalculating ${discount.name}: ${discount.discount_value}% of ${currentSubtotal} = ${newDiscountAmount}`)
+      logger.debug(`📊 Recalculating ${discount.name}: ${discount.discount_value}% of ${currentSubtotal} = ${newDiscountAmount}`)
       
       // Update the discount amount
       appliedDiscounts.value[index] = {
@@ -1319,7 +1319,7 @@ const recalculateDiscounts = () => {
         discount_amount_rappen: newDiscountAmount
       }
     } else {
-      console.log(`💰 Fixed discount ${discount.name}: ${discount.discount_amount_rappen} (no recalculation needed)`)
+      logger.debug(`💰 Fixed discount ${discount.name}: ${discount.discount_amount_rappen} (no recalculation needed)`)
     }
   })
   
@@ -1332,7 +1332,7 @@ const removeProduct = (productId: string) => {
   if (index >= 0) {
     const productName = selectedProducts.value[index].product.name
     selectedProducts.value.splice(index, 1)
-    console.log('🗑️ Product removed:', productName)
+    logger.debug('🗑️ Product removed:', productName)
     
     // Recalculate discounts when product is removed
     recalculateDiscounts()
@@ -1346,7 +1346,7 @@ const removeProduct = (productId: string) => {
 }
 
 const updateQuantity = (productId: string, newQuantity: number) => {
-  console.log('🔄 updateQuantity called:', productId, 'newQuantity:', newQuantity)
+  logger.debug('🔄 updateQuantity called:', productId, 'newQuantity:', newQuantity)
   
   if (newQuantity <= 0) {
     removeProduct(productId)
@@ -1359,7 +1359,7 @@ const updateQuantity = (productId: string, newQuantity: number) => {
     const oldQuantity = item.quantity
     item.quantity = newQuantity
     item.total = newQuantity * (item.product.price_rappen / 100)
-    console.log('📊 Quantity updated:', item.product.name, 'x', newQuantity)
+    logger.debug('📊 Quantity updated:', item.product.name, 'x', newQuantity)
     
     // Recalculate discounts when quantity changes
     recalculateDiscounts()
@@ -1383,7 +1383,7 @@ const updateQuantity = (productId: string, newQuantity: number) => {
           total: newQuantity * (product.price_rappen / 100)
         }
         selectedProducts.value.push(newItem)
-        console.log('✅ Product added to cart:', product.name, 'x', newQuantity, 'total:', newItem.total)
+        logger.debug('✅ Product added to cart:', product.name, 'x', newQuantity, 'total:', newItem.total)
         
         // Recalculate discounts when product is added
         recalculateDiscounts()
@@ -1399,7 +1399,7 @@ const updateQuantity = (productId: string, newQuantity: number) => {
     }
   
   // Debug: Zeige aktuellen Warenkorb
-  console.log('🛒 Current cart:', selectedProducts.value)
+  logger.debug('🛒 Current cart:', selectedProducts.value)
 }
 
 const getProductQuantity = (productId: string) => {
@@ -1409,7 +1409,7 @@ const getProductQuantity = (productId: string) => {
 
 // Toast notification functions
 const showToastMessage = (message: string, duration: number = 3000) => {
-  console.log('🔔 showToastMessage called:', message)
+  logger.debug('🔔 showToastMessage called:', message)
   
   // Clear existing timeout
   if (toastTimeout.value) {
@@ -1419,13 +1419,13 @@ const showToastMessage = (message: string, duration: number = 3000) => {
   toastMessage.value = message
   showToast.value = true
   
-  console.log('🔔 Toast state:', { showToast: showToast.value, message: toastMessage.value })
+  logger.debug('🔔 Toast state:', { showToast: showToast.value, message: toastMessage.value })
   
   // Auto-hide after duration
   toastTimeout.value = setTimeout(() => {
     showToast.value = false
     toastMessage.value = ''
-    console.log('🔔 Toast hidden')
+    logger.debug('🔔 Toast hidden')
   }, duration)
 }
 
@@ -1441,7 +1441,7 @@ const loadProducts = async () => {
     
     // If tenant is not loaded yet, wait for it
     if (!currentTenant.value) {
-      console.log('🔄 Waiting for tenant to be loaded...')
+      logger.debug('🔄 Waiting for tenant to be loaded...')
       
       // Wait up to 5 seconds for tenant to be loaded
       let attempts = 0
@@ -1463,13 +1463,13 @@ const loadProducts = async () => {
       throw new Error('Keine Tenant-ID verfügbar - Shop kann nicht geöffnet werden')
     }
     
-    console.log('🏢 Loading products for tenant:', currentTenantId)
-    console.log('🔍 Debug - currentTenant:', currentTenant.value)
-    console.log('🔍 Debug - tenantId.value:', tenantId.value)
-    console.log('🔍 Debug - tenantSlug:', tenantSlug.value)
-    console.log('🔍 Debug - tenantParam:', tenantParam.value)
-    console.log('🔍 Debug - route.query.tenant:', route.query.tenant)
-    console.log('🔍 Debug - route.params:', route.params)
+    logger.debug('🏢 Loading products for tenant:', currentTenantId)
+    logger.debug('🔍 Debug - currentTenant:', currentTenant.value)
+    logger.debug('🔍 Debug - tenantId.value:', tenantId.value)
+    logger.debug('🔍 Debug - tenantSlug:', tenantSlug.value)
+    logger.debug('🔍 Debug - tenantParam:', tenantParam.value)
+    logger.debug('🔍 Debug - route.query.tenant:', route.query.tenant)
+    logger.debug('🔍 Debug - route.params:', route.params)
     
     const { data, error } = await supabase
       .from('products')
@@ -1481,12 +1481,12 @@ const loadProducts = async () => {
     if (error) throw error
     
     availableProducts.value = data || []
-    console.log('✅ Products loaded:', availableProducts.value.length)
-    console.log('📦 Available products:', availableProducts.value)
+    logger.debug('✅ Products loaded:', availableProducts.value.length)
+    logger.debug('📦 Available products:', availableProducts.value)
     
     // Wenn keine Produkte in der DB sind, Shop als nicht verfügbar markieren
     if (availableProducts.value.length === 0) {
-      console.log('⚠️ No products in database, shop not available')
+      logger.debug('⚠️ No products in database, shop not available')
       availableProducts.value = []
       // Shop wird als nicht verfügbar angezeigt
     }
@@ -1537,7 +1537,7 @@ const selectInvoicePayment = async () => {
 
 // Gutschein-Handler
 const handleVoucherCreated = (voucherData: any) => {
-  console.log('🎁 Voucher created:', voucherData)
+  logger.debug('🎁 Voucher created:', voucherData)
   
   // Gutschein als Produkt hinzufügen - mit ALLEN benötigten Fields
   const voucherProduct = {
@@ -1565,7 +1565,7 @@ const handleVoucherCreated = (voucherData: any) => {
 }
 
 const handleVoucherSelected = (voucher: any) => {
-  console.log('🎁 Voucher selected:', voucher)
+  logger.debug('🎁 Voucher selected:', voucher)
   
   // Bestehenden Gutschein als Produkt hinzufügen
   const voucherProduct = {
@@ -1600,7 +1600,7 @@ const saveImmediately = () => {
     clearTimeout(debounceTimer)
     debounceTimer = null
   }
-  console.log('💾 Immediate LocalStorage update triggered')
+  logger.debug('💾 Immediate LocalStorage update triggered')
   autoSaveData.value = {
     formData: formData.value,
     selectedProducts: selectedProducts.value,
@@ -1618,7 +1618,7 @@ watch([formData, selectedProducts, currentStep, appliedDiscounts], () => {
   
   // Setze neuen Timer für 2 Sekunden
   debounceTimer = setTimeout(() => {
-    console.log('💾 Debounced LocalStorage update triggered')
+    logger.debug('💾 Debounced LocalStorage update triggered')
     autoSaveData.value = {
       formData: formData.value,
       selectedProducts: selectedProducts.value,
@@ -1699,7 +1699,7 @@ const autoSave = useAutoSave(
     
     // Callbacks
     onRestore: (data) => {
-      console.log('🔄 Shop data restored!')
+      logger.debug('🔄 Shop data restored!')
       
       // Tenant-ID Validierung: Prüfe ob wiederhergestellte Daten zum aktuellen Tenant gehören
       if (data.tenant_id && data.tenant_id !== tenantId.value) {
@@ -1728,7 +1728,7 @@ const autoSave = useAutoSave(
       }
       if (data.appliedDiscounts) {
         appliedDiscounts.value = data.appliedDiscounts
-        console.log('✅ Applied discounts restored:', appliedDiscounts.value)
+        logger.debug('✅ Applied discounts restored:', appliedDiscounts.value)
       }
       if (data.currentStep) {
         currentStep.value = data.currentStep
@@ -1907,25 +1907,25 @@ defineExpose({
 // Lifecycle
 onMounted(async () => {
   try {
-    console.log('🔍 Shop onMounted - tenantParam:', tenantParam.value)
-    console.log('🔍 Shop onMounted - tenantSlug:', tenantSlug.value)
-    console.log('🔍 Shop onMounted - tenantId:', tenantId.value)
-    console.log('🔍 Shop onMounted - currentTenant:', currentTenant.value)
-    console.log('🔍 Shop onMounted - route.query.tenant:', route.query.tenant)
-    console.log('🔍 Shop onMounted - route.params:', route.params)
+    logger.debug('🔍 Shop onMounted - tenantParam:', tenantParam.value)
+    logger.debug('🔍 Shop onMounted - tenantSlug:', tenantSlug.value)
+    logger.debug('🔍 Shop onMounted - tenantId:', tenantId.value)
+    logger.debug('🔍 Shop onMounted - currentTenant:', currentTenant.value)
+    logger.debug('🔍 Shop onMounted - route.query.tenant:', route.query.tenant)
+    logger.debug('🔍 Shop onMounted - route.params:', route.params)
     
     // Load tenant if tenant parameter is provided
     if (tenantParam.value) {
-      console.log('🏢 Shop - Loading tenant from URL parameter:', tenantParam.value)
+      logger.debug('🏢 Shop - Loading tenant from URL parameter:', tenantParam.value)
       await loadTenant(tenantParam.value)
-      console.log('🏢 Shop - After loading tenant, tenantId is now:', tenantId.value)
+      logger.debug('🏢 Shop - After loading tenant, tenantId is now:', tenantId.value)
     } else if (route.query.tenant) {
-      console.log('🏢 Shop - Loading tenant from route query:', route.query.tenant)
+      logger.debug('🏢 Shop - Loading tenant from route query:', route.query.tenant)
       await loadTenant(route.query.tenant as string)
-      console.log('🏢 Shop - After loading tenant, tenantId is now:', tenantId.value)
+      logger.debug('🏢 Shop - After loading tenant, tenantId is now:', tenantId.value)
     } else {
       // Kein Tenant-Parameter gefunden - lade den aktuellen Benutzer-Tenant als Fallback
-      console.log('🏢 Shop - No tenant parameter found, using current user tenant as fallback')
+      logger.debug('🏢 Shop - No tenant parameter found, using current user tenant as fallback')
       try {
         const { getSupabase } = await import('~/utils/supabase')
         const supabase = getSupabase()
@@ -1951,7 +1951,7 @@ onMounted(async () => {
             
             if (tenantData) {
               currentTenant.value = tenantData
-              console.log('🏢 Shop - Loaded user tenant as fallback:', tenantData.name)
+              logger.debug('🏢 Shop - Loaded user tenant as fallback:', tenantData.name)
             }
           }
         }
@@ -1965,20 +1965,20 @@ onMounted(async () => {
     
     // Load features for the current tenant
     if (tenantId.value) {
-      console.log('🔍 Loading features for tenant:', tenantId.value)
+      logger.debug('🔍 Loading features for tenant:', tenantId.value)
       await loadFeatures(tenantId.value)
     }
     
     // AutoSave: Nach gespeicherten Daten suchen
-    console.log('💾 Checking for saved data...')
+    logger.debug('💾 Checking for saved data...')
     const recoveryData = await autoSave.checkRecovery()
     if (recoveryData) {
-      console.log('🔄 Found saved data, showing recovery modal')
+      logger.debug('🔄 Found saved data, showing recovery modal')
       // Das AutoSave-System zeigt automatisch das Recovery-Modal
     }
     
     // Produkte laden nachdem Tenant geladen ist
-    console.log('🛍️ Shop mounted - Step-by-step process started')
+    logger.debug('🛍️ Shop mounted - Step-by-step process started')
     await loadProducts()
     
     // ✅ NEW: Check auth status and skip step 0 if user is already logged in
@@ -1987,7 +1987,7 @@ onMounted(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (user) {
-      console.log('👤 User is already logged in, skipping customer type selection')
+      logger.debug('👤 User is already logged in, skipping customer type selection')
       isLoggedIn.value = true
       customerType.value = 'existing'
       currentStep.value = 1 // Jump directly to product selection
@@ -2001,7 +2001,7 @@ onMounted(async () => {
       
       if (userData) {
         customerData.value = userData
-        console.log('✅ Customer data loaded:', userData.email)
+        logger.debug('✅ Customer data loaded:', userData.email)
         
         // ✅ NEW: Pre-fill form data with customer information
         formData.value = {
@@ -2015,7 +2015,7 @@ onMounted(async () => {
           city: userData.city || '',
           notes: ''
         }
-        console.log('✅ Form data pre-filled with customer info')
+        logger.debug('✅ Form data pre-filled with customer info')
       }
     }
   } catch (error) {
@@ -2039,11 +2039,11 @@ onUnmounted(() => {
 
 // Payment handlers
 const handlePaymentCreated = async (payment: any) => {
-  console.log('✅ Payment created:', payment)
+  logger.debug('✅ Payment created:', payment)
   
   // Check if this is a Wallee payment with redirect URL
   if (payment.payment_url && payment.payment_method === 'wallee') {
-    console.log('🔄 Redirecting to Wallee payment page:', payment.payment_url)
+    logger.debug('🔄 Redirecting to Wallee payment page:', payment.payment_url)
     window.location.href = payment.payment_url
     return
   }

@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
       action 
     } = await readBody(event)
 
-    console.log('🔧 Manual payment update:', { 
+    logger.debug('🔧 Manual payment update:', { 
       wallee_transaction_id, 
       appointment_id, 
       payment_id,
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const payment = payments[0]
-    console.log('✅ Found payment:', payment)
+    logger.debug('✅ Found payment:', payment)
 
     // Step 2: Perform action
     if (action === 'update_status' && payment_status) {
@@ -73,7 +73,7 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      console.log(`✅ Payment updated to ${payment_status}`)
+      logger.debug(`✅ Payment updated to ${payment_status}`)
 
       // Also update appointment if completed
       if (payment_status === 'completed' && payment.appointment_id) {
@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      console.log(`✅ Wallee transaction ID updated to ${wallee_transaction_id}`)
+      logger.debug(`✅ Wallee transaction ID updated to ${wallee_transaction_id}`)
     }
 
     // Step 3: Return updated payment

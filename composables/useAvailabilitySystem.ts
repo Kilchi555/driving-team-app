@@ -133,7 +133,7 @@ export const useAvailabilitySystem = () => {
   // Methods
   const loadBaseData = async (tenantId?: string) => {
     try {
-      console.log('🔄 Loading base data for availability system...')
+      logger.debug('🔄 Loading base data for availability system...')
       
       // Build queries with tenant filtering
       let staffQuery = supabase.from('users').select('id, first_name, last_name, role, is_active, category, preferred_location_id, preferred_duration, assigned_staff_ids, tenant_id').eq('role', 'staff')
@@ -175,7 +175,7 @@ export const useAvailabilitySystem = () => {
       categoriesCache.value = categoriesData || []
       locationsCache.value = locationsData || []
 
-      console.log('✅ Base data loaded:', {
+      logger.debug('✅ Base data loaded:', {
         staff: staffCache.value.length,
         categories: categoriesCache.value.length,
         locations: locationsCache.value.length
@@ -190,10 +190,10 @@ export const useAvailabilitySystem = () => {
 
   const loadStaffCapabilities = async () => {
     try {
-      console.log('🔄 Loading staff capabilities...')
+      logger.debug('🔄 Loading staff capabilities...')
       
       if (activeStaff.value.length === 0) {
-        console.log('⚠️ No active staff found')
+        logger.debug('⚠️ No active staff found')
         return
       }
 
@@ -232,7 +232,7 @@ export const useAvailabilitySystem = () => {
       })
       staffLocationsCache.value = staffLocations
 
-      console.log('✅ Staff capabilities loaded:', {
+      logger.debug('✅ Staff capabilities loaded:', {
         staffCategories: staffCategoriesCache.value.length,
         staffLocations: staffLocationsCache.value.length
       })
@@ -245,12 +245,12 @@ export const useAvailabilitySystem = () => {
 
   const loadWorkingHours = async () => {
     try {
-      console.log('🔄 Loading working hours...')
+      logger.debug('🔄 Loading working hours...')
       
       const staffIds = activeStaff.value.map(staff => staff.id)
       
       if (staffIds.length === 0) {
-        console.log('⚠️ No active staff found')
+        logger.debug('⚠️ No active staff found')
         return
       }
 
@@ -277,7 +277,7 @@ export const useAvailabilitySystem = () => {
 
       // If no working hours found, create default ones
       if (workingHoursCache.value.length === 0) {
-        console.log('⚠️ No working hours found, creating default ones')
+        logger.debug('⚠️ No working hours found, creating default ones')
         const defaultWorkingHours: StaffWorkingHours[] = []
         
         activeStaff.value.forEach(staff => {
@@ -296,7 +296,7 @@ export const useAvailabilitySystem = () => {
         workingHoursCache.value = defaultWorkingHours
       }
 
-      console.log('✅ Working hours loaded:', workingHoursCache.value.length)
+      logger.debug('✅ Working hours loaded:', workingHoursCache.value.length)
 
     } catch (err: any) {
       console.error('❌ Error loading working hours:', err)
@@ -306,7 +306,7 @@ export const useAvailabilitySystem = () => {
 
   const loadAppointments = async (date: string, tenantId?: string, skipFutureFilter = false) => {
     try {
-      console.log('🔄 Loading appointments for date:', date, skipFutureFilter ? '(ALL appointments)' : '(future only)')
+      logger.debug('🔄 Loading appointments for date:', date, skipFutureFilter ? '(ALL appointments)' : '(future only)')
       
       // DB stores times in UTC with space format (YYYY-MM-DD HH:MM:SS+00), so use that format
       const startOfDayUTC = `${date} 00:00:00+00`
@@ -317,7 +317,7 @@ export const useAvailabilitySystem = () => {
       const minFutureTime = new Date(now.getTime() + 24 * 60 * 60 * 1000)
       const minFutureTimeUTC = minFutureTime.toISOString()
       
-      console.log('⏰ Time filters (UTC):', {
+      logger.debug('⏰ Time filters (UTC):', {
         now: now.toLocaleString('de-CH'),
         minFutureTime: skipFutureFilter ? 'SKIPPED' : minFutureTimeUTC,
         date: date,
@@ -342,7 +342,7 @@ export const useAvailabilitySystem = () => {
       
       const { data: appointments, error } = await query
 
-      console.log('📋 Query results:', {
+      logger.debug('📋 Query results:', {
         count: appointments?.length || 0,
         appointments: appointments?.slice(0, 3).map(apt => ({
           id: apt.id,
@@ -383,11 +383,11 @@ export const useAvailabilitySystem = () => {
       }))
 
       // Load external busy times for the same date
-      console.log('🛰️ Loading external busy times window:', { startOfDayUTC, endOfDayUTC })
+      logger.debug('🛰️ Loading external busy times window:', { startOfDayUTC, endOfDayUTC })
       
       // Use provided tenantId - no need to check current user
       const selectedTenantId = tenantId
-      console.log('🏢 Selected tenant ID:', selectedTenantId)
+      logger.debug('🏢 Selected tenant ID:', selectedTenantId)
       
       if (!selectedTenantId) {
         console.warn('⚠️ No tenant ID provided for external busy times')
@@ -407,7 +407,7 @@ export const useAvailabilitySystem = () => {
       if (externalError) {
         console.warn('⚠️ Error loading external busy times (with date filters):', externalError)
       } else {
-        console.log('🛰️ External busy times fetched (with date filters):', (externalBusyTimes?.length || 0), (externalBusyTimes || []).slice(0, 3).map(e => ({ id: e.id, staff_id: e.staff_id, start_time: e.start_time, end_time: e.end_time, location: e.event_location })))
+        logger.debug('🛰️ External busy times fetched (with date filters):', (externalBusyTimes?.length || 0), (externalBusyTimes || []).slice(0, 3).map(e => ({ id: e.id, staff_id: e.staff_id, start_time: e.start_time, end_time: e.end_time, location: e.event_location })))
       }
       
       // Helper function to convert UTC to Zurich local time
@@ -461,7 +461,7 @@ export const useAvailabilitySystem = () => {
       })
       
       appointmentsCache.value = [...existingAppointments, ...allAppointments]
-      console.log('✅ Appointments loaded:', {
+      logger.debug('✅ Appointments loaded:', {
         internal: enrichedAppointments?.length || 0,
         external: finalExternalBusyTimes.length,
         total: allAppointments.length,
@@ -480,7 +480,7 @@ export const useAvailabilitySystem = () => {
     error.value = null
     
     try {
-      console.log('🎯 Getting available slots for:', filters)
+      logger.debug('🎯 Getting available slots for:', filters)
       
       // Load all required data if not cached
       if (staffCache.value.length === 0) {
@@ -508,7 +508,7 @@ export const useAvailabilitySystem = () => {
         )
       })
       
-      console.log('👥 Capable staff for category', filters.category_code, ':', capableStaff.length)
+      logger.debug('👥 Capable staff for category', filters.category_code, ':', capableStaff.length)
       
       // For each capable staff member
       for (const staff of capableStaff) {
@@ -520,7 +520,7 @@ export const useAvailabilitySystem = () => {
         )
         
         if (!workingHours) {
-          console.log('⏰ No working hours for staff', staff.id, 'on day', dayOfWeek)
+          logger.debug('⏰ No working hours for staff', staff.id, 'on day', dayOfWeek)
           continue
         }
         
@@ -556,7 +556,7 @@ export const useAvailabilitySystem = () => {
       }
       
       availableSlots.value = slots
-      console.log('✅ Generated', slots.length, 'available slots')
+      logger.debug('✅ Generated', slots.length, 'available slots')
       
       return slots
       
@@ -574,7 +574,7 @@ export const useAvailabilitySystem = () => {
     error.value = null
     
     try {
-      console.log('🎯 Getting staff-location-category combinations for:', filters)
+      logger.debug('🎯 Getting staff-location-category combinations for:', filters)
       
       // Load all required data for the tenant
       await loadBaseData(filters.tenant_id)
@@ -592,7 +592,7 @@ export const useAvailabilitySystem = () => {
         )
       })
       
-      console.log('👥 Capable staff for category', filters.category_code, ':', capableStaff.length)
+      logger.debug('👥 Capable staff for category', filters.category_code, ':', capableStaff.length)
       
       // For each capable staff member
       for (const staff of capableStaff) {
@@ -611,9 +611,9 @@ export const useAvailabilitySystem = () => {
           
           // TEMPORARY FIX: If location has no categories defined, assume it supports all
           if (categoryArray.length === 0) {
-            console.log('📍 Location', location.name, 'has no categories defined - assuming all categories supported')
+            logger.debug('📍 Location', location.name, 'has no categories defined - assuming all categories supported')
           } else if (!categoryArray.includes(filters.category_code)) {
-            console.log('📍 Location', location.name, 'does not support category', filters.category_code, 'Available:', categoryArray)
+            logger.debug('📍 Location', location.name, 'does not support category', filters.category_code, 'Available:', categoryArray)
             continue
           }
           
@@ -629,7 +629,7 @@ export const useAvailabilitySystem = () => {
       }
       
       staffLocationCategories.value = combinations
-      console.log('✅ Found', combinations.length, 'staff-location-category combinations')
+      logger.debug('✅ Found', combinations.length, 'staff-location-category combinations')
       
       return combinations
       
@@ -647,7 +647,7 @@ export const useAvailabilitySystem = () => {
     error.value = null
     
     try {
-      console.log('🎯 Getting all available slots for multiple days:', filters)
+      logger.debug('🎯 Getting all available slots for multiple days:', filters)
       
       // Load all required data for the tenant
       await loadBaseData(filters.tenant_id)
@@ -666,7 +666,7 @@ export const useAvailabilitySystem = () => {
         dates.push(d.toISOString().split('T')[0])
       }
       
-      console.log('📅 Checking dates:', dates)
+      logger.debug('📅 Checking dates:', dates)
       
       // For each date, get available slots
       for (const date of dates) {
@@ -731,7 +731,7 @@ export const useAvailabilitySystem = () => {
       }
       
       availableSlots.value = allSlots
-      console.log('✅ Generated', allSlots.length, 'available slots across', dates.length, 'days')
+      logger.debug('✅ Generated', allSlots.length, 'available slots across', dates.length, 'days')
       
       return allSlots
       
@@ -746,7 +746,7 @@ export const useAvailabilitySystem = () => {
 
   const getAvailableSlotsForCombination = async (combination: StaffLocationCategory, filters: { duration_minutes: number, buffer_minutes?: number, tenant_id?: string }): Promise<AvailableSlot[]> => {
     try {
-      console.log('🕐 Getting available slots for:', combination.staff_name, 'at', combination.location_name)
+      logger.debug('🕐 Getting available slots for:', combination.staff_name, 'at', combination.location_name)
       
       // Get working hours for this staff
       const workingHours = workingHoursCache.value.filter(wh => 
@@ -754,7 +754,7 @@ export const useAvailabilitySystem = () => {
       )
       
       if (workingHours.length === 0) {
-        console.log('⏰ No working hours found for staff', combination.staff_id)
+        logger.debug('⏰ No working hours found for staff', combination.staff_id)
         return []
       }
       
@@ -783,7 +783,7 @@ export const useAvailabilitySystem = () => {
         await loadAppointments(date, filters.tenant_id)
         
         // Get existing appointments for this staff+location+category
-        console.log('🔍 Filtering appointments:', {
+        logger.debug('🔍 Filtering appointments:', {
           totalAppointments: appointmentsCache.value.length,
           staff_id: combination.staff_id,
           location_id: combination.location_id,
@@ -802,7 +802,7 @@ export const useAvailabilitySystem = () => {
           // Block all appointments for this staff, regardless of location and category
         )
         
-        console.log('✅ Filtered existing appointments:', existingAppointments.length)
+        logger.debug('✅ Filtered existing appointments:', existingAppointments.length)
         
         // Generate time slots
         const daySlots = generateTimeSlots({
@@ -834,7 +834,7 @@ export const useAvailabilitySystem = () => {
         slots.push(...daySlots)
       }
       
-      console.log('✅ Generated', slots.length, 'slots for', combination.staff_name, 'at', combination.location_name)
+      logger.debug('✅ Generated', slots.length, 'slots for', combination.staff_name, 'at', combination.location_name)
       return slots
       
     } catch (err: any) {
@@ -873,8 +873,8 @@ export const useAvailabilitySystem = () => {
     // Create buffer zones from existing appointments
     const bufferZones: Array<{ start: number, end: number }> = []
     
-    console.log('🔍 Existing appointments for conflict check:', existingAppointments.length)
-    console.log('🔍 All appointments details:', existingAppointments.map(apt => ({
+    logger.debug('🔍 Existing appointments for conflict check:', existingAppointments.length)
+    logger.debug('🔍 All appointments details:', existingAppointments.map(apt => ({
       id: apt.id,
       type: apt.type,
       status: apt.status,
@@ -897,7 +897,7 @@ export const useAvailabilitySystem = () => {
       const aptStartDateOnly = aptStartDate.toISOString().split('T')[0]
       
       if (aptStartDateOnly !== date) {
-        console.log('⏭️ Skipping appointment not on target date:', {
+        logger.debug('⏭️ Skipping appointment not on target date:', {
           appointmentDate: aptStartDateOnly,
           targetDate: date,
           appointment: apt.id
@@ -909,7 +909,7 @@ export const useAvailabilitySystem = () => {
       const aptStartMinutes = aptStartUTC.getHours() * 60 + aptStartUTC.getMinutes()
       const aptEndMinutes = aptEndUTC.getHours() * 60 + aptEndUTC.getMinutes()
       
-      console.log('📅 Appointment conflict:', {
+      logger.debug('📅 Appointment conflict:', {
         id: apt.id,
         type: apt.type,
         status: apt.status,
@@ -927,11 +927,11 @@ export const useAvailabilitySystem = () => {
       })
     })
     
-    console.log('🚫 Buffer zones created:', bufferZones)
+    logger.debug('🚫 Buffer zones created:', bufferZones)
     
     // Generate slots every 15 minutes, but ensure we have enough time for the full duration
     const slotInterval = 15
-    console.log('🕐 Generating slots:', {
+    logger.debug('🕐 Generating slots:', {
       workingStartMinutes,
       workingEndMinutes,
       duration,
@@ -954,7 +954,7 @@ export const useAvailabilitySystem = () => {
       
       if (hasConflict) {
         slotsBlocked++
-        console.log('❌ Slot conflict at', minutes, '-', slotEndMinutes, 'with buffer zones:', bufferZones)
+        logger.debug('❌ Slot conflict at', minutes, '-', slotEndMinutes, 'with buffer zones:', bufferZones)
       } else {
         // Convert back to time string
         const startHour = Math.floor(minutes / 60)
@@ -971,7 +971,7 @@ export const useAvailabilitySystem = () => {
         if (params.locationTimeWindows && params.locationTimeWindows.length > 0) {
           if (!isWithinTimeWindows(slotStartDateTime, params.locationTimeWindows)) {
             slotsBlocked++
-            console.log('❌ Slot outside time windows:', startTime)
+            logger.debug('❌ Slot outside time windows:', startTime)
             continue
           }
         }
@@ -995,7 +995,7 @@ export const useAvailabilitySystem = () => {
       }
     }
     
-    console.log('📊 Slot generation summary:', {
+    logger.debug('📊 Slot generation summary:', {
       totalSlots: slotsGenerated + slotsBlocked,
       generated: slotsGenerated,
       blocked: slotsBlocked,
@@ -1019,7 +1019,7 @@ export const useAvailabilitySystem = () => {
     googleApiKey: string,
     peakSettings?: any
   ): Promise<AvailableSlot[]> => {
-    console.log(`🚗 Starting travel-time validation for ${slots.length} slots`)
+    logger.debug(`🚗 Starting travel-time validation for ${slots.length} slots`)
     const validSlots: AvailableSlot[] = []
     
     // Get BOTH internal appointments AND external busy times with postal codes
@@ -1048,12 +1048,12 @@ export const useAvailabilitySystem = () => {
       .filter(apt => apt !== null)
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
     
-    console.log(`📅 Found ${staffAppointments.length} appointments for staff (internal + external with PLZ)`)
-    console.log(`📍 External busy times with PLZ: ${staffAppointments.filter((apt: any) => apt.hasPLZForTravelCalc).length}`)
+    logger.debug(`📅 Found ${staffAppointments.length} appointments for staff (internal + external with PLZ)`)
+    logger.debug(`📍 External busy times with PLZ: ${staffAppointments.filter((apt: any) => apt.hasPLZForTravelCalc).length}`)
     
     // If no appointments, all slots are valid
     if (staffAppointments.length === 0) {
-      console.log('✅ No existing appointments with locations, all slots valid')
+      logger.debug('✅ No existing appointments with locations, all slots valid')
       return slots
     }
     
@@ -1102,8 +1102,8 @@ export const useAvailabilitySystem = () => {
       })
     }
     
-    console.log(`🎯 Only ${slotsToValidate.size} slots need travel-time validation (adjacent to appointments)`)
-    console.log('🎯 Slots to validate:', Array.from(slotsToValidate).map(id => {
+    logger.debug(`🎯 Only ${slotsToValidate.size} slots need travel-time validation (adjacent to appointments)`)
+    logger.debug('🎯 Slots to validate:', Array.from(slotsToValidate).map(id => {
       const slot = slots.find(s => s.id === id)
       return slot ? `${slot.start_time} (${slot.location_name})` : id
     }))
@@ -1142,13 +1142,13 @@ export const useAvailabilitySystem = () => {
         // First, check if it's an external busy time with postal_code
         if ((previousAppointment as any).hasPLZForTravelCalc && (previousAppointment as any).location_plz) {
           prevPLZ = (previousAppointment as any).location_plz
-          console.log(`✅ Using postal_code from external busy time: ${prevPLZ}`)
+          logger.debug(`✅ Using postal_code from external busy time: ${prevPLZ}`)
         } else {
           // Fall back to address extraction from internal appointments
           const prevAddress = previousAppointment.custom_location_address || previousAppointment.locations?.address
           if (prevAddress) {
             prevPLZ = extractPLZFromAddress(prevAddress)
-            console.log(`✅ Extracted PLZ from address: ${prevAddress} → ${prevPLZ}`)
+            logger.debug(`✅ Extracted PLZ from address: ${prevAddress} → ${prevPLZ}`)
           }
         }
         
@@ -1162,13 +1162,13 @@ export const useAvailabilitySystem = () => {
         // First, check if it's an external busy time with postal_code
         if ((nextAppointment as any).hasPLZForTravelCalc && (nextAppointment as any).location_plz) {
           nextPLZ = (nextAppointment as any).location_plz
-          console.log(`✅ Using postal_code from external busy time: ${nextPLZ}`)
+          logger.debug(`✅ Using postal_code from external busy time: ${nextPLZ}`)
         } else {
           // Fall back to address extraction from internal appointments
           const nextAddress = nextAppointment.custom_location_address || nextAppointment.locations?.address
           if (nextAddress) {
             nextPLZ = extractPLZFromAddress(nextAddress)
-            console.log(`✅ Extracted PLZ from address: ${nextAddress} → ${nextPLZ}`)
+            logger.debug(`✅ Extracted PLZ from address: ${nextAddress} → ${nextPLZ}`)
           }
         }
         
@@ -1186,9 +1186,9 @@ export const useAvailabilitySystem = () => {
       })
     }
     
-    console.log(`📍 Need to fetch ${plzPairsNeeded.size} unique PLZ pairs for validation`)
-    console.log(`📍 PLZ pairs:`, Array.from(plzPairsNeeded))
-    console.log(`📍 Staff appointments found:`, staffAppointments.length, staffAppointments.map(a => ({
+    logger.debug(`📍 Need to fetch ${plzPairsNeeded.size} unique PLZ pairs for validation`)
+    logger.debug(`📍 PLZ pairs:`, Array.from(plzPairsNeeded))
+    logger.debug(`📍 Staff appointments found:`, staffAppointments.length, staffAppointments.map(a => ({
       start: a.start_time,
       end: a.end_time,
       location_id: a.location_id,
@@ -1213,7 +1213,7 @@ export const useAvailabilitySystem = () => {
             timeout: 15000 // Increased timeout to 15 seconds
           })
           travelTimeCache.set(pairKey, response.travelTime)
-          console.log(`✅ Fetched ${fromPLZ} -> ${toPLZ}: ${response.travelTime} min`)
+          logger.debug(`✅ Fetched ${fromPLZ} -> ${toPLZ}: ${response.travelTime} min`)
         } catch (error: any) {
           console.warn(`⚠️ Could not fetch ${fromPLZ} -> ${toPLZ} (${error?.message || 'timeout'}), skipping travel-time check for this pair`)
           // Don't add to cache - slots will be considered valid if we can't verify travel time
@@ -1225,7 +1225,7 @@ export const useAvailabilitySystem = () => {
       if (travelTimeCache.size === 0 && plzPairsNeeded.size > 0) {
         console.warn('⚠️ No travel times could be fetched - all slots will be considered valid')
       } else {
-        console.log(`✅ Batch fetched ${travelTimeCache.size}/${plzPairsNeeded.size} travel times`)
+        logger.debug(`✅ Batch fetched ${travelTimeCache.size}/${plzPairsNeeded.size} travel times`)
       }
     }
     
@@ -1279,11 +1279,11 @@ export const useAvailabilitySystem = () => {
       if (isValid) {
         validSlots.push(slot)
       } else {
-        console.log('❌ Slot blocked by travel time:', slot.start_time, reason)
+        logger.debug('❌ Slot blocked by travel time:', slot.start_time, reason)
       }
     }
     
-    console.log(`✅ Travel-time validation complete: ${validSlots.length}/${slots.length} slots valid`)
+    logger.debug(`✅ Travel-time validation complete: ${validSlots.length}/${slots.length} slots valid`)
     return validSlots
   }
 
@@ -1300,7 +1300,7 @@ export const useAvailabilitySystem = () => {
   
   const clearAppointmentsCache = () => {
     appointmentsCache.value = []
-    console.log('🗑️ Appointments cache cleared')
+    logger.debug('🗑️ Appointments cache cleared')
   }
 
   return {

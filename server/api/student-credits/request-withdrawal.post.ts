@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('💳 Processing withdrawal request:', {
+    logger.debug('💳 Processing withdrawal request:', {
       userId: authUser.id,
       amount: (amount_rappen / 100).toFixed(2)
     })
@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
     const amountTowardsPending = Math.min(amount_rappen, pendingPaymentAmount)
     const actualWithdrawalAmount = amount_rappen - amountTowardsPending
     
-    console.log('💰 Balance & Pending Payments check:', {
+    logger.debug('💰 Balance & Pending Payments check:', {
       totalBalance: (studentCredit.balance_rappen / 100).toFixed(2),
       pendingWithdrawal: ((studentCredit.pending_withdrawal_rappen || 0) / 100).toFixed(2),
       availableBalance: (availableBalance / 100).toFixed(2),
@@ -97,7 +97,7 @@ export default defineEventHandler(async (event) => {
 
     // ✅ NEW: Apply pending payments automatically using student credit
     if (amountTowardsPending > 0) {
-      console.log('📋 Applying credit to pending payments:', {
+      logger.debug('📋 Applying credit to pending payments:', {
         amount: (amountTowardsPending / 100).toFixed(2),
         pendingPayments: pendingPayments?.length || 0
       })
@@ -119,7 +119,7 @@ export default defineEventHandler(async (event) => {
           })
           .eq('id', payment.id)
         
-        console.log('✅ Payment updated with credit:', {
+        logger.debug('✅ Payment updated with credit:', {
           paymentId: payment.id,
           creditApplied: (appliedCredit / 100).toFixed(2),
           newTotal: (newTotalAmount / 100).toFixed(2)
@@ -173,7 +173,7 @@ export default defineEventHandler(async (event) => {
       // Non-critical - don't fail the withdrawal request
     }
 
-    console.log('✅ Withdrawal request created:', {
+    logger.debug('✅ Withdrawal request created:', {
       amount: (amount_rappen / 100).toFixed(2),
       pendingWithdrawal: (newPendingWithdrawal / 100).toFixed(2),
       transactionId: transaction?.id

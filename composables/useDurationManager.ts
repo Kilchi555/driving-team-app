@@ -21,7 +21,7 @@ export const useDurationManager = () => {
 
   // Staff-Dauern direkt laden - KEINE Kategorie-Abfrage!
   const loadStaffDurations = async (staffId: string) => {
-    console.log('🚀 useDurationManager - Loading staff durations for:', staffId)
+    logger.debug('🚀 useDurationManager - Loading staff durations for:', staffId)
     isLoading.value = true
     error.value = null
 
@@ -42,7 +42,7 @@ export const useDurationManager = () => {
       if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
       // ✅ TENANT-GEFILTERTE Staff Settings laden
-      console.log('📋 Querying staff_settings with tenant filter...')
+      logger.debug('📋 Querying staff_settings with tenant filter...')
       const { data: staffSettings, error: staffError } = await supabase
         .from('staff_settings')
         .select('preferred_durations')
@@ -50,12 +50,12 @@ export const useDurationManager = () => {
         .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
         .maybeSingle()
 
-      console.log('📋 Staff settings result:', { data: staffSettings, error: staffError })
+      logger.debug('📋 Staff settings result:', { data: staffSettings, error: staffError })
 
       let finalDurations: number[] = []
       
       if (staffSettings?.preferred_durations) {
-        console.log('👤 Raw staff durations:', staffSettings.preferred_durations)
+        logger.debug('👤 Raw staff durations:', staffSettings.preferred_durations)
         
         try {
           // Parse different formats
@@ -67,7 +67,7 @@ export const useDurationManager = () => {
               return isNaN(num) ? 0 : num
             }).filter((d: number) => d > 0).sort((a: number, b: number) => a - b)
             
-            console.log('✅ Parsed durations:', finalDurations)
+            logger.debug('✅ Parsed durations:', finalDurations)
           } else if (staffSettings.preferred_durations.includes(',')) {
             // CSV format: "45,60,75,90"
             finalDurations = staffSettings.preferred_durations
@@ -76,15 +76,15 @@ export const useDurationManager = () => {
               .filter((d: number) => !isNaN(d) && d > 0)
               .sort((a: number, b: number) => a - b)
             
-            console.log('✅ Parsed CSV durations:', finalDurations)
+            logger.debug('✅ Parsed CSV durations:', finalDurations)
           } else {
             // Single number
             const singleDuration = parseInt(staffSettings.preferred_durations)
             if (!isNaN(singleDuration) && singleDuration > 0) {
               finalDurations = [singleDuration]
-              console.log('✅ Parsed single duration:', finalDurations)
+              logger.debug('✅ Parsed single duration:', finalDurations)
             } else {
-              console.log('⚠️ Invalid format, using fallback')
+              logger.debug('⚠️ Invalid format, using fallback')
               finalDurations = [45]
             }
           }
@@ -93,12 +93,12 @@ export const useDurationManager = () => {
           finalDurations = [45]
         }
       } else {
-        console.log('⚠️ No staff settings found, using default [45]')
+        logger.debug('⚠️ No staff settings found, using default [45]')
         finalDurations = [45]
       }
 
       availableDurations.value = finalDurations
-      console.log('🎯 Final available durations:', finalDurations)
+      logger.debug('🎯 Final available durations:', finalDurations)
       return finalDurations
 
     } catch (err: any) {
@@ -113,7 +113,7 @@ export const useDurationManager = () => {
 
   // Staff preferred durations in DB updaten
   const updateStaffDurations = async (staffId: string, newDurations: number[]) => {
-    console.log('🔄 Updating staff durations in DB:', newDurations)
+    logger.debug('🔄 Updating staff durations in DB:', newDurations)
     
     try {
       const supabase = getSupabase()
@@ -145,7 +145,7 @@ export const useDurationManager = () => {
 
       if (upsertError) throw upsertError
 
-      console.log('✅ Staff durations updated in DB as JSON:', durationsString)
+      logger.debug('✅ Staff durations updated in DB as JSON:', durationsString)
       
       // State aktualisieren
       availableDurations.value = newDurations.sort((a: number, b: number) => a - b)
@@ -159,7 +159,7 @@ export const useDurationManager = () => {
 
   // Standard-Dauern für alle Kategorien aus DB laden (für Settings UI)
   const loadAllPossibleDurations = async () => {
-    console.log('🔥 Loading all possible durations')
+    logger.debug('🔥 Loading all possible durations')
     
     try {
       // Alle möglichen Dauern sammeln (15min steps von 45-240)
@@ -182,7 +182,7 @@ export const useDurationManager = () => {
 
   // Staff-Settings für User laden
   const loadStaffSettings = async (staffId: string) => {
-    console.log('🔥 Loading complete staff settings')
+    logger.debug('🔥 Loading complete staff settings')
     
     try {
       const supabase = getSupabase()

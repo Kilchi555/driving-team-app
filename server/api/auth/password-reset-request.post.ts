@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
                       event.node.req.socket.remoteAddress || 
                       'unknown'
     
-    console.log('🔐 Password reset request from IP:', ipAddress)
+    logger.debug('🔐 Password reset request from IP:', ipAddress)
     
     // Apply rate limiting (max 5 attempts per 15 minutes)
     const rateLimit = checkRateLimit(ipAddress, 'password_reset', 5, 15 * 60)
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Zu viele Versuche. Bitte versuchen Sie es später erneut.'
       })
     }
-    console.log('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
+    logger.debug('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
 
     const body = await readBody(event)
     const { contact, method } = body
@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
     // Find user by email or phone
-    console.log(`🔍 Looking up user by ${method}:`, contact)
+    logger.debug(`🔍 Looking up user by ${method}:`, contact)
     
     let userQuery
     if (method === 'email') {
@@ -96,17 +96,17 @@ export default defineEventHandler(async (event) => {
       
       if (!tenantError && tenant) {
         tenantSlug = tenant.slug
-        console.log('🏢 Found tenant slug:', tenantSlug)
+        logger.debug('🏢 Found tenant slug:', tenantSlug)
       }
     }
 
     // If phone number not found, try with different formatting
     if ((userError || !user) && method === 'sms') {
-      console.log(`⚠️ Phone not found with exact format, trying normalized format...`)
+      logger.debug(`⚠️ Phone not found with exact format, trying normalized format...`)
       
       // Remove all non-digit characters except leading +
       const normalizedPhone = contact.replace(/[^\d+]/g, '')
-      console.log(`🔍 Trying normalized phone:`, normalizedPhone)
+      logger.debug(`🔍 Trying normalized phone:`, normalizedPhone)
       
       const { data: phoneUser, error: phoneError } = await serviceSupabase
         .from('users')
@@ -117,19 +117,19 @@ export default defineEventHandler(async (event) => {
       if (!phoneError && phoneUser) {
         user = phoneUser
         userError = null
-        console.log(`✅ Found user with normalized phone format`)
+        logger.debug(`✅ Found user with normalized phone format`)
       }
     }
 
     if (userError || !user) {
       // Don't reveal if user exists (security)
-      console.log(`ℹ️ No user found for ${method}: ${contact}`)
-      console.log(`User lookup error:`, userError?.message)
+      logger.debug(`ℹ️ No user found for ${method}: ${contact}`)
+      logger.debug(`User lookup error:`, userError?.message)
       // Still return success to prevent user enumeration
       return { success: true, message: 'Falls ein Account mit diesen Angaben existiert, erhalten Sie einen Magic Link.' }
     }
 
-    console.log('✅ User found:', user.id)
+    logger.debug('✅ User found:', user.id)
 
     // Generate secure random token
     const token = Array.from(crypto.getRandomValues(new Uint8Array(32)))
@@ -139,7 +139,7 @@ export default defineEventHandler(async (event) => {
     // Token expires in 1 hour
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000)
 
-    console.log('🔐 Creating password reset token...')
+    logger.debug('🔐 Creating password reset token...')
     
     const { error: insertError } = await serviceSupabase
       .from('password_reset_tokens')
@@ -168,7 +168,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Reset token created')
+    logger.debug('✅ Reset token created')
 
     // Build reset link with tenant slug if available
     const protocol = getHeader(event, 'x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
@@ -178,7 +178,7 @@ export default defineEventHandler(async (event) => {
 
     // Send magic link via email or SMS
     if (normalizedMethod === 'email') {
-      console.log('📧 Sending password reset email to:', user.email)
+      logger.debug('📧 Sending password reset email to:', user.email)
       
       try {
         const emailHtml = `
@@ -213,7 +213,7 @@ export default defineEventHandler(async (event) => {
           throw emailError
         }
         
-        console.log('✅ Password reset email sent successfully')
+        logger.debug('✅ Password reset email sent successfully')
       } catch (emailError: any) {
         console.error('❌ Email sending failed:', emailError)
         console.error('❌ Email error details:', {
@@ -223,15 +223,15 @@ export default defineEventHandler(async (event) => {
           data: emailError?.data
         })
         // Don't fail the whole process - token is created, email just failed
-        console.log('⚠️ Continuing despite email error - token still valid')
+        logger.debug('⚠️ Continuing despite email error - token still valid')
       }
     } else if (normalizedMethod === 'sms') {
-      console.log('📱 Sending password reset SMS to:', user.phone)
+      logger.debug('📱 Sending password reset SMS to:', user.phone)
       
       try {
         const smsMessage = `Ihr Passwort-Reset-Link: ${resetLink}. Dieser Link ist 1 Stunde gültig.`
         
-        console.log('📱 Invoking send-twilio-sms edge function with phone:', user.phone)
+        logger.debug('📱 Invoking send-twilio-sms edge function with phone:', user.phone)
         
         // Use service role for edge function invocation
         const { data: smsResult, error: smsError } = await serviceSupabase.functions.invoke('send-twilio-sms', {
@@ -242,14 +242,14 @@ export default defineEventHandler(async (event) => {
           method: 'POST'
         })
         
-        console.log('📱 SMS edge function response:', { data: smsResult, error: smsError })
+        logger.debug('📱 SMS edge function response:', { data: smsResult, error: smsError })
         
         if (smsError) {
           console.error('❌ SMS sending via send-twilio-sms failed:', smsError)
           throw smsError
         }
         
-        console.log('✅ Password reset SMS sent successfully:', smsResult)
+        logger.debug('✅ Password reset SMS sent successfully:', smsResult)
       } catch (smsError: any) {
         console.error('❌ SMS sending failed:', smsError)
         console.error('❌ SMS error details:', {
@@ -259,11 +259,11 @@ export default defineEventHandler(async (event) => {
           data: smsError?.data
         })
         // Don't fail the whole process - token is created, SMS just failed
-        console.log('⚠️ Continuing despite SMS error - token still valid')
+        logger.debug('⚠️ Continuing despite SMS error - token still valid')
       }
     }
 
-    console.log('✅ Password reset link sent successfully')
+    logger.debug('✅ Password reset link sent successfully')
 
     return {
       success: true,

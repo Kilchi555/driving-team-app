@@ -65,10 +65,10 @@ function generateSettlementEmail(data: SettleEmailData): string {
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🔄 settle-and-email.post called')
+    logger.debug('🔄 settle-and-email.post called')
     const body = await readBody(event)
     const { appointmentIds, invoiceNumber, companyBillingAddressId } = body
-    console.log('📋 Received:', { appointmentIds, invoiceNumber, companyBillingAddressId })
+    logger.debug('📋 Received:', { appointmentIds, invoiceNumber, companyBillingAddressId })
 
     if (!appointmentIds || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
       throw createError({
@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log(`✅ Processing ${appointmentIds.length} appointments`)
+    logger.debug(`✅ Processing ${appointmentIds.length} appointments`)
     const supabase = getSupabaseAdmin()
 
     // 1. Fetch appointment details for all appointments
@@ -180,14 +180,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Appointments marked as verrechnet:', appointmentIds)
+    logger.debug('✅ Appointments marked as verrechnet:', appointmentIds)
 
     // 5b. Void Wallee transactions and update payment method to invoice
-    console.log('💳 Voiding Wallee transactions and updating payment method...')
+    logger.debug('💳 Voiding Wallee transactions and updating payment method...')
     for (const payment of payments) {
       try {
         if (payment.wallee_transaction_id) {
-          console.log(`🔄 Processing Wallee transaction ${payment.wallee_transaction_id}...`)
+          logger.debug(`🔄 Processing Wallee transaction ${payment.wallee_transaction_id}...`)
           
           // Void the transaction in Wallee
           const walleeResponse = await $fetch(`https://app-wallee.com/api/transaction/void`, {
@@ -202,7 +202,7 @@ export default defineEventHandler(async (event) => {
             }
           })
           
-          console.log(`✅ Wallee transaction ${payment.wallee_transaction_id} voided`)
+          logger.debug(`✅ Wallee transaction ${payment.wallee_transaction_id} voided`)
         }
         
         // Update payment to invoice method and mark as invoiced
@@ -219,7 +219,7 @@ export default defineEventHandler(async (event) => {
         if (paymentUpdateError) {
           console.error(`❌ Error updating payment ${payment.id}:`, paymentUpdateError)
         } else {
-          console.log(`✅ Payment ${payment.id} updated: method='invoice', status='invoiced'`)
+          logger.debug(`✅ Payment ${payment.id} updated: method='invoice', status='invoiced'`)
         }
       } catch (err) {
         console.error(`❌ Error processing Wallee transaction ${payment.wallee_transaction_id}:`, err)
@@ -233,12 +233,12 @@ export default defineEventHandler(async (event) => {
     // Always generate PDF if we have payments (not just when invoiceNumber is provided)
     if (appointmentIds.length > 0) {
       try {
-        console.log('🔄 Generating PDF receipt...')
+        logger.debug('🔄 Generating PDF receipt...')
         
         // Get payment IDs for PDF generation
         const paymentIds = payments.map(p => p.id).filter(Boolean)
         
-        console.log('📝 Payment IDs for PDF:', paymentIds)
+        logger.debug('📝 Payment IDs for PDF:', paymentIds)
         
         if (paymentIds.length > 0) {
           const pdfResult = await $fetch('/api/payments/receipt', {
@@ -248,10 +248,10 @@ export default defineEventHandler(async (event) => {
             }
           })
 
-          console.log('📊 PDF Result:', JSON.stringify(pdfResult))
+          logger.debug('📊 PDF Result:', JSON.stringify(pdfResult))
           
           if (pdfResult?.pdfUrl) {
-            console.log('✅ PDF generated:', pdfResult.pdfUrl)
+            logger.debug('✅ PDF generated:', pdfResult.pdfUrl)
             pdfUrl = pdfResult.pdfUrl
           } else if (pdfResult?.success === false) {
             console.warn('⚠️ PDF generation returned false:', pdfResult.error)
@@ -331,7 +331,7 @@ export default defineEventHandler(async (event) => {
 
       for (const emailData of emailsToSend) {
         try {
-          console.log('📧 Sending email to:', emailData.to, 'Subject:', emailData.subject)
+          logger.debug('📧 Sending email to:', emailData.to, 'Subject:', emailData.subject)
           
           const { data: emailResult, error: emailError } = await serviceSupabase.functions.invoke('send-email', {
             body: {
@@ -347,7 +347,7 @@ export default defineEventHandler(async (event) => {
             console.error('❌ Failed to send email to', emailData.to, ':', JSON.stringify(emailError))
             failureCount++
           } else {
-            console.log('✅ Email sent successfully to', emailData.to, 'Result:', JSON.stringify(emailResult))
+            logger.debug('✅ Email sent successfully to', emailData.to, 'Result:', JSON.stringify(emailResult))
             successCount++
           }
         } catch (emailError) {
@@ -356,7 +356,7 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      console.log(`✅ Settlement emails sent: ${successCount} success, ${failureCount} failures`)
+      logger.debug(`✅ Settlement emails sent: ${successCount} success, ${failureCount} failures`)
 
       return {
         success: true,

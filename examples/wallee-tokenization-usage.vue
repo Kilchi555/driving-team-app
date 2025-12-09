@@ -63,7 +63,7 @@ const loadSavedPaymentMethods = async () => {
     const result = await getCustomerPaymentMethods(customerEmail)
     savedPaymentMethods.value = result.paymentMethods
     
-    console.log('💳 Loaded saved payment methods:', {
+    logger.debug('💳 Loaded saved payment methods:', {
       count: result.paymentMethods.length,
       totalTransactions: result.totalTransactions
     })
@@ -113,7 +113,7 @@ const payWithSavedMethod = async (method: WalleePaymentMethod) => {
   isProcessing.value = true
   
   try {
-    console.log('💳 Paying with saved method:', method.name)
+    logger.debug('💳 Paying with saved method:', method.name)
     
     // Wiederkehrende Zahlung mit gespeicherter Methode
     const response = await createRecurringTransaction({

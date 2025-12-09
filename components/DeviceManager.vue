@@ -210,7 +210,7 @@ const loadDevices = async () => {
     
     // Get the auth user ID from the auth store (this is the auth.users.id)
     const authUserId = authStore.user?.id || currentUser.auth_user_id || currentUser.id
-    console.log('Loading devices for user:', currentUser.id, 'auth_user_id:', authUserId)
+    logger.debug('Loading devices for user:', currentUser.id, 'auth_user_id:', authUserId)
     
     const { data, error } = await supabase
       .from('user_devices')
@@ -223,7 +223,7 @@ const loadDevices = async () => {
       return
     }
     
-    console.log('Loaded devices:', data)
+    logger.debug('Loaded devices:', data)
     devices.value = data || []
     lastUpdated.value = new Date()
     
@@ -250,7 +250,7 @@ const trustDevice = async (deviceId: string) => {
     }
     
     const authUserId = authStore.user?.id || currentUser.auth_user_id || currentUser.id
-    console.log('Trusting device with ID:', deviceId, 'for user:', currentUser.id, 'auth_user_id:', authUserId)
+    logger.debug('Trusting device with ID:', deviceId, 'for user:', currentUser.id, 'auth_user_id:', authUserId)
     
     // Use API route with service role to bypass RLS
     const response = await $fetch('/api/admin/update-user-device', {
@@ -268,7 +268,7 @@ const trustDevice = async (deviceId: string) => {
       return
     }
     
-    console.log('Device trusted successfully:', response.data)
+    logger.debug('Device trusted successfully:', response.data)
     showSuccess('Gerät vertrauenswürdig', 'Das Gerät wurde als vertrauenswürdig markiert.')
     
     // Reload devices
@@ -296,7 +296,7 @@ const removeDevice = async (deviceId: string) => {
     }
     
     const authUserId = authStore.user?.id || currentUser.auth_user_id || currentUser.id
-    console.log('Removing device with ID:', deviceId, 'for user:', currentUser.id, 'auth_user_id:', authUserId)
+    logger.debug('Removing device with ID:', deviceId, 'for user:', currentUser.id, 'auth_user_id:', authUserId)
     
     // Use API route with service role to bypass RLS
     const response = await $fetch('/api/admin/remove-user-device', {
@@ -313,7 +313,7 @@ const removeDevice = async (deviceId: string) => {
       return
     }
     
-    console.log('Device removed successfully:', response.data)
+    logger.debug('Device removed successfully:', response.data)
     showSuccess('Gerät entfernt', 'Das Gerät wurde erfolgreich entfernt.')
     
     // Reload devices

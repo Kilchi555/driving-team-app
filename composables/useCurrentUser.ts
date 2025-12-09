@@ -33,7 +33,7 @@ export const useCurrentUser = () => {
         return
       }
 
-      console.log('Auth-User gefunden:', user.email)
+      logger.debug('Auth-User gefunden:', user.email)
 
       // 2. Database-User per E-Mail suchen
       const { data: usersData, error: dbError } = await supabase
@@ -49,7 +49,7 @@ export const useCurrentUser = () => {
       }
 
       if (!usersData || usersData.length === 0) {
-        console.log('Business-User nicht gefunden für:', user.email)
+        logger.debug('Business-User nicht gefunden für:', user.email)
         profileExists.value = false
         currentUser.value = {
           email: user.email,
@@ -60,7 +60,7 @@ export const useCurrentUser = () => {
 
       // ✅ User gefunden
       const userData = usersData[0]
-      console.log('✅ Business-User geladen:', userData)
+      logger.debug('✅ Business-User geladen:', userData)
       
       if (!userData.tenant_id) {
         console.warn('⚠️ User nicht zugewiesen:', userData.email)
@@ -114,7 +114,7 @@ export const useCurrentUser = () => {
         throw error
       }
 
-      console.log('✅ Profil erstellt:', data)
+      logger.debug('✅ Profil erstellt:', data)
       
       // Update lokaler State
       currentUser.value = {

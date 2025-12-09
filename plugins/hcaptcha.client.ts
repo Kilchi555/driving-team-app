@@ -7,7 +7,7 @@ export default defineNuxtPlugin(() => {
   if (typeof window !== 'undefined') {
     // Check if script already exists
     if (document.querySelector('script[src*="hcaptcha"]')) {
-      console.log('✅ hCaptcha script tag already exists')
+      logger.debug('✅ hCaptcha script tag already exists')
       return
     }
 
@@ -18,24 +18,24 @@ export default defineNuxtPlugin(() => {
     script.defer = false
     
     script.onload = () => {
-      console.log('✅ hCaptcha script loaded successfully')
+      logger.debug('✅ hCaptcha script loaded successfully')
       
       // Render hCaptcha widgets after script loads
       if ((window as any).hcaptcha) {
         // Find all hCaptcha containers and render them
         const containers = document.querySelectorAll('.h-captcha')
-        console.log(`🔍 Found ${containers.length} hCaptcha containers`)
+        logger.debug(`🔍 Found ${containers.length} hCaptcha containers`)
         
         containers.forEach((container, index) => {
           const siteKey = container.getAttribute('data-sitekey')
-          console.log(`🎨 Rendering hCaptcha widget ${index + 1} with sitekey: ${siteKey?.substring(0, 10)}...`)
+          logger.debug(`🎨 Rendering hCaptcha widget ${index + 1} with sitekey: ${siteKey?.substring(0, 10)}...`)
           
           try {
             (window as any).hcaptcha.render(container.id, {
               sitekey: siteKey,
               theme: 'light'
             })
-            console.log(`✅ hCaptcha widget ${index + 1} rendered successfully`)
+            logger.debug(`✅ hCaptcha widget ${index + 1} rendered successfully`)
           } catch (error) {
             console.error(`❌ Failed to render hCaptcha widget ${index + 1}:`, error)
           }
@@ -48,7 +48,7 @@ export default defineNuxtPlugin(() => {
     }
     
     document.head.appendChild(script)
-    console.log('📝 hCaptcha script appended to head')
+    logger.debug('📝 hCaptcha script appended to head')
   }
 })
 

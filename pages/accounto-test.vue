@@ -227,7 +227,7 @@ const debugEnvironment = async () => {
   error.value = null
   
   try {
-    console.log('🔍 Debugging Accounto environment...')
+    logger.debug('🔍 Debugging Accounto environment...')
     
     const response = await $fetch('/api/accounto/debug-env', {
       method: 'GET'
@@ -238,7 +238,7 @@ const debugEnvironment = async () => {
       environment: response
     }
     
-    console.log('✅ Environment debug completed:', response)
+    logger.debug('✅ Environment debug completed:', response)
     
   } catch (err: any) {
     console.error('❌ Environment debug failed:', err)
@@ -263,7 +263,7 @@ const testConnection = async () => {
   error.value = null
   
   try {
-    console.log('🔗 Testing Accounto API connection...')
+    logger.debug('🔗 Testing Accounto API connection...')
     
     const response = await $fetch('/api/accounto/test-connection', {
       method: 'GET'
@@ -274,7 +274,7 @@ const testConnection = async () => {
       connection: response
     }
     
-    console.log('✅ Connection test completed:', response)
+    logger.debug('✅ Connection test completed:', response)
     
   } catch (err: any) {
     console.error('❌ Connection test failed:', err)
@@ -299,7 +299,7 @@ const testCreateInvoice = async () => {
   error.value = null
   
   try {
-    console.log('🧾 Testing Accounto invoice creation...')
+    logger.debug('🧾 Testing Accounto invoice creation...')
     
     const testData = {
       appointments: [
@@ -344,7 +344,7 @@ const testCreateInvoice = async () => {
       invoice: response
     }
     
-    console.log('✅ Invoice test completed:', response)
+    logger.debug('✅ Invoice test completed:', response)
     
   } catch (err: any) {
     console.error('❌ Invoice test failed:', err)

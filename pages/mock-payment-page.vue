@@ -94,7 +94,7 @@ const isProcessing = ref(false)
 
 // Methods
 const selectMethod = (method: string) => {
-  console.log('🎭 Payment method selected:', method)
+  logger.debug('🎭 Payment method selected:', method)
 }
 
 const processPayment = async (success: boolean) => {

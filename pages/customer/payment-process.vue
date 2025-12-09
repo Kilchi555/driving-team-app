@@ -237,7 +237,7 @@ const loadPaymentDetails = async () => {
             default_duration_minutes: et.default_duration_minutes
           }
         })
-        console.log('✅ Event types loaded:', eventTypes)
+        logger.debug('✅ Event types loaded:', eventTypes)
       }
     } catch (error) {
       console.warn('⚠️ Could not load event types:', error)
@@ -274,7 +274,7 @@ const loadPaymentDetails = async () => {
             automaticPaymentEnabled = !!settings?.automatic_payment_enabled
             automaticPaymentHoursBefore = Number(settings?.automatic_payment_hours_before) || 24
             
-            console.log('🔧 Automatic payment settings:', {
+            logger.debug('🔧 Automatic payment settings:', {
               enabled: automaticPaymentEnabled,
               hoursBefore: automaticPaymentHoursBefore
             })
@@ -309,7 +309,7 @@ const loadPaymentDetails = async () => {
       if (loadError) {
         console.warn('⚠️ Error loading payments:', loadError)
       } else if (paymentsData && paymentsData.length > 0) {
-        console.log('✅ Payments loaded:', paymentsData.length)
+        logger.debug('✅ Payments loaded:', paymentsData.length)
         
         // Verarbeite payments
         for (const payment of paymentsData) {
@@ -373,7 +373,7 @@ const loadPaymentDetails = async () => {
                 const hoursUntilPayment = (scheduledPaymentDate.getTime() - now.getTime()) / (1000 * 60 * 60)
                 const hoursUntilAppointment = (appointmentStart.getTime() - now.getTime()) / (1000 * 60 * 60)
                 
-                console.log('🔒 Automatic payment scheduled:', {
+                logger.debug('🔒 Automatic payment scheduled:', {
                   paymentId: payment.id,
                   appointmentStart: appointmentStart.toISOString(),
                   scheduledPaymentDate: scheduledPaymentDate.toISOString(),
@@ -428,7 +428,7 @@ const loadPaymentDetails = async () => {
 
     // 2. Lade Appointments direkt (falls keine payments gefunden wurden)
     if (enrichedPayments.length === 0) {
-      console.log('🔍 No payments found, loading appointments directly')
+      logger.debug('🔍 No payments found, loading appointments directly')
       
       try {
         const { data: appointmentsData, error: appointmentsError } = await supabase
@@ -452,7 +452,7 @@ const loadPaymentDetails = async () => {
         if (appointmentsError) {
           console.warn('⚠️ Error loading appointments:', appointmentsError)
         } else if (appointmentsData && appointmentsData.length > 0) {
-          console.log('✅ Appointments loaded:', appointmentsData.length)
+          logger.debug('✅ Appointments loaded:', appointmentsData.length)
           
           // Konvertiere appointments zu payment-ähnlicher Struktur
           for (const appointment of appointmentsData) {
@@ -600,7 +600,7 @@ const loadPaymentDetails = async () => {
     }
 
     paymentDetails.value = enrichedPayments
-    console.log('✅ Payment details loaded:', paymentDetails.value)
+    logger.debug('✅ Payment details loaded:', paymentDetails.value)
 
   } catch (err: any) {
     console.error('❌ Error loading payment details:', err)
@@ -617,12 +617,12 @@ const processPayment = async (success: boolean) => {
   isProcessing.value = true
   
   try {
-    console.log('🔄 Processing payment for IDs:', paymentIds.value)
-    console.log('💰 Total amount:', totalAmount.value)
+    logger.debug('🔄 Processing payment for IDs:', paymentIds.value)
+    logger.debug('💰 Total amount:', totalAmount.value)
     
     // Wenn automatische Zahlung geplant war, storniere sie (freiwillige Zahlung hat Vorrang)
     if (automaticPaymentBlocked.value) {
-      console.log('💡 Voluntary early payment - automatic payment will be cancelled')
+      logger.debug('💡 Voluntary early payment - automatic payment will be cancelled')
     }
     
     // Get current user
@@ -665,7 +665,7 @@ const processPayment = async (success: boolean) => {
     
     if (walleeResponse.success && walleeResponse.paymentUrl && walleeResponse.transactionId) {
       // Update all payments with Wallee transaction ID before redirect
-      console.log('💾 Saving Wallee transaction ID to payments:', walleeResponse.transactionId)
+      logger.debug('💾 Saving Wallee transaction ID to payments:', walleeResponse.transactionId)
       
       for (const paymentId of paymentIds.value) {
         const { error: updateError } = await supabase
@@ -685,7 +685,7 @@ const processPayment = async (success: boolean) => {
         }
       }
       
-      console.log('✅ All payments updated with transaction ID')
+      logger.debug('✅ All payments updated with transaction ID')
       
       // Redirect to Wallee payment page
       window.location.href = walleeResponse.paymentUrl

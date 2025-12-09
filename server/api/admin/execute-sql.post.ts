@@ -49,8 +49,8 @@ export default defineEventHandler(async (event) => {
       }
     )
     
-    console.log('🔧 Executing SQL:', description || 'Manual SQL execution')
-    console.log('📝 Query:', sql.substring(0, 200) + '...')
+    logger.debug('🔧 Executing SQL:', description || 'Manual SQL execution')
+    logger.debug('📝 Query:', sql.substring(0, 200) + '...')
     
     // Execute the SQL
     const { data, error } = await supabase.rpc('exec_sql', { sql_query: sql })
@@ -63,7 +63,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    console.log('✅ SQL executed successfully')
+    logger.debug('✅ SQL executed successfully')
     
     return {
       success: true,

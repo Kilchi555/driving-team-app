@@ -50,7 +50,7 @@ export const useVehicleReservations = () => {
   const loadVehicles = async (forceTenantId?: string) => {
     const tenantId = forceTenantId || currentUser.value?.tenant_id
     
-    console.log('🔄 loadVehicles called', {
+    logger.debug('🔄 loadVehicles called', {
       currentUser: currentUser.value,
       forceTenantId,
       effectiveTenantId: tenantId
@@ -61,7 +61,7 @@ export const useVehicleReservations = () => {
       return
     }
 
-    console.log('🚗 Loading vehicles for tenant:', tenantId)
+    logger.debug('🚗 Loading vehicles for tenant:', tenantId)
     isLoading.value = true
     error.value = null
 
@@ -75,8 +75,8 @@ export const useVehicleReservations = () => {
 
       if (vehiclesError) throw vehiclesError
       
-      console.log('✅ Vehicles loaded:', data?.length || 0, 'items')
-      console.log('🚗 Vehicles data:', data)
+      logger.debug('✅ Vehicles loaded:', data?.length || 0, 'items')
+      logger.debug('🚗 Vehicles data:', data)
       
       vehicles.value = data || []
 

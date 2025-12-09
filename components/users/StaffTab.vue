@@ -698,7 +698,7 @@ const loadStaff = async () => {
   error.value = null
   
   try {
-    console.log('🔄 Loading staff from database...')
+    logger.debug('🔄 Loading staff from database...')
     
     // Get current user's tenant_id
     const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -842,7 +842,7 @@ const loadStaff = async () => {
     })
 
     staffList.value = enrichedStaff
-    console.log('✅ Staff loaded successfully:', staffList.value.length)
+    logger.debug('✅ Staff loaded successfully:', staffList.value.length)
 
   } catch (err: any) {
     console.error('❌ Error loading staff:', err)
@@ -877,7 +877,7 @@ const removeTimeWindow = async (location: any, index: number) => {
 
 const updateLocationTimeWindows = async (location: any) => {
   try {
-    console.log('🔄 Updating location time windows:', location.id)
+    logger.debug('🔄 Updating location time windows:', location.id)
     
     const { error } = await supabase
       .from('locations')
@@ -910,7 +910,7 @@ const updateLocationTimeWindows = async (location: any) => {
 
 const updateStaffAvailability = async (staff: any) => {
   try {
-    console.log('🔄 Updating staff availability:', staff.id, staff.availability_mode)
+    logger.debug('🔄 Updating staff availability:', staff.id, staff.availability_mode)
     
     const { error } = await supabase
       .from('staff_availability_settings')
@@ -1031,7 +1031,7 @@ const initializeNewLocationAutocomplete = async () => {
       }
     })
     
-    console.log('✅ Google Places Autocomplete initialized for new location')
+    logger.debug('✅ Google Places Autocomplete initialized for new location')
   } catch (error) {
     console.error('❌ Error initializing Google Places Autocomplete:', error)
   }
@@ -1069,7 +1069,7 @@ const initializeEditLocationAutocomplete = async () => {
       }
     })
     
-    console.log('✅ Google Places Autocomplete initialized for edit location')
+    logger.debug('✅ Google Places Autocomplete initialized for edit location')
   } catch (error) {
     console.error('❌ Error initializing Google Places Autocomplete:', error)
   }
@@ -1216,7 +1216,7 @@ const removeLocation = async (staff: any, location: any) => {
       staff.locations.splice(index, 1)
     }
     
-    console.log('✅ Location removed successfully')
+    logger.debug('✅ Location removed successfully')
     alert(`Standort "${location.name}" wurde erfolgreich von ${staff.first_name} ${staff.last_name} entfernt.`)
   } catch (err: any) {
     console.error('❌ Error removing location:', err)
@@ -1281,7 +1281,7 @@ const updateLocationCategoryPickupSettings = async (location: any) => {
 
     if (error) throw error
 
-    console.log('✅ Location category pickup settings updated')
+    logger.debug('✅ Location category pickup settings updated')
     
     // Show toast after 1 second delay
     setTimeout(() => {
@@ -1303,7 +1303,7 @@ const updateLocationCategoryPickupSettings = async (location: any) => {
 
 const updateLocationCategories = async (location: any) => {
   try {
-    console.log('🔄 Updating location categories:', location.id, location.available_categories)
+    logger.debug('🔄 Updating location categories:', location.id, location.available_categories)
     
     const { error } = await supabase
       .from('locations')
@@ -1314,7 +1314,7 @@ const updateLocationCategories = async (location: any) => {
 
     if (error) throw error
 
-    console.log('✅ Location categories updated')
+    logger.debug('✅ Location categories updated')
     
     // Show toast after 1 second delay
     setTimeout(() => {
@@ -1336,7 +1336,7 @@ const updateLocationCategories = async (location: any) => {
 
 const updateLocationPickup = async (location: any) => {
   try {
-    console.log('🔄 Updating location pickup:', location.id, location.pickup_enabled)
+    logger.debug('🔄 Updating location pickup:', location.id, location.pickup_enabled)
     
     const { error } = await supabase
       .from('locations')
@@ -1382,7 +1382,7 @@ const createStaff = async () => {
   isCreatingStaff.value = true
   
   try {
-    console.log('🔄 Creating new staff member...')
+    logger.debug('🔄 Creating new staff member...')
     
     // Get current user's tenant_id
     const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -1448,7 +1448,7 @@ const createStaff = async () => {
 }
 
 const editWorkingHours = (staff: any) => {
-  console.log('Edit working hours for:', staff)
+  logger.debug('Edit working hours for:', staff)
   // TODO: Implement working hours modal
 }
 

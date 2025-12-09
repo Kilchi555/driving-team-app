@@ -1,6 +1,6 @@
 // server/api/admin/test.get.ts
 export default defineEventHandler(async (event) => {
-  console.log('🧪 Admin test endpoint called')
+  logger.debug('🧪 Admin test endpoint called')
   
   return {
     success: true,

@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
       selectedCategories
     } = body
 
-    console.log('📝 Staff registration request:', { email, firstName, lastName })
+    logger.debug('📝 Staff registration request:', { email, firstName, lastName })
 
     // Validate required fields
     if (!invitationToken || !email || !firstName || !lastName || !password) {
@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Invitation verified:', invitation.id)
+    logger.debug('✅ Invitation verified:', invitation.id)
 
     // 2. Create Supabase Auth user
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Auth user created:', authData.user.id)
+    logger.debug('✅ Auth user created:', authData.user.id)
 
     // 3. Create user profile in database
     const { data: newUser, error: profileError } = await serviceSupabase
@@ -140,7 +140,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ User profile created:', newUser.id)
+    logger.debug('✅ User profile created:', newUser.id)
 
     // 4. Store categories if provided
     if (selectedCategories && selectedCategories.length > 0) {
@@ -155,7 +155,7 @@ export default defineEventHandler(async (event) => {
           .from('staff_categories')
           .insert(categoryInserts)
         
-        console.log('✅ Categories stored:', selectedCategories.length)
+        logger.debug('✅ Categories stored:', selectedCategories.length)
       } catch (catErr) {
         console.warn('⚠️ Categories storage failed (non-fatal):', catErr)
       }
@@ -170,7 +170,7 @@ export default defineEventHandler(async (event) => {
       })
       .eq('id', invitation.id)
 
-    console.log('✅ Invitation marked as accepted')
+    logger.debug('✅ Invitation marked as accepted')
 
     return {
       success: true,

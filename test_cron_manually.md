@@ -24,7 +24,7 @@ const response = await fetch('/api/cron/process-automatic-payments', {
   }
 });
 const result = await response.json();
-console.log(result);
+logger.debug(result);
 ```
 
 ## Was Sie sehen sollten

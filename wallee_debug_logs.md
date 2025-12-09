@@ -37,14 +37,14 @@ const transactionData = {
 
 ### **3. Detaillierte Debug-Logs:**
 ```javascript
-console.log('🔍 COMPLETE HTTP REQUEST DEBUG:')
-console.log('🌐 URL:', url)
-console.log('📤 METHOD:', 'POST')
-console.log('📤 HEADERS:', JSON.stringify(headers, null, 2))
-console.log('📤 BODY:', JSON.stringify(transactionData, null, 2))
-console.log('🔐 AUTH STRING:', `${userId}:${secretKey}`)
-console.log('🔐 BASE64 AUTH:', auth)
-console.log('🔐 AUTH HEADER:', `Basic ${auth}`)
+logger.debug('🔍 COMPLETE HTTP REQUEST DEBUG:')
+logger.debug('🌐 URL:', url)
+logger.debug('📤 METHOD:', 'POST')
+logger.debug('📤 HEADERS:', JSON.stringify(headers, null, 2))
+logger.debug('📤 BODY:', JSON.stringify(transactionData, null, 2))
+logger.debug('🔐 AUTH STRING:', `${userId}:${secretKey}`)
+logger.debug('🔐 BASE64 AUTH:', auth)
+logger.debug('🔐 AUTH HEADER:', `Basic ${auth}`)
 ```
 
 ## 🧪 **Debug-Tests:**

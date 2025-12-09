@@ -186,11 +186,11 @@ const checkStatus = async () => {
     
     // ✅ NEW: If no payment/transaction ID, try to find the most recent completed payment for logged-in user
     if (!paymentId && !transactionId) {
-      console.log('🔍 No payment ID provided, trying to find recent payment for current user...')
+      logger.debug('🔍 No payment ID provided, trying to find recent payment for current user...')
       
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        console.log('👤 Auth user:', user.id)
+        logger.debug('👤 Auth user:', user.id)
         
         const { data: userData } = await supabase
           .from('users')
@@ -199,7 +199,7 @@ const checkStatus = async () => {
           .single()
         
         if (userData) {
-          console.log('🏢 User data found:', { user_id: userData.id, tenant_id: userData.tenant_id })
+          logger.debug('🏢 User data found:', { user_id: userData.id, tenant_id: userData.tenant_id })
           
           // Find the most recent completed OR authorized payment (created within last 5 minutes)
           const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
@@ -227,10 +227,10 @@ const checkStatus = async () => {
             .limit(1)
             .maybeSingle()
           
-          console.log('📊 Query result:', { payment: recentPayment, error: recentError })
+          logger.debug('📊 Query result:', { payment: recentPayment, error: recentError })
           
           if (recentPayment) {
-            console.log('✅ Found recent payment:', recentPayment.id)
+            logger.debug('✅ Found recent payment:', recentPayment.id)
             paymentDetails.value = recentPayment
             paymentStatus.value = recentPayment.payment_status
             isLoading.value = false
@@ -245,7 +245,7 @@ const checkStatus = async () => {
                   const voucherProducts = metadata.products.filter((p: any) => p.is_voucher)
                   if (voucherProducts.length > 0) {
                     vouchers.value = voucherProducts
-                    console.log('🎁 Found vouchers in metadata:', voucherProducts)
+                    logger.debug('🎁 Found vouchers in metadata:', voucherProducts)
                     // Show voucher modal instead of countdown if vouchers exist
                     showVoucherModal.value = true
                     return
@@ -319,7 +319,7 @@ const checkStatus = async () => {
           const voucherProducts = metadata.products.filter((p: any) => p.is_voucher)
           if (voucherProducts.length > 0) {
             vouchers.value = voucherProducts
-            console.log('🎁 Found vouchers in metadata:', voucherProducts)
+            logger.debug('🎁 Found vouchers in metadata:', voucherProducts)
             // Show voucher modal instead of countdown if vouchers exist
             showVoucherModal.value = true
             isLoading.value = false

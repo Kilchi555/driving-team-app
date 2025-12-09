@@ -39,7 +39,7 @@ export const useReminderService = () => {
     body: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('📧 Sending email reminder:', { email, subject })
+      logger.debug('📧 Sending email reminder:', { email, subject })
 
       // ✅ Use centralized /api/email/send-appointment-notification endpoint
       const result = await $fetch('/api/email/send-appointment-notification', {
@@ -52,7 +52,7 @@ export const useReminderService = () => {
         }
       }) as any
 
-      console.log('✅ Email sent successfully via API')
+      logger.debug('✅ Email sent successfully via API')
       
       // Log the reminder in database
       const { error: logError } = await supabase
@@ -100,7 +100,7 @@ export const useReminderService = () => {
     message: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('📱 Sending SMS reminder via Twilio:', { phoneNumber })
+      logger.debug('📱 Sending SMS reminder via Twilio:', { phoneNumber })
 
       // ✅ Use centralized /api/sms/send endpoint
       const result = await $fetch('/api/sms/send', {
@@ -111,7 +111,7 @@ export const useReminderService = () => {
         }
       }) as any
 
-      console.log('✅ SMS sent successfully via API')
+      logger.debug('✅ SMS sent successfully via API')
       
       // Log the reminder in database
       const { error: logError } = await supabase
@@ -157,11 +157,11 @@ export const useReminderService = () => {
     message: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('🔔 Push Reminder (SIMULATED):', { userId, message })
+      logger.debug('🔔 Push Reminder (SIMULATED):', { userId, message })
 
       // TODO: Implement actual push notification via service (e.g., Firebase, OneSignal)
       // For now, we'll log it
-      console.log('🔔 Push content:', { message })
+      logger.debug('🔔 Push content:', { message })
 
       // Log the reminder in database
       const { error: logError } = await supabase
@@ -241,7 +241,7 @@ export const useReminderService = () => {
     }
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('🔔 Sending payment reminder:', { paymentId, stage, channels })
+      logger.debug('🔔 Sending payment reminder:', { paymentId, stage, channels })
 
       // Get payment details first
       const { data: payment, error: paymentError } = await supabase
@@ -322,7 +322,7 @@ export const useReminderService = () => {
 
       // Check if payment is still pending
       if (payment.payment_status !== 'pending') {
-        console.log('ℹ️ Payment is not pending, skipping reminder')
+        logger.debug('ℹ️ Payment is not pending, skipping reminder')
         return { success: true }
       }
 
@@ -353,7 +353,7 @@ export const useReminderService = () => {
       const finalTenantSlug = tenantSlug || 'driving-team'
       const paymentLink = `${baseUrl}/${finalTenantSlug}?redirect=${dashboardUrl}`
       
-      console.log('🔗 Payment link constructed:', {
+      logger.debug('🔗 Payment link constructed:', {
         tenantSlug,
         finalTenantSlug,
         dashboardUrl,
@@ -422,7 +422,7 @@ export const useReminderService = () => {
         })
         .eq('id', paymentId)
 
-      console.log('✅ Reminder sent successfully:', results)
+      logger.debug('✅ Reminder sent successfully:', results)
       return { success: true }
     } catch (error: any) {
       console.error('❌ Error sending payment reminder:', error)
@@ -443,7 +443,7 @@ export const useReminderService = () => {
     }
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('🔔 Sending confirmation reminder:', { appointmentId, stage, channels })
+      logger.debug('🔔 Sending confirmation reminder:', { appointmentId, stage, channels })
 
       // Get appointment details
       const { data: appointment, error: appointmentError } = await supabase
@@ -482,7 +482,7 @@ export const useReminderService = () => {
 
       // Check if appointment still needs confirmation
       if (appointment.status !== 'pending_confirmation') {
-        console.log('ℹ️ Appointment is not pending confirmation, skipping reminder')
+        logger.debug('ℹ️ Appointment is not pending confirmation, skipping reminder')
         return { success: true }
       }
 
@@ -525,7 +525,7 @@ export const useReminderService = () => {
       const tenantSlug = Array.isArray(userData.tenants) ? userData.tenants[0]?.slug : userData.tenants?.slug || 'driving-team'
       const confirmationLink = `${baseUrl}/confirm/${appointment.confirmation_token}`
 
-      console.log('🔗 Confirmation link constructed:', {
+      logger.debug('🔗 Confirmation link constructed:', {
         tenantSlug,
         confirmationLink
       })
@@ -605,7 +605,7 @@ export const useReminderService = () => {
         })
         .eq('id', appointmentId)
 
-      console.log('✅ Confirmation reminder sent successfully:', results)
+      logger.debug('✅ Confirmation reminder sent successfully:', results)
       return { success: true }
     } catch (error: any) {
       console.error('❌ Error sending confirmation reminder:', error)

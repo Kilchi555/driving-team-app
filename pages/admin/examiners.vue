@@ -323,7 +323,7 @@ const loadExaminers = async () => {
     if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
-    console.log('🔍 Loading examiners for tenant:', userProfile.tenant_id)
+    logger.debug('🔍 Loading examiners for tenant:', userProfile.tenant_id)
     
     // Load examiners with their average ratings (filtered by tenant)
     const { data, error } = await supabase
@@ -493,7 +493,7 @@ loadExaminers()
 const authStore = useAuthStore()
 
 onMounted(async () => {
-  console.log('🔍 Examiners page mounted, checking auth...')
+  logger.debug('🔍 Examiners page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -502,7 +502,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -511,18 +511,18 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading examiners...')
+  logger.debug('✅ Auth check passed, loading examiners...')
   // Page is already displayed, data loads in background
-  console.log('👨‍🏫 Examiners page mounted, data loading in background')
+  logger.debug('👨‍🏫 Examiners page mounted, data loading in background')
 })
 </script>

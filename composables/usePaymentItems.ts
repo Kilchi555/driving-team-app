@@ -77,7 +77,7 @@ export const usePaymentItems = () => {
       if (dbError) throw dbError
       
       paymentItems.value = data || []
-      console.log('✅ Payment items loaded:', paymentItems.value.length)
+      logger.debug('✅ Payment items loaded:', paymentItems.value.length)
       
     } catch (err: any) {
       console.error('❌ Error loading payment items:', err)
@@ -98,7 +98,7 @@ export const usePaymentItems = () => {
       if (dbError) throw dbError
       
       paymentItems.value.push(data)
-      console.log('✅ Payment item created:', data.id)
+      logger.debug('✅ Payment item created:', data.id)
       
       return data
     } catch (err: any) {
@@ -119,7 +119,7 @@ export const usePaymentItems = () => {
       if (dbError) throw dbError
       
       paymentItems.value.push(...(data || []))
-      console.log('✅ Multiple payment items created:', data?.length || 0)
+      logger.debug('✅ Multiple payment items created:', data?.length || 0)
       
       return data || []
     } catch (err: any) {
@@ -144,7 +144,7 @@ export const usePaymentItems = () => {
         paymentItems.value[index] = data
       }
       
-      console.log('✅ Payment item updated:', id)
+      logger.debug('✅ Payment item updated:', id)
       
       return data
     } catch (err: any) {
@@ -163,7 +163,7 @@ export const usePaymentItems = () => {
       if (dbError) throw dbError
       
       paymentItems.value = paymentItems.value.filter(item => item.id !== id)
-      console.log('✅ Payment item deleted:', id)
+      logger.debug('✅ Payment item deleted:', id)
       
     } catch (err: any) {
       console.error('❌ Error deleting payment item:', err)
@@ -181,7 +181,7 @@ export const usePaymentItems = () => {
       if (dbError) throw dbError
       
       paymentItems.value = paymentItems.value.filter(item => item.payment_id !== paymentId)
-      console.log('✅ Payment items deleted for payment:', paymentId)
+      logger.debug('✅ Payment items deleted for payment:', paymentId)
       
     } catch (err: any) {
       console.error('❌ Error deleting payment items by payment:', err)

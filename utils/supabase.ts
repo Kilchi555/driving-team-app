@@ -80,7 +80,7 @@ export const getSupabase = (): SupabaseClient => {
       throw new Error('Missing Supabase configuration')
     }
 
-    console.log('🔗 Initializing Supabase client with URL:', supabaseUrl)
+    logger.debug('🔗 Initializing Supabase client with URL:', supabaseUrl)
     
     // Use normal localStorage for session persistence across browser windows
     const storageAdapter = process.client ? createNormalStorage() : undefined
@@ -138,25 +138,25 @@ export const getSupabaseServerWithSession = (event: any): SupabaseClient => {
   const authHeader = event.node.req.headers.authorization || ''
   let accessToken: string | null = null
 
-  console.log('🔐 DEBUG: Incoming headers:', {
+  logger.debug('🔐 DEBUG: Incoming headers:', {
     authHeader: authHeader ? '✓ Present' : '✗ Missing',
     authHeaderFirst50: authHeader.substring(0, 50)
   })
 
   if (authHeader.startsWith('Bearer ')) {
     accessToken = authHeader.substring(7)
-    console.log('🔐 DEBUG: Extracted token from Authorization header:', accessToken ? `✓ (${accessToken.length} chars)` : '✗')
+    logger.debug('🔐 DEBUG: Extracted token from Authorization header:', accessToken ? `✓ (${accessToken.length} chars)` : '✗')
   }
 
-  console.log('🔐 DEBUG: Final accessToken:', accessToken ? `✓ Found (${accessToken.length} chars)` : '✗ Not found')
+  logger.debug('🔐 DEBUG: Final accessToken:', accessToken ? `✓ Found (${accessToken.length} chars)` : '✗ Not found')
 
   // Create Supabase client with the access token if available
   let headers: Record<string, string> = {}
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`
-    console.log('🔐 DEBUG: Using Bearer token auth')
+    logger.debug('🔐 DEBUG: Using Bearer token auth')
   } else {
-    console.log('🔐 DEBUG: Using anon key auth (no token found)')
+    logger.debug('🔐 DEBUG: Using anon key auth (no token found)')
   }
 
   return createClient(supabaseUrl, supabaseKey, {

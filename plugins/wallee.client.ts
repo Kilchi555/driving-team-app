@@ -18,7 +18,7 @@ export default defineNuxtPlugin(() => {
   // Browser-Implementation
   const createTransaction = async (): Promise<WalleeTransactionResult> => {
     try {
-      console.log('🔄 Wallee: Creating transaction...')
+      logger.debug('🔄 Wallee: Creating transaction...')
       
       // Hier würde die echte Wallee-Integration stehen
       // Für den Moment geben wir ein Mock-Ergebnis zurück
@@ -40,7 +40,7 @@ export default defineNuxtPlugin(() => {
 
   const testSpaceConnection = async (): Promise<WalleeConnectionResult> => {
     try {
-      console.log('🔄 Testing Wallee Space connection...')
+      logger.debug('🔄 Testing Wallee Space connection...')
       
       // Test-Verbindung zu Wallee Space
       // Für den Moment simulieren wir eine erfolgreiche Verbindung

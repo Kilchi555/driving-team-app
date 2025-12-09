@@ -65,7 +65,7 @@ const defaultPendenzenTab = computed(() => {
   const bewertungenCount = pendingCount.value || 0
   const unbestätigtCount = unconfirmedNext24hCount.value || 0
   
-  console.log('📊 Default tab selection:', { pendenzenCount, bewertungenCount, unbestätigtCount })
+  logger.debug('📊 Default tab selection:', { pendenzenCount, bewertungenCount, unbestätigtCount })
   
   // Priorisiere den Tab mit den meisten Pendenzen
   if (unbestätigtCount > 0 && unbestätigtCount >= pendenzenCount && unbestätigtCount >= bewertungenCount) {
@@ -107,8 +107,8 @@ const shouldShowStaffSwitcher = computed(() => {
 
 // Debug: Log admin status
 watch(() => currentUser.value?.role, (newRole) => {
-  console.log('🔍 Dashboard - User role changed:', newRole)
-  console.log('🔍 Dashboard - Is admin:', newRole === 'admin')
+  logger.debug('🔍 Dashboard - User role changed:', newRole)
+  logger.debug('🔍 Dashboard - Is admin:', newRole === 'admin')
 }, { immediate: true })
 
 // NEU: Zentrale Funktion zum Aktualisieren der Pendenzen
@@ -118,17 +118,17 @@ const refreshPendingData = async () => {
   }
 
   try {
-    console.log('🔄 Refreshing pending data...')
+    logger.debug('🔄 Refreshing pending data...')
     
     // 1. Erst überfällige Termine updaten
     const result = await updateOverdueAppointments()
     if (result.updated > 0) {
-      console.log(`✅ Updated ${result.updated} appointments to 'completed'`)
+      logger.debug(`✅ Updated ${result.updated} appointments to 'completed'`)
     }
     
     // 2. Dann Pending Tasks neu laden
     await fetchPendingTasks(currentUser.value.id, currentUser.value.role)
-    console.log('✅ Pending tasks refreshed, count:', pendingCount.value)
+    logger.debug('✅ Pending tasks refreshed, count:', pendingCount.value)
     
   } catch (err) {
     console.error('❌ Error refreshing pending data:', err)
@@ -137,30 +137,30 @@ const refreshPendingData = async () => {
 
 // NEU: Zentrale Funktion zum kompletten Neu-Laden aller Dashboard-Daten
 const reloadDashboardData = async () => {
-  console.log('🔄 Reloading all dashboard data...')
+  logger.debug('🔄 Reloading all dashboard data...')
   
   try {
     // 1. Kalender neu laden (falls Methode existiert)
     if (calendarRef.value && 'refreshCalendar' in calendarRef.value) {
       await (calendarRef.value as any).refreshCalendar?.()
-      console.log('✅ Calendar data reloaded')
+      logger.debug('✅ Calendar data reloaded')
     } else {
-      console.log('⚠️ Calendar refresh method not available')
+      logger.debug('⚠️ Calendar refresh method not available')
     }
     
     // 2. Pendenzen neu laden
     await refreshPendingData()
-    console.log('✅ Pending data reloaded')
+    logger.debug('✅ Pending data reloaded')
     
     // 3. Falls unbestätigte Termine (24h) existieren: Modal öffnen auf Tab "unconfirmed"
     if ((unconfirmedNext24hCount?.value || 0) > 0) {
-      console.log('🔔 Opening Pendenzen modal for unconfirmed appointments within 24h:', unconfirmedNext24hCount.value)
+      logger.debug('🔔 Opening Pendenzen modal for unconfirmed appointments within 24h:', unconfirmedNext24hCount.value)
       // @ts-ignore - defaultPendenzenTab may be read-only computed
       defaultPendenzenTab.value = 'unconfirmed'
       showPendenzen.value = true
     }
     
-    console.log('✅ Dashboard reload complete')
+    logger.debug('✅ Dashboard reload complete')
   } catch (err) {
     console.error('❌ Error reloading dashboard:', err)
   }
@@ -242,12 +242,12 @@ const selectedAppointment = ref<any>(null)
 
 // HINZUFÜGEN: Event Handler für Pendenzen Modal
 const handleEvaluateLesson = (appointment: any) => {
-  console.log('🔥 Evaluating lesson:', appointment)
+  logger.debug('🔥 Evaluating lesson:', appointment)
   selectedAppointment.value = appointment
   showEvaluationModal.value = true
 }
 const onAppointmentChanged = async (event: { type: string, data: any }) => {
-  console.log('📅 Appointment changed:', event.type, event.data)
+  logger.debug('📅 Appointment changed:', event.type, event.data)
   
   // Bei jedem Termin-Change die Pendenzen aktualisieren
   await refreshPendingData()
@@ -255,14 +255,14 @@ const onAppointmentChanged = async (event: { type: string, data: any }) => {
 
 // Admin Staff Switcher Handler
 const onStaffChanged = (staffId: string | null) => {
-  console.log('🔄 Admin staff filter changed:', staffId)
+  logger.debug('🔄 Admin staff filter changed:', staffId)
   selectedStaffId.value = staffId
   // The CalendarComponent will react to this change via props
 }
 
 // NEU: Watch für pendingCount um Debugging zu verbessern
 watch(pendingCount, (newCount, oldCount) => {
-  console.log(`🔄 Pending count changed: ${oldCount} → ${newCount}`)
+  logger.debug(`🔄 Pending count changed: ${oldCount} → ${newCount}`)
 }, { immediate: true })
 
 // Watch for userError changes and redirect to tenant login
@@ -287,21 +287,21 @@ watch(userError, async (error) => {
 // onMounted
 // onMounted - UPDATED VERSION mit Feature Flags
 onMounted(async () => {
-  console.log('🚀 Dashboard mounting...')
+  logger.debug('🚀 Dashboard mounting...')
 
-    console.log('🔥 Feature Flags Debug:', isEnabled('AUTO_REFRESH_PENDING'))
+    logger.debug('🔥 Feature Flags Debug:', isEnabled('AUTO_REFRESH_PENDING'))
 
   
   await fetchCurrentUser()
   
-  console.log('🔥 Current user after fetch:', currentUser.value)
-  console.log('Debug - profileExists:', profileExists?.value)
-  console.log('Debug - userError:', userError.value)
+  logger.debug('🔥 Current user after fetch:', currentUser.value)
+  logger.debug('Debug - profileExists:', profileExists?.value)
+  logger.debug('Debug - userError:', userError.value)
   
   // KRITISCH: Prüfe auf kaputte Session (Session existiert aber kein Profil)
   if (!currentUser.value && userError.value === 'Nicht eingeloggt') {
     console.error('❌ Dashboard: Broken session detected! User is null but trying to access dashboard.')
-    console.log('🧹 Clearing broken session and redirecting...')
+    logger.debug('🧹 Clearing broken session and redirecting...')
     
     // Session bereinigen
     const authStore = useAuthStore()
@@ -312,57 +312,57 @@ onMounted(async () => {
     const slugMatch = route.path.match(/^\/([^\/]+)/)
     if (slugMatch && slugMatch[1] && slugMatch[1] !== 'dashboard') {
       const slug = slugMatch[1]
-      console.log('Auth: Redirecting to slug route:', `/${slug}`)
+      logger.debug('Auth: Redirecting to slug route:', `/${slug}`)
       return await navigateTo(`/${slug}`)
     }
     
-    console.log('Auth: No slug found, redirecting to login')
+    logger.debug('Auth: No slug found, redirecting to login')
     return await navigateTo('/login')
   }
 
 
   if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
-    console.log('🔄 About to refresh pending data...')
-    console.log('🔥 Current user ID:', currentUser.value.id)
-    console.log('🔥 Current user role:', currentUser.value.role)
+    logger.debug('🔄 About to refresh pending data...')
+    logger.debug('🔥 Current user ID:', currentUser.value.id)
+    logger.debug('🔥 Current user role:', currentUser.value.role)
     await refreshPendingData()
-    console.log('✅ Pending data refresh completed')
-    console.log('🔥 Pending count after refresh:', pendingCount.value)
+    logger.debug('✅ Pending data refresh completed')
+    logger.debug('🔥 Pending count after refresh:', pendingCount.value)
 
   }
-  console.log('🔄 About to update today state...')
+  logger.debug('🔄 About to update today state...')
 
   updateTodayState()
   updateCurrentMonth()
-  console.log('✅ Today state updated')
+  logger.debug('✅ Today state updated')
 
 
 // ✅ AUTO-REFRESH MIT FEATURE FLAG:
-  console.log('🔍 Checking auto-refresh conditions...')
-  console.log('🔍 process.client:', process.client)
-  console.log('🔍 isEnabled result:', isEnabled('AUTO_REFRESH_PENDING'))
+  logger.debug('🔍 Checking auto-refresh conditions...')
+  logger.debug('🔍 process.client:', process.client)
+  logger.debug('🔍 isEnabled result:', isEnabled('AUTO_REFRESH_PENDING'))
 
   if (process.client && isEnabled('AUTO_REFRESH_PENDING')) {
-    console.log('🔄 Setting up auto-refresh interval (Feature Flag enabled)...')
+    logger.debug('🔄 Setting up auto-refresh interval (Feature Flag enabled)...')
     refreshInterval.value = setInterval(async () => {
       if (currentUser.value && profileExists.value && ['staff', 'admin'].includes(currentUser.value.role)) {
-        console.log('🔄 Auto-refreshing pending data...')
+        logger.debug('🔄 Auto-refreshing pending data...')
         await refreshPendingData()
       }
     }, 5 * 60 * 1000) as unknown as number
   } else if (process.client) {
-    console.log('⏸️ Auto-refresh disabled via Feature Flag')
+    logger.debug('⏸️ Auto-refresh disabled via Feature Flag')
      } else {
-    console.log('⏸️ Auto-refresh disabled - not client side')
+    logger.debug('⏸️ Auto-refresh disabled - not client side')
   }
-    console.log('✅ onMounted completed')
+    logger.debug('✅ onMounted completed')
 })
 
 // Cleanup on unmount (bleibt gleich)
 onUnmounted(() => {
   if (refreshInterval.value) {
     clearInterval(refreshInterval.value)
-    console.log('🧹 Cleaned up refresh interval')
+    logger.debug('🧹 Cleaned up refresh interval')
   }
 })
 </script>
@@ -444,7 +444,7 @@ onUnmounted(() => {
       <!-- Pendenzen Button - VERBESSERT -->
       <button 
         @click="() => { 
-          console.log('🔥 Opening pendenzen modal, current count:', pendingCount); 
+          logger.debug('🔥 Opening pendenzen modal, current count:', pendingCount); 
           showPendenzen = true; 
         }"
         :class="`${pendenzenButtonClasses} min-w-[80px] h-[36px] flex items-center justify-center text-sm`"
@@ -458,7 +458,7 @@ onUnmounted(() => {
         :current-user="currentUser"
         :default-tab="defaultPendenzenTab"
         @close="() => { 
-          console.log('🔥 Closing pendenzen modal'); 
+          logger.debug('🔥 Closing pendenzen modal'); 
           showPendenzen = false; 
         }"
         @evaluate-lesson="handleEvaluateLesson"

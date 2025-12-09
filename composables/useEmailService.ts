@@ -11,10 +11,10 @@ export const useEmailService = () => {
     html?: string
   ) => {
     try {
-      console.log('📧 Email Service called:', { to, subject })
+      logger.debug('📧 Email Service called:', { to, subject })
       
       // Try to use Supabase Edge Function for email sending
-      console.log('🌐 Attempting to send email via Supabase Edge Function')
+      logger.debug('🌐 Attempting to send email via Supabase Edge Function')
       
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
@@ -29,8 +29,8 @@ export const useEmailService = () => {
         console.error('❌ Edge function error:', error)
         
         // ✅ FALLBACK: Simuliere erfolgreiche Email und speichere in Logs
-        console.log('🔄 Email Fallback: Simulating successful email for testing')
-        console.log('📧 Email would be sent:', { to, subject, body })
+        logger.debug('🔄 Email Fallback: Simulating successful email for testing')
+        logger.debug('📧 Email would be sent:', { to, subject, body })
         
         return { 
           success: true, 
@@ -45,15 +45,15 @@ export const useEmailService = () => {
         }
       }
 
-      console.log('✅ Email sent successfully:', data)
+      logger.debug('✅ Email sent successfully:', data)
       return { success: true, data }
 
     } catch (err: any) {
       console.error('❌ Unexpected email error:', err)
       
       // ✅ FALLBACK: Simuliere erfolgreiche Email
-      console.log('🔄 Email Fallback: Simulating successful email for testing')
-      console.log('📧 Email would be sent:', { to, subject, body })
+      logger.debug('🔄 Email Fallback: Simulating successful email for testing')
+      logger.debug('📧 Email would be sent:', { to, subject, body })
       
       return { 
         success: true, 

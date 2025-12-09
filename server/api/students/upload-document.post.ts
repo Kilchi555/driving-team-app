@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
       .from('user-documents')
       .getPublicUrl(fileName)
 
-    console.log('✅ Document uploaded to Storage:', fileName)
+    logger.debug('✅ Document uploaded to Storage:', fileName)
 
     return {
       success: true,

@@ -63,13 +63,13 @@ export const useEventModalWatchers = ({
       
       // Skip if in view mode or during initialization
       if (props.mode === 'view' || isLoading.value) {
-        console.log('🚫 Price recalculation skipped - view mode or loading')
+        logger.debug('🚫 Price recalculation skipped - view mode or loading')
         return
       }
 
       // Skip if no essential data
       if (!newCategory || !newDuration || formData.value.eventType !== 'lesson') {
-        console.log('🚫 Price recalculation skipped - missing data')
+        logger.debug('🚫 Price recalculation skipped - missing data')
         return
       }
 
@@ -79,11 +79,11 @@ export const useEventModalWatchers = ({
       const userChanged = newUserId !== oldUserId
 
       if (!durationChanged && !categoryChanged && !userChanged) {
-        console.log('🚫 Price recalculation skipped - no relevant changes')
+        logger.debug('🚫 Price recalculation skipped - no relevant changes')
         return
       }
 
-      console.log('💰 Recalculating price due to changes:', {
+      logger.debug('💰 Recalculating price due to changes:', {
         durationChanged: durationChanged ? `${oldDuration}min → ${newDuration}min` : false,
         categoryChanged: categoryChanged ? `${oldCategory} → ${newCategory}` : false,
         userChanged: userChanged ? `${oldUserId} → ${newUserId}` : false
@@ -119,7 +119,7 @@ export const useEventModalWatchers = ({
         // Also update form data for fallback
         formData.value.price_per_minute = dynamicPricing.value.pricePerMinute
 
-        console.log('✅ Price recalculated:', {
+        logger.debug('✅ Price recalculated:', {
           duration: `${newDuration}min`,
           basePrice: priceResult.base_price_chf,
           adminFee: priceResult.admin_fee_chf,
@@ -145,7 +145,7 @@ export const useEventModalWatchers = ({
         }
         
         formData.value.price_per_minute = fallbackPrices[newCategory] || 95/45
-        console.log('⚠️ Using fallback price due to calculation error')
+        logger.debug('⚠️ Using fallback price due to calculation error')
       }
       
     }, { immediate: false, deep: false })
@@ -173,7 +173,7 @@ export const useEventModalWatchers = ({
       
       // Update duration if it changed due to time modification
       if (durationMinutes > 0 && durationMinutes !== formData.value.duration_minutes) {
-        console.log('⏰ Duration changed via time selector:', 
+        logger.debug('⏰ Duration changed via time selector:', 
           `${formData.value.duration_minutes}min → ${durationMinutes}min`)
         
         formData.value.duration_minutes = durationMinutes
@@ -198,7 +198,7 @@ export const useEventModalWatchers = ({
 
     // Event type change watcher
     watch(() => formData.value.eventType, (newType) => {
-      console.log('👀 Event type changed to:', newType)
+      logger.debug('👀 Event type changed to:', newType)
 
       // Reset form when switching types
       if (newType !== 'lesson') {
@@ -212,23 +212,23 @@ export const useEventModalWatchers = ({
     watch(() => formData.value.user_id, async (newUserId) => {
       // Skip in edit/view mode
       if (props.mode === 'edit' || props.mode === 'view') {
-        console.log(`📝 ${props.mode} mode detected - skipping auto-operations`)
+        logger.debug(`📝 ${props.mode} mode detected - skipping auto-operations`)
         return
       }
 
       if (newUserId && formData.value.eventType === 'lesson') {
         // Load appointment number for pricing
         try {
-          console.log('🔢 Loading appointment number for pricing...')
+          logger.debug('🔢 Loading appointment number for pricing...')
           appointmentNumber.value = await getAppointmentNumber(newUserId)
-          console.log('✅ Appointment number loaded:', appointmentNumber.value)
+          logger.debug('✅ Appointment number loaded:', appointmentNumber.value)
         } catch (err) {
           console.error('❌ Error loading appointment number:', err)
           appointmentNumber.value = 1
         }
       } else if (!newUserId) {
         appointmentNumber.value = 1
-        console.log('🔄 Reset appointment number to 1')
+        logger.debug('🔄 Reset appointment number to 1')
       }
     })
 
@@ -237,7 +237,7 @@ export const useEventModalWatchers = ({
     // Category type watcher
     watch(() => formData.value.type, async (newType) => {
       if (newType && props.mode === 'edit') {
-        console.log('👀 Category type changed in edit mode:', newType)
+        logger.debug('👀 Category type changed in edit mode:', newType)
         await nextTick()
       }
     }, { immediate: true })
@@ -247,12 +247,12 @@ export const useEventModalWatchers = ({
   const setupDebugWatchers = () => {
     // Location debugging
     watch(() => formData.value.location_id, (newVal, oldVal) => {
-      console.log('🔄 location_id changed:', oldVal, '→', newVal)
+      logger.debug('🔄 location_id changed:', oldVal, '→', newVal)
     })
 
     // Selected student debugging
     watch(selectedStudent, (newStudent, oldStudent) => {
-      console.log('🔄 selectedStudent changed:', 
+      logger.debug('🔄 selectedStudent changed:', 
         oldStudent?.first_name || 'none', 
         '→', 
         newStudent?.first_name || 'none'
@@ -261,7 +261,7 @@ export const useEventModalWatchers = ({
 
     // Dynamic pricing debugging
     watch(dynamicPricing, (newPricing, oldPricing) => {
-      console.log('💰 dynamicPricing changed:', {
+      logger.debug('💰 dynamicPricing changed:', {
         oldTotal: oldPricing?.totalPriceChf,
         newTotal: newPricing?.totalPriceChf,
         hasAdminFee: newPricing?.hasAdminFee
@@ -276,7 +276,7 @@ export const useEventModalWatchers = ({
     setupStandardWatchers()
     setupDebugWatchers()
     
-    console.log('⚡ All enhanced watchers initialized with price reactivity')
+    logger.debug('⚡ All enhanced watchers initialized with price reactivity')
   }
 
   return {

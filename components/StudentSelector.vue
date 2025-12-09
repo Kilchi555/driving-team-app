@@ -294,7 +294,7 @@ const loadStudents = async (editStudentId?: string | null) => {
 
   // ✅ FIX: Bei Freeslot-Modus editStudentId ignorieren
   if (props.isFreeslotMode && editStudentId) {
-    console.log('🎯 Freeslot mode detected - ignoring editStudentId to prevent auto-selection')
+    logger.debug('🎯 Freeslot mode detected - ignoring editStudentId to prevent auto-selection')
     editStudentId = null
   }
 
@@ -306,10 +306,10 @@ const loadStudents = async (editStudentId?: string | null) => {
     // ✅ 1. Cache prüfen (nur für Staff-spezifische Abfragen)
     if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && staffId) { 
       const cacheStatus = getCacheStatus(staffId)
-      console.log('📦 Cache status:', cacheStatus)
+      logger.debug('📦 Cache status:', cacheStatus)
       
       if (cacheStatus.isValid && cacheStatus.count > 0) {
-        console.log('📦 Using cached students')
+        logger.debug('📦 Using cached students')
         const cachedStudents = getCachedStudents(staffId)
         
         const typedStudents: Student[] = cachedStudents.map((student) => ({
@@ -324,11 +324,11 @@ const loadStudents = async (editStudentId?: string | null) => {
         }))
         
         availableStudents.value = typedStudents
-        console.log('✅ Students loaded from cache:', availableStudents.value.length)
+        logger.debug('✅ Students loaded from cache:', availableStudents.value.length)
         
         // Background refresh falls online
         if (navigator.onLine) {
-          console.log('🔄 Cache valid, but trying to refresh in background...')
+          logger.debug('🔄 Cache valid, but trying to refresh in background...')
           setTimeout(() => {
             loadStudentsFromDB(editStudentId, true) // Background refresh
           }, 100)
@@ -349,7 +349,7 @@ const loadStudents = async (editStudentId?: string | null) => {
     if ((err.message?.includes('fetch') || err.message?.includes('network')) && 
         props.currentUser?.role === 'staff' && !showAllStudentsLocal.value) {
       
-      console.log('📦 Network error - trying cache as fallback')
+      logger.debug('📦 Network error - trying cache as fallback')
       if (staffId) { 
       const cachedStudents = getCachedStudents(staffId)
       
@@ -366,7 +366,7 @@ const loadStudents = async (editStudentId?: string | null) => {
         }))
         
         availableStudents.value = typedStudents
-        console.log('✅ Students loaded from expired cache (offline fallback):', availableStudents.value.length)
+        logger.debug('✅ Students loaded from expired cache (offline fallback):', availableStudents.value.length)
         error.value = '' // Kein Fehler anzeigen wenn Cache verfügbar
       } else {
         error.value = 'Offline - keine Schüler im Cache. Versuchen Sie es online.'
@@ -388,7 +388,7 @@ const loadStudents = async (editStudentId?: string | null) => {
 // ✅ Neue Hilfsfunktion: DB-Laden
 const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRefresh: boolean = false) => {
   try {
-    console.log('📚 StudentSelector: Loading students from database...')
+    logger.debug('📚 StudentSelector: Loading students from database...')
     const supabase = getSupabase()
 
     let studentsToCache: any[] = []
@@ -397,7 +397,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
 
     // Staff-spezifische Logik
     const condition = Boolean(props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && staffId)
-    console.log('🔍 Debug loadStudentsFromDB:', {
+    logger.debug('🔍 Debug loadStudentsFromDB:', {
       userRole: props.currentUser?.role,
       showAllStudents: showAllStudentsLocal.value,
       staffId: staffId,
@@ -405,7 +405,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
     })
     
     if (condition) {
-      console.log('👨‍🏫 Loading students for staff member:', props.currentUser?.id)
+      logger.debug('👨‍🏫 Loading students for staff member:', props.currentUser?.id)
       
       // Get current user's tenant_id first
       const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -421,7 +421,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
       }
       
       // 1. Direkt zugewiesene Schüler laden - FILTERED BY TENANT
-      console.log('🔍 Loading assigned students for staff:', staffId)
+      logger.debug('🔍 Loading assigned students for staff:', staffId)
       const { data: assignedStudents, error: assignedError } = await supabase
         .from('users')
         .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
@@ -432,10 +432,10 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         .order('first_name')
 
       if (assignedError) throw assignedError
-      console.log('🔍 Assigned students loaded:', assignedStudents?.length || 0)
+      logger.debug('🔍 Assigned students loaded:', assignedStudents?.length || 0)
 
       // 2. Schüler mit Termin-Historie laden - FILTERED BY TENANT
-      console.log('🔍 Loading students with appointment history for staff:', props.currentUser?.id)
+      logger.debug('🔍 Loading students with appointment history for staff:', props.currentUser?.id)
       const { data: appointmentStudents, error: appointmentError } = await supabase
         .from('appointments')
         .select(`
@@ -450,7 +450,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         .not('users.id', 'is', null)
 
       if (appointmentError) throw appointmentError
-      console.log('🔍 Appointments with students loaded:', appointmentStudents?.length || 0)
+      logger.debug('🔍 Appointments with students loaded:', appointmentStudents?.length || 0)
 
       const typedAppointmentStudents = appointmentStudents as unknown as AppointmentResponse[]
       
@@ -489,11 +489,11 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
 
       // 4. Falls ein editStudentId angegeben ist, diesen auch laden falls nicht enthalten
       if (editStudentId && !uniqueStudents.find(s => s.id === editStudentId)) {
-        console.log('🔍 Loading specific student for edit mode:', editStudentId)
+        logger.debug('🔍 Loading specific student for edit mode:', editStudentId)
         
         // ✅ FIX: Bei Freeslot-Modus keinen Schüler automatisch auswählen
         if (props.isFreeslotMode) {
-          console.log('🎯 Freeslot mode detected - not auto-selecting editStudentId')
+          logger.debug('🎯 Freeslot mode detected - not auto-selecting editStudentId')
         } else {
           const { data: editStudent } = await supabase
             .from('users')
@@ -523,14 +523,14 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         }))
         
         availableStudents.value = typedStudents
-        console.log('✅ Staff students loaded:', availableStudents.value.length)
-        console.log('🔍 Available students:', availableStudents.value)
+        logger.debug('✅ Staff students loaded:', availableStudents.value.length)
+        logger.debug('🔍 Available students:', availableStudents.value)
       }
 
     } else {
       // Admin oder "Alle anzeigen" Modus - FILTERED BY TENANT
-      console.log('👑 Loading all active students (Admin mode or show all)')
-      console.log('🔍 Reason for admin mode:', {
+      logger.debug('👑 Loading all active students (Admin mode or show all)')
+      logger.debug('🔍 Reason for admin mode:', {
         userRole: props.currentUser?.role,
         showAllStudents: showAllStudentsLocal.value,
         staffId: staffId
@@ -579,7 +579,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         }))
         
         availableStudents.value = typedStudents
-        console.log('✅ All students loaded:', availableStudents.value.length)
+        logger.debug('✅ All students loaded:', availableStudents.value.length)
       }
     }
 
@@ -597,25 +597,25 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
 }
 
 const handleSwitchToOther = () => {
-  console.log('🔄 User manually clicked "Andere Terminart" button')
-  console.log('📍 SWITCH CALL STACK:', new Error().stack)
+  logger.debug('🔄 User manually clicked "Andere Terminart" button')
+  logger.debug('📍 SWITCH CALL STACK:', new Error().stack)
   
   // ✅ Immer erlauben, unabhängig vom Loading-Status
   emit('switch-to-other')
 }
 
 const handleSearchFocus = () => {
-  console.log('🔍 Search field focused, autoLoad:', shouldAutoLoadComputed.value)
+  logger.debug('🔍 Search field focused, autoLoad:', shouldAutoLoadComputed.value)
   
   // ✅ Lade Studenten auch bei autoLoad=false wenn noch keine geladen sind
   // ÄNDERE DIESEN BLOCK:
   // Füge props.currentUser?.id hinzu, um sicherzustellen, dass die ID vorhanden ist
   if (availableStudents.value.length === 0 && props.currentUser?.id) { // <-- HIER IST DIE WICHTIGE ÄNDERUNG
-    console.log('📚 Loading students on search focus (no students loaded yet)')
+    logger.debug('📚 Loading students on search focus (no students loaded yet)')
     loadStudents() // Ruft loadStudents auf, das intern die staffId prüft
   } else if (!props.currentUser?.id) {
     // Optionaler Log, um zu bestätigen, dass es hier nicht geladen wird, weil die ID fehlt
-    console.log('🚫 Cannot load on focus yet: No staff ID available.');
+    logger.debug('🚫 Cannot load on focus yet: No staff ID available.');
   }
 }
 
@@ -627,7 +627,7 @@ const filterStudents = () => {
 
 // In StudentSelector.vue - Zurück zur ursprünglichen selectStudent Funktion:
 const selectStudent = (student: Student, isUserClick = false) => {
-  console.log('🔍 DEBUG VALUES:', {
+  logger.debug('🔍 DEBUG VALUES:', {
     isUserClick: isUserClick,
     isFreeslotMode: props.isFreeslotMode,
     studentName: student.first_name + ' ' + student.last_name
@@ -635,25 +635,25 @@ const selectStudent = (student: Student, isUserClick = false) => {
   
   // ✅ Block automatische Selections bei Free-Slots
   if (props.isFreeslotMode && !isUserClick) {
-    console.log('🚫 Auto-selection blocked - freeslot mode detected')
+    logger.debug('🚫 Auto-selection blocked - freeslot mode detected')
     return
   }
   
   selectedStudent.value = student
   searchQuery.value = ''
   
-  console.log('✅ StudentSelector: Student selected:', student.first_name, student.last_name)
+  logger.debug('✅ StudentSelector: Student selected:', student.first_name, student.last_name)
   emit('student-selected', student)
 }
 
 const handleStudentClick = (student: Student) => {
-  console.log('🔍 Student click attempted:', {
+  logger.debug('🔍 Student click attempted:', {
     studentName: student.first_name,
     isFreeslotMode: props.isFreeslotMode
   })
   
   // Manuelle Klicks sollten erlaubt sein
-  console.log('✅ Manual student click allowed - selecting student')
+  logger.debug('✅ Manual student click allowed - selecting student')
   selectStudent(student, true) // isUserClick=true bedeutet manueller Klick
 }
 
@@ -661,17 +661,17 @@ const clearStudent = () => {
   selectedStudent.value = null
   searchQuery.value = ''
   
-  console.log('🗑️ StudentSelector: Student cleared')
+  logger.debug('🗑️ StudentSelector: Student cleared')
   emit('student-cleared')
 }
 
 const openAddStudentModal = () => {
-  console.log('🆕 Opening Add Student Modal')
+  logger.debug('🆕 Opening Add Student Modal')
   showAddStudentModal.value = true
 }
 
 const handleStudentAdded = async (newStudent: any) => {
-  console.log('✅ New student added:', newStudent)
+  logger.debug('✅ New student added:', newStudent)
   showAddStudentModal.value = false
   
   // Konvertiere den neuen Schüler zum richtigen Format
@@ -688,23 +688,23 @@ const handleStudentAdded = async (newStudent: any) => {
   
   // Füge den neuen Schüler zur Liste hinzu (an den Anfang)
   availableStudents.value.unshift(typedStudent)
-  console.log('✅ Added new student to list:', typedStudent.first_name, typedStudent.last_name)
+  logger.debug('✅ Added new student to list:', typedStudent.first_name, typedStudent.last_name)
   
   // Wähle den neuen Schüler automatisch aus
   selectStudent(typedStudent, true)
-  console.log('✅ Auto-selected new student')
+  logger.debug('✅ Auto-selected new student')
 }
 
 const selectStudentById = async (userId: string, retryCount = 0) => {
   const maxRetries = 3
   
   // ✅ DEBUG: Stack trace anzeigen
-  console.log(`👨‍🎓 StudentSelector: Selecting student by ID: ${userId}, Retry: ${retryCount}`)
-  console.log('📍 CALL STACK:', new Error().stack)
+  logger.debug(`👨‍🎓 StudentSelector: Selecting student by ID: ${userId}, Retry: ${retryCount}`)
+  logger.debug('📍 CALL STACK:', new Error().stack)
   
   // ✅ FIX: Bei Freeslot-Modus Schüler laden aber nicht automatisch auswählen
   if (props.isFreeslotMode) {
-    console.log('🎯 Freeslot mode detected - loading students but not auto-selecting')
+    logger.debug('🎯 Freeslot mode detected - loading students but not auto-selecting')
     // Schüler laden falls noch nicht geladen
     if (availableStudents.value.length === 0) {
       await loadStudents()
@@ -713,17 +713,17 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
   }
   
   while (isLoading.value) {
-    console.log('⏳ Waiting for current loading to finish...')
+    logger.debug('⏳ Waiting for current loading to finish...')
     await new Promise(resolve => setTimeout(resolve, 100))
   }
   
   if (availableStudents.value.length === 0 && retryCount < maxRetries) {
-    console.log('⏳ Students not loaded yet, loading first...')
+    logger.debug('⏳ Students not loaded yet, loading first...')
     await loadStudents(userId)
   }
   
   while (isLoading.value) {
-    console.log('⏳ Waiting for loading to complete...')
+    logger.debug('⏳ Waiting for loading to complete...')
     await new Promise(resolve => setTimeout(resolve, 100))
   }
   
@@ -731,12 +731,12 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
   
   if (student) {
     selectStudent(student, false) // Diese Zeile wird jetzt von unserem selectStudent-Fix abgefangen
-    console.log('✅ StudentSelector: Student selected by ID:', student.first_name, student.last_name)
+    logger.debug('✅ StudentSelector: Student selected by ID:', student.first_name, student.last_name)
     return student
   } else {
-    console.log('❌ StudentSelector: Student not found for ID:', userId)
+    logger.debug('❌ StudentSelector: Student not found for ID:', userId)
     if (retryCount < maxRetries) {
-      console.log('🔄 Retrying to find student...')
+      logger.debug('🔄 Retrying to find student...')
       await new Promise(resolve => setTimeout(resolve, 200))
       return selectStudentById(userId, retryCount + 1)
     }
@@ -746,18 +746,18 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
 
 watch(() => props.showAllStudents, (newVal) => { // <--- HIER newVal HINZUFÜGEN
   showAllStudentsLocal.value = newVal;
-  console.log('👀 Watcher: showAllStudents changed to:', newVal);
+  logger.debug('👀 Watcher: showAllStudents changed to:', newVal);
   if (props.currentUser?.id) { 
-      console.log('🔄 showAllStudents changed, re-loading students with current ID...');
+      logger.debug('🔄 showAllStudents changed, re-loading students with current ID...');
       loadStudents(props.editStudentId);
   } else {
-      console.log('🔄 showAllStudents changed, but no currentUser ID to trigger load yet.');
+      logger.debug('🔄 showAllStudents changed, but no currentUser ID to trigger load yet.');
   }
 });
 
 // Watchers
 watch(showAllStudentsLocal, async () => {
-  console.log('🔄 Toggle changed:', showAllStudentsLocal.value)
+  logger.debug('🔄 Toggle changed:', showAllStudentsLocal.value)
   await loadStudents()
 })
 
@@ -765,36 +765,36 @@ watch(showAllStudentsLocal, async () => {
 // ...
 // Füge DIESEN WATCHER HINZU ODER PASSE IHN AN, falls nicht exakt so
 watch(() => props.currentUser?.id, (newId) => {
-  console.log('👀 Watcher: currentUser.id changed to:', newId, 'autoLoad:', props.autoLoad, 'isFreeslotMode:', props.isFreeslotMode, 'showAllStudents:', props.showAllStudents);
+  logger.debug('👀 Watcher: currentUser.id changed to:', newId, 'autoLoad:', props.autoLoad, 'isFreeslotMode:', props.isFreeslotMode, 'showAllStudents:', props.showAllStudents);
   
   if (props.autoLoad && !props.isFreeslotMode && newId) {
-    console.log('🚀 Triggering loadStudents from watcher (autoLoad & not freeslot & id available)');
+    logger.debug('🚀 Triggering loadStudents from watcher (autoLoad & not freeslot & id available)');
     // ZEILE 601: Sicherstellen, dass 'editStudentId' als Prop existiert
     loadStudents(props.editStudentId); 
   } else if (props.showAllStudents && (newId || !props.autoLoad)) {
-      console.log('🚀 Triggering loadStudents from watcher (showAllStudents enabled)');
+      logger.debug('🚀 Triggering loadStudents from watcher (showAllStudents enabled)');
       // ZEILE 607: Sicherstellen, dass 'editStudentId' als Prop existiert
       loadStudents(props.editStudentId);
   } else if (!newId) {
-      console.log('Waiting for currentUser ID to become available to trigger loadStudents.');
+      logger.debug('Waiting for currentUser ID to become available to trigger loadStudents.');
   }
 }, { immediate: true });
 
 onMounted(() => {
-  console.log('📚 StudentSelector mounted, autoLoad:', props.autoLoad, 'isFreeslotMode:', props.isFreeslotMode, 'currentUser.id:', props.currentUser?.id, 'showAllStudents:', props.showAllStudents);
+  logger.debug('📚 StudentSelector mounted, autoLoad:', props.autoLoad, 'isFreeslotMode:', props.isFreeslotMode, 'currentUser.id:', props.currentUser?.id, 'showAllStudents:', props.showAllStudents);
   // Stelle sicher, dass HIER KEIN loadStudents() Aufruf mehr ist!
   if (!props.autoLoad || props.isFreeslotMode || (!props.currentUser?.id && !props.showAllStudents)) {
-    console.log('🚫 Initial auto-load conditions not met. Waiting for props or user action.');
+    logger.debug('🚫 Initial auto-load conditions not met. Waiting for props or user action.');
   }
 });
 
 watch(() => props.autoLoad, (newVal) => { // <--- HIER newVal HINZUFÜGEN
-  console.log('🔄 autoLoad prop changed to:', newVal);
+  logger.debug('🔄 autoLoad prop changed to:', newVal);
   if (newVal && props.currentUser?.id && !props.isFreeslotMode) {
-    console.log('🚀 autoLoad enabled and ID available, triggering loadStudents.');
+    logger.debug('🚀 autoLoad enabled and ID available, triggering loadStudents.');
     loadStudents(props.editStudentId);
   } else if (newVal && !props.currentUser?.id) {
-    console.log('🚫 autoLoad enabled, but no ID yet. Waiting for currentUser.id watcher.');
+    logger.debug('🚫 autoLoad enabled, but no ID yet. Waiting for currentUser.id watcher.');
   }
 });
 

@@ -116,7 +116,7 @@ export default defineEventHandler(async (event) => {
     const fileExt = file.filename?.split('.').pop() || 'pdf'
     const fileName = `medical-certificates/${appointment.tenant_id}/${appointment.user_id}/${appointmentId}_${Date.now()}.${fileExt}`
 
-    console.log('📤 Uploading medical certificate:', fileName)
+    logger.debug('📤 Uploading medical certificate:', fileName)
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
@@ -139,7 +139,7 @@ export default defineEventHandler(async (event) => {
       .from('user-documents')
       .getPublicUrl(fileName)
 
-    console.log('✅ Medical certificate uploaded:', urlData.publicUrl)
+    logger.debug('✅ Medical certificate uploaded:', urlData.publicUrl)
 
     // Update appointment with certificate info
     const { error: updateError } = await supabaseAdmin

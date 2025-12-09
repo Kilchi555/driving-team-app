@@ -641,12 +641,12 @@ const handleStaffAssignment = async () => {
 
 const removeStaffAssignment = async (staffId: string) => {
   // TODO: Implement remove staff assignment
-  console.log('Remove staff assignment:', staffId)
+  logger.debug('Remove staff assignment:', staffId)
 }
 
 const toggleRegisterStatus = async (register: any) => {
   // TODO: Implement toggle register status
-  console.log('Toggle register status:', register.id)
+  logger.debug('Toggle register status:', register.id)
 }
 
 // Lifecycle

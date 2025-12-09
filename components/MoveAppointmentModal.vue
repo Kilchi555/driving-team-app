@@ -285,8 +285,8 @@ const moveAppointment = async () => {
     const newStartDateTime = new Date(`${newDate.value}T${newStartTime.value}`)
     const newEndDateTime = new Date(`${newDate.value}T${newEndTime.value}`)
     
-    console.log('🔄 Moving appointment:', props.appointment.id)
-    console.log('📅 New times:', newStartDateTime, newEndDateTime)
+    logger.debug('🔄 Moving appointment:', props.appointment.id)
+    logger.debug('📅 New times:', newStartDateTime, newEndDateTime)
     
     const { error } = await supabase
       .from('appointments')
@@ -301,7 +301,7 @@ const moveAppointment = async () => {
       throw error
     }
     
-    console.log('✅ Appointment moved successfully')
+    logger.debug('✅ Appointment moved successfully')
     
     // Emit success
     emit('moved', {

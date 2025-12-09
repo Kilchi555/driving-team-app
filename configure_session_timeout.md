@@ -23,7 +23,7 @@ const resetInactivityTimer = () => {
   if (inactivityTimer) clearTimeout(inactivityTimer)
   
   inactivityTimer = setTimeout(async () => {
-    console.log('⏰ Session timeout due to inactivity')
+    logger.debug('⏰ Session timeout due to inactivity')
     await supabase.auth.signOut()
   }, INACTIVITY_TIMEOUT)
 }

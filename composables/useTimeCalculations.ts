@@ -15,7 +15,7 @@ export const useTimeCalculations = (formData: any) => {
     const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
 
     formData.value.endTime = `${endHours}:${endMinutes}`
-    console.log('⏰ End time calculated:', {
+    logger.debug('⏰ End time calculated:', {
       startTime: formData.value.startTime,
       duration: formData.value.duration_minutes,
       endTime: formData.value.endTime

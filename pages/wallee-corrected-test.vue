@@ -233,14 +233,14 @@ const testWithSupportData = async () => {
   result.value = null
   
   try {
-    console.log('✅ Testing With Support Data...')
+    logger.debug('✅ Testing With Support Data...')
     
     const response = await $fetch('/api/wallee/test-with-support-data', {
       method: 'POST',
       body: testData.value
     })
     
-    console.log('✅ Support Data Test:', response)
+    logger.debug('✅ Support Data Test:', response)
     result.value = response
     
   } catch (err: any) {
@@ -265,14 +265,14 @@ const testExactSupportFormat = async () => {
   result.value = null
   
   try {
-    console.log('🎯 Testing Exact Support Format...')
+    logger.debug('🎯 Testing Exact Support Format...')
     
     const response = await $fetch('/api/wallee/test-exact-support-format', {
       method: 'POST',
       body: testData.value
     })
     
-    console.log('✅ Support Format Test:', response)
+    logger.debug('✅ Support Format Test:', response)
     result.value = response
     
   } catch (err: any) {
@@ -297,13 +297,13 @@ const testMacVariants = async () => {
   result.value = null
   
   try {
-    console.log('🔍 Testing MAC Variants...')
+    logger.debug('🔍 Testing MAC Variants...')
     
     const response = await $fetch('/api/wallee/debug-mac-variants', {
       method: 'POST'
     })
     
-    console.log('✅ MAC Variants Test:', response)
+    logger.debug('✅ MAC Variants Test:', response)
     result.value = response
     
   } catch (err: any) {
@@ -328,14 +328,14 @@ const testMacAuthentication = async () => {
   result.value = null
   
   try {
-    console.log('🔐 Testing MAC Authentication with data:', testData.value)
+    logger.debug('🔐 Testing MAC Authentication with data:', testData.value)
     
     const response = await $fetch('/api/wallee/create-transaction-mac', {
       method: 'POST',
       body: testData.value
     })
     
-    console.log('✅ MAC Auth API Success:', response)
+    logger.debug('✅ MAC Auth API Success:', response)
     result.value = response
     
   } catch (err: any) {
@@ -360,14 +360,14 @@ const testCorrectedTransaction = async () => {
   result.value = null
   
   try {
-    console.log('🚀 Testing corrected Wallee API with data:', testData.value)
+    logger.debug('🚀 Testing corrected Wallee API with data:', testData.value)
     
     const response = await $fetch('/api/wallee/create-transaction-corrected', {
       method: 'POST',
       body: testData.value
     })
     
-    console.log('✅ Corrected API Success:', response)
+    logger.debug('✅ Corrected API Success:', response)
     result.value = response
     
   } catch (err: any) {

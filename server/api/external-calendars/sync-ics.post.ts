@@ -52,10 +52,10 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
         let fetchUrl = ics_url as string
         if (fetchUrl.startsWith('webcal://')) {
           fetchUrl = fetchUrl.replace('webcal://', 'https://')
-          console.log('Converted webcal:// to https://', fetchUrl)
+          logger.debug('Converted webcal:// to https://', fetchUrl)
         }
         
-        console.log('Fetching ICS from:', fetchUrl)
+        logger.debug('Fetching ICS from:', fetchUrl)
         
         const icsResponse = await fetch(fetchUrl, {
           headers: {
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
           redirect: 'follow'
         })
         
-        console.log('ICS fetch response:', icsResponse.status, icsResponse.statusText)
+        logger.debug('ICS fetch response:', icsResponse.status, icsResponse.statusText)
         
         if (!icsResponse.ok) {
           throw createError({
@@ -75,7 +75,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
         }
         
         icsData = await icsResponse.text()
-        console.log('ICS data length:', icsData.length)
+        logger.debug('ICS data length:', icsData.length)
         
         if (!icsData || icsData.length < 50) {
           throw createError({
@@ -200,7 +200,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     
     // Asynchronously resolve and update postal codes for events with locations
     if (uniqueBusyTimes.some(bt => bt.event_location)) {
-      console.log('📍 Resolving postal codes for external busy times...')
+      logger.debug('📍 Resolving postal codes for external busy times...')
       
       // Don't await this - let it process in background
       ;(async () => {
@@ -209,24 +209,24 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
             if (busyTime.event_location) {
               // Call the geocoding API directly for server-side processing
               try {
-                console.log(`🌐 Resolving PLZ for: "${busyTime.event_location}"`)
+                logger.debug(`🌐 Resolving PLZ for: "${busyTime.event_location}"`)
                 
                 // Import and use the geocoding resolution function
                 const { extractPLZFromAddress, lookupPLZFromLocationName } = await import('~/utils/postalCodeUtils')
                 
                 // Try extraction first
                 let plz = extractPLZFromAddress(busyTime.event_location)
-                console.log(`📝 Extraction attempt: "${busyTime.event_location}" → ${plz || 'no match'}`)
+                logger.debug(`📝 Extraction attempt: "${busyTime.event_location}" → ${plz || 'no match'}`)
                 
                 // Try DB lookup next
                 if (!plz) {
                   plz = await lookupPLZFromLocationName(busyTime.event_location, calendar.tenant_id, supabase)
-                  console.log(`🔍 DB lookup attempt: "${busyTime.event_location}" → ${plz || 'no match'}`)
+                  logger.debug(`🔍 DB lookup attempt: "${busyTime.event_location}" → ${plz || 'no match'}`)
                 }
                 
                 // Try Google API as fallback
                 if (!plz) {
-                  console.log(`🌐 Attempting Google Geocoding API for: "${busyTime.event_location}"`)
+                  logger.debug(`🌐 Attempting Google Geocoding API for: "${busyTime.event_location}"`)
                   try {
                     const GOOGLE_API_KEY = process.env.GOOGLE_GEOCODING_API_KEY
                     if (!GOOGLE_API_KEY) {
@@ -241,7 +241,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
                         for (const component of result.address_components) {
                           if (component.types.includes('postal_code')) {
                             plz = component.short_name
-                            console.log(`✅ Google API resolved: "${busyTime.event_location}" → ${plz}`)
+                            logger.debug(`✅ Google API resolved: "${busyTime.event_location}" → ${plz}`)
                             break
                           }
                         }
@@ -263,7 +263,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
                   if (updateError) {
                     console.warn(`⚠️  Failed to update PLZ for ${busyTime.event_location}:`, updateError)
                   } else {
-                    console.log(`✅ Updated PLZ: ${busyTime.event_location} → ${plz}`)
+                    logger.debug(`✅ Updated PLZ: ${busyTime.event_location} → ${plz}`)
                   }
                 } else {
                   console.warn(`❌ Could not resolve PLZ for: "${busyTime.event_location}"`)

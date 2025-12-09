@@ -184,10 +184,10 @@ const loadLocations = async () => {
     
     // Sammle alle location_ids aus den lessons
     const locationIds = [...new Set(props.lessons.map(lesson => lesson.location_id).filter(Boolean))]
-    console.log('🔍 Modal: Loading locations for IDs:', locationIds)
+    logger.debug('🔍 Modal: Loading locations for IDs:', locationIds)
     
     if (locationIds.length === 0) {
-      console.log('⚠️ Modal: No location IDs found')
+      logger.debug('⚠️ Modal: No location IDs found')
       return
     }
     
@@ -203,7 +203,7 @@ const loadLocations = async () => {
     }
     
     if (locations) {
-      console.log('✅ Modal: Locations loaded:', locations)
+      logger.debug('✅ Modal: Locations loaded:', locations)
       
       locationsMap.value = locations.reduce((acc: Record<string, any>, loc: any) => {
         acc[loc.id] = {
@@ -216,7 +216,7 @@ const loadLocations = async () => {
         return acc
       }, {} as Record<string, any>)
       
-      console.log('✅ Modal: LocationsMap created:', locationsMap.value)
+      logger.debug('✅ Modal: LocationsMap created:', locationsMap.value)
     }
   } catch (error) {
     console.error('❌ Modal: Error in loadLocations:', error)
@@ -250,7 +250,7 @@ import { watch } from 'vue'
 
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen && props.lessons.length > 0) {
-    console.log('🔍 Modal opened, loading locations...')
+    logger.debug('🔍 Modal opened, loading locations...')
     await loadLocations()
   }
 }, { immediate: true })

@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     
     const supabase = getSupabaseAdmin()
     
-    console.log('🔍 Checking credit processing for:', {
+    logger.debug('🔍 Checking credit processing for:', {
       paymentId,
       userId,
       transactionId

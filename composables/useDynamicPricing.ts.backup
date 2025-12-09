@@ -42,12 +42,12 @@ export const usePricing = () => {
 
   // Load pricing rules from database
   const loadPricingRules = async (forceReload = false): Promise<void> => {
-    console.log('🔄 Loading pricing rules from database...')
+    logger.debug('🔄 Loading pricing rules from database...')
     
     // Prüfe Cache
     if (!forceReload && lastLoaded.value && 
         (Date.now() - lastLoaded.value.getTime()) < CACHE_DURATION) {
-      console.log('📦 Using cached pricing rules')
+      logger.debug('📦 Using cached pricing rules')
       return
     }
 
@@ -62,7 +62,7 @@ export const usePricing = () => {
         .eq('is_active', true)
         .order('category_code')
 
-      console.log('📊 Database response:', { data, error })
+      logger.debug('📊 Database response:', { data, error })
 
       if (error) {
         console.error('❌ Database error:', error)
@@ -86,8 +86,8 @@ export const usePricing = () => {
       pricingRules.value = validRules
       lastLoaded.value = new Date()
 
-      console.log('✅ Pricing rules loaded:', validRules.length, 'rules')
-      console.log('📊 Categories:', validRules.map(r => r.category_code))
+      logger.debug('✅ Pricing rules loaded:', validRules.length, 'rules')
+      logger.debug('📊 Categories:', validRules.map(r => r.category_code))
 
     } catch (err: any) {
       console.error('❌ Error loading pricing rules:', err)
@@ -102,7 +102,7 @@ export const usePricing = () => {
 
   // Fallback: Hard-coded Werte in Memory laden
   const createFallbackPricingRules = async (): Promise<void> => {
-    console.log('🔄 Using fallback pricing rules...')
+    logger.debug('🔄 Using fallback pricing rules...')
     
     const fallbackRules: PricingRule[] = [
       { 
@@ -145,7 +145,7 @@ export const usePricing = () => {
     
     pricingRules.value = fallbackRules
     lastLoaded.value = new Date()
-    console.log('✅ Fallback pricing rules loaded')
+    logger.debug('✅ Fallback pricing rules loaded')
   }
 
   // Get pricing rule for specific category

@@ -16,8 +16,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🔗 Testing Accounto API connection...')
-    console.log('🔧 Accounto Config:', {
+    logger.debug('🔗 Testing Accounto API connection...')
+    logger.debug('🔧 Accounto Config:', {
       baseUrl,
       apiKeyPreview: `${apiKey.substring(0, 20)}...`,
       apiKeyLength: apiKey.length
@@ -33,10 +33,10 @@ export default defineEventHandler(async (event) => {
       'https://api.accounto.com'
     ]
 
-    console.log('🔄 Testing multiple base URLs for Administer branding...')
+    logger.debug('🔄 Testing multiple base URLs for Administer branding...')
 
     for (const testBaseUrl of possibleBaseUrls) {
-      console.log(`🔍 Testing base URL: ${testBaseUrl}`)
+      logger.debug(`🔍 Testing base URL: ${testBaseUrl}`)
       
       // Test the /api/v1/me endpoint with this base URL
       try {
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
         })
 
         // If we get here, this base URL works!
-        console.log(`✅ Base URL ${testBaseUrl} works with /api/v1/me!`)
+        logger.debug(`✅ Base URL ${testBaseUrl} works with /api/v1/me!`)
         return {
           success: true,
           message: `Verbindung erfolgreich mit ${testBaseUrl}`,
@@ -66,17 +66,17 @@ export default defineEventHandler(async (event) => {
         }
       } catch (error: any) {
         if (error.status === 401) {
-          console.log(`❌ Base URL ${testBaseUrl} - 401 Unauthorized (API Key ungültig)`)
+          logger.debug(`❌ Base URL ${testBaseUrl} - 401 Unauthorized (API Key ungültig)`)
         } else if (error.status === 404) {
-          console.log(`❌ Base URL ${testBaseUrl} - 404 Not Found (Endpoint existiert nicht)`)
+          logger.debug(`❌ Base URL ${testBaseUrl} - 404 Not Found (Endpoint existiert nicht)`)
         } else {
-          console.log(`❌ Base URL ${testBaseUrl} - ${error.status} ${error.statusText}`)
+          logger.debug(`❌ Base URL ${testBaseUrl} - ${error.status} ${error.statusText}`)
         }
       }
     }
 
     // If we get here, none of the base URLs worked
-    console.log('❌ Keine der getesteten Base URLs funktioniert')
+    logger.debug('❌ Keine der getesteten Base URLs funktioniert')
     return {
       success: false,
       message: 'Keine der getesteten Base URLs funktioniert',

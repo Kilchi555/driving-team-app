@@ -1721,7 +1721,7 @@ const autoSaveBranding = async () => {
   
   try {
     await updateTenantBranding(currentTenantBranding.value.id, brandingForm.value)
-    console.log('✅ Branding auto-saved')
+    logger.debug('✅ Branding auto-saved')
   } catch (error) {
     console.error('❌ Auto-save failed:', error)
   }
@@ -1733,7 +1733,7 @@ const autoSaveSessionSettings = async () => {
   
   try {
     await saveSessionSettings()
-    console.log('✅ Session settings auto-saved')
+    logger.debug('✅ Session settings auto-saved')
   } catch (error) {
     console.error('❌ Session settings auto-save failed:', error)
   }
@@ -1802,7 +1802,7 @@ const loadPaymentSettings = async (tenantId: string) => {
         ...paymentSettings.value,
         ...parsed
       }
-      console.log('✅ Payment settings loaded:', paymentSettings.value)
+      logger.debug('✅ Payment settings loaded:', paymentSettings.value)
     }
 
     // Load staff members for cash payment permissions
@@ -1829,7 +1829,7 @@ const loadStaffMembers = async (tenantId: string) => {
     }
     
     staffMembers.value = data || []
-    console.log('✅ Staff members loaded:', staffMembers.value.length)
+    logger.debug('✅ Staff members loaded:', staffMembers.value.length)
   } catch (error) {
     console.error('Error loading staff members:', error)
   } finally {
@@ -1853,7 +1853,7 @@ const updateStaffCashPermission = async (staff: any) => {
       return
     }
     
-    console.log('✅ Staff cash permission updated:', staff.id, staff.can_accept_cash)
+    logger.debug('✅ Staff cash permission updated:', staff.id, staff.can_accept_cash)
     showSuccess(`Berechtigung für ${staff.first_name} ${staff.last_name} aktualisiert`)
   } catch (error) {
     console.error('Error updating staff cash permission:', error)
@@ -1871,7 +1871,7 @@ const savePaymentSettings = async () => {
       return
     }
 
-    console.log('💾 Saving payment settings...')
+    logger.debug('💾 Saving payment settings...')
     showAutoSaving()
 
     const supabase = getSupabase()
@@ -1890,7 +1890,7 @@ const savePaymentSettings = async () => {
 
     if (error) throw error
 
-    console.log('✅ Payment settings saved')
+    logger.debug('✅ Payment settings saved')
     showAutoSaveSuccess('Gespeichert')
   } catch (error: any) {
     console.error('Error saving payment settings:', error)
@@ -1924,7 +1924,7 @@ const loadReminderSettings = async (tenantId: string) => {
         ...reminderSettings.value,
         ...parsed
       }
-      console.log('✅ Reminder settings loaded:', reminderSettings.value)
+      logger.debug('✅ Reminder settings loaded:', reminderSettings.value)
     }
   } catch (error) {
     console.error('Error loading reminder settings:', error)
@@ -1941,7 +1941,7 @@ const saveReminderSettings = async () => {
       return
     }
 
-    console.log('💾 Saving reminder settings...')
+    logger.debug('💾 Saving reminder settings...')
     isSaving.value = true
 
     const supabase = getSupabase()
@@ -1983,7 +1983,7 @@ const saveReminderSettings = async () => {
       if (error) throw error
     }
 
-    console.log('✅ Reminder settings saved')
+    logger.debug('✅ Reminder settings saved')
     showSuccess('Erinnerungs-Einstellungen gespeichert')
   } catch (error: any) {
     console.error('Error saving reminder settings:', error)
@@ -2009,7 +2009,7 @@ const loadTemplates = async (tenantId: string) => {
     }
     
     allTemplates.value = data || []
-    console.log('✅ Templates loaded:', allTemplates.value.length)
+    logger.debug('✅ Templates loaded:', allTemplates.value.length)
     
     // Load initial template
     loadSelectedTemplate()
@@ -2032,7 +2032,7 @@ const loadSelectedTemplate = () => {
       subject: template.subject || '',
       body: template.body || ''
     }
-    console.log('✅ Template loaded:', selectedTemplateStage.value, selectedTemplateChannel.value)
+    logger.debug('✅ Template loaded:', selectedTemplateStage.value, selectedTemplateChannel.value)
   } else {
     // Load default template from utils
     const defaultKey = `${selectedTemplateStage.value}_${selectedTemplateChannel.value}`
@@ -2043,7 +2043,7 @@ const loadSelectedTemplate = () => {
       subject: defaultTemplate.subject,
       body: defaultTemplate.body
     }
-    console.log('📝 Using default template for:', defaultKey)
+    logger.debug('📝 Using default template for:', defaultKey)
   }
 }
 
@@ -2170,7 +2170,7 @@ const saveTemplate = async () => {
       return
     }
 
-    console.log('💾 Saving template...')
+    logger.debug('💾 Saving template...')
     showAutoSaving()
 
     const supabase = getSupabase()
@@ -2212,7 +2212,7 @@ const saveTemplate = async () => {
       }
     }
 
-    console.log('✅ Template saved')
+    logger.debug('✅ Template saved')
     showAutoSaveSuccess('Gespeichert')
   } catch (error: any) {
     console.error('Error saving template:', error)
@@ -2324,7 +2324,7 @@ const applySelectedFont = () => {
 
 const handleLogoUpload = async (event: Event, logoType: 'square' | 'wide') => {
   // Logo upload logic here
-  console.log('Logo upload:', logoType)
+  logger.debug('Logo upload:', logoType)
 }
 
 const removeLogo = (logoType: 'square' | 'wide') => {
@@ -2366,7 +2366,7 @@ const handleClickOutside = (event: Event) => {
 onMounted(async () => {
   // Add click outside listener
   document.addEventListener('click', handleClickOutside)
-  console.log('🔍 Profile page mounted, checking auth...')
+  logger.debug('🔍 Profile page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -2375,7 +2375,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -2384,17 +2384,17 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading profile...')
+  logger.debug('✅ Auth check passed, loading profile...')
   
   // Original onMounted logic
   await loadData()

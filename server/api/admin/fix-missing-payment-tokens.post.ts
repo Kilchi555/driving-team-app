@@ -6,7 +6,7 @@ import { Wallee } from 'wallee'
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🔧 Fix: Checking for payments without saved payment methods...')
+    logger.debug('🔧 Fix: Checking for payments without saved payment methods...')
 
     const body = await readBody(event)
     const { paymentId, transactionId, userId, tenantId } = body
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
 
     // Wenn spezifische Payment-ID übergeben wurde
     if (paymentId) {
-      console.log(`🔍 Checking payment: ${paymentId}`)
+      logger.debug(`🔍 Checking payment: ${paymentId}`)
 
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
         const transactionResponse = await transactionService.read(spaceId, parseInt(payment.wallee_transaction_id.toString()))
         const transaction: Wallee.model.Transaction = transactionResponse.body
 
-        console.log('🔍 Wallee transaction details:', {
+        logger.debug('🔍 Wallee transaction details:', {
           id: transaction.id,
           state: transaction.state,
           customerId: transaction.customerId,
@@ -153,7 +153,7 @@ export default defineEventHandler(async (event) => {
           .update({ payment_method_id: savedToken.id })
           .eq('id', payment.id)
 
-        console.log('✅ Payment method token saved retroactively:', savedToken.id)
+        logger.debug('✅ Payment method token saved retroactively:', savedToken.id)
 
         return {
           success: true,
@@ -175,7 +175,7 @@ export default defineEventHandler(async (event) => {
 
     // Wenn Transaction-ID direkt übergeben wurde
     if (transactionId && userId && tenantId) {
-      console.log(`🔍 Checking transaction: ${transactionId} for user: ${userId}`)
+      logger.debug(`🔍 Checking transaction: ${transactionId} for user: ${userId}`)
 
       try {
         const transactionResponse = await transactionService.read(spaceId, parseInt(transactionId.toString()))

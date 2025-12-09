@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    console.log('Updating device:', deviceId, 'for user:', userId, 'isTrusted:', isTrusted)
+    logger.debug('Updating device:', deviceId, 'for user:', userId, 'isTrusted:', isTrusted)
 
     // Update device using service role (bypasses RLS)
     const { data, error } = await supabase

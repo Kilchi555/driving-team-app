@@ -527,7 +527,7 @@ const loadExamResults = async () => {
     
     if (appointmentIds.length === 0) {
       examResults.value = []
-      console.log('✅ No appointments found for staff member')
+      logger.debug('✅ No appointments found for staff member')
       return
     }
     
@@ -598,7 +598,7 @@ const loadExamResults = async () => {
       }
     })
     
-    console.log('✅ Exam results loaded:', examResults.value.length)
+    logger.debug('✅ Exam results loaded:', examResults.value.length)
     
   } catch (err: any) {
     console.error('❌ Error loading exam results:', err)

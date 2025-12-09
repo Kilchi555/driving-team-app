@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   const supabaseAdmin = getSupabaseAdmin()
 
   try {
-    console.log('🔍 Testing search with parameters:', { tenantId, batchId, search, searchColumn })
+    logger.debug('🔍 Testing search with parameters:', { tenantId, batchId, search, searchColumn })
     
     // Test 1: Get all records first
     const { data: allRecords, error: allError } = await supabaseAdmin
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
       console.error('Error fetching all records:', allError)
     }
 
-    console.log('📊 All records count:', allRecords?.length || 0)
+    logger.debug('📊 All records count:', allRecords?.length || 0)
     
     // Test 2: Search in Institution column
     const { data: institutionResults, error: institutionError } = await supabaseAdmin
@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
       console.error('Error searching Institution:', institutionError)
     }
 
-    console.log('📊 Institution search results:', institutionResults?.length || 0)
+    logger.debug('📊 Institution search results:', institutionResults?.length || 0)
 
     // Test 3: Search in Schüler column
     const { data: schulerResults, error: schulerError } = await supabaseAdmin
@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
       console.error('Error searching Schüler:', schulerError)
     }
 
-    console.log('📊 Schüler search results:', schulerResults?.length || 0)
+    logger.debug('📊 Schüler search results:', schulerResults?.length || 0)
 
     return {
       success: true,

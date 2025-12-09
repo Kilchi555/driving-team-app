@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabaseAdmin()
 
-    console.log('🧹 Cleaning up expired booking reservations...')
+    logger.debug('🧹 Cleaning up expired booking reservations...')
 
     // Lösche alle abgelaufenen Reservierungen
     const { data: deletedReservations, error: deleteError } = await supabase
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const deletedCount = deletedReservations?.length || 0
-    console.log(`✅ Cleaned up ${deletedCount} expired booking reservations`)
+    logger.debug(`✅ Cleaned up ${deletedCount} expired booking reservations`)
 
     return {
       success: true,

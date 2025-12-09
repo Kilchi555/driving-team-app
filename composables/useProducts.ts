@@ -84,7 +84,7 @@ export const useProducts = () => {
         price_chf: product.price_rappen / 100
       }))
 
-      console.log('✅ Products loaded for tenant:', userData.tenant_id, products.value.length)
+      logger.debug('✅ Products loaded for tenant:', userData.tenant_id, products.value.length)
     } catch (err: any) {
       console.error('❌ Error loading products:', err)
       error.value = err.message
@@ -170,7 +170,7 @@ export const useProducts = () => {
         }
       })
 
-      console.log('✅ Products loaded from product_sales:', allProducts.length)
+      logger.debug('✅ Products loaded from product_sales:', allProducts.length)
       return allProducts
     } catch (err: any) {
       console.error('❌ Error loading products from product_sales:', err)

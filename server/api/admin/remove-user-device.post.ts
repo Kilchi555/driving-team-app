@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    console.log('Removing device:', deviceId, 'for user:', userId)
+    logger.debug('Removing device:', deviceId, 'for user:', userId)
 
     // Delete device using service role (bypasses RLS)
     const { data, error } = await supabase

@@ -54,7 +54,7 @@ export const useCourseCategories = () => {
   const loadCategories = async (forceTenantId?: string) => {
     const tenantId = forceTenantId || currentUser.value?.tenant_id
     
-    console.log('🔄 loadCategories called', {
+    logger.debug('🔄 loadCategories called', {
       currentUser: currentUser.value,
       forceTenantId,
       effectiveTenantId: tenantId
@@ -65,7 +65,7 @@ export const useCourseCategories = () => {
       return
     }
 
-    console.log('📥 Loading categories for tenant:', tenantId)
+    logger.debug('📥 Loading categories for tenant:', tenantId)
     isLoading.value = true
     error.value = null
 
@@ -78,8 +78,8 @@ export const useCourseCategories = () => {
 
       if (loadError) throw loadError
       
-      console.log('✅ Categories loaded:', data?.length || 0, 'items')
-      console.log('📋 Categories data:', data)
+      logger.debug('✅ Categories loaded:', data?.length || 0, 'items')
+      logger.debug('📋 Categories data:', data)
       
       categories.value = data || []
 
@@ -93,7 +93,7 @@ export const useCourseCategories = () => {
 
   const createCategory = async (categoryData: Partial<CourseCategory>, tenantId?: string, userId?: string) => {
     // Debug logging
-    console.log('🔍 createCategory called with:', {
+    logger.debug('🔍 createCategory called with:', {
       categoryData,
       tenantId,
       userId,
@@ -103,7 +103,7 @@ export const useCourseCategories = () => {
     const effectiveTenantId = tenantId || currentUser.value?.tenant_id
     const effectiveUserId = userId || currentUser.value?.id
     
-    console.log('🔍 Effective IDs:', {
+    logger.debug('🔍 Effective IDs:', {
       effectiveTenantId,
       effectiveUserId
     })
@@ -137,7 +137,7 @@ export const useCourseCategories = () => {
   const updateCategory = async (id: string, updates: Partial<CourseCategory>, forceTenantId?: string) => {
     const tenantId = forceTenantId || currentUser.value?.tenant_id
     
-    console.log('🔍 updateCategory called', {
+    logger.debug('🔍 updateCategory called', {
       id,
       updates,
       currentUser: currentUser.value,

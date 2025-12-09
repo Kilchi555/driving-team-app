@@ -77,7 +77,7 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
     return { logoSrc: null, logoDataUrl: null }
   }
 
-  console.log('📷 Using logo URL directly:', logoUrl)
+  logger.debug('📷 Using logo URL directly:', logoUrl)
   
   // Simply use the public URL directly - no need to download and convert to base64
   // The PDF generator can fetch it directly
@@ -186,7 +186,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
 
   // Load vouchers directly linked to payment
   try {
-    console.log('🎫 Loading vouchers for payment:', payment.id)
+    logger.debug('🎫 Loading vouchers for payment:', payment.id)
     const { data: vouchersData, error: voucherError } = await supabase
       .from('vouchers')
       .select('name, description, amount_rappen, recipient_name')
@@ -195,9 +195,9 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     if (voucherError) {
       console.error('❌ Voucher query error:', voucherError)
     } else {
-      console.log('🎫 Vouchers found:', vouchersData?.length || 0)
+      logger.debug('🎫 Vouchers found:', vouchersData?.length || 0)
       if (vouchersData && vouchersData.length > 0) {
-        console.log('🎫 Voucher details:', vouchersData)
+        logger.debug('🎫 Voucher details:', vouchersData)
         const voucherProducts = vouchersData.map((voucher: any) => ({
           name: voucher.name || 'Gutschein',
           description: voucher.recipient_name ? `Für: ${voucher.recipient_name}` : (voucher.description || ''),
@@ -205,7 +205,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
           totalCHF: (voucher.amount_rappen || 0) / 100
         }))
         products = [...products, ...voucherProducts]
-        console.log('✅ Added vouchers to products, total products:', products.length)
+        logger.debug('✅ Added vouchers to products, total products:', products.length)
       }
     }
   } catch (voucherErr) {
@@ -521,7 +521,7 @@ function wrapHtml(body: string, primary: string, secondary: string) {
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('📄 Receipt API called')
+    logger.debug('📄 Receipt API called')
     
     const { paymentId, paymentIds }: ReceiptRequest = await readBody(event)
     
@@ -533,7 +533,7 @@ export default defineEventHandler(async (event) => {
       throw new Error('Payment ID(s) is required')
     }
 
-    console.log('📄 Generating receipt(s) for payment(s):', ids)
+    logger.debug('📄 Generating receipt(s) for payment(s):', ids)
 
     const supabase = getSupabaseAdmin()
 
@@ -633,12 +633,12 @@ export default defineEventHandler(async (event) => {
 
     const finalHtml = wrapHtml(bodyHtml, primary, secondary)
 
-    console.log('📄 Generating PDF with Puppeteer...')
+    logger.debug('📄 Generating PDF with Puppeteer...')
     
     let browser: any
     try {
       const { default: Puppeteer } = await getPuppeteer()
-      console.log('✅ Puppeteer loaded successfully')
+      logger.debug('✅ Puppeteer loaded successfully')
       
       browser = await Puppeteer.launch({ 
         args: chromium.args,
@@ -646,12 +646,12 @@ export default defineEventHandler(async (event) => {
         executablePath: await chromium.executablePath(),
         headless: chromium.headless,
       })
-      console.log('✅ Browser launched successfully')
+      logger.debug('✅ Browser launched successfully')
       
       const page = await browser.newPage()
       await page.setContent(finalHtml, { waitUntil: 'networkidle0' })
       
-      console.log('📄 Converting to PDF...')
+      logger.debug('📄 Converting to PDF...')
       const pdfBuffer = await page.pdf({ 
         format: 'A4', 
         printBackground: true, 
@@ -661,7 +661,7 @@ export default defineEventHandler(async (event) => {
       await page.close()
       await browser.close()
       
-      console.log('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
+      logger.debug('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
       
       // Upload PDF to Supabase Storage
       const filename = payments.length === 1 
@@ -671,7 +671,7 @@ export default defineEventHandler(async (event) => {
       // Don't include 'receipts/' in path since bucket is already named 'receipts'
       const filepath = `${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${filename}`
       
-      console.log('📤 Uploading PDF to Supabase Storage:', filepath)
+      logger.debug('📤 Uploading PDF to Supabase Storage:', filepath)
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('receipts')
@@ -685,7 +685,7 @@ export default defineEventHandler(async (event) => {
         throw new Error(`PDF upload failed: ${uploadError.message}`)
       }
       
-      console.log('✅ PDF uploaded successfully:', uploadData)
+      logger.debug('✅ PDF uploaded successfully:', uploadData)
       
       // Get public URL for the PDF
       const { data: publicData } = supabase.storage
@@ -693,7 +693,7 @@ export default defineEventHandler(async (event) => {
         .getPublicUrl(filepath)
       
       const pdfUrl = publicData?.publicUrl
-      console.log('📄 PDF public URL:', pdfUrl)
+      logger.debug('📄 PDF public URL:', pdfUrl)
       
       // Return success with URL for email sending
       return {

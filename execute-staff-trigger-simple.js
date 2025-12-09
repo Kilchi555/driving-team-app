@@ -19,7 +19,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 async function checkStaffWithoutCashRegisters() {
-  console.log('🔍 Checking current staff situation...')
+  logger.debug('🔍 Checking current staff situation...')
   
   // Check existing staff
   const { data: staff, error: staffError } = await supabase
@@ -34,10 +34,10 @@ async function checkStaffWithoutCashRegisters() {
     return
   }
   
-  console.log(`👥 Found ${staff?.length || 0} staff members`)
+  logger.debug(`👥 Found ${staff?.length || 0} staff members`)
   
   if (!staff || staff.length === 0) {
-    console.log('ℹ️  No staff members found - trigger will work for future staff')
+    logger.debug('ℹ️  No staff members found - trigger will work for future staff')
     return
   }
   
@@ -52,14 +52,14 @@ async function checkStaffWithoutCashRegisters() {
     const hasRegister = !balanceError && balance?.cash_register_id
     const name = `${staffMember.first_name || ''} ${staffMember.last_name || ''}`.trim() || staffMember.email
     
-    console.log(`  ${hasRegister ? '✅' : '❌'} ${name} (${staffMember.email})`)
+    logger.debug(`  ${hasRegister ? '✅' : '❌'} ${name} (${staffMember.email})`)
   }
   
   return staff
 }
 
 async function manuallyCreateStaffRegisters() {
-  console.log('\n🔧 Creating cash registers for existing staff...')
+  logger.debug('\n🔧 Creating cash registers for existing staff...')
   
   // Get staff without cash registers
   const { data: staffWithoutRegisters, error } = await supabase
@@ -78,10 +78,10 @@ async function manuallyCreateStaffRegisters() {
     return
   }
   
-  console.log(`🔨 Found ${staffWithoutRegisters?.length || 0} staff without registers`)
+  logger.debug(`🔨 Found ${staffWithoutRegisters?.length || 0} staff without registers`)
   
   if (!staffWithoutRegisters || staffWithoutRegisters.length === 0) {
-    console.log('✅ All staff already have cash registers!')
+    logger.debug('✅ All staff already have cash registers!')
     return
   }
   
@@ -138,11 +138,11 @@ async function manuallyCreateStaffRegisters() {
         })
       
       if (movementError) {
-        console.log(`⚠️  Movement log failed for ${staffName}:`, movementError)
+        logger.debug(`⚠️  Movement log failed for ${staffName}:`, movementError)
         // Not critical, continue
       }
       
-      console.log(`✅ Created cash register for ${staffName}`)
+      logger.debug(`✅ Created cash register for ${staffName}`)
       
     } catch (err) {
       console.error(`❌ Exception creating register for ${staffName}:`, err)
@@ -151,23 +151,23 @@ async function manuallyCreateStaffRegisters() {
 }
 
 async function main() {
-  console.log('🚀 Staff Cash Register Setup')
-  console.log('============================\n')
+  logger.debug('🚀 Staff Cash Register Setup')
+  logger.debug('============================\n')
   
   try {
     await checkStaffWithoutCashRegisters()
     await manuallyCreateStaffRegisters()
     
-    console.log('\n🔍 Final verification...')
+    logger.debug('\n🔍 Final verification...')
     await checkStaffWithoutCashRegisters()
     
-    console.log('\n✅ Setup completed!')
-    console.log('\n💡 Next steps:')
-    console.log('1. The manual setup is complete for existing staff')
-    console.log('2. For automatic creation of future staff registers, you need to:')
-    console.log('   - Go to Supabase Dashboard > SQL Editor')
-    console.log('   - Execute the trigger from database_trigger_auto_create_staff_cash.sql')
-    console.log('   - Or implement staff creation through admin interface')
+    logger.debug('\n✅ Setup completed!')
+    logger.debug('\n💡 Next steps:')
+    logger.debug('1. The manual setup is complete for existing staff')
+    logger.debug('2. For automatic creation of future staff registers, you need to:')
+    logger.debug('   - Go to Supabase Dashboard > SQL Editor')
+    logger.debug('   - Execute the trigger from database_trigger_auto_create_staff_cash.sql')
+    logger.debug('   - Or implement staff creation through admin interface')
     
   } catch (error) {
     console.error('❌ Fatal error:', error)

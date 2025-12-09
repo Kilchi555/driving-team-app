@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const { email, firstName, lastName, onboardingLink, tenantId } = body
 
-    console.log('📧 Onboarding email request received:', { email, firstName, lastName, tenantId })
+    logger.debug('📧 Onboarding email request received:', { email, firstName, lastName, tenantId })
 
     if (!email || !onboardingLink || !tenantId) {
       console.error('❌ Missing required fields:', { email: !!email, onboardingLink: !!onboardingLink, tenantId: !!tenantId })
@@ -21,13 +21,13 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ All required fields present')
-    console.log('🔗 Onboarding link:', onboardingLink)
+    logger.debug('✅ All required fields present')
+    logger.debug('🔗 Onboarding link:', onboardingLink)
 
     const supabase = getSupabaseAdmin()
 
     // Get tenant information
-    console.log('🏢 Loading tenant information for:', tenantId)
+    logger.debug('🏢 Loading tenant information for:', tenantId)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
       .select('name, primary_color')
@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Tenant loaded:', tenant.name)
+    logger.debug('✅ Tenant loaded:', tenant.name)
 
     const tenantName = tenant.name || 'Ihre Fahrschule'
     const primaryColor = tenant.primary_color || '#2563eb'
@@ -135,8 +135,8 @@ export default defineEventHandler(async (event) => {
     `
 
     // Send email
-    console.log('📧 Attempting to send email via Resend...')
-    console.log('📧 Email config:', {
+    logger.debug('📧 Attempting to send email via Resend...')
+    logger.debug('📧 Email config:', {
       to: email,
       subject: `Willkommen bei ${tenantName} - Registrierung abschließen`,
       from: process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
@@ -148,7 +148,7 @@ export default defineEventHandler(async (event) => {
       html: emailHtml
     })
 
-    console.log('✅ Onboarding email sent successfully to:', email)
+    logger.debug('✅ Onboarding email sent successfully to:', email)
 
     return {
       success: true,

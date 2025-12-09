@@ -248,7 +248,7 @@ const validateToken = async () => {
 
     if (response?.valid) {
       isValidToken.value = true
-      console.log('✅ Token is valid')
+      logger.debug('✅ Token is valid')
     } else {
       isValidToken.value = false
       tokenError.value = response?.message || 'Reset-Token ist ungültig oder abgelaufen.'
@@ -272,7 +272,7 @@ const handleReset = async () => {
   error.value = null
 
   try {
-    console.log('🔐 Submitting password reset...')
+    logger.debug('🔐 Submitting password reset...')
     
     const response = await $fetch('/api/auth/reset-password', {
       method: 'POST',
@@ -283,7 +283,7 @@ const handleReset = async () => {
     }) as any
 
     if (response?.success) {
-      console.log('✅ Password reset successful')
+      logger.debug('✅ Password reset successful')
       isSuccess.value = true
       showSuccess('Passwort erfolgreich zurückgesetzt!', 'Sie können sich jetzt mit Ihrem neuen Passwort anmelden.')
       
@@ -318,15 +318,15 @@ onMounted(async () => {
   // Load tenant branding if tenant slug is provided
   const tenantSlug = route.query.tenant as string
   if (tenantSlug) {
-    console.log('🏢 Loading branding for tenant:', tenantSlug)
+    logger.debug('🏢 Loading branding for tenant:', tenantSlug)
     try {
       await loadTenantBranding(tenantSlug)
-      console.log('✅ Tenant branding loaded:', { primaryColor: primaryColor.value, brandName: brandName.value })
+      logger.debug('✅ Tenant branding loaded:', { primaryColor: primaryColor.value, brandName: brandName.value })
     } catch (err) {
       console.error('❌ Failed to load tenant branding:', err)
     }
   } else {
-    console.log('ℹ️ No tenant slug provided, using default branding')
+    logger.debug('ℹ️ No tenant slug provided, using default branding')
   }
   
   await validateToken()

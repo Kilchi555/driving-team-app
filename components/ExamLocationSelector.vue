@@ -179,9 +179,9 @@ const activeExamLocations = computed(() => {
 
 // Methods
 const loadExamLocations = async () => {
-  console.log('🔍 Debug currentStaffId:', props.currentStaffId)
+  logger.debug('🔍 Debug currentStaffId:', props.currentStaffId)
   if (!props.currentStaffId) {
-    console.log('❌ No currentStaffId provided, skipping load')
+    logger.debug('❌ No currentStaffId provided, skipping load')
     return
   }
 
@@ -220,7 +220,7 @@ const loadExamLocations = async () => {
       return Array.isArray(staffIds) && staffIds.includes(props.currentStaffId)
     })
 
-    console.log('✅ Exam locations loaded for selector:', {
+    logger.debug('✅ Exam locations loaded for selector:', {
       available: availableExamLocations.value.length,
       staffPreferences: staffExamLocations.value.length,
       filtered: activeExamLocations.value.length
@@ -289,10 +289,10 @@ const saveOfflineLocation = (location: ExamLocation | null) => {
   try {
     if (location && location.isManual) {
       localStorage.setItem(LOCAL_STORAGE_OFFLINE_LOCATION_KEY, JSON.stringify(location))
-      console.log('💾 Manual location saved to local storage:', location.name);
+      logger.debug('💾 Manual location saved to local storage:', location.name);
     } else {
       localStorage.removeItem(LOCAL_STORAGE_OFFLINE_LOCATION_KEY)
-      console.log('🗑️ Manual location cleared from local storage.');
+      logger.debug('🗑️ Manual location cleared from local storage.');
     }
   } catch (e) {
     console.error('Error saving offline location to local storage:', e)
@@ -310,7 +310,7 @@ const loadOfflineLocation = () => {
         selectedLocation.value = parsedLocation
         manualLocationInput.value = parsedLocation.name || '';
         emit('update:modelValue', parsedLocation)
-        console.log('🚀 Manual location loaded from cache:', parsedLocation.name);
+        logger.debug('🚀 Manual location loaded from cache:', parsedLocation.name);
       }
     }
   } catch (e) {
@@ -341,7 +341,7 @@ const synchronizeManualLocation = async () => {
       if (existingLocations && existingLocations.length > 0) {
         // Location already exists, use its ID
         locationIdToUse = existingLocations[0].id;
-        console.log(`💡 Manual location '${cachedManualLocation.name}' already exists in exam_locations. Using existing ID.`);
+        logger.debug(`💡 Manual location '${cachedManualLocation.name}' already exists in exam_locations. Using existing ID.`);
       } else {
         // Insert new exam location if it doesn't exist
         const { data: newLocation, error: insertError } = await supabase
@@ -358,7 +358,7 @@ const synchronizeManualLocation = async () => {
 
         if (insertError) throw insertError;
         locationIdToUse = newLocation.id;
-        console.log(`➕ Manual location '${cachedManualLocation.name}' added to exam_locations.`);
+        logger.debug(`➕ Manual location '${cachedManualLocation.name}' added to exam_locations.`);
       }
 
       // Check if staff_exam_location entry already exists for this staff and location
@@ -383,9 +383,9 @@ const synchronizeManualLocation = async () => {
           });
         
         if (staffInsertError) throw staffInsertError;
-        console.log(`🔗 Manual location '${cachedManualLocation.name}' linked to staff_exam_locations.`);
+        logger.debug(`🔗 Manual location '${cachedManualLocation.name}' linked to staff_exam_locations.`);
       } else {
-          console.log(`👌 Manual location '${cachedManualLocation.name}' already linked to staff.`);
+          logger.debug(`👌 Manual location '${cachedManualLocation.name}' already linked to staff.`);
       }
 
       // Clear the manual location from cache after successful sync
@@ -397,7 +397,7 @@ const synchronizeManualLocation = async () => {
       const syncedLocation = availableExamLocations.value.find(loc => loc.name === cachedManualLocation.name);
       if (syncedLocation) {
         selectLocation(syncedLocation);
-        console.log('✅ Manual location successfully synchronized and selected.');
+        logger.debug('✅ Manual location successfully synchronized and selected.');
       }
 
     } catch (syncErr: any) {
@@ -422,7 +422,7 @@ const selectLocation = (location: ExamLocation) => {
     // If a database location is selected, clear any pending manual location
     saveOfflineLocation(null);
   }
-  console.log('📍 Exam location selected:', location.name, location.isManual ? '(Manual)' : '(DB)');
+  logger.debug('📍 Exam location selected:', location.name, location.isManual ? '(Manual)' : '(DB)');
 }
 
 const clearSelection = () => {
@@ -431,7 +431,7 @@ const clearSelection = () => {
   emit('update:modelValue', null)
   saveSelectedLocationToCache(null); // Clear selected location from cache
   saveOfflineLocation(null); // Clear any pending manual location from cache
-  console.log('🗑️ Exam location selection cleared');
+  logger.debug('🗑️ Exam location selection cleared');
 }
 
 // Watchers
@@ -461,7 +461,7 @@ onMounted(() => {
   // Sync-Interval für manuelle Locations (falls offline erstellt)
   setInterval(() => {
     if (isOfflineMode.value && selectedLocation.value?.isManual) {
-      console.log('Attempting to re-sync manual location...');
+      logger.debug('Attempting to re-sync manual location...');
       synchronizeManualLocation();
     }
   }, 30000); // Try every 30 seconds

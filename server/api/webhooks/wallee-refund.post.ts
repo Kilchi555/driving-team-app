@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
     
-    console.log('🔔 Wallee refund webhook received:', {
+    logger.debug('🔔 Wallee refund webhook received:', {
       entityId: body.entityId,
       entityState: body.entityState,
       spaceId: body.spaceId,
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     // Map entity states to our status
     const refundStatus = body.entityState === 'SUCCESSFUL' ? 'completed' : 'failed'
 
-    console.log('💳 Refund status:', refundStatus)
+    logger.debug('💳 Refund status:', refundStatus)
 
     if (refundStatus === 'completed') {
       // Find transaction by wallee_refund_id
@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
         .single()
 
       if (creditTransaction) {
-        console.log('✅ Found credit transaction, marking as completed')
+        logger.debug('✅ Found credit transaction, marking as completed')
 
         // Update transaction status
         await supabase
@@ -55,10 +55,10 @@ export default defineEventHandler(async (event) => {
           })
           .eq('user_id', creditTransaction.user_id)
 
-        console.log('✅ Wallee refund processed successfully')
+        logger.debug('✅ Wallee refund processed successfully')
       }
     } else {
-      console.log('❌ Refund failed, marking transaction as failed')
+      logger.debug('❌ Refund failed, marking transaction as failed')
 
       // Find and update transaction
       await supabase

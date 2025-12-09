@@ -203,7 +203,7 @@ const formattedAppointments = computed(() => {
 
 // SINGLETON FUNCTIONS - Funktionen operieren auf globalem State
 const fetchPendingTasks = async (userId: string, userRole?: string) => {
-  console.log('🔥 fetchPendingTasks starting for user:', userId, 'with role:', userRole)
+  logger.debug('🔥 fetchPendingTasks starting for user:', userId, 'with role:', userRole)
   globalState.isLoading = true
   globalState.error = null
 
@@ -266,23 +266,23 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     // Für Staff: Nach staff_id filtern (ihre eigenen Termine)
     // Für Admin: Alle Termine (kein Filter)
     if (userRole === 'client') {
-      console.log('🔥 Client detected - filtering by user_id, tenant:', userData.tenant_id)
+      logger.debug('🔥 Client detected - filtering by user_id, tenant:', userData.tenant_id)
       query = query.eq('user_id', userId)
     } else if (userRole === 'admin') {
-      console.log('🔥 Admin detected - loading ALL appointments for tenant:', userData.tenant_id)
+      logger.debug('🔥 Admin detected - loading ALL appointments for tenant:', userData.tenant_id)
       // Admins sehen alle Termine des Tenants (kein zusätzlicher Filter)
     } else {
-      console.log('🔥 Staff detected - filtering by staff_id, tenant:', userData.tenant_id)
+      logger.debug('🔥 Staff detected - filtering by staff_id, tenant:', userData.tenant_id)
       query = query.eq('staff_id', userId)
     }
     
     // Debug: Zeige die aktuelle Query
     if (userRole === 'client') {
-      console.log('🔥 Query filter: user_id =', userId)
+      logger.debug('🔥 Query filter: user_id =', userId)
     } else if (userRole === 'admin') {
-      console.log('🔥 Query filter: admin - no filter (all appointments)')
+      logger.debug('🔥 Query filter: admin - no filter (all appointments)')
     } else {
-      console.log('🔥 Query filter: staff_id =', userId)
+      logger.debug('🔥 Query filter: staff_id =', userId)
     }
     
     // ✅ ZWEI QUERIES: 1. Abgeschlossene Termine ohne Evaluation, 2. Nicht-bestätigte Termine
@@ -296,9 +296,9 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     
     // Query 2: Nicht-bestätigte Termine (nur für Staff/Admin, nicht für Clients)
     let unconfirmedAppointments: any[] = []
-    console.log('🔍 Checking userRole for unconfirmed query:', userRole, 'type:', typeof userRole)
+    logger.debug('🔍 Checking userRole for unconfirmed query:', userRole, 'type:', typeof userRole)
     if (userRole === 'staff' || userRole === 'admin') {
-      console.log('✅ Loading unconfirmed appointments for', userRole)
+      logger.debug('✅ Loading unconfirmed appointments for', userRole)
       let unconfirmedQuery = supabase
         .from('appointments')
         .select(`
@@ -348,7 +348,7 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
         console.warn('⚠️ Error loading unconfirmed appointments:', unconfirmedError)
       } else {
         unconfirmedAppointments = unconfirmedData || []
-        console.log(`📋 Found ${unconfirmedAppointments.length} unconfirmed appointments`)
+        logger.debug(`📋 Found ${unconfirmedAppointments.length} unconfirmed appointments`)
       }
     }
 
@@ -357,9 +357,9 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
       throw fetchError
     }
 
-    console.log('🔥 Fetched appointments (raw data):', data?.length)
-    console.log('🔥 Raw appointments data:', data)
-    console.log('🔍 Query filter details:', {
+    logger.debug('🔥 Fetched appointments (raw data):', data?.length)
+    logger.debug('🔥 Raw appointments data:', data)
+    logger.debug('🔍 Query filter details:', {
       userId,
       userRole,
       filterBy: userRole === 'client' ? 'user_id' : 'staff_id',
@@ -367,8 +367,8 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
       status: ['completed', 'confirmed', 'scheduled'],
       eventTypes: ['lesson', 'exam']
     })
-    console.log('🔥 Current time for comparison:', toLocalTimeString(new Date()))
-    console.log('🔥 User ID being searched:', userId)
+    logger.debug('🔥 Current time for comparison:', toLocalTimeString(new Date()))
+    logger.debug('🔥 User ID being searched:', userId)
 
     // ✅ NUR abgeschlossene Termine für Bewertungen verwenden (KEINE unbestätigten Termine)
     const allAppointments = [...(data || [])]
@@ -376,10 +376,10 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     // Termine ohne Kriterienbewertung oder Prüfungsergebnis filtern
     const pending: PendingAppointment[] = allAppointments.filter((appointment: any) => {
       // ✅ Zusätzlicher Filter: Stelle sicher, dass nur nicht gelöschte Termine angezeigt werden
-      console.log(`🔥 Checking appointment ${appointment.id}: deleted_at = "${appointment.deleted_at}" (type: ${typeof appointment.deleted_at})`)
+      logger.debug(`🔥 Checking appointment ${appointment.id}: deleted_at = "${appointment.deleted_at}" (type: ${typeof appointment.deleted_at})`)
       
       if (appointment.deleted_at !== null && appointment.deleted_at !== undefined) {
-        console.log(`🔥 Skipping deleted appointment: ${appointment.id} (${appointment.title})`)
+        logger.debug(`🔥 Skipping deleted appointment: ${appointment.id} (${appointment.title})`)
         return false
       }
       
@@ -403,7 +403,7 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
       // Termin ist erledigt, wenn er entweder eine Kriterien-Bewertung ODER ein Prüfungsergebnis hat
       const isCompleted = hasCriteriaEvaluation || hasExamResult;
 
-      console.log(`🔥 Appointment ${appointment.id} (${appointment.title}):`, {
+      logger.debug(`🔥 Appointment ${appointment.id} (${appointment.title}):`, {
         status: appointment.status,
         start_time: appointment.start_time,
         end_time: appointment.end_time,
@@ -434,14 +434,14 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
       payments: appointment.payments || []
     }))
 
-    console.log('🔥 Filtered pending appointments:', pending.length)
+    logger.debug('🔥 Filtered pending appointments:', pending.length)
     
     // WICHTIG: Globalen State komplett ersetzen (nicht mutieren)
     globalState.pendingAppointments = [...pending]
     
     // ✅ Speichere ALLE unbestätigten Termine (nicht nur nächste 24h)
     // Die Filterung nach Fälligkeit erfolgt im Frontend via unconfirmedWithStatus
-    console.log('🔥 Raw unconfirmedAppointments before processing:', unconfirmedAppointments)
+    logger.debug('🔥 Raw unconfirmedAppointments before processing:', unconfirmedAppointments)
     
     const formattedUnconfirmed = (unconfirmedAppointments || []).map((apt: any) => {
       try {
@@ -455,9 +455,9 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     
     globalState.unconfirmedNext24h = formattedUnconfirmed
     
-    console.log('📌 Unconfirmed next 24h:', globalState.unconfirmedNext24h.length)
-    console.log('🔥 Unconfirmed next 24h data:', globalState.unconfirmedNext24h)
-    console.log('🔥 Global pending state updated, count:', pendingCount.value)
+    logger.debug('📌 Unconfirmed next 24h:', globalState.unconfirmedNext24h.length)
+    logger.debug('🔥 Unconfirmed next 24h data:', globalState.unconfirmedNext24h)
+    logger.debug('🔥 Global pending state updated, count:', pendingCount.value)
     
   } catch (err: any) {
     globalState.error = err?.message || 'Fehler beim Laden der Pendenzen'
@@ -506,7 +506,7 @@ const saveCriteriaEvaluations = async (
       };
     });
 
-    console.log('Attempting to save notes:', notesToInsert);
+    logger.debug('Attempting to save notes:', notesToInsert);
 
     // Step 1: Delete all old evaluation notes for this appointment first
     // This ensures we don't have duplicates or old evaluations
@@ -534,7 +534,7 @@ const saveCriteriaEvaluations = async (
     // TODO: Hier müsste die User-Rolle übergeben werden
     await fetchPendingTasks(currentUserId || '', 'staff'); // Aktualisiere die Liste nach dem Speichern
 
-    console.log('✅ Kriterien-Bewertungen erfolgreich gespeichert und Pendenzen aktualisiert:', appointmentId);
+    logger.debug('✅ Kriterien-Bewertungen erfolgreich gespeichert und Pendenzen aktualisiert:', appointmentId);
 
   } catch (err: any) {
     globalState.error = err?.message || 'Fehler beim Speichern der Kriterien-Bewertungen';
@@ -559,8 +559,8 @@ const clearError = () => {
 
 // SINGLETON EXPORT - Immer dieselbe Instanz zurückgeben
 export const usePendingTasks = () => {
-  console.log('🔄 usePendingTasks called - returning singleton instance')
-  console.log('🔥 Current global pending count:', pendingCount.value)
+  logger.debug('🔄 usePendingTasks called - returning singleton instance')
+  logger.debug('🔥 Current global pending count:', pendingCount.value)
   
   return {
     // Reactive state - direkte Referenzen auf reactive state

@@ -510,7 +510,7 @@ const calculatedCurrentBalance = computed(() => {
     .reduce((sum, t) => sum + t.amount_rappen, 0)
   balance += pendingAmount
   
-  console.log('💰 Balance calculation:', {
+  logger.debug('💰 Balance calculation:', {
     deposits: totalDeposits.value,
     withdrawals: totalWithdrawals.value,
     pending: pendingAmount,
@@ -549,9 +549,9 @@ const staffFeedItems = computed(() => {
 
 // Load data on mount
 onMounted(async () => {
-  console.log('🚀 CashBalanceManager mounted, loading staff balances...')
+  logger.debug('🚀 CashBalanceManager mounted, loading staff balances...')
   await loadStaffBalances()
-  console.log('✅ Staff balances loaded:', staffBalances.value)
+  logger.debug('✅ Staff balances loaded:', staffBalances.value)
 })
 
 // Load staff balances
@@ -573,7 +573,7 @@ const loadStaffBalances = async () => {
       throw new Error('User has no tenant assigned')
     }
     
-    console.log('🔍 Loading staff balances for tenant:', userProfile.tenant_id)
+    logger.debug('🔍 Loading staff balances for tenant:', userProfile.tenant_id)
     
     // Get only staff users (exclude admins) - FILTERED BY TENANT
     const { data: users, error: usersError } = await supabase
@@ -587,7 +587,7 @@ const loadStaffBalances = async () => {
 
     if (usersError) throw usersError
     
-    console.log('👥 Found users:', users?.map(u => ({ name: `${u.first_name} ${u.last_name}`, role: u.role, id: u.id })))
+    logger.debug('👥 Found users:', users?.map(u => ({ name: `${u.first_name} ${u.last_name}`, role: u.role, id: u.id })))
 
     // Load existing balances from cash_balances - FILTERED BY TENANT
     const { data: balancesRows, error: balancesError } = await supabase
@@ -597,7 +597,7 @@ const loadStaffBalances = async () => {
 
     if (balancesError) throw balancesError
     
-    console.log('💰 Found cash_balances rows:', balancesRows)
+    logger.debug('💰 Found cash_balances rows:', balancesRows)
 
     const instructorIdToBalance = new Map((balancesRows || []).map(row => [row.instructor_id, row]))
 
@@ -609,7 +609,7 @@ const loadStaffBalances = async () => {
 
     if (movementsError) throw movementsError
     
-    console.log('📊 Found cash_movements:', movements)
+    logger.debug('📊 Found cash_movements:', movements)
 
     const { data: transactions, error: transactionsError } = await supabase
       .from('cash_transactions')
@@ -618,7 +618,7 @@ const loadStaffBalances = async () => {
 
     if (transactionsError) throw transactionsError
     
-    console.log('💳 Found cash_transactions:', transactions)
+    logger.debug('💳 Found cash_transactions:', transactions)
 
     // Calculate balance for each staff member
     staffBalances.value = users.map(user => {
@@ -653,7 +653,7 @@ const loadStaffBalances = async () => {
       }
     })
 
-    console.log('💰 Staff balances (with persisted where available):', staffBalances.value.map(s => ({
+    logger.debug('💰 Staff balances (with persisted where available):', staffBalances.value.map(s => ({
       name: `${s.first_name} ${s.last_name}`,
       balance: s.current_balance_rappen / 100
     })))
@@ -698,7 +698,7 @@ const loadStaffMovements = async (staffId) => {
 // Load staff transactions
 const loadStaffTransactions = async (staffId) => {
   try {
-    console.log('🔍 Loading transactions for staff:', staffId)
+    logger.debug('🔍 Loading transactions for staff:', staffId)
     
     const { data, error } = await supabase
       .from('cash_transactions')
@@ -716,7 +716,7 @@ const loadStaffTransactions = async (staffId) => {
       student_name: transaction.student ? `${transaction.student.first_name} ${transaction.student.last_name}` : 'Unbekannt'
     }))
 
-    console.log('✅ Transactions loaded:', {
+    logger.debug('✅ Transactions loaded:', {
       total: staffTransactions.value.length,
       pending: staffTransactions.value.filter(t => t.status === 'pending').length,
       confirmed: staffTransactions.value.filter(t => t.status === 'confirmed').length,
@@ -764,7 +764,7 @@ const submitTopUp = async () => {
     const staff = staffBalances.value.find(s => s.id === topUpStaffId.value)
     const currentBalance = staff ? staff.current_balance_rappen : 0
     
-    console.log('💰 Topping up cash:', {
+    logger.debug('💰 Topping up cash:', {
       staffId: topUpStaffId.value,
       amount: topUpAmount.value,
       currentBalance: currentBalance / 100,
@@ -858,18 +858,18 @@ const calculateCurrentBalance = async (staffId) => {
 // Helper function to get current balance for a specific staff member (sync version for UI)
 const getStaffCurrentBalance = (staffId) => {
   try {
-    console.log('🔍 Getting balance for staff:', staffId)
-    console.log('📊 Available staff balances:', staffBalances.value)
+    logger.debug('🔍 Getting balance for staff:', staffId)
+    logger.debug('📊 Available staff balances:', staffBalances.value)
     
     // Find the staff member in staffBalances
     const staff = staffBalances.value.find(s => s.id === staffId)
     if (!staff) {
-      console.log('❌ Staff not found in staffBalances')
+      logger.debug('❌ Staff not found in staffBalances')
       return 0
     }
 
-    console.log('✅ Staff found:', staff)
-    console.log('💰 Balance:', staff.current_balance_rappen / 100, 'CHF')
+    logger.debug('✅ Staff found:', staff)
+    logger.debug('💰 Balance:', staff.current_balance_rappen / 100, 'CHF')
     
     // Return the calculated balance from loadStaffBalances
     return staff.current_balance_rappen || 0
@@ -899,7 +899,7 @@ const submitWithdraw = async () => {
     const staff = staffBalances.value.find(s => s.id === withdrawStaffId.value)
     const currentBalance = staff ? staff.current_balance_rappen : 0
     
-    console.log('💰 Withdrawing cash:', {
+    logger.debug('💰 Withdrawing cash:', {
       staffId: withdrawStaffId.value,
       amount: withdrawAmount.value,
       currentBalance: currentBalance / 100,

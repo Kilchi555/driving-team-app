@@ -16,7 +16,7 @@ const updateOverdueAppointments = async () => {
   isUpdating.value = true
   updateError.value = null
   try {
-    console.log('🔄 Checking for overdue appointments...')
+    logger.debug('🔄 Checking for overdue appointments...')
     
     const now = toLocalTimeString(new Date())
     
@@ -33,11 +33,11 @@ const updateOverdueAppointments = async () => {
     }
     
     if (!overdueAppointments || overdueAppointments.length === 0) {
-      console.log('✅ No overdue appointments found')
+      logger.debug('✅ No overdue appointments found')
       return { updated: 0, appointments: [] }
     }
     
-    console.log(`📅 Found ${overdueAppointments.length} overdue appointments:`, overdueAppointments)
+    logger.debug(`📅 Found ${overdueAppointments.length} overdue appointments:`, overdueAppointments)
     
     // Update alle überfälligen Termine auf 'completed'
     const appointmentIds = overdueAppointments.map(apt => apt.id)
@@ -55,7 +55,7 @@ const updateOverdueAppointments = async () => {
       throw new Error(`Error updating appointments: ${updateError.message}`)
     }
     
-    console.log(`✅ Successfully updated ${updatedAppointments?.length || 0} appointments to 'completed'`)
+    logger.debug(`✅ Successfully updated ${updatedAppointments?.length || 0} appointments to 'completed'`)
     
     return {
       updated: updatedAppointments?.length || 0,
@@ -79,7 +79,7 @@ const updateOverdueAppointments = async () => {
     updateError.value = null
 
     try {
-      console.log(`🔄 Marking appointment ${appointmentId} as completed...`)
+      logger.debug(`🔄 Marking appointment ${appointmentId} as completed...`)
 
       const { data, error } = await supabase
         .from('appointments')
@@ -96,7 +96,7 @@ const updateOverdueAppointments = async () => {
         throw new Error(`Error updating appointment: ${error.message}`)
       }
 
-      console.log('✅ Appointment marked as completed:', data)
+      logger.debug('✅ Appointment marked as completed:', data)
       return data
 
     } catch (err: any) {
@@ -117,7 +117,7 @@ const updateOverdueAppointments = async () => {
     updateError.value = null
 
     try {
-      console.log(`🔄 Marking appointment ${appointmentId} as evaluated...`)
+      logger.debug(`🔄 Marking appointment ${appointmentId} as evaluated...`)
 
       const { data, error } = await supabase
         .from('appointments')
@@ -133,7 +133,7 @@ const updateOverdueAppointments = async () => {
         throw new Error(`Error updating appointment: ${error.message}`)
       }
 
-      console.log('✅ Appointment marked as evaluated:', data)
+      logger.debug('✅ Appointment marked as evaluated:', data)
       return data
 
     } catch (err: any) {
@@ -170,7 +170,7 @@ const updateOverdueAppointments = async () => {
         return acc
       }, {}) || {}
 
-      console.log('📊 Appointment status statistics:', stats)
+      logger.debug('📊 Appointment status statistics:', stats)
       return stats
 
     } catch (err: any) {
@@ -194,7 +194,7 @@ const updateOverdueAppointments = async () => {
     updateError.value = null
 
     try {
-      console.log('🔄 Batch updating appointment status...', filters)
+      logger.debug('🔄 Batch updating appointment status...', filters)
 
       let query = supabase
         .from('appointments')
@@ -222,7 +222,7 @@ const updateOverdueAppointments = async () => {
         throw new Error(`Batch update error: ${error.message}`)
       }
 
-      console.log(`✅ Batch updated ${data?.length || 0} appointments from '${filters.fromStatus}' to '${filters.toStatus}'`)
+      logger.debug(`✅ Batch updated ${data?.length || 0} appointments from '${filters.fromStatus}' to '${filters.toStatus}'`)
       
       return {
         updated: data?.length || 0,

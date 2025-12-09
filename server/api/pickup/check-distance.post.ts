@@ -25,7 +25,7 @@ async function callGoogleDistanceMatrixAPI(
     // Call for offpeak time (current time)
     const offpeakUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&mode=driving&language=de&key=${googleApiKey}`
     
-    console.log('🌐 Calling Google Distance Matrix API (offpeak)...')
+    logger.debug('🌐 Calling Google Distance Matrix API (offpeak)...')
     const offpeakResponse = await $fetch(offpeakUrl)
     
     if (offpeakResponse.status !== 'OK' || !offpeakResponse.rows?.[0]?.elements?.[0]) {
@@ -50,7 +50,7 @@ async function callGoogleDistanceMatrixAPI(
     
     const peakUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&mode=driving&departure_time=${Math.floor(peakTime.getTime() / 1000)}&traffic_model=pessimistic&language=de&key=${googleApiKey}`
     
-    console.log('🌐 Calling Google Distance Matrix API (peak)...')
+    logger.debug('🌐 Calling Google Distance Matrix API (peak)...')
     const peakResponse = await $fetch(peakUrl)
     
     let peakMinutes = offpeakMinutes
@@ -61,11 +61,11 @@ async function callGoogleDistanceMatrixAPI(
       }
     }
     
-    console.log(`✅ Google API results: offpeak=${offpeakMinutes} min, peak=${peakMinutes} min`)
+    logger.debug(`✅ Google API results: offpeak=${offpeakMinutes} min, peak=${peakMinutes} min`)
     
     // Save to database cache
     const supabase = getSupabaseAdmin()
-    console.log(`💾 Saving to DB cache: ${fromPLZ} -> ${toPLZ}`)
+    logger.debug(`💾 Saving to DB cache: ${fromPLZ} -> ${toPLZ}`)
     const { error: dbError } = await supabase
       .from('plz_distance_cache')
       .upsert({
@@ -83,7 +83,7 @@ async function callGoogleDistanceMatrixAPI(
     if (dbError) {
       console.error('❌ Error saving to DB cache:', dbError)
     } else {
-      console.log(`✅ Saved to DB cache: ${fromPLZ} -> ${toPLZ}`)
+      logger.debug(`✅ Saved to DB cache: ${fromPLZ} -> ${toPLZ}`)
     }
     
     return { peak: peakMinutes, offpeak: offpeakMinutes }
@@ -95,12 +95,12 @@ async function callGoogleDistanceMatrixAPI(
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('=' .repeat(80))
-    console.log('🔍 PICKUP DISTANCE CHECK API CALLED')
-    console.log('=' .repeat(80))
+    logger.debug('=' .repeat(80))
+    logger.debug('🔍 PICKUP DISTANCE CHECK API CALLED')
+    logger.debug('=' .repeat(80))
     
     const body = await readBody(event)
-    console.log('📦 Request body:', JSON.stringify(body, null, 2))
+    logger.debug('📦 Request body:', JSON.stringify(body, null, 2))
     
     const { fromPLZ, toPLZ, appointmentTime, staffId } = body
 
@@ -146,16 +146,16 @@ export default defineEventHandler(async (event) => {
           evening_start: staffSettings.peak_time_evening_start || '17:00',
           evening_end: staffSettings.peak_time_evening_end || '19:00'
         }
-        console.log('📅 Using staff-specific peak settings:', peakSettings)
+        logger.debug('📅 Using staff-specific peak settings:', peakSettings)
       }
     }
 
     // Get Google API Key from runtime config
     const config = useRuntimeConfig()
-    console.log('🔑 Runtime config keys available:', Object.keys(config))
+    logger.debug('🔑 Runtime config keys available:', Object.keys(config))
     
     const googleApiKey = config.googleMapsApiKey
-    console.log('🔑 Google API Key present:', !!googleApiKey)
+    logger.debug('🔑 Google API Key present:', !!googleApiKey)
     
     if (!googleApiKey) {
       console.error('❌ GOOGLE_MAPS_API_KEY not configured in runtime config')
@@ -167,7 +167,7 @@ export default defineEventHandler(async (event) => {
 
     // Special case: same PLZ = 0 minutes
     if (normalizedFromPLZ === normalizedToPLZ) {
-      console.log(`✅ Same PLZ (${normalizedFromPLZ}), returning 0 minutes`)
+      logger.debug(`✅ Same PLZ (${normalizedFromPLZ}), returning 0 minutes`)
       return {
         success: true,
         fromPLZ: normalizedFromPLZ,
@@ -178,11 +178,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // Check cache first
-    console.log('🔍 Checking cache...')
+    logger.debug('🔍 Checking cache...')
     const cachedTime = await getCachedTravelTime(normalizedFromPLZ, normalizedToPLZ, appointmentDate, peakSettings)
     
     if (cachedTime !== null) {
-      console.log(`✅ Cache hit: ${normalizedFromPLZ} -> ${normalizedToPLZ} = ${cachedTime} min`)
+      logger.debug(`✅ Cache hit: ${normalizedFromPLZ} -> ${normalizedToPLZ} = ${cachedTime} min`)
       return {
         success: true,
         fromPLZ: normalizedFromPLZ,
@@ -193,7 +193,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Cache miss - call Google API directly
-    console.log(`🌐 Cache miss, calling Google API: ${normalizedFromPLZ} -> ${normalizedToPLZ}`)
+    logger.debug(`🌐 Cache miss, calling Google API: ${normalizedFromPLZ} -> ${normalizedToPLZ}`)
     const result = await callGoogleDistanceMatrixAPI(normalizedFromPLZ, normalizedToPLZ, appointmentDate, googleApiKey)
 
     if (!result) {
@@ -207,7 +207,7 @@ export default defineEventHandler(async (event) => {
     const usePeakTime = isPeakTime(appointmentDate, peakSettings)
     const travelTime = usePeakTime ? result.peak : result.offpeak
 
-    console.log(`✅ Travel time: ${normalizedFromPLZ} -> ${normalizedToPLZ} = ${travelTime} min (${usePeakTime ? 'peak' : 'offpeak'})`)
+    logger.debug(`✅ Travel time: ${normalizedFromPLZ} -> ${normalizedToPLZ} = ${travelTime} min (${usePeakTime ? 'peak' : 'offpeak'})`)
 
     return {
       success: true,

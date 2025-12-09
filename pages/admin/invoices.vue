@@ -482,7 +482,7 @@ const authStore = useAuthStore()
 
 // Prüfe Authentifizierung direkt in der Komponente
 onMounted(async () => {
-  console.log('🔍 Invoices page mounted, checking auth...')
+  logger.debug('🔍 Invoices page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -491,7 +491,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -500,17 +500,17 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading invoices...')
+  logger.debug('✅ Auth check passed, loading invoices...')
 })
 
 // Simple debounce implementation
@@ -592,12 +592,12 @@ const debouncedSearch = useDebounce(() => {
 
 // Watch filter changes for debugging
 watch(filters, (newFilters) => {
-  console.log('👀 Filters changed:', newFilters)
+  logger.debug('👀 Filters changed:', newFilters)
 }, { deep: true })
 
 // Methods
 const refreshData = async () => {
-  console.log('🔄 refreshData called')
+  logger.debug('🔄 refreshData called')
   
   // Load current tenant info
   const { getSupabase } = await import('~/utils/supabase')
@@ -618,7 +618,7 @@ const refreshData = async () => {
       .eq('id', tenantId)
       .single()
     currentTenant.value = tenantData
-    console.log('🔍 Current tenant:', tenantData)
+    logger.debug('🔍 Current tenant:', tenantData)
   }
   
   const [invoicesResult, summaryResult] = await Promise.all([
@@ -628,7 +628,7 @@ const refreshData = async () => {
   
   // Aktualisiere den summary ref mit den geladenen Daten
   if (summaryResult) {
-    console.log('📊 Summary result received:', summaryResult)
+    logger.debug('📊 Summary result received:', summaryResult)
     summary.value = summaryResult
   } else {
     console.warn('⚠️ No summary result received')
@@ -643,17 +643,17 @@ const applyFilters = async () => {
   showPaymentStatusDropdown.value = false
   showDateDropdown.value = false
   
-  console.log('🔍 Applying filters with values:', filters.value)
-  console.log('📅 Date filters:', { from: filters.value.date_from, to: filters.value.date_to })
-  console.log('📊 Status filters:', filters.value.status)
-  console.log('💳 Payment status filters:', filters.value.payment_status)
-  console.log('🔍 Search term:', filters.value.search)
+  logger.debug('🔍 Applying filters with values:', filters.value)
+  logger.debug('📅 Date filters:', { from: filters.value.date_from, to: filters.value.date_to })
+  logger.debug('📊 Status filters:', filters.value.status)
+  logger.debug('💳 Payment status filters:', filters.value.payment_status)
+  logger.debug('🔍 Search term:', filters.value.search)
   
   // Debug: Check if filters are actually arrays
-  console.log('🔍 Status filters type:', Array.isArray(filters.value.status))
-  console.log('🔍 Payment status filters type:', Array.isArray(filters.value.payment_status))
-  console.log('🔍 Status filters length:', filters.value.status?.length)
-  console.log('🔍 Payment status filters length:', filters.value.payment_status?.length)
+  logger.debug('🔍 Status filters type:', Array.isArray(filters.value.status))
+  logger.debug('🔍 Payment status filters type:', Array.isArray(filters.value.payment_status))
+  logger.debug('🔍 Status filters length:', filters.value.status?.length)
+  logger.debug('🔍 Payment status filters length:', filters.value.payment_status?.length)
   
   await fetchInvoices(filters.value, 1)
 }
@@ -670,7 +670,7 @@ const clearFilters = async () => {
   // Ensure arrays are initialized
   ensureFilterArrays()
   
-  console.log('🧹 Filters cleared, reloading data...')
+  logger.debug('🧹 Filters cleared, reloading data...')
   await fetchInvoices(filters.value, 1)
 }
 
@@ -692,7 +692,7 @@ const viewInvoice = async (id: string) => {
 
 const handleEditInvoice = async (id: string) => {
   try {
-    console.log('✏️ Edit invoice requested:', id)
+    logger.debug('✏️ Edit invoice requested:', id)
     
     // Setze den Flag für den Bearbeitungsmodus
     shouldStartInEditMode.value = true
@@ -712,13 +712,13 @@ const handleEditInvoice = async (id: string) => {
 
 const handleSendInvoice = async (id: string) => {
   try {
-    console.log('📤 Send invoice requested:', id)
+    logger.debug('📤 Send invoice requested:', id)
     
     // Verwende die Funktion aus dem useInvoices Composable
     const result = await sendInvoice(id)
     
     if (result && 'success' in result && result.success) {
-      console.log('✅ Invoice sent successfully')
+      logger.debug('✅ Invoice sent successfully')
       // Modal schließen und Daten neu laden
       showDetailModal.value = false
       await refreshData()
@@ -732,13 +732,13 @@ const handleSendInvoice = async (id: string) => {
 
 const handleMarkAsPaid = async (id: string) => {
   try {
-    console.log('💰 Mark as paid requested:', id)
+    logger.debug('💰 Mark as paid requested:', id)
     
     // Verwende die Funktion aus dem useInvoices Composable
     const result = await markInvoiceAsPaid(id, 'paid')
     
     if (result && 'success' in result && result.success) {
-      console.log('✅ Invoice marked as paid successfully')
+      logger.debug('✅ Invoice marked as paid successfully')
       // Modal schließen und Daten neu laden
       showDetailModal.value = false
       await refreshData()
@@ -752,13 +752,13 @@ const handleMarkAsPaid = async (id: string) => {
 
 const handleCancelInvoice = async (id: string) => {
   try {
-    console.log('❌ Cancel invoice requested:', id)
+    logger.debug('❌ Cancel invoice requested:', id)
     
     // Verwende die Funktion aus dem useInvoices Composable
     const result = await cancelInvoice(id)
     
     if (result && 'success' in result && result.success) {
-      console.log('✅ Invoice cancelled successfully')
+      logger.debug('✅ Invoice cancelled successfully')
       // Modal schließen und Daten neu laden
       showDetailModal.value = false
       await refreshData()
@@ -894,7 +894,7 @@ const toggleStatusFilter = (status: string) => {
   } else {
     filters.value.status!.push(status as InvoiceStatus)
   }
-  console.log('🔍 Status filter toggled:', status, 'New status array:', filters.value.status)
+  logger.debug('🔍 Status filter toggled:', status, 'New status array:', filters.value.status)
   // Apply filters immediately
   applyFilters()
 }
@@ -909,7 +909,7 @@ const togglePaymentStatusFilter = (status: string) => {
   } else {
     filters.value.payment_status!.push(status as PaymentStatus)
   }
-  console.log('💳 Payment status filter toggled:', status, 'New payment status array:', filters.value.payment_status)
+  logger.debug('💳 Payment status filter toggled:', status, 'New payment status array:', filters.value.payment_status)
   // Apply filters immediately
   applyFilters()
 }
@@ -948,11 +948,11 @@ const handleClickOutside = (event: Event) => {
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🚀 onMounted called')
-  console.log('🔍 Initial summary state:', summary.value)
+  logger.debug('🚀 onMounted called')
+  logger.debug('🔍 Initial summary state:', summary.value)
   await refreshData()
-  console.log('✅ refreshData completed')
-  console.log('🔍 Final summary state:', summary.value)
+  logger.debug('✅ refreshData completed')
+  logger.debug('🔍 Final summary state:', summary.value)
   
   // Add click outside listener to close dropdowns
   document.addEventListener('click', handleClickOutside)

@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    console.log('Checking user_devices table RLS policies...')
+    logger.debug('Checking user_devices table RLS policies...')
 
     // Check if table exists
     const { data: tableExists, error: tableError } = await supabase

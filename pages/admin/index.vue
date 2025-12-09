@@ -719,7 +719,7 @@ const hoursStats = ref({
 // Function to load recent activities including pending payments
 const loadRecentActivities = async () => {
   try {
-    console.log('🔄 Loading recent activities...')
+    logger.debug('🔄 Loading recent activities...')
     
     // Get current user's tenant_id
     const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -798,7 +798,7 @@ const loadRecentActivities = async () => {
     ]
     
     recentActivities.value = [...pendingActivities, ...staticActivities]
-    console.log('✅ Recent activities loaded:', recentActivities.value.length)
+    logger.debug('✅ Recent activities loaded:', recentActivities.value.length)
   } catch (error) {
     console.error('❌ Error loading recent activities:', error)
   }
@@ -852,7 +852,7 @@ const totalPendingAmount = computed(() =>
 // Methods
 const loadDashboardStats = async () => {
   try {
-    console.log('🔄 Loading dashboard statistics...')
+    logger.debug('🔄 Loading dashboard statistics...')
     
     // Get today's date range
     const today = new Date()
@@ -875,7 +875,7 @@ const loadDashboardStats = async () => {
       console.error('❌ User hat keine tenant_id zugewiesen')
       return
     }
-    console.log('🔍 Admin Dashboard - Current tenant_id:', tenantId)
+    logger.debug('🔍 Admin Dashboard - Current tenant_id:', tenantId)
 
     // Load various stats in parallel - FILTERED BY TENANT
     const [
@@ -967,10 +967,10 @@ const loadDashboardStats = async () => {
     } else if (pendingPayments) {
       stats.value.pendingPayments = pendingPayments.length
       stats.value.pendingAmount = pendingPayments.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0)
-      console.log('💰 Pending payments loaded:', pendingPayments.length, 'payments, total amount:', stats.value.pendingAmount)
+      logger.debug('💰 Pending payments loaded:', pendingPayments.length, 'payments, total amount:', stats.value.pendingAmount)
     }
 
-    console.log('✅ Dashboard stats loaded:', stats.value)
+    logger.debug('✅ Dashboard stats loaded:', stats.value)
     
     // Load recent invoices
     await loadRecentInvoices()
@@ -991,7 +991,7 @@ const loadDashboardStats = async () => {
 const loadRecentInvoices = async () => {
   try {
     isLoadingInvoices.value = true
-    console.log('🔄 Loading recent invoices...')
+    logger.debug('🔄 Loading recent invoices...')
     
     // Get invoices from the last 2 weeks
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
@@ -1055,7 +1055,7 @@ const loadRecentInvoices = async () => {
       status: invoice.payment_status
     }))
     
-    console.log('✅ Recent invoices loaded:', recentInvoices.value.length)
+    logger.debug('✅ Recent invoices loaded:', recentInvoices.value.length)
   } catch (error) {
     console.error('❌ Error loading recent invoices:', error)
   } finally {
@@ -1066,7 +1066,7 @@ const loadRecentInvoices = async () => {
 const loadPendingStudents = async () => {
   try {
     isLoadingPendingStudents.value = true
-    console.log('🔄 Loading students with pending payments...')
+    logger.debug('🔄 Loading students with pending payments...')
     
     // Get current user's tenant_id
     const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -1099,10 +1099,10 @@ const loadPendingStudents = async () => {
     
     if (paymentsError) throw paymentsError
     
-    console.log('💳 Found pending payments:', pendingPayments?.length || 0)
+    logger.debug('💳 Found pending payments:', pendingPayments?.length || 0)
     
     if (!pendingPayments || pendingPayments.length === 0) {
-      console.log('ℹ️ No pending payments found')
+      logger.debug('ℹ️ No pending payments found')
       pendingStudents.value = []
       return
     }
@@ -1157,8 +1157,8 @@ const loadPendingStudents = async () => {
       .sort((a, b) => b.total_pending_amount - a.total_pending_amount)
       .slice(0, 10) // Show top 10
     
-    console.log('✅ Pending students loaded:', pendingStudents.value.length, 'students with pending payments')
-    console.log('📊 Sample data:', pendingStudents.value.slice(0, 2))
+    logger.debug('✅ Pending students loaded:', pendingStudents.value.length, 'students with pending payments')
+    logger.debug('📊 Sample data:', pendingStudents.value.slice(0, 2))
   } catch (error) {
     console.error('❌ Error loading pending students:', error)
   } finally {
@@ -1186,7 +1186,7 @@ const loadRevenueData = async () => {
       console.warn('No tenant ID found for revenue data')
       return
     }
-    console.log('💰 Loading revenue data for tenant:', tenantId)
+    logger.debug('💰 Loading revenue data for tenant:', tenantId)
     
     const now = new Date()
     const months: RevenueMonth[] = []
@@ -1198,7 +1198,7 @@ const loadRevenueData = async () => {
       .eq('tenant_id', tenantId)
       .limit(10)
 
-    console.log('📊 Sample of all payments in DB:', {
+    logger.debug('📊 Sample of all payments in DB:', {
       total: allPayments?.length || 0,
       samples: allPayments?.slice(0, 3),
       statuses: [...new Set(allPayments?.map(p => p.payment_status))]
@@ -1249,7 +1249,7 @@ const loadRevenueData = async () => {
       })
 
       if (i === 0) {
-        console.log('💰 Current month data:', {
+        logger.debug('💰 Current month data:', {
           completed: paymentsCount,
           pending: pendingCount,
           revenue: totalRevenue
@@ -1258,7 +1258,7 @@ const loadRevenueData = async () => {
     }
 
     revenueMonths.value = months
-    console.log('✅ Revenue data loaded for 4 months:', months)
+    logger.debug('✅ Revenue data loaded for 4 months:', months)
   } catch (error) {
     console.error('❌ Error loading revenue data:', error)
   }
@@ -1317,7 +1317,7 @@ const load12MonthsRevenue = async () => {
     }
 
     revenue12Months.value = months
-    console.log('✅ 12 months revenue data loaded:', months)
+    logger.debug('✅ 12 months revenue data loaded:', months)
   } catch (error) {
     console.error('❌ Error loading 12 months revenue data:', error)
   }
@@ -1531,7 +1531,7 @@ watch(showRevenueModal, (isOpen) => {
 // Load all data function
 const loadAllDashboardData = () => {
   const tenantId = authStore.userProfile?.tenant_id || currentUser.value?.tenant_id
-  console.log('🔄 Loading all dashboard data...', { 
+  logger.debug('🔄 Loading all dashboard data...', { 
     tenantId, 
     authStoreProfile: !!authStore.userProfile,
     authStoreTenant: authStore.userProfile?.tenant_id, 
@@ -1539,7 +1539,7 @@ const loadAllDashboardData = () => {
   })
   
   if (tenantId) {
-    console.log('✅ Tenant ID available, loading data:', tenantId)
+    logger.debug('✅ Tenant ID available, loading data:', tenantId)
     loadDashboardStats()
     loadRevenueData()
     loadCoursesStats()
@@ -1555,13 +1555,13 @@ const loadAllDashboardData = () => {
 // Watch for tenant to be available
 watch(() => authStore.userProfile?.tenant_id, (tenantId) => {
   if (tenantId) {
-    console.log('✅ Tenant ID available in auth store, loading data:', tenantId)
+    logger.debug('✅ Tenant ID available in auth store, loading data:', tenantId)
     loadAllDashboardData()
   }
 }, { immediate: true })
 
 onMounted(() => {
-  console.log('📊 Dashboard page mounted')
+  logger.debug('📊 Dashboard page mounted')
 })
 </script>
 

@@ -23,10 +23,10 @@ interface PaymentListResponse {
 
 export default defineEventHandler(async (event): Promise<PaymentListResponse> => {
   try {
-    console.log('📋 Payment List API called')
+    logger.debug('📋 Payment List API called')
     
     const query = getQuery(event) as PaymentListQuery
-    console.log('🔍 Query parameters:', query)
+    logger.debug('🔍 Query parameters:', query)
     
     const supabase = getSupabase()
     
@@ -105,7 +105,7 @@ export default defineEventHandler(async (event): Promise<PaymentListResponse> =>
 
     if (error) throw error
 
-    console.log(`✅ Found ${payments?.length || 0} payments`)
+    logger.debug(`✅ Found ${payments?.length || 0} payments`)
 
     return {
       success: true,

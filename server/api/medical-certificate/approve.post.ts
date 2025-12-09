@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
     const now = new Date()
 
-    console.log('✅ Approving medical certificate for appointment:', appointmentId)
+    logger.debug('✅ Approving medical certificate for appointment:', appointmentId)
 
     // 1. Get appointment with payment
     const { data: appointment, error: appointmentError } = await supabase
@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Appointment updated - charge set to 0%')
+    logger.debug('✅ Appointment updated - charge set to 0%')
 
     // 3. Handle payment
     const payment = Array.isArray(appointment.payments) 
@@ -90,12 +90,12 @@ export default defineEventHandler(async (event) => {
     let paymentAction = 'none'
 
     if (payment) {
-      console.log('💰 Processing payment:', payment.id, 'Status:', payment.payment_status)
+      logger.debug('💰 Processing payment:', payment.id, 'Status:', payment.payment_status)
 
       if (payment.payment_status === 'completed' && payment.paid_at) {
         // Payment was completed - create credit
         if (createCredit) {
-          console.log('💳 Creating credit for paid payment...')
+          logger.debug('💳 Creating credit for paid payment...')
           
           const { error: creditError } = await supabase
             .from('user_credits')
@@ -111,7 +111,7 @@ export default defineEventHandler(async (event) => {
           if (creditError) {
             console.error('⚠️ Error creating credit:', creditError)
           } else {
-            console.log('✅ Credit created')
+            logger.debug('✅ Credit created')
             paymentAction = 'credit_created'
             
             // Mark appointment as credit created
@@ -130,7 +130,7 @@ export default defineEventHandler(async (event) => {
 
       } else if (payment.payment_status === 'pending' || payment.payment_status === 'authorized') {
         // Payment not completed yet - cancel it
-        console.log('❌ Cancelling pending/authorized payment...')
+        logger.debug('❌ Cancelling pending/authorized payment...')
         
         const { error: paymentUpdateError } = await supabase
           .from('payments')
@@ -143,14 +143,14 @@ export default defineEventHandler(async (event) => {
         if (paymentUpdateError) {
           console.error('⚠️ Error cancelling payment:', paymentUpdateError)
         } else {
-          console.log('✅ Payment cancelled')
+          logger.debug('✅ Payment cancelled')
           paymentAction = 'cancelled'
         }
 
         // If authorized, void the authorization
         if (payment.payment_status === 'authorized' && payment.wallee_transaction_id) {
           // TODO: Call Wallee void API
-          console.log('⚠️ TODO: Void Wallee authorization for:', payment.wallee_transaction_id)
+          logger.debug('⚠️ TODO: Void Wallee authorization for:', payment.wallee_transaction_id)
         }
       }
     }
@@ -167,7 +167,7 @@ export default defineEventHandler(async (event) => {
     //   }
     // })
 
-    console.log('✅ Medical certificate approved successfully')
+    logger.debug('✅ Medical certificate approved successfully')
 
     return {
       success: true,

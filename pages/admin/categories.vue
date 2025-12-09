@@ -844,7 +844,7 @@ const loadCategories = async () => {
       throw new Error('Fehler beim Laden der Benutzerinformationen')
     }
 
-    console.log('🔍 User tenant_id:', userProfile.tenant_id)
+    logger.debug('🔍 User tenant_id:', userProfile.tenant_id)
 
     // Get tenant business_type first
     const { data: tenantData, error: tenantError } = await supabase
@@ -857,7 +857,7 @@ const loadCategories = async () => {
     
     // Only load categories if business_type is driving_school
     if (tenantData?.business_type !== 'driving_school') {
-      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
       categories.value = []
       isLoading.value = false
       return
@@ -882,7 +882,7 @@ const loadCategories = async () => {
     }
 
     categories.value = data || []
-    console.log('✅ Categories loaded:', categories.value.length, 'categories for tenant:', userProfile.tenant_id || 'standard templates')
+    logger.debug('✅ Categories loaded:', categories.value.length, 'categories for tenant:', userProfile.tenant_id || 'standard templates')
   } catch (err: any) {
     console.error('❌ Error loading categories:', err)
     error.value = err.message || 'Fehler beim Laden der Kategorien'
@@ -1301,7 +1301,7 @@ const saveCategory = async () => {
         .eq('id', editingCategory.value.id)
       
       if (updateError) throw updateError
-      console.log('✅ Category updated:', categoryForm.value.code)
+      logger.debug('✅ Category updated:', categoryForm.value.code)
     } else {
       // Insert category
       const { error: insertError } = await supabase
@@ -1309,7 +1309,7 @@ const saveCategory = async () => {
         .insert({ ...categoryData, tenant_id: userProfile.tenant_id })
       
       if (insertError) throw insertError
-      console.log('✅ Category created:', categoryForm.value.code)
+      logger.debug('✅ Category created:', categoryForm.value.code)
     }
 
     // Sync pricing rules
@@ -1402,7 +1402,7 @@ const loadCategoryPricing = async (categoryCode: string) => {
     } else {
       // No theory rule found - set to disabled
       categoryForm.value.theory_enabled = false
-      console.log('ℹ️ No theory rule found for category:', categoryCode)
+      logger.debug('ℹ️ No theory rule found for category:', categoryCode)
     }
     
     if (consultationRule) {
@@ -1417,10 +1417,10 @@ const loadCategoryPricing = async (categoryCode: string) => {
     } else {
       // No consultation rule found - set to disabled
       categoryForm.value.consultation_enabled = false
-      console.log('ℹ️ No consultation rule found for category:', categoryCode)
+      logger.debug('ℹ️ No consultation rule found for category:', categoryCode)
     }
     
-    console.log('✅ Loaded pricing data for category:', categoryCode)
+    logger.debug('✅ Loaded pricing data for category:', categoryCode)
     
   } catch (err: any) {
     console.error('❌ Error loading category pricing:', err)
@@ -1468,7 +1468,7 @@ const copyStandardPricingRules = async (categoryCode: string, tenantId: string) 
     
     if (insertError) throw insertError
     
-    console.log(`✅ Copied ${copiedRules.length} pricing rules for category: ${categoryCode}`)
+    logger.debug(`✅ Copied ${copiedRules.length} pricing rules for category: ${categoryCode}`)
     
   } catch (err: any) {
     console.error(`❌ Error copying pricing rules for ${categoryCode}:`, err)
@@ -1490,7 +1490,7 @@ const syncPricingRules = async (
   tenantId: string
 ) => {
   try {
-    console.log('🔄 Syncing pricing rules for category:', categoryCode, {
+    logger.debug('🔄 Syncing pricing rules for category:', categoryCode, {
       pricePerLessonChf,
       adminFeeChf,
       adminFeeAppliesFrom,
@@ -1511,7 +1511,7 @@ const syncPricingRules = async (
     const adminFeeRappen = Math.round(adminFeeChf * 100)
     
     // Delete existing pricing rules for this category
-    console.log('🗑️ Deleting existing pricing rules for:', categoryCode, 'tenant:', tenantId)
+    logger.debug('🗑️ Deleting existing pricing rules for:', categoryCode, 'tenant:', tenantId)
     
     const { data: deletedRules, error: deleteError } = await supabase
       .from('pricing_rules')
@@ -1525,7 +1525,7 @@ const syncPricingRules = async (
       throw deleteError
     }
     
-    console.log('🗑️ Deleted', deletedRules?.length || 0, 'existing pricing rules')
+    logger.debug('🗑️ Deleted', deletedRules?.length || 0, 'existing pricing rules')
     
     // Create new pricing rules
     // IMPORTANT: Base price is ALWAYS calculated for 45 minutes (standard lesson duration)
@@ -1600,7 +1600,7 @@ const syncPricingRules = async (
     }
     
     // Insert pricing rules
-    console.log('📊 Inserting pricing rules:', pricingRules)
+    logger.debug('📊 Inserting pricing rules:', pricingRules)
     
     const { data: insertedRules, error: insertError } = await supabase
       .from('pricing_rules')
@@ -1612,7 +1612,7 @@ const syncPricingRules = async (
       throw insertError
     }
     
-    console.log('✅ Pricing rules synced for category:', categoryCode, 'Inserted:', insertedRules?.length || 0, 'rules')
+    logger.debug('✅ Pricing rules synced for category:', categoryCode, 'Inserted:', insertedRules?.length || 0, 'rules')
     
   } catch (err: any) {
     console.error('❌ Error syncing pricing rules:', err)
@@ -1645,7 +1645,7 @@ loadCategories()
 
 onMounted(async () => {
   // Page is already displayed, data loads in background
-  console.log('📋 Categories page mounted, data loading in background')
+  logger.debug('📋 Categories page mounted, data loading in background')
 })
 
 const deleteCategory = async (category: Category) => {
@@ -1692,7 +1692,7 @@ const deleteCategory = async (category: Category) => {
     // Remove from local state
     categories.value = categories.value.filter(c => c.id !== category.id)
     await loadPricingData() // Reload pricing data for table
-    console.log('✅ Category and pricing rules deleted:', category.code)
+    logger.debug('✅ Category and pricing rules deleted:', category.code)
   } catch (err: any) {
     console.error('❌ Error deleting category:', err)
     alert(`Fehler beim Löschen der Kategorie: ${err.message}`)
@@ -1813,7 +1813,7 @@ const loadPricingData = async () => {
     })
     
     pricingCache.value = pricingByCategory
-    console.log('✅ Pricing data loaded for table display')
+    logger.debug('✅ Pricing data loaded for table display')
     
   } catch (err: any) {
     console.error('❌ Error loading pricing data:', err)
@@ -1825,7 +1825,7 @@ const authStore = useAuthStore()
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🔍 Categories page mounted, checking auth...')
+  logger.debug('🔍 Categories page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -1834,7 +1834,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -1843,17 +1843,17 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading categories...')
+  logger.debug('✅ Auth check passed, loading categories...')
   
   // Original onMounted logic
   await loadCategories()

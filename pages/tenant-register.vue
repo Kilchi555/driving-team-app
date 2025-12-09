@@ -813,8 +813,8 @@ onMounted(() => {
 const submitRegistration = async () => {
   if (!canSubmit.value) {
     console.error('❌ Cannot submit: canSubmit is false')
-    console.log('canProceed:', canProceed.value)
-    console.log('acceptTerms:', acceptTerms.value)
+    logger.debug('canProceed:', canProceed.value)
+    logger.debug('acceptTerms:', acceptTerms.value)
     return
   }
 
@@ -832,13 +832,13 @@ const submitRegistration = async () => {
     const formDataToSend = new FormData()
     
     // Grunddaten hinzufügen
-    console.log('📝 Form data being sent:', formData.value)
+    logger.debug('📝 Form data being sent:', formData.value)
     Object.entries(formData.value).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
         const stringValue = value.toString().trim()
         if (stringValue !== '') {
           formDataToSend.append(key, stringValue)
-          console.log(`📤 Added to FormData: ${key} = ${stringValue}`)
+          logger.debug(`📤 Added to FormData: ${key} = ${stringValue}`)
         } else {
           console.warn(`⚠️ Skipping empty field: ${key} = "${stringValue}"`)
         }
@@ -850,13 +850,13 @@ const submitRegistration = async () => {
     // Logo-Datei hinzufügen (falls vorhanden)
     if (logoFile.value) {
       formDataToSend.append('logo_file', logoFile.value)
-      console.log('📤 Added logo file to FormData')
+      logger.debug('📤 Added logo file to FormData')
     }
     
     // Debug: Alle FormData-Einträge ausgeben
-    console.log('🔍 FormData contents:')
+    logger.debug('🔍 FormData contents:')
     for (const [key, value] of formDataToSend.entries()) {
-      console.log(`  ${key}:`, value)
+      logger.debug(`  ${key}:`, value)
     }
 
     const response = await $fetch('/api/tenants/register', {
@@ -865,9 +865,9 @@ const submitRegistration = async () => {
     })
 
     if (response.success) {
-      console.log('✅ Registration successful, response:', response)
-      console.log('📊 Tenant data:', response.tenant)
-      console.log('🔢 Customer number:', response.tenant.customer_number)
+      logger.debug('✅ Registration successful, response:', response)
+      logger.debug('📊 Tenant data:', response.tenant)
+      logger.debug('🔢 Customer number:', response.tenant.customer_number)
       createdTenantSlug.value = response.tenant.slug
       createdCustomerNumber.value = response.tenant.customer_number
       // Create admin user immediately
@@ -903,7 +903,7 @@ const submitRegistration = async () => {
 const goToTenantPage = () => {
   // Weiterleitung zur Admin-Registrierung mit vorausgefüllten Daten
   // Erfolgreiche Registrierung - keine Weiterleitung nötig
-  console.log('✅ Tenant registration completed successfully')
+  logger.debug('✅ Tenant registration completed successfully')
 }
 
 // State to track if user manually edited slug

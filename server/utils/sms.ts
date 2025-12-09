@@ -39,7 +39,7 @@ export async function sendSMS({ to, message }: SendSMSOptions) {
       to
     })
 
-    console.log('✅ SMS sent successfully:', result.sid)
+    logger.debug('✅ SMS sent successfully:', result.sid)
     return { success: true, messageSid: result.sid }
   } catch (error) {
     console.error('❌ Error sending SMS:', error)

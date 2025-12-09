@@ -21,7 +21,7 @@ export async function lookupPLZFromLocationName(
   supabase: any
 ): Promise<string | null> {
   try {
-    console.log(`🔍 Looking up PLZ for location: "${locationName}"`)
+    logger.debug(`🔍 Looking up PLZ for location: "${locationName}"`)
 
     const { data, error } = await supabase
       .from('locations')
@@ -36,12 +36,12 @@ export async function lookupPLZFromLocationName(
     }
 
     if (!data || data.length === 0) {
-      console.log(`⚠️ No location found in DB for: "${locationName}"`)
+      logger.debug(`⚠️ No location found in DB for: "${locationName}"`)
       return null
     }
 
     const location = data[0]
-    console.log(`✅ Found location in DB: ${location.name} (${location.city}) - PLZ: ${location.postal_code}`)
+    logger.debug(`✅ Found location in DB: ${location.name} (${location.city}) - PLZ: ${location.postal_code}`)
     return location.postal_code
   } catch (err: any) {
     console.error('❌ Error looking up location:', err)
@@ -67,19 +67,19 @@ export async function resolvePLZForExternalBusyTime(
   // In case it's already formatted as "8610 Uster"
   const directPLZ = extractPLZFromAddress(eventLocation)
   if (directPLZ) {
-    console.log(`✅ Extracted PLZ directly: ${directPLZ} from "${eventLocation}"`)
+    logger.debug(`✅ Extracted PLZ directly: ${directPLZ} from "${eventLocation}"`)
     return directPLZ
   }
 
   // Second: look up in locations table
   const lookedUpPLZ = await lookupPLZFromLocationName(eventLocation, tenantId, supabase)
   if (lookedUpPLZ) {
-    console.log(`✅ Found PLZ from locations table: ${lookedUpPLZ} for "${eventLocation}"`)
+    logger.debug(`✅ Found PLZ from locations table: ${lookedUpPLZ} for "${eventLocation}"`)
     return lookedUpPLZ
   }
 
   // Third: Use Google Geocoding API as fallback (server-side call)
-  console.log(`🌐 Attempting Google Geocoding API for: "${eventLocation}"`)
+  logger.debug(`🌐 Attempting Google Geocoding API for: "${eventLocation}"`)
   try {
     // Note: This is called from server-side, so it will use the server's Google API key
     // The API endpoint will be called directly via $fetch
@@ -92,14 +92,14 @@ export async function resolvePLZForExternalBusyTime(
     })
 
     if (response && response.postal_code) {
-      console.log(`✅ Geocoding API resolved: "${eventLocation}" → ${response.postal_code}`)
+      logger.debug(`✅ Geocoding API resolved: "${eventLocation}" → ${response.postal_code}`)
       return response.postal_code
     }
   } catch (error: any) {
     console.warn(`⚠️ Geocoding API failed for "${eventLocation}":`, error.message)
   }
 
-  console.log(`❌ Could not resolve PLZ for: "${eventLocation}"`)
+  logger.debug(`❌ Could not resolve PLZ for: "${eventLocation}"`)
   return null
 }
 

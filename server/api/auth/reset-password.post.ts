@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
-    console.log('🔐 Processing password reset...')
+    logger.debug('🔐 Processing password reset...')
 
     // Get reset token data
     const { data: tokenData, error: tokenError } = await serviceSupabase
@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (tokenError || !tokenData) {
-      console.log('❌ Token not found')
+      logger.debug('❌ Token not found')
       throw createError({
         statusCode: 400,
         statusMessage: 'Reset-Token ungültig'
@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
     const expiresAt = new Date(tokenData.expires_at)
 
     if (now > expiresAt) {
-      console.log('⏰ Token expired')
+      logger.debug('⏰ Token expired')
       throw createError({
         statusCode: 400,
         statusMessage: 'Reset-Token ist abgelaufen'
@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
 
     // Check if token has already been used
     if (tokenData.used_at) {
-      console.log('⚠️ Token already used')
+      logger.debug('⚠️ Token already used')
       throw createError({
         statusCode: 400,
         statusMessage: 'Dieser Reset-Link wurde bereits verwendet'
@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🔐 Updating password for user:', user.auth_user_id)
+    logger.debug('🔐 Updating password for user:', user.auth_user_id)
 
     // Update auth user password
     const { error: updateError } = await serviceSupabase.auth.admin.updateUserById(
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Password updated successfully')
+    logger.debug('✅ Password updated successfully')
 
     // Mark token as used
     const { error: markUsedError } = await serviceSupabase
@@ -119,7 +119,7 @@ export default defineEventHandler(async (event) => {
       // Don't fail the whole process - password is already updated
     }
 
-    console.log('✅ Password reset completed successfully')
+    logger.debug('✅ Password reset completed successfully')
 
     return {
       success: true,

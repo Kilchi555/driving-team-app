@@ -3,7 +3,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const { courseId, participant } = body
 
-    console.log('Enrollment API called with:', { courseId, participant })
+    logger.debug('Enrollment API called with:', { courseId, participant })
 
     if (!courseId || !participant) {
       throw createError({

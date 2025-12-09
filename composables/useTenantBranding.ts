@@ -120,7 +120,7 @@ export const useTenantBranding = () => {
 
   // Tenant-Branding laden (by slug)
   const loadTenantBranding = async (tenantSlug?: string) => {
-    console.log('🎨 loadTenantBranding called with slug:', tenantSlug)
+    logger.debug('🎨 loadTenantBranding called with slug:', tenantSlug)
     isLoading.value = true
     error.value = null
     
@@ -130,7 +130,7 @@ export const useTenantBranding = () => {
         throw new Error('Tenant slug is required')
       }
       
-      console.log('🔍 loadTenantBranding: Starting client query for slug:', tenantSlug)
+      logger.debug('🔍 loadTenantBranding: Starting client query for slug:', tenantSlug)
 
       const { data, error: queryError } = await supabase
         .from('tenants')
@@ -155,11 +155,11 @@ export const useTenantBranding = () => {
         console.warn('⚠️ Tenant not found for slug (client query):', tenantSlug, 'Error:', queryError?.message, '→ trying server API fallback')
         // Fallback to server API (bypasses RLS)
         try {
-          console.log('📡 Calling /api/tenants/by-slug with slug:', tenantSlug)
+          logger.debug('📡 Calling /api/tenants/by-slug with slug:', tenantSlug)
           const serverResp: any = await $fetch(`/api/tenants/by-slug?slug=${tenantSlug}`)
-          console.log('✅ Server API response:', serverResp)
+          logger.debug('✅ Server API response:', serverResp)
           if (serverResp?.success && serverResp.data) {
-            console.log('✅ Processing tenant data from server API:', serverResp.data.name)
+            logger.debug('✅ Processing tenant data from server API:', serverResp.data.name)
             await processTenantData(serverResp.data)
             return
           } else {
@@ -209,7 +209,7 @@ export const useTenantBranding = () => {
         .eq('id', tenantId)
         .maybeSingle()
 
-      console.log('🔍 Raw query result:', { data, queryError })
+      logger.debug('🔍 Raw query result:', { data, queryError })
 
       if (queryError) throw queryError
       if (!data) {
@@ -230,8 +230,8 @@ export const useTenantBranding = () => {
 
   // Tenant-Daten verarbeiten (gemeinsame Logik)
   const processTenantData = async (data: any) => {
-    console.log('🔍 Processing tenant data from DB:', data)
-    console.log('🎨 Raw DB colors:', {
+    logger.debug('🔍 Processing tenant data from DB:', data)
+    logger.debug('🎨 Raw DB colors:', {
       primary_color: data.primary_color,
       secondary_color: data.secondary_color,
       accent_color: data.accent_color
@@ -345,13 +345,13 @@ export const useTenantBranding = () => {
 
   // Tenant-Branding aktualisieren
   const updateTenantBranding = async (tenantId: string, updates: Partial<TenantBranding>) => {
-    console.log('🔄 updateTenantBranding called with:', { tenantId, updates })
+    logger.debug('🔄 updateTenantBranding called with:', { tenantId, updates })
     
     // Debug: Check current user and auth state
     const { data: { user } } = await supabase.auth.getUser()
-    console.log('👤 Current user for update:', user)
-    console.log('🔑 User metadata:', user?.user_metadata)
-    console.log('🏢 User tenant_id:', user?.user_metadata?.tenant_id)
+    logger.debug('👤 Current user for update:', user)
+    logger.debug('🔑 User metadata:', user?.user_metadata)
+    logger.debug('🏢 User tenant_id:', user?.user_metadata?.tenant_id)
     
     isLoading.value = true
     error.value = null
@@ -360,7 +360,7 @@ export const useTenantBranding = () => {
       const updateData: any = {}
 
       if (updates.colors) {
-        console.log('🎨 Updating colors:', updates.colors)
+        logger.debug('🎨 Updating colors:', updates.colors)
         updateData.primary_color = updates.colors.primary
         updateData.secondary_color = updates.colors.secondary
         updateData.accent_color = updates.colors.accent
@@ -433,7 +433,7 @@ export const useTenantBranding = () => {
 
       updateData.updated_at = new Date().toISOString()
 
-      console.log('📝 Final updateData to be saved:', updateData)
+      logger.debug('📝 Final updateData to be saved:', updateData)
 
       // Try update with current client first
       let updateResult, updateError
@@ -449,7 +449,7 @@ export const useTenantBranding = () => {
       
       // If no rows updated, try with service role (for admin updates)
       if (!updateError && (!updateResult || updateResult.length === 0)) {
-        console.log('🔄 Retrying update with service role...')
+        logger.debug('🔄 Retrying update with service role...')
         
         try {
           const response = await $fetch('/api/tenants/update-branding', {
@@ -460,7 +460,7 @@ export const useTenantBranding = () => {
             }
           })
           
-          console.log('🚀 Service role update response:', response)
+          logger.debug('🚀 Service role update response:', response)
           updateResult = [response]
           updateError = null
         } catch (serviceError) {
@@ -468,7 +468,7 @@ export const useTenantBranding = () => {
         }
       }
 
-      console.log('📊 Update result:', { updateResult, updateError })
+      logger.debug('📊 Update result:', { updateResult, updateError })
 
       if (updateError) {
         console.error('❌ Database update failed:', updateError)
@@ -480,7 +480,7 @@ export const useTenantBranding = () => {
         throw new Error('Update failed - no rows affected. Check RLS policies.')
       }
 
-      console.log('✅ Database update successful, reloading branding...')
+      logger.debug('✅ Database update successful, reloading branding...')
       // Branding neu laden
       await loadTenantBrandingById(tenantId)
 
@@ -550,12 +550,12 @@ export const useTenantBranding = () => {
     ),
     primaryColor: computed(() => {
       const color = currentTenantBranding.value?.colors?.primary || '#1E40AF'
-      console.log('🎨 primaryColor computed:', color, 'from branding:', currentTenantBranding.value?.name)
+      logger.debug('🎨 primaryColor computed:', color, 'from branding:', currentTenantBranding.value?.name)
       return color
     }),
     secondaryColor: computed(() => {
       const color = currentTenantBranding.value?.colors?.secondary || '#64748B'
-      console.log('🎨 secondaryColor computed:', color, 'from branding:', currentTenantBranding.value?.name)
+      logger.debug('🎨 secondaryColor computed:', color, 'from branding:', currentTenantBranding.value?.name)
       return color
     }),
     accentColor: computed(() => currentTenantBranding.value?.colors?.accent || '#3B82F6'),

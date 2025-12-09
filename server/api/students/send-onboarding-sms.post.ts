@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     // SMS Message
     const message = `Hallo ${firstName}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
 
-    console.log('📱 Sending onboarding SMS:', {
+    logger.debug('📱 Sending onboarding SMS:', {
       to: formattedPhone,
       firstName,
       link: onboardingLink
@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    console.log('✅ Onboarding SMS sent successfully:', smsData)
+    logger.debug('✅ Onboarding SMS sent successfully:', smsData)
 
     // Log SMS in database
     try {

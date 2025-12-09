@@ -41,7 +41,7 @@ interface PaymentResponse {
 
 export default defineEventHandler(async (event): Promise<PaymentResponse> => {
   try {
-    console.log('💳 Payment API called')
+    logger.debug('💳 Payment API called')
     
     // Check feature flag
     const url = event.node.req.url || ''
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event): Promise<PaymentResponse> => {
     }
     
     const body = await readBody(event) as PaymentRequest
-    console.log('📨 Payment request:', JSON.stringify(body, null, 2))
+    logger.debug('📨 Payment request:', JSON.stringify(body, null, 2))
     
     // Validierung der erforderlichen Felder
     if (!body.userId || !body.amount || !body.customerEmail || !body.paymentMethod) {
@@ -110,7 +110,7 @@ export default defineEventHandler(async (event): Promise<PaymentResponse> => {
 
     if (insertError) throw insertError
 
-    console.log('✅ Payment record created:', payment.id)
+    logger.debug('✅ Payment record created:', payment.id)
     
     // 2. Je nach Zahlungsmethode verarbeiten
     switch (body.paymentMethod) {
@@ -139,7 +139,7 @@ export default defineEventHandler(async (event): Promise<PaymentResponse> => {
  */
 async function processWalleePayment(payment: any, request: PaymentRequest): Promise<PaymentResponse> {
   try {
-    console.log('🔄 Processing Wallee payment...')
+    logger.debug('🔄 Processing Wallee payment...')
 
     const walleeData = {
       orderId: payment.id,
@@ -194,7 +194,7 @@ async function processWalleePayment(payment: any, request: PaymentRequest): Prom
  */
 async function processCashPayment(payment: any, request: PaymentRequest): Promise<PaymentResponse> {
   try {
-    console.log('💰 Processing cash payment method...')
+    logger.debug('💰 Processing cash payment method...')
 
     // WICHTIG: Payment bleibt auf 'pending' - wird erst nach Bewertung bestätigt
     // Nur die Zahlungsmethode wird gespeichert
@@ -223,7 +223,7 @@ async function processCashPayment(payment: any, request: PaymentRequest): Promis
  */
 async function processInvoicePayment(payment: any, request: PaymentRequest): Promise<PaymentResponse> {
   try {
-    console.log('📄 Processing invoice payment...')
+    logger.debug('📄 Processing invoice payment...')
 
     // Update payment status to pending (waiting for payment)
     await updatePaymentStatus(payment.id, 'pending')
@@ -264,7 +264,7 @@ async function updatePaymentWithWalleeId(paymentId: string, walleeTransactionId:
     .eq('id', paymentId)
 
   if (error) throw error
-  console.log('✅ Payment updated with Wallee transaction ID')
+  logger.debug('✅ Payment updated with Wallee transaction ID')
 }
 
 /**
@@ -282,7 +282,7 @@ async function updatePaymentStatus(paymentId: string, status: string): Promise<v
     .eq('id', paymentId)
 
   if (error) throw error
-  console.log('✅ Payment status updated to:', status)
+  logger.debug('✅ Payment status updated to:', status)
 }
 
 /**
@@ -301,5 +301,5 @@ async function updateAppointmentPaymentStatus(appointmentId: string, status: str
     .eq('id', appointmentId)
 
   if (error) throw error
-  console.log('✅ Appointment payment status updated to:', status)
+  logger.debug('✅ Appointment payment status updated to:', status)
 }

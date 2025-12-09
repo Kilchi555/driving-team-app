@@ -265,7 +265,7 @@ const sendTestReminder = async () => {
       return
     }
 
-    console.log('✅ Payment gefunden:', payment)
+    logger.debug('✅ Payment gefunden:', payment)
 
     const { useReminderService } = await import('~/composables/useReminderService')
     const { sendPaymentReminder } = useReminderService()
@@ -306,7 +306,7 @@ const loadLatestPaymentId = async () => {
     }
 
     testPaymentId.value = data.id
-    console.log('✅ Neueste Payment ID geladen:', data)
+    logger.debug('✅ Neueste Payment ID geladen:', data)
   } catch (error: any) {
     console.error('Error loading latest payment:', error)
     testResult.value = {

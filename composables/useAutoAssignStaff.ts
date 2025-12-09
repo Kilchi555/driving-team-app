@@ -13,7 +13,7 @@ export const useAutoAssignStaff = () => {
     staff_id: string
   }) => {
     try {
-      console.log('🔍 Checking first appointment assignment for student:', appointmentData.user_id)
+      logger.debug('🔍 Checking first appointment assignment for student:', appointmentData.user_id)
 
       // 1. Prüfen ob Schüler bereits einen assigned_staff hat
       const { data: student, error: studentError } = await supabase
@@ -24,7 +24,7 @@ export const useAutoAssignStaff = () => {
         .single()
 
       if (studentError || !student) {
-        console.log('Student nicht gefunden für Auto-Assignment')
+        logger.debug('Student nicht gefunden für Auto-Assignment')
         return { assigned: false, reason: 'Student nicht gefunden' }
       }
 
@@ -33,7 +33,7 @@ export const useAutoAssignStaff = () => {
       const isStaffAlreadyAssigned = currentStaffIds.includes(appointmentData.staff_id)
       
       if (isStaffAlreadyAssigned) {
-        console.log(`Staff bereits zugewiesen für ${student.first_name} ${student.last_name}`)
+        logger.debug(`Staff bereits zugewiesen für ${student.first_name} ${student.last_name}`)
         return { assigned: false, reason: 'Staff bereits in Liste' }
       }
 
@@ -50,7 +50,7 @@ export const useAutoAssignStaff = () => {
         return { assigned: false, reason: 'Fehler beim Zählen' }
       }
 
-      console.log(`Termine zwischen Student und Staff: ${count}`)
+      logger.debug(`Termine zwischen Student und Staff: ${count}`)
 
       // 4. Auto-Assignment Logik: 
       // - Erster Termin überhaupt ODER
@@ -77,7 +77,7 @@ export const useAutoAssignStaff = () => {
           return { assigned: false, reason: 'Update-Fehler', error: updateError.message }
         }
 
-        console.log(`✅ Auto-Assignment: ${student.first_name} ${student.last_name} - Staff hinzugefügt (${staffSpecificCount} Termine mit diesem Staff)`)
+        logger.debug(`✅ Auto-Assignment: ${student.first_name} ${student.last_name} - Staff hinzugefügt (${staffSpecificCount} Termine mit diesem Staff)`)
         
         return {
           assigned: true,
@@ -102,7 +102,7 @@ export const useAutoAssignStaff = () => {
    */
   const assignExistingStudents = async (staffId: string) => {
     try {
-      console.log('🔄 Suche nach nicht zugewiesenen Schülern für Staff:', staffId)
+      logger.debug('🔄 Suche nach nicht zugewiesenen Schülern für Staff:', staffId)
 
       // 1. Alle nicht zugewiesenen Schüler finden
       const { data: unassignedStudents, error: studentsError } = await supabase
@@ -112,11 +112,11 @@ export const useAutoAssignStaff = () => {
         .or('assigned_staff_ids.is.null,assigned_staff_ids.eq.{}')
 
       if (studentsError || !unassignedStudents) {
-        console.log('Keine nicht zugewiesenen Schüler gefunden')
+        logger.debug('Keine nicht zugewiesenen Schüler gefunden')
         return []
       }
 
-      console.log(`📊 ${unassignedStudents.length} nicht zugewiesene Schüler gefunden`)
+      logger.debug(`📊 ${unassignedStudents.length} nicht zugewiesene Schüler gefunden`)
 
       const assignments = []
 
@@ -148,7 +148,7 @@ export const useAutoAssignStaff = () => {
         }
       }
 
-      console.log(`✅ ${assignments.length} Schüler automatisch zugewiesen`)
+      logger.debug(`✅ ${assignments.length} Schüler automatisch zugewiesen`)
       return assignments
 
     } catch (error: any) {

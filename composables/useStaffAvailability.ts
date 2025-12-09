@@ -32,7 +32,7 @@ export const useStaffAvailability = () => {
       const startDateTime = `${date}T${startTime}:00`
       const endDateTime = `${date}T${endTime}:00`
       
-      console.log('🔍 Checking availability for staff:', staffId, 'at', startDateTime, 'to', endDateTime)
+      logger.debug('🔍 Checking availability for staff:', staffId, 'at', startDateTime, 'to', endDateTime)
       
       // Check for appointment conflicts using simple time range comparison
       const { data: conflictingAppointments, error: dbError } = await supabase
@@ -54,7 +54,7 @@ export const useStaffAvailability = () => {
       const isAvailable = actualConflicts.length === 0
       
       if (!isAvailable) {
-        console.log('🚫 Staff', staffId, 'is busy at this time:', {
+        logger.debug('🚫 Staff', staffId, 'is busy at this time:', {
           conflicts: actualConflicts.length,
           conflictingAppointments: actualConflicts.map(apt => ({
             id: apt.id,
@@ -64,7 +64,7 @@ export const useStaffAvailability = () => {
           }))
         })
       } else {
-        console.log('✅ Staff', staffId, 'is available at this time')
+        logger.debug('✅ Staff', staffId, 'is available at this time')
       }
       
       return isAvailable
@@ -90,7 +90,7 @@ export const useStaffAvailability = () => {
     error.value = null
     
     try {
-      console.log('👥 Loading staff members with availability...')
+      logger.debug('👥 Loading staff members with availability...')
       
       // Load basic staff information
       const { data: allStaff, error: staffError } = await supabase
@@ -104,7 +104,7 @@ export const useStaffAvailability = () => {
       
       // If we have time information, check availability
       if (date && startTime && endTime) {
-        console.log('📅 Checking staff availability for:', { date, startTime, endTime })
+        logger.debug('📅 Checking staff availability for:', { date, startTime, endTime })
         
         const staffWithAvailability = await Promise.all(
           allStaff.map(async (staff) => {
@@ -131,7 +131,7 @@ export const useStaffAvailability = () => {
           return a.first_name.localeCompare(b.first_name)
         })
         
-        console.log('✅ Staff loaded with availability:', {
+        logger.debug('✅ Staff loaded with availability:', {
           total: sortedStaff.length,
           available: sortedStaff.filter(s => s.isAvailable).length,
           busy: sortedStaff.filter(s => !s.isAvailable).length
@@ -147,7 +147,7 @@ export const useStaffAvailability = () => {
           availabilityStatus: 'unknown' as const
         }))
         
-        console.log('✅ All staff loaded (no time info available):', staffWithUnknownStatus.length, 'members')
+        logger.debug('✅ All staff loaded (no time info available):', staffWithUnknownStatus.length, 'members')
         return staffWithUnknownStatus
       }
       

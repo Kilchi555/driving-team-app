@@ -7,7 +7,7 @@ import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wal
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('💳 Wallee: Saving payment method token...')
+    logger.debug('💳 Wallee: Saving payment method token...')
     
     const body = await readBody(event)
     const {
@@ -26,14 +26,14 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabase()
 
     // ✅ GET WALLEE CONFIG FOR TENANT (Multi-Tenant Support!)
-    console.log('🔍 Fetching Wallee config for tenant:', tenantId)
+    logger.debug('🔍 Fetching Wallee config for tenant:', tenantId)
     let walleeConfig: any
     try {
       walleeConfig = await getWalleeConfigForTenant(tenantId)
     } catch (configError: any) {
       console.error('❌ Error loading Wallee config for tenant:', tenantId, configError)
       // Fallback zu globaler Konfiguration
-      console.log('⚠️ Falling back to global Wallee config')
+      logger.debug('⚠️ Falling back to global Wallee config')
       walleeConfig = {
         spaceId: parseInt(process.env.WALLEE_SPACE_ID || '82592'),
         userId: parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525'),
@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
     }
     const spaceId = walleeConfig.spaceId
     
-    console.log('🔧 Wallee Config loaded:', {
+    logger.debug('🔧 Wallee Config loaded:', {
       spaceId: spaceId,
       userId: walleeConfig.userId,
       apiSecretPreview: walleeConfig.apiSecret.substring(0, 10) + '...'
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
 
     // ✅ Hole Transaktions-Details von Wallee (inkl. Payment Method Token)
-    console.log('🔄 Fetching transaction from Wallee:', {
+    logger.debug('🔄 Fetching transaction from Wallee:', {
       spaceId: walleeConfig.spaceId,
       transactionId: parseInt(transactionId.toString())
     })
@@ -62,12 +62,12 @@ export default defineEventHandler(async (event) => {
       transactionResponse = await transactionService.read(walleeConfig.spaceId, parseInt(transactionId.toString()))
     } catch (error: any) {
       console.error('❌ Error fetching transaction from Wallee:', error)
-      console.log('⚠️ Transaction fetch failed - continuing without token data')
+      logger.debug('⚠️ Transaction fetch failed - continuing without token data')
       transactionResponse = { body: null }
     }
     const transaction: Wallee.model.Transaction = transactionResponse?.body || {}
 
-    console.log('🔍 Wallee transaction details:', {
+    logger.debug('🔍 Wallee transaction details:', {
       id: transaction.id,
       state: transaction.state,
       paymentConnectorConfiguration: transaction.paymentConnectorConfiguration,
@@ -82,14 +82,14 @@ export default defineEventHandler(async (event) => {
     // ✅ WICHTIG: Token wird über Charge Attempt abgerufen, nicht direkt aus Transaction!
     // Aber: Charge Attempt ist optional - nicht alle Zahlungsmethoden haben Tokens
     if ((transaction as any).chargeAttemptId) {
-      console.log('🔄 Attempting to fetch Charge Attempt details for token...')
+      logger.debug('🔄 Attempting to fetch Charge Attempt details for token...')
       try {
         const chargeAttemptService: Wallee.api.ChargeAttemptService = new Wallee.api.ChargeAttemptService(config)
         const chargeAttemptResponse = await chargeAttemptService.read(walleeConfig.spaceId, (transaction as any).chargeAttemptId)
         const chargeAttempt: any = chargeAttemptResponse?.body
         
         if (chargeAttempt) {
-          console.log('✅ Charge Attempt fetched:', {
+          logger.debug('✅ Charge Attempt fetched:', {
             id: chargeAttempt.id,
             state: chargeAttempt.state,
             labels: chargeAttempt.labels?.length || 0
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
             )
             
             if (tokenLabel) {
-              console.log('✅ Found token in charge attempt labels:', tokenLabel)
+              logger.debug('✅ Found token in charge attempt labels:', tokenLabel)
               // Der Token könnte in verschiedenen Formaten vorliegen
               if (tokenLabel.content) {
                 paymentMethodToken = tokenLabel.content
@@ -116,8 +116,8 @@ export default defineEventHandler(async (event) => {
         console.warn('⚠️ Could not fetch charge attempt:', chargeError.message)
       }
     } else {
-      console.log('ℹ️ No chargeAttemptId in transaction - this is normal for some payment methods like TWINT')
-      console.log('ℹ️ Wallee handles tokenization automatically for supported methods')
+      logger.debug('ℹ️ No chargeAttemptId in transaction - this is normal for some payment methods like TWINT')
+      logger.debug('ℹ️ Wallee handles tokenization automatically for supported methods')
     }
 
     // ✅ Hole Payment Method Token von Wallee
@@ -137,7 +137,7 @@ export default defineEventHandler(async (event) => {
       // ✅ Versuche Token direkt aus Transaction zu extrahieren
       const transactionAny = transaction as any
       
-      console.log('🔍 Transaction details for token extraction:', {
+      logger.debug('🔍 Transaction details for token extraction:', {
         id: transaction.id,
         state: transaction.state,
         customerId: transaction.customerId,
@@ -155,17 +155,17 @@ export default defineEventHandler(async (event) => {
         // ✅ WICHTIG: Könnte ein Objekt sein, extrahiere die ID!
         if (typeof tokenValue === 'object' && tokenValue !== null) {
           paymentMethodToken = tokenValue.id?.toString() || tokenValue.toString()
-          console.log('✅ Extracted token ID from token object:', paymentMethodToken)
+          logger.debug('✅ Extracted token ID from token object:', paymentMethodToken)
         } else {
           paymentMethodToken = tokenValue?.toString()
-          console.log('✅ Found numeric token ID in transaction:', paymentMethodToken)
+          logger.debug('✅ Found numeric token ID in transaction:', paymentMethodToken)
         }
       }
       
       // Option 1b: paymentMethodToken (könnte Token Version UUID sein)
       if (!paymentMethodToken && transactionAny.paymentMethodToken) {
         paymentMethodToken = transactionAny.paymentMethodToken
-        console.log('⚠️ Found paymentMethodToken (might be Token Version UUID):', paymentMethodToken?.substring(0, 8) + '...')
+        logger.debug('⚠️ Found paymentMethodToken (might be Token Version UUID):', paymentMethodToken?.substring(0, 8) + '...')
       }
       
       // Option 1b: tokens Array in transaction
@@ -173,7 +173,7 @@ export default defineEventHandler(async (event) => {
         // Verwende den ersten/neuesten Token
         const tokenObj = transaction.tokens[0]
         paymentMethodToken = tokenObj.id?.toString() || tokenObj
-        console.log('✅ Found token in transaction.tokens array:', typeof paymentMethodToken, paymentMethodToken?.substring ? paymentMethodToken.substring(0, 8) + '...' : paymentMethodToken)
+        logger.debug('✅ Found token in transaction.tokens array:', typeof paymentMethodToken, paymentMethodToken?.substring ? paymentMethodToken.substring(0, 8) + '...' : paymentMethodToken)
       }
       
       // Option 2: Token in metaData
@@ -182,14 +182,14 @@ export default defineEventHandler(async (event) => {
                            transactionAny.metaData.token || 
                            transactionAny.metaData.payment_token
         if (paymentMethodToken) {
-          console.log('✅ Found payment method token in transaction metadata:', paymentMethodToken.substring(0, 8) + '...')
+          logger.debug('✅ Found payment method token in transaction metadata:', paymentMethodToken.substring(0, 8) + '...')
         }
       }
       
       // Option 3: Prüfe DB ob Token bereits für diesen Customer existiert
       if (!paymentMethodToken && transaction.customerId) {
         try {
-          console.log('🔍 Checking for existing payment method tokens for customer:', transaction.customerId)
+          logger.debug('🔍 Checking for existing payment method tokens for customer:', transaction.customerId)
           
           const walleeCustomerId = transaction.customerId.toString()
           const { data: existingTokens } = await supabase
@@ -203,7 +203,7 @@ export default defineEventHandler(async (event) => {
           if (existingTokens && existingTokens.length > 0) {
             const existingToken = existingTokens[0]
             paymentMethodToken = existingToken.wallee_token_id || existingToken.wallee_token
-            console.log('✅ Found existing payment method token in database:', paymentMethodToken?.substring(0, 8) + '...')
+            logger.debug('✅ Found existing payment method token in database:', paymentMethodToken?.substring(0, 8) + '...')
             
             // Verknüpfe diese Payment mit bestehendem Token
             if (existingToken.id) {
@@ -215,7 +215,7 @@ export default defineEventHandler(async (event) => {
                   .is('payment_method_id', null)
 
                 if (!linkError) {
-                  console.log('🔗 Linked existing token to payment for transaction:', transactionId)
+                  logger.debug('🔗 Linked existing token to payment for transaction:', transactionId)
                 }
               } catch (e: any) {
                 console.warn('⚠️ Linking existing token failed:', e?.message)
@@ -228,7 +228,7 @@ export default defineEventHandler(async (event) => {
               tokenId: existingToken.id
             }
           } else {
-            console.log('ℹ️ No existing token in database yet - will be created when Wallee provides it')
+            logger.debug('ℹ️ No existing token in database yet - will be created when Wallee provides it')
           }
           
         } catch (dbError: any) {
@@ -248,7 +248,7 @@ export default defineEventHandler(async (event) => {
     if (!paymentMethodToken) {
       // ✅ Für Force Storage Payment Methods: Hole ECHTEN Token von Wallee
       if (transaction.customerId) {
-        console.log('🔍 Fetching real token IDs from Wallee for customer:', transaction.customerId)
+        logger.debug('🔍 Fetching real token IDs from Wallee for customer:', transaction.customerId)
         
         try {
           // ✅ Hole die ECHTE Token ID von Wallee via TokenService
@@ -269,7 +269,7 @@ export default defineEventHandler(async (event) => {
           })
           
           const allTokens = tokenSearchResult.body || []
-          console.log('💳 Found tokens from TokenService:', {
+          logger.debug('💳 Found tokens from TokenService:', {
             count: allTokens.length,
             tokens: allTokens.map((t: any) => ({
               id: t.id,
@@ -287,7 +287,7 @@ export default defineEventHandler(async (event) => {
             paymentMethodToken = latestToken.id?.toString() || null
             displayName = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 'Gespeicherte Zahlungsmethode'
             paymentMethodType = latestToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.description || 'wallee_token'
-            console.log('✅ Found real token from Wallee TokenService:', {
+            logger.debug('✅ Found real token from Wallee TokenService:', {
               tokenId: paymentMethodToken,
               tokenIdType: typeof latestToken.id,
               displayName,
@@ -295,7 +295,7 @@ export default defineEventHandler(async (event) => {
               note: 'Using numeric Token ID (not Token Version UUID)'
             })
           } else {
-            console.log('⚠️ No active tokens found for customer in Wallee - will wait for token creation')
+            logger.debug('⚠️ No active tokens found for customer in Wallee - will wait for token creation')
           }
         } catch (searchError: any) {
           console.warn('⚠️ Could not fetch tokens from Wallee TokenService:', searchError.message, searchError.stack)
@@ -306,11 +306,11 @@ export default defineEventHandler(async (event) => {
     if (!paymentMethodToken) {
       // ✅ FALLBACK für TWINT mit Force Storage: Nutze die LANGE Customer ID aus der Transaction
       if (transaction.customerId) {
-        console.log('🔄 No explicit token found, using transaction customerId as fallback (typical for TWINT Force Storage)')
+        logger.debug('🔄 No explicit token found, using transaction customerId as fallback (typical for TWINT Force Storage)')
         // ✅ WICHTIG: Verwende die Customer ID DIREKT aus der Transaction - nicht neu generieren!
         // Diese ID muss EXAKT übereinstimmen mit der ID, die beim Erstellen der Transaction verwendet wurde!
         paymentMethodToken = transaction.customerId.toString()
-        console.log('🔑 Using Customer ID from transaction:', paymentMethodToken)
+        logger.debug('🔑 Using Customer ID from transaction:', paymentMethodToken)
         displayName = 'TWINT (Gespeichert)'
         paymentMethodType = 'twint'
       } else {
@@ -325,12 +325,12 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ Speichere Token in unserer Datenbank
-    console.log('🔍 Looking up user:', userId)
+    logger.debug('🔍 Looking up user:', userId)
     
     // ✅ Setze Default für payment_method_type wenn nicht vorhanden
     if (!paymentMethodType) {
       paymentMethodType = 'wallee_token' // Default für alle Wallee Zahlungsmethoden
-      console.log('ℹ️ Using default payment_method_type:', paymentMethodType)
+      logger.debug('ℹ️ Using default payment_method_type:', paymentMethodType)
     }
     
     if (!userId) {
@@ -371,7 +371,7 @@ export default defineEventHandler(async (event) => {
       .maybeSingle()
 
     if (existing) {
-      console.log('✅ Payment method token already exists')
+      logger.debug('✅ Payment method token already exists')
       // Verknüpfe bestehende Zahlungen mit diesem Token, falls noch nicht gesetzt
       try {
         const { error: linkError } = await supabase
@@ -383,7 +383,7 @@ export default defineEventHandler(async (event) => {
         if (linkError) {
           console.warn('⚠️ Could not link existing token to payments:', linkError.message)
         } else {
-          console.log('🔗 Linked existing token to pending payments for transaction:', transactionId)
+          logger.debug('🔗 Linked existing token to pending payments for transaction:', transactionId)
         }
       } catch (e: any) {
         console.warn('⚠️ Linking existing token failed with exception:', e?.message)
@@ -397,7 +397,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Speichere neuen Token
-    console.log('💾 Saving new payment method token...', {
+    logger.debug('💾 Saving new payment method token...', {
       paymentMethodToken,
       walleeCustomerId,
       isTokenId: paymentMethodToken !== walleeCustomerId
@@ -427,7 +427,7 @@ export default defineEventHandler(async (event) => {
       // Token is still saved in Wallee, just not in our DB yet
       if (saveError.message.includes('row-level security')) {
         console.warn('⚠️ RLS policy prevented token save - but token is saved in Wallee')
-        console.log('ℹ️ Token will be available for future one-click payments via Wallee')
+        logger.debug('ℹ️ Token will be available for future one-click payments via Wallee')
         return {
           success: true,
           message: 'Token saved in Wallee (RLS prevented DB storage)',
@@ -437,7 +437,7 @@ export default defineEventHandler(async (event) => {
       throw saveError
     }
 
-    console.log('✅ Payment method token saved:', savedToken.id)
+    logger.debug('✅ Payment method token saved:', savedToken.id)
 
     // Verknüpfe Zahlungen mit dieser Transaktion mit dem gespeicherten Token
     try {
@@ -450,7 +450,7 @@ export default defineEventHandler(async (event) => {
       if (linkError) {
         console.warn('⚠️ Could not link saved token to payments:', linkError.message)
       } else {
-        console.log('🔗 Linked saved token to pending payments for transaction:', transactionId)
+        logger.debug('🔗 Linked saved token to pending payments for transaction:', transactionId)
       }
     } catch (e: any) {
       console.warn('⚠️ Linking saved token failed with exception:', e?.message)

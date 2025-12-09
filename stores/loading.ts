@@ -54,7 +54,7 @@ export const useLoadingStore = defineStore('loading', () => {
     }
     
     loadingStates.value.set(id, loadingState)
-    console.log('🔄 Loading started:', id, message)
+    logger.debug('🔄 Loading started:', id, message)
   }
   
   const updateProgress = (id: string, progress: number, message?: string) => {
@@ -62,7 +62,7 @@ export const useLoadingStore = defineStore('loading', () => {
     if (state) {
       state.progress = Math.max(0, Math.min(100, progress))
       if (message) state.message = message
-      console.log('📊 Loading progress:', id, `${progress}%`)
+      logger.debug('📊 Loading progress:', id, `${progress}%`)
     }
   }
   
@@ -71,7 +71,7 @@ export const useLoadingStore = defineStore('loading', () => {
     if (state) {
       state.message = message
       if (submessage !== undefined) state.submessage = submessage
-      console.log('💬 Loading message updated:', id, message)
+      logger.debug('💬 Loading message updated:', id, message)
     }
   }
   
@@ -79,7 +79,7 @@ export const useLoadingStore = defineStore('loading', () => {
     const state = loadingStates.value.get(id)
     if (state) {
       const duration = Date.now() - state.startTime
-      console.log('✅ Loading completed:', id, `${duration}ms`)
+      logger.debug('✅ Loading completed:', id, `${duration}ms`)
       loadingStates.value.delete(id)
     }
   }
@@ -87,13 +87,13 @@ export const useLoadingStore = defineStore('loading', () => {
   const stopAllLoading = () => {
     const count = loadingStates.value.size
     loadingStates.value.clear()
-    console.log('🛑 All loading stopped:', count, 'states cleared')
+    logger.debug('🛑 All loading stopped:', count, 'states cleared')
   }
   
   // Set global tenant ID for loading states
   const setGlobalTenantId = (tenantId: string | null) => {
     globalTenantId.value = tenantId
-    console.log('🏢 Global tenant ID set for loading:', tenantId)
+    logger.debug('🏢 Global tenant ID set for loading:', tenantId)
   }
   
   // Convenience methods for common loading scenarios

@@ -41,7 +41,7 @@ bash scripts/replace-console-logs.sh
 ```
 
 This will:
-- Replace all `console.log(` with `logger.debug(`
+- Replace all `logger.debug(` with `logger.debug(`
 - Keep `console.error` and `console.warn` (those are important!)
 - Show you what was changed
 

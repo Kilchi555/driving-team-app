@@ -219,7 +219,7 @@ const createVoucher = () => {
     recipient: recipient || undefined
   }
 
-  console.log('🎁 Creating voucher:', voucherData)
+  logger.debug('🎁 Creating voucher:', voucherData)
   
   emit('voucher-created', voucherData)
   
@@ -231,7 +231,7 @@ const createVoucher = () => {
 }
 
 const addExistingVoucher = (voucher: any) => {
-  console.log('🎁 Adding existing voucher:', voucher)
+  logger.debug('🎁 Adding existing voucher:', voucher)
   emit('voucher-selected', voucher)
 }
 

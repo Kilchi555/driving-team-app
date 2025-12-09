@@ -40,7 +40,7 @@ export const usePaymentsNew = () => {
     try {
       const supabase = getSupabase()
       
-      console.log('🔄 Creating appointment with integrated payment workflow...')
+      logger.debug('🔄 Creating appointment with integrated payment workflow...')
       
       // 1. TERMIN in appointments Tabelle speichern
       const { data: appointment, error: appointmentError } = await supabase
@@ -58,7 +58,7 @@ export const usePaymentsNew = () => {
         .single()
 
       if (appointmentError) throw appointmentError
-      console.log('✅ Appointment saved:', appointment.id)
+      logger.debug('✅ Appointment saved:', appointment.id)
 
       // 2. PAYMENT ITEMS vorbereiten
       const paymentItems: CreatePaymentItemRequest[] = []
@@ -119,7 +119,7 @@ export const usePaymentsNew = () => {
         throw new Error('Failed to create payment record')
       }
 
-      console.log('✅ Payment created:', payment.id)
+      logger.debug('✅ Payment created:', payment.id)
 
       return { appointment, payment }
 
@@ -145,7 +145,7 @@ export const usePaymentsNew = () => {
     error.value = null
 
     try {
-      console.log('🔄 Creating standalone product payment...')
+      logger.debug('🔄 Creating standalone product payment...')
       
       if (products.length === 0) {
         throw new Error('At least one product is required')
@@ -199,7 +199,7 @@ export const usePaymentsNew = () => {
         throw new Error('Failed to create standalone payment record')
       }
 
-      console.log('✅ Standalone payment created:', payment.id)
+      logger.debug('✅ Standalone payment created:', payment.id)
       return payment
 
     } catch (err: any) {
@@ -290,7 +290,7 @@ export const usePaymentsNew = () => {
 
       if (finalError) throw finalError
 
-      console.log('✅ Payment created successfully:', finalPayment)
+      logger.debug('✅ Payment created successfully:', finalPayment)
       return finalPayment
 
     } catch (err: any) {
@@ -436,7 +436,7 @@ export const usePaymentsNew = () => {
 
       if (updateError) throw updateError
 
-      console.log('✅ Payment marked as completed')
+      logger.debug('✅ Payment marked as completed')
       return true
 
     } catch (err: any) {
@@ -457,7 +457,7 @@ export const usePaymentsNew = () => {
 
       if (deleteError) throw deleteError
 
-      console.log('✅ Payment deleted')
+      logger.debug('✅ Payment deleted')
       return true
 
     } catch (err: any) {

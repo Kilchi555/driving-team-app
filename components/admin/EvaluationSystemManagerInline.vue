@@ -1177,11 +1177,11 @@ const currentDrivingCategory = computed(() => {
 
 // Get evaluation categories filtered by current driving category
 const filteredEvaluationCategories = computed(() => {
-  console.log('🔍 filteredEvaluationCategories - currentDrivingCategory:', currentDrivingCategory.value)
-  console.log('🔍 filteredEvaluationCategories - evaluationCategories:', evaluationCategories.value.length)
+  logger.debug('🔍 filteredEvaluationCategories - currentDrivingCategory:', currentDrivingCategory.value)
+  logger.debug('🔍 filteredEvaluationCategories - evaluationCategories:', evaluationCategories.value.length)
   
   if (!currentDrivingCategory.value) {
-    console.log('🔍 filteredEvaluationCategories - no driving category, returning all:', evaluationCategories.value.length)
+    logger.debug('🔍 filteredEvaluationCategories - no driving category, returning all:', evaluationCategories.value.length)
     return evaluationCategories.value
   }
   
@@ -1189,7 +1189,7 @@ const filteredEvaluationCategories = computed(() => {
   const filtered = evaluationCategories.value.filter(category => {
     // Always show theory categories in all driving categories
     if (category.is_theory) {
-      console.log('📚 Showing theory category:', category.name)
+      logger.debug('📚 Showing theory category:', category.name)
       return true
     }
     
@@ -1198,7 +1198,7 @@ const filteredEvaluationCategories = computed(() => {
     return category.driving_categories.includes(currentDrivingCategory.value!.code)
   })
   
-  console.log('🔍 filteredEvaluationCategories - filtered result:', filtered.length)
+  logger.debug('🔍 filteredEvaluationCategories - filtered result:', filtered.length)
   return filtered
 })
 
@@ -1229,7 +1229,7 @@ const loadData = async () => {
     if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
-    console.log('🔍 Loading evaluation data for tenant:', userProfile.tenant_id)
+    logger.debug('🔍 Loading evaluation data for tenant:', userProfile.tenant_id)
 
     // Load evaluation categories (filtered by tenant + global theory categories)
     const { data: evalCatData, error: evalCatError } = await supabase
@@ -1257,7 +1257,7 @@ const loadData = async () => {
           ...cat,
           is_theory: cat.is_theory ?? false
         }))
-        console.log('📊 Loaded evaluation categories (fallback):', evalCatDataFallback?.length || 0, evalCatDataFallback)
+        logger.debug('📊 Loaded evaluation categories (fallback):', evalCatDataFallback?.length || 0, evalCatDataFallback)
       }
     } else {
       // Ensure is_theory has a default value
@@ -1265,10 +1265,10 @@ const loadData = async () => {
         ...cat,
         is_theory: cat.is_theory ?? false
       }))
-      console.log('📊 Loaded evaluation categories:', evalCatData?.length || 0, evalCatData)
+      logger.debug('📊 Loaded evaluation categories:', evalCatData?.length || 0, evalCatData)
     }
 
-    console.log('🔍 Getting tenant business_type for evaluation system...')
+    logger.debug('🔍 Getting tenant business_type for evaluation system...')
 
     // Get tenant business_type first
     const { data: tenantData, error: tenantError } = await supabase
@@ -1279,12 +1279,12 @@ const loadData = async () => {
 
     if (tenantError) throw tenantError
 
-    console.log('🔍 Tenant business_type:', tenantData?.business_type)
+    logger.debug('🔍 Tenant business_type:', tenantData?.business_type)
     tenantBusinessType.value = tenantData?.business_type || ''
 
     // For driving_school: Load driving categories (filtered by tenant)
     if (tenantData?.business_type === 'driving_school') {
-      console.log('🔍 Loading driving categories for driving school tenant:', userProfile.tenant_id)
+      logger.debug('🔍 Loading driving categories for driving school tenant:', userProfile.tenant_id)
       const { data: drivingCatData } = await supabase
         .from('categories')
         .select('*')
@@ -1293,7 +1293,7 @@ const loadData = async () => {
         .order('code')
       drivingCategories.value = drivingCatData || []
     } else {
-      console.log('🔍 Creating generic categories for non-driving school tenant:', tenantData?.business_type)
+      logger.debug('🔍 Creating generic categories for non-driving school tenant:', tenantData?.business_type)
       // For other business types: Create generic categories
       drivingCategories.value = [
         { 
@@ -1350,7 +1350,7 @@ const loadData = async () => {
     // Combine both results
     const allCriteria = [...(tenantCritData || []), ...(theoryCritData || [])]
     criteria.value = allCriteria
-    console.log('📊 Loaded evaluation criteria:', allCriteria.length, { tenant: tenantCritData?.length || 0, theory: theoryCritData?.length || 0 })
+    logger.debug('📊 Loaded evaluation criteria:', allCriteria.length, { tenant: tenantCritData?.length || 0, theory: theoryCritData?.length || 0 })
 
     // Load scale (filtered by tenant)
     const { data: scaleData } = await supabase
@@ -1359,7 +1359,7 @@ const loadData = async () => {
       .eq('tenant_id', userProfile.tenant_id)
       .order('rating')
     scale.value = scaleData || []
-    console.log('📊 Loaded evaluation scale:', scaleData?.length || 0, scaleData)
+    logger.debug('📊 Loaded evaluation scale:', scaleData?.length || 0, scaleData)
   } catch (error) {
     console.error('Error loading data:', error)
   }
@@ -1383,7 +1383,7 @@ const loadStandardEvaluationScale = async () => {
     if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
-    console.log('📥 Loading standard evaluation scale for tenant:', userProfile.tenant_id)
+    logger.debug('📥 Loading standard evaluation scale for tenant:', userProfile.tenant_id)
 
     // Load global evaluation scale (tenant_id IS NULL)
     const { data: globalScale, error: fetchError } = await supabase
@@ -1416,7 +1416,7 @@ const loadStandardEvaluationScale = async () => {
 
     if (insertError) throw insertError
 
-    console.log('✅ Standard evaluation scale copied for tenant:', userProfile.tenant_id)
+    logger.debug('✅ Standard evaluation scale copied for tenant:', userProfile.tenant_id)
     
     // Reload data to show the new scale
     await loadData()
@@ -1449,7 +1449,7 @@ const loadStandardEvaluationCategories = async () => {
     if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
-    console.log('📥 Loading standard evaluation categories for tenant:', userProfile.tenant_id)
+    logger.debug('📥 Loading standard evaluation categories for tenant:', userProfile.tenant_id)
 
     // First check if tenant already has evaluation categories
     const { data: existingCategories, error: checkError } = await supabase
@@ -1467,7 +1467,7 @@ const loadStandardEvaluationCategories = async () => {
       }
       
       // Delete existing categories and criteria for this tenant
-      console.log('🗑️ Deleting existing evaluation data for tenant:', userProfile.tenant_id)
+      logger.debug('🗑️ Deleting existing evaluation data for tenant:', userProfile.tenant_id)
       
       const { error: deleteCriteriaError } = await supabase
         .from('evaluation_criteria')
@@ -1483,7 +1483,7 @@ const loadStandardEvaluationCategories = async () => {
       
       if (deleteCategoriesError) throw deleteCategoriesError
       
-      console.log('✅ Existing evaluation data deleted')
+      logger.debug('✅ Existing evaluation data deleted')
     }
 
     // Load global evaluation categories (tenant_id IS NULL)
@@ -1550,7 +1550,7 @@ const loadStandardEvaluationCategories = async () => {
       if (insertError) throw insertError
     }
 
-    console.log('✅ Standard evaluation categories copied for tenant:', userProfile.tenant_id)
+    logger.debug('✅ Standard evaluation categories copied for tenant:', userProfile.tenant_id)
     
     // Reload data to show the new categories
     await loadData()
@@ -1581,7 +1581,7 @@ const loadEvaluationDataForCategory = async (drivingCategoryCode: string) => {
     if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
-    console.log('🔍 Loading evaluation data for driving category:', drivingCategoryCode, 'and tenant:', userProfile.tenant_id)
+    logger.debug('🔍 Loading evaluation data for driving category:', drivingCategoryCode, 'and tenant:', userProfile.tenant_id)
 
     // Load evaluation categories that apply to this driving category
     const { data: evalCatData, error: catError } = await supabase
@@ -1668,7 +1668,7 @@ const saveCategory = async () => {
 
 const deleteCategory = async (id: string) => {
   if (confirm('Sind Sie sicher, dass Sie diese Kategorie löschen möchten?')) {
-    console.log('Deleting category:', id)
+    logger.debug('Deleting category:', id)
     try {
       await supabase
         .from('evaluation_categories')
@@ -1683,7 +1683,7 @@ const deleteCategory = async (id: string) => {
 
 const deleteCriteria = async (id: string) => {
   if (confirm('Sind Sie sicher, dass Sie dieses Kriterium löschen möchten?')) {
-    console.log('Deleting criteria:', id)
+    logger.debug('Deleting criteria:', id)
     try {
       await supabase
         .from('evaluation_criteria')
@@ -1769,7 +1769,7 @@ const getCriteriaForCategoryAndDrivingCategory = (categoryId: string, drivingCat
     return matches
   })
   
-  console.log(`📊 getCriteriaForCategoryAndDrivingCategory(${categoryId}, ${drivingCategory}):`, filtered.length, 'criteria found')
+  logger.debug(`📊 getCriteriaForCategoryAndDrivingCategory(${categoryId}, ${drivingCategory}):`, filtered.length, 'criteria found')
   
   return filtered
 }
@@ -1834,7 +1834,7 @@ const toggleAllCategoriesForCriteria = async (criteria: any) => {
     // Lokalen State aktualisieren
     criteria.driving_categories = newCategories
     
-    console.log(`✅ All categories ${hasAll ? 'deactivated' : 'activated'} for criteria: ${criteria.name}`)
+    logger.debug(`✅ All categories ${hasAll ? 'deactivated' : 'activated'} for criteria: ${criteria.name}`)
   } catch (err: any) {
     console.error('❌ Error toggling all categories for criteria:', err)
     uiStore.showError('Fehler beim Umschalten', `Fehler beim Umschalten aller Kategorien: ${err.message}`)
@@ -1902,7 +1902,7 @@ const toggleAllDrivingCategories = async (event: Event) => {
       c.driving_categories = isChecked ? drivingCategories.value.map((dc: any) => dc.code) : []
     })
     
-    console.log(`✅ All driving categories ${isChecked ? 'activated' : 'deactivated'} successfully`)
+    logger.debug(`✅ All driving categories ${isChecked ? 'activated' : 'deactivated'} successfully`)
   } catch (err: any) {
     console.error('❌ Error toggling all driving categories:', err)
     uiStore.showError('Fehler beim Umschalten', `Fehler beim Umschalten aller Fahrkategorien: ${err.message}`)
@@ -1987,7 +1987,7 @@ const saveInlineCriteria = async (category: EvaluationCategory) => {
     
     if (error) throw error
     
-    console.log('✅ Inline criteria created:', criteriaData.name, 'with order:', nextOrder)
+    logger.debug('✅ Inline criteria created:', criteriaData.name, 'with order:', nextOrder)
     await loadData()
     cancelInlineAdd()
   } catch (err: any) {
@@ -2022,7 +2022,7 @@ const startDrag = (event: DragEvent, criteria: any, categoryId: string) => {
     event.dataTransfer.effectAllowed = 'move'
   }
   
-  console.log('🚀 Started dragging:', criteria.name)
+  logger.debug('🚀 Started dragging:', criteria.name)
 }
 
 
@@ -2067,7 +2067,7 @@ const onDrop = async (event: DragEvent, targetCriteria: any, targetCategoryId: s
       if (error) throw error
     }
     
-    console.log('✅ Criteria order updated successfully')
+    logger.debug('✅ Criteria order updated successfully')
     
     // Kurze Verzögerung vor dem Neuladen, um Flackern zu vermeiden
     setTimeout(async () => {

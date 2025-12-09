@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
         html: emailHtml
       })
 
-      console.log('✅ Device verification email sent:', emailResult.messageId)
+      logger.debug('✅ Device verification email sent:', emailResult.messageId)
 
       return {
         success: true,

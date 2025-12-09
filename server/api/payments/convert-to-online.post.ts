@@ -10,7 +10,7 @@ interface ConvertToOnlineRequest {
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🔄 convert-to-online.post called')
+    logger.debug('🔄 convert-to-online.post called')
     const body = await readBody<ConvertToOnlineRequest>(event)
     const { paymentId, customerEmail } = body
 
@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('📋 Processing payment conversion:', { paymentId })
+    logger.debug('📋 Processing payment conversion:', { paymentId })
     const supabase = getSupabaseAdmin()
 
     // 1. Fetch the existing payment
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('📊 Fetched payment:', {
+    logger.debug('📊 Fetched payment:', {
       id: payment.id,
       status: payment.payment_status,
       method: payment.payment_method,
@@ -81,7 +81,7 @@ export default defineEventHandler(async (event) => {
 
     // 4. If there's an existing Wallee transaction, void it
     if (payment.wallee_transaction_id) {
-      console.log(`🔄 Voiding existing Wallee transaction: ${payment.wallee_transaction_id}`)
+      logger.debug(`🔄 Voiding existing Wallee transaction: ${payment.wallee_transaction_id}`)
       try {
         // Void the transaction
         const voidResult = await fetch(
@@ -96,7 +96,7 @@ export default defineEventHandler(async (event) => {
         )
 
         if (voidResult.ok) {
-          console.log(`✅ Wallee transaction ${payment.wallee_transaction_id} voided`)
+          logger.debug(`✅ Wallee transaction ${payment.wallee_transaction_id} voided`)
         } else {
           console.warn(`⚠️ Could not void Wallee transaction: ${voidResult.statusText}`)
         }
@@ -128,7 +128,7 @@ export default defineEventHandler(async (event) => {
         throw new Error('Failed to get Wallee transaction response')
       }
 
-      console.log('✅ New Wallee transaction created:', {
+      logger.debug('✅ New Wallee transaction created:', {
         transactionId: walleeTransactionResult.transactionId,
         paymentUrl: walleeTransactionResult.paymentUrl
       })
@@ -158,7 +158,7 @@ export default defineEventHandler(async (event) => {
       throw updateError
     }
 
-    console.log('✅ Payment updated to pending with new transaction')
+    logger.debug('✅ Payment updated to pending with new transaction')
 
     // 6. Send email with payment link
     if (email && newWalleeResult.paymentUrl) {
@@ -210,7 +210,7 @@ export default defineEventHandler(async (event) => {
             paymentLink: newWalleeResult.paymentUrl
           }
         })
-        console.log('✅ Payment link email sent to:', email)
+        logger.debug('✅ Payment link email sent to:', email)
       } catch (emailErr) {
         console.error('❌ Error sending email:', emailErr)
         // Don't fail the whole request if email fails

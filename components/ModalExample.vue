@@ -45,7 +45,7 @@ import { useModal } from '~/composables/useModal'
 const modal = useModal()
 
 const handleSave = () => {
-  console.log('Save clicked')
+  logger.debug('Save clicked')
   modal.close()
 }
 </script>

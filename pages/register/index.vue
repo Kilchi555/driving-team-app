@@ -181,7 +181,7 @@ const loadTenants = async () => {
     if (!data) throw new Error('Keine Anbieter gefunden')
 
     tenants.value = data as Tenant[]
-    console.log('✅ Tenants loaded:', tenants.value.length)
+    logger.debug('✅ Tenants loaded:', tenants.value.length)
   } catch (err: any) {
     console.error('❌ Error loading tenants:', err)
     error.value = err.message || 'Fehler beim Laden der Anbieter'
@@ -192,7 +192,7 @@ const loadTenants = async () => {
 
 const navigateToRegister = (slug: string) => {
   const targetPath = `/register/${slug}`
-  console.log('🔗 Navigating to:', targetPath)
+  logger.debug('🔗 Navigating to:', targetPath)
   try {
     navigateTo(targetPath)
   } catch (error) {

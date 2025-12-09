@@ -320,7 +320,7 @@ const loadCancellationInvoices = async () => {
         .eq('auth_user_id', currentUser?.id)
       .single()
     const tenantId = userProfile?.tenant_id
-    console.log('🔍 Admin Cancellation Invoices - Current tenant_id:', tenantId)
+    logger.debug('🔍 Admin Cancellation Invoices - Current tenant_id:', tenantId)
     
     // Load current tenant info
     if (tenantId) {
@@ -330,7 +330,7 @@ const loadCancellationInvoices = async () => {
         .eq('id', tenantId)
         .single()
       currentTenant.value = tenantData
-      console.log('🔍 Current tenant:', tenantData)
+      logger.debug('🔍 Current tenant:', tenantData)
     }
 
     let query = supabase
@@ -388,7 +388,7 @@ const loadCancellationInvoices = async () => {
         : 'Unbekannt'
     }))
 
-    console.log('✅ Cancellation invoices loaded:', cancellationInvoices.value.length)
+    logger.debug('✅ Cancellation invoices loaded:', cancellationInvoices.value.length)
 
   } catch (err: any) {
     console.error('❌ Error loading cancellation invoices:', err)
@@ -424,7 +424,7 @@ const markInvoiceAsPaid = async (invoiceId: string) => {
 
     if (error) throw error
 
-    console.log('✅ Invoice marked as paid:', data)
+    logger.debug('✅ Invoice marked as paid:', data)
 
     // Reload invoices
     await loadCancellationInvoices()

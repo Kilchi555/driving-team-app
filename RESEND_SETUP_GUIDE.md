@@ -101,7 +101,7 @@ serve(async (req) => {
   try {
     const { to, subject, text, html } = await req.json()
 
-    console.log('📧 Sending email via Resend:', { to, subject })
+    logger.debug('📧 Sending email via Resend:', { to, subject })
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -125,7 +125,7 @@ serve(async (req) => {
       throw new Error(data.message || 'Failed to send email')
     }
 
-    console.log('✅ Email sent successfully:', data.id)
+    logger.debug('✅ Email sent successfully:', data.id)
 
     return new Response(
       JSON.stringify({ success: true, messageId: data.id }),

@@ -8,13 +8,13 @@ export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabase()
     
-    console.log('🔍 Diagnosing email delivery issues...')
+    logger.debug('🔍 Diagnosing email delivery issues...')
     
     // Test with a real email signup to see what happens
     const testEmail = `test-${Date.now()}@example.com`
     const testPassword = 'TestPassword123!'
     
-    console.log('📧 Testing with email:', testEmail)
+    logger.debug('📧 Testing with email:', testEmail)
     
     const { data: signupData, error: signupError } = await supabase.auth.signUp({
       email: testEmail,
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
       }
     })
     
-    console.log('📧 Signup result:', { signupData, signupError })
+    logger.debug('📧 Signup result:', { signupData, signupError })
     
     if (signupError) {
       return {

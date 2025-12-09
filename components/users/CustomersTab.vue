@@ -378,7 +378,7 @@ const loadCustomers = async (loadAppointments = true) => {
   error.value = null
   
   try {
-    console.log('🔄 Loading customers from database...')
+    logger.debug('🔄 Loading customers from database...')
     
     // Get current user's tenant_id
     const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -453,7 +453,7 @@ const loadCustomers = async (loadAppointments = true) => {
     })
 
     customers.value = enrichedCustomers
-    console.log('✅ Customers loaded successfully:', customers.value.length)
+    logger.debug('✅ Customers loaded successfully:', customers.value.length)
 
   } catch (err: any) {
     console.error('❌ Error loading customers:', err)
@@ -474,21 +474,21 @@ const quickAction = (customer: any) => {
 
 const editCustomer = (customer: any) => {
   selectedCustomer.value = null
-  console.log('Edit customer:', customer)
+  logger.debug('Edit customer:', customer)
 }
 
 const handleCreateAppointment = (customer: any) => {
   selectedCustomer.value = null
-  console.log('Create appointment for:', customer)
+  logger.debug('Create appointment for:', customer)
 }
 
 const handleEvaluateLesson = (lesson: any) => {
   selectedCustomer.value = null
-  console.log('Evaluate lesson:', lesson)
+  logger.debug('Evaluate lesson:', lesson)
 }
 
 const handleCustomerUpdated = (updateData: any) => {
-  console.log('📡 Customer updated:', updateData)
+  logger.debug('📡 Customer updated:', updateData)
   
   const customerIndex = customers.value.findIndex(s => s.id === updateData.id)
   if (customerIndex !== -1) {
@@ -503,7 +503,7 @@ const handleCustomerUpdated = (updateData: any) => {
 }
 
 const handleCustomerAdded = async (newCustomer: any) => {
-  console.log('✅ New customer added:', newCustomer)
+  logger.debug('✅ New customer added:', newCustomer)
   showAddCustomerModal.value = false
   await loadCustomers()
 }
@@ -570,7 +570,7 @@ const copyOnboardingLink = async () => {
       message: 'Der Onboarding-Link wurde in die Zwischenablage kopiert.'
     })
     
-    console.log('🔗 Onboarding-Link:', onboardingLink)
+    logger.debug('🔗 Onboarding-Link:', onboardingLink)
   } catch (err) {
     console.error('Error copying link:', err)
     uiStore.addNotification({

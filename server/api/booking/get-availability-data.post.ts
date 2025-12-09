@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
-    console.log('📅 Fetching availability data:', {
+    logger.debug('📅 Fetching availability data:', {
       tenant_id,
       staff_id,
       start_date,
@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
         console.warn('⚠️ Error fetching working hours:', whError)
       } else {
         response.working_hours = workingHours || []
-        console.log('✅ Fetched working hours:', workingHours?.length || 0)
+        logger.debug('✅ Fetched working hours:', workingHours?.length || 0)
       }
     }
 
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
         console.warn('⚠️ Error fetching busy times:', busyError)
       } else {
         response.external_busy_times = busyTimes || []
-        console.log('✅ Fetched external busy times:', busyTimes?.length || 0)
+        logger.debug('✅ Fetched external busy times:', busyTimes?.length || 0)
       }
     }
 
@@ -91,7 +91,7 @@ export default defineEventHandler(async (event) => {
         console.warn('⚠️ Error fetching appointments:', aptError)
       } else {
         response.appointments = appointments || []
-        console.log('✅ Fetched appointments:', appointments?.length || 0)
+        logger.debug('✅ Fetched appointments:', appointments?.length || 0)
       }
     }
 

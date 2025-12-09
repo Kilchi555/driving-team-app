@@ -235,7 +235,7 @@ const handleUpload = async () => {
       }
     }
 
-    console.log('✅ Documents uploaded successfully')
+    logger.debug('✅ Documents uploaded successfully')
     emit('success')
   } catch (err: any) {
     console.error('Upload error:', err)

@@ -20,7 +20,7 @@ export default defineEventHandler(async (event): Promise<DownloadResponse> => {
       throw new Error('Invoice ID is required')
     }
 
-    console.log('📄 Generating PDF for invoice:', invoiceId)
+    logger.debug('📄 Generating PDF for invoice:', invoiceId)
 
     // Rechnungsdaten aus der Datenbank abrufen
     const supabase = getSupabase()
@@ -52,7 +52,7 @@ export default defineEventHandler(async (event): Promise<DownloadResponse> => {
     const pdfBase64 = pdfBuffer.toString('base64')
     const pdfUrl = `data:application/pdf;base64,${pdfBase64}`
 
-    console.log('✅ PDF generated successfully for invoice:', invoice.invoice_number)
+    logger.debug('✅ PDF generated successfully for invoice:', invoice.invoice_number)
 
     return {
       success: true,

@@ -69,7 +69,7 @@ const verifyDevice = async () => {
   }
 
   try {
-    console.log('🔐 Verifying device with token:', token)
+    logger.debug('🔐 Verifying device with token:', token)
 
     // Finde Gerät mit diesem Token
     const { data: device, error: deviceError } = await supabase
@@ -117,7 +117,7 @@ const verifyDevice = async () => {
       throw updateError
     }
 
-    console.log('✅ Device verified successfully:', device.id)
+    logger.debug('✅ Device verified successfully:', device.id)
     isVerified.value = true
     isVerifying.value = false
 

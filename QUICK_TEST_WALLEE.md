@@ -57,7 +57,7 @@ const testConfig = async (tenantSlug = 'driving-team') => {
   // Then test config
   const response = await fetch(`/api/wallee/debug-tenant-config?tenantId=${tenant.id}&verbose=true`)
   const data = await response.json()
-  console.log('Wallee Config Debug:', data)
+  logger.debug('Wallee Config Debug:', data)
   return data
 }
 

@@ -89,7 +89,7 @@ export const useTenantConsistency = () => {
     }
     
     inconsistencyLog.value.push(logEntry)
-    console.log('🏢 Tenant Event:', logEntry)
+    logger.debug('🏢 Tenant Event:', logEntry)
     
     // Keep only last 50 entries
     if (inconsistencyLog.value.length > 50) {
@@ -100,7 +100,7 @@ export const useTenantConsistency = () => {
   // Attempt to restore the correct tenant for a user
   const attemptTenantRestore = async (userEmail: string) => {
     try {
-      console.log('🔄 Attempting to restore correct tenant for:', userEmail)
+      logger.debug('🔄 Attempting to restore correct tenant for:', userEmail)
       
       // Get the user's actual tenant_id from database
       const { data: userData, error } = await supabase
@@ -120,7 +120,7 @@ export const useTenantConsistency = () => {
         return false
       }
 
-      console.log('✅ Correct tenant_id found:', userData.tenant_id)
+      logger.debug('✅ Correct tenant_id found:', userData.tenant_id)
       
       // Force refresh of user profile
       await authStore.fetchUserProfile(authStore.user?.id || '')
@@ -145,7 +145,7 @@ export const useTenantConsistency = () => {
       // Skip validation if user is not authenticated or if we can't access the database
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        console.log('⚠️ No authenticated user, skipping tenant consistency check')
+        logger.debug('⚠️ No authenticated user, skipping tenant consistency check')
         return true
       }
 
@@ -159,7 +159,7 @@ export const useTenantConsistency = () => {
       if (error) {
         // If it's a 406 or RLS error, skip validation rather than failing
         if (error.code === 'PGRST116' || error.message?.includes('406')) {
-          console.log('⚠️ RLS policy blocking tenant consistency check, skipping validation')
+          logger.debug('⚠️ RLS policy blocking tenant consistency check, skipping validation')
           return true
         }
         console.error('❌ Failed to validate tenant consistency:', error)

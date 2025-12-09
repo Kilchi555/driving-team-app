@@ -3,10 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🔄 [update-profile] Handler started')
+    logger.debug('🔄 [update-profile] Handler started')
     
     const body = await readBody(event)
-    console.log('🔄 [update-profile] Body received:', { firstName: body.firstName, lastName: body.lastName })
+    logger.debug('🔄 [update-profile] Body received:', { firstName: body.firstName, lastName: body.lastName })
     
     const { 
       firstName, 
@@ -21,13 +21,13 @@ export default defineEventHandler(async (event) => {
     } = body
 
     // Get auth token from Authorization header (set by @nuxtjs/supabase module)
-    console.log('🔄 [update-profile] Getting auth header')
+    logger.debug('🔄 [update-profile] Getting auth header')
     const authHeader = getHeader(event, 'authorization') || ''
     let accessToken: string | null = null
     
     if (authHeader.startsWith('Bearer ')) {
       accessToken = authHeader.substring(7)
-      console.log('🔄 [update-profile] Found Bearer token')
+      logger.debug('🔄 [update-profile] Found Bearer token')
     }
 
     if (!accessToken) {
@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // Get authenticated user
-    console.log('🔄 [update-profile] Getting user from auth')
+    logger.debug('🔄 [update-profile] Getting user from auth')
     const { data: { user }, error: authError } = await userClient.auth.getUser()
 
     if (authError || !user) {
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🔄 Updating profile for user:', user.id)
+    logger.debug('🔄 Updating profile for user:', user.id)
 
     // Create service role client to bypass RLS
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -98,7 +98,7 @@ export default defineEventHandler(async (event) => {
 
     // Add email if it changed
     if (email && email !== user.email) {
-      console.log('📧 Email changed from', user.email, 'to', email)
+      logger.debug('📧 Email changed from', user.email, 'to', email)
       updateData.email = email.toLowerCase().trim()
     }
 
@@ -117,7 +117,7 @@ export default defineEventHandler(async (event) => {
 
     // If email changed, also update in auth
     if (email && email !== user.email) {
-      console.log('🔐 Updating auth email to:', email)
+      logger.debug('🔐 Updating auth email to:', email)
       const { error: emailUpdateError } = await serviceSupabase.auth.admin.updateUserById(user.id, {
         email: email.toLowerCase().trim(),
         email_confirm: true // Auto-confirm new email
@@ -131,7 +131,7 @@ export default defineEventHandler(async (event) => {
           statusMessage: 'Fehler beim Aktualisieren der Email-Adresse'
         })
       }
-      console.log('✅ Auth email updated successfully')
+      logger.debug('✅ Auth email updated successfully')
     }
 
     // Update auth user metadata
@@ -147,7 +147,7 @@ export default defineEventHandler(async (event) => {
       // Don't fail if metadata update fails
     }
 
-    console.log('✅ Profile updated successfully')
+    logger.debug('✅ Profile updated successfully')
 
     return {
       success: true,

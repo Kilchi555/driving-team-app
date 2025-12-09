@@ -117,19 +117,19 @@ const loadEventTypes = async (excludeTypes: string[] = []) => {
 const selectEventType = (eventType: EventType) => {
   // ❌ Vergangene Termine können nicht mehr geändert werden
   if (!props.showBackButton) {
-    console.log('🚫 Cannot change event type for past appointment')
+    logger.debug('🚫 Cannot change event type for past appointment')
     return
   }
   
   try {
-    console.log('📋 Selecting event type:', eventType)
+    logger.debug('📋 Selecting event type:', eventType)
     // Sichere Checks
     if (!eventType || !eventType.code) {
       console.error('❌ Invalid event type:', eventType)
       return
     }
     
-    console.log('✅ Event type selected successfully:', {
+    logger.debug('✅ Event type selected successfully:', {
       code: eventType.code,
       name: eventType.name,
       duration: eventType.default_duration_minutes

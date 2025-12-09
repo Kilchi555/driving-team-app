@@ -140,7 +140,7 @@ logger.info('Auth', 'User logged in successfully')
 ### ❌ DON'T
 
 ```typescript
-console.log('something')  // Use logger instead
+logger.debug('something')  // Use logger instead
 logger.error('Component', 'Error:', { password: user.password })  // No sensitive data!
 logger.debug('Component', 'Starting...', entireUserObject)  // Too verbose
 ```

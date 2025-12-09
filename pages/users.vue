@@ -148,7 +148,7 @@ const goBack = async () => {
   
   try {
     isNavigating.value = true
-    console.log('🔙 Navigating back to dashboard...')
+    logger.debug('🔙 Navigating back to dashboard...')
     
     await navigateTo('/dashboard', { replace: true })
   } catch (error) {
@@ -162,17 +162,17 @@ const goBack = async () => {
 }
 
 const addNewUser = () => {
-  console.log('🚀 Opening add user modal')
+  logger.debug('🚀 Opening add user modal')
   // TODO: Implement add user modal
 }
 
 const handleUserUpdated = (updateData: any) => {
-  console.log('📡 User updated:', updateData)
+  logger.debug('📡 User updated:', updateData)
   // Refresh data if needed
 }
 
 const handleSettingsUpdated = (settings: any) => {
-  console.log('📡 Settings updated:', settings)
+  logger.debug('📡 Settings updated:', settings)
   tenantSettings.value = { ...tenantSettings.value, ...settings }
 }
 
@@ -195,7 +195,7 @@ const loadTenantSettings = async () => {
     })
 
     tenantSettings.value = settings
-    console.log('✅ Tenant settings loaded:', settings)
+    logger.debug('✅ Tenant settings loaded:', settings)
   } catch (err) {
     console.error('❌ Error loading tenant settings:', err)
   }

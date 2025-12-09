@@ -290,10 +290,10 @@ const loadStats = async () => {
 
     const tenants = tenantsError ? [] : (tenantsData || [])
 
-    console.log('🔍 TENANT LOADING DEBUG:')
-    console.log('- Tenants data:', tenants)
-    console.log('- Tenants error:', tenantsError)
-    console.log('- Tenants count:', tenants?.length || 0)
+    logger.debug('🔍 TENANT LOADING DEBUG:')
+    logger.debug('- Tenants data:', tenants)
+    logger.debug('- Tenants error:', tenantsError)
+    logger.debug('- Tenants count:', tenants?.length || 0)
 
     if (tenantsError) {
       console.error('❌ Tenants loading failed:', tenantsError)
@@ -304,15 +304,15 @@ const loadStats = async () => {
       .from('users')
       .select('id, tenant_id, role')
 
-    console.log('🔍 USER LOADING DEBUG:')
-    console.log('- Users data:', users)
-    console.log('- Users error:', usersError)
-    console.log('- Users count:', users?.length || 0)
+    logger.debug('🔍 USER LOADING DEBUG:')
+    logger.debug('- Users data:', users)
+    logger.debug('- Users error:', usersError)
+    logger.debug('- Users count:', users?.length || 0)
     
     // Get current user role separately
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     const currentUserRole = users?.find(u => u.id === currentUser?.id)?.role
-    console.log('- Current user role:', currentUserRole)
+    logger.debug('- Current user role:', currentUserRole)
 
     if (usersError) {
       console.error('❌ Users loading failed:', usersError)

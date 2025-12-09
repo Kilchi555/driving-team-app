@@ -200,7 +200,7 @@ const setPassword = async () => {
     }
 
     isSuccess.value = true
-    console.log('✅ Password set successfully')
+    logger.debug('✅ Password set successfully')
 
   } catch (err: any) {
     console.error('❌ Error setting password:', err)
@@ -241,7 +241,7 @@ onMounted(async () => {
       tenantSlug.value = tenant?.slug || 'default'
     }
 
-    console.log('👤 User info loaded from invitation:', userInfo.value)
+    logger.debug('👤 User info loaded from invitation:', userInfo.value)
 
   } catch (err) {
     console.error('❌ Error loading invitation:', err)

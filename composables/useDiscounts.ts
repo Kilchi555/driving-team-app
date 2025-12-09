@@ -82,8 +82,8 @@ export const useDiscounts = () => {
       if (dbError) throw dbError
       
       discounts.value = data || []
-      console.log('✅ Discounts loaded for tenant:', discounts.value.length, userProfile.tenant_id)
-      console.log('📋 Loaded discount IDs:', discounts.value.map(d => ({ 
+      logger.debug('✅ Discounts loaded for tenant:', discounts.value.length, userProfile.tenant_id)
+      logger.debug('📋 Loaded discount IDs:', discounts.value.map(d => ({ 
         id: d.id, 
         name: d.name, 
         code: d.code, 
@@ -319,7 +319,7 @@ export const useDiscounts = () => {
         discount.updated_at = new Date().toISOString()
       }
       
-      console.log('✅ Discount applied:', discountId)
+      logger.debug('✅ Discount applied:', discountId)
       
     } catch (err: any) {
       console.error('❌ Error applying discount:', err)
@@ -366,7 +366,7 @@ export const useDiscounts = () => {
         is_active: discountData.is_active !== undefined ? discountData.is_active : true
       }
       
-      console.log('🔍 Creating discount with data:', discountWithTenant)
+      logger.debug('🔍 Creating discount with data:', discountWithTenant)
 
       const { data, error: dbError } = await supabase
         .from('discounts')
@@ -383,8 +383,8 @@ export const useDiscounts = () => {
       }
       
       discounts.value.unshift(data)
-      console.log('✅ Discount created with tenant_id:', data.id, userProfile.tenant_id)
-      console.log('🔍 Created discount data:', { id: data.id, name: data.name, is_active: data.is_active })
+      logger.debug('✅ Discount created with tenant_id:', data.id, userProfile.tenant_id)
+      logger.debug('🔍 Created discount data:', { id: data.id, name: data.name, is_active: data.is_active })
       
       return data
     } catch (err: any) {
@@ -409,7 +409,7 @@ export const useDiscounts = () => {
         discounts.value[index] = data
       }
       
-      console.log('✅ Discount updated:', id)
+      logger.debug('✅ Discount updated:', id)
       
       return data
     } catch (err: any) {
@@ -428,7 +428,7 @@ export const useDiscounts = () => {
       if (dbError) throw dbError
       
       discounts.value = discounts.value.filter(d => d.id !== id)
-      console.log('✅ Discount deleted:', id)
+      logger.debug('✅ Discount deleted:', id)
       
     } catch (err: any) {
       console.error('❌ Error deleting discount:', err)

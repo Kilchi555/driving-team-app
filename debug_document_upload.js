@@ -2,7 +2,7 @@
 // This tests if the document upload and database update works
 
 async function debugDocumentUpload() {
-  console.log('🔍 Debugging document upload...');
+  logger.debug('🔍 Debugging document upload...');
   
   try {
     // Get Supabase client
@@ -14,7 +14,7 @@ async function debugDocumentUpload() {
     }
     
     // Test 1: Check current user
-    console.log('👤 Checking current user...');
+    logger.debug('👤 Checking current user...');
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError) {
@@ -27,11 +27,11 @@ async function debugDocumentUpload() {
       return;
     }
     
-    console.log('✅ Current user:', user.email);
+    logger.debug('✅ Current user:', user.email);
     
     // Test 2: Try to read Hans Meier's record
     const hansId = '9cca023a-ab9d-4df1-ae9d-488bae2b8e15';
-    console.log('📖 Reading Hans Meier record...');
+    logger.debug('📖 Reading Hans Meier record...');
     
     const { data: hansData, error: readError } = await supabase
       .from('users')
@@ -44,10 +44,10 @@ async function debugDocumentUpload() {
       return;
     }
     
-    console.log('✅ Hans Meier data:', hansData);
+    logger.debug('✅ Hans Meier data:', hansData);
     
     // Test 3: Try to update Hans Meier's lernfahrausweis_url
-    console.log('📝 Testing database update...');
+    logger.debug('📝 Testing database update...');
     const testUrl = `https://test-url-${Date.now()}.jpg`;
     
     const { error: updateError } = await supabase
@@ -57,19 +57,19 @@ async function debugDocumentUpload() {
     
     if (updateError) {
       console.error('❌ Update failed:', updateError);
-      console.log('🔍 This might be an RLS policy issue!');
+      logger.debug('🔍 This might be an RLS policy issue!');
       
       // Check RLS policies
-      console.log('🔐 Checking RLS policies...');
+      logger.debug('🔐 Checking RLS policies...');
       const { data: policies, error: policyError } = await supabase.rpc('get_policies');
       if (!policyError) {
-        console.log('📋 Current RLS policies:', policies);
+        logger.debug('📋 Current RLS policies:', policies);
       }
       
       return;
     }
     
-    console.log('✅ Update successful! Test URL:', testUrl);
+    logger.debug('✅ Update successful! Test URL:', testUrl);
     
     // Test 4: Verify the update worked
     const { data: verifyData, error: verifyError } = await supabase
@@ -83,7 +83,7 @@ async function debugDocumentUpload() {
       return;
     }
     
-    console.log('✅ Verified update:', verifyData.lernfahrausweis_url);
+    logger.debug('✅ Verified update:', verifyData.lernfahrausweis_url);
     
     // Test 5: Clean up - reset to null
     await supabase
@@ -91,8 +91,8 @@ async function debugDocumentUpload() {
       .update({ lernfahrausweis_url: null })
       .eq('id', hansId);
     
-    console.log('🧹 Cleaned up test data');
-    console.log('🎉 All tests passed! Upload should work.');
+    logger.debug('🧹 Cleaned up test data');
+    logger.debug('🎉 All tests passed! Upload should work.');
     
   } catch (error) {
     console.error('❌ Debug failed:', error);

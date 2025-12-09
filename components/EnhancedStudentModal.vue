@@ -1090,7 +1090,7 @@ const loadDocumentRequirements = async () => {
   loadingDocumentRequirements.value = true
   
   try {
-    console.log('🔍 Loading document requirements for categories:', props.selectedStudent.category)
+    logger.debug('🔍 Loading document requirements for categories:', props.selectedStudent.category)
 
     // Load categories with their document requirements from database
     const { data: categories, error } = await supabase
@@ -1104,7 +1104,7 @@ const loadDocumentRequirements = async () => {
       throw error
     }
 
-    console.log('✅ Categories loaded:', categories)
+    logger.debug('✅ Categories loaded:', categories)
 
     const allRequirements: DocumentRequirement[] = []
     const addedDocuments = new Set<string>()
@@ -1114,7 +1114,7 @@ const loadDocumentRequirements = async () => {
       const requirements = category.document_requirements
       if (!requirements) return
 
-      console.log(`📋 Processing requirements for ${category.code}:`, requirements)
+      logger.debug(`📋 Processing requirements for ${category.code}:`, requirements)
 
       // Add required documents
       requirements.required?.forEach((req: any) => {
@@ -1180,7 +1180,7 @@ const loadDocumentRequirements = async () => {
     })
 
     categoryDocumentRequirements.value = allRequirements
-    console.log('📄 Final document requirements:', allRequirements)
+    logger.debug('📄 Final document requirements:', allRequirements)
 
   } catch (error) {
     console.error('❌ Error loading document requirements:', error)
@@ -1266,7 +1266,7 @@ const getCancellationPolicy = (appointment: any) => {
   
   const hoursDifference = (appointmentZurich.getTime() - cancellationZurich.getTime()) / (1000 * 60 * 60)
   
-  console.log('🕐 Cancellation policy check:', {
+  logger.debug('🕐 Cancellation policy check:', {
     appointmentTime: appointment.start_time,
     cancelledAt: appointment.deleted_at,
     hoursDifference: hoursDifference.toFixed(2),
@@ -1276,13 +1276,13 @@ const getCancellationPolicy = (appointment: any) => {
   // Finde die passende Policy basierend auf der Zeit vor dem Termin
   for (const policy of cancellationPolicies.value) {
     if (hoursDifference >= policy.hours_before_appointment) {
-      console.log('✅ Policy found:', { hours: policy.hours_before_appointment, refund: policy.refund_percentage })
+      logger.debug('✅ Policy found:', { hours: policy.hours_before_appointment, refund: policy.refund_percentage })
       return policy
     }
   }
   
   // Fallback: Letzte Policy (meist 100% Stornierung)
-  console.log('⚠️ No matching policy, using fallback')
+  logger.debug('⚠️ No matching policy, using fallback')
   return cancellationPolicies.value[cancellationPolicies.value.length - 1] || null
 }
 
@@ -1486,8 +1486,8 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
   
   isProcessingBulkAction.value = true
   try {
-    console.log(`💳 Processing ${selectedPayments.value.length} payments as ${method}`)
-    console.log(`Payment IDs: ${selectedPayments.value.join(', ')}`)
+    logger.debug(`💳 Processing ${selectedPayments.value.length} payments as ${method}`)
+    logger.debug(`Payment IDs: ${selectedPayments.value.join(', ')}`)
     
     const supabase = getSupabase()
     
@@ -1531,11 +1531,11 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
         if (updateAppointmentError) {
           console.error(`❌ Error confirming appointment ${paymentData.appointment_id}:`, updateAppointmentError)
         } else {
-          console.log(`✅ Appointment ${paymentData.appointment_id} confirmed`)
+          logger.debug(`✅ Appointment ${paymentData.appointment_id} confirmed`)
         }
       }
       
-      console.log(`✅ Payment ${paymentId} updated to ${method}`)
+      logger.debug(`✅ Payment ${paymentId} updated to ${method}`)
     }
     
     // Reload payments and lessons to reflect changes
@@ -1545,7 +1545,7 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
     // Clear selection after processing
     selectedPayments.value = []
     
-    console.log(`✅ Successfully processed ${selectedPayments.value.length} payments as ${method}`)
+    logger.debug(`✅ Successfully processed ${selectedPayments.value.length} payments as ${method}`)
   } catch (error) {
     console.error('❌ Error processing bulk payment:', error)
   } finally {
@@ -1571,7 +1571,7 @@ const totalSelectedAmount = computed(() => {
 const handlePaymentCardClick = (payment: any) => {
   // If cancelled, toggle expansion to show/hide details
   if (payment.appointments?.status === 'cancelled') {
-    console.log('📋 Toggling cancelled payment details:', payment.id)
+    logger.debug('📋 Toggling cancelled payment details:', payment.id)
     if (expandedCancelledPayments.value.has(payment.id)) {
       expandedCancelledPayments.value.delete(payment.id)
     } else {
@@ -1580,7 +1580,7 @@ const handlePaymentCardClick = (payment: any) => {
   }
   // If completed, ignore click
   else if (payment.payment_status === 'completed') {
-    console.log('🔒 Payment is completed, cannot select')
+    logger.debug('🔒 Payment is completed, cannot select')
   }
   // Otherwise, toggle selection
   else {
@@ -1647,19 +1647,19 @@ const openEvaluationModal = (lesson: any) => {
     return
   }
   
-  console.log('📝 Opening evaluation modal for lesson:', lesson.id)
+  logger.debug('📝 Opening evaluation modal for lesson:', lesson.id)
   selectedAppointmentForEvaluation.value = lesson
   showEvaluationModal.value = true
 }
 
 const closeEvaluationModal = () => {
-  console.log('📝 Closing evaluation modal')
+  logger.debug('📝 Closing evaluation modal')
   showEvaluationModal.value = false
   selectedAppointmentForEvaluation.value = null
 }
 
 const onEvaluationSaved = async () => {
-  console.log('✅ Evaluation saved, reloading lessons')
+  logger.debug('✅ Evaluation saved, reloading lessons')
   // Lade Lektionen neu um die aktualisierten Bewertungen zu sehen
   await loadLessons()
   closeEvaluationModal()
@@ -1776,7 +1776,7 @@ const loadRatingPoints = async () => {
       return
     }
     
-    console.log('📊 Loading evaluation scale for tenant:', tenantId)
+    logger.debug('📊 Loading evaluation scale for tenant:', tenantId)
     
     let ratingPoints: any[] | null = null
     
@@ -1816,7 +1816,7 @@ const loadRatingPoints = async () => {
     })
     
     ratingPointsMap.value = map
-    console.log('✅ Loaded rating points:', Object.keys(map).length, 'ratings')
+    logger.debug('✅ Loaded rating points:', Object.keys(map).length, 'ratings')
     
   } catch (error: any) {
     console.error('❌ Error in loadRatingPoints:', error)
@@ -1840,7 +1840,7 @@ const loadLessons = async () => {
   lessonsError.value = null
   
   try {
-    console.log('📚 Loading lessons for student:', props.selectedStudent.id)
+    logger.debug('📚 Loading lessons for student:', props.selectedStudent.id)
     
     const supabase = getSupabase()
     
@@ -1876,7 +1876,7 @@ const loadLessons = async () => {
     let evaluationsMap: Record<string, any[]> = {}
     
     if (appointmentIds.length > 0) {
-      console.log('🔍 Loading evaluations for', appointmentIds.length, 'appointments')
+      logger.debug('🔍 Loading evaluations for', appointmentIds.length, 'appointments')
       
       // Lade Notes mit Evaluationen - vereinfachte Query ohne Join
       const { data: notesData, error: notesError } = await supabase
@@ -1887,7 +1887,7 @@ const loadLessons = async () => {
       if (notesError) {
         console.error('❌ Error loading notes:', notesError)
       } else if (notesData) {
-        console.log('📝 Loaded', notesData.length, 'notes')
+        logger.debug('📝 Loaded', notesData.length, 'notes')
         
         // Hole Criteria-IDs für weitere Details
         const criteriaIds = [...new Set(notesData
@@ -1919,7 +1919,7 @@ const loadLessons = async () => {
           return dateB - dateA // Neueste zuerst
         })
         
-        console.log('🔍 Total notes loaded:', notesData.length)
+        logger.debug('🔍 Total notes loaded:', notesData.length)
         
         sortedNotes.forEach(note => {
           const aptId = note.appointment_id
@@ -1931,20 +1931,20 @@ const loadLessons = async () => {
           
           // Wenn dieses Kriterium noch nicht vorhanden ist (da wir sortiert haben, ist das erste die neueste), speichern
           if (!latestEvaluationsMap[aptId][criteriaId]) {
-            console.log(`✅ Keeping evaluation for apt ${aptId.slice(0, 8)}, criteria ${criteriaId?.slice(0, 8)}`)
+            logger.debug(`✅ Keeping evaluation for apt ${aptId.slice(0, 8)}, criteria ${criteriaId?.slice(0, 8)}`)
             latestEvaluationsMap[aptId][criteriaId] = {
               ...note,
               evaluation_criteria: criteriaId ? criteriaMap[criteriaId] : null
             }
           } else {
-            console.log(`⏭️ Skipping duplicate for apt ${aptId.slice(0, 8)}, criteria ${criteriaId?.slice(0, 8)}`)
+            logger.debug(`⏭️ Skipping duplicate for apt ${aptId.slice(0, 8)}, criteria ${criteriaId?.slice(0, 8)}`)
           }
         })
         
         // Konvertiere in das erwartete Format
         Object.entries(latestEvaluationsMap).forEach(([aptId, criteriaMap]) => {
           evaluationsMap[aptId] = Object.values(criteriaMap)
-          console.log(`📦 Apt ${aptId.slice(0, 8)} has ${evaluationsMap[aptId].length} evaluations`)
+          logger.debug(`📦 Apt ${aptId.slice(0, 8)} has ${evaluationsMap[aptId].length} evaluations`)
         })
       }
     }
@@ -1991,7 +1991,7 @@ const loadLessons = async () => {
       evaluationsCount: apt.evaluations.length
     }))
     
-    console.log('✅ Loaded', lessons.value.length, 'lessons with evaluations')
+    logger.debug('✅ Loaded', lessons.value.length, 'lessons with evaluations')
     
   } catch (error: any) {
     console.error('Error loading lessons:', error)
@@ -2008,7 +2008,7 @@ const loadExamResults = async () => {
   examResultsError.value = null
   
   try {
-    console.log('🎓 Loading exam results for student:', props.selectedStudent.id)
+    logger.debug('🎓 Loading exam results for student:', props.selectedStudent.id)
     
     const supabase = getSupabase()
     
@@ -2038,7 +2038,7 @@ const loadExamResults = async () => {
     
     if (appointmentIds.length === 0) {
       examResults.value = []
-      console.log('✅ No appointments found for student')
+      logger.debug('✅ No appointments found for student')
       return
     }
     
@@ -2087,7 +2087,7 @@ const loadExamResults = async () => {
       appointments: appointmentsMap.get(result.appointment_id)
     }))
     
-    console.log('✅ Loaded', examResults.value.length, 'exam results')
+    logger.debug('✅ Loaded', examResults.value.length, 'exam results')
     
   } catch (error: any) {
     console.error('Error loading exam results:', error)
@@ -2136,7 +2136,7 @@ const loadCancellationPolicies = async () => {
       b.hours_before_appointment - a.hours_before_appointment
     )
     
-    console.log('✅ Loaded', cancellationPolicies.value.length, 'cancellation rules')
+    logger.debug('✅ Loaded', cancellationPolicies.value.length, 'cancellation rules')
     
   } catch (error: any) {
     console.error('Error loading cancellation policies:', error)
@@ -2150,7 +2150,7 @@ const loadPayments = async () => {
   paymentsError.value = null
   
   try {
-    console.log('💰 Loading payments for student:', props.selectedStudent.id)
+    logger.debug('💰 Loading payments for student:', props.selectedStudent.id)
     
     const supabase = getSupabase()
     
@@ -2165,7 +2165,7 @@ const loadPayments = async () => {
       console.warn('⚠️ Could not load student credit:', creditError)
     } else if (creditData) {
       studentBalance.value = creditData.balance_rappen || 0
-      console.log('💰 Student balance loaded:', ((studentBalance.value || 0) / 100).toFixed(2), 'CHF')
+      logger.debug('💰 Student balance loaded:', ((studentBalance.value || 0) / 100).toFixed(2), 'CHF')
     }
     
     // Lade Zahlungen über appointments - RLS filtert automatisch nach tenant_id
@@ -2289,7 +2289,7 @@ const loadPayments = async () => {
       }
     })
     
-    console.log('✅ Loaded', payments.value.length, 'payments with product/discount sales')
+    logger.debug('✅ Loaded', payments.value.length, 'payments with product/discount sales')
     
   } catch (error: any) {
     console.error('Error loading payments:', error)
@@ -2316,7 +2316,7 @@ const uploadCurrentFile = async (file: File) => {
       return
     }
 
-    console.log('📤 Starting upload with new user_documents table:', {
+    logger.debug('📤 Starting upload with new user_documents table:', {
       fileName: file.name,
       requirement: requirement.id,
       side: side
@@ -2335,7 +2335,7 @@ const uploadCurrentFile = async (file: File) => {
       throw new Error('Upload fehlgeschlagen')
     }
 
-    console.log('✅ File uploaded to storage:', storagePath)
+    logger.debug('✅ File uploaded to storage:', storagePath)
 
     // Save document record to user_documents table (use current user's tenant to satisfy RLS)
     const tenantIdForDoc = (props.currentUser as any)?.tenant_id || selectedStudent.value.tenant_id
@@ -2359,7 +2359,7 @@ const uploadCurrentFile = async (file: File) => {
       throw new Error('Dokument konnte nicht gespeichert werden')
     }
 
-    console.log('✅ Document saved to database:', savedDocument)
+    logger.debug('✅ Document saved to database:', savedDocument)
 
     // Reload documents to update UI
     await loadDocuments(selectedStudent.value.id)
@@ -2367,7 +2367,7 @@ const uploadCurrentFile = async (file: File) => {
     // Emit update to parent
     emit('studentUpdated', selectedStudent.value)
 
-    console.log('✅ Document uploaded successfully with new system:', file.name)
+    logger.debug('✅ Document uploaded successfully with new system:', file.name)
     
     // Nach erfolgreichem Upload automatisch schließen
     setTimeout(() => {
@@ -2435,7 +2435,7 @@ const deleteDocumentFile = async (requirement: DocumentRequirement, side: 'front
 const getStudentDocumentUrl = (doc: any): string => {
   // Use public_url if available (from new Storage endpoint)
   if (doc.public_url) {
-    console.log('🔗 Using public_url from Storage:', doc.public_url)
+    logger.debug('🔗 Using public_url from Storage:', doc.public_url)
     return doc.public_url
   }
   
@@ -2458,7 +2458,7 @@ const getStudentDocumentUrl = (doc: any): string => {
   path = path.replace(/\/+/g, '/')
   
   const url = `${supabaseUrl}/storage/v1/object/public/user-documents/${path}`
-  console.log('🔗 Built URL from storage_path:', url)
+  logger.debug('🔗 Built URL from storage_path:', url)
   return url
 }
 
@@ -2476,7 +2476,7 @@ const handleDocumentUpload = async (event: Event) => {
   }
   
   try {
-    console.log('📤 Uploading document for student:', props.selectedStudent.id, 'File:', file.name)
+    logger.debug('📤 Uploading document for student:', props.selectedStudent.id, 'File:', file.name)
     
     // Create FormData
     const formData = new FormData()
@@ -2484,28 +2484,28 @@ const handleDocumentUpload = async (event: Event) => {
     formData.append('userId', props.selectedStudent.id)
     formData.append('type', 'student-document') // Document type
     
-    console.log('📝 FormData prepared with keys:', Array.from(formData.keys()))
+    logger.debug('📝 FormData prepared with keys:', Array.from(formData.keys()))
     
     // Upload via API
-    console.log('🌐 Sending request to /api/students/upload-document')
+    logger.debug('🌐 Sending request to /api/students/upload-document')
     const response = await $fetch('/api/students/upload-document', {
       method: 'POST',
       body: formData
     }) as any
     
-    console.log('✅ Upload response received:', response)
+    logger.debug('✅ Upload response received:', response)
     
     if (response?.success) {
-      console.log('✅ Document uploaded successfully to Storage:', response.url)
+      logger.debug('✅ Document uploaded successfully to Storage:', response.url)
       
       // Wait a bit for the file to be fully available in Storage
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // Reload documents from Storage
-      console.log('🔄 Reloading documents from Storage...')
+      logger.debug('🔄 Reloading documents from Storage...')
       await loadStudentDocuments()
       
-      console.log('✅ Documents reloaded, UI should update')
+      logger.debug('✅ Documents reloaded, UI should update')
     } else {
       console.error('❌ Upload failed - no success flag:', response)
       alert(`Upload fehlgeschlagen: ${response?.message || 'Unbekannter Fehler'}`)
@@ -2523,12 +2523,12 @@ const handleDocumentUpload = async (event: Event) => {
 // ===== STUDENT DOCUMENTS (Ausweise) - Load directly from Storage =====
 const loadStudentDocuments = async () => {
   if (!props.selectedStudent) {
-    console.log('⚠️ No student selected')
+    logger.debug('⚠️ No student selected')
     return
   }
   
   try {
-    console.log('📂 Loading student documents from Storage for:', props.selectedStudent.id)
+    logger.debug('📂 Loading student documents from Storage for:', props.selectedStudent.id)
     
     // Call new endpoint that lists documents directly from Storage
     const { documents, count, error } = await $fetch('/api/documents/list-user-documents', {
@@ -2558,8 +2558,8 @@ const loadStudentDocuments = async () => {
       created_at: doc.createdAt
     }))
     
-    console.log('✅ Loaded student documents from Storage:', count)
-    console.log('📋 Document details:', studentDocuments.value.map(doc => ({
+    logger.debug('✅ Loaded student documents from Storage:', count)
+    logger.debug('📋 Document details:', studentDocuments.value.map(doc => ({
       type: doc.document_type,
       category: doc.category_code,
       side: doc.side,

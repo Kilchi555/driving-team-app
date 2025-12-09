@@ -82,13 +82,13 @@ const handleImageLoad = () => {
 const loadLogoForTenant = async (tenantId: string | null, tenantSlug?: string) => {
   try {
     if (tenantId) {
-      console.log('🎯 LoadingLogo: Using explicit tenantId:', tenantId)
+      logger.debug('🎯 LoadingLogo: Using explicit tenantId:', tenantId)
       
       // Check cache immediately for instant loading
       const cached = logoCache.value.get(tenantId)
       
       if (cached && (Date.now() - cached.timestamp) < 5 * 60 * 1000) {
-        console.log('⚡ LoadingLogo: Instant cache hit!', cached.url)
+        logger.debug('⚡ LoadingLogo: Instant cache hit!', cached.url)
         tenantLogo.value = cached.url
         // Still load in background to refresh cache
         getTenantLogo(tenantId).then((url: string | null) => {
@@ -100,13 +100,13 @@ const loadLogoForTenant = async (tenantId: string | null, tenantSlug?: string) =
         tenantLogo.value = await getTenantLogo(tenantId)
       }
     } else if (tenantSlug) {
-      console.log('🎯 LoadingLogo: Using tenantSlug:', tenantSlug)
+      logger.debug('🎯 LoadingLogo: Using tenantSlug:', tenantSlug)
       tenantLogo.value = await getTenantLogoBySlug(tenantSlug)
     } else {
-      console.log('🔄 LoadingLogo: Auto-detecting tenant from current user')
+      logger.debug('🔄 LoadingLogo: Auto-detecting tenant from current user')
       tenantLogo.value = await loadCurrentTenantLogo()
     }
-    console.log('✅ LoadingLogo: Final logo URL:', tenantLogo.value)
+    logger.debug('✅ LoadingLogo: Final logo URL:', tenantLogo.value)
   } catch (err) {
     console.error('❌ Error loading tenant logo in LoadingLogo:', err)
     handleImageError()
@@ -121,7 +121,7 @@ onMounted(async () => {
 // Watch for changes in tenantId or tenantSlug props
 watch([() => props.tenantId, () => props.tenantSlug], async ([newTenantId, newTenantSlug], [oldTenantId, oldTenantSlug]) => {
   if (newTenantId !== oldTenantId || newTenantSlug !== oldTenantSlug) {
-    console.log('🔄 LoadingLogo: props changed:', { 
+    logger.debug('🔄 LoadingLogo: props changed:', { 
       tenantId: { from: oldTenantId, to: newTenantId },
       tenantSlug: { from: oldTenantSlug, to: newTenantSlug }
     })

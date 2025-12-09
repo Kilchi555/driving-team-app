@@ -33,7 +33,7 @@ const isLoggedIn = computed(() => !!user.value && !!userProfile.value)
 
 const isAdmin = computed(() => {
   const result = userRole.value === 'admin'
-  console.log('🔍 Auth Store - isAdmin:', result, 'Role:', userRole.value)
+  logger.debug('🔍 Auth Store - isAdmin:', result, 'Role:', userRole.value)
   return result
 })
   const isStaff = computed(() => userRole.value === 'staff')
@@ -57,7 +57,7 @@ const isAdmin = computed(() => {
   // Actions
 
   const initializeAuthStore = async () => {
-    console.log('🔥 Initializing Auth Store')
+    logger.debug('🔥 Initializing Auth Store')
 
     // Get Supabase client
     const supabaseClient = getSupabase()
@@ -71,7 +71,7 @@ const isAdmin = computed(() => {
       try {
         const { data: { session } } = await supabaseClient.auth.getSession()
         if (session?.user && !user.value) {
-          console.log('🔄 Restoring session for:', session.user.email)
+          logger.debug('🔄 Restoring session for:', session.user.email)
           user.value = session.user
           await fetchUserProfile(session.user.id)
         }
@@ -82,7 +82,7 @@ const isAdmin = computed(() => {
 
     // Auth State Change Listener
     supabaseClient.auth.onAuthStateChange(async (event: any, session: any) => {
-      console.log('🔄 Auth state changed:', event, !!session)
+      logger.debug('🔄 Auth state changed:', event, !!session)
       
       if (session?.user) {
         user.value = session.user
@@ -93,14 +93,14 @@ const isAdmin = computed(() => {
     })
 
     isInitialized.value = true
-      console.log('✅ Auth Store initialization completed, isInitialized:', isInitialized.value)
+      logger.debug('✅ Auth Store initialization completed, isInitialized:', isInitialized.value)
 
   }
 
   // stores/auth.ts - nach Zeile wo initializeAuthStore steht
     const restoreSession = async () => {
       try {
-        console.log('🔄 Restoring session...')
+        logger.debug('🔄 Restoring session...')
         
         const supabaseClient = getSupabase()
         if (!supabaseClient) {
@@ -116,12 +116,12 @@ const isAdmin = computed(() => {
         }
         
         if (session?.user) {
-          console.log('✅ Session restored for:', session.user.email)
+          logger.debug('✅ Session restored for:', session.user.email)
           user.value = session.user
           await fetchUserProfile(session.user.id)
           return true
         } else {
-          console.log('❌ No session found to restore')
+          logger.debug('❌ No session found to restore')
           return false
         }
       } catch (err: any) {
@@ -135,7 +135,7 @@ const isAdmin = computed(() => {
     errorMessage.value = null
 
     try {
-      console.log('🔑 Attempting login for:', email)
+      logger.debug('🔑 Attempting login for:', email)
       
       const supabaseClient = getSupabase()
       if (!supabaseClient) {
@@ -152,7 +152,7 @@ const isAdmin = computed(() => {
       if (data.user) {
         user.value = data.user
         await fetchUserProfile(data.user.id)
-        console.log('✅ Login successful')
+        logger.debug('✅ Login successful')
         return true
       }
 
@@ -171,7 +171,7 @@ const isAdmin = computed(() => {
     errorMessage.value = null
 
     try {
-      console.log('📝 Attempting registration for:', email)
+      logger.debug('📝 Attempting registration for:', email)
       
       const supabaseClient = getSupabase()
       if (!supabaseClient) {
@@ -184,7 +184,7 @@ const isAdmin = computed(() => {
       })
 
       if (error) throw error
-      console.log('✅ Registration successful')
+      logger.debug('✅ Registration successful')
       return true
     } catch (err: any) {
       console.error('❌ Registration error:', err.message)
@@ -200,7 +200,7 @@ const isAdmin = computed(() => {
     errorMessage.value = null
 
     try {
-      console.log('🚪 Logging out')
+      logger.debug('🚪 Logging out')
       
       // Save tenant_id and get slug BEFORE clearing auth state
       let tenantSlug: string | null = null
@@ -229,7 +229,7 @@ const isAdmin = computed(() => {
       if (error) throw error
       
       clearAuthState()
-      console.log('✅ Logout successful')
+      logger.debug('✅ Logout successful')
       
       // Save tenant slug to localStorage for redirect after logout
       if (process.client && tenantSlug) {
@@ -280,7 +280,7 @@ const isAdmin = computed(() => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('👤 Fetching user profile for:', userId)
+      logger.debug('👤 Fetching user profile for:', userId)
       
       const supabaseClient = getSupabase()
       if (!supabaseClient) {
@@ -308,7 +308,7 @@ const isAdmin = computed(() => {
 
       if (error) {
         if (error.code === 'PGRST116') {
-          console.log('📝 No user profile found, needs setup')
+          logger.debug('📝 No user profile found, needs setup')
           userProfile.value = null
           userRole.value = ''
           return
@@ -319,7 +319,7 @@ const isAdmin = computed(() => {
       userProfile.value = data
       userRole.value = data.role || ''
       
-      console.log('✅ User profile loaded:', {
+      logger.debug('✅ User profile loaded:', {
         role: data.role,
         tenant_id: data.tenant_id,
         email: data.email,
@@ -337,7 +337,7 @@ const isAdmin = computed(() => {
     if (!user.value?.id) return false
 
     try {
-      console.log('📝 Updating user profile')
+      logger.debug('📝 Updating user profile')
       
       const supabaseClient = getSupabase()
       if (!supabaseClient) {
@@ -356,7 +356,7 @@ const isAdmin = computed(() => {
       userProfile.value = { ...userProfile.value, ...data } as UserProfile
       userRole.value = data.role || userRole.value
       
-      console.log('✅ Profile updated')
+      logger.debug('✅ Profile updated')
       return true
     } catch (err: any) {
       console.error('❌ Error updating profile:', err.message)
@@ -374,7 +374,7 @@ const isAdmin = computed(() => {
     if (!user.value?.id || !user.value?.email) return false
 
     try {
-      console.log('🆕 Creating user profile')
+      logger.debug('🆕 Creating user profile')
       
       const supabaseClient = getSupabase()
       if (!supabaseClient) {
@@ -398,7 +398,7 @@ const isAdmin = computed(() => {
       userProfile.value = data
       userRole.value = data.role
       
-      console.log('✅ Profile created')
+      logger.debug('✅ Profile created')
       return true
     } catch (err: any) {
       console.error('❌ Error creating profile:', err.message)
@@ -408,7 +408,7 @@ const isAdmin = computed(() => {
   }
 
   const clearAuthState = () => {
-    console.log('🧹 Clearing auth state')
+    logger.debug('🧹 Clearing auth state')
     user.value = null
     userProfile.value = null
     userRole.value = ''

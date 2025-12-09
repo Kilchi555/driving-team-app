@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   try {
     const { slug } = getQuery(event)
 
-    console.log('📡 /api/tenants/by-slug called with query:', { slug })
+    logger.debug('📡 /api/tenants/by-slug called with query:', { slug })
 
     if (!slug || typeof slug !== 'string') {
       console.error('❌ Invalid slug parameter:', slug)
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🔍 Fetching tenant branding for slug:', slug)
+    logger.debug('🔍 Fetching tenant branding for slug:', slug)
 
     // Create service role client to bypass RLS
     const { createClient } = await import('@supabase/supabase-js')
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Tenant found:', data.name)
+    logger.debug('✅ Tenant found:', data.name)
 
     return {
       success: true,

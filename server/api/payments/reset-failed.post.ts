@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Found payment:', payment.id, 'with status:', payment.payment_status)
+    logger.debug('✅ Found payment:', payment.id, 'with status:', payment.payment_status)
 
     // 2. Reset payment status to pending
     const { error: paymentError } = await supabase
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Payment status reset to pending')
+    logger.debug('✅ Payment status reset to pending')
 
     // 3. Reset appointment status to pending_confirmation
     // Note: is_paid is NOT a column in appointments table, it's computed from payment status
@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Appointment status reset to pending_confirmation:', updatedAppointment)
+    logger.debug('✅ Appointment status reset to pending_confirmation:', updatedAppointment)
 
     // 4. Send confirmation email via API
     try {
@@ -89,7 +89,7 @@ export default defineEventHandler(async (event) => {
           appointmentId
         }
       })
-      console.log('✅ Confirmation email sent')
+      logger.debug('✅ Confirmation email sent')
     } catch (emailError) {
       console.warn('⚠️ Failed to send confirmation email:', emailError)
       // Don't throw - payment reset is still successful

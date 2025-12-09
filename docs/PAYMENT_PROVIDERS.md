@@ -198,8 +198,8 @@ Bei Ausfall eines Providers:
 Alle Provider-Calls werden geloggt:
 
 ```typescript
-console.log('🔄 [Wallee] Creating transaction...')
-console.log('✅ [Stripe] Transaction created')
+logger.debug('🔄 [Wallee] Creating transaction...')
+logger.debug('✅ [Stripe] Transaction created')
 console.error('❌ [Provider] Error:', error)
 ```
 

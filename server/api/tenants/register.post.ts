@@ -65,22 +65,22 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     let logoFile: File | null = null
 
     // FormData-Felder verarbeiten
-    console.log('🔍 Processing FormData fields:')
+    logger.debug('🔍 Processing FormData fields:')
     for (const field of formData) {
-      console.log(`  Field: ${field.name}, Type: ${field.type}, Filename: ${field.filename}`)
+      logger.debug(`  Field: ${field.name}, Type: ${field.type}, Filename: ${field.filename}`)
       
       if (field.name === 'logo_file' && field.filename) {
         // Logo-Datei
         logoFile = new File([field.data], field.filename, {
           type: field.type || 'image/jpeg'
         })
-        console.log(`  ✅ Processed logo file: ${field.filename}`)
+        logger.debug(`  ✅ Processed logo file: ${field.filename}`)
         } else if (field.name && field.data) {
         // Text-Felder
         const value = field.data.toString()
         if (field.name in data) {
           (data as any)[field.name] = value
-          console.log(`  ✅ Set ${field.name} = ${value}`)
+          logger.debug(`  ✅ Set ${field.name} = ${value}`)
         } else {
           console.warn(`  ⚠️ Unknown field: ${field.name}`)
         }
@@ -90,8 +90,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     // Logo-File zu data hinzufügen
     data.logo_file = logoFile
 
-    console.log('🏢 Starting tenant registration for:', data.name)
-    console.log('📊 Final data object:', JSON.stringify(data, null, 2))
+    logger.debug('🏢 Starting tenant registration for:', data.name)
+    logger.debug('📊 Final data object:', JSON.stringify(data, null, 2))
 
     // Validierung
     const validationError = validateTenantData(data)
@@ -137,7 +137,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     if (data.logo_file) {
       try {
         logoUrl = await uploadTenantLogo(data.logo_file, data.slug)
-        console.log('✅ Logo uploaded successfully:', logoUrl)
+        logger.debug('✅ Logo uploaded successfully:', logoUrl)
       } catch (logoError) {
         console.warn('⚠️ Logo upload failed, continuing without logo:', logoError)
         // Weiter ohne Logo - nicht kritisch
@@ -146,7 +146,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
 
     // 4. Kundennummer generieren
     const customerNumber = await generateCustomerNumber(supabase)
-    console.log('🔢 Generated customer number:', customerNumber)
+    logger.debug('🔢 Generated customer number:', customerNumber)
 
     // 5. Tenant in Datenbank erstellen
     const tenantId = crypto.randomUUID()
@@ -219,15 +219,15 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     // 6. Standard-Kategorien und Templates kopieren (optional)
     try {
       await copyDefaultDataToTenant(tenantId)
-      console.log('✅ Default data copied to tenant')
+      logger.debug('✅ Default data copied to tenant')
     } catch (defaultDataError) {
       console.warn('⚠️ Default data copy failed:', defaultDataError)
       // Nicht kritisch - Tenant ist bereits erstellt
     }
 
-    console.log('🎉 Tenant registration completed successfully:', newTenant.slug)
-    console.log('📊 New tenant data:', newTenant)
-    console.log('🔢 Customer number in response:', newTenant.customer_number)
+    logger.debug('🎉 Tenant registration completed successfully:', newTenant.slug)
+    logger.debug('📊 New tenant data:', newTenant)
+    logger.debug('🔢 Customer number in response:', newTenant.customer_number)
 
     const response = {
       success: true,
@@ -243,7 +243,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       }
     }
     
-    console.log('📤 Sending response:', JSON.stringify(response, null, 2))
+    logger.debug('📤 Sending response:', JSON.stringify(response, null, 2))
     return response
 
   } catch (error: any) {
@@ -349,7 +349,7 @@ async function uploadTenantLogo(file: File, tenantSlug: string): Promise<string>
   const fileName = `${tenantSlug}-logo-${timestamp}.${fileExtension}`
   const filePath = `tenant-logos/${fileName}`
 
-  console.log('🔄 Uploading tenant logo:', filePath)
+  logger.debug('🔄 Uploading tenant logo:', filePath)
 
   // File zu Buffer konvertieren (für Supabase Storage)
   const arrayBuffer = await file.arrayBuffer()
@@ -425,7 +425,7 @@ async function generateCustomerNumber(supabase: any): Promise<string> {
     }
     
     // Fallback: Manuelle Generierung
-    console.log('⚠️ SQL function not available, using manual generation')
+    logger.debug('⚠️ SQL function not available, using manual generation')
     
     const now = new Date()
     const datePrefix = now.getFullYear().toString().slice(-2) +  // YY
@@ -454,7 +454,7 @@ async function generateCustomerNumber(supabase: any): Promise<string> {
     }
     
     const customerNumber = `SM-${datePrefix}-${nextNumber}`
-    console.log(`🔢 Generated customer number: ${customerNumber}`)
+    logger.debug(`🔢 Generated customer number: ${customerNumber}`)
     
     return customerNumber
     
@@ -497,7 +497,7 @@ async function copyDefaultDataToTenant(tenantId: string): Promise<void> {
         .from('categories')
         .insert(newCategories)
 
-      console.log(`✅ Copied ${newCategories.length} categories to tenant`)
+      logger.debug(`✅ Copied ${newCategories.length} categories to tenant`)
     }
 
     // Weitere Standard-Daten können hier kopiert werden:

@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
-    console.log('🔍 Validating password reset token...')
+    logger.debug('🔍 Validating password reset token...')
 
     // Check if token exists and hasn't expired
     const { data: tokenData, error: tokenError } = await serviceSupabase
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (tokenError || !tokenData) {
-      console.log('❌ Token not found or error:', tokenError)
+      logger.debug('❌ Token not found or error:', tokenError)
       return {
         valid: false,
         message: 'Reset-Token ungültig oder nicht gefunden.'
@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
     const expiresAt = new Date(tokenData.expires_at)
 
     if (now > expiresAt) {
-      console.log('⏰ Token expired at:', expiresAt)
+      logger.debug('⏰ Token expired at:', expiresAt)
       return {
         valid: false,
         message: 'Reset-Token ist abgelaufen. Bitte fordern Sie einen neuen Link an.'
@@ -58,14 +58,14 @@ export default defineEventHandler(async (event) => {
 
     // Check if token has already been used
     if (tokenData.used_at) {
-      console.log('⚠️ Token already used at:', tokenData.used_at)
+      logger.debug('⚠️ Token already used at:', tokenData.used_at)
       return {
         valid: false,
         message: 'Dieser Reset-Link wurde bereits verwendet.'
       }
     }
 
-    console.log('✅ Token is valid and not expired')
+    logger.debug('✅ Token is valid and not expired')
     return {
       valid: true,
       message: 'Token ist gültig'

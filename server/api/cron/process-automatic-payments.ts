@@ -6,7 +6,7 @@ import { Wallee } from 'wallee'
 import crypto from 'crypto'
 
 export default defineEventHandler(async (event) => {
-  console.log('🔄 Processing automatic payments...')
+  logger.debug('🔄 Processing automatic payments...')
   
   // ✅ SICHERHEIT: Vercel Cron oder Admin-Auth
   try {
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     const isVercelCron = !!vercelCronHeader || event.node.req.headers['user-agent'] === 'vercel-cron/1.0'
     
     if (isVercelCron) {
-      console.log('✅ Vercel Cron request detected (trusted)')
+      logger.debug('✅ Vercel Cron request detected (trusted)')
     } else {
       // 2. Für manuelle Aufrufe: Prüfe ob User eingeloggt und Admin ist
       const authHeader = event.node.req.headers['authorization']
@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
         })
       }
       
-      console.log('✅ Admin authentication validated (manual request)')
+      logger.debug('✅ Admin authentication validated (manual request)')
     }
     
     // 2. Vercel Signature Validierung (optional, falls konfiguriert)
@@ -98,12 +98,12 @@ export default defineEventHandler(async (event) => {
         })
       }
       
-      console.log('✅ Vercel signature validated')
+      logger.debug('✅ Vercel signature validated')
     } else {
-      console.log('ℹ️ Vercel signature validation skipped (VERCEL_WEBHOOK_SECRET not set)')
+      logger.debug('ℹ️ Vercel signature validation skipped (VERCEL_WEBHOOK_SECRET not set)')
     }
     
-    console.log('✅ Authentication successful')
+    logger.debug('✅ Authentication successful')
     
   } catch (authError: any) {
     // Re-throw auth errors
@@ -134,7 +134,7 @@ export default defineEventHandler(async (event) => {
         .limit(100)
 
       if (toAuthorize && toAuthorize.length > 0) {
-        console.log(`⏳ Found ${toAuthorize.length} payments to authorize (pre-auth window reached)`)
+        logger.debug(`⏳ Found ${toAuthorize.length} payments to authorize (pre-auth window reached)`)
         for (const p of toAuthorize) {
           try {
             await $fetch('/api/wallee/authorize-payment', {
@@ -146,13 +146,13 @@ export default defineEventHandler(async (event) => {
               .from('payments')
               .update({ scheduled_authorization_date: null, updated_at: new Date().toISOString() })
               .eq('id', p.id)
-            console.log('✅ Authorized payment', p.id)
+            logger.debug('✅ Authorized payment', p.id)
           } catch (e: any) {
             console.warn('⚠️ Failed to authorize payment', p.id, e?.message)
           }
         }
       } else {
-        console.log('ℹ️ No payments to authorize at this time')
+        logger.debug('ℹ️ No payments to authorize at this time')
       }
     } catch (authPhaseErr) {
       console.warn('⚠️ Authorization phase encountered an issue:', authPhaseErr)
@@ -163,7 +163,7 @@ export default defineEventHandler(async (event) => {
     // Hier wird die autorisierte Transaction gecaptured (endgültige Abbuchung)
     
     // DEBUG: Log current time for comparison
-    console.log('🕐 Current time (UTC):', now.toISOString())
+    logger.debug('🕐 Current time (UTC):', now.toISOString())
     
     const { data: duePayments, error: fetchError } = await supabase
       .from('payments')
@@ -216,7 +216,7 @@ export default defineEventHandler(async (event) => {
       .order('scheduled_payment_date', { ascending: true })
       .limit(50) // Verarbeite max 50 pro Durchlauf
     
-    console.log('🔍 Query completed, found:', duePayments?.length || 0, 'payments')
+    logger.debug('🔍 Query completed, found:', duePayments?.length || 0, 'payments')
     
     if (fetchError) {
       console.error('❌ Error fetching due payments:', fetchError)
@@ -224,7 +224,7 @@ export default defineEventHandler(async (event) => {
     }
     
     if (!duePayments || duePayments.length === 0) {
-      console.log('ℹ️ No due payments found')
+      logger.debug('ℹ️ No due payments found')
       return {
         success: true,
         processed: 0,
@@ -232,7 +232,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    console.log(`📋 Found ${duePayments.length} due payment(s) to process`)
+    logger.debug(`📋 Found ${duePayments.length} due payment(s) to process`)
     
     const results = {
       success: 0,
@@ -243,7 +243,7 @@ export default defineEventHandler(async (event) => {
     // ✅ Verarbeite jede fällige Zahlung
     for (const payment of duePayments) {
       try {
-        console.log(`💳 Processing payment ${payment.id}...`)
+        logger.debug(`💳 Processing payment ${payment.id}...`)
         
         const appointment = payment.appointments as any
         
@@ -264,7 +264,7 @@ export default defineEventHandler(async (event) => {
               // Termin vorbei + nie bestätigt → nicht mehr verarbeiten
               await markPaymentAsFailed(payment.id, `Termin nicht bestätigt vor Ablauf: ${reason}`)
               results.failed++
-              console.log(`❌ Payment ${payment.id} marked as failed: Termin abgelaufen ohne Bestätigung`)
+              logger.debug(`❌ Payment ${payment.id} marked as failed: Termin abgelaufen ohne Bestätigung`)
             }
           }
           
@@ -281,10 +281,10 @@ export default defineEventHandler(async (event) => {
             // Termin mehr als 48h vorbei → nicht mehr automatisch verarbeiten
             await markPaymentAsFailed(payment.id, `Termin bereits ${Math.round(hoursAfterAppointment)}h vorbei - automatische Abbuchung nicht mehr möglich`)
             results.failed++
-            console.log(`❌ Payment ${payment.id} marked as failed: Termin zu lange vorbei (${Math.round(hoursAfterAppointment)}h)`)
+            logger.debug(`❌ Payment ${payment.id} marked as failed: Termin zu lange vorbei (${Math.round(hoursAfterAppointment)}h)`)
             continue
           } else if (hoursAfterAppointment > 0) {
-            console.log(`⚠️ Payment ${payment.id}: Termin bereits ${Math.round(hoursAfterAppointment)}h vorbei, verarbeite trotzdem (innerhalb 48h Frist)`)
+            logger.debug(`⚠️ Payment ${payment.id}: Termin bereits ${Math.round(hoursAfterAppointment)}h vorbei, verarbeite trotzdem (innerhalb 48h Frist)`)
           }
         }
         
@@ -304,7 +304,7 @@ export default defineEventHandler(async (event) => {
           continue
         }
         
-        console.log(`💰 Payment ${payment.id} is authorized, capturing...`)
+        logger.debug(`💰 Payment ${payment.id} is authorized, capturing...`)
         
         try {
           const captureResult = await $fetch('/api/wallee/capture-payment', {
@@ -316,7 +316,7 @@ export default defineEventHandler(async (event) => {
           }) as { success?: boolean; paymentStatus?: string; error?: string }
 
           if (captureResult.success) {
-            console.log(`✅ Payment ${payment.id} captured successfully`)
+            logger.debug(`✅ Payment ${payment.id} captured successfully`)
             results.success++
           } else {
             console.error(`❌ Failed to capture payment ${payment.id}:`, captureResult.error)
@@ -345,12 +345,12 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    console.log(`✅ Processing complete: ${results.success} success, ${results.failed} failed`)
+    logger.debug(`✅ Processing complete: ${results.success} success, ${results.failed} failed`)
     
     // ============================================
     // PHASE 3: Auto-Deletion of Unconfirmed Appointments
     // ============================================
-    console.log('🗑️ Checking for appointments to auto-delete...')
+    logger.debug('🗑️ Checking for appointments to auto-delete...')
     
     // Get all tenants with auto-delete enabled
     const { data: autoDeleteSettings, error: autoDeleteError } = await supabase
@@ -380,7 +380,7 @@ export default defineEventHandler(async (event) => {
           const deleteHoursAfterAuth = reminderSettings.auto_delete_hours_after_auth_deadline || 72
           const notifyStaff = reminderSettings.notify_staff_on_auto_delete !== false
           
-          console.log(`🗑️ Tenant ${setting.tenant_id}: Auto-delete enabled (${deleteHoursAfterAuth}h after auth deadline)`)
+          logger.debug(`🗑️ Tenant ${setting.tenant_id}: Auto-delete enabled (${deleteHoursAfterAuth}h after auth deadline)`)
           
           // Find appointments to delete
           // scheduled_authorization_date + deleteHoursAfterAuth < now AND status = pending_confirmation
@@ -422,11 +422,11 @@ export default defineEventHandler(async (event) => {
           }
           
           if (!appointmentsToDelete || appointmentsToDelete.length === 0) {
-            console.log(`ℹ️ No appointments to check for deletion in tenant ${setting.tenant_id}`)
+            logger.debug(`ℹ️ No appointments to check for deletion in tenant ${setting.tenant_id}`)
             continue
           }
           
-          console.log(`📋 Checking ${appointmentsToDelete.length} pending appointments for tenant ${setting.tenant_id}`)
+          logger.debug(`📋 Checking ${appointmentsToDelete.length} pending appointments for tenant ${setting.tenant_id}`)
           
           for (const appointment of appointmentsToDelete) {
             try {
@@ -442,7 +442,7 @@ export default defineEventHandler(async (event) => {
               const deletionDeadline = new Date(authDate.getTime() + (deleteHoursAfterAuth * 60 * 60 * 1000))
               
               if (now >= deletionDeadline) {
-                console.log(`🗑️ Deleting appointment ${appointment.id} (deadline passed: ${deletionDeadline.toISOString()})`)
+                logger.debug(`🗑️ Deleting appointment ${appointment.id} (deadline passed: ${deletionDeadline.toISOString()})`)
                 
                 // Cancel appointment
                 const { error: cancelError } = await supabase
@@ -506,7 +506,7 @@ export default defineEventHandler(async (event) => {
                         type: 'customer'
                       }
                     })
-                    console.log(`✅ Customer notification sent for appointment ${appointment.id}`)
+                    logger.debug(`✅ Customer notification sent for appointment ${appointment.id}`)
                   } catch (notifError) {
                     console.error(`⚠️ Error sending customer notification:`, notifError)
                   }
@@ -524,7 +524,7 @@ export default defineEventHandler(async (event) => {
                         type: 'staff'
                       }
                     })
-                    console.log(`✅ Staff notification sent for appointment ${appointment.id}`)
+                    logger.debug(`✅ Staff notification sent for appointment ${appointment.id}`)
                   } catch (notifError) {
                     console.error(`⚠️ Error sending staff notification:`, notifError)
                   }
@@ -551,7 +551,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    console.log(`✅ Auto-deletion complete: ${deletedCount} appointments deleted`)
+    logger.debug(`✅ Auto-deletion complete: ${deletedCount} appointments deleted`)
     
     return {
       success: true,

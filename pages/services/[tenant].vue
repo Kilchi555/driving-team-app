@@ -145,9 +145,9 @@ const serviceHeader = computed(() => {
 
 // Methods
 const selectService = (serviceType: string) => {
-  console.log('🎯 Service selected:', serviceType)
+  logger.debug('🎯 Service selected:', serviceType)
   const url = `/register/${tenantSlug.value}?service=${serviceType}`
-  console.log('🔗 Navigating to:', url)
+  logger.debug('🔗 Navigating to:', url)
   navigateTo(url)
 }
 
@@ -170,15 +170,15 @@ const goBack = () => {
 
 // Initialize
 onMounted(async () => {
-  console.log('🚀 Service page mounted!')
-  console.log('📍 Current route:', route.path)
-  console.log('🏷️ Tenant slug:', tenantSlug.value)
+  logger.debug('🚀 Service page mounted!')
+  logger.debug('📍 Current route:', route.path)
+  logger.debug('🏷️ Tenant slug:', tenantSlug.value)
   
   isLoading.value = true
   
   // Load available services for the tenant identified by slug
   if (tenantSlug.value) {
-    console.log('🏢 Loading services for tenant slug:', tenantSlug.value)
+    logger.debug('🏢 Loading services for tenant slug:', tenantSlug.value)
     try {
       // First, get the tenant ID from the slug
       const { data: tenantData, error: tenantError } = await supabase
@@ -193,7 +193,7 @@ onMounted(async () => {
         return
       }
       
-      console.log('✅ Tenant found:', tenantData)
+      logger.debug('✅ Tenant found:', tenantData)
       
       // Load pricing_rules for this tenant to determine available services
       const { data: pricingRules, error: pricingError } = await supabase
@@ -208,11 +208,11 @@ onMounted(async () => {
         return
       }
       
-      console.log('📊 Pricing rules found:', pricingRules)
+      logger.debug('📊 Pricing rules found:', pricingRules)
       
       // Extract unique service types from pricing rules
       const uniqueServiceTypes = [...new Set(pricingRules?.map(r => r.rule_type) || [])]
-      console.log('🔍 Unique service types:', uniqueServiceTypes)
+      logger.debug('🔍 Unique service types:', uniqueServiceTypes)
       
       // Map rule_types to service identifiers
       const services: string[] = []
@@ -226,13 +226,13 @@ onMounted(async () => {
         services.push('beratung')
       }
       
-      console.log('✅ Available services:', services)
+      logger.debug('✅ Available services:', services)
       
       // Auto-skip if only one service is available
       if (services.length === 1) {
-        console.log('🎯 Only one service available, auto-redirecting to registration...')
+        logger.debug('🎯 Only one service available, auto-redirecting to registration...')
         const url = `/register/${tenantSlug.value}?service=${services[0]}`
-        console.log('🔗 Navigating to:', url)
+        logger.debug('🔗 Navigating to:', url)
         navigateTo(url)
         return
       }
@@ -251,7 +251,7 @@ onMounted(async () => {
     isLoading.value = false
   }
 
-  console.log('✅ Service selection page ready for:', tenantSlug.value)
+  logger.debug('✅ Service selection page ready for:', tenantSlug.value)
 })
 </script>
 

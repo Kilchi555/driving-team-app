@@ -701,7 +701,7 @@ const loadUserDetails = async () => {
     }
     
     userDetails.value = userDetailsWithTenant
-    console.log('✅ User details loaded:', data)
+    logger.debug('✅ User details loaded:', data)
 
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
@@ -740,7 +740,7 @@ const loadAppointmentStats = async () => {
     })
 
     appointmentStats.value = stats
-    console.log('✅ Appointment stats loaded:', stats)
+    logger.debug('✅ Appointment stats loaded:', stats)
 
   } catch (err: unknown) {
     console.error('❌ Error loading appointment stats:', err)
@@ -759,7 +759,7 @@ const loadSystemActivities = async () => {
     ]
 
     systemActivities.value = activities
-    console.log('✅ System activities loaded:', activities)
+    logger.debug('✅ System activities loaded:', activities)
 
   } catch (err: unknown) {
     console.error('❌ Error loading system activities:', err)
@@ -826,7 +826,7 @@ const saveChanges = async () => {
     await loadUserDetails()
     await loadCategories()
     
-    console.log('✅ User updated successfully')
+    logger.debug('✅ User updated successfully')
     
     // Auto-hide success message after 3 seconds
     setTimeout(() => {
@@ -867,7 +867,7 @@ const toggleUserStatus = async () => {
     if (error) throw error
     
     userDetails.value.is_active = newStatus
-    console.log(`✅ User ${action} successful`)
+    logger.debug(`✅ User ${action} successful`)
     
   } catch (err: unknown) {
     console.error(`❌ Error ${action} user:`, err)
@@ -955,7 +955,7 @@ const loadCategories = async () => {
         : [userDetails.value.category]
     }
     
-    console.log('✅ Categories loaded:', data)
+    logger.debug('✅ Categories loaded:', data)
   } catch (err) {
     console.error('❌ Error loading categories:', err)
   }

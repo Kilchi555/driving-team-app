@@ -50,7 +50,7 @@ const validateProductSelection = () => {
 ```typescript
 // Verbesserte Fehlerbehandlung beim Laden der Produkte
 if (availableProducts.value.length === 0) {
-  console.log('⚠️ No products in database, showing fallback products')
+  logger.debug('⚠️ No products in database, showing fallback products')
   // Fallback-Produkte anzeigen
 }
 ```

@@ -26,10 +26,10 @@ interface WalleeTransactionState {
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🔔 Wallee Webhook received')
+    logger.debug('🔔 Wallee Webhook received')
     
     const body = await readBody(event) as WalleeWebhookPayload
-    console.log('📨 Webhook payload:', JSON.stringify(body, null, 2))
+    logger.debug('📨 Webhook payload:', JSON.stringify(body, null, 2))
     
     // Validate webhook
     if (!body.entityId || !body.state) {
@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
     const transactionId = body.entityId.toString()
     const walleeState = body.state
     
-    console.log('🔍 Processing transaction:', {
+    logger.debug('🔍 Processing transaction:', {
       transactionId,
       walleeState,
       spaceId: body.spaceId
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
     
     const paymentStatus = statusMapping[walleeState] || 'pending'
     
-    console.log(`🔄 Mapping Wallee state "${walleeState}" to payment status "${paymentStatus}"`)
+    logger.debug(`🔄 Mapping Wallee state "${walleeState}" to payment status "${paymentStatus}"`)
     
     // ✅ WICHTIG: FULFILL ist der final state - glaube dem Webhook!
     // Wenn Wallee FULFILL sagt, ist die Transaktion fertig und Geld wurde abgebucht
@@ -78,12 +78,12 @@ export default defineEventHandler(async (event) => {
     
     // ✅ If webhook says FULFILL, trust it! Don't double-check with API
     if (walleeState === 'FULFILL') {
-      console.log('✅ Webhook reports FULFILL - payment is completed')
+      logger.debug('✅ Webhook reports FULFILL - payment is completed')
       actualPaymentStatus = 'completed'
     } else {
       // For other states, try to fetch actual state from API for verification
       try {
-        console.log('🔍 Fetching actual transaction state from Wallee API for non-FULFILL state...')
+        logger.debug('🔍 Fetching actual transaction state from Wallee API for non-FULFILL state...')
         
         // Get Wallee settings for the first payment we find (or use default)
         const { data: firstPaymentForSettings } = await supabase
@@ -132,7 +132,7 @@ export default defineEventHandler(async (event) => {
         const actualWalleeState = (walleeTransaction as any).state || walleeState
         actualPaymentStatus = statusMapping[actualWalleeState] || 'pending'
         
-        console.log('✅ Actual payment status from API:', {
+        logger.debug('✅ Actual payment status from API:', {
           webhookState: walleeState,
           actualApiState: actualWalleeState,
           webhookPaymentStatus: paymentStatus,
@@ -145,7 +145,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    console.log(`📋 FINAL STATE BEFORE PAYMENT LOOKUP:`, {
+    logger.debug(`📋 FINAL STATE BEFORE PAYMENT LOOKUP:`, {
       webhookState: walleeState,
       webhookPaymentStatus: paymentStatus,
       actualPaymentStatus: actualPaymentStatus,
@@ -154,7 +154,7 @@ export default defineEventHandler(async (event) => {
     })
     
     // Find ALL payments by Wallee transaction ID (there might be multiple)
-    console.log(`🔍 Searching for payment with wallee_transaction_id: "${transactionId}" (type: ${typeof transactionId})`)
+    logger.debug(`🔍 Searching for payment with wallee_transaction_id: "${transactionId}" (type: ${typeof transactionId})`)
     
     let { data: payments, error: findError } = await supabase
       .from('payments')
@@ -175,7 +175,7 @@ export default defineEventHandler(async (event) => {
       `)
       .eq('wallee_transaction_id', transactionId)
     
-    console.log(`🔍 Query result:`, { 
+    logger.debug(`🔍 Query result:`, { 
       found: payments?.length || 0, 
       error: findError?.message,
       payments: payments?.map(p => ({ id: p.id, wallee_transaction_id: p.wallee_transaction_id }))
@@ -183,7 +183,7 @@ export default defineEventHandler(async (event) => {
     
     if (findError || !payments || payments.length === 0) {
       // ✅ Try to find appointment by transaction metadata (from confirmation page)
-      console.log('🔍 Payment not found, checking transaction metadata for appointment...')
+      logger.debug('🔍 Payment not found, checking transaction metadata for appointment...')
       
       try {
         // Fetch transaction details from Wallee to get merchantReference
@@ -210,7 +210,7 @@ export default defineEventHandler(async (event) => {
         const actualWalleeState = (walleeTransaction as any).state || walleeState
         const actualPaymentStatus = statusMapping[actualWalleeState] || 'pending'
         
-        console.log('📋 Wallee transaction details:', {
+        logger.debug('📋 Wallee transaction details:', {
           id: walleeTransaction.id,
           webhookState: walleeState,
           actualApiState: actualWalleeState,
@@ -227,7 +227,7 @@ export default defineEventHandler(async (event) => {
         
         if (appointmentIdMatch) {
           const appointmentId = appointmentIdMatch[1]
-          console.log('✅ Found appointment ID from merchantReference:', appointmentId)
+          logger.debug('✅ Found appointment ID from merchantReference:', appointmentId)
           
           // Load appointment
           const { data: appointment, error: aptError } = await supabase
@@ -265,7 +265,7 @@ export default defineEventHandler(async (event) => {
               .single()
             
             if (!createError && newPayment) {
-              console.log('✅ Created payment from transaction metadata:', newPayment.id)
+              logger.debug('✅ Created payment from transaction metadata:', newPayment.id)
               
               // Confirm appointment if payment completed
               if (paymentStatus === 'completed') {
@@ -277,7 +277,7 @@ export default defineEventHandler(async (event) => {
                   })
                   .eq('id', appointmentId)
                 
-                console.log('✅ Appointment confirmed via webhook')
+                logger.debug('✅ Appointment confirmed via webhook')
               }
               
               // Use the newly created payment for further processing
@@ -295,7 +295,7 @@ export default defineEventHandler(async (event) => {
       
       // If still no payment, try to find anonymous sale
       if (!payments || payments.length === 0) {
-        console.log('🔍 Payment still not found, checking for anonymous sale...')
+        logger.debug('🔍 Payment still not found, checking for anonymous sale...')
         
         const { data: anonymousSale, error: saleError } = await supabase
           .from('product_sales')
@@ -318,7 +318,7 @@ export default defineEventHandler(async (event) => {
         }
         
         // Process anonymous sale
-        console.log('✅ Anonymous sale found:', {
+        logger.debug('✅ Anonymous sale found:', {
           saleId: anonymousSale.id,
           currentStatus: anonymousSale.status,
           newStatus: paymentStatus
@@ -326,7 +326,7 @@ export default defineEventHandler(async (event) => {
         
         // Skip if status hasn't changed
         if (anonymousSale.status === paymentStatus) {
-          console.log('ℹ️ Sale status unchanged, skipping update')
+          logger.debug('ℹ️ Sale status unchanged, skipping update')
           return { success: true, message: 'Status unchanged' }
         }
         
@@ -354,7 +354,7 @@ export default defineEventHandler(async (event) => {
           })
         }
         
-        console.log('✅ Anonymous sale status updated successfully')
+        logger.debug('✅ Anonymous sale status updated successfully')
         
         // Send confirmation email if payment completed
         if (paymentStatus === 'completed') {
@@ -375,7 +375,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    console.log('✅ Payments found:', {
+    logger.debug('✅ Payments found:', {
       count: payments.length,
       paymentIds: payments.map(p => p.id),
       currentStatus: payments[0]?.payment_status,
@@ -400,7 +400,7 @@ export default defineEventHandler(async (event) => {
       const shouldUpdate = newStatusPriority >= currentPriority
       
       if (!shouldUpdate) {
-        console.log(`⏭️ Ignoring status downgrade: ${currentStatus} (${currentPriority}) -> ${actualPaymentStatus} (${newStatusPriority})`)
+        logger.debug(`⏭️ Ignoring status downgrade: ${currentStatus} (${currentPriority}) -> ${actualPaymentStatus} (${newStatusPriority})`)
       }
       return shouldUpdate
     }
@@ -409,7 +409,7 @@ export default defineEventHandler(async (event) => {
     const paymentsToUpdate = payments.filter(p => shouldUpdatePayment(p.payment_status))
     
     if (paymentsToUpdate.length === 0) {
-      console.log('✅ All payments have better or equal status, skipping update')
+      logger.debug('✅ All payments have better or equal status, skipping update')
       return {
         success: true,
         message: 'Payments status not downgraded',
@@ -418,7 +418,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    console.log(`📝 Will update ${paymentsToUpdate.length}/${payments.length} payments`)
+    logger.debug(`📝 Will update ${paymentsToUpdate.length}/${payments.length} payments`)
     
     // Update ALL payments with this transaction ID
     const updateData: any = {
@@ -448,11 +448,11 @@ export default defineEventHandler(async (event) => {
         })
       }
       
-      console.log(`✅ ${paymentsToUpdate.length} payment(s) updated to status: ${actualPaymentStatus}`)
+      logger.debug(`✅ ${paymentsToUpdate.length} payment(s) updated to status: ${actualPaymentStatus}`)
     }
     
-    console.log(`📋 CHECKPOINT: After payment update - actualPaymentStatus is: "${actualPaymentStatus}"`)
-    console.log(`📋 IMPORTANT: Now proceeding to voucher and credit product processing...`)
+    logger.debug(`📋 CHECKPOINT: After payment update - actualPaymentStatus is: "${actualPaymentStatus}"`)
+    logger.debug(`📋 IMPORTANT: Now proceeding to voucher and credit product processing...`)
     
     // Update appointments ONLY if payments were actually updated AND (completed or authorized)
     // ✅ NUR 'completed' oder 'authorized' = Zahlung wurde tatsächlich verarbeitet
@@ -474,7 +474,7 @@ export default defineEventHandler(async (event) => {
         if (appointmentError) {
           console.error('❌ Error updating appointments:', appointmentError)
         } else {
-          console.log(`✅ ${appointmentIds.length} appointment(s) updated to status: ${paymentStatus === 'completed' ? 'confirmed' : 'scheduled'}`)
+          logger.debug(`✅ ${appointmentIds.length} appointment(s) updated to status: ${paymentStatus === 'completed' ? 'confirmed' : 'scheduled'}`)
         }
       }
     }
@@ -494,14 +494,14 @@ export default defineEventHandler(async (event) => {
               transactionId: transactionId
             }
           })
-          console.log('✅ Attempted to sync payment methods for transaction:', transactionId, syncResult)
+          logger.debug('✅ Attempted to sync payment methods for transaction:', transactionId, syncResult)
           
           // ✅ Prüfe ob dies eine Tokenization-only Transaktion war
           // Wenn ja, storniere die Transaktion automatisch
           const syncResultTyped = syncResult as { success?: boolean; error?: string }
           if (syncResultTyped.success && firstPayment.metadata?.isTokenizationOnly === 'true') {
             try {
-              console.log('🔙 Auto-refunding tokenization-only transaction:', transactionId)
+              logger.debug('🔙 Auto-refunding tokenization-only transaction:', transactionId)
               // TODO: Implementiere automatische Stornierung via Wallee API
               // Für jetzt: Markiere Payment als refunded in unserer DB
               await supabase
@@ -517,7 +517,7 @@ export default defineEventHandler(async (event) => {
                 })
                 .eq('id', firstPayment.id)
               
-              console.log('✅ Tokenization transaction marked as auto-refunded in DB')
+              logger.debug('✅ Tokenization transaction marked as auto-refunded in DB')
               // TODO: Rufe Wallee Refund API auf, um die Transaktion tatsächlich zu stornieren
             } catch (refundErr: any) {
               console.warn('⚠️ Could not auto-refund tokenization transaction (non-critical):', refundErr.message)
@@ -532,22 +532,22 @@ export default defineEventHandler(async (event) => {
 
     // ✅ VOUCHER & CREDIT PRODUCT PROCESSING
     // Create vouchers if payment completed and products are vouchers
-    console.log(`🔍 [CRITICAL DEBUG] About to check voucher processing:`)
-    console.log(`   - actualPaymentStatus: "${actualPaymentStatus}" (typeof: ${typeof actualPaymentStatus})`)
-    console.log(`   - Is string 'completed'?: ${actualPaymentStatus === 'completed'}`)
-    console.log(`   - Actual length: ${actualPaymentStatus?.length}`)
-    console.log(`   - Charcode at 0: ${actualPaymentStatus?.charCodeAt(0)}`)
-    console.log(`   - Trimmed: "${actualPaymentStatus?.trim()}"`)
-    console.log(`   - Trimmed === 'completed': ${actualPaymentStatus?.trim() === 'completed'}`)
+    logger.debug(`🔍 [CRITICAL DEBUG] About to check voucher processing:`)
+    logger.debug(`   - actualPaymentStatus: "${actualPaymentStatus}" (typeof: ${typeof actualPaymentStatus})`)
+    logger.debug(`   - Is string 'completed'?: ${actualPaymentStatus === 'completed'}`)
+    logger.debug(`   - Actual length: ${actualPaymentStatus?.length}`)
+    logger.debug(`   - Charcode at 0: ${actualPaymentStatus?.charCodeAt(0)}`)
+    logger.debug(`   - Trimmed: "${actualPaymentStatus?.trim()}"`)
+    logger.debug(`   - Trimmed === 'completed': ${actualPaymentStatus?.trim() === 'completed'}`)
     
     if (actualPaymentStatus === 'completed') {
-      console.log(`✅ [Voucher Processing] Payment status is 'completed', processing vouchers...`)
+      logger.debug(`✅ [Voucher Processing] Payment status is 'completed', processing vouchers...`)
       for (const payment of payments) {
-        console.log(`🎁 [createVouchersAfterPayment] Called for payment: ${payment.id}`)
-        console.log(`   - Has metadata: ${!!payment.metadata}`)
+        logger.debug(`🎁 [createVouchersAfterPayment] Called for payment: ${payment.id}`)
+        logger.debug(`   - Has metadata: ${!!payment.metadata}`)
         if (payment.metadata) {
-          console.log(`   - Metadata type: ${typeof payment.metadata}`)
-          console.log(`   - Metadata: ${JSON.stringify(payment.metadata).substring(0, 200)}...`)
+          logger.debug(`   - Metadata type: ${typeof payment.metadata}`)
+          logger.debug(`   - Metadata: ${JSON.stringify(payment.metadata).substring(0, 200)}...`)
         }
         
         try {
@@ -558,18 +558,18 @@ export default defineEventHandler(async (event) => {
         
         // ✅ NEW: Auto-credit for credit products (5er/10er Abos)
         try {
-          console.log('🎁 Processing credit product purchase for payment:', payment.id)
+          logger.debug('🎁 Processing credit product purchase for payment:', payment.id)
           await processCreditProductPurchase(payment)
-          console.log('✅ Credit product purchase processed successfully')
+          logger.debug('✅ Credit product purchase processed successfully')
         } catch (creditErr) {
           console.error('❌ ERROR in processCreditProductPurchase:', creditErr)
         }
       }
     } else {
-      console.log(`❌ [Voucher Processing] SKIPPED - payment status is NOT 'completed'!`)
-      console.log(`   - actualPaymentStatus: "${actualPaymentStatus}"`)
-      console.log(`   - Type: ${typeof actualPaymentStatus}`)
-      console.log(`   - Length: ${actualPaymentStatus?.length}`)
+      logger.debug(`❌ [Voucher Processing] SKIPPED - payment status is NOT 'completed'!`)
+      logger.debug(`   - actualPaymentStatus: "${actualPaymentStatus}"`)
+      logger.debug(`   - Type: ${typeof actualPaymentStatus}`)
+      logger.debug(`   - Length: ${actualPaymentStatus?.length}`)
     }
 
     // Send notification email if payment completed (use first payment)
@@ -598,7 +598,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    console.log('🎉 Webhook processed successfully')
+    logger.debug('🎉 Webhook processed successfully')
     
     return {
       success: true,
@@ -624,29 +624,29 @@ export default defineEventHandler(async (event) => {
 
 // Helper function to send payment confirmation email
 async function sendPaymentConfirmationEmail(data: any) {
-  console.log('📧 Sending payment confirmation email for payment:', data.payment.id)
+  logger.debug('📧 Sending payment confirmation email for payment:', data.payment.id)
   // TODO: Implement email service
   // Could use Supabase Edge Functions, SendGrid, etc.
 }
 
 // Helper function to send payment failed email
 async function sendPaymentFailedEmail(data: any) {
-  console.log('📧 Sending payment failed email for payment:', data.payment.id)
+  logger.debug('📧 Sending payment failed email for payment:', data.payment.id)
   // TODO: Implement email service
 }
 
 // Helper function to send anonymous sale confirmation email
 async function sendAnonymousSaleConfirmationEmail(data: any) {
-  console.log('📧 Sending anonymous sale confirmation email for sale:', data.saleId)
+  logger.debug('📧 Sending anonymous sale confirmation email for sale:', data.saleId)
   // TODO: Implement email service
 }
 
 // ✅ NEW: Helper function to process credit product purchases
 async function processCreditProductPurchase(payment: any) {
-  console.log('🎁 Processing credit product purchase for payment:', payment.id)
+  logger.debug('🎁 Processing credit product purchase for payment:', payment.id)
   
   if (!payment.metadata?.products || !Array.isArray(payment.metadata.products)) {
-    console.log('ℹ️ No products in metadata, skipping credit product processing')
+    logger.debug('ℹ️ No products in metadata, skipping credit product processing')
     return
   }
 
@@ -662,7 +662,7 @@ async function processCreditProductPurchase(payment: any) {
         .single()
       
       if (productError || !productData?.is_credit_product) {
-        console.log('ℹ️ Product is not a credit product, skipping:', product.id)
+        logger.debug('ℹ️ Product is not a credit product, skipping:', product.id)
         continue
       }
 
@@ -711,7 +711,7 @@ async function processCreditProductPurchase(payment: any) {
       if (txError) {
         console.error('❌ Error creating credit transaction:', txError)
       } else {
-        console.log('✅ Credit added to student:', {
+        logger.debug('✅ Credit added to student:', {
           userId: payment.user_id,
           amountRappen: productData.credit_amount_rappen,
           newBalance
@@ -725,28 +725,28 @@ async function processCreditProductPurchase(payment: any) {
 
 // Helper function to create vouchers after successful payment
 async function createVouchersAfterPayment(paymentId: string, metadata: any) {
-  console.log('🎁 Creating vouchers for payment:', paymentId)
-  console.log('📦 Metadata:', metadata)
+  logger.debug('🎁 Creating vouchers for payment:', paymentId)
+  logger.debug('📦 Metadata:', metadata)
   
   if (!metadata) {
-    console.log('ℹ️ Metadata is null/undefined, skipping voucher creation')
+    logger.debug('ℹ️ Metadata is null/undefined, skipping voucher creation')
     return
   }
   
   if (!metadata?.products) {
-    console.log('ℹ️ No products in metadata, skipping voucher creation')
+    logger.debug('ℹ️ No products in metadata, skipping voucher creation')
     return
   }
 
-  console.log('🎁 Found products in metadata:', metadata.products.length)
+  logger.debug('🎁 Found products in metadata:', metadata.products.length)
   const voucherProducts = metadata.products.filter((p: any) => {
-    console.log(`  - Checking product: ${p.id} (is_voucher=${p.is_voucher})`)
+    logger.debug(`  - Checking product: ${p.id} (is_voucher=${p.is_voucher})`)
     return p.is_voucher
   })
-  console.log(`🎁 Found ${voucherProducts.length} voucher products`)
+  logger.debug(`🎁 Found ${voucherProducts.length} voucher products`)
 
   if (voucherProducts.length === 0) {
-    console.log('ℹ️ No voucher products found, skipping')
+    logger.debug('ℹ️ No voucher products found, skipping')
     return
   }
 
@@ -786,7 +786,7 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
         tenant_id: payment.tenant_id
       }
 
-      console.log('💾 Creating voucher with data:', voucherData)
+      logger.debug('💾 Creating voucher with data:', voucherData)
 
       const { data: voucher, error: voucherError } = await supabase
         .from('vouchers')
@@ -802,7 +802,7 @@ async function createVouchersAfterPayment(paymentId: string, metadata: any) {
           console.warn('⚠️ Vouchers table not found - migration may not have run yet. Storing voucher info in payment metadata instead.')
         }
       } else {
-        console.log('✅ Voucher created:', { code: voucher.code, id: voucher.id })
+        logger.debug('✅ Voucher created:', { code: voucher.code, id: voucher.id })
       }
     } catch (err) {
       console.error('❌ Error processing voucher:', err)

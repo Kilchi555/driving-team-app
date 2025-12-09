@@ -261,7 +261,7 @@ const testScenario1 = async () => {
   result.value = null
   
   try {
-    console.log('🚀 Testing Scenario 1: Appointment + Products + Discounts')
+    logger.debug('🚀 Testing Scenario 1: Appointment + Products + Discounts')
     
     // Mock-Daten für den Test
     const appointmentData = {
@@ -282,8 +282,8 @@ const testScenario1 = async () => {
     const products = await loadProducts()
     const discounts = await loadDiscounts()
     
-    console.log('📦 Loaded products:', products.length)
-    console.log('🎫 Loaded discounts:', discounts.length)
+    logger.debug('📦 Loaded products:', products.length)
+    logger.debug('🎫 Loaded discounts:', discounts.length)
     
     // Workflow ausführen
     const resultData = await createAppointmentWithPayment(
@@ -299,7 +299,7 @@ const testScenario1 = async () => {
         appointment: resultData.appointment,
         payment: resultData.payment
       }
-      console.log('✅ Scenario 1 completed successfully:', resultData)
+      logger.debug('✅ Scenario 1 completed successfully:', resultData)
     } else {
       throw new Error('Failed to create appointment with payment')
     }
@@ -324,7 +324,7 @@ const testScenario2 = async () => {
   result.value = null
   
   try {
-    console.log('🛍️ Testing Scenario 2: Standalone Products')
+    logger.debug('🛍️ Testing Scenario 2: Standalone Products')
     
     // Mock-Produkte laden
     const products = await loadProducts()
@@ -334,8 +334,8 @@ const testScenario2 = async () => {
       throw new Error('No products available for testing')
     }
     
-    console.log('📦 Loaded products:', products.length)
-    console.log('🎫 Loaded discounts:', discounts.length)
+    logger.debug('📦 Loaded products:', products.length)
+    logger.debug('🎫 Loaded discounts:', discounts.length)
     
     // Workflow ausführen
     const payment = await createStandaloneProductPayment(
@@ -352,7 +352,7 @@ const testScenario2 = async () => {
         success: true,
         payment: payment
       }
-      console.log('✅ Scenario 2 completed successfully:', payment)
+      logger.debug('✅ Scenario 2 completed successfully:', payment)
     } else {
       throw new Error('Failed to create standalone product payment')
     }

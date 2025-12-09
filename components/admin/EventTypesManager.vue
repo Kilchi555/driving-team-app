@@ -609,7 +609,7 @@ const load = async () => {
       .single()
     
     tenantBusinessType.value = tenant?.business_type || null
-    console.log('🏢 Tenant business type:', tenantBusinessType.value)
+    logger.debug('🏢 Tenant business type:', tenantBusinessType.value)
 
     const { data, error } = await supabase
       .from('event_types')
@@ -768,7 +768,7 @@ const setDefaultEventType = async (et: EventTypeRow) => {
       e.is_default = e.id === et.id
     })
 
-    console.log('✅ Default event type set:', et.name)
+    logger.debug('✅ Default event type set:', et.name)
   } catch (e) {
     console.error('Failed to set default event type', e)
     await load()

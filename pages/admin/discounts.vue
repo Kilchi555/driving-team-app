@@ -748,9 +748,9 @@ const filteredDiscounts = computed(() => {
 // Methods
 const loadAllDiscounts = async () => {
   try {
-    console.log('🔄 Loading all discounts...')
+    logger.debug('🔄 Loading all discounts...')
     await loadDiscounts()
-    console.log('✅ Discounts loaded:', discounts.value.length)
+    logger.debug('✅ Discounts loaded:', discounts.value.length)
   } catch (error) {
     console.error('❌ Error loading discounts:', error)
   }
@@ -850,7 +850,7 @@ const loadVouchers = async () => {
     if (error) throw error
     
     vouchers.value = data || []
-    console.log('✅ Loaded vouchers:', vouchers.value.length)
+    logger.debug('✅ Loaded vouchers:', vouchers.value.length)
   } catch (error) {
     console.error('❌ Error loading vouchers:', error)
   } finally {
@@ -1005,7 +1005,7 @@ const authStore = useAuthStore()
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🔍 Discounts page mounted, checking auth...')
+  logger.debug('🔍 Discounts page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -1014,7 +1014,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -1023,17 +1023,17 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading discounts...')
+  logger.debug('✅ Auth check passed, loading discounts...')
   
   // Original onMounted logic
   loadAllDiscounts()

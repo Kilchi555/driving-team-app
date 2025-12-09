@@ -23,7 +23,7 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
       throw new Error('Voucher ID is required')
     }
 
-    console.log('📧 Sending email for voucher:', voucherId)
+    logger.debug('📧 Sending email for voucher:', voucherId)
 
     // Gutschein-Daten aus der Datenbank abrufen
     const supabase = getSupabase()
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
 
     // TODO: Hier würde die echte E-Mail-Versendung implementiert werden
     // Für jetzt loggen wir nur die E-Mail-Daten
-    console.log('📧 Would send email:', {
+    logger.debug('📧 Would send email:', {
       to: emailTo,
       subject: emailContent.subject,
       voucherCode: voucher.code,
@@ -84,7 +84,7 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
     //   text: emailContent.text
     // })
 
-    console.log('✅ Voucher email prepared successfully for:', voucher.code)
+    logger.debug('✅ Voucher email prepared successfully for:', voucher.code)
 
     return {
       success: true,

@@ -2,11 +2,11 @@
 // Accounto API Integration für Rechnungserstellung
 
 export default defineEventHandler(async (event) => {
-  console.log('🏦 Accounto Invoice Creation...')
+  logger.debug('🏦 Accounto Invoice Creation...')
   
   try {
     const body = await readBody(event)
-    console.log('📨 Received invoice data:', body)
+    logger.debug('📨 Received invoice data:', body)
     
     const {
       appointments,
@@ -37,14 +37,14 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    console.log('🔧 Accounto Config:', { 
+    logger.debug('🔧 Accounto Config:', { 
       baseUrl: accountoBaseUrl, 
       apiKeyPreview: accountoApiKey.substring(0, 20) + '...',
       apiKeyLength: accountoApiKey.length
     })
 
     // 🔍 Finde den funktionierenden API-Endpunkt basierend auf der Accounto-Dokumentation
-    console.log('🔄 Discovering working Accounto API endpoints based on documentation...')
+    logger.debug('🔄 Discovering working Accounto API endpoints based on documentation...')
     
     const testEndpoints = [
       // Standard-Endpunkte
@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
 
     for (const endpoint of testEndpoints) {
       try {
-        console.log(`🔍 Testing endpoint: ${endpoint}`)
+        logger.debug(`🔍 Testing endpoint: ${endpoint}`)
         
         const testResponse = await $fetch(`${accountoBaseUrl}${endpoint}`, {
           method: 'GET',
@@ -89,7 +89,7 @@ export default defineEventHandler(async (event) => {
           }
         })
         
-        console.log(`✅ SUCCESS! Endpoint ${endpoint} works:`, testResponse)
+        logger.debug(`✅ SUCCESS! Endpoint ${endpoint} works:`, testResponse)
         workingEndpoint = endpoint
         
         // Bestimme den API-Prefix basierend auf dem funktionierenden Endpunkt
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
         break
         
       } catch (endpointError: any) {
-        console.log(`❌ Endpoint ${endpoint} failed: ${endpointError.status} ${endpointError.message}`)
+        logger.debug(`❌ Endpoint ${endpoint} failed: ${endpointError.status} ${endpointError.message}`)
         continue
       }
     }
@@ -116,15 +116,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log(`🔧 Using working API prefix: ${apiPrefix}`)
+    logger.debug(`🔧 Using working API prefix: ${apiPrefix}`)
 
     // ✅ KORREKTE ACCOUNTO API INTEGRATION mit gefundenem Endpunkt
     
-    console.log('🏦 Sending real API request to Accounto...')
+    logger.debug('🏦 Sending real API request to Accounto...')
     
     try {
       // 1. Teste Accounto API-Verbindung mit gefundenem Endpunkt
-      console.log('🔄 Step 1: Testing Accounto API connection...')
+      logger.debug('🔄 Step 1: Testing Accounto API connection...')
       
       const testResponse = await $fetch(`${accountoBaseUrl}${workingEndpoint}`, {
         method: 'GET',
@@ -137,10 +137,10 @@ export default defineEventHandler(async (event) => {
         }
       })
       
-      console.log('✅ Accounto API connection test successful:', testResponse)
+      logger.debug('✅ Accounto API connection test successful:', testResponse)
       
       // 2. Kunde in Accounto erstellen/aktualisieren
-      console.log('🔄 Step 2: Creating customer in Accounto...')
+      logger.debug('🔄 Step 2: Creating customer in Accounto...')
       
     const customerPayload = {
       name: `${customerData.firstName} ${customerData.lastName}`,
@@ -156,7 +156,7 @@ export default defineEventHandler(async (event) => {
       vatNumber: billingAddress?.vat_number || null
     }
 
-      console.log('👤 Customer payload:', customerPayload)
+      logger.debug('👤 Customer payload:', customerPayload)
       
       // Administer API funktioniert anders - versuchen wir verschiedene Ansätze
       let customerResponse: any = null
@@ -181,7 +181,7 @@ export default defineEventHandler(async (event) => {
       
       for (const endpoint of customerEndpoints) {
         try {
-          console.log(`🔍 Testing customer endpoint: ${endpoint}`)
+          logger.debug(`🔍 Testing customer endpoint: ${endpoint}`)
           const response: any = await $fetch(`${accountoBaseUrl}${endpoint}`, {
             method: 'POST',
             headers: {
@@ -196,20 +196,20 @@ export default defineEventHandler(async (event) => {
           
           // Prüfe, ob es eine echte API-Antwort ist (nicht HTML)
           if (response && typeof response === 'object' && response.id) {
-            console.log(`✅ Customer endpoint ${endpoint} works:`, response)
+            logger.debug(`✅ Customer endpoint ${endpoint} works:`, response)
             customerResponse = response
             customerId = response.id
             break
           } else {
-            console.log(`⚠️ Customer endpoint ${endpoint} returned non-API response:`, typeof response)
+            logger.debug(`⚠️ Customer endpoint ${endpoint} returned non-API response:`, typeof response)
           }
         } catch (error: any) {
-          console.log(`❌ Customer endpoint ${endpoint} failed:`, error.status, error.statusText)
+          logger.debug(`❌ Customer endpoint ${endpoint} failed:`, error.status, error.statusText)
           
           // Bei 405: Versuche GET
           if (error.status === 405) {
             try {
-              console.log(`🔄 Trying GET for customer endpoint: ${endpoint}`)
+              logger.debug(`🔄 Trying GET for customer endpoint: ${endpoint}`)
               const getResponse: any = await $fetch(`${accountoBaseUrl}${endpoint}`, {
                 method: 'GET',
                 headers: {
@@ -223,16 +223,16 @@ export default defineEventHandler(async (event) => {
               
               // Prüfe, ob es eine echte API-Antwort ist
               if (getResponse && typeof getResponse === 'object' && !getResponse.toString().includes('<!DOCTYPE html>')) {
-                console.log(`✅ Customer endpoint ${endpoint} works with GET:`, getResponse)
+                logger.debug(`✅ Customer endpoint ${endpoint} works with GET:`, getResponse)
                 customerResponse = getResponse
                 // Versuche eine ID aus der Antwort zu extrahieren
                 if (getResponse.id) customerId = getResponse.id
                 break
               } else {
-                console.log(`⚠️ Customer endpoint ${endpoint} returned HTML with GET`)
+                logger.debug(`⚠️ Customer endpoint ${endpoint} returned HTML with GET`)
               }
             } catch (getError: any) {
-              console.log(`❌ Customer endpoint ${endpoint} also failed with GET:`, getError.status, getError.statusText)
+              logger.debug(`❌ Customer endpoint ${endpoint} also failed with GET:`, getError.status, getError.statusText)
             }
           }
         }
@@ -240,7 +240,7 @@ export default defineEventHandler(async (event) => {
       
       // Ansatz 2: Falls kein Endpunkt funktioniert, verwende Mock-Daten für den Test
       if (!customerResponse) {
-        console.log('⚠️ No working customer endpoint found, using mock customer for testing')
+        logger.debug('⚠️ No working customer endpoint found, using mock customer for testing')
         customerResponse = {
           id: 'mock-customer-' + Date.now(),
           name: customerPayload.name,
@@ -249,10 +249,10 @@ export default defineEventHandler(async (event) => {
         customerId = customerResponse.id
       }
       
-      console.log('✅ Customer created/updated in Accounto:', customerResponse)
+      logger.debug('✅ Customer created/updated in Accounto:', customerResponse)
       
       // 3. Rechnung in Accounto erstellen
-      console.log('🔄 Step 3: Creating invoice in Accounto...')
+      logger.debug('🔄 Step 3: Creating invoice in Accounto...')
       
     const invoicePayload = {
         customerId: customerId,
@@ -272,7 +272,7 @@ export default defineEventHandler(async (event) => {
       notes: emailData.message || 'Vielen Dank für Ihr Vertrauen in unser Driving Team.'
     }
 
-      console.log('🧾 Invoice payload:', invoicePayload)
+      logger.debug('🧾 Invoice payload:', invoicePayload)
       
       // Administer API funktioniert anders - versuchen wir verschiedene Ansätze
       let invoiceResponse: any = null
@@ -297,7 +297,7 @@ export default defineEventHandler(async (event) => {
       
       for (const endpoint of invoiceEndpoints) {
         try {
-          console.log(`🔍 Testing invoice endpoint: ${endpoint}`)
+          logger.debug(`🔍 Testing invoice endpoint: ${endpoint}`)
           const response: any = await $fetch(`${accountoBaseUrl}${endpoint}`, {
         method: 'POST',
         headers: {
@@ -312,20 +312,20 @@ export default defineEventHandler(async (event) => {
           
           // Prüfe, ob es eine echte API-Antwort ist (nicht HTML)
           if (response && typeof response === 'object' && response.id) {
-            console.log(`✅ Invoice endpoint ${endpoint} works:`, response)
+            logger.debug(`✅ Invoice endpoint ${endpoint} works:`, response)
             invoiceResponse = response
             invoiceId = response.id
             break
           } else {
-            console.log(`⚠️ Invoice endpoint ${endpoint} returned non-API response:`, typeof response)
+            logger.debug(`⚠️ Invoice endpoint ${endpoint} returned non-API response:`, typeof response)
           }
         } catch (error: any) {
-          console.log(`❌ Invoice endpoint ${endpoint} failed:`, error.status, error.statusText)
+          logger.debug(`❌ Invoice endpoint ${endpoint} failed:`, error.status, error.statusText)
           
           // Bei 405: Versuche GET
           if (error.status === 405) {
             try {
-              console.log(`🔄 Trying GET for invoice endpoint: ${endpoint}`)
+              logger.debug(`🔄 Trying GET for invoice endpoint: ${endpoint}`)
               const getResponse: any = await $fetch(`${accountoBaseUrl}${endpoint}`, {
                 method: 'GET',
         headers: {
@@ -339,16 +339,16 @@ export default defineEventHandler(async (event) => {
               
               // Prüfe, ob es eine echte API-Antwort ist
               if (getResponse && typeof getResponse === 'object' && !getResponse.toString().includes('<!DOCTYPE html>')) {
-                console.log(`✅ Invoice endpoint ${endpoint} works with GET:`, getResponse)
+                logger.debug(`✅ Invoice endpoint ${endpoint} works with GET:`, getResponse)
                 invoiceResponse = getResponse
                 // Versuche eine ID aus der Antwort zu extrahieren
                 if (getResponse.id) invoiceId = getResponse.id
                 break
               } else {
-                console.log(`⚠️ Invoice endpoint ${endpoint} returned HTML with GET`)
+                logger.debug(`⚠️ Invoice endpoint ${endpoint} returned HTML with GET`)
               }
             } catch (getError: any) {
-              console.log(`❌ Invoice endpoint ${endpoint} also failed with GET:`, getError.status, getError.statusText)
+              logger.debug(`❌ Invoice endpoint ${endpoint} also failed with GET:`, getError.status, getError.statusText)
             }
           }
         }
@@ -356,7 +356,7 @@ export default defineEventHandler(async (event) => {
       
       // Ansatz 2: Falls kein Endpunkt funktioniert, verwende Mock-Daten für den Test
       if (!invoiceResponse) {
-        console.log('⚠️ No working invoice endpoint found, using mock invoice for testing')
+        logger.debug('⚠️ No working invoice endpoint found, using mock invoice for testing')
         invoiceResponse = {
           id: 'mock-invoice-' + Date.now(),
           invoiceNumber: invoicePayload.invoiceNumber,
@@ -365,10 +365,10 @@ export default defineEventHandler(async (event) => {
         invoiceId = invoiceResponse.id
       }
       
-      console.log('✅ Invoice created in Accounto:', invoiceResponse)
+      logger.debug('✅ Invoice created in Accounto:', invoiceResponse)
       
       // 4. E-Mail versenden
-      console.log('🔄 Step 4: Sending email via Accounto...')
+      logger.debug('🔄 Step 4: Sending email via Accounto...')
       
       const emailPayload = {
         to: emailData.email,
@@ -377,7 +377,7 @@ export default defineEventHandler(async (event) => {
         attachInvoice: true
       }
       
-      console.log('📧 Email payload:', emailPayload)
+      logger.debug('📧 Email payload:', emailPayload)
       
       const emailResponse = await $fetch(`${accountoBaseUrl}${apiPrefix}/invoices/${invoiceResponse.id}/send`, {
         method: 'POST',
@@ -389,7 +389,7 @@ export default defineEventHandler(async (event) => {
         body: emailPayload
       })
       
-      console.log('✅ Email sent via Accounto:', emailResponse)
+      logger.debug('✅ Email sent via Accounto:', emailResponse)
       
       const successResponse = {
         success: true,
@@ -402,7 +402,7 @@ export default defineEventHandler(async (event) => {
         documentation: 'Basierend auf der Accounto-Dokumentation'
       }
       
-      console.log('✅ Real Accounto integration successful:', successResponse)
+      logger.debug('✅ Real Accounto integration successful:', successResponse)
       return successResponse
       
     } catch (apiError: any) {

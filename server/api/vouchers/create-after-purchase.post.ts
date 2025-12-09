@@ -38,7 +38,7 @@ export default defineEventHandler(async (event): Promise<CreateVouchersResponse>
       throw new Error('Payment ID is required')
     }
 
-    console.log('🎁 Creating vouchers after purchase for payment:', paymentId)
+    logger.debug('🎁 Creating vouchers after purchase for payment:', paymentId)
 
     const supabase = getSupabase()
     
@@ -85,10 +85,10 @@ export default defineEventHandler(async (event): Promise<CreateVouchersResponse>
           }
         }
 
-        console.log('🔍 Product voucher check:', { productId: product.id, productName: product.name, isVoucher })
+        logger.debug('🔍 Product voucher check:', { productId: product.id, productName: product.name, isVoucher })
 
         if (isVoucher) {
-          console.log('🎁 Creating voucher for product:', product.name)
+          logger.debug('🎁 Creating voucher for product:', product.name)
           
           // Generiere Gutschein-Code
           const voucherCode = generateVoucherCode()
@@ -132,7 +132,7 @@ export default defineEventHandler(async (event): Promise<CreateVouchersResponse>
             amount_chf: newVoucher.discount_value
           })
 
-          console.log('✅ Voucher created:', voucherCode)
+          logger.debug('✅ Voucher created:', voucherCode)
 
           // TODO: Optional - automatisch E-Mail senden
           // Hier könnte die automatische E-Mail-Versendung implementiert werden
@@ -144,7 +144,7 @@ export default defineEventHandler(async (event): Promise<CreateVouchersResponse>
       }
     }
 
-    console.log('✅ All vouchers created for payment:', paymentId, 'Count:', createdVouchers.length)
+    logger.debug('✅ All vouchers created for payment:', paymentId, 'Count:', createdVouchers.length)
 
     return {
       success: true,

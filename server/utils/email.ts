@@ -57,7 +57,7 @@ export async function sendEmail({ to, subject, html, from, attachments }: SendEm
       throw error
     }
 
-    console.log('✅ Email sent successfully:', data?.id)
+    logger.debug('✅ Email sent successfully:', data?.id)
     return { success: true, messageId: data?.id }
   } catch (error) {
     console.error('❌ Error sending email:', error)

@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('📄 Document action:', action, 'for user:', user.id)
+    logger.debug('📄 Document action:', action, 'for user:', user.id)
 
     // Create service role client
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
       // New structure: user-documents/customer-licenses/{user_id}/{category_code}/{timestamp}_{filename}.jpg
       const filename = `user-documents/customer-licenses/${user.id}/${categoryCode}/${timestamp}_${originalFilename}.jpg`
 
-      console.log('📤 Uploading document with organized path:', filename)
+      logger.debug('📤 Uploading document with organized path:', filename)
 
       // Upload to storage
       const { error: uploadError } = await serviceSupabase.storage
@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
         .from('user-documents')
         .getPublicUrl(filename)
 
-      console.log('✅ Document uploaded:', publicUrl.publicUrl)
+      logger.debug('✅ Document uploaded:', publicUrl.publicUrl)
 
       // Save document record in user_documents table
       try {
@@ -111,7 +111,7 @@ export default defineEventHandler(async (event) => {
           console.warn('⚠️ Could not create user_documents record:', docError)
           // Continue - document is uploaded even if DB record fails
         } else {
-          console.log('✅ Document record created in user_documents table')
+          logger.debug('✅ Document record created in user_documents table')
         }
       } catch (recordErr: any) {
         console.error('⚠️ Error creating document record:', recordErr)
@@ -168,7 +168,7 @@ export default defineEventHandler(async (event) => {
         .delete()
         .eq('id', doc.id)
 
-      console.log('✅ Document deleted:', doc.storage_path)
+      logger.debug('✅ Document deleted:', doc.storage_path)
 
       return {
         success: true,

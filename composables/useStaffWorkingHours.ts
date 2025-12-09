@@ -103,7 +103,7 @@ export const useStaffWorkingHours = () => {
       if (fetchError) throw fetchError
       
       workingHours.value = data || []
-      console.log('✅ Working hours loaded:', workingHours.value.length)
+      logger.debug('✅ Working hours loaded:', workingHours.value.length)
       
     } catch (err: any) {
       console.error('❌ Error loading working hours:', err)
@@ -116,7 +116,7 @@ export const useStaffWorkingHours = () => {
   // Arbeitszeit speichern/aktualisieren - erstellt automatisch Nicht-Arbeitszeiten
   const saveWorkingHour = async (staffId: string, workingHour: WorkingHourForm) => {
     try {
-      console.log('💾 Saving working hour:', { staffId, workingHour })
+      logger.debug('💾 Saving working hour:', { staffId, workingHour })
       
       // Get tenant_id for this staff
       const { data: userData, error: userError } = await supabase
@@ -204,7 +204,7 @@ export const useStaffWorkingHours = () => {
       )
       workingHours.value.push(...insertData)
       
-      console.log('✅ Working hours saved:', insertData.length, 'entries')
+      logger.debug('✅ Working hours saved:', insertData.length, 'entries')
       return insertData
       
     } catch (err: any) {
@@ -216,7 +216,7 @@ export const useStaffWorkingHours = () => {
   // Mehrere Arbeitszeit-Blöcke speichern (für erweiterte UI)
   const saveWorkingDay = async (staffId: string, workingDay: WorkingDayForm) => {
     try {
-      console.log('💾 Saving working day with multiple blocks:', { staffId, workingDay })
+      logger.debug('💾 Saving working day with multiple blocks:', { staffId, workingDay })
       
       // Get tenant_id for this staff
       const { data: userData, error: userError } = await supabase
@@ -314,7 +314,7 @@ export const useStaffWorkingHours = () => {
       )
       workingHours.value.push(...insertData)
       
-      console.log('✅ Working day saved:', insertData.length, 'entries')
+      logger.debug('✅ Working day saved:', insertData.length, 'entries')
       return insertData
       
     } catch (err: any) {
@@ -339,7 +339,7 @@ export const useStaffWorkingHours = () => {
         h => h.day_of_week !== dayOfWeek
       )
       
-      console.log('✅ Working hour deleted for day:', dayOfWeek)
+      logger.debug('✅ Working hour deleted for day:', dayOfWeek)
       
     } catch (err: any) {
       console.error('❌ Error deleting working hour:', err)
@@ -364,7 +364,7 @@ export const useStaffWorkingHours = () => {
         hour.is_active = isActive
       }
       
-      console.log('✅ Working hour toggled:', dayOfWeek, isActive)
+      logger.debug('✅ Working hour toggled:', dayOfWeek, isActive)
       
     } catch (err: any) {
       console.error('❌ Error toggling working hour:', err)
@@ -416,7 +416,7 @@ export const useStaffWorkingHours = () => {
       for (const hour of defaultHours) {
         await saveWorkingHour(staffId, hour)
       }
-      console.log('✅ Default working hours set')
+      logger.debug('✅ Default working hours set')
     } catch (err: any) {
       console.error('❌ Error setting default working hours:', err)
       throw err

@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
     // Upload file to storage in user-specific folder with timestamp
     const timestampedFileName = `${path.split('/')[0]}_${Date.now()}.${fileName.split('.').pop()}`
     const storagePath = `${userId}/${timestampedFileName}`
-    console.log(`📤 Uploading file to ${bucket}/${storagePath}`)
+    logger.debug(`📤 Uploading file to ${bucket}/${storagePath}`)
     const { data, error: uploadError } = await serviceSupabase.storage
       .from(bucket)
       .upload(storagePath, fileBuffer, {
@@ -61,13 +61,13 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ File uploaded successfully:', data.path)
+    logger.debug('✅ File uploaded successfully:', data.path)
 
     // Create document record in user_documents table
     if (tenantId) {
       try {
-        console.log('📝 Creating user_documents record with storage_path:', storagePath)
-        console.log('📋 Document data:', {
+        logger.debug('📝 Creating user_documents record with storage_path:', storagePath)
+        logger.debug('📋 Document data:', {
           user_id: userId,
           tenant_id: tenantId,
           document_type: 'lernfahrausweis',
@@ -105,7 +105,7 @@ export default defineEventHandler(async (event) => {
           })
           // Continue - document is uploaded but not linked
         } else {
-          console.log('✅ Document record created successfully:', insertedDoc)
+          logger.debug('✅ Document record created successfully:', insertedDoc)
         }
       } catch (recordErr: any) {
         console.error('⚠️ Exception creating document record:', {

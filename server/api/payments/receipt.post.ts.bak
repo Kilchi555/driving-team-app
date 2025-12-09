@@ -217,7 +217,7 @@ async function generateReceiptHTML(payment: any, supabase: any, tenant: any, pri
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('📄 Receipt API called')
+    logger.debug('📄 Receipt API called')
     
     const { paymentId, paymentIds }: ReceiptRequest = await readBody(event)
     
@@ -229,7 +229,7 @@ export default defineEventHandler(async (event) => {
       throw new Error('Payment ID(s) is required')
     }
 
-    console.log('📄 Generating receipt(s) for payment(s):', ids)
+    logger.debug('📄 Generating receipt(s) for payment(s):', ids)
 
     const supabase = getSupabaseAdmin()
 
@@ -352,23 +352,23 @@ export default defineEventHandler(async (event) => {
       return offset === lastIndex ? '>' : match
     })
 
-    console.log('📄 Generating PDF with Puppeteer...')
+    logger.debug('📄 Generating PDF with Puppeteer...')
     
     let browser: any
     try {
       const { default: Puppeteer } = await getPuppeteer()
-      console.log('✅ Puppeteer loaded successfully')
+      logger.debug('✅ Puppeteer loaded successfully')
       
       browser = await Puppeteer.launch({ 
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
         headless: true
       })
-      console.log('✅ Browser launched successfully')
+      logger.debug('✅ Browser launched successfully')
       
       const page = await browser.newPage()
       await page.setContent(finalHtml, { waitUntil: 'networkidle0' })
       
-      console.log('📄 Converting to PDF...')
+      logger.debug('📄 Converting to PDF...')
       const pdfBuffer = await page.pdf({ 
         format: 'A4', 
         printBackground: true, 
@@ -378,7 +378,7 @@ export default defineEventHandler(async (event) => {
       await page.close()
       await browser.close()
       
-      console.log('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
+      logger.debug('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
       
       setHeader(event, 'Content-Type', 'application/pdf')
       const filename = payments.length === 1 
@@ -511,7 +511,7 @@ export default defineEventHandler(async (event) => {
     const fullAddress = tenantAddress.join(', ')
 
     // Debug logging for tenant header rendering
-    console.log('🧾 Receipt header debug:', {
+    logger.debug('🧾 Receipt header debug:', {
       tenantId,
       tenantLoaded: !!tenant,
       companyName,
@@ -684,23 +684,23 @@ export default defineEventHandler(async (event) => {
     </html>
     `
 
-    console.log('📄 Generating PDF with Puppeteer...')
+    logger.debug('📄 Generating PDF with Puppeteer...')
     
     let browser: any
     try {
       const { default: Puppeteer } = await getPuppeteer()
-      console.log('✅ Puppeteer loaded successfully')
+      logger.debug('✅ Puppeteer loaded successfully')
       
       browser = await Puppeteer.launch({ 
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
         headless: true
       })
-      console.log('✅ Browser launched successfully')
+      logger.debug('✅ Browser launched successfully')
       
       const page = await browser.newPage()
       await page.setContent(html, { waitUntil: 'networkidle0' })
       
-      console.log('📄 Converting to PDF...')
+      logger.debug('📄 Converting to PDF...')
       const pdfBuffer = await page.pdf({ 
         format: 'A4', 
         printBackground: true, 
@@ -710,7 +710,7 @@ export default defineEventHandler(async (event) => {
       await page.close()
       await browser.close()
       
-      console.log('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
+      logger.debug('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
       
       setHeader(event, 'Content-Type', 'application/pdf')
       setHeader(event, 'Content-Disposition', `attachment; filename="Quittung_${payment.id}.pdf"`)

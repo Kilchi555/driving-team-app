@@ -19,10 +19,10 @@ interface ConfirmCashResponse {
 
 export default defineEventHandler(async (event): Promise<ConfirmCashResponse> => {
   try {
-    console.log('💰 Cash Payment Confirmation API called')
+    logger.debug('💰 Cash Payment Confirmation API called')
     
     const body = await readBody(event) as ConfirmCashRequest
-    console.log('📨 Confirm cash request:', JSON.stringify(body, null, 2))
+    logger.debug('📨 Confirm cash request:', JSON.stringify(body, null, 2))
     
     if (!body.paymentId || !body.confirmedBy) {
       throw createError({
@@ -64,7 +64,7 @@ export default defineEventHandler(async (event): Promise<ConfirmCashResponse> =>
       }
     }
 
-    console.log('✅ Cash payment found:', payment.id)
+    logger.debug('✅ Cash payment found:', payment.id)
 
     // 2. Payment Status auf 'completed' setzen
     const { error: updateError } = await supabase
@@ -84,7 +84,7 @@ export default defineEventHandler(async (event): Promise<ConfirmCashResponse> =>
 
     if (updateError) throw updateError
 
-    console.log('✅ Payment status updated to completed')
+    logger.debug('✅ Payment status updated to completed')
 
     // 3. Appointment als bezahlt markieren
     if (payment.appointment_id) {
@@ -100,7 +100,7 @@ export default defineEventHandler(async (event): Promise<ConfirmCashResponse> =>
       if (appointmentError) {
         console.warn('⚠️ Could not update appointment:', appointmentError)
       } else {
-        console.log('✅ Appointment marked as paid')
+        logger.debug('✅ Appointment marked as paid')
       }
     }
 

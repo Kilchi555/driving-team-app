@@ -78,7 +78,7 @@ export const usePaymentMethods = () => {
       if (fetchError) throw fetchError
 
       paymentMethods.value = data || []
-      console.log('✅ Payment methods loaded:', paymentMethods.value.length)
+      logger.debug('✅ Payment methods loaded:', paymentMethods.value.length)
     } catch (err: any) {
       console.error('❌ Error loading payment methods:', err)
       error.value = err.message
@@ -129,7 +129,7 @@ export const useCompanyBilling = () => {
       if (fetchError) throw fetchError
 
       billingAddresses.value = data || []
-      console.log('✅ Billing addresses loaded:', billingAddresses.value.length)
+      logger.debug('✅ Billing addresses loaded:', billingAddresses.value.length)
     } catch (err: any) {
       console.error('❌ Error loading billing addresses:', err)
       error.value = err.message
@@ -152,7 +152,7 @@ export const useCompanyBilling = () => {
       // Aktualisiere die lokale Liste
       await loadBillingAddresses()
       
-      console.log('✅ Billing address created:', data)
+      logger.debug('✅ Billing address created:', data)
       return { success: true, data }
     } catch (err: any) {
       console.error('❌ Error creating billing address:', err)
@@ -176,7 +176,7 @@ export const useCompanyBilling = () => {
       // Aktualisiere die lokale Liste
       await loadBillingAddresses()
       
-      console.log('✅ Billing address updated:', data)
+      logger.debug('✅ Billing address updated:', data)
       return { success: true, data }
     } catch (err: any) {
       console.error('❌ Error updating billing address:', err)
@@ -198,7 +198,7 @@ export const useCompanyBilling = () => {
       // Aktualisiere die lokale Liste
       await loadBillingAddresses()
       
-      console.log('✅ Billing address deleted:', id)
+      logger.debug('✅ Billing address deleted:', id)
       return { success: true }
     } catch (err: any) {
       console.error('❌ Error deleting billing address:', err)

@@ -6,10 +6,10 @@ export const useSmsService = () => {
 
   const sendSms = async (phoneNumber: string, message: string) => {
     try {
-      console.log('📱 SMS Service called:', { phoneNumber, message })
+      logger.debug('📱 SMS Service called:', { phoneNumber, message })
       
       // Always use cloud Supabase Edge Function (project uses cloud database)
-      console.log('🌐 Using cloud Supabase Edge Function')
+      logger.debug('🌐 Using cloud Supabase Edge Function')
       
       const { data, error } = await supabase.functions.invoke('send-twilio-sms', {
         body: {
@@ -24,14 +24,14 @@ export const useSmsService = () => {
         return { success: false, error: error.message };
       }
 
-      console.log('✅ Cloud SMS sent successfully:', data);
+      logger.debug('✅ Cloud SMS sent successfully:', data);
       return { success: true, data };
 
     } catch (err: any) {
       console.error('❌ Unexpected SMS error:', err);
       
       // ✅ FALLBACK: Simuliere erfolgreiche SMS und speichere in Datenbank
-      console.log('🔄 SMS Fallback: Simulating successful SMS for testing')
+      logger.debug('🔄 SMS Fallback: Simulating successful SMS for testing')
       
       try {
         // Speichere SMS-Log direkt in der Datenbank
@@ -48,7 +48,7 @@ export const useSmsService = () => {
         if (dbError) {
           console.error('❌ Database error:', dbError);
         } else {
-          console.log('✅ SMS log saved to database');
+          logger.debug('✅ SMS log saved to database');
         }
       } catch (dbErr) {
         console.error('❌ Database fallback error:', dbErr);

@@ -329,13 +329,13 @@ const loadStaffForCategory = async () => {
       available_locations: []
     }))
     
-    console.log('✅ Staff for category', filters.value.category_code, ':', availableStaff.value.length)
-    console.log('🔍 Capable staff:', capableStaff.map(s => ({ 
+    logger.debug('✅ Staff for category', filters.value.category_code, ':', availableStaff.value.length)
+    logger.debug('🔍 Capable staff:', capableStaff.map(s => ({ 
       id: s.id, 
       name: `${s.first_name} ${s.last_name}`, 
       categories: s.category 
     })))
-    console.log('🔍 All active staff:', activeStaff.value.map(s => ({ 
+    logger.debug('🔍 All active staff:', activeStaff.value.map(s => ({ 
       id: s.id, 
       name: `${s.first_name} ${s.last_name}`, 
       categories: s.category 
@@ -369,7 +369,7 @@ const loadLocationsForStaff = async (staff: any) => {
       }))
     }
     
-    console.log('✅ Loaded', staffLocations?.length || 0, 'locations for', staff.first_name, staff.last_name)
+    logger.debug('✅ Loaded', staffLocations?.length || 0, 'locations for', staff.first_name, staff.last_name)
   } catch (err) {
     console.error('❌ Error loading locations for staff:', err)
   }
@@ -379,7 +379,7 @@ const loadTimeSlotsForStaffLocation = async (staff: any, location: any) => {
   try {
     // This would load actual time slots for the staff-location combination
     // For now, we'll just show a placeholder
-    console.log('🕒 Loading time slots for', staff.first_name, 'at', location.name)
+    logger.debug('🕒 Loading time slots for', staff.first_name, 'at', location.name)
     
     // TODO: Implement actual time slot loading
     alert(`Zeitslots für ${staff.first_name} ${staff.last_name} an ${location.name} würden hier geladen werden.`)
@@ -390,7 +390,7 @@ const loadTimeSlotsForStaffLocation = async (staff: any, location: any) => {
 
 const selectSlot = (slot: any) => {
   selectedSlot.value = slot
-  console.log('✅ Slot selected:', slot)
+  logger.debug('✅ Slot selected:', slot)
 }
 
 const proceedToRegistration = () => {
@@ -412,7 +412,7 @@ const setTenantFromSlug = async (slugOrId: string) => {
     
     // If not found by slug, try by id (UUID format)
     if (error && error.code === 'PGRST116') {
-      console.log('🔍 Tenant not found by slug, trying by ID:', slugOrId)
+      logger.debug('🔍 Tenant not found by slug, trying by ID:', slugOrId)
       const result = await supabase
         .from('tenants')
         .select('id, name, slug, business_type')
@@ -440,7 +440,7 @@ const setTenantFromSlug = async (slugOrId: string) => {
     // Load categories for the tenant
     await loadCategories()
     
-    console.log('✅ Tenant set from slug/ID:', tenantData.name)
+    logger.debug('✅ Tenant set from slug/ID:', tenantData.name)
   } catch (err) {
     console.error('❌ Error setting tenant from slug/ID:', err)
   }
@@ -450,14 +450,14 @@ const setTenantFromSlug = async (slugOrId: string) => {
 const loadCategories = async () => {
   try {
     if (!currentTenant.value) {
-      console.log('🚫 No current tenant selected')
+      logger.debug('🚫 No current tenant selected')
       categories.value = []
       return
     }
 
     // Only load categories if business_type is driving_school
     if (currentTenant.value.business_type !== 'driving_school') {
-      console.log('🚫 Categories not available for business_type:', currentTenant.value.business_type)
+      logger.debug('🚫 Categories not available for business_type:', currentTenant.value.business_type)
       categories.value = []
       return
     }
@@ -498,12 +498,12 @@ onMounted(async () => {
     if (tenantParam) {
       // Set the tenant from slug or ID
       await setTenantFromSlug(tenantParam)
-      console.log('✅ Tenant set from parameter:', tenantParam)
+      logger.debug('✅ Tenant set from parameter:', tenantParam)
     } else {
       console.error('❌ No tenant parameter provided in URL')
     }
     
-    console.log('✅ Availability test page loaded')
+    logger.debug('✅ Availability test page loaded')
   } catch (err) {
     console.error('❌ Error initializing availability test page:', err)
   }

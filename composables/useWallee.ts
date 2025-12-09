@@ -57,7 +57,7 @@ export const useWallee = () => {
   // ✅ Hauptfunktion: Wallee-Transaktion mit DB-Integration
   const createTransaction = async (request: WalleeTransactionRequest): Promise<WalleeTransactionResult> => {
     try {
-      console.log('🔄 Creating Wallee transaction with DB integration:', request)
+      logger.debug('🔄 Creating Wallee transaction with DB integration:', request)
       
       // Validierung der erforderlichen Felder
       if (!request.amount || !request.customerId || !request.customerEmail || !request.userId) {
@@ -93,7 +93,7 @@ export const useWallee = () => {
         throw new Error(walleeResponse.error || 'Wallee transaction failed')
       }
 
-      console.log('✅ Wallee transaction created:', walleeResponse)
+      logger.debug('✅ Wallee transaction created:', walleeResponse)
 
       // 2. Zahlung in der lokalen DB speichern
       const paymentItems: CreatePaymentItemRequest[] = []
@@ -155,7 +155,7 @@ export const useWallee = () => {
         throw new Error('Failed to create payment in database')
       }
 
-      console.log('✅ Payment saved to database:', dbPayment)
+      logger.debug('✅ Payment saved to database:', dbPayment)
 
       return {
         success: true,
@@ -178,7 +178,7 @@ export const useWallee = () => {
 
   const testConnection = async (): Promise<WalleeConnectionResult> => {
     try {
-      console.log('🔄 Testing Wallee connection...')
+      logger.debug('🔄 Testing Wallee connection...')
       
       // Test mit einer minimalen Transaction oder Connection Check
       const testResponse = await $fetch('/api/wallee/test-connection', {
@@ -317,7 +317,7 @@ export const useWallee = () => {
 
       if (error) throw error
 
-      console.log(`✅ Payment ${paymentId} status updated to ${status}`)
+      logger.debug(`✅ Payment ${paymentId} status updated to ${status}`)
       return true
     } catch (error: any) {
       console.error('❌ Error updating payment status:', error)

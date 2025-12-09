@@ -10,9 +10,9 @@ export const useProductManagement = () => {
   
   const loadFromAppointment = async (appointmentId: string): Promise<ProductItem[]> => {
     try {
-      console.log('📚 Loading products from appointment:', appointmentId)
+      logger.debug('📚 Loading products from appointment:', appointmentId)
       const products = await loadAppointmentProducts(appointmentId)
-      console.log('✅ Products loaded:', products.length)
+      logger.debug('✅ Products loaded:', products.length)
       return products
     } catch (error) {
       console.error('❌ Error loading products:', error)

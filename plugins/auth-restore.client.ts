@@ -7,13 +7,13 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   // Nur im Browser
   if (!process.client) return
 
-  console.log('🔄 Auth restore plugin starting...')
+  logger.debug('🔄 Auth restore plugin starting...')
 
   try {
     const supabase = getSupabase()  // Use Supabase singleton
     const authStore = useAuthStore()
 
-    console.log('🔄 Getting session...')
+    logger.debug('🔄 Getting session...')
     
     // Prüfe sofort ob Session existiert
     const { data: { session }, error } = await supabase.auth.getSession()
@@ -23,7 +23,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     }
     
     if (session?.user) {
-      console.log('🔄 Session found for:', session.user.email)
+      logger.debug('🔄 Session found for:', session.user.email)
       
       // Setze User direkt
       authStore.user = session.user
@@ -31,9 +31,9 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       // Lade User-Profil
       await authStore.fetchUserProfile(session.user.id)
       
-      console.log('✅ Session restored in plugin, role:', authStore.userRole)
+      logger.debug('✅ Session restored in plugin, role:', authStore.userRole)
     } else {
-      console.log('🔄 No session found')
+      logger.debug('🔄 No session found')
     }
     
   } catch (err: any) {
@@ -42,6 +42,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     // Setze isInitialized auf true, egal was passiert ist
     const authStore = useAuthStore()
     authStore.isInitialized = true
-    console.log('✅ Auth store initialized (forced)')
+    logger.debug('✅ Auth store initialized (forced)')
   }
 })

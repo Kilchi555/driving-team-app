@@ -75,10 +75,10 @@ const loadEvaluationData = async (tenantId?: string) => {
     criteria.value = criteriaData
     scale.value = scaleData
 
-    console.log('✅ Evaluation data loaded for tenant:', tenantId)
-    console.log('- Categories:', categories.value.length)
-    console.log('- Criteria:', criteria.value.length)
-    console.log('- Scale:', scale.value.length)
+    logger.debug('✅ Evaluation data loaded for tenant:', tenantId)
+    logger.debug('- Categories:', categories.value.length)
+    logger.debug('- Criteria:', criteria.value.length)
+    logger.debug('- Scale:', scale.value.length)
 
   } catch (err: any) {
     error.value = err.message || 'Failed to load evaluation data'
@@ -95,7 +95,7 @@ const copyDefaultsToTenant = async (tenantId: string) => {
 
     if (error) throw error
 
-    console.log('✅ Default evaluation data copied to tenant:', tenantId)
+    logger.debug('✅ Default evaluation data copied to tenant:', tenantId)
     
     // Reload data after copying
     await loadEvaluationData(tenantId)

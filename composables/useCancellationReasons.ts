@@ -40,7 +40,7 @@ export const useCancellationReasons = () => {
         throw new Error('User has no tenant assigned')
       }
 
-      console.log('🔍 Cancellation Reasons - Current tenant_id:', tenantId)
+      logger.debug('🔍 Cancellation Reasons - Current tenant_id:', tenantId)
 
       const { data, error: fetchError } = await supabase
         .from('cancellation_reasons')
@@ -81,7 +81,7 @@ export const useCancellationReasons = () => {
         throw new Error('User has no tenant assigned')
       }
 
-      console.log('🔍 All Cancellation Reasons - Current tenant_id:', tenantId)
+      logger.debug('🔍 All Cancellation Reasons - Current tenant_id:', tenantId)
 
       const { data, error: fetchError } = await supabase
         .from('cancellation_reasons')

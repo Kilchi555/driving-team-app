@@ -78,7 +78,7 @@ export const useOfficeCashRegisters = () => {
       const tenantId = await getCurrentTenantId()
       if (!tenantId) throw new Error('No tenant_id found')
 
-      console.log('🔍 Loading office registers for tenant:', tenantId)
+      logger.debug('🔍 Loading office registers for tenant:', tenantId)
 
       // Use direct table query (simpler and more reliable)
       const { data, error: queryError } = await supabase
@@ -125,7 +125,7 @@ export const useOfficeCashRegisters = () => {
       })
 
       officeRegisters.value = transformedData
-      console.log('✅ Office cash registers loaded:', officeRegisters.value.length)
+      logger.debug('✅ Office cash registers loaded:', officeRegisters.value.length)
       
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load office registers'
@@ -172,7 +172,7 @@ export const useOfficeCashRegisters = () => {
 
       if (error) throw error
       
-      console.log('✅ Office cash register created:', data)
+      logger.debug('✅ Office cash register created:', data)
       await loadOfficeRegisters() // Reload list
       
       return data
@@ -213,7 +213,7 @@ export const useOfficeCashRegisters = () => {
 
       if (error) throw error
       
-      console.log('✅ Staff assigned to office cash register')
+      logger.debug('✅ Staff assigned to office cash register')
       await loadOfficeRegisters() // Reload to show new assignment
       
       return true

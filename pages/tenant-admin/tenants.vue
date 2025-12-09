@@ -322,7 +322,7 @@ const editTenant = (tenant) => {
 
 const viewTenant = (tenant) => {
   // TODO: Navigate to tenant detail page
-  console.log('View tenant:', tenant)
+  logger.debug('View tenant:', tenant)
 }
 
 const closeModal = () => {

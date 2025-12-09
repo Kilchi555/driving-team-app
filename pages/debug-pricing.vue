@@ -88,7 +88,7 @@ const { loadPricingRules, calculatePrice, getPricingRule, pricingRules } = usePr
 // Functions
 const queryRawDatabase = async () => {
   try {
-    console.log('🔍 Querying raw database...')
+    logger.debug('🔍 Querying raw database...')
     const supabase = getSupabase()
     
     const { data, error } = await supabase
@@ -103,7 +103,7 @@ const queryRawDatabase = async () => {
       return
     }
 
-    console.log('📊 Raw database result:', data)
+    logger.debug('📊 Raw database result:', data)
     rawDatabaseResult.value = JSON.stringify({
       count: data?.length || 0,
       data: data
@@ -117,7 +117,7 @@ const queryRawDatabase = async () => {
 
 const testSpecificCategory = async () => {
   try {
-    console.log('🔍 Testing specific category:', testCategory.value)
+    logger.debug('🔍 Testing specific category:', testCategory.value)
     
     // First load pricing rules
     await loadPricingRules(true)
@@ -152,7 +152,7 @@ const testSpecificCategory = async () => {
 
 const testPriceCalculation = async () => {
   try {
-    console.log('🔍 Testing price calculation for:', calcCategory.value, calcDuration.value, 'User:', calcUserId.value || 'none')
+    logger.debug('🔍 Testing price calculation for:', calcCategory.value, calcDuration.value, 'User:', calcUserId.value || 'none')
     
     const result = await calculatePrice(calcCategory.value, calcDuration.value, calcUserId.value || undefined)
     

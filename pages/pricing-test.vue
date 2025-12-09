@@ -118,7 +118,7 @@ const { loadPricingRules, calculatePrice, pricingRules, isLoadingPrices, pricing
 // Test functions
 const testPricingRules = async () => {
   try {
-    console.log('🧪 Testing pricing rules loading...')
+    logger.debug('🧪 Testing pricing rules loading...')
     await loadPricingRules(true) // Force reload
     
     pricingTestResult.value = JSON.stringify({
@@ -135,7 +135,7 @@ const testPricingRules = async () => {
       error: pricingError.value
     }, null, 2)
     
-    console.log('✅ Pricing rules test completed')
+    logger.debug('✅ Pricing rules test completed')
   } catch (error) {
     console.error('❌ Pricing rules test failed:', error)
     pricingTestResult.value = JSON.stringify({
@@ -147,7 +147,7 @@ const testPricingRules = async () => {
 
 const testPriceCalculation = async () => {
   try {
-    console.log('🧪 Testing price calculation...')
+    logger.debug('🧪 Testing price calculation...')
     const result = await calculatePrice(testCategory.value, testDuration.value)
     
     priceCalculationResult.value = JSON.stringify({
@@ -162,7 +162,7 @@ const testPriceCalculation = async () => {
       }
     }, null, 2)
     
-    console.log('✅ Price calculation test completed')
+    logger.debug('✅ Price calculation test completed')
   } catch (error) {
     console.error('❌ Price calculation test failed:', error)
     priceCalculationResult.value = JSON.stringify({
@@ -173,16 +173,16 @@ const testPriceCalculation = async () => {
 }
 
 const testPriceDisplay = () => {
-  console.log('🧪 Testing PriceDisplay component...')
+  logger.debug('🧪 Testing PriceDisplay component...')
   mockStudent.value.category = testStudentCategory.value
   showPriceDisplay.value = true
   
   // ✅ NEU: Warte kurz und zeige dann die geladenen Preise
   setTimeout(() => {
-    console.log('💰 PriceDisplay test - Student category:', testStudentCategory.value)
-    console.log('💰 PriceDisplay test - Mock student:', mockStudent.value)
+    logger.debug('💰 PriceDisplay test - Student category:', testStudentCategory.value)
+    logger.debug('💰 PriceDisplay test - Mock student:', mockStudent.value)
   }, 1000)
   
-  console.log('✅ PriceDisplay test completed')
+  logger.debug('✅ PriceDisplay test completed')
 }
 </script>

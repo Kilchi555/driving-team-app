@@ -339,7 +339,7 @@ const loadCashTransactions = async () => {
     return
   }
 
-  console.log('🔍 Loading cash transactions...', {
+  logger.debug('🔍 Loading cash transactions...', {
     currentUser: props.currentUser,
     isAdmin: props.isAdmin,
     userId: props.currentUser.id
@@ -363,7 +363,7 @@ const loadCashTransactions = async () => {
       throw new Error('User has no tenant assigned')
     }
     
-    console.log('🔍 Loading cash transactions for tenant:', userProfile.tenant_id)
+    logger.debug('🔍 Loading cash transactions for tenant:', userProfile.tenant_id)
     
     // Lade zuerst die cash_transactions - FILTERED BY TENANT
     let query = supabase
@@ -375,28 +375,28 @@ const loadCashTransactions = async () => {
     // Filter by instructor if not admin OR if staff filter is applied
     if (!props.isAdmin && props.currentUser?.id) {
       query = query.eq('instructor_id', props.currentUser.id)
-      console.log('🔍 Filtering by instructor_id:', props.currentUser.id)
+      logger.debug('🔍 Filtering by instructor_id:', props.currentUser.id)
     } else if (props.isAdmin && props.staffFilterId) {
       query = query.eq('instructor_id', props.staffFilterId)
-      console.log('🔍 Admin filtering by specific staff_id:', props.staffFilterId)
+      logger.debug('🔍 Admin filtering by specific staff_id:', props.staffFilterId)
     } else {
-      console.log('🔍 Loading all transactions (admin mode)')
+      logger.debug('🔍 Loading all transactions (admin mode)')
     }
 
-    console.log('🔍 Query:', query)
+    logger.debug('🔍 Query:', query)
 
     const { data: transactions, error: queryError } = await query
 
     if (queryError) throw queryError
 
-    console.log('🔍 Query result:', {
+    logger.debug('🔍 Query result:', {
       transactions: transactions,
       count: transactions?.length || 0,
       error: queryError
     })
 
     if (!transactions || transactions.length === 0) {
-      console.log('🔍 No transactions found, setting empty array')
+      logger.debug('🔍 No transactions found, setting empty array')
       cashTransactions.value = []
       return
     }
@@ -562,8 +562,8 @@ const submitEdit = async () => {
   isEditing.value = true
 
   try {
-    console.log('🔧 Submitting edit for transaction:', selectedTransaction.value.id)
-    console.log('🔧 New notes:', editNotes.value)
+    logger.debug('🔧 Submitting edit for transaction:', selectedTransaction.value.id)
+    logger.debug('🔧 New notes:', editNotes.value)
 
     const { error: updateError } = await supabase
       .from('cash_transactions')
@@ -574,16 +574,16 @@ const submitEdit = async () => {
 
     if (updateError) throw updateError
 
-    console.log('✅ Database update successful')
+    logger.debug('✅ Database update successful')
 
     // Update local transaction data immediately
     const transactionIndex = cashTransactions.value.findIndex(t => t.id === selectedTransaction.value.id)
-    console.log('🔍 Found transaction at index:', transactionIndex)
+    logger.debug('🔍 Found transaction at index:', transactionIndex)
     
     if (transactionIndex !== -1) {
-      console.log('🔧 Updating local transaction notes from:', cashTransactions.value[transactionIndex].notes, 'to:', editNotes.value)
+      logger.debug('🔧 Updating local transaction notes from:', cashTransactions.value[transactionIndex].notes, 'to:', editNotes.value)
       cashTransactions.value[transactionIndex].notes = editNotes.value
-      console.log('✅ Local update successful, new notes:', cashTransactions.value[transactionIndex].notes)
+      logger.debug('✅ Local update successful, new notes:', cashTransactions.value[transactionIndex].notes)
     } else {
       console.warn('⚠️ Transaction not found in local array')
     }
@@ -647,18 +647,18 @@ const getStatusText = (status: string) => {
 
 // Watcher für currentUser
 watch(() => props.currentUser, (newUser: any) => {
-  console.log('🔍 Watcher triggered:', { newUser, hasId: newUser?.id })
+  logger.debug('🔍 Watcher triggered:', { newUser, hasId: newUser?.id })
   if (newUser?.id) {
-    console.log('✅ User loaded, loading cash transactions...')
+    logger.debug('✅ User loaded, loading cash transactions...')
     loadCashTransactions()
   } else {
-    console.log('⚠️ User not loaded yet or no ID')
+    logger.debug('⚠️ User not loaded yet or no ID')
   }
 }, { immediate: true })
 
 // Watcher für staffFilterId
 watch(() => props.staffFilterId, (newFilterId) => {
-  console.log('🔍 Staff filter changed:', newFilterId)
+  logger.debug('🔍 Staff filter changed:', newFilterId)
   if (props.currentUser?.id) {
     loadCashTransactions()
   }
@@ -666,7 +666,7 @@ watch(() => props.staffFilterId, (newFilterId) => {
 
 // Lifecycle
 onMounted(() => {
-  console.log('🔍 Component mounted, currentUser:', props.currentUser)
+  logger.debug('🔍 Component mounted, currentUser:', props.currentUser)
   // loadCashTransactions() wird jetzt vom Watcher aufgerufen
 })
 </script>

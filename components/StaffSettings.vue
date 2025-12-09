@@ -890,7 +890,7 @@ const loadExamLocations = async () => {
       return Array.isArray(staffIds) && staffIds.includes(staffId)
     });
 
-      console.log('✅ Prüfungsstandorte geladen:', {
+      logger.debug('✅ Prüfungsstandorte geladen:', {
       verfügbar: availableExamLocations.value.length,
       aktiviert_durch_Mitarbeiter: staffExamLocations.value.length,
       aktive_namen: staffExamLocations.value.map(loc => loc.name)
@@ -951,7 +951,7 @@ const toggleExamLocation = async (location: any) => {
         .eq('id', existingPreference.id);
 
       if (deleteError) throw deleteError;
-      console.log('✅ Prüfungsstandort-Präferenz gelöscht für:', location.name);
+      logger.debug('✅ Prüfungsstandort-Präferenz gelöscht für:', location.name);
     } else {
       // Wenn keine Präferenz-Zeile existiert, erstellen wir eine neue
       const { error: insertError } = await supabase
@@ -969,7 +969,7 @@ const toggleExamLocation = async (location: any) => {
         });
 
       if (insertError) throw insertError;
-      console.log('✅ Neue Prüfungsstandort-Präferenz erstellt für:', location.name);
+      logger.debug('✅ Neue Prüfungsstandort-Präferenz erstellt für:', location.name);
     }
 
   } catch (err: any) {
@@ -990,7 +990,7 @@ const loadAllData = async () => {
   try {
     // Exam Locations werden nur in der Prüfungsstandorte-Sektion geladen
     // Standard Locations werden separat geladen
-    console.log('✅ Basic data loading completed')
+    logger.debug('✅ Basic data loading completed')
   } catch (err: any) {
     console.error('❌ Error loading data:', err)
     error.value = err.message
@@ -1017,7 +1017,7 @@ const getExamLocationMapsUrl = (location: any): string => {
 
 // New function to handle exam locations changes from dropdown
 const handleExamLocationsChanged = (locations: any[]) => {
-  console.log('🔄 Exam locations changed:', locations.length)
+  logger.debug('🔄 Exam locations changed:', locations.length)
   // Reload the staff exam locations to reflect changes
   loadExamLocations()
 }
@@ -1047,7 +1047,7 @@ const removeExamLocation = async (location: any) => {
 
     if (deleteError) throw deleteError
 
-    console.log('✅ Prüfungsstandort entfernt:', location.name)
+    logger.debug('✅ Prüfungsstandort entfernt:', location.name)
     
     // Reload the data
     await loadExamLocations()
@@ -1159,7 +1159,7 @@ const addExamLocation = async () => {
       categories: []
     }
 
-    console.log('✅ Exam location added:', data)
+    logger.debug('✅ Exam location added:', data)
 
   } catch (err: any) {
     console.error('❌ Error adding exam location:', err)
@@ -1202,7 +1202,7 @@ const createNewLocation = async () => {
     resetLocationForm()
     showNewLocationModal.value = false
     
-    console.log('✅ Location created successfully:', data)
+    logger.debug('✅ Location created successfully:', data)
   } catch (err: any) {
     console.error('❌ Error creating location:', err)
     error.value = `Fehler beim Erstellen: ${err.message}`
@@ -1238,11 +1238,11 @@ const toggleLocationAssignment = async (locationId: string) => {
     if (currentStaffIds.includes(staffId)) {
       // Entfernen
       currentStaffIds = currentStaffIds.filter(id => id !== staffId)
-      console.log(`🔥 Removing staff ${staffId} from location ${locationId}`)
+      logger.debug(`🔥 Removing staff ${staffId} from location ${locationId}`)
     } else {
       // Hinzufügen
       currentStaffIds.push(staffId)
-      console.log(`🔥 Adding staff ${staffId} to location ${locationId}`)
+      logger.debug(`🔥 Adding staff ${staffId} to location ${locationId}`)
     }
 
     // Update in Datenbank
@@ -1259,7 +1259,7 @@ const toggleLocationAssignment = async (locationId: string) => {
       allTenantLocations.value[locationIndex].staff_ids = currentStaffIds
     }
 
-    console.log('✅ Location assignment updated successfully')
+    logger.debug('✅ Location assignment updated successfully')
 
   } catch (err: any) {
     console.error('❌ Error in toggleLocationAssignment:', err)
@@ -1269,7 +1269,7 @@ const toggleLocationAssignment = async (locationId: string) => {
 
 const removeLocation = async (locationId: string) => {
   try {
-    console.log('🔥 Removing location:', locationId)
+    logger.debug('🔥 Removing location:', locationId)
     
     await saveWithOfflineSupport(
       'locations',           // table
@@ -1279,11 +1279,11 @@ const removeLocation = async (locationId: string) => {
       `Standort löschen`    // operation name
     )
     
-    console.log('🔍 Delete response - success')
+    logger.debug('🔍 Delete response - success')
     
     // Optimistic Update - sofort aus UI entfernen
     myLocations.value = myLocations.value.filter(loc => loc.id !== locationId)
-    console.log('✅ Location removed successfully')
+    logger.debug('✅ Location removed successfully')
     
   } catch (err: any) {
     console.error('❌ Error in removeLocation:', err)
@@ -1301,7 +1301,7 @@ const removeLocation = async (locationId: string) => {
       error.value = null // Kein Fehler anzeigen
       
       // Optional: Success-Message für Offline
-      console.log('📦 Location will be deleted when online')
+      logger.debug('📦 Location will be deleted when online')
       // Sie könnten hier eine Notification anzeigen:
       // showMessage("Standort wird gelöscht sobald Internet verfügbar ist")
     } else {
@@ -1320,7 +1320,7 @@ const loadData = async () => {
   try {
     const supabase = getSupabase()
 
-    console.log('🔥 Loading staff settings data...')
+    logger.debug('🔥 Loading staff settings data...')
 
     // Kategorien laden (nur für aktuellen Tenant)
     const { data: categories, error: categoriesError } = await supabase
@@ -1356,9 +1356,9 @@ const loadData = async () => {
 
     // Staff Settings laden (temporär deaktiviert - Tabelle existiert nicht)
     // TODO: Implementiere staff_settings Tabelle oder alternative Lösung
-    console.log('🔥 Staff settings loading disabled - table does not exist')
+    logger.debug('🔥 Staff settings loading disabled - table does not exist')
 
-    console.log('✅ All data loaded successfully')
+    logger.debug('✅ All data loaded successfully')
 
   } catch (err: any) {
     console.error('❌ Error loading data:', err)
@@ -1374,17 +1374,17 @@ const loadData = async () => {
 // Vollständige Debug-Version für alle 4 Monate:
 
 const loadWorkingHoursData = async () => {
-  console.log('🔍 DEBUG: Starting loadWorkingHoursData')
+  logger.debug('🔍 DEBUG: Starting loadWorkingHoursData')
   
   if (!props.currentUser?.id) {
-    console.log('❌ DEBUG: No currentUser.id found')
+    logger.debug('❌ DEBUG: No currentUser.id found')
     return
   }
   
   try {
     const supabase = getSupabase()
     
-    console.log('🔍 DEBUG: Querying appointments for staff_id:', props.currentUser.id)
+    logger.debug('🔍 DEBUG: Querying appointments for staff_id:', props.currentUser.id)
     
     const { data: appointments, error } = await supabase
       .from('appointments')
@@ -1396,10 +1396,10 @@ const loadWorkingHoursData = async () => {
       return
     }
     
-    console.log('🔍 DEBUG: Total appointments found:', appointments?.length || 0)
+    logger.debug('🔍 DEBUG: Total appointments found:', appointments?.length || 0)
     
     if (!appointments || appointments.length === 0) {
-      console.log('⚠️ DEBUG: No appointments found')
+      logger.debug('⚠️ DEBUG: No appointments found')
       return
     }
     
@@ -1422,8 +1422,8 @@ const loadWorkingHoursData = async () => {
       return appointmentDate >= now // Start-Zeit in der Zukunft = geplant
     })
     
-    console.log('🔍 DEBUG: Worked appointments (in past):', workedAppointments.length)
-    console.log('🔍 DEBUG: Planned appointments (in future):', plannedAppointments.length)
+    logger.debug('🔍 DEBUG: Worked appointments (in past):', workedAppointments.length)
+    logger.debug('🔍 DEBUG: Planned appointments (in future):', plannedAppointments.length)
     
     // Monatsgrenzen definieren
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -1482,7 +1482,7 @@ const loadWorkingHoursData = async () => {
       filterByPeriod(plannedAppointments, nextMonthStart, nextMonthEnd)
     )
     
-    console.log('🔍 DEBUG: Hours calculated:', {
+    logger.debug('🔍 DEBUG: Hours calculated:', {
       currentMonthWorked,
       currentMonthPlanned,
       nextMonthPlanned,
@@ -1515,12 +1515,12 @@ const saveAllSettings = async () => {
     const supabase = getSupabase()
 
     // 1. Arbeitszeiten speichern
-    console.log('💾 Saving working hours...')
+    logger.debug('💾 Saving working hours...')
     try {
       isSavingWorkingHours.value = true
       for (const day of weekdays) {
         const formData = workingHoursForm.value[day.value]
-        console.log(`💾 Saving day ${day.value}:`, formData)
+        logger.debug(`💾 Saving day ${day.value}:`, formData)
         
         await saveWorkingHour(props.currentUser.id, {
           day_of_week: day.value,
@@ -1529,7 +1529,7 @@ const saveAllSettings = async () => {
           is_active: formData.is_active
         })
       }
-      console.log('✅ Working hours saved via saveAllSettings')
+      logger.debug('✅ Working hours saved via saveAllSettings')
       isSavingWorkingHours.value = false
     } catch (whErr: any) {
       isSavingWorkingHours.value = false
@@ -1538,18 +1538,18 @@ const saveAllSettings = async () => {
     }
 
     // 2. Staff-Kategorien speichern (temporär deaktiviert - Tabelle existiert nicht)
-    console.log('🔥 Staff categories saving disabled - table does not exist')
+    logger.debug('🔥 Staff categories saving disabled - table does not exist')
     // TODO: Implementiere staff_categories Tabelle oder alternative Lösung
 
     // 3. Lektionsdauern speichern (temporär deaktiviert - Tabelle existiert nicht)
-    console.log('🔥 Lesson durations saving disabled - table does not exist')
+    logger.debug('🔥 Lesson durations saving disabled - table does not exist')
     // TODO: Implementiere staff_category_durations Tabelle oder alternative Lösung
 
     // 3. Staff Settings speichern (temporär deaktiviert - Tabelle existiert nicht)
-    console.log('🔥 Staff settings saving disabled - table does not exist')
+    logger.debug('🔥 Staff settings saving disabled - table does not exist')
     // TODO: Implementiere staff_settings Tabelle oder alternative Lösung
 
-    console.log('✅ All settings saved successfully!')
+    logger.debug('✅ All settings saved successfully!')
     saveSuccess.value = true
     emit('settings-updated')
     setTimeout(() => emit('close'), 1000)
@@ -1730,7 +1730,7 @@ const initializeWorkingHoursForm = () => {
       (wh: any) => wh.day_of_week === day.value && wh.is_active === true
     )
     
-    console.log(`🔍 Initializing day ${day.value}:`, dayWorkingHours)
+    logger.debug(`🔍 Initializing day ${day.value}:`, dayWorkingHours)
     
     // Wenn aktive Arbeitszeiten vorhanden sind, lade alle Blöcke
     if (dayWorkingHours.length > 0) {
@@ -1754,7 +1754,7 @@ const initializeWorkingHoursForm = () => {
     }
   })
   
-  console.log('✅ Working day form initialized:', workingDayForm.value)
+  logger.debug('✅ Working day form initialized:', workingDayForm.value)
 }
 
 // Auto-Save für einzelnen Arbeitstag (Legacy)
@@ -1764,7 +1764,7 @@ const autoSaveWorkingHour = async (dayOfWeek: number) => {
   isSavingWorkingHours.value = true
   try {
     const formData = workingHoursForm.value[dayOfWeek]
-    console.log(`💾 Auto-saving day ${dayOfWeek}:`, formData)
+    logger.debug(`💾 Auto-saving day ${dayOfWeek}:`, formData)
     
     await saveWorkingHour(props.currentUser.id, {
       day_of_week: dayOfWeek,
@@ -1773,11 +1773,11 @@ const autoSaveWorkingHour = async (dayOfWeek: number) => {
       is_active: formData.is_active
     })
     
-    console.log(`✅ Day ${dayOfWeek} auto-saved successfully`)
+    logger.debug(`✅ Day ${dayOfWeek} auto-saved successfully`)
     
     // Reload working hours to update calendar
     await loadWorkingHours(props.currentUser.id)
-    console.log('🔄 Working hours reloaded after save')
+    logger.debug('🔄 Working hours reloaded after save')
     
     // Emit event to notify parent (calendar needs to reload)
     emit('settings-updated')
@@ -1799,15 +1799,15 @@ const autoSaveWorkingDay = async (dayOfWeek: number) => {
   isSavingWorkingHours.value = true
   try {
     const dayData = workingDayForm.value[dayOfWeek]
-    console.log(`💾 Auto-saving working day ${dayOfWeek}:`, dayData)
+    logger.debug(`💾 Auto-saving working day ${dayOfWeek}:`, dayData)
     
     await saveWorkingDay(props.currentUser.id, dayData)
     
-    console.log(`✅ Working day ${dayOfWeek} auto-saved successfully`)
+    logger.debug(`✅ Working day ${dayOfWeek} auto-saved successfully`)
     
     // Reload working hours to update calendar
     await loadWorkingHours(props.currentUser.id)
-    console.log('🔄 Working hours reloaded after save')
+    logger.debug('🔄 Working hours reloaded after save')
     
     // Emit event to notify parent (calendar needs to reload)
     emit('settings-updated')
@@ -1865,13 +1865,13 @@ const saveWorkingHours = async () => {
   
   isSavingWorkingHours.value = true
   try {
-    console.log('💾 Saving working hours for staff:', props.currentUser.id)
-    console.log('📊 Form data:', workingHoursForm.value)
+    logger.debug('💾 Saving working hours for staff:', props.currentUser.id)
+    logger.debug('📊 Form data:', workingHoursForm.value)
     
     // Save each day's working hours (including inactive ones)
     for (const day of weekdays) {
       const formData = workingHoursForm.value[day.value]
-      console.log(`💾 Saving day ${day.value}:`, formData)
+      logger.debug(`💾 Saving day ${day.value}:`, formData)
       
       try {
         await saveWorkingHour(props.currentUser.id, {
@@ -1880,14 +1880,14 @@ const saveWorkingHours = async () => {
           end_time: formData.end_time,
           is_active: formData.is_active
         })
-        console.log(`✅ Day ${day.value} saved successfully`)
+        logger.debug(`✅ Day ${day.value} saved successfully`)
       } catch (dayErr: any) {
         console.error(`❌ Error saving day ${day.value}:`, dayErr)
         throw dayErr
       }
     }
     
-    console.log('✅ All working hours saved successfully')
+    logger.debug('✅ All working hours saved successfully')
     
     // Reload to confirm
     await loadWorkingHours(props.currentUser.id)
@@ -1922,7 +1922,7 @@ const clearWorkingHours = async () => {
     await loadWorkingHours(props.currentUser.id)
     initializeWorkingHoursForm()
     
-    console.log('✅ All working hours cleared')
+    logger.debug('✅ All working hours cleared')
     showSuccessToast('Arbeitszeiten gelöscht', 'Alle Arbeitszeiten wurden erfolgreich gelöscht!')
     
   } catch (err: any) {

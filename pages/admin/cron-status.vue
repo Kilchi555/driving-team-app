@@ -253,9 +253,9 @@ const loadStatus = async () => {
 
   try {
     const response = await $fetch('/api/admin/cron-status')
-    console.log('📊 Cron Status loaded:', response)
-    console.log('📊 Pending Payments:', response.pendingPayments)
-    console.log('📊 Payment Stats:', response.paymentStats)
+    logger.debug('📊 Cron Status loaded:', response)
+    logger.debug('📊 Pending Payments:', response.pendingPayments)
+    logger.debug('📊 Payment Stats:', response.paymentStats)
     status.value = response
   } catch (err: any) {
     console.error('Error loading cron status:', err)
@@ -299,7 +299,7 @@ const runCronManually = async (cronPath: string) => {
   runningCron.value = cronPath
   
   try {
-    console.log('🔄 Running cron job manually:', cronPath)
+    logger.debug('🔄 Running cron job manually:', cronPath)
     
     // Hole aktuellen Auth-Token von Supabase
     const supabase = getSupabase()
@@ -316,7 +316,7 @@ const runCronManually = async (cronPath: string) => {
       }
     })
     
-    console.log('✅ Cron job completed:', response)
+    logger.debug('✅ Cron job completed:', response)
     
     alert(`✅ Cron Job erfolgreich ausgeführt!\n\nPath: ${cronPath}\n\nErgebnis:\n${JSON.stringify(response, null, 2)}`)
     

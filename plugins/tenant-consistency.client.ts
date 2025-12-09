@@ -23,7 +23,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   
   // Validate on page focus (when user returns to tab)
   window.addEventListener('focus', async () => {
-    console.log('👁️ Page focused, validating tenant consistency')
+    logger.debug('👁️ Page focused, validating tenant consistency')
     await validateTenantConsistency()
   })
   
@@ -42,14 +42,14 @@ export default defineNuxtPlugin((nuxtApp) => {
             }
           }
         })
-        console.log('✅ Router guard for tenant consistency registered')
+        logger.debug('✅ Router guard for tenant consistency registered')
       } else {
         console.warn('⚠️ Router not available in app:mounted hook')
       }
     })
   }
   
-  console.log('✅ Tenant consistency monitoring initialized')
+  logger.debug('✅ Tenant consistency monitoring initialized')
 })
 
 

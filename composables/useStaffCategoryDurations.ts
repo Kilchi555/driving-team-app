@@ -30,7 +30,7 @@ export const useStaffCategoryDurations = () => {
 
   // Dauern für Staff + Kategorie laden
   const loadStaffCategoryDurations = async (staffId: string, categoryCode: string) => {
-    console.log('🚀 Loading staff category durations:', { staffId, categoryCode })
+    logger.debug('🚀 Loading staff category durations:', { staffId, categoryCode })
     isLoading.value = true
     error.value = null
 
@@ -51,7 +51,7 @@ export const useStaffCategoryDurations = () => {
       
       // Fallback wenn keine spezifischen Dauern gefunden
       if (durations.length === 0) {
-        console.log('⚠️ No specific durations found, using category default')
+        logger.debug('⚠️ No specific durations found, using category default')
         
         // Hole Standard-Dauer aus categories Tabelle
         const { data: categoryData, error: categoryError } = await supabase
@@ -69,7 +69,7 @@ export const useStaffCategoryDurations = () => {
         availableDurations.value = durations.sort((a: number, b: number) => a - b)
       }
 
-      console.log('✅ Loaded durations:', availableDurations.value)
+      logger.debug('✅ Loaded durations:', availableDurations.value)
       return availableDurations.value
 
     } catch (err: any) {
@@ -89,7 +89,7 @@ export const useStaffCategoryDurations = () => {
     categoryCode: string, 
     durations: number[]
   ) => {
-    console.log('💾 Saving staff category durations:', { staffId, categoryCode, durations })
+    logger.debug('💾 Saving staff category durations:', { staffId, categoryCode, durations })
     
     try {
       const supabase = getSupabase()
@@ -121,7 +121,7 @@ export const useStaffCategoryDurations = () => {
       // State aktualisieren
       availableDurations.value = durations.sort((a: number, b: number) => a - b)
       
-      console.log('✅ Staff category durations saved successfully')
+      logger.debug('✅ Staff category durations saved successfully')
 
     } catch (err: any) {
       console.error('❌ Error saving staff category durations:', err)
@@ -132,7 +132,7 @@ export const useStaffCategoryDurations = () => {
 
   // Alle Dauern eines Staff laden (für Settings)
   const loadAllStaffDurations = async (staffId: string) => {
-    console.log('📋 Loading all staff durations for settings')
+    logger.debug('📋 Loading all staff durations for settings')
     
     try {
       const supabase = getSupabase()
@@ -175,7 +175,7 @@ export const useStaffCategoryDurations = () => {
 
   // Standard-Dauern für neue Staff erstellen
   const createDefaultDurations = async (staffId: string) => {
-    console.log('🏗️ Creating default durations for new staff')
+    logger.debug('🏗️ Creating default durations for new staff')
     
     try {
       const supabase = getSupabase()
@@ -212,7 +212,7 @@ export const useStaffCategoryDurations = () => {
 
       if (insertError) throw insertError
 
-      console.log('✅ Default durations created for all categories')
+      logger.debug('✅ Default durations created for all categories')
 
     } catch (err: any) {
       console.error('❌ Error creating default durations:', err)

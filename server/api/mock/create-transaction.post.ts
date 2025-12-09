@@ -3,7 +3,7 @@
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🎭 Mock Payment API called')
+    logger.debug('🎭 Mock Payment API called')
     
     const body = await readBody(event)
     
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🎭 Creating mock transaction:', {
+    logger.debug('🎭 Creating mock transaction:', {
       appointmentId,
       amount,
       currency,
@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
     const protocol = 'http' // Development
     const paymentUrl = `${protocol}://${host}/mock-payment-page?txn=${transactionId}&amount=${amount}&email=${customerEmail}`
 
-    console.log('✅ Mock transaction created:', {
+    logger.debug('✅ Mock transaction created:', {
       transactionId,
       paymentUrl
     })

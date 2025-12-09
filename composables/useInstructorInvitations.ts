@@ -76,7 +76,7 @@ export const useInstructorInvitations = () => {
         expiresAt
       })
 
-      console.log('✅ Instructor invitation sent:', invitation.id)
+      logger.debug('✅ Instructor invitation sent:', invitation.id)
       return invitation
 
     } catch (err: any) {
@@ -161,7 +161,7 @@ Mit freundlichen Grüssen
 Ihr Fahrschul-Team
     `
 
-    console.log('📧 Instructor invitation email:', emailContent)
+    logger.debug('📧 Instructor invitation email:', emailContent)
     
     // TODO: Integrate with actual email service
     // For now, we just log and simulate success

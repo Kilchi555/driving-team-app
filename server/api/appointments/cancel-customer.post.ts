@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Authenticated user:', user.id, user.email)
+    logger.debug('✅ Authenticated user:', user.id, user.email)
 
     // Get user profile from database (use admin client to bypass RLS)
     const supabaseAdmin = getSupabaseAdmin()
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
       .eq('auth_user_id', user.id)
       .single()
 
-    console.log('🔍 User profile query result:', { userProfile, profileError })
+    logger.debug('🔍 User profile query result:', { userProfile, profileError })
 
     if (profileError) {
       console.error('❌ Profile error:', profileError)
@@ -66,9 +66,9 @@ export default defineEventHandler(async (event) => {
 
     const now = new Date()
 
-    console.log('🗑️ Customer cancelling appointment:', appointmentId)
-    console.log('👤 User:', userProfile.id)
-    console.log('📋 Reason ID:', cancellationReasonId)
+    logger.debug('🗑️ Customer cancelling appointment:', appointmentId)
+    logger.debug('👤 User:', userProfile.id)
+    logger.debug('📋 Reason ID:', cancellationReasonId)
 
     // 1. Get appointment with payment
     const { data: appointment, error: appointmentError } = await supabaseAdmin
@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
     
     const hoursUntilAppointment = (appointmentZurich.getTime() - nowZurich.getTime()) / (1000 * 60 * 60)
     
-    console.log('🕐 Backend hours until appointment (Zurich TZ):', hoursUntilAppointment.toFixed(2), {
+    logger.debug('🕐 Backend hours until appointment (Zurich TZ):', hoursUntilAppointment.toFixed(2), {
       appointment: appointment.start_time,
       now: now.toISOString()
     })
@@ -129,13 +129,13 @@ export default defineEventHandler(async (event) => {
 
     if (hoursUntilAppointment >= 24) {
       // More than 24h before appointment
-      console.log('✅ Free cancellation (>= 24h)')
+      logger.debug('✅ Free cancellation (>= 24h)')
       chargePercentage = 0
       creditHours = true
     } else {
       // Less than 24h before appointment
       // Will charge 100% unless medical certificate is approved
-      console.log('⚠️ Charged cancellation (< 24h)')
+      logger.debug('⚠️ Charged cancellation (< 24h)')
       chargePercentage = 100
       creditHours = true
     }
@@ -157,7 +157,7 @@ export default defineEventHandler(async (event) => {
     if (reason.requires_proof) {
       updateData.medical_certificate_status = 'pending'
       updateData.original_charge_percentage = chargePercentage
-      console.log('📄 Medical certificate required - status set to pending')
+      logger.debug('📄 Medical certificate required - status set to pending')
     }
 
     // 6. Update appointment
@@ -174,7 +174,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Appointment cancelled successfully')
+    logger.debug('✅ Appointment cancelled successfully')
 
     // 7. Handle payment if exists
     const payment = Array.isArray(appointment.payments) 
@@ -185,7 +185,7 @@ export default defineEventHandler(async (event) => {
       // Cancel payment if more than 24h before appointment
       if (payment.payment_status === 'authorized') {
         // TODO: Void Wallee authorization
-        console.log('⚠️ TODO: Void Wallee authorization:', payment.wallee_transaction_id)
+        logger.debug('⚠️ TODO: Void Wallee authorization:', payment.wallee_transaction_id)
       }
 
       if (payment.payment_status === 'pending' || payment.payment_status === 'authorized') {
@@ -197,7 +197,7 @@ export default defineEventHandler(async (event) => {
           })
           .eq('id', payment.id)
         
-        console.log('✅ Payment cancelled')
+        logger.debug('✅ Payment cancelled')
       }
     }
 

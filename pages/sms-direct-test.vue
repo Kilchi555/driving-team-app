@@ -123,7 +123,7 @@ const sendDirectSms = async () => {
   result.value = null
   
   try {
-    console.log('📱 Sending direct SMS:', { phoneNumber: phoneNumber.value, message: message.value })
+    logger.debug('📱 Sending direct SMS:', { phoneNumber: phoneNumber.value, message: message.value })
     
     // Direkt in die Datenbank schreiben
     const { data, error: dbError } = await supabase
@@ -143,7 +143,7 @@ const sendDirectSms = async () => {
       return
     }
     
-    console.log('✅ SMS saved to database:', data)
+    logger.debug('✅ SMS saved to database:', data)
     result.value = { success: true, data: data[0] }
     
     // Reload SMS logs
@@ -163,7 +163,7 @@ const testDatabaseConnection = async () => {
   result.value = null
   
   try {
-    console.log('🔍 Testing database connection...')
+    logger.debug('🔍 Testing database connection...')
     
     const { data, error: dbError } = await supabase
       .from('sms_logs')
@@ -174,7 +174,7 @@ const testDatabaseConnection = async () => {
       console.error('❌ Database connection error:', dbError)
       error.value = 'Database connection failed: ' + dbError.message
     } else {
-      console.log('✅ Database connection successful')
+      logger.debug('✅ Database connection successful')
       result.value = { success: true, message: 'Database connection successful' }
     }
     
@@ -188,7 +188,7 @@ const testDatabaseConnection = async () => {
 
 const loadSmsLogs = async () => {
   try {
-    console.log('📋 Loading SMS logs...')
+    logger.debug('📋 Loading SMS logs...')
     
     const { data, error: dbError } = await supabase
       .from('sms_logs')
@@ -202,7 +202,7 @@ const loadSmsLogs = async () => {
       return
     }
     
-    console.log('✅ SMS logs loaded:', data)
+    logger.debug('✅ SMS logs loaded:', data)
     smsLogs.value = data || []
     smsLogsLoaded.value = true
     

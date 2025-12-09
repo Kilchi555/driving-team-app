@@ -403,8 +403,8 @@ const loadCourses = async () => {
     if (categoriesError) throw categoriesError
     categories.value = categoriesData || []
 
-    console.log('✅ Courses loaded:', courses.value.length)
-    console.log('📊 Course data sample:', courses.value[0])
+    logger.debug('✅ Courses loaded:', courses.value.length)
+    logger.debug('📊 Course data sample:', courses.value[0])
   } catch (err: any) {
     console.error('❌ Error loading courses:', err)
     error.value = err.message || 'Fehler beim Laden der Kurse'
@@ -558,7 +558,7 @@ const formatTime = (dateString: string) => {
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🔍 Customer courses page mounted')
+  logger.debug('🔍 Customer courses page mounted')
   
   // Load instructor display setting from localStorage (synced with admin setting)
   const savedPreference = localStorage.getItem('showInstructorColumn')
@@ -571,7 +571,7 @@ onMounted(async () => {
   
   // Check auth
   if (!authStore.isLoggedIn || !isClient?.value) {
-    console.log('❌ Not logged in or not a client, redirecting...')
+    logger.debug('❌ Not logged in or not a client, redirecting...')
     await navigateTo('/login')
     return
   }

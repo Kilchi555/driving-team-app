@@ -61,7 +61,7 @@ export const useProductSales = () => {
       isLoading.value = true
       error.value = null
       
-      console.log('💾 Creating product sale:', data)
+      logger.debug('💾 Creating product sale:', data)
       
       // Berechne Gesamtbetrag
       const totalAmount = data.items && data.items.length > 0 
@@ -87,7 +87,7 @@ export const useProductSales = () => {
       
       if (saleError) throw saleError
       
-      console.log('✅ Product sale created:', saleData.id)
+      logger.debug('✅ Product sale created:', saleData.id)
       
       // 2. Produktverkauf-Items erstellen (nur wenn Produkte vorhanden sind)
       if (data.items && data.items.length > 0) {
@@ -105,9 +105,9 @@ export const useProductSales = () => {
         
         if (itemsError) throw itemsError
         
-        console.log('✅ Product sale items created:', saleItems.length)
+        logger.debug('✅ Product sale items created:', saleItems.length)
       } else {
-        console.log('ℹ️ No products to save in product_sale_items (discount-only sale)')
+        logger.debug('ℹ️ No products to save in product_sale_items (discount-only sale)')
       }
       
       return saleData
@@ -124,7 +124,7 @@ export const useProductSales = () => {
   // ✅ Produktverkauf für einen Termin laden
   const loadProductSaleForAppointment = async (appointmentId: string): Promise<ProductSale | null> => {
     try {
-      console.log('📦 Loading product sale for appointment:', appointmentId)
+      logger.debug('📦 Loading product sale for appointment:', appointmentId)
       
       const { data, error: dbError } = await supabase
         .from('product_sales')
@@ -146,13 +146,13 @@ export const useProductSales = () => {
       if (dbError) {
         if (dbError.code === 'PGRST116') {
           // Kein Produktverkauf gefunden
-          console.log('📦 No product sale found for appointment')
+          logger.debug('📦 No product sale found for appointment')
           return null
         }
         throw dbError
       }
       
-      console.log('✅ Product sale loaded:', data)
+      logger.debug('✅ Product sale loaded:', data)
       return data
       
     } catch (err: any) {
@@ -165,7 +165,7 @@ export const useProductSales = () => {
   // ✅ Produktverkauf aktualisieren
   const updateProductSale = async (saleId: string, data: Partial<ProductSale>): Promise<boolean> => {
     try {
-      console.log('💾 Updating product sale:', saleId, data)
+      logger.debug('💾 Updating product sale:', saleId, data)
       
       const { error } = await supabase
         .from('product_sales')
@@ -174,7 +174,7 @@ export const useProductSales = () => {
       
       if (error) throw error
       
-      console.log('✅ Product sale updated')
+      logger.debug('✅ Product sale updated')
       return true
       
     } catch (err: any) {
@@ -187,7 +187,7 @@ export const useProductSales = () => {
   // ✅ Produktverkauf löschen
   const deleteProductSale = async (saleId: string): Promise<boolean> => {
     try {
-      console.log('🗑️ Deleting product sale:', saleId)
+      logger.debug('🗑️ Deleting product sale:', saleId)
       
       const { error } = await supabase
         .from('product_sales')
@@ -196,7 +196,7 @@ export const useProductSales = () => {
       
       if (error) throw error
       
-      console.log('✅ Product sale deleted')
+      logger.debug('✅ Product sale deleted')
       return true
       
     } catch (err: any) {
@@ -209,7 +209,7 @@ export const useProductSales = () => {
   // ✅ Alle Produktverkäufe für einen User laden
   const loadProductSalesForUser = async (userId: string): Promise<ProductSale[]> => {
     try {
-      console.log('📦 Loading product sales for user:', userId)
+      logger.debug('📦 Loading product sales for user:', userId)
       
       const { data, error } = await supabase
         .from('product_sales')
@@ -230,7 +230,7 @@ export const useProductSales = () => {
       
       if (error) throw error
       
-      console.log('✅ Product sales loaded:', data?.length || 0)
+      logger.debug('✅ Product sales loaded:', data?.length || 0)
       return data || []
       
     } catch (err: any) {
@@ -243,7 +243,7 @@ export const useProductSales = () => {
   // ✅ Alle Produktverkäufe für einen Staff laden
   const loadProductSalesForStaff = async (staffId: string): Promise<ProductSale[]> => {
     try {
-      console.log('📦 Loading product sales for staff:', staffId)
+      logger.debug('📦 Loading product sales for staff:', staffId)
       
       const { data, error } = await supabase
         .from('product_sales')
@@ -264,7 +264,7 @@ export const useProductSales = () => {
       
       if (error) throw error
       
-      console.log('✅ Product sales loaded:', data?.length || 0)
+      logger.debug('✅ Product sales loaded:', data?.length || 0)
       return data || []
       
     } catch (err: any) {

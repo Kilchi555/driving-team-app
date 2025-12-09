@@ -412,7 +412,7 @@ const loadStaffHours = async () => {
       throw new Error('User has no tenant assigned')
     }
     
-    console.log('🔍 Loading staff hours for tenant:', tenantId)
+    logger.debug('🔍 Loading staff hours for tenant:', tenantId)
 
     // Get tenant business_type first
     const { data: tenantData, error: tenantError } = await supabase
@@ -425,7 +425,7 @@ const loadStaffHours = async () => {
     
     // Only load categories if business_type is driving_school
     if (tenantData?.business_type !== 'driving_school') {
-      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
       availableCategories.value = []
       isLoading.value = false
       return
@@ -689,7 +689,7 @@ const authStore = useAuthStore()
 
 // Initialize
 onMounted(async () => {
-  console.log('🔍 Staff hours page mounted, checking auth...')
+  logger.debug('🔍 Staff hours page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -698,7 +698,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -707,17 +707,17 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading staff hours...')
+  logger.debug('✅ Auth check passed, loading staff hours...')
   
   // Original onMounted logic
   // Set default values

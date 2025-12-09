@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabase()
     const { wallee_transaction_id, appointment_id, payment_id } = await readBody(event)
 
-    console.log('🔍 Debug check:', { wallee_transaction_id, appointment_id, payment_id })
+    logger.debug('🔍 Debug check:', { wallee_transaction_id, appointment_id, payment_id })
 
     let query = supabase.from('payments').select('id, wallee_transaction_id, payment_status, appointment_id')
 

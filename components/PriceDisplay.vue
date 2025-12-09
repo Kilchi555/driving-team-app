@@ -703,7 +703,7 @@ const invoiceSaveMessage = ref<{ type: 'success' | 'error', text: string } | nul
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🚀 PriceDisplay mounted, starting to load data...')
+  logger.debug('🚀 PriceDisplay mounted, starting to load data...')
   
   await Promise.all([
     loadPaymentMethods(),
@@ -713,7 +713,7 @@ onMounted(async () => {
   
   // ✅ NEU: Student Billing Address laden (falls Student bereits ausgewählt)
   if (props.selectedStudent?.id) {
-    console.log('🏢 PriceDisplay onMounted: Loading billing address for student:', props.selectedStudent.id)
+    logger.debug('🏢 PriceDisplay onMounted: Loading billing address for student:', props.selectedStudent.id)
     await loadStudentBillingAddressData(props.selectedStudent.id)
     
     // ✅ ZUSÄTZLICH: Falls kein Student Billing gefunden, versuche über bestehende Payments zu laden
@@ -721,16 +721,16 @@ onMounted(async () => {
       await loadBillingAddressFromExistingPayments(props.selectedStudent.id)
     }
   } else {
-    console.log('💡 PriceDisplay onMounted: No student selected yet')
+    logger.debug('💡 PriceDisplay onMounted: No student selected yet')
   }
   
-  console.log('✅ PriceDisplay initialization complete')
+  logger.debug('✅ PriceDisplay initialization complete')
 })
 
 // ✅ NEU: Watcher für Student-Änderung - lädt automatisch Billing Address
 watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId: string) => {
   if (newStudentId && newStudentId !== oldStudentId) {
-    console.log('👤 Student changed, loading billing address for:', newStudentId)
+    logger.debug('👤 Student changed, loading billing address for:', newStudentId)
     
     // Reset Toggle und Custom Data
     useCustomBillingAddressInModal.value = false
@@ -752,7 +752,7 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
 // ✅ NEU: Watcher für studentBillingAddress - automatisch Form füllen wenn Invoice ausgewählt
 watch(() => studentBillingAddress.value, (newAddress: any) => {
   if (newAddress && selectedPaymentMethod.value === 'invoice' && !isEditingBillingAddress.value) {
-    console.log('✅ Watcher: Auto-filling invoice form with loaded billing address')
+    logger.debug('✅ Watcher: Auto-filling invoice form with loaded billing address')
     invoiceData.value = {
       company_name: newAddress.company_name || '',
       contact_person: newAddress.contact_person || '',
@@ -790,17 +790,17 @@ watch(() => invoiceData.value, (newData: any) => {
   
   // Auto-save nach 2 Sekunden Inaktivität
   autoSaveTimeout = setTimeout(() => {
-    console.log('⏱️ Auto-saving invoice address after inactivity...')
+    logger.debug('⏱️ Auto-saving invoice address after inactivity...')
     saveInvoiceAddress()
   }, 2000)
 }, { deep: true })
 
 // ✅ NEU: Watcher für Toggle - füllt Formular mit Kundendaten wenn ON
 watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
-  console.log('🔄 Toggle watcher triggered, isOn:', isOn)
+  logger.debug('🔄 Toggle watcher triggered, isOn:', isOn)
   
   if (isOn && studentBillingAddress.value) {
-    console.log('✅ Toggle ON - filling form with customer billing address')
+    logger.debug('✅ Toggle ON - filling form with customer billing address')
     invoiceData.value = {
       company_name: studentBillingAddress.value.company_name || '',
       contact_person: studentBillingAddress.value.contact_person || '',
@@ -816,7 +816,7 @@ watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
       notes: studentBillingAddress.value.notes || ''
     }
   } else if (!isOn) {
-    console.log('✅ Toggle OFF - clearing form')
+    logger.debug('✅ Toggle OFF - clearing form')
     invoiceData.value = {
       company_name: '',
       contact_person: '',
@@ -837,12 +837,12 @@ watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
 // ✅ NEU: Watcher für Duration-Änderung im Edit-Modus - recalculate price
 watch(() => props.durationMinutes, async (newDuration: number, oldDuration: number) => {
   if (newDuration !== oldDuration && props.isEditMode && props.appointmentId) {
-    console.log('⏱️ Duration changed in edit mode:', `${oldDuration}min -> ${newDuration}min`)
-    console.log('💰 Old stored price:', (existingPayment.value?.lesson_price_rappen || 0) / 100)
+    logger.debug('⏱️ Duration changed in edit mode:', `${oldDuration}min -> ${newDuration}min`)
+    logger.debug('💰 Old stored price:', (existingPayment.value?.lesson_price_rappen || 0) / 100)
     
     // Calculate new price based on new duration
     const newPrice = newDuration * props.pricePerMinute
-    console.log('💰 New calculated price:', newPrice)
+    logger.debug('💰 New calculated price:', newPrice)
     
     // Update the stored payment with new lesson price locally first
     if (existingPayment.value) {
@@ -859,7 +859,7 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
       existingPayment.value.lesson_price_rappen = newLessonPriceRappen
       existingPayment.value.total_amount_rappen = Math.max(0, newTotalRappen)
       
-      console.log('✅ PriceDisplay: Updated payment price for duration change:', {
+      logger.debug('✅ PriceDisplay: Updated payment price for duration change:', {
         oldLessonPrice: (oldLessonPrice / 100).toFixed(2),
         newLessonPrice: (newLessonPriceRappen / 100).toFixed(2),
         oldTotal: (oldTotalRappen / 100).toFixed(2),
@@ -871,7 +871,7 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
       
       // ✅ NEU: Update payment in database directly
       try {
-        console.log('💾 Saving updated payment to database...')
+        logger.debug('💾 Saving updated payment to database...')
         const supabase = getSupabase()
         
         const { error: updateError } = await supabase
@@ -887,7 +887,7 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
         if (updateError) {
           console.error('❌ Failed to save payment to database:', updateError)
         } else {
-          console.log('✅ Payment saved to database')
+          logger.debug('✅ Payment saved to database')
         }
       } catch (error: any) {
         console.error('❌ Error saving payment:', error)
@@ -895,7 +895,7 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
       
       // ✅ Call API endpoint to handle payment reconciliation (for completed/authorized payments)
       try {
-        console.log('📡 Calling adjust-duration endpoint...')
+        logger.debug('📡 Calling adjust-duration endpoint...')
         const result = await $fetch('/api/appointments/adjust-duration', {
           method: 'POST',
           body: {
@@ -906,14 +906,14 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
           }
         })
         
-        console.log('✅ Duration adjustment processed:', result)
+        logger.debug('✅ Duration adjustment processed:', result)
         
         // Show notification based on result
         if ((result as any).action === 'additional_payment') {
-          console.log(`💳 Additional payment created: CHF ${(result as any).details.amount}`)
+          logger.debug(`💳 Additional payment created: CHF ${(result as any).details.amount}`)
           // Could show toast here if needed
         } else if ((result as any).action === 'credit_applied') {
-          console.log(`💰 Credit applied to student: CHF ${(result as any).details.refundAmount}`)
+          logger.debug(`💰 Credit applied to student: CHF ${(result as any).details.refundAmount}`)
           // Could show toast here if needed
         }
       } catch (error: any) {
@@ -927,11 +927,11 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
 // ✅ NEUE METHODE: Lade verfügbare Gutscheine
 const loadAvailableDiscounts = async () => {
   try {
-    console.log('🔄 Starting to load available discounts...')
+    logger.debug('🔄 Starting to load available discounts...')
     isLoadingDiscounts.value = true
     const supabase = getSupabase()
     
-    console.log('🔍 Querying discounts table for fixed discounts...')
+    logger.debug('🔍 Querying discounts table for fixed discounts...')
     
     // ✅ Lade nur Gutscheine mit discount_type = 'fixed'
     let query = supabase
@@ -943,7 +943,7 @@ const loadAvailableDiscounts = async () => {
     // ✅ WICHTIG: Nach tenant_id filtern, falls verfügbar
     if (props.currentUser?.tenant_id) {
       query = query.eq('tenant_id', props.currentUser.tenant_id)
-      console.log('🏢 Filtering discounts by tenant_id:', props.currentUser.tenant_id)
+      logger.debug('🏢 Filtering discounts by tenant_id:', props.currentUser.tenant_id)
     }
     
     const { data, error } = await query.order('discount_value', { ascending: true })
@@ -953,12 +953,12 @@ const loadAvailableDiscounts = async () => {
       return
     }
     
-    console.log('📊 Raw discounts data:', data)
-    console.log('📊 Fixed discounts found:', data)
+    logger.debug('📊 Raw discounts data:', data)
+    logger.debug('📊 Fixed discounts found:', data)
     
     availableDiscounts.value = data || []
-    console.log('✅ Loaded available fixed discounts:', availableDiscounts.value.length)
-    console.log('🎫 Available discounts:', availableDiscounts.value)
+    logger.debug('✅ Loaded available fixed discounts:', availableDiscounts.value.length)
+    logger.debug('🎫 Available discounts:', availableDiscounts.value)
     
   } catch (err: any) {
     console.error('❌ Error loading discounts:', err)
@@ -973,7 +973,7 @@ const applyVoucher = (discount: any) => {
   if (discountValue > 0) {
     emit('discount-changed', discountValue, discount.discount_type || 'fixed', discount.name)
     showDiscountSelector.value = false
-    console.log('✅ Applied voucher:', discount.name, 'Value:', discountValue)
+    logger.debug('✅ Applied voucher:', discount.name, 'Value:', discountValue)
   }
 }
 
@@ -989,7 +989,7 @@ const applyManualDiscount = () => {
   manualDiscountReason.value = ''
   showDiscountSelector.value = false
   
-  console.log('✅ Applied manual discount:', manualDiscountAmount.value, 'Reason:', reason)
+  logger.debug('✅ Applied manual discount:', manualDiscountAmount.value, 'Reason:', reason)
 }
 
 // ✅ NEUE METHODE: Gutschein-Selector schließen
@@ -1013,7 +1013,7 @@ const getBasePrice = () => {
   // Im Edit-Modus: Verwende den Wert aus existingPayment (wird durch den Watch aktualisiert)
   if (props.isEditMode && existingPayment.value) {
     const storedPrice = (existingPayment.value.lesson_price_rappen || 0) / 100
-    console.log('📊 getBasePrice (edit mode):', {
+    logger.debug('📊 getBasePrice (edit mode):', {
       storedPrice,
       durationMinutes: props.durationMinutes,
       pricePerMinute: props.pricePerMinute
@@ -1161,11 +1161,11 @@ const getProductPrice = (product: any): number => {
 const selectPaymentMethod = (method: string) => {
   selectedPaymentMethod.value = method
   emit('payment-method-changed', method)
-  console.log('💳 PriceDisplay - Payment method selected:', method)
+  logger.debug('💳 PriceDisplay - Payment method selected:', method)
   
   // ✅ Debug: Zeige den aktuellen Zustand wenn 'invoice' gewählt wird
   if (method === 'invoice') {
-    console.log('📋 Invoice selected - current state:', {
+    logger.debug('📋 Invoice selected - current state:', {
       selectedStudent: props.selectedStudent?.id,
       studentBillingAddress: !!studentBillingAddress.value,
       existingPayment: !!existingPayment.value,
@@ -1174,7 +1174,7 @@ const selectPaymentMethod = (method: string) => {
     
     // ✅ NEU: Automatisch die gespeicherte Rechnungsadresse ins Formular laden
     if (studentBillingAddress.value && !isEditingBillingAddress.value) {
-      console.log('✅ Auto-filling invoice form with studentBillingAddress')
+      logger.debug('✅ Auto-filling invoice form with studentBillingAddress')
       invoiceData.value = {
         company_name: studentBillingAddress.value.company_name || '',
         contact_person: studentBillingAddress.value.contact_person || '',
@@ -1198,7 +1198,7 @@ const loadBillingAddressFromExistingPayments = async (studentId: string) => {
   if (!studentId) return null
   
   try {
-    console.log('🔍 Loading customer data from users table for student:', studentId)
+    logger.debug('🔍 Loading customer data from users table for student:', studentId)
     
     const supabase = getSupabase()
     
@@ -1231,7 +1231,7 @@ const loadBillingAddressFromExistingPayments = async (studentId: string) => {
       }
       
       studentBillingAddress.value = billingAddress
-      console.log('✅ Billing address loaded from user data:', billingAddress)
+      logger.debug('✅ Billing address loaded from user data:', billingAddress)
       return billingAddress
     }
     
@@ -1248,14 +1248,14 @@ const loadStudentBillingAddressData = async (studentId: string) => {
   
   try {
     isLoadingStudentBilling.value = true
-    console.log('🏢 Loading student billing address for PriceDisplay:', studentId)
+    logger.debug('🏢 Loading student billing address for PriceDisplay:', studentId)
     
     const modalForm = useEventModalForm()
     const billingData = await modalForm.loadStudentBillingAddress(studentId)
     
     if (billingData) {
       studentBillingAddress.value = billingData
-      console.log('✅ Student billing address loaded in PriceDisplay:', billingData)
+      logger.debug('✅ Student billing address loaded in PriceDisplay:', billingData)
     }
     
     return billingData
@@ -1275,7 +1275,7 @@ const startEditingBillingAddress = () => {
   const existingAddress = studentBillingAddress.value || existingPayment.value?.company_billing_address
   
   if (existingAddress) {
-    console.log('✏️ Loading existing address data for editing:', existingAddress.id || 'no-id')
+    logger.debug('✏️ Loading existing address data for editing:', existingAddress.id || 'no-id')
     
     invoiceData.value = {
       company_name: existingAddress.company_name || '',
@@ -1292,10 +1292,10 @@ const startEditingBillingAddress = () => {
       notes: existingAddress.notes || ''
     }
   } else {
-    console.log('⚠️ No existing address found for editing')
+    logger.debug('⚠️ No existing address found for editing')
   }
   
-  console.log('✏️ Started editing billing address')
+  logger.debug('✏️ Started editing billing address')
 }
 
 const cancelEditingBillingAddress = () => {
@@ -1315,19 +1315,19 @@ const cancelEditingBillingAddress = () => {
     company_register_number: '',
     notes: ''
   }
-  console.log('❌ Cancelled editing billing address')
+  logger.debug('❌ Cancelled editing billing address')
 }
 
 // ✅ NEU: Load existing payment data
 const loadExistingPayment = async () => {
-  console.log('🔍 loadExistingPayment check:', {
+  logger.debug('🔍 loadExistingPayment check:', {
     appointmentId: props.appointmentId,
     isEditMode: props.isEditMode,
     shouldLoad: !!(props.appointmentId && props.isEditMode)
   })
   
   if (!props.appointmentId || !props.isEditMode) {
-    console.log('⏭️ Skipping payment loading - no appointmentId or not in edit mode')
+    logger.debug('⏭️ Skipping payment loading - no appointmentId or not in edit mode')
     return
   }
   
@@ -1373,7 +1373,7 @@ const loadExistingPayment = async () => {
     if (paymentData) {
       // Initialize with empty products array to avoid stale data
       existingPayment.value = { ...paymentData, products: [] }
-      console.log('✅ PriceDisplay - Existing payment loaded:', {
+      logger.debug('✅ PriceDisplay - Existing payment loaded:', {
         payment_method: paymentData.payment_method,
         payment_status: paymentData.payment_status,
         total_chf: (paymentData.total_amount_rappen / 100).toFixed(2),
@@ -1385,7 +1385,7 @@ const loadExistingPayment = async () => {
 
       // 🔗 Produkte für genau diesen Termin laden (discount_sales -> product_sales)
       try {
-        console.log('📦 Loading existing products for appointment:', props.appointmentId)
+        logger.debug('📦 Loading existing products for appointment:', props.appointmentId)
         
         // ✅ DEBUG: Prüfe zuerst, ob es überhaupt eine discount_sale gibt
         const { data: discountSale, error: dsError } = await supabase
@@ -1394,14 +1394,14 @@ const loadExistingPayment = async () => {
           .eq('appointment_id', props.appointmentId as string)
           .single()
 
-        console.log('🔍 DEBUG - discount_sale query result:', {
+        logger.debug('🔍 DEBUG - discount_sale query result:', {
           discountSale,
           dsError,
           appointmentId: props.appointmentId
         })
 
         if (!dsError && discountSale?.id) {
-          console.log('✅ Found discount_sale, loading products with discount_sale_id:', discountSale.id)
+          logger.debug('✅ Found discount_sale, loading products with discount_sale_id:', discountSale.id)
           
           // ✅ FIX: Versuche verschiedene Verknüpfungsmöglichkeiten
           let productsData = null
@@ -1426,18 +1426,18 @@ const loadExistingPayment = async () => {
             if (!result1.error) {
               productsData = result1.data
               psError = result1.error
-              console.log('✅ Method 1 (discount_sale_id) worked')
+              logger.debug('✅ Method 1 (discount_sale_id) worked')
             } else {
-              console.log('❌ Method 1 failed:', result1.error.message)
+              logger.debug('❌ Method 1 failed:', result1.error.message)
             }
           } catch (e) {
-            console.log('❌ Method 1 exception:', e)
+            logger.debug('❌ Method 1 exception:', e)
           }
           
           // Versuche 2: Direkt über die product_sale_id aus der payment
           if (!productsData) {
             try {
-              console.log('🔄 Trying method 2: direct product_sale_id lookup from discount_sale.id:', discountSale.id)
+              logger.debug('🔄 Trying method 2: direct product_sale_id lookup from discount_sale.id:', discountSale.id)
               const result2 = await supabase
                 .from('product_sales')
                 .select(`
@@ -1455,16 +1455,16 @@ const loadExistingPayment = async () => {
               if (!result2.error) {
                 productsData = result2.data
                 psError = result2.error
-                console.log('✅ Method 2 (direct product_sale_id) worked')
+                logger.debug('✅ Method 2 (direct product_sale_id) worked')
               } else {
-                console.log('❌ Method 2 failed:', result2.error.message)
+                logger.debug('❌ Method 2 failed:', result2.error.message)
               }
             } catch (e) {
-              console.log('❌ Method 2 exception:', e)
+              logger.debug('❌ Method 2 exception:', e)
             }
           }
 
-          console.log('🔍 DEBUG - product_sales query result:', {
+          logger.debug('🔍 DEBUG - product_sales query result:', {
             productsData,
             psError,
             discountSaleId: discountSale.id
@@ -1481,16 +1481,16 @@ const loadExistingPayment = async () => {
               price: undefined
             }))
             ;(existingPayment.value as any).products = mapped
-            console.log('📦 PriceDisplay - Loaded appointment products:', mapped.length, mapped)
+            logger.debug('📦 PriceDisplay - Loaded appointment products:', mapped.length, mapped)
           } else {
             // Ensure products cleared if query returns nothing
             ;(existingPayment.value as any).products = []
-            console.log('📦 PriceDisplay - No products for this appointment, error:', psError)
+            logger.debug('📦 PriceDisplay - No products for this appointment, error:', psError)
           }
         } else {
           // No discount sale => no products
           ;(existingPayment.value as any).products = []
-          console.log('📦 PriceDisplay - No discount_sale found for this appointment, error:', dsError)
+          logger.debug('📦 PriceDisplay - No discount_sale found for this appointment, error:', dsError)
         }
       } catch (prodErr) {
         // On error, still ensure products are empty
@@ -1528,7 +1528,7 @@ const shouldShowBillingAddressForm = computed(() => {
   // Formular soll IMMER angezeigt werden wenn Rechnung ausgewählt ist
   const result = isInvoiceSelected && hasPaymentSelection
   
-  console.log('📝 shouldShowBillingAddressForm check:', {
+  logger.debug('📝 shouldShowBillingAddressForm check:', {
     isInvoiceSelected,
     hasPaymentSelection,
     result
@@ -1547,7 +1547,7 @@ const shouldShowSavedBillingAddress = computed(() => {
   const result = isInvoiceSelected && (hasStudentBilling || hasExistingPaymentBilling) && isNotEditing
   
   if (isInvoiceSelected) {
-    console.log('🔍 shouldShowSavedBillingAddress check (INVOICE SELECTED):', {
+    logger.debug('🔍 shouldShowSavedBillingAddress check (INVOICE SELECTED):', {
       isInvoiceSelected,
       hasStudentBilling,
       studentBillingAddress: studentBillingAddress.value,
@@ -1622,19 +1622,19 @@ const saveInvoiceAddress = async () => {
     }
     
     const currentUserId = businessUser.id
-    console.log('🔍 Using business user ID for created_by:', currentUserId, '(auth user ID:', authUser.id, ')')
+    logger.debug('🔍 Using business user ID for created_by:', currentUserId, '(auth user ID:', authUser.id, ')')
     
     let result
     
     // ✅ NEU: Immer UPDATE wenn eine Adresse existiert, ansonsten CREATE
-    console.log('📝 saveInvoiceAddress check:', {
+    logger.debug('📝 saveInvoiceAddress check:', {
       hasBillingAddress: !!studentBillingAddress.value,
       billingAddressId: studentBillingAddress.value?.id,
       fullAddress: studentBillingAddress.value
     })
     
     if (studentBillingAddress.value?.id) {
-      console.log('✏️ Updating existing billing address:', studentBillingAddress.value.id)
+      logger.debug('✏️ Updating existing billing address:', studentBillingAddress.value.id)
       
       const updateData = {
         ...invoiceData.value,
@@ -1653,11 +1653,11 @@ const saveInvoiceAddress = async () => {
       }
       
       result = { success: true, data }
-      console.log('✅ Billing address updated successfully')
+      logger.debug('✅ Billing address updated successfully')
       
     } else {
       // ✅ NEU: Neuen Eintrag erstellen (nur wenn keine existiert)
-      console.log('➕ Creating new billing address for student:', props.selectedStudent?.id)
+      logger.debug('➕ Creating new billing address for student:', props.selectedStudent?.id)
       
       const addressData = {
         ...invoiceData.value,
@@ -1673,7 +1673,7 @@ const saveInvoiceAddress = async () => {
           if (result.success) {
         // ✅ NEU: Speichere die company_billing_address_id
         savedCompanyBillingAddressId.value = result.data?.id || null
-        console.log('✅ Company billing address ID saved:', result.data?.id)
+        logger.debug('✅ Company billing address ID saved:', result.data?.id)
         
         // ✅ NEU: Unterscheide zwischen Update und Create für die Nachricht
         const isUpdate = isEditingBillingAddress.value

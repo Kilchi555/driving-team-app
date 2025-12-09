@@ -33,8 +33,8 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    console.log('🔧 Service role update for tenant:', tenantId)
-    console.log('📝 Update data:', updateData)
+    logger.debug('🔧 Service role update for tenant:', tenantId)
+    logger.debug('📝 Update data:', updateData)
 
     // Perform update with service role (bypasses RLS)
     const { data, error } = await supabaseAdmin
@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Service role update successful:', data.name)
+    logger.debug('✅ Service role update successful:', data.name)
     return data
 
   } catch (error) {

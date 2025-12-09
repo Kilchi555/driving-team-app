@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
       originalAdminFee
     } = await readBody(event)
 
-    console.log('🗑️ Processing appointment cancellation:', {
+    logger.debug('🗑️ Processing appointment cancellation:', {
       appointmentId,
       deletionReason,
       lessonPriceRappen,
@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
       throw new Error(`Error fetching payment: ${paymentError.message}`)
     }
     
-    console.log('🔍 Payment query result:', {
+    logger.debug('🔍 Payment query result:', {
       appointmentId,
       paymentFound: !!payment,
       paymentId: payment?.id,
@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
       const originalLesson = originalLessonPrice || (lessonPriceRappen || 0)
       const originalAdmin = originalAdminFee || (adminFeeRappen || 0)
       refundableAmount = originalLesson + originalAdmin
-      console.log('💚 Staff cancellation - refunding full original prices:', {
+      logger.debug('💚 Staff cancellation - refunding full original prices:', {
         originalLesson: (originalLesson / 100).toFixed(2),
         originalAdmin: (originalAdmin / 100).toFixed(2),
         total: (refundableAmount / 100).toFixed(2)
@@ -87,7 +87,7 @@ export default defineEventHandler(async (event) => {
     } else {
       // Regular cancellation - use the passed amounts
       refundableAmount = (lessonPriceRappen || 0) + (adminFeeRappen || 0)
-      console.log('💰 Regular cancellation refund calculation:', {
+      logger.debug('💰 Regular cancellation refund calculation:', {
         lessonPrice: ((lessonPriceRappen || 0) / 100).toFixed(2),
         adminFee: ((adminFeeRappen || 0) / 100).toFixed(2),
         totalRefund: (refundableAmount / 100).toFixed(2),
@@ -96,7 +96,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!payment) {
-      console.log('⚠️ No payment found for appointment - check if shouldCreditHours is true')
+      logger.debug('⚠️ No payment found for appointment - check if shouldCreditHours is true')
       
       // ✅ NEW: If shouldCreditHours is true but no payment found, still create credit!
       // This happens when appointment has no associated payment (e.g., free lessons)
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
         const refundAmount = (originalLessonPrice || 0) + (originalAdminFee || 0)
         
         if (refundAmount > 0) {
-          console.log('💚 No payment but shouldCreditHours=true, creating credit anyway:', {
+          logger.debug('💚 No payment but shouldCreditHours=true, creating credit anyway:', {
             refundAmount: (refundAmount / 100).toFixed(2)
           })
           
@@ -159,7 +159,7 @@ export default defineEventHandler(async (event) => {
                     notes: `Rückerstattung für Terminabsage: ${deletionReason} (CHF ${(refundAmount / 100).toFixed(2)})`
                   }])
                 
-                console.log('✅ Credit created despite no payment:', {
+                logger.debug('✅ Credit created despite no payment:', {
                   oldBalance: (oldBalance / 100).toFixed(2),
                   newBalance: (newBalance / 100).toFixed(2),
                   refund: (refundAmount / 100).toFixed(2)
@@ -174,7 +174,7 @@ export default defineEventHandler(async (event) => {
                 if (updateAptError) {
                   console.warn('⚠️ Could not update appointment credit_created flag:', updateAptError)
                 } else {
-                  console.log('✅ Appointment marked as credit_created (no payment case)')
+                  logger.debug('✅ Appointment marked as credit_created (no payment case)')
                 }
                 
                 return {
@@ -200,7 +200,7 @@ export default defineEventHandler(async (event) => {
 
     // 3. Check if payment was completed/authorized
     if (payment.payment_status === 'completed' || payment.payment_status === 'authorized') {
-      console.log('✅ Payment was completed - processing refund')
+      logger.debug('✅ Payment was completed - processing refund')
 
       if (refundableAmount > 0) {
         return await processRefund(
@@ -215,7 +215,7 @@ export default defineEventHandler(async (event) => {
         // ✅ FREE CANCELLATION: Update payment status based on current status
         // completed → refunded (money was returned)
         // authorized/pending → cancelled (never paid)
-        console.log('ℹ️ Free cancellation - updating payment status')
+        logger.debug('ℹ️ Free cancellation - updating payment status')
         
         const newStatus = payment.payment_status === 'completed' ? 'refunded' : 'cancelled'
         const { error: updatePaymentError } = await supabase
@@ -229,7 +229,7 @@ export default defineEventHandler(async (event) => {
         if (updatePaymentError) {
           console.warn('⚠️ Could not update payment status:', updatePaymentError)
         } else {
-          console.log('✅ Payment status updated:', {
+          logger.debug('✅ Payment status updated:', {
             paymentId: payment.id,
             oldStatus: payment.payment_status,
             newStatus: newStatus,
@@ -245,11 +245,11 @@ export default defineEventHandler(async (event) => {
         }
       }
     } else {
-      console.log('ℹ️ Payment was not completed - no refund needed')
+      logger.debug('ℹ️ Payment was not completed - no refund needed')
       
       // ✅ FREE CANCELLATION: Update payment status to cancelled
       if (refundableAmount === 0) {
-        console.log('ℹ️ Free cancellation - updating payment status to cancelled')
+        logger.debug('ℹ️ Free cancellation - updating payment status to cancelled')
         const { error: updatePaymentError } = await supabase
           .from('payments')
           .update({
@@ -261,7 +261,7 @@ export default defineEventHandler(async (event) => {
         if (updatePaymentError) {
           console.warn('⚠️ Could not update payment status:', updatePaymentError)
         } else {
-          console.log('✅ Payment marked as cancelled (free cancellation):', {
+          logger.debug('✅ Payment marked as cancelled (free cancellation):', {
             paymentId: payment.id,
             reason: deletionReason
           })
@@ -340,7 +340,7 @@ async function processRefund(
 
     if (updateError) throw new Error(`Failed to update student credit: ${updateError.message}`)
 
-    console.log('✅ Student credit balance updated:', {
+    logger.debug('✅ Student credit balance updated:', {
       oldBalance: (oldBalance / 100).toFixed(2),
       refund: (refundAmountRappen / 100).toFixed(2),
       newBalance: (newBalance / 100).toFixed(2)
@@ -366,7 +366,7 @@ async function processRefund(
 
     if (transError) throw new Error(`Failed to create credit transaction: ${transError.message}`)
 
-    console.log('✅ Credit transaction created:', transaction.id)
+    logger.debug('✅ Credit transaction created:', transaction.id)
 
     // ✅ NEW: Update payment record to mark it as refunded
     const refundedAt = new Date().toISOString()
@@ -382,7 +382,7 @@ async function processRefund(
     if (updatePaymentError) {
       console.warn('⚠️ Could not update payment refunded status:', updatePaymentError)
     } else {
-      console.log('✅ Payment marked as refunded:', {
+      logger.debug('✅ Payment marked as refunded:', {
         paymentId: payment.id,
         refundedAt,
         refundAmount: (refundAmountRappen / 100).toFixed(2)
@@ -398,7 +398,7 @@ async function processRefund(
     if (updateAptError) {
       console.warn('⚠️ Could not update appointment credit_created flag:', updateAptError)
     } else {
-      console.log('✅ Appointment marked as credit_created')
+      logger.debug('✅ Appointment marked as credit_created')
     }
 
     return {

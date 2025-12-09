@@ -3,18 +3,18 @@
 ## Methode 1: Node.js Terminal-Befehl (am einfachsten)
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+node -e "logger.debug(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 **Was passiert:**
 - `require('crypto')` - Lädt Node.js Crypto-Modul
 - `randomBytes(32)` - Generiert 32 zufällige Bytes (256 Bit)
 - `.toString('hex')` - Konvertiert zu Hexadezimal (64 Zeichen)
-- `console.log()` - Gibt das Ergebnis aus
+- `logger.debug()` - Gibt das Ergebnis aus
 
 **Alternative mit UUID (wie in deiner Codebase):**
 ```bash
-node -e "console.log(require('crypto').randomUUID().replace(/-/g, ''))"
+node -e "logger.debug(require('crypto').randomUUID().replace(/-/g, ''))"
 ```
 
 ---
@@ -29,8 +29,8 @@ const crypto = require('crypto');
 // Generiere 32 Bytes (256 Bit) zufällige Daten
 const key = crypto.randomBytes(32).toString('hex');
 
-console.log('Dein API-Key:');
-console.log(key);
+logger.debug('Dein API-Key:');
+logger.debug(key);
 ```
 
 **Dann ausführen:**
@@ -97,12 +97,12 @@ crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').su
 **Da du Node.js bereits installiert hast**, ist die einfachste Methode:
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+node -e "logger.debug(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 **Falls du mehrere Keys auf einmal brauchst:**
 ```bash
-node -e "for(let i=0; i<3; i++) console.log(require('crypto').randomBytes(32).toString('hex'))"
+node -e "for(let i=0; i<3; i++) logger.debug(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 ---
@@ -138,10 +138,10 @@ Erstelle `generate-keys.sh`:
 ```bash
 #!/bin/bash
 echo "=== CRON_API_KEY ==="
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+node -e "logger.debug(require('crypto').randomBytes(32).toString('hex'))"
 echo ""
 echo "=== VERCEL_WEBHOOK_SECRET ==="
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+node -e "logger.debug(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 **Dann ausführen:**

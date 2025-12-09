@@ -117,11 +117,11 @@ const getLastStudentDuration = async (studentId: string): Promise<number | null>
     }
     
     if (lastAppointment && lastAppointment.duration_minutes) {
-      console.log('✅ Last student duration found:', lastAppointment.duration_minutes)
+      logger.debug('✅ Last student duration found:', lastAppointment.duration_minutes)
       return lastAppointment.duration_minutes
     }
     
-    console.log('ℹ️ No previous appointments found for student')
+    logger.debug('ℹ️ No previous appointments found for student')
     return null
     
   } catch (err) {
@@ -182,7 +182,7 @@ const formattedDurations = computed(() => {
     
     // ✅ DEBUG: Log specific durations to identify the issue
     if (duration === 135) {
-      console.log('🔍 DEBUG 135min formatting:', {
+      logger.debug('🔍 DEBUG 135min formatting:', {
         duration,
         hours: Math.floor(duration / 60),
         minutes: duration % 60,
@@ -196,7 +196,7 @@ const formattedDurations = computed(() => {
     }
   })
   
-  console.log('🔄 formattedDurations computed:', {
+  logger.debug('🔄 formattedDurations computed:', {
     availableDurations: props.availableDurations,
     processedDurations: durations,
     result: result,
@@ -209,11 +209,11 @@ const formattedDurations = computed(() => {
 
 // Methods
 const selectDuration = (duration: number) => {
-  console.log('🔄 Duration selected:', duration)
+  logger.debug('🔄 Duration selected:', duration)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
   if (props.isPastAppointment) {
-    console.log('🚫 Cannot change duration for past appointment')
+    logger.debug('🚫 Cannot change duration for past appointment')
     return
   }
   
@@ -223,7 +223,7 @@ const selectDuration = (duration: number) => {
 
 // Watchers
 watch(() => props.availableDurations, async (newDurations) => {
-  console.log('🔄 DurationSelector - Available durations changed:', newDurations, 'Mode:', props.mode)
+  logger.debug('🔄 DurationSelector - Available durations changed:', newDurations, 'Mode:', props.mode)
   
   // ✅ KORRIGIERT: Verwende formattedDurations für die Prüfung
   const durations = formattedDurations.value.map((d: any) => d.value)
@@ -234,11 +234,11 @@ watch(() => props.availableDurations, async (newDurations) => {
     
     if (!isEditMode) {
       // Fallback: Erste verfügbare Dauer verwenden
-      console.log('⏱️ Auto-setting duration to first available (CREATE mode):', durations[0])
+      logger.debug('⏱️ Auto-setting duration to first available (CREATE mode):', durations[0])
       emit('update:modelValue', durations[0])
       emit('duration-changed', durations[0])
     } else {
-      console.log('📝 EDIT/VIEW mode detected - keeping existing duration:', props.modelValue)
+      logger.debug('📝 EDIT/VIEW mode detected - keeping existing duration:', props.modelValue)
     }
   }
 }, { immediate: true })
@@ -248,18 +248,18 @@ watch(() => props.selectedStudent, async (newStudent) => {
   // ✅ KORRIGIERT: Immer im CREATE-Modus reagieren, auch wenn bereits eine Dauer gesetzt ist
   if (newStudent?.id && props.mode === 'create' && props.availableDurations.length > 0) {
     try {
-      console.log('👤 Student changed, loading last duration for:', newStudent.first_name)
+      logger.debug('👤 Student changed, loading last duration for:', newStudent.first_name)
       const lastDuration = await getLastStudentDuration(newStudent.id)
       
       // ✅ KORRIGIERT: Verwende formattedDurations für die Prüfung
       const durations = formattedDurations.value.map((d: any) => d.value)
       
       if (lastDuration && durations.includes(lastDuration)) {
-        console.log('✅ Setting duration to student\'s last used duration:', lastDuration)
+        logger.debug('✅ Setting duration to student\'s last used duration:', lastDuration)
         emit('update:modelValue', lastDuration)
         emit('duration-changed', lastDuration)
       } else if (durations.length > 0) {
-        console.log('⚠️ Last duration not available, using first available:', durations[0])
+        logger.debug('⚠️ Last duration not available, using first available:', durations[0])
         emit('update:modelValue', durations[0])
         emit('duration-changed', durations[0])
       }

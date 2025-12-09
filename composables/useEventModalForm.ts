@@ -115,7 +115,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
                      formData.value.location_id &&
                      formData.value.duration_minutes > 0
       
-      console.log('🔍 Form validation check:', {
+      logger.debug('🔍 Form validation check:', {
         baseValid,
         hasStudent: !!selectedStudent.value,
         hasType: !!formData.value.type,
@@ -150,7 +150,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
 
   // ============ FORM ACTIONS ============
   const resetForm = () => {
-    console.log('🔄 Resetting form data')
+    logger.debug('🔄 Resetting form data')
     
     formData.value = {
       title: '',
@@ -183,16 +183,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
   }
 
   const populateFormFromAppointment = (appointment: any) => {
-    console.log('📝 Populating form from appointment:', appointment?.id)
-    console.log('🔍 Full appointment data:', appointment)
-    console.log('🔍 Appointment event_type_code check:', {
+    logger.debug('📝 Populating form from appointment:', appointment?.id)
+    logger.debug('🔍 Full appointment data:', appointment)
+    logger.debug('🔍 Appointment event_type_code check:', {
       direct_event_type_code: appointment.event_type_code,
       extendedProps_appointment_type: appointment.extendedProps?.appointment_type,
       extendedProps_eventType: appointment.extendedProps?.eventType,
       type: appointment.type,
       extendedProps_type: appointment.extendedProps?.type,
     })
-    console.log('🔍 Appointment user_id check:', {
+    logger.debug('🔍 Appointment user_id check:', {
       user_id: appointment.user_id,
       extendedProps_user_id: appointment.extendedProps?.user_id,
       hasUserData: !!(appointment.user_id || appointment.extendedProps?.user_id)
@@ -212,16 +212,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // Das ist der korrekte Termintyp
       appointmentType = appointment.type.toLowerCase()
       vehicleCategory = 'B' // Standard für andere Events
-      console.log('🎯 Detected event type in appointment.type:', appointmentType)
+      logger.debug('🎯 Detected event type in appointment.type:', appointmentType)
     } else {
       // appointment.type ist die Fahrzeugkategorie, verwende event_type_code
       appointmentType = appointment.event_type_code || appointment.extendedProps?.appointment_type || 'lesson'
       vehicleCategory = appointment.type ? appointment.type.split(',')[0].trim() : 'B'
-      console.log('🎯 Using event_type_code:', appointmentType)
+      logger.debug('🎯 Using event_type_code:', appointmentType)
     }
     
-    console.log('🎯 Final appointmentType:', appointmentType)
-    console.log('🎯 Final vehicleCategory:', vehicleCategory)
+    logger.debug('🎯 Final appointmentType:', appointmentType)
+    logger.debug('🎯 Final vehicleCategory:', vehicleCategory)
     
     const isOtherEvent = appointmentType && otherEventTypes.includes(appointmentType.toLowerCase())
     
@@ -239,7 +239,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       : ''
     
     let duration = appointment.duration_minutes || appointment.extendedProps?.duration_minutes
-    console.log('🔍 Duration calculation debug:', {
+    logger.debug('🔍 Duration calculation debug:', {
       appointmentDuration: appointment.duration_minutes,
       extendedPropsDuration: appointment.extendedProps?.duration_minutes,
       hasEndDateTime: !!endDateTime,
@@ -250,10 +250,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
     
     if (!duration && endDateTime) {
       duration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60))
-      console.log('✅ Duration calculated from start/end times:', duration, 'minutes')
+      logger.debug('✅ Duration calculated from start/end times:', duration, 'minutes')
     }
     duration = duration || 45
-    console.log('🎯 Final duration:', duration, 'minutes')
+    logger.debug('🎯 Final duration:', duration, 'minutes')
     
     // ✅ vehicleCategory bereits oben definiert
     
@@ -283,27 +283,27 @@ const useEventModalForm = (currentUser?: any, refs?: {
       google_place_id: appointment.google_place_id || appointment.extendedProps?.google_place_id || null
     }
     
-    console.log('🔍 DEBUG: Form populated with duration:', {
+    logger.debug('🔍 DEBUG: Form populated with duration:', {
       originalDuration: duration,
       formDataDuration: formData.value.duration_minutes,
       startTime: formData.value.startTime,
       endTime: formData.value.endTime
     })
     
-    console.log('✅ Form populated with type:', formData.value.type)
+    logger.debug('✅ Form populated with type:', formData.value.type)
     
     // ✅ Load student if user_id exists
-    console.log('🔍 Student loading check:', {
+    logger.debug('🔍 Student loading check:', {
       user_id: formData.value.user_id,
       eventType: formData.value.eventType,
       shouldLoadStudent: !!(formData.value.user_id && formData.value.eventType === 'lesson')
     })
     
     if (formData.value.user_id && formData.value.eventType === 'lesson') {
-      console.log('🎯 Loading student by ID:', formData.value.user_id)
+      logger.debug('🎯 Loading student by ID:', formData.value.user_id)
       loadStudentById(formData.value.user_id)
     } else {
-      console.log('ℹ️ Skipping student load - missing user_id or not a lesson')
+      logger.debug('ℹ️ Skipping student load - missing user_id or not a lesson')
     }
     
     // ✅ Load existing discount if appointment ID exists
@@ -328,18 +328,18 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ Load student by ID for existing appointments
   const loadStudentById = async (userId: string) => {
     try {
-      console.log('📞 loadStudentById called with userId:', userId)
+      logger.debug('📞 loadStudentById called with userId:', userId)
       
       // ✅ PRÜFE ZUERST: Ist das ein bezahlbarer Termin (Lektion)?
       if (!isLessonType(formData.value.eventType)) {
-        console.log('🚫 Not loading student for other event type:', formData.value.eventType)
+        logger.debug('🚫 Not loading student for other event type:', formData.value.eventType)
         selectedStudent.value = null
         return
       }
       
       const supabase = getSupabase()
       
-      console.log('🔍 Querying users table for student...')
+      logger.debug('🔍 Querying users table for student...')
       const { data: student, error } = await supabase
         .from('users')
         .select('*')
@@ -347,7 +347,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         .eq('role', 'client')
         .single()
 
-      console.log('📊 Student query result:', { student, error })
+      logger.debug('📊 Student query result:', { student, error })
 
       if (error) {
         console.error('❌ Error loading student:', error)
@@ -356,10 +356,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
 
       if (student) {
         selectedStudent.value = student
-        console.log('✅ Student loaded for existing appointment:', student.first_name, student.last_name)
-        console.log('🎯 selectedStudent.value now set to:', selectedStudent.value?.id)
+        logger.debug('✅ Student loaded for existing appointment:', student.first_name, student.last_name)
+        logger.debug('🎯 selectedStudent.value now set to:', selectedStudent.value?.id)
       } else {
-        console.log('⚠️ No student found with ID:', userId)
+        logger.debug('⚠️ No student found with ID:', userId)
       }
     } catch (err) {
       console.error('❌ Error in loadStudentById:', err)
@@ -369,7 +369,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   const calculateEndTime = () => {
     if (formData.value.startTime && formData.value.duration_minutes) {
       formData.value.endTime = computedEndTime.value
-      console.log('⏰ End time calculated:', formData.value.endTime)
+      logger.debug('⏰ End time calculated:', formData.value.endTime)
     }
   }
 
@@ -392,7 +392,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
       
       if (discount) {
-        console.log('💰 Existing discount loaded:', discount)
+        logger.debug('💰 Existing discount loaded:', discount)
         
         // Convert rappen back to CHF for fixed discounts
         const discountAmount = discount.discount_type === 'percentage' 
@@ -404,7 +404,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         formData.value.discount_type = discount.discount_type
         formData.value.discount_reason = discount.discount_reason || ''
         
-        console.log('✅ Discount data populated into form:', {
+        logger.debug('✅ Discount data populated into form:', {
           amount: discountAmount,
           type: discount.discount_type,
           reason: discount.discount_reason
@@ -423,12 +423,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ NEU: Lade Standard-Rechnungsadresse eines Studenten
   const loadStudentBillingAddress = async (studentId: string) => {
     try {
-      console.log('🏢 Loading student billing address for:', studentId)
+      logger.debug('🏢 Loading student billing address for:', studentId)
       
       const supabaseClient = getSupabase()
       
       // ✅ Lade die neueste Rechnungsadresse für diesen Student (user_id)
-      console.log('🔍 Looking for billing address with user_id =', studentId)
+      logger.debug('🔍 Looking for billing address with user_id =', studentId)
       
       const { data: addressData, error: addressError } = await supabaseClient
         .from('company_billing_addresses')
@@ -445,11 +445,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
 
       if (addressData && addressData.length > 0) {
         const address = addressData[0]
-        console.log('✅ Student billing address loaded:', address)
+        logger.debug('✅ Student billing address loaded:', address)
         return address
       }
 
-      console.log('💡 No active billing address found for student')
+      logger.debug('💡 No active billing address found for student')
       return null
     } catch (error) {
       console.error('❌ Error loading student billing address:', error)
@@ -460,7 +460,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ Load existing payment data for edit mode
   const loadExistingPayment = async (appointmentId: string) => {
     if (!appointmentId) {
-      console.log('ℹ️ No appointment ID provided for payment loading')
+      logger.debug('ℹ️ No appointment ID provided for payment loading')
       return null
     }
 
@@ -479,7 +479,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
       
       if (paymentData) {
-        console.log('✅ Existing payment loaded:', {
+        logger.debug('✅ Existing payment loaded:', {
           id: paymentData.id,
           payment_method: paymentData.payment_method,
           payment_status: paymentData.payment_status,
@@ -489,13 +489,13 @@ const useEventModalForm = (currentUser?: any, refs?: {
         // Update selectedPaymentMethod ref if available
         if (refs?.selectedPaymentMethod) {
           refs.selectedPaymentMethod.value = paymentData.payment_method
-          console.log('💳 Payment method set from existing payment:', paymentData.payment_method)
+          logger.debug('💳 Payment method set from existing payment:', paymentData.payment_method)
         }
         
         return paymentData
       }
       
-      console.log('ℹ️ No existing payment found for appointment:', appointmentId)
+      logger.debug('ℹ️ No existing payment found for appointment:', appointmentId)
       return null
       
     } catch (err: any) {
@@ -507,7 +507,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ Save discount to discount_sales table if discount exists
   const saveDiscountIfExists = async (appointmentId: string) => {
     if (!formData.value.discount || formData.value.discount <= 0) {
-      console.log('ℹ️ No discount to save')
+      logger.debug('ℹ️ No discount to save')
       return null
     }
     
@@ -538,7 +538,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         status: 'pending'
       }
       
-      console.log('💰 Saving discount data:', discountData)
+      logger.debug('💰 Saving discount data:', discountData)
       
       let discountRecord = null
       
@@ -553,7 +553,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         
         if (updateError) throw updateError
         discountRecord = updatedDiscount
-        console.log('✅ Discount updated successfully')
+        logger.debug('✅ Discount updated successfully')
       } else {
         // Create new discount
         const { data: newDiscount, error: insertError } = await supabase
@@ -564,7 +564,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         
         if (insertError) throw insertError
         discountRecord = newDiscount
-        console.log('✅ Discount saved successfully')
+        logger.debug('✅ Discount saved successfully')
       }
       
       return discountRecord
@@ -582,7 +582,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     const hasProducts = refs?.selectedProducts?.value && refs.selectedProducts.value.length > 0
     
     if (!hasDiscount && !hasProducts) {
-      console.log('ℹ️ No discount or products to save')
+      logger.debug('ℹ️ No discount or products to save')
       return null
     }
     
@@ -615,7 +615,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         status: 'pending'
       }
       
-      console.log('💰 Saving/creating discount_sales record:', discountData)
+      logger.debug('💰 Saving/creating discount_sales record:', discountData)
       
       let discountRecord = null
       
@@ -630,7 +630,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         
         if (updateError) throw updateError
         discountRecord = updatedRecord
-        console.log('✅ Discount_sales record updated')
+        logger.debug('✅ Discount_sales record updated')
       } else {
         // Create new record
         const { data: newRecord, error: insertError } = await supabase
@@ -641,7 +641,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         
         if (insertError) throw insertError
         discountRecord = newRecord
-        console.log('✅ Discount_sales record created')
+        logger.debug('✅ Discount_sales record created')
       }
       
       return discountRecord
@@ -654,7 +654,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   
   // ✅ Load existing products via discount_sales → product_sales chain
   const loadExistingProducts = async (appointmentId: string) => {
-    console.log('📦 Loading existing products for appointment:', appointmentId)
+    logger.debug('📦 Loading existing products for appointment:', appointmentId)
     try {
       const supabase = getSupabase()
       
@@ -671,11 +671,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
       
       if (!discountSale) {
-        console.log('📦 No discount_sales record found, no products to load')
+        logger.debug('📦 No discount_sales record found, no products to load')
         return []
       }
 
-      console.log('📦 Found discount_sales record:', discountSale.id)
+      logger.debug('📦 Found discount_sales record:', discountSale.id)
 
       // Now load product_sales that reference this discount_sales
       const { data: productItems, error } = await supabase
@@ -697,11 +697,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
 
       if (!productItems || productItems.length === 0) {
-        console.log('📦 No product items found')
+        logger.debug('📦 No product items found')
         return []
       }
 
-      console.log('📦 Found product items:', productItems.length)
+      logger.debug('📦 Found product items:', productItems.length)
 
       // Format products for UI
       const allProducts = productItems.map((item: any) => ({
@@ -716,12 +716,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
         total: item.total_price_rappen / 100
       }))
       
-      console.log('✅ Products formatted for UI:', allProducts.length)
+      logger.debug('✅ Products formatted for UI:', allProducts.length)
       
       // Set products in refs if available
       if (refs?.selectedProducts) {
         refs.selectedProducts.value = allProducts
-        console.log('✅ Products set in selectedProducts ref')
+        logger.debug('✅ Products set in selectedProducts ref')
       }
       
       return allProducts
@@ -733,7 +733,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   
   // ✅ Load invited staff and customers for other event types
   const loadInvitedStaffAndCustomers = async (appointmentId: string) => {
-    console.log('👥 Loading invited staff and customers for appointment:', appointmentId)
+    logger.debug('👥 Loading invited staff and customers for appointment:', appointmentId)
     try {
       const supabase = getSupabase()
       
@@ -746,7 +746,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       if (customersError) {
         console.warn('⚠️ Error loading invited customers:', customersError)
       } else {
-        console.log('👥 Loaded invited customers:', customers?.length || 0)
+        logger.debug('👥 Loaded invited customers:', customers?.length || 0)
         // Set invited customers in the form - convert to NewCustomer format
         if (refs?.invitedCustomers) {
           const newCustomers = (customers || []).map(customer => ({
@@ -757,7 +757,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
             notes: customer.notes || ''
           }))
           refs.invitedCustomers.value = newCustomers
-          console.log('✅ Set invited customers in form:', newCustomers.length)
+          logger.debug('✅ Set invited customers in form:', newCustomers.length)
         } else {
           console.warn('⚠️ invitedCustomers ref not available')
         }
@@ -765,7 +765,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       // TODO: Load invited staff when invited_staff table is created
       // For now, we'll need to create this table first
-      console.log('ℹ️ Staff invitations loading not yet implemented - need invited_staff table')
+      logger.debug('ℹ️ Staff invitations loading not yet implemented - need invited_staff table')
       
     } catch (err: any) {
       console.error('❌ Error loading invited staff and customers:', err)
@@ -780,12 +780,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
     const selectedProducts = refs?.selectedProducts?.value || []
     
     if (!selectedProducts || selectedProducts.length === 0) {
-      console.log('ℹ️ No products to save')
+      logger.debug('ℹ️ No products to save')
       return
     }
     
     if (!discountSaleId) {
-      console.log('❌ No discount_sale_id provided for product linkage')
+      logger.debug('❌ No discount_sale_id provided for product linkage')
       return
     }
     
@@ -811,7 +811,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         total_price_rappen: Math.round((item.total || (item.product?.price || item.price || 0) * (item.quantity || 1)) * 100)
       }))
       
-      console.log('📦 Saving product data:', productData)
+      logger.debug('📦 Saving product data:', productData)
       
       // Insert new products
       const { error: insertError } = await supabase
@@ -820,7 +820,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       if (insertError) throw insertError
       
-      console.log('✅ Products saved successfully:', productData.length)
+      logger.debug('✅ Products saved successfully:', productData.length)
       
     } catch (err: any) {
       console.error('❌ Error saving products:', err)
@@ -951,7 +951,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         // ✅ price_per_minute and is_paid removed - not in appointments table
       }
       
-      console.log('💾 Saving appointment data:', appointmentData)
+      logger.debug('💾 Saving appointment data:', appointmentData)
       
       let result
       if (mode === 'edit' && eventId) {
@@ -977,12 +977,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
         result = data
       }
       
-      console.log('✅ Appointment saved:', result.id)
+      logger.debug('✅ Appointment saved:', result.id)
       
       // ✅ NEW: Send appointment confirmation email with token
       if (mode === 'create' && result.status === 'pending_confirmation') {
         try {
-          console.log('📧 Sending appointment confirmation email...')
+          logger.debug('📧 Sending appointment confirmation email...')
           
           // Fetch student data for email
           const { data: appointmentData } = await supabase
@@ -1018,9 +1018,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
                 amount: '(wird berechnet)'
               }
             })
-            console.log('✅ Confirmation email sent:', confirmationResponse)
+            logger.debug('✅ Confirmation email sent:', confirmationResponse)
           } else {
-            console.log('ℹ️ No email found for student, skipping confirmation email')
+            logger.debug('ℹ️ No email found for student, skipping confirmation email')
           }
         } catch (emailError: any) {
           console.warn('⚠️ Error sending confirmation email (non-critical):', emailError.message)
@@ -1044,7 +1044,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
             if (!currentStaffIds.includes(result.staff_id)) {
               const updatedStaffIds = [...currentStaffIds, result.staff_id]
               
-              console.log(`👤 Adding staff ${result.staff_id} to customer ${result.user_id}'s assigned_staff_ids`)
+              logger.debug(`👤 Adding staff ${result.staff_id} to customer ${result.user_id}'s assigned_staff_ids`)
               
               const { error: updateError } = await supabase
                 .from('users')
@@ -1054,7 +1054,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
               if (updateError) {
                 console.warn('⚠️ Could not update assigned_staff_ids:', updateError)
               } else {
-                console.log('✅ Staff added to customer assigned_staff_ids')
+                logger.debug('✅ Staff added to customer assigned_staff_ids')
               }
             }
           }
@@ -1074,16 +1074,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
       const isLessonType = ['lesson', 'exam', 'theory'].includes(appointmentType)
       if (isLessonType) {
         if (mode === 'create') {
-          console.log('🚀 Creating new payment entry for lesson type (pending_confirmation flow):', appointmentType)
+          logger.debug('🚀 Creating new payment entry for lesson type (pending_confirmation flow):', appointmentType)
           const paymentResult = await createPaymentEntry(result.id, discountSale?.id)
-          console.log('📊 Payment creation result:', paymentResult)
+          logger.debug('📊 Payment creation result:', paymentResult)
         } else {
-          console.log('🔄 Updating existing payment entry for lesson type:', appointmentType)
+          logger.debug('🔄 Updating existing payment entry for lesson type:', appointmentType)
           const paymentResult = await updatePaymentEntry(result.id, discountSale?.id)
-          console.log('📊 Payment update result:', paymentResult)
+          logger.debug('📊 Payment update result:', paymentResult)
         }
       } else {
-        console.log('ℹ️ Skipping payment creation for other event type:', appointmentType)
+        logger.debug('ℹ️ Skipping payment creation for other event type:', appointmentType)
       }
       
       return result
@@ -1109,7 +1109,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       if (error) throw error
       
-      console.log('✅ Appointment deleted:', eventId)
+      logger.debug('✅ Appointment deleted:', eventId)
       
     } catch (err: any) {
       console.error('❌ Delete error:', err)
@@ -1145,10 +1145,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ NEUE FUNKTION: Lade letzte Kategorie aus Cloud Supabase
   const loadLastAppointmentCategory = async (studentId?: string): Promise<string | null> => {
     try {
-      console.log('🎯 Loading last appointment category from Cloud Supabase...')
+      logger.debug('🎯 Loading last appointment category from Cloud Supabase...')
       
       if (!currentUser?.id) {
-        console.log('🚫 No current user ID available')
+        logger.debug('🚫 No current user ID available')
         return null
       }
 
@@ -1161,7 +1161,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         .order('start_time', { ascending: false })
       
       if (studentId) {
-        console.log('🎯 Loading last category for specific student:', studentId)
+        logger.debug('🎯 Loading last category for specific student:', studentId)
         query = query.eq('user_id', studentId)
       }
       
@@ -1173,10 +1173,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
 
       if (lastAppointment?.type) {
-        console.log('✅ Last appointment category loaded:', lastAppointment.type)
+        logger.debug('✅ Last appointment category loaded:', lastAppointment.type)
         return lastAppointment.type
       } else {
-        console.log('ℹ️ No last appointment category found')
+        logger.debug('ℹ️ No last appointment category found')
         return null
       }
 
@@ -1199,7 +1199,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let lessonPriceRappen: number
       if (appointmentType === 'theory') {
         lessonPriceRappen = 8500 // 85.00 CHF in Rappen
-        console.log('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
+        logger.debug('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
       } else {
         // ✅ Für andere Lektionen: Verwende die dynamische Preisberechnung aus dynamicPricing
         const dynamicPrice = refs?.dynamicPricing?.value
@@ -1210,7 +1210,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
           const adminFeeChf = dynamicPrice.adminFeeChf || 0
           const basePriceChf = totalChf - adminFeeChf
           lessonPriceRappen = Math.round(basePriceChf * 100)
-          console.log('💰 Verwende dynamischen Preis:', {
+          logger.debug('💰 Verwende dynamischen Preis:', {
             totalChf,
             adminFeeChf,
             basePriceChf,
@@ -1241,12 +1241,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let adminFeeRappen: number
       if (appointmentType === 'theory') {
         adminFeeRappen = 0 // Keine Admin-Fee für Theorielektionen
-        console.log('📚 Theorielektion: Keine Admin-Fee')
+        logger.debug('📚 Theorielektion: Keine Admin-Fee')
       } else {
         adminFeeRappen = Math.round((refs?.dynamicPricing?.value?.adminFeeRappen || 0))
       }
       
-      console.log('💰 Admin fee for payment:', {
+      logger.debug('💰 Admin fee for payment:', {
         adminFeeChf: refs?.dynamicPricing?.value?.adminFeeChf,
         adminFeeRappen: adminFeeRappen,
         hasAdminFee: refs?.dynamicPricing?.value?.hasAdminFee
@@ -1270,7 +1270,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       const paymentMethod = paymentMethodMapping[rawPaymentMethod] || 'wallee'
       
-      console.log('💳 Payment method debug:', {
+      logger.debug('💳 Payment method debug:', {
         rawPaymentMethod,
         mappedPaymentMethod: paymentMethod,
         availableMappings: Object.keys(paymentMethodMapping),
@@ -1294,12 +1294,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
         const eventModalScope = (globalThis as any).savedCompanyBillingAddressId
         if (eventModalScope) {
           companyBillingAddressId = eventModalScope
-          console.log('📋 Using company billing address ID from EventModal scope:', companyBillingAddressId)
+          logger.debug('📋 Using company billing address ID from EventModal scope:', companyBillingAddressId)
         }
         // Fallback: Check PriceDisplay component directly
         if (priceDisplay && priceDisplay.savedCompanyBillingAddressId) {
           companyBillingAddressId = priceDisplay.savedCompanyBillingAddressId
-          console.log('📋 Using company billing address ID from PriceDisplay:', companyBillingAddressId)
+          logger.debug('📋 Using company billing address ID from PriceDisplay:', companyBillingAddressId)
         }
         // Fallback: Copy invoice data as JSONB if no company billing address was saved
         else if (priceDisplay && priceDisplay.invoiceData) {
@@ -1316,7 +1316,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
             vat_number: priceDisplay.invoiceData.vat_number || '',
             notes: priceDisplay.invoiceData.notes || ''
           }
-          console.log('📋 Using fallback invoice address as JSONB:', invoiceAddress)
+          logger.debug('📋 Using fallback invoice address as JSONB:', invoiceAddress)
         }
       }
 
@@ -1336,7 +1336,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let creditTransactionId = null
       
       // Check if PriceDisplay has credit usage info
-      console.log('🔍 DEBUG createPaymentEntry - checking priceDisplayRef:', {
+      logger.debug('🔍 DEBUG createPaymentEntry - checking priceDisplayRef:', {
         hasRef: !!refs,
         hasDisplayRef: !!refs?.priceDisplayRef,
         hasValue: !!refs?.priceDisplayRef?.value,
@@ -1345,7 +1345,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       if (refs?.priceDisplayRef?.value) {
         const priceDisplay = refs.priceDisplayRef.value
-        console.log('🔍 DEBUG priceDisplay object:', {
+        logger.debug('🔍 DEBUG priceDisplay object:', {
           usedCredit: priceDisplay.usedCredit,
           type: typeof priceDisplay.usedCredit,
           keys: Object.keys(priceDisplay)
@@ -1354,15 +1354,15 @@ const useEventModalForm = (currentUser?: any, refs?: {
         // Check if credit is being used (from PriceDisplay calculation)
         if (priceDisplay.usedCredit && priceDisplay.usedCredit > 0) {
           creditUsedRappen = Math.round(priceDisplay.usedCredit * 100)
-          console.log('💳 Credit being used from PriceDisplay:', {
+          logger.debug('💳 Credit being used from PriceDisplay:', {
             creditChf: priceDisplay.usedCredit,
             creditRappen: creditUsedRappen
           })
         } else {
-          console.log('⚠️ usedCredit is falsy or <= 0:', priceDisplay.usedCredit)
+          logger.debug('⚠️ usedCredit is falsy or <= 0:', priceDisplay.usedCredit)
         }
       } else {
-        console.log('⚠️ priceDisplayRef not available')
+        logger.debug('⚠️ priceDisplayRef not available')
       }
       
       // ✅ NOTE: Credit transaction handling is now done by useStudentCredits
@@ -1394,7 +1394,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         paid_at: creditUsedRappen >= Math.max(0, totalAmountRappen) ? new Date().toISOString() : null
       }
       
-      console.log('💳 Creating payment entry:', {
+      logger.debug('💳 Creating payment entry:', {
         paymentData,
         creditUsedRappen,
         totalAmountRappen: Math.max(0, totalAmountRappen),
@@ -1416,11 +1416,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
         return null
       }
       
-      console.log('✅ Payment entry created:', payment.id)
+      logger.debug('✅ Payment entry created:', payment.id)
       
       // ✅ NEW: Send first reminder email immediately after payment creation
       try {
-        console.log('📧 Sending first payment confirmation reminder via API...')
+        logger.debug('📧 Sending first payment confirmation reminder via API...')
         const reminderResponse = await $fetch('/api/reminders/send-payment-confirmation', {
           method: 'POST',
           body: {
@@ -1430,7 +1430,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
           }
         })
 
-        console.log('✅ First reminder sent:', reminderResponse)
+        logger.debug('✅ First reminder sent:', reminderResponse)
       } catch (reminderError) {
         console.error('⚠️ Error sending first reminder (non-critical):', reminderError)
         // Non-critical - don't fail the payment creation
@@ -1463,11 +1463,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
 
       if (!existingPayment) {
-        console.log('ℹ️ No existing payment found, creating new one')
+        logger.debug('ℹ️ No existing payment found, creating new one')
         return await createPaymentEntry(appointmentId, discountSaleId)
       }
 
-      console.log('🔄 Updating existing payment:', existingPayment.id)
+      logger.debug('🔄 Updating existing payment:', existingPayment.id)
       
       // ✅ WICHTIG: Nutze die aktuell in PriceDisplay gespeicherte Price aus der DB
       // nicht die alten Refs, da PriceDisplay den Preis bereits aktualisiert hat
@@ -1478,14 +1478,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
       if (existingPayment.lesson_price_rappen && existingPayment.lesson_price_rappen > 0) {
         // Use the current payment price (already updated by PriceDisplay watcher)
         lessonPriceRappen = existingPayment.lesson_price_rappen
-        console.log('💾 Using existing payment price from DB (updated by PriceDisplay):', lessonPriceRappen)
+        logger.debug('💾 Using existing payment price from DB (updated by PriceDisplay):', lessonPriceRappen)
       } else {
         // Fallback: calculate based on current data
         const durationMinutes = formData.value.duration_minutes || 45
       
       if (appointmentType === 'theory') {
         lessonPriceRappen = 8500
-        console.log('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
+        logger.debug('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
       } else {
         const dynamicPrice = refs?.dynamicPricing?.value
         
@@ -1580,7 +1580,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         updated_at: new Date().toISOString()
       }
       
-      console.log('💳 Updating payment entry:', updateData)
+      logger.debug('💳 Updating payment entry:', updateData)
       
       const { data: payment, error } = await supabase
         .from('payments')
@@ -1594,7 +1594,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         return null
       }
       
-      console.log('✅ Payment entry updated:', payment.id)
+      logger.debug('✅ Payment entry updated:', payment.id)
       return payment
       
     } catch (err: any) {
@@ -1606,10 +1606,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ NEUE FUNKTION: Lade letzten Standort aus Cloud Supabase
   const loadLastAppointmentLocation = async (studentId?: string): Promise<{ location_id: string | null, custom_location_address: any | null }> => {
     try {
-      console.log('📍 Loading last appointment location from Cloud Supabase...')
+      logger.debug('📍 Loading last appointment location from Cloud Supabase...')
       
       if (!currentUser?.id) {
-        console.log('🚫 No current user ID available')
+        logger.debug('🚫 No current user ID available')
         return { location_id: null, custom_location_address: null }
       }
 
@@ -1622,7 +1622,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         .order('start_time', { ascending: false })
       
       if (studentId) {
-        console.log('🎯 Loading last location for specific student:', studentId)
+        logger.debug('🎯 Loading last location for specific student:', studentId)
         query = query.eq('user_id', studentId)
       }
       
@@ -1634,12 +1634,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
 
       if (!lastAppointment) {
-        console.log('ℹ️ No previous appointments found for this user')
+        logger.debug('ℹ️ No previous appointments found for this user')
         return { location_id: null, custom_location_address: null }
       }
 
       if (lastAppointment?.location_id || lastAppointment?.custom_location_address) {
-        console.log('✅ Last appointment location loaded:', {
+        logger.debug('✅ Last appointment location loaded:', {
           location_id: lastAppointment.location_id,
           has_custom_address: !!lastAppointment.custom_location_address
         })
@@ -1649,7 +1649,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
           custom_location_address: lastAppointment.custom_location_address
         }
       } else {
-        console.log('ℹ️ No last appointment location found')
+        logger.debug('ℹ️ No last appointment location found')
         return { location_id: null, custom_location_address: null }
       }
 

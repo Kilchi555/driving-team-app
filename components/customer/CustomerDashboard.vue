@@ -881,9 +881,9 @@
 
 <script setup lang="ts">
 // In CustomerDashboard.vue - ganz oben im script setup:
-console.log('🔍 CustomerDashboard Script loaded')
-console.log('🔍 Process client:', process.client)
-console.log('🔍 Process server:', process.server)
+logger.debug('🔍 CustomerDashboard Script loaded')
+logger.debug('🔍 Process client:', process.client)
+logger.debug('🔍 Process server:', process.server)
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { navigateTo, useRoute } from '#app'
@@ -939,20 +939,20 @@ const activeClickDiv = ref<string | null>(null) // Track which div is being clic
 
 // Load user documents
 const loadUserDocuments = async () => {
-  console.log('🔥 loadUserDocuments called [NEW VERSION 2025-12-08]')
-  console.log('   userData.value?.id:', userData.value?.id)
-  console.log('   userData.value?.tenant_id:', userData.value?.tenant_id)
+  logger.debug('🔥 loadUserDocuments called [NEW VERSION 2025-12-08]')
+  logger.debug('   userData.value?.id:', userData.value?.id)
+  logger.debug('   userData.value?.tenant_id:', userData.value?.tenant_id)
   
   if (!userData.value?.id) {
-    console.log('⚠️ User data not available for loading documents')
+    logger.debug('⚠️ User data not available for loading documents')
     return
   }
 
   try {
-    console.log('📄 [NEW] Loading documents from Storage API for user:', userData.value.id)
+    logger.debug('📄 [NEW] Loading documents from Storage API for user:', userData.value.id)
     
     // Call new endpoint that lists documents directly from Storage
-    console.log('🌐 Calling /api/documents/list-user-documents with userId:', userData.value.id)
+    logger.debug('🌐 Calling /api/documents/list-user-documents with userId:', userData.value.id)
     const response = await $fetch('/api/documents/list-user-documents', {
       query: {
         userId: userData.value.id
@@ -963,7 +963,7 @@ const loadUserDocuments = async () => {
     // Extract the documents array
     const documents = response?.documents || response || []
     
-    console.log('✅ Loaded documents from Storage:', documents?.length || 0, 'docs:', documents)
+    logger.debug('✅ Loaded documents from Storage:', documents?.length || 0, 'docs:', documents)
 
     // Load document categories for this tenant
     const supabase = getSupabase()
@@ -978,15 +978,15 @@ const loadUserDocuments = async () => {
       return
     }
 
-    console.log('✅ Loaded categories:', categories?.length || 0)
+    logger.debug('✅ Loaded categories:', categories?.length || 0)
 
     // Map categories with their documents
     userDocumentCategories.value = (categories || []).map((cat: any) => {
-      console.log('🔍 Processing category:', cat.code, 'with', documents?.length || 0, 'documents')
+      logger.debug('🔍 Processing category:', cat.code, 'with', documents?.length || 0, 'documents')
       // All uploaded documents go to the first category (Ausweise)
       // Don't filter - just assign all documents to the category
       const categoryDocs = documents || []
-      console.log('   Assigning', categoryDocs.length, 'docs to category', cat.code)
+      logger.debug('   Assigning', categoryDocs.length, 'docs to category', cat.code)
       return {
         code: cat.code,
         name: cat.name,
@@ -995,9 +995,9 @@ const loadUserDocuments = async () => {
       }
     })
 
-    console.log('✅ Documents grouped, categories:', userDocumentCategories.value.length)
+    logger.debug('✅ Documents grouped, categories:', userDocumentCategories.value.length)
     if (userDocumentCategories.value.length > 0) {
-      console.log('📂 First category:', userDocumentCategories.value[0])
+      logger.debug('📂 First category:', userDocumentCategories.value[0])
     }
   } catch (err: any) {
     console.error('❌ Error loading documents:', err)
@@ -1200,7 +1200,7 @@ const refreshData = async () => {
     if (failed.length > 0) {
       console.warn(`⚠️ ${failed.length} refresh task(s) failed, but continuing`)
     } else {
-      console.log('✅ Data refreshed successfully')
+      logger.debug('✅ Data refreshed successfully')
     }
   } catch (err: any) {
     console.error('❌ Critical refresh error:', err)
@@ -1408,7 +1408,7 @@ const loadAllData = async () => {
     // Load instructors after appointments are loaded
     loadInstructors()
 
-    console.log('✅ Customer dashboard data loaded successfully')
+    logger.debug('✅ Customer dashboard data loaded successfully')
   } catch (err: any) {
     console.error('❌ Error loading customer dashboard:', err)
     error.value = err.message
@@ -1420,7 +1420,7 @@ const loadAllData = async () => {
 // ✅ Load pending confirmation appointments
 const loadPendingConfirmations = async () => {
   if (!currentUser.value?.id) {
-    console.log('⚠️ No current user ID for loadPendingConfirmations')
+    logger.debug('⚠️ No current user ID for loadPendingConfirmations')
     return
   }
 
@@ -1471,7 +1471,7 @@ const loadPendingConfirmations = async () => {
 
     if (!confirmationsData || confirmationsData.length === 0) {
       pendingConfirmations.value = []
-      console.log('✅ No pending confirmations found')
+      logger.debug('✅ No pending confirmations found')
       return
     }
 
@@ -1592,7 +1592,7 @@ const loadPendingConfirmations = async () => {
       }
     })
 
-    console.log('✅ Loaded pending confirmations:', pendingConfirmations.value.length)
+    logger.debug('✅ Loaded pending confirmations:', pendingConfirmations.value.length)
   } catch (err: any) {
     console.error('❌ Error loading pending confirmations:', err)
   }
@@ -1623,7 +1623,7 @@ const checkPaymentMethod = async () => {
     
     hasPaymentMethod.value = !!data && !error
     
-    console.log('✅ Payment method check:', hasPaymentMethod.value ? 'Has payment method' : 'No payment method')
+    logger.debug('✅ Payment method check:', hasPaymentMethod.value ? 'Has payment method' : 'No payment method')
   } catch (err: any) {
     console.error('❌ Error checking payment method:', err)
     hasPaymentMethod.value = false
@@ -1733,7 +1733,7 @@ const confirmAppointment = async (appointment: any) => {
     }
 
     // ✅ SCHRITT 1: Setze Termin SOFORT auf 'confirmed' - BEVOR Zahlung starten!
-    console.log('🔄 Setting appointment to confirmed immediately...')
+    logger.debug('🔄 Setting appointment to confirmed immediately...')
     try {
       const confirmResult = await $fetch('/api/appointments/confirm', {
         method: 'POST',
@@ -1746,7 +1746,7 @@ const confirmAppointment = async (appointment: any) => {
         console.error('⚠️ Could not confirm appointment:', confirmResult.error)
         throw new Error(confirmResult.error || 'Could not confirm appointment')
       } else {
-        console.log('✅ Appointment confirmed immediately')
+        logger.debug('✅ Appointment confirmed immediately')
       }
     } catch (err) {
       console.error('❌ Error confirming appointment:', err)
@@ -1765,7 +1765,7 @@ const confirmAppointment = async (appointment: any) => {
 
     // ✅ NEU: Wenn payment_method 'cash', 'invoice' oder 'credit' ist, NICHT zu Wallee weiterleiten!
     if (payment?.payment_method === 'cash' || payment?.payment_method === 'invoice' || payment?.payment_method === 'credit') {
-      console.log('✅ Payment method is', payment.payment_method, '- no online payment needed')
+      logger.debug('✅ Payment method is', payment.payment_method, '- no online payment needed')
       displayToast('success', 'Termin bestätigt!', `Zahlungsart: ${getPaymentMethodLabel(payment.payment_method)}`)
       
       // Termin ist bereits bestätigt (siehe weiter oben)
@@ -1775,11 +1775,11 @@ const confirmAppointment = async (appointment: any) => {
       const index = pendingConfirmations.value.findIndex((apt: any) => apt.id === appointment.id)
       if (index !== -1) {
         pendingConfirmations.value.splice(index, 1)
-        console.log('✅ Removed confirmed appointment from pending list')
+        logger.debug('✅ Removed confirmed appointment from pending list')
       }
       
       // ✅ Force refresh pending confirmations - load all remaining
-      console.log('🔄 Refreshing pending confirmations after confirmation...')
+      logger.debug('🔄 Refreshing pending confirmations after confirmation...')
       await loadPendingConfirmations()
       
       // ✅ Schließe das Modal
@@ -1817,7 +1817,7 @@ const confirmAppointment = async (appointment: any) => {
         const authHours = Number(settings?.automatic_authorization_hours_before) || 120
         automaticAuthorizationHoursBeforeLocal = Math.min(authHours, 120)
         
-        console.log('✅ Payment settings loaded:', {
+        logger.debug('✅ Payment settings loaded:', {
           automatic_payment_enabled: automaticPaymentEnabledLocal,
           automatic_payment_hours_before: automaticPaymentHoursBeforeLocal,
           automatic_authorization_hours_before: automaticAuthorizationHoursBeforeLocal,
@@ -1845,7 +1845,7 @@ const confirmAppointment = async (appointment: any) => {
       
       defaultMethodId = method?.id || null
       
-      console.log('💳 Payment method check:', {
+      logger.debug('💳 Payment method check:', {
         hasMethod: !!defaultMethodId,
         automaticPaymentEnabled: automaticPaymentEnabledLocal,
         note: defaultMethodId 
@@ -1870,7 +1870,7 @@ const confirmAppointment = async (appointment: any) => {
     const shouldProcessImmediately = hasToken && diffHours < automaticPaymentHoursBeforeLocal
     const canScheduleAutomatic = hasToken && diffHours >= automaticPaymentHoursBeforeLocal
     
-    console.log('🔍 Automatic payment decision:', {
+    logger.debug('🔍 Automatic payment decision:', {
       automaticPaymentEnabled: automaticPaymentEnabledLocal,
       hasDefaultMethod: !!defaultMethodId,
       diffHours: diffHours,
@@ -1944,7 +1944,7 @@ const confirmAppointment = async (appointment: any) => {
           confirmingAppointments.value.delete(appointment.id)
           return
         } else {
-          console.log('✅ Appointment confirmed immediately after customer click')
+          logger.debug('✅ Appointment confirmed immediately after customer click')
         }
       } catch (err: any) {
         console.error('⚠️ Error confirming appointment immediately:', err)
@@ -1953,7 +1953,7 @@ const confirmAppointment = async (appointment: any) => {
         return
       }
       
-      console.log('⏳ Authorization scheduled at', authDueDate.toISOString(), '; capture scheduled at', scheduledPayDate.toISOString())
+      logger.debug('⏳ Authorization scheduled at', authDueDate.toISOString(), '; capture scheduled at', scheduledPayDate.toISOString())
     }
 
     // Erstelle Wallee-Transaktion über Backend
@@ -2018,7 +2018,7 @@ const confirmAppointment = async (appointment: any) => {
       return
     }
 
-    console.log('✅ Wallee transaction created:', {
+    logger.debug('✅ Wallee transaction created:', {
       transactionId: response.transactionId,
       paymentId: payment?.id,
       paymentUrl: response.paymentUrl
@@ -2038,7 +2038,7 @@ const confirmAppointment = async (appointment: any) => {
       if (updateError) {
         console.error('❌ Failed to update payment with transaction ID:', updateError)
       } else {
-        console.log('✅ Payment updated with transaction ID:', response.transactionId)
+        logger.debug('✅ Payment updated with transaction ID:', response.transactionId)
       }
     } else {
       console.warn('⚠️ Cannot update payment - missing payment ID or transaction ID:', {
@@ -2051,7 +2051,7 @@ const confirmAppointment = async (appointment: any) => {
     // Wir aktualisieren den Status NICHT mehr hier, da er bereits auf 'confirmed' gesetzt wurde!
 
     // Direkt zu Wallee weiterleiten
-    console.log('🔄 Redirecting to Wallee payment page...')
+    logger.debug('🔄 Redirecting to Wallee payment page...')
     window.location.href = response.paymentUrl
   } catch (err: any) {
     console.error('❌ Fehler beim Starten der Zahlung:', err)
@@ -2076,7 +2076,7 @@ const loadAppointments = async () => {
     if (userError) throw userError
     if (!userData) throw new Error('User nicht in Datenbank gefunden')
 
-    console.log('🔍 Loading appointments for user:', userData.id)
+    logger.debug('🔍 Loading appointments for user:', userData.id)
 
     const { data: appointmentsData, error: appointmentsError } = await supabase
       .from('appointments')
@@ -2118,15 +2118,15 @@ const loadAppointments = async () => {
       .order('start_time', { ascending: false })
 
     if (appointmentsError) throw appointmentsError
-    console.log('✅ Appointments loaded:', appointmentsData?.length || 0)
+    logger.debug('✅ Appointments loaded:', appointmentsData?.length || 0)
 
     const locationIds = [...new Set(appointmentsData?.map(a => a.location_id).filter(Boolean))]
-    console.log('🔍 Location IDs found:', locationIds)
+    logger.debug('🔍 Location IDs found:', locationIds)
     
     let locationsMap: Record<string, { name: string; address?: string; formatted_address?: string }> = {}
     
     if (locationIds.length > 0) {
-      console.log('🔍 Loading locations for IDs:', locationIds)
+      logger.debug('🔍 Loading locations for IDs:', locationIds)
       
       const { data: locations, error: locationsError } = await supabase
         .from('locations')
@@ -2136,7 +2136,7 @@ const loadAppointments = async () => {
       if (locationsError) {
         console.error('❌ Error loading locations:', locationsError)
       } else if (locations) {
-        console.log('✅ Locations loaded:', locations)
+        logger.debug('✅ Locations loaded:', locations)
         
         locationsMap = locations.reduce((acc, loc) => {
           acc[loc.id] = {
@@ -2147,14 +2147,14 @@ const loadAppointments = async () => {
           return acc
         }, {} as Record<string, any>)
         
-        console.log('✅ LocationsMap created:', locationsMap)
+        logger.debug('✅ LocationsMap created:', locationsMap)
       }
     } else {
-      console.log('⚠️ No location IDs found in appointments')
+      logger.debug('⚠️ No location IDs found in appointments')
     }
 
     const appointmentIds = appointmentsData?.map(a => a.id) || []
-    console.log('🔍 Searching evaluations for appointments:', appointmentIds.length)
+    logger.debug('🔍 Searching evaluations for appointments:', appointmentIds.length)
 
     const { data: notes, error: notesError } = await supabase
       .from('notes')
@@ -2173,13 +2173,13 @@ const loadAppointments = async () => {
       throw notesError
     }
 
-    console.log('✅ Evaluations loaded:', notes?.length || 0)
+    logger.debug('✅ Evaluations loaded:', notes?.length || 0)
 
     const criteriaIds = [...new Set(notes?.map(n => n.evaluation_criteria_id).filter(Boolean))]
     let criteriaMap: Record<string, any> = {}
 
     if (criteriaIds.length > 0) {
-      console.log('🔍 Loading criteria details for:', criteriaIds.length, 'criteria')
+      logger.debug('🔍 Loading criteria details for:', criteriaIds.length, 'criteria')
       
       const { data: criteria, error: criteriaError } = await supabase
         .from('evaluation_criteria')
@@ -2196,7 +2196,7 @@ const loadAppointments = async () => {
           }
         })
       } else if (criteria) {
-        console.log('✅ Criteria loaded:', criteria.length)
+        logger.debug('✅ Criteria loaded:', criteria.length)
         
         criteriaMap = criteria.reduce((acc, crit) => {
           acc[crit.id] = {
@@ -2238,14 +2238,14 @@ const loadAppointments = async () => {
     }))
 
     // Debug: Zeige location_details für die ersten paar Termine
-    console.log('🔍 Sample location_details:', lessonsWithEvaluations.slice(0, 3).map(lesson => ({
+    logger.debug('🔍 Sample location_details:', lessonsWithEvaluations.slice(0, 3).map(lesson => ({
       id: lesson.id,
       location_id: lesson.location_id,
       location_name: lesson.location_name,
       location_details: lesson.location_details
     })))
 
-    console.log('✅ Final lessons with evaluations:', lessonsWithEvaluations.length)
+    logger.debug('✅ Final lessons with evaluations:', lessonsWithEvaluations.length)
 
     appointments.value = lessonsWithEvaluations
     lessons.value = lessonsWithEvaluations
@@ -2316,7 +2316,7 @@ const loadInstructors = () => {
   }
   
   instructors.value = Array.from(instructorMap.values())
-  console.log('✅ Instructors loaded:', instructors.value.length)
+  logger.debug('✅ Instructors loaded:', instructors.value.length)
 }
 
 const getInstructorInitials = (instructor: any) => {
@@ -2349,11 +2349,11 @@ const handleLogout = async () => {
   
   try {
     isLoggingOut.value = true
-    console.log('🚪 Logging out user...')
+    logger.debug('🚪 Logging out user...')
     
     await authStore.logout()
     
-    console.log('✅ Logout successful, redirecting to tenant login...')
+    logger.debug('✅ Logout successful, redirecting to tenant login...')
     const { currentTenantBranding } = useTenantBranding()
     const slug = currentTenantBranding.value?.slug
     await navigateTo(slug ? `/${slug}` : '/login')
@@ -2371,7 +2371,7 @@ const handleLogout = async () => {
 // Watch for user role changes and redirect if needed
 watch([currentUser, userRole], ([newUser, newRole]) => {
   if (newUser && !isClient.value) {
-    console.log('🔄 User is not a client, redirecting to main dashboard')
+    logger.debug('🔄 User is not a client, redirecting to main dashboard')
     navigateTo('/')
   }
 }, { immediate: true })
@@ -2381,10 +2381,10 @@ watch([currentUser, userRole], ([newUser, newRole]) => {
 const route = useRoute() // ← Hier oben definieren, außerhalb des watchers
 
 watch(userRole, (newRole: string | null) => {
-  console.log('🔍 WATCHER TRIGGERED - userRole changed to:', newRole)
+  logger.debug('🔍 WATCHER TRIGGERED - userRole changed to:', newRole)
   
   if (newRole) {
-    console.log('DEBUG: UserRole detected in index.vue watcher:', newRole);
+    logger.debug('DEBUG: UserRole detected in index.vue watcher:', newRole);
     
     const currentPath = route.path; // ← Jetzt route.path verwenden statt useRoute().path
     let targetPath = '/';
@@ -2392,7 +2392,7 @@ watch(userRole, (newRole: string | null) => {
     switch (newRole) {
       case 'admin':
         targetPath = '/admin';
-        console.log('🔄 Navigating admin to:', targetPath);
+        logger.debug('🔄 Navigating admin to:', targetPath);
         break;
       case 'staff':
         targetPath = '/dashboard';
@@ -2404,19 +2404,19 @@ watch(userRole, (newRole: string | null) => {
         targetPath = '/';
     }
 
-    console.log('🎯 Final navigation:', currentPath, '→', targetPath);
+    logger.debug('🎯 Final navigation:', currentPath, '→', targetPath);
     if (currentPath !== targetPath) {
       navigateTo(targetPath);
     }
   } else {
-    console.log('🔍 WATCHER - userRole is null/empty')
+    logger.debug('🔍 WATCHER - userRole is null/empty')
   }
 }, { immediate: true })// ← Stelle sicher dass immediate: true da ist
 
 // Watch for tenant branding changes
 watch(() => currentTenantBranding.value, (newVal) => {
   if (newVal) {
-    console.log('👀 Tenant branding changed:', {
+    logger.debug('👀 Tenant branding changed:', {
       name: newVal.name,
       colors: newVal.colors,
       primaryColor: primaryColor.value,
@@ -2432,14 +2432,14 @@ watch(() => currentTenantBranding.value, (newVal) => {
 // Watch for ProfileModal opening to load documents
 watch(() => showProfileModal.value, async (newVal) => {
   if (newVal && userData.value) {
-    console.log('📂 ProfileModal opened, loading documents...')
+    logger.debug('📂 ProfileModal opened, loading documents...')
     await loadUserDocuments()
   }
 })
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🔥 CustomerDashboard mounted')
+  logger.debug('🔥 CustomerDashboard mounted')
   
   try {
     // Check for payment success/failure from Wallee redirect
@@ -2448,7 +2448,7 @@ onMounted(async () => {
     const paymentFailed = route.query.payment_failed === 'true'
     
     if (paymentSuccess) {
-      console.log('💳 Payment success detected, refreshing data...')
+      logger.debug('💳 Payment success detected, refreshing data...')
       // Small delay to ensure webhook processed
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
@@ -2461,12 +2461,12 @@ onMounted(async () => {
     }
     
     if (!authStore.isLoggedIn || !authStore.isClient) {
-      console.log('❌ Not logged in or not a client, redirecting...')
+      logger.debug('❌ Not logged in or not a client, redirecting...')
       await navigateTo('/')
       return
     }
     
-    console.log('✅ Auth verified, loading data...')
+    logger.debug('✅ Auth verified, loading data...')
     
     // First, load user data from database
     if (!userData.value && currentUser.value?.id) {
@@ -2479,7 +2479,7 @@ onMounted(async () => {
       
       if (!userError && userDataFromDb) {
         userData.value = userDataFromDb
-        console.log('✅ User data loaded:', userDataFromDb.id)
+        logger.debug('✅ User data loaded:', userDataFromDb.id)
       } else {
         console.warn('⚠️ Error loading user data:', userError?.message)
       }
@@ -2487,7 +2487,7 @@ onMounted(async () => {
     
     // Load tenant data and branding
     if (userData.value?.tenant_id) {
-      console.log('🎨 Loading tenant data for:', userData.value.tenant_id)
+      logger.debug('🎨 Loading tenant data for:', userData.value.tenant_id)
       
       // Load tenant info from database using tenant_id
       const supabase = getSupabase()
@@ -2498,7 +2498,7 @@ onMounted(async () => {
         .single()
       
       if (!tenantError && tenantData) {
-        console.log('✅ Tenant loaded:', tenantData.name)
+        logger.debug('✅ Tenant loaded:', tenantData.name)
         // Update the useTenant composable with the loaded tenant
         setTenant(tenantData)
       } else {

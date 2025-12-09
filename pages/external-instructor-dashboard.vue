@@ -244,11 +244,11 @@ const redirectToSlugOrLogin = async () => {
   const slugMatch = route.path.match(/^\/([^\/]+)/)
   if (slugMatch && slugMatch[1] && slugMatch[1] !== 'external-instructor-dashboard') {
     const slug = slugMatch[1]
-    console.log('Auth: Redirecting to slug route:', `/${slug}`)
+    logger.debug('Auth: Redirecting to slug route:', `/${slug}`)
     return await navigateTo(`/${slug}`)
   }
   
-  console.log('Auth: No slug found, redirecting to login')
+  logger.debug('Auth: No slug found, redirecting to login')
   return await navigateTo('/login')
 }
 

@@ -436,10 +436,10 @@ const saveDiscount = async () => {
 
     if (props.isEdit && props.discount) {
       await updateDiscount(props.discount.id, discountData)
-      console.log('✅ Discount updated')
+      logger.debug('✅ Discount updated')
     } else {
       await createDiscount(discountData)
-      console.log('✅ Discount created')
+      logger.debug('✅ Discount created')
     }
     
     emit('saved')

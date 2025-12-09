@@ -406,7 +406,7 @@ const openPaymentModal = (appointment: any) => {
 }
 
 const handlePaymentCompleted = (result: any) => {
-  console.log('Payment completed:', result)
+  logger.debug('Payment completed:', result)
   // Refresh calendar or appointment list
 }
 
@@ -509,7 +509,7 @@ const calculatePrice = async () => {
     const category = props.appointment.extendedProps?.category || 'B'
     const duration = props.appointment.duration_minutes || 45
 
-    console.log('💰 Calculating price for:', { category, duration, appointmentCount: appointmentCount.value })
+    logger.debug('💰 Calculating price for:', { category, duration, appointmentCount: appointmentCount.value })
 
     // ✅ KORRIGIERT: Admin-Fee nur beim 2. Termin pro Kategorie (außer bei Motorrädern)
     const motorcycleCategories = ['A', 'A1', 'A35kW']
@@ -532,7 +532,7 @@ const calculatePrice = async () => {
     }
 
     calculatedPrice.value = mockPrice
-    console.log('✅ Price calculated:', mockPrice)
+    logger.debug('✅ Price calculated:', mockPrice)
 
   } catch (err: any) {
     console.error('❌ Error calculating price:', err)
@@ -569,7 +569,7 @@ const processPayment = async () => {
   isProcessing.value = true
 
   try {
-    console.log('💳 Processing payment:', {
+    logger.debug('💳 Processing payment:', {
       method: selectedPaymentMethod.value,
       amount: calculatedPrice.value.total_rappen,
       appointment: props.appointment.id
@@ -607,7 +607,7 @@ interface WalleeResponse {
 
 const handleWalleePayment = async () => {
   try {
-    console.log('🔄 Creating Wallee payment...')
+    logger.debug('🔄 Creating Wallee payment...')
     
     const paymentRequest = {
       appointmentId: props.appointment.id,
@@ -629,7 +629,7 @@ const handleWalleePayment = async () => {
     })
 
     if (isPaymentApiResponse(result) && result.success && result.paymentUrl) {
-      console.log('✅ Wallee payment created:', result)
+      logger.debug('✅ Wallee payment created:', result)
       // Redirect to Wallee payment page
       window.location.href = result.paymentUrl
     } else {
@@ -644,7 +644,7 @@ const handleWalleePayment = async () => {
 
 const handleCashPayment = async () => {
   try {
-    console.log('💰 Processing cash payment...')
+    logger.debug('💰 Processing cash payment...')
     
     const paymentRequest = {
       appointmentId: props.appointment.id,
@@ -664,7 +664,7 @@ const handleCashPayment = async () => {
     })
 
     if (isPaymentApiResponse(result) && result.success) {
-      console.log('✅ Cash payment created:', result)
+      logger.debug('✅ Cash payment created:', result)
       
       // Emit success
       emit('payment-created', {
@@ -686,7 +686,7 @@ const handleCashPayment = async () => {
 
 const handleInvoicePayment = async () => {
   try {
-    console.log('📄 Processing invoice payment...')
+    logger.debug('📄 Processing invoice payment...')
     
     const paymentRequest = {
       appointmentId: props.appointment.id,
@@ -706,7 +706,7 @@ const handleInvoicePayment = async () => {
     })
 
     if (isPaymentApiResponse(result) && result.success) {
-      console.log('✅ Invoice payment created:', result)
+      logger.debug('✅ Invoice payment created:', result)
       
       // Emit success
       emit('payment-created', {

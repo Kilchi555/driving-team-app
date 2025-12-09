@@ -50,7 +50,7 @@ export const useAccounto = () => {
   // Hauptfunktion: Rechnung in Accounto erstellen
   const createInvoice = async (request: AccountoInvoiceRequest): Promise<AccountoInvoiceResponse> => {
     try {
-      console.log('🏦 Creating Accounto invoice:', request)
+      logger.debug('🏦 Creating Accounto invoice:', request)
       
       isLoading.value = true
       error.value = null
@@ -74,7 +74,7 @@ export const useAccounto = () => {
         body: request
       }) as AccountoInvoiceResponse
 
-      console.log('✅ Accounto invoice response:', response)
+      logger.debug('✅ Accounto invoice response:', response)
 
       if (!response.success) {
         throw new Error(response.error || 'Rechnungserstellung fehlgeschlagen')
@@ -99,13 +99,13 @@ export const useAccounto = () => {
 
   // Rechnung erstellen und per E-Mail versenden
   const createInvoiceAndSend = async (request: AccountoInvoiceRequest): Promise<AccountoInvoiceResponse> => {
-    console.log('📧 Creating invoice and sending via email...')
+    logger.debug('📧 Creating invoice and sending via email...')
     return await createInvoice(request)
   }
 
   // Rechnung erstellen und für Druck vorbereiten
   const createInvoiceAndPrint = async (request: AccountoInvoiceRequest): Promise<AccountoInvoiceResponse> => {
-    console.log('🖨️ Creating invoice for printing...')
+    logger.debug('🖨️ Creating invoice for printing...')
     
     // Für den Druck fügen wir einen speziellen Flag hinzu
     const printRequest = {

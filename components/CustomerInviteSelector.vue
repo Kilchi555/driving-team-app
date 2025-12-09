@@ -534,7 +534,7 @@ const createInvitationSmsMessage = (customer: NewCustomer, appointmentData?: any
 
 const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value
-  console.log('🔄 CustomerInviteSelector expanded:', isExpanded.value)
+  logger.debug('🔄 CustomerInviteSelector expanded:', isExpanded.value)
   
   // Auto-load categories when expanded for the first time
   if (isExpanded.value && categories.value.length === 0) {
@@ -548,7 +548,7 @@ const loadCategories = async () => {
   isLoadingCategories.value = true
   
   try {
-    console.log('🔄 Loading categories from database...')
+    logger.debug('🔄 Loading categories from database...')
     const supabase = getSupabase()
     
     // Get current user's tenant_id
@@ -575,7 +575,7 @@ const loadCategories = async () => {
     
     // Only load categories if business_type is driving_school
     if (tenantData?.business_type !== 'driving_school') {
-      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
       categories.value = []
       isLoadingCategories.value = false
       return
@@ -591,7 +591,7 @@ const loadCategories = async () => {
     if (error) throw error
     
     categories.value = data || []
-    console.log('✅ Categories loaded:', categories.value.length)
+    logger.debug('✅ Categories loaded:', categories.value.length)
     
   } catch (err: any) {
     console.error('❌ Error loading categories:', err)
@@ -605,7 +605,7 @@ const loadCategories = async () => {
       { code: 'C1', name: 'C1 - LKW klein' },
       { code: 'CE', name: 'CE - LKW mit Anhänger' }
     ]
-    console.log('🔄 Using fallback categories')
+    logger.debug('🔄 Using fallback categories')
   } finally {
     isLoadingCategories.value = false
   }
@@ -698,7 +698,7 @@ const addCustomer = async () => {
       notes: ''
     }
 
-    console.log('✅ Customer added to invite list:', customerToAdd)
+    logger.debug('✅ Customer added to invite list:', customerToAdd)
     emit('customers-added', [customerToAdd])
 
   } catch (err: any) {
@@ -712,7 +712,7 @@ const addCustomer = async () => {
 const removeCustomer = (index: number) => {
   const updatedCustomers = invitedCustomers.value.filter((_, i) => i !== index)
   invitedCustomers.value = updatedCustomers
-  console.log('🗑️ Customer removed from invite list at index:', index)
+  logger.debug('🗑️ Customer removed from invite list at index:', index)
 }
 
 const clearAll = () => {
@@ -726,14 +726,14 @@ const clearAll = () => {
     notes: ''
   }
   error.value = null
-  console.log('🗑️ All invited customers cleared')
+  logger.debug('🗑️ All invited customers cleared')
   emit('customers-cleared')
 }
 
 const resetSelection = () => {
   clearAll()
   isExpanded.value = false
-  console.log('🔄 CustomerInviteSelector: Selection reset')
+  logger.debug('🔄 CustomerInviteSelector: Selection reset')
 }
 
 // 1. VERWENDE useSmsService STATT DIREKTER EDGE FUNCTION:
@@ -742,11 +742,11 @@ const { sendSms } = useSmsService()
 // 2. DEINE createInvitedCustomers FUNKTION BLEIBT UNVERÄNDERT:
 const createInvitedCustomers = async (appointmentData: any) => {
   if (invitedCustomers.value.length === 0) {
-    console.log('📞 No customers to invite')
+    logger.debug('📞 No customers to invite')
     return []
   }
 
-  console.log('📧 Creating invited customers and sending invitations:', invitedCustomers.value.length)
+  logger.debug('📧 Creating invited customers and sending invitations:', invitedCustomers.value.length)
   const supabase = getSupabase()
   const createdInvites = []
   sendingSms.value = true
@@ -781,20 +781,20 @@ const createInvitedCustomers = async (appointmentData: any) => {
 
       if (inviteError) throw inviteError
 
-      console.log('✅ Invitation upserted with ID:', invite.id)
+      logger.debug('✅ Invitation upserted with ID:', invite.id)
 
       // 2. Send invitation (SMS or Email)
       try {
         if (customer.phone) {
           // Send SMS invitation
           const smsMessage = createInvitationSmsMessage(customer, appointmentData)
-          console.log('📱 Sending SMS to:', customer.phone)
-          console.log('📄 Message:', smsMessage)
+          logger.debug('📱 Sending SMS to:', customer.phone)
+          logger.debug('📄 Message:', smsMessage)
 
           const smsResult = await sendSms(customer.phone, smsMessage)
 
        if (smsResult.success) {
-          console.log('✅ SMS sent successfully:', smsResult.data?.sid)
+          logger.debug('✅ SMS sent successfully:', smsResult.data?.sid)
           
           // Update SMS status tracking
           smsStatus.value[customer.phone] = {
@@ -838,7 +838,7 @@ const createInvitedCustomers = async (appointmentData: any) => {
 
         } else if (customer.email) {
           // Send Email invitation using Supabase Auth
-          console.log('📧 Sending Email invitation to:', customer.email)
+          logger.debug('📧 Sending Email invitation to:', customer.email)
           
           try {
             const { data: emailResult, error: emailError } = await supabase.auth.admin.inviteUserByEmail(
@@ -871,7 +871,7 @@ const createInvitedCustomers = async (appointmentData: any) => {
                 })
                 .eq('id', invite.id)
             } else {
-              console.log('✅ Email invitation sent successfully:', emailResult.user?.id)
+              logger.debug('✅ Email invitation sent successfully:', emailResult.user?.id)
               // Update invitation record with email success
               await supabase
                 .from('invited_customers')
@@ -927,10 +927,10 @@ const createInvitedCustomers = async (appointmentData: any) => {
   // 3. Log SMS summary
   const successfulSms = Object.values(smsStatus.value).filter(status => status.sent).length
   const failedSms = Object.values(smsStatus.value).filter(status => !status.sent).length
-  console.log(`📊 SMS Summary: ${successfulSms} sent, ${failedSms} failed`)
+  logger.debug(`📊 SMS Summary: ${successfulSms} sent, ${failedSms} failed`)
 
   // 4. TODO: Create reminder job for follow-up SMS
-  console.log('⏰ Reminder jobs would be scheduled for', createdInvites.length, 'invites')
+  logger.debug('⏰ Reminder jobs would be scheduled for', createdInvites.length, 'invites')
 
   return createdInvites
 }
@@ -946,7 +946,7 @@ const retrySms = async (customer: NewCustomer) => {
         sent: true,
         sid: smsResult.data?.sid
       }
-      console.log('✅ SMS retry successful for:', customer.phone)
+      logger.debug('✅ SMS retry successful for:', customer.phone)
     } else {
       console.error('❌ SMS retry failed for:', customer.phone, smsResult.error)
     }

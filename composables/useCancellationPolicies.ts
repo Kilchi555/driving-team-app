@@ -66,7 +66,7 @@ export const useCancellationPolicies = () => {
         throw new Error('User has no tenant assigned')
       }
 
-      console.log('🔍 Cancellation Policies - Current tenant_id:', tenantId, 'appliesTo:', appliesTo)
+      logger.debug('🔍 Cancellation Policies - Current tenant_id:', tenantId, 'appliesTo:', appliesTo)
 
       // Build query
       let query = supabase
@@ -160,7 +160,7 @@ export const useCancellationPolicies = () => {
         throw new Error('User has no tenant assigned')
       }
 
-      console.log('🔍 All Cancellation Policies - Current tenant_id:', userData.tenant_id)
+      logger.debug('🔍 All Cancellation Policies - Current tenant_id:', userData.tenant_id)
 
       const { data: policiesData, error: policiesError } = await supabase
         .from('cancellation_policies')

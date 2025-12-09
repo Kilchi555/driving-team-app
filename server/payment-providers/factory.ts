@@ -57,7 +57,7 @@ export async function getPaymentProviderConfig(tenantId: string): Promise<Paymen
  * Erstellt eine Payment Provider Instanz basierend auf der Konfiguration
  */
 export function createPaymentProvider(config: PaymentProviderConfig): IPaymentProvider {
-  console.log(`🏭 Creating payment provider: ${config.provider}`)
+  logger.debug(`🏭 Creating payment provider: ${config.provider}`)
 
   switch (config.provider) {
     case 'wallee':

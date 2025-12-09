@@ -236,17 +236,17 @@ const filteredFeed = computed(() => {
 
 // Load data on mount
 onMounted(async () => {
-  console.log('🚀 StaffCashBalance mounted, loading data...')
+  logger.debug('🚀 StaffCashBalance mounted, loading data...')
   await loadCashMovements()
   await loadCashTransactions()
   await loadCashBalance() // Load balance AFTER movements and transactions
-  console.log('✅ All data loaded')
+  logger.debug('✅ All data loaded')
 })
 
 // Load cash balance
 const loadCashBalance = async () => {
   try {
-    console.log('🔍 Loading cash balance for staff:', props.currentUser.id)
+    logger.debug('🔍 Loading cash balance for staff:', props.currentUser.id)
     
     // Calculate balance from movements and transactions (same logic as admin)
     let balance = 0
@@ -255,10 +255,10 @@ const loadCashBalance = async () => {
     cashMovements.value.forEach(movement => {
       if (movement.movement_type === 'deposit') {
         balance += movement.amount_rappen
-        console.log(`➕ Adding deposit: ${movement.amount_rappen / 100} CHF`)
+        logger.debug(`➕ Adding deposit: ${movement.amount_rappen / 100} CHF`)
       } else if (movement.movement_type === 'withdrawal') {
         balance -= movement.amount_rappen
-        console.log(`➖ Subtracting withdrawal: ${movement.amount_rappen / 100} CHF`)
+        logger.debug(`➖ Subtracting withdrawal: ${movement.amount_rappen / 100} CHF`)
       }
     })
 
@@ -266,13 +266,13 @@ const loadCashBalance = async () => {
     cashTransactions.value.forEach(transaction => {
       if (transaction.status === 'pending') {
         balance += transaction.amount_rappen
-        console.log(`➕ Adding pending transaction: ${transaction.amount_rappen / 100} CHF`)
+        logger.debug(`➕ Adding pending transaction: ${transaction.amount_rappen / 100} CHF`)
       } else if (transaction.status === 'confirmed') {
-        console.log(`❌ Ignoring confirmed transaction: ${transaction.amount_rappen / 100} CHF`)
+        logger.debug(`❌ Ignoring confirmed transaction: ${transaction.amount_rappen / 100} CHF`)
       }
     })
 
-    console.log(`💰 Final calculated balance: ${balance / 100} CHF`)
+    logger.debug(`💰 Final calculated balance: ${balance / 100} CHF`)
     currentBalance.value = balance
 
   } catch (err) {

@@ -20,12 +20,12 @@ export default defineEventHandler(async (event) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
-    console.log('🔍 Testing SMTP configuration...')
+    logger.debug('🔍 Testing SMTP configuration...')
     
     // Test 1: Try to send a test email invitation
     const testEmail = `test-${Date.now()}@example.com`
     
-    console.log('📧 Testing email invitation with:', testEmail)
+    logger.debug('📧 Testing email invitation with:', testEmail)
     
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
       testEmail,

@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     
     if (error) {
       // If RPC doesn't exist, try direct execution
-      console.log('RPC not available, trying alternative approach...')
+      logger.debug('RPC not available, trying alternative approach...')
       
       // For now, just return success - the tables will be created when first accessed
       return {

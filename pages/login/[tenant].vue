@@ -12,7 +12,7 @@ const route = useRoute()
 const router = useRouter()
 const tenant = route.params.tenant as string
 
-console.log('🔄 Redirecting /login/' + tenant + ' → /' + tenant)
+logger.debug('🔄 Redirecting /login/' + tenant + ' → /' + tenant)
 
 // Use router.replace() for immediate redirect
 if (tenant) {

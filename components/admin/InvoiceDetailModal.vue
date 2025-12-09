@@ -624,7 +624,7 @@ const loadInvoicePayments = async () => {
         .filter(p => !p.deleted_at)
         .reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0);
       
-      console.log('✅ Invoice payments loaded:', payments.length, 'Total excluding cancelled:', totalExcludingCancelled.value);
+      logger.debug('✅ Invoice payments loaded:', payments.length, 'Total excluding cancelled:', totalExcludingCancelled.value);
     }
   } catch (err) {
     console.error('⚠️ Error loading invoice payments:', err);
@@ -696,7 +696,7 @@ const loadDetailedData = async () => {
              
              // Lade die Kundendaten aus der users Tabelle
              if (data.user_id) {
-               console.log('🔍 Loading user data for user_id:', data.user_id);
+               logger.debug('🔍 Loading user data for user_id:', data.user_id);
                
                const { data: userData, error: userError } = await supabase
                  .from('users')
@@ -705,7 +705,7 @@ const loadDetailedData = async () => {
                  .single();
                
                if (!userError && userData) {
-                 console.log('✅ User data loaded:', userData);
+                 logger.debug('✅ User data loaded:', userData);
                  customerData.value = userData;
                } else if (userError) {
                  console.warn('❌ Could not load user data:', userError);
@@ -1210,7 +1210,7 @@ const saveChanges = async () => {
     isEditing.value = false;
     
     // Zeige Erfolgsmeldung
-    console.log('✅ Rechnungsdaten erfolgreich gespeichert');
+    logger.debug('✅ Rechnungsdaten erfolgreich gespeichert');
     
   } catch (error) {
     console.error('❌ Error saving invoice changes:', error);

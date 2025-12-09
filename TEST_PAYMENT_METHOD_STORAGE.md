@@ -246,7 +246,7 @@ HAVING COUNT(*) > 1;
 1. Prüfen Sie die Transaction-Response direkt:
    ```typescript
    // In save-payment-token.post.ts wird die Response geloggt
-   console.log('🔍 Wallee transaction details:', transaction)
+   logger.debug('🔍 Wallee transaction details:', transaction)
    ```
 2. Prüfen Sie, ob die Transaction wirklich erfolgreich war (`state === 'SUCCESSFUL'`)
 3. Warten Sie ein paar Sekunden - Wallee braucht manchmal Zeit, um den Token zu generieren

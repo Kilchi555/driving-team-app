@@ -64,7 +64,7 @@ export class PaymentService {
    */
   async createPayment(request: PaymentRequest): Promise<PaymentResult> {
     try {
-      console.log('💳 Creating payment:', request)
+      logger.debug('💳 Creating payment:', request)
 
       // 1. Payment Record in DB erstellen
       const paymentRecord = await this.createPaymentRecord(request)
@@ -138,7 +138,7 @@ export class PaymentService {
 
     if (error) throw error
 
-    console.log('✅ Payment record created:', data.id)
+    logger.debug('✅ Payment record created:', data.id)
     return data
   }
 
@@ -147,12 +147,12 @@ export class PaymentService {
    */
   async redeemVouchersAfterPayment(paymentId: string, appointmentId?: string, redeemerId?: string): Promise<void> {
     try {
-      console.log('🎁 Redeeming vouchers after payment:', paymentId)
+      logger.debug('🎁 Redeeming vouchers after payment:', paymentId)
 
       // Hole Payment Details
       const payment = await this.getPaymentDetails(paymentId)
       if (!payment || !payment.metadata?.discounts) {
-        console.log('ℹ️ No vouchers to redeem for payment:', paymentId)
+        logger.debug('ℹ️ No vouchers to redeem for payment:', paymentId)
         return
       }
 
@@ -169,7 +169,7 @@ export class PaymentService {
             .single()
 
           if (discountData?.is_voucher) {
-            console.log('🎁 Redeeming voucher:', discount.id)
+            logger.debug('🎁 Redeeming voucher:', discount.id)
             await applyDiscount(discount.id, appointmentId, redeemerId)
           }
         } catch (err: any) {
@@ -178,7 +178,7 @@ export class PaymentService {
         }
       }
 
-      console.log('✅ All vouchers redeemed for payment:', paymentId)
+      logger.debug('✅ All vouchers redeemed for payment:', paymentId)
 
     } catch (err: any) {
       console.error('❌ Error redeeming vouchers after payment:', err)
@@ -191,12 +191,12 @@ export class PaymentService {
    */
   async createVouchersAfterPurchase(paymentId: string): Promise<void> {
     try {
-      console.log('🎁 Creating vouchers after purchase:', paymentId)
+      logger.debug('🎁 Creating vouchers after purchase:', paymentId)
 
       // Hole Payment Details
       const payment = await this.getPaymentDetails(paymentId)
       if (!payment || !payment.metadata?.products) {
-        console.log('ℹ️ No products to create vouchers for payment:', paymentId)
+        logger.debug('ℹ️ No products to create vouchers for payment:', paymentId)
         return
       }
 
@@ -211,7 +211,7 @@ export class PaymentService {
             .single()
 
           if (productData?.is_voucher) {
-            console.log('🎁 Creating voucher for product:', product.name)
+            logger.debug('🎁 Creating voucher for product:', product.name)
             await this.createVoucherFromPurchase(payment, product)
           }
         } catch (err: any) {
@@ -220,7 +220,7 @@ export class PaymentService {
         }
       }
 
-      console.log('✅ All vouchers created for payment:', paymentId)
+      logger.debug('✅ All vouchers created for payment:', paymentId)
 
     } catch (err: any) {
       console.error('❌ Error creating vouchers after purchase:', err)
@@ -268,7 +268,7 @@ export class PaymentService {
 
       if (createError) throw createError
 
-      console.log('✅ Voucher created:', voucherCode)
+      logger.debug('✅ Voucher created:', voucherCode)
 
       // TODO: Optional - automatisch E-Mail senden
       // await this.sendVoucherEmail(voucherCode, payment.metadata?.customer_email)
@@ -284,7 +284,7 @@ export class PaymentService {
    */
   private async processWalleePayment(paymentRecord: PaymentRecord, request: PaymentRequest): Promise<PaymentResult> {
     try {
-      console.log('🔄 Processing Wallee payment...')
+      logger.debug('🔄 Processing Wallee payment...')
 
       const walleeData = {
         orderId: paymentRecord.id,
@@ -336,7 +336,7 @@ export class PaymentService {
    */
   private async processCashPayment(paymentRecord: PaymentRecord): Promise<PaymentResult> {
     try {
-      console.log('💰 Processing cash payment method...')
+      logger.debug('💰 Processing cash payment method...')
 
       // WICHTIG: Payment bleibt auf 'pending' - wird erst nach Bewertung bestätigt
       // Nur die Zahlungsmethode wird gespeichert
@@ -365,7 +365,7 @@ export class PaymentService {
    */
   private async processInvoicePayment(paymentRecord: PaymentRecord): Promise<PaymentResult> {
     try {
-      console.log('📄 Processing invoice payment...')
+      logger.debug('📄 Processing invoice payment...')
 
       // Update payment status to pending (waiting for payment)
       await this.updatePaymentStatus(paymentRecord.id, 'pending')
@@ -404,7 +404,7 @@ export class PaymentService {
       .eq('id', paymentId)
 
     if (error) throw error
-    console.log('✅ Payment updated with Wallee transaction ID')
+    logger.debug('✅ Payment updated with Wallee transaction ID')
   }
 
   /**
@@ -420,7 +420,7 @@ export class PaymentService {
       .eq('id', paymentId)
 
     if (error) throw error
-    console.log('✅ Payment status updated to:', status)
+    logger.debug('✅ Payment status updated to:', status)
   }
 
   /**
@@ -437,7 +437,7 @@ export class PaymentService {
       .eq('id', appointmentId)
 
     if (error) throw error
-    console.log('✅ Appointment payment status updated to:', status)
+    logger.debug('✅ Appointment payment status updated to:', status)
   }
 
   /**

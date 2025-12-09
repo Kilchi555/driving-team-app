@@ -5,7 +5,7 @@ import { getPaymentProviderForTenant } from '~/server/payment-providers/factory'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
-  console.log('🔔 Universal Payment Gateway - Webhook Received')
+  logger.debug('🔔 Universal Payment Gateway - Webhook Received')
 
   try {
     // Hole den Request Body (als String für Stripe Signatur-Validierung)
@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log(`📋 Webhook from provider: ${providerType}`)
+    logger.debug(`📋 Webhook from provider: ${providerType}`)
 
     // Hole Signatur für Stripe
     const signature = getHeader(event, 'stripe-signature') || ''
@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
 
         if (payment) {
           tenantId = payment.tenant_id
-          console.log(`✅ Found tenant ID from payment: ${tenantId}`)
+          logger.debug(`✅ Found tenant ID from payment: ${tenantId}`)
         }
       }
     }
@@ -102,7 +102,7 @@ export default defineEventHandler(async (event) => {
     // Verarbeite Webhook
     const webhookPayload = await provider.processWebhook(payload, signature)
 
-    console.log(`✅ Webhook processed:`, {
+    logger.debug(`✅ Webhook processed:`, {
       provider: webhookPayload.provider,
       transactionId: webhookPayload.transactionId,
       status: webhookPayload.status
@@ -143,7 +143,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Payment updated successfully')
+    logger.debug('✅ Payment updated successfully')
 
     // TODO: Weitere Payment-spezifische Logik (z.B. Credit Product Processing, Voucher Creation)
     // Diese Logik sollte in eine separate Funktion ausgelagert werden

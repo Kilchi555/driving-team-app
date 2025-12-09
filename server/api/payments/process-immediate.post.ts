@@ -174,7 +174,7 @@ export default defineEventHandler(async (event) => {
     transaction.customerEmailAddress = userEmail
     transaction.tokenizationEnabled = false // Token bereits vorhanden
 
-    console.log('⚡ Processing immediate payment:', {
+    logger.debug('⚡ Processing immediate payment:', {
       paymentId: payment.id,
       amount: amountInCHF,
       customerId: paymentMethod.wallee_customer_id,
@@ -185,7 +185,7 @@ export default defineEventHandler(async (event) => {
     const createResponse = await transactionService.create(spaceId, transaction)
     const walleeTransaction = createResponse.body
 
-    console.log('✅ Wallee transaction created:', walleeTransaction.id)
+    logger.debug('✅ Wallee transaction created:', walleeTransaction.id)
 
     // ✅ Warte kurz und prüfe Status
     await new Promise(resolve => setTimeout(resolve, 2000))
@@ -193,7 +193,7 @@ export default defineEventHandler(async (event) => {
     const statusResponse = await transactionService.read(spaceId, walleeTransaction.id as number)
     const finalTransaction = statusResponse.body
 
-    console.log('📊 Final transaction state:', finalTransaction.state)
+    logger.debug('📊 Final transaction state:', finalTransaction.state)
 
     // ✅ Update Payment basierend auf Ergebnis
     if (finalTransaction.state === Wallee.model.TransactionState.SUCCESSFUL || 

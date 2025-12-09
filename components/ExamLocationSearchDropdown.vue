@@ -325,7 +325,7 @@ const loadAllExamLocations = async () => {
   try {
     const supabase = getSupabase()
     
-    console.log('🔍 Loading all Swiss exam locations (global)')
+    logger.debug('🔍 Loading all Swiss exam locations (global)')
 
     // Load all exam locations from Switzerland (global locations - no tenant filtering needed)
     const { data: locations, error } = await supabase
@@ -339,13 +339,13 @@ const loadAllExamLocations = async () => {
     if (error) throw error
 
     allLocations.value = locations || []
-    console.log('✅ Loaded exam locations:', allLocations.value.length)
-    console.log('🔍 First few locations:', allLocations.value.slice(0, 5))
+    logger.debug('✅ Loaded exam locations:', allLocations.value.length)
+    logger.debug('🔍 First few locations:', allLocations.value.slice(0, 5))
     
     // Debug: Check if we have any locations at all
     if (allLocations.value.length === 0) {
       console.warn('⚠️ No exam locations found in database!')
-      console.log('🔍 Checking if locations table has any exam locations...')
+      logger.debug('🔍 Checking if locations table has any exam locations...')
       
       // Check total locations in table
       const { data: allLocationsCheck, error: checkError } = await supabase
@@ -356,7 +356,7 @@ const loadAllExamLocations = async () => {
       if (checkError) {
         console.error('❌ Error checking locations table:', checkError)
       } else {
-        console.log('🔍 All locations in table (first 10):', allLocationsCheck)
+        logger.debug('🔍 All locations in table (first 10):', allLocationsCheck)
       }
     }
 
@@ -390,7 +390,7 @@ const loadSelectedLocations = async () => {
     if (error) throw error
 
     selectedLocations.value = staffLocations || []
-    console.log('✅ Loaded selected locations:', selectedLocations.value.length)
+    logger.debug('✅ Loaded selected locations:', selectedLocations.value.length)
 
   } catch (err: any) {
     console.error('❌ Error loading selected locations:', err)
@@ -433,7 +433,7 @@ const addLocation = async (location: ExamLocation) => {
     emit('location-selected', location)
     emit('locations-changed', selectedLocations.value)
     
-    console.log('✅ Location added:', location.name)
+    logger.debug('✅ Location added:', location.name)
 
   } catch (err: any) {
     console.error('❌ Error adding location:', err)
@@ -483,7 +483,7 @@ const removeLocation = async (location: ExamLocation) => {
     emit('location-removed', location)
     emit('locations-changed', selectedLocations.value)
     
-    console.log('✅ Location removed:', location.name)
+    logger.debug('✅ Location removed:', location.name)
 
   } catch (err: any) {
     console.error('❌ Error removing location:', err)
@@ -565,7 +565,7 @@ const addNewLocation = async () => {
 
     if (error) throw error
 
-    console.log('✅ New exam location added globally:', data)
+    logger.debug('✅ New exam location added globally:', data)
     
     // Reload all locations to include the new one
     await loadAllExamLocations()
@@ -622,7 +622,7 @@ const updateLocation = async () => {
 
     if (error) throw error
 
-    console.log('✅ Exam location updated globally:', editingLocation.value.id)
+    logger.debug('✅ Exam location updated globally:', editingLocation.value.id)
     
     // Reload all locations to include the updated one
     await loadAllExamLocations()

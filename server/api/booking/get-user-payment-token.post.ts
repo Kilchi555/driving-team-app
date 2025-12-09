@@ -17,12 +17,12 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🔍 Looking for user payment token:', { userId, tenantId })
+    logger.debug('🔍 Looking for user payment token:', { userId, tenantId })
 
     const supabase = getSupabaseAdmin()
 
     // First try to find default token
-    console.log('🔎 Querying for default token with criteria:', {
+    logger.debug('🔎 Querying for default token with criteria:', {
       user_id: userId,
       tenant_id: tenantId,
       is_active: true,
@@ -38,10 +38,10 @@ export default defineEventHandler(async (event) => {
       .eq('is_default', true)
       .maybeSingle()
 
-    console.log('📋 Default token query result:', { defaultToken, defaultError })
+    logger.debug('📋 Default token query result:', { defaultToken, defaultError })
 
     if (defaultToken?.id) {
-      console.log('✅ Found default token:', defaultToken.id)
+      logger.debug('✅ Found default token:', defaultToken.id)
       return { id: defaultToken.id }
     }
 
@@ -50,14 +50,14 @@ export default defineEventHandler(async (event) => {
     }
 
     // Fallback: Find ANY active token
-    console.log('ℹ️ No default token, looking for any active token...')
+    logger.debug('ℹ️ No default token, looking for any active token...')
     const { data: allTokens, error: allError } = await supabase
       .from('customer_payment_methods')
       .select('id, is_default, is_active, user_id, tenant_id')
       .eq('user_id', userId)
       .eq('tenant_id', tenantId)
 
-    console.log('📋 All tokens for user:', { allTokens, allError })
+    logger.debug('📋 All tokens for user:', { allTokens, allError })
 
     const { data: anyToken, error: anyError } = await supabase
       .from('customer_payment_methods')
@@ -68,10 +68,10 @@ export default defineEventHandler(async (event) => {
       .limit(1)
       .maybeSingle()
 
-    console.log('📋 Active token query result:', { anyToken, anyError })
+    logger.debug('📋 Active token query result:', { anyToken, anyError })
 
     if (anyToken?.id) {
-      console.log('✅ Found active token:', anyToken.id)
+      logger.debug('✅ Found active token:', anyToken.id)
       return { id: anyToken.id }
     }
 
@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
       console.warn('⚠️ Error querying any token:', anyError)
     }
 
-    console.log('⚠️ No payment token found for user:', { userId, tenantId })
+    logger.debug('⚠️ No payment token found for user:', { userId, tenantId })
     return { id: null }
   } catch (error: any) {
     console.error('❌ Error in get-user-payment-token:', error)

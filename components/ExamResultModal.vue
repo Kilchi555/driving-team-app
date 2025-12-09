@@ -323,7 +323,7 @@ const loadExaminers = async () => {
     
     if (error) throw error
     
-    console.log('🔍 Loaded examiners:', data)
+    logger.debug('🔍 Loaded examiners:', data)
     availableExaminers.value = data || []
     
   } catch (err: any) {
@@ -341,9 +341,9 @@ const selectExaminer = (examiner: any) => {
 
 // Bewertung setzen mit Logging
 const setRating = (rating: number) => {
-  console.log('🔥 Setting rating:', rating, 'Current value:', examResult.value.examiner_behavior_rating)
+  logger.debug('🔥 Setting rating:', rating, 'Current value:', examResult.value.examiner_behavior_rating)
   examResult.value.examiner_behavior_rating = rating
-  console.log('🔥 Rating set to:', examResult.value.examiner_behavior_rating)
+  logger.debug('🔥 Rating set to:', examResult.value.examiner_behavior_rating)
 }
 
 // Auswahl löschen
@@ -401,7 +401,7 @@ const addExaminer = async () => {
     // Auto-select the new examiner
     examResult.value.examiner_id = data.id
 
-    console.log('✅ New examiner added:', data)
+    logger.debug('✅ New examiner added:', data)
 
   } catch (err: any) {
     console.error('❌ Error adding examiner:', err)
@@ -434,15 +434,15 @@ const validateForm = () => {
 }
 
 const saveExamResult = async () => {
-  console.log('🔥 saveExamResult called')
-  console.log('🔥 Current examResult:', examResult.value)
+  logger.debug('🔥 saveExamResult called')
+  logger.debug('🔥 Current examResult:', examResult.value)
   
   if (!validateForm()) {
-    console.log('❌ Validation failed')
+    logger.debug('❌ Validation failed')
     return
   }
   
-  console.log('✅ Validation passed, starting to save...')
+  logger.debug('✅ Validation passed, starting to save...')
   isSaving.value = true
   
   try {
@@ -457,9 +457,9 @@ const saveExamResult = async () => {
       exam_date: props.appointment.start_time
     }
     
-    console.log('🔥 Inserting exam data:', examData)
-    console.log('🔥 examiner_behavior_rating in examData:', examData.examiner_behavior_rating)
-    console.log('🔥 examiner_behavior_rating in examResult:', examResult.value.examiner_behavior_rating)
+    logger.debug('🔥 Inserting exam data:', examData)
+    logger.debug('🔥 examiner_behavior_rating in examData:', examData.examiner_behavior_rating)
+    logger.debug('🔥 examiner_behavior_rating in examResult:', examResult.value.examiner_behavior_rating)
     
     // Create exam result record
     const { data, error } = await supabase
@@ -473,7 +473,7 @@ const saveExamResult = async () => {
       throw error
     }
 
-    console.log('✅ Exam result saved:', data)
+    logger.debug('✅ Exam result saved:', data)
     
     // Mark appointment as completed
     const { error: updateError } = await supabase
@@ -486,18 +486,18 @@ const saveExamResult = async () => {
       throw updateError
     }
 
-    console.log('✅ Appointment marked as completed')
+    logger.debug('✅ Appointment marked as completed')
     
     // Emit success
     emit('exam-result-saved', props.appointment.id)
-    console.log('✅ Success event emitted')
+    logger.debug('✅ Success event emitted')
 
   } catch (err: any) {
     console.error('❌ Error saving exam result:', err)
     alert(`Fehler beim Speichern: ${err.message}`)
   } finally {
     isSaving.value = false
-    console.log('🔥 saveExamResult finished')
+    logger.debug('🔥 saveExamResult finished')
   }
 }
 

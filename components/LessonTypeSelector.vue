@@ -71,7 +71,7 @@ const { loadEventTypes } = useEventTypes()
 
 // Methods
 const selectLessonType = (lessonType: LessonType) => {
-  console.log('🎯 Lesson type selected:', lessonType)
+  logger.debug('🎯 Lesson type selected:', lessonType)
   
   // ✅ FIX: selectedType aktualisieren
   selectedType.value = lessonType.code
@@ -87,7 +87,7 @@ const getSelectedLessonTypeName = () => {
 
 // ✅ Watch for prop changes
 watch(() => props.selectedType, (newType, oldType) => {
-  console.log('🎯 LessonTypeSelector: selectedType prop changed:', {
+  logger.debug('🎯 LessonTypeSelector: selectedType prop changed:', {
     from: oldType,
     to: newType,
     will_update_internal: !!newType
@@ -96,7 +96,7 @@ watch(() => props.selectedType, (newType, oldType) => {
     selectedType.value = newType
     // ✅ WICHTIG: Auch selectedPaidCode synchronisieren für das Select-Element
     selectedPaidCode.value = newType
-    console.log('✅ LessonTypeSelector: internal selectedType updated to:', selectedType.value, 'selectedPaidCode:', selectedPaidCode.value)
+    logger.debug('✅ LessonTypeSelector: internal selectedType updated to:', selectedType.value, 'selectedPaidCode:', selectedPaidCode.value)
   }
 }, { immediate: true })
 

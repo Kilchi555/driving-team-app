@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     // Format phone number (ensure +41 format for Swiss numbers)
     const formattedPhone = formatSwissPhoneNumber(phone)
     
-    console.log('📱 Sending SMS via Twilio:', {
+    logger.debug('📱 Sending SMS via Twilio:', {
       to: formattedPhone,
       messageLength: message.length
     })
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ SMS sent successfully:', smsData)
+    logger.debug('✅ SMS sent successfully:', smsData)
 
     // Try to log SMS in database (non-critical)
     try {

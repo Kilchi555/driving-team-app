@@ -267,7 +267,7 @@ let placesLibrary: any = null
 // === MANUAL LOCATION FUNCTIONS ===
 
 const handleOfflineError = (error: any) => {
-  console.log('🔍 Checking if error is offline-related:', error)
+  logger.debug('🔍 Checking if error is offline-related:', error)
   
   const isOfflineError = 
     error.message?.includes('Failed to fetch') ||
@@ -276,7 +276,7 @@ const handleOfflineError = (error: any) => {
     !navigator.onLine
 
   if (isOfflineError) {
-    console.log('📴 Offline detected - switching to manual mode')
+    logger.debug('📴 Offline detected - switching to manual mode')
     useStandardLocations.value = false
     error.value = '📴 Offline-Modus: Bitte Treffpunkt manuell eingeben'
     return true
@@ -307,7 +307,7 @@ const handleManualLocationSubmit = () => {
   emit('update:modelValue', null)
   emit('locationSelected', tempLocation)
   
-  console.log('📝 Manual location created:', tempLocation)
+  logger.debug('📝 Manual location created:', tempLocation)
 }
 
 const clearManualLocation = () => {
@@ -344,15 +344,15 @@ const loadStandardLocations = async () => {
 
     // ✅ TENANT FILTER: tenant_id ist verfügbar
     query = query.eq('tenant_id', userProfile.tenant_id)
-    console.log('✅ Using tenant_id filter for locations:', userProfile.tenant_id)
+    logger.debug('✅ Using tenant_id filter for locations:', userProfile.tenant_id)
 
     // ✅ ADMIN & STAFF FILTER: Admins sehen alle Tenant-Locations, Staff nur ihre eigenen
     if (props.currentStaffId) {
       // Staff: Lade alle Tenant-Locations (zeige nur die, wo der Staff registriert ist)
-      console.log('🔍 Loading tenant locations for staff:', props.currentStaffId)
+      logger.debug('🔍 Loading tenant locations for staff:', props.currentStaffId)
     } else {
       // Admin oder kein Staff: Lade ALLE Tenant-Locations
-      console.log('🔍 Loading ALL tenant locations (admin access or no staff specified)')
+      logger.debug('🔍 Loading ALL tenant locations (admin access or no staff specified)')
     }
 
     const { data, error: fetchError } = await query
@@ -374,8 +374,8 @@ const loadStandardLocations = async () => {
       source: 'standard' as const
     }))
     
-    console.log('✅ Standard locations loaded:', data?.length)
-    console.log('🔍 LocationSelector Debug:', {
+    logger.debug('✅ Standard locations loaded:', data?.length)
+    logger.debug('🔍 LocationSelector Debug:', {
       tenantId: userProfile.tenant_id,
       currentStaffId: props.currentStaffId,
       isAdmin: !props.currentStaffId,
@@ -394,10 +394,10 @@ const loadStandardLocations = async () => {
 
 const loadLastUsedLocation = async (userId: string, staffId: string): Promise<any> => {
   try {
-    console.log('🔍 Loading last used location for student:', userId, 'staff:', staffId)
+    logger.debug('🔍 Loading last used location for student:', userId, 'staff:', staffId)
     
     if (!userId || !staffId || staffId === '') {
-      console.log('⚠️ Missing or empty staffId, skipping last location load')
+      logger.debug('⚠️ Missing or empty staffId, skipping last location load')
       return null
     }
     
@@ -426,20 +426,20 @@ const loadLastUsedLocation = async (userId: string, staffId: string): Promise<an
       .maybeSingle()
     
     if (error) {
-      console.log('❌ Error loading appointments:', error)
+      logger.debug('❌ Error loading appointments:', error)
       return null
     }
     
     if (!data) {
-      console.log('ℹ️ No completed appointments found')
+      logger.debug('ℹ️ No completed appointments found')
       return null
     }
     
-    console.log('✅ Last used location data:', data)
+    logger.debug('✅ Last used location data:', data)
     return data
     
   } catch (err: any) {
-    console.log('❌ Error loading last location:', err)
+    logger.debug('❌ Error loading last location:', err)
     return null
   }
 }
@@ -451,7 +451,7 @@ const loadStudentPickupLocations = async (studentId: string) => {
   }
 
   try {
-    console.log('🔍 Loading student pickup locations for:', studentId)
+    logger.debug('🔍 Loading student pickup locations for:', studentId)
     
     // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
     const { data: { user } } = await supabase.auth.getUser()
@@ -484,7 +484,7 @@ const loadStudentPickupLocations = async (studentId: string) => {
       source: 'pickup' as const
     }))
     
-    console.log('✅ Student pickup locations loaded:', data?.length)
+    logger.debug('✅ Student pickup locations loaded:', data?.length)
     
     // 2. Lade letzten verwendeten Standort nur wenn staffId vorhanden UND keine Location bereits gesetzt ist
     if (props.currentStaffId && !props.modelValue && !props.disableAutoSelection) {
@@ -499,14 +499,14 @@ const loadStudentPickupLocations = async (studentId: string) => {
           selectedLocationId.value = matchingLocation.id
           emit('update:modelValue', matchingLocation.id)
           emit('locationSelected', matchingLocation)
-          console.log('🎯 Auto-selected last used location:', matchingLocation.name)
+          logger.debug('🎯 Auto-selected last used location:', matchingLocation.name)
         }
       }
     }
     
     // ✅ NEU: Wenn eine Location bereits gesetzt ist (modelValue), zeige sie an
     if (props.modelValue && !selectedLocationId.value) {
-      console.log('🎯 Location bereits gesetzt, zeige sie an:', props.modelValue)
+      logger.debug('🎯 Location bereits gesetzt, zeige sie an:', props.modelValue)
       selectedLocationId.value = props.modelValue
     }
     
@@ -518,16 +518,16 @@ const loadStudentPickupLocations = async (studentId: string) => {
         selectedLocationId.value = firstPickup.id
         emit('update:modelValue', firstPickup.id)
         emit('locationSelected', firstPickup)
-        console.log('📍 Auto-selected first pickup location:', firstPickup.name)
+        logger.debug('📍 Auto-selected first pickup location:', firstPickup.name)
       } else if (standardLocations.value.length > 0) {
         // ✅ FALLBACK: Erste Standard-Location wählen wenn keine Pickup-Locations vorhanden
         const firstStandard = standardLocations.value[0]
         selectedLocationId.value = firstStandard.id
         emit('update:modelValue', firstStandard.id)
         emit('locationSelected', firstStandard)
-        console.log('📍 Auto-selected first standard location (no pickup locations):', firstStandard.name)
+        logger.debug('📍 Auto-selected first standard location (no pickup locations):', firstStandard.name)
       } else {
-        console.log('⚠️ No locations available for auto-selection')
+        logger.debug('⚠️ No locations available for auto-selection')
       }
     }
     
@@ -570,7 +570,7 @@ const savePickupLocation = async (locationData: any, studentId: string) => {
       is_active: true
     }
     
-    console.log('📤 Saving pickup location:', locationToSave)
+    logger.debug('📤 Saving pickup location:', locationToSave)
     
     const { data, error: saveError } = await supabase
       .from('locations')
@@ -590,7 +590,7 @@ const savePickupLocation = async (locationData: any, studentId: string) => {
     }
     
     studentPickupLocations.value.push(savedLocation)
-    console.log('✅ Pickup location saved successfully:', savedLocation)
+    logger.debug('✅ Pickup location saved successfully:', savedLocation)
     return savedLocation
 
   } catch (err: any) {
@@ -607,13 +607,13 @@ const initializeGooglePlaces = async () => {
     try {
       const { Place, AutocompleteSuggestion } = await window.google.maps.importLibrary('places')
       placesLibrary = { Place, AutocompleteSuggestion }
-      console.log('✅ Google Places (New API) initialized')
+      logger.debug('✅ Google Places (New API) initialized')
     } catch (error) {
       console.warn('⚠️ New Places API failed, using legacy API:', error)
       // ✅ WICHTIG: placesLibrary auf null setzen damit Legacy API verwendet wird
       placesLibrary = null
       if (window.google.maps.places) {
-        console.log('✅ Google Places (Legacy) initialized')
+        logger.debug('✅ Google Places (Legacy) initialized')
       }
     }
   }
@@ -663,13 +663,13 @@ const onLocationSearch = async () => {
         console.warn('New Places API failed:', newApiError)
         // ✅ MARKIERE NEUE API ALS BLOCKIERT FÜR ZUKÜNFTIGE REQUESTS
         newApiBlocked = true
-        console.log('🚫 New API marked as blocked, switching to legacy API permanently')
+        logger.debug('🚫 New API marked as blocked, switching to legacy API permanently')
       }
     }
 
     // ✅ Legacy API (wird jetzt verwendet)
     if (typeof window !== 'undefined' && window.google && window.google.maps && window.google.maps.places && window.google.maps.places.AutocompleteService) {
-      console.log('🔄 Using Legacy Google Places API')
+      logger.debug('🔄 Using Legacy Google Places API')
       
       const autocompleteService = new window.google.maps.places.AutocompleteService()
       
@@ -690,14 +690,14 @@ const onLocationSearch = async () => {
             structured_formatting: prediction.structured_formatting
           }))
           showLocationSuggestions.value = true
-          console.log('✅ Legacy API suggestions loaded:', locationSuggestions.value.length)
+          logger.debug('✅ Legacy API suggestions loaded:', locationSuggestions.value.length)
         } else {
           locationSuggestions.value = []
           error.value = 'Keine Vorschläge von Google Places gefunden'
         }
       })
     } else {
-      console.log('📴 Google Places not available - using manual input')
+      logger.debug('📴 Google Places not available - using manual input')
       isLoadingGooglePlaces.value = false
     }
   } catch (err: any) {
@@ -736,7 +736,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       emit('update:modelValue', existingLocation.id)
       emit('locationSelected', existingLocation)
       
-      console.log('🔄 Using existing pickup location:', existingLocation.name)
+      logger.debug('🔄 Using existing pickup location:', existingLocation.name)
     } else if (props.selectedStudentId) {
       // ✅ LOADING STATE WÄHREND SPEICHERN:
       isLoadingGooglePlaces.value = true
@@ -755,10 +755,10 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       emit('locationSelected', savedLocation)
       
       // ✅ SUCCESS MESSAGE:
-      console.log('✅ Neue Adresse gespeichert:', savedLocation.name)
+      logger.debug('✅ Neue Adresse gespeichert:', savedLocation.name)
       // ✅ LOADING STATE BEENDEN:
       isLoadingGooglePlaces.value = false
-      console.log('💾 Saved and selected new pickup location:', savedLocation.name)
+      logger.debug('💾 Saved and selected new pickup location:', savedLocation.name)
     } else {
       // Kein Student selected - speichere als Standard-Location für Staff
       try {
@@ -790,7 +790,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
           is_active: true
         }
         
-        console.log('📤 Saving standard location for staff:', locationToSave)
+        logger.debug('📤 Saving standard location for staff:', locationToSave)
         
         const { data: savedLocation, error: saveError } = await supabase
           .from('locations')
@@ -819,7 +819,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
         emit('update:modelValue', savedLocation.id)
         emit('locationSelected', location)
         
-        console.log('✅ Standard location saved for staff:', savedLocation.name)
+        logger.debug('✅ Standard location saved for staff:', savedLocation.name)
         isLoadingGooglePlaces.value = false
         
       } catch (err: any) {
@@ -845,7 +845,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
         emit('update:modelValue', null)
         emit('locationSelected', tempLocation)
         
-        console.log('⚠️ Fallback to temporary location:', tempLocation)
+        logger.debug('⚠️ Fallback to temporary location:', tempLocation)
       }
     }
     
@@ -870,7 +870,7 @@ const hideLocationSuggestionsDelayed = () => {
 const onLocationChange = () => {
   // ❌ Vergangene Termine können nicht mehr geändert werden
   if (props.isPastAppointment) {
-    console.log('🚫 Cannot change location for past appointment')
+    logger.debug('🚫 Cannot change location for past appointment')
     return
   }
   
@@ -880,7 +880,7 @@ const onLocationChange = () => {
   if (location) {
     emit('update:modelValue', location.id)
     emit('locationSelected', location)
-    console.log('📍 Location selected:', location.name)
+    logger.debug('📍 Location selected:', location.name)
   }
 }
 
@@ -932,12 +932,12 @@ watch(() => props.currentStaffId, async (newStaffId) => {
 })
 
 watch(() => props.modelValue, (newValue) => {
-  console.log('🔍 LocationSelector: modelValue changed:', newValue)
+  logger.debug('🔍 LocationSelector: modelValue changed:', newValue)
   if (newValue && newValue !== selectedLocationId.value) {
     selectedLocationId.value = newValue
     useStandardLocations.value = true
     selectedCustomLocation.value = null
-    console.log('✅ LocationSelector: Location updated from modelValue:', newValue)
+    logger.debug('✅ LocationSelector: Location updated from modelValue:', newValue)
   }
 })
 
@@ -955,19 +955,19 @@ onMounted(async () => {
   try {
     // ✅ IMMER Standard-Locations laden (für alle Benutzer)
     await loadStandardLocations()
-    console.log('📍 Standard locations loaded on mount:', standardLocations.value.length)
+    logger.debug('📍 Standard locations loaded on mount:', standardLocations.value.length)
     
     // ✅ Zusätzlich Pickup-Locations laden wenn Student ausgewählt
     if (props.selectedStudentId) {
       await loadStudentPickupLocations(props.selectedStudentId)
-      console.log('📍 Pickup locations loaded on mount:', studentPickupLocations.value.length)
+      logger.debug('📍 Pickup locations loaded on mount:', studentPickupLocations.value.length)
     } else {
-      console.log('ℹ️ No student selected - only standard locations available')
+      logger.debug('ℹ️ No student selected - only standard locations available')
     }
     
     // ✅ NEU: Wenn bereits eine Location gesetzt ist, zeige sie an
     if (props.modelValue && !selectedLocationId.value) {
-      console.log('🎯 onMounted: Location bereits gesetzt, zeige sie an:', props.modelValue)
+      logger.debug('🎯 onMounted: Location bereits gesetzt, zeige sie an:', props.modelValue)
       selectedLocationId.value = props.modelValue
     }
     
@@ -978,7 +978,7 @@ onMounted(async () => {
       selectedLocationId.value = firstStandard.id
       emit('update:modelValue', firstStandard.id)
       emit('locationSelected', firstStandard)
-      console.log('📍 Auto-selected first standard location (no student):', firstStandard.name)
+      logger.debug('📍 Auto-selected first standard location (no student):', firstStandard.name)
     }
   } catch (err) {
     console.error('Error loading initial location data:', err)

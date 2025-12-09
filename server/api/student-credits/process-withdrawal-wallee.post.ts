@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('💰 Processing withdrawal via Wallee:', { withdrawalId, studentId })
+    logger.debug('💰 Processing withdrawal via Wallee:', { withdrawalId, studentId })
 
     // Get student credit
     let studentCredit
@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
 
     const withdrawalAmount = studentCredit.pending_withdrawal_rappen
 
-    console.log('🔄 Creating Wallee refund for:', {
+    logger.debug('🔄 Creating Wallee refund for:', {
       studentId: studentCredit.user_id,
       amount: (withdrawalAmount / 100).toFixed(2),
       currency: 'CHF'
@@ -120,7 +120,7 @@ export default defineEventHandler(async (event) => {
         .maybeSingle()
 
       if (payment && payment.wallee_transaction_id) {
-        console.log('💳 Found completed payment with Wallee transaction:', payment.wallee_transaction_id)
+        logger.debug('💳 Found completed payment with Wallee transaction:', payment.wallee_transaction_id)
 
         // 2. Get Wallee config from tenant
         const { data: user } = await supabase
@@ -143,7 +143,7 @@ export default defineEventHandler(async (event) => {
           throw new Error('Tenant Wallee config not found')
         }
 
-        console.log('🔧 Wallee config loaded for tenant:', user.tenant_id)
+        logger.debug('🔧 Wallee config loaded for tenant:', user.tenant_id)
 
         // 3. Create refund via Wallee API
         const WalleeModule = await import('wallee')
@@ -165,25 +165,25 @@ export default defineEventHandler(async (event) => {
           external_id: `withdrawal-${studentCredit.user_id}-${Date.now()}` // Unique identifier
         }
 
-        console.log('📤 Creating Wallee refund:', refundData)
+        logger.debug('📤 Creating Wallee refund:', refundData)
         
         const refundResponse = await refundService.create(tenant.wallee_space_id, refundData)
         walleeRefundId = refundResponse.body?.id?.toString() || refundResponse.body?.externalId
         
-        console.log('✅ Wallee refund created:', {
+        logger.debug('✅ Wallee refund created:', {
           refundId: walleeRefundId,
           transactionId: payment.wallee_transaction_id,
           amount: (withdrawalAmount / 100).toFixed(2)
         })
       } else {
-        console.log('⚠️ No completed Wallee payment found for student, using fallback refund ID')
+        logger.debug('⚠️ No completed Wallee payment found for student, using fallback refund ID')
         walleeRefundId = `REFUND-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
       }
     } catch (walleeError: any) {
       console.error('❌ Error creating Wallee refund:', walleeError.message)
       // Fallback: use generated ID if Wallee API fails
       walleeRefundId = `REFUND-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-      console.log('⚠️ Using fallback refund ID:', walleeRefundId)
+      logger.debug('⚠️ Using fallback refund ID:', walleeRefundId)
     }
 
     // Update student_credits to reflect completed withdrawal
@@ -234,7 +234,7 @@ export default defineEventHandler(async (event) => {
         .eq('id', existingTransaction.id)
     }
 
-    console.log('✅ Withdrawal processed successfully:', {
+    logger.debug('✅ Withdrawal processed successfully:', {
       studentId: studentCredit.user_id,
       amount: (withdrawalAmount / 100).toFixed(2),
       walleeRefundId,

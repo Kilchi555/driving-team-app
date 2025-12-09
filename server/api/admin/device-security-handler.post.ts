@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
         // Wenn ähnliche Geräte gefunden wurden, verwende das neueste (merge behavior)
         if (similarDevices && similarDevices.length > 0) {
           const mostRecent = similarDevices[0]
-          console.log('🔄 Similar device found, updating instead of creating new:', mostRecent.id)
+          logger.debug('🔄 Similar device found, updating instead of creating new:', mostRecent.id)
           
           // Aktualisiere das bestehende Gerät
           const { data: updatedDevice, error: updateError } = await supabase

@@ -30,7 +30,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     
     // Check if user is authenticated and has profile
     if (!authStore.isLoggedIn || !authStore.hasProfile) {
-      console.log('Feature middleware: User not authenticated')
+      logger.debug('Feature middleware: User not authenticated')
       return navigateTo('/dashboard')
     }
     
@@ -45,7 +45,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     const featureEnabled = isEnabled(requiredFeature, false)
     
     if (!featureEnabled) {
-      console.log(`Feature middleware: Feature ${requiredFeature} disabled for route ${to.path}`)
+      logger.debug(`Feature middleware: Feature ${requiredFeature} disabled for route ${to.path}`)
       
       // Show error message and redirect to admin dashboard
       const { useUIStore } = await import('~/stores/ui')
@@ -55,7 +55,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       return navigateTo('/admin')
     }
     
-    console.log(`Feature middleware: Access granted for route ${to.path} (feature: ${requiredFeature})`)
+    logger.debug(`Feature middleware: Access granted for route ${to.path} (feature: ${requiredFeature})`)
     
   } catch (error) {
     console.error('Feature middleware error:', error)

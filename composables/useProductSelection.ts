@@ -53,7 +53,7 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
       isLoading.value = true
       error.value = null
       
-      console.log('🔄 Loading products from database...')
+      logger.debug('🔄 Loading products from database...')
       
       const { data, error: dbError } = await supabase
         .from('products')
@@ -78,7 +78,7 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
       }
       
       availableProducts.value = data || []
-      console.log('✅ Products loaded from DB:', availableProducts)
+      logger.debug('✅ Products loaded from DB:', availableProducts)
 
         } catch (err: any) {
       console.error('❌ Error loading products:', err)
@@ -96,7 +96,7 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
     if (!id) return
     
     try {
-      console.log('🔄 Loading products from product_sales for:', id)
+      logger.debug('🔄 Loading products from product_sales for:', id)
       
       // Lade Produkte aus product_sales über product_sale_items
       const { data, error: dbError } = await supabase
@@ -152,7 +152,7 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
       // Konvertiere zu ProductItem Format
       selectedProducts.value = allProducts
       
-      console.log('✅ Products loaded from product_sales:', selectedProducts.value.length)
+      logger.debug('✅ Products loaded from product_sales:', selectedProducts.value.length)
       
     } catch (err: any) {
       console.error('❌ Error loading products from product_sales:', err)
@@ -166,7 +166,7 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
     
     try {
       isSaving.value = true
-      console.log('💾 Saving products to product_sales for:', id)
+      logger.debug('💾 Saving products to product_sales for:', id)
       
       // Verwende useProductSales Composable für konsistente Datenspeicherung
       const { createProductSale } = useProductSales()
@@ -202,7 +202,7 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
       const result = await createProductSale(saleData)
       
       if (result) {
-        console.log('✅ Products saved to product_sales:', result.id)
+        logger.debug('✅ Products saved to product_sales:', result.id)
       } else {
         throw new Error('Failed to create product sale')
       }
@@ -252,7 +252,7 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
       })
     }
     
-    console.log('✅ Product added:', product.name)
+    logger.debug('✅ Product added:', product.name)
   }
 
   const removeProduct = (productId: string) => {
@@ -260,7 +260,7 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
     if (index > -1) {
       const product = selectedProducts.value[index]
       selectedProducts.value.splice(index, 1)
-      console.log('🗑️ Product removed:', product.product?.name)
+      logger.debug('🗑️ Product removed:', product.product?.name)
     }
   }
 
@@ -269,7 +269,7 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
     if (item && newQuantity > 0) {
       item.quantity = newQuantity
       item.total_price_rappen = item.quantity * item.unit_price_rappen
-      console.log('📊 Quantity updated:', item.product?.name, 'x', newQuantity)
+      logger.debug('📊 Quantity updated:', item.product?.name, 'x', newQuantity)
     } else if (item && newQuantity <= 0) {
       removeProduct(productId)
     }
@@ -277,12 +277,12 @@ export const useProductSelection = (appointmentId?: string, initialProducts: Pro
 
   const clearProducts = () => {
     selectedProducts.value = []
-    console.log('🗑️ All products cleared')
+    logger.debug('🗑️ All products cleared')
   }
 
   const setProducts = (products: ProductItem[]) => {
     selectedProducts.value = [...products]
-    console.log('📦 Products set:', products.length)
+    logger.debug('📦 Products set:', products.length)
   }
 
   // Helper: CHF formatting

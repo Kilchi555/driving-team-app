@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const { templateType, templateContent } = body
     
-    console.log('📧 Configuring email template:', templateType)
+    logger.debug('📧 Configuring email template:', templateType)
     
     // Email templates for Supabase
     const templates = {

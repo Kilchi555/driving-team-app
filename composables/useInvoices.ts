@@ -44,7 +44,7 @@ export const useInvoices = () => {
         .eq('auth_user_id', currentUser?.id)
         .single()
       const tenantId = userProfile?.tenant_id
-      console.log('🔍 Admin Invoice Create - Current tenant_id:', tenantId)
+      logger.debug('🔍 Admin Invoice Create - Current tenant_id:', tenantId)
 
       // Rechnung erstellen - nur definierte Werte einfügen
       const invoiceInsertData: any = {
@@ -81,7 +81,7 @@ export const useInvoices = () => {
       invoiceInsertData.total_amount_rappen = totalAmountRappen
       invoiceInsertData.vat_rate = 0 // MWST-Satz auf 0 setzen
 
-      console.log('💰 Invoice price calculation (no VAT):', {
+      logger.debug('💰 Invoice price calculation (no VAT):', {
         subtotal: invoiceData.subtotal_rappen,
         discount: invoiceData.discount_amount_rappen || 0,
         vatRate: 0,
@@ -123,7 +123,7 @@ export const useInvoices = () => {
           }
         })
 
-        console.log('💰 Invoice items created:', invoiceItems.map(item => ({
+        logger.debug('💰 Invoice items created:', invoiceItems.map(item => ({
           name: item.product_name,
           quantity: item.quantity,
           unitPrice: item.unit_price_rappen,
@@ -218,19 +218,19 @@ export const useInvoices = () => {
         .eq('auth_user_id', currentUser?.id)
         .single()
       const tenantId = userProfile?.tenant_id
-      console.log('🔍 Admin Invoices - Current tenant_id:', tenantId)
+      logger.debug('🔍 Admin Invoices - Current tenant_id:', tenantId)
 
       let query = supabase
         .from('invoices_with_details')
         .select('*', { count: 'exact' })
         .eq('tenant_id', tenantId) // Filter by current tenant
 
-      console.log('🔍 Building query with filters:', filters)
+      logger.debug('🔍 Building query with filters:', filters)
 
       // Filter anwenden
       if (filters) {
-        console.log('🔍 Applying filters:', filters)
-        console.log('🔍 Filters type check:', {
+        logger.debug('🔍 Applying filters:', filters)
+        logger.debug('🔍 Filters type check:', {
           status: filters.status,
           statusType: typeof filters.status,
           statusIsArray: Array.isArray(filters.status),
@@ -242,36 +242,36 @@ export const useInvoices = () => {
         })
         
         if (filters.status && filters.status.length > 0) {
-          console.log('📊 Filtering by status:', filters.status)
+          logger.debug('📊 Filtering by status:', filters.status)
           query = query.in('status', filters.status)
         }
         if (filters.payment_status && filters.payment_status.length > 0) {
-          console.log('💳 Filtering by payment status:', filters.payment_status)
+          logger.debug('💳 Filtering by payment status:', filters.payment_status)
           query = query.in('payment_status', filters.payment_status)
         }
         if (filters.user_id) {
-          console.log('👤 Filtering by user ID:', filters.user_id)
+          logger.debug('👤 Filtering by user ID:', filters.user_id)
           query = query.eq('user_id', filters.user_id)
         }
         if (filters.staff_id) {
-          console.log('👨‍🏫 Filtering by staff ID:', filters.staff_id)
+          logger.debug('👨‍🏫 Filtering by staff ID:', filters.staff_id)
           query = query.eq('staff_id', filters.staff_id)
         }
         if (filters.date_from) {
-          console.log('📅 Filtering from date:', filters.date_from)
+          logger.debug('📅 Filtering from date:', filters.date_from)
           // Ensure date is in YYYY-MM-DD format
           const formattedDate = new Date(filters.date_from).toISOString().split('T')[0]
           query = query.gte('invoice_date', formattedDate)
         }
         if (filters.date_to) {
-          console.log('📅 Filtering to date:', filters.date_to)
+          logger.debug('📅 Filtering to date:', filters.date_to)
           // Ensure date is in YYYY-MM-DD format
           const formattedDate = new Date(filters.date_to).toISOString().split('T')[0]
           query = query.lte('invoice_date', formattedDate)
         }
         if (filters.search && filters.search.trim()) {
           const searchTerm = filters.search.trim()
-          console.log('🔍 Filtering by search term:', searchTerm)
+          logger.debug('🔍 Filtering by search term:', searchTerm)
           // Search in invoice_number, customer names, billing company name, and billing email
           query = query.or(`invoice_number.ilike.%${searchTerm}%,customer_first_name.ilike.%${searchTerm}%,customer_last_name.ilike.%${searchTerm}%,billing_company_name.ilike.%${searchTerm}%,billing_email.ilike.%${searchTerm}%`)
         }
@@ -289,7 +289,7 @@ export const useInvoices = () => {
 
       if (fetchError) throw fetchError
 
-      console.log('📊 Query result:', { 
+      logger.debug('📊 Query result:', { 
         count, 
         returnedCount: invoiceList?.length || 0,
         firstInvoice: invoiceList?.[0] || null,
@@ -298,10 +298,10 @@ export const useInvoices = () => {
 
       // Debug: Check if filters were actually applied
       if (filters?.status && filters.status.length > 0) {
-        console.log('🔍 Checking if status filter worked:')
+        logger.debug('🔍 Checking if status filter worked:')
         const filteredByStatus = invoiceList?.filter(inv => filters.status!.includes(inv.status))
-        console.log('📊 Invoices matching status filter:', filteredByStatus?.length || 0)
-        console.log('📊 Expected vs actual:', { expected: filters.status, actual: invoiceList?.map(inv => inv.status) })
+        logger.debug('📊 Invoices matching status filter:', filteredByStatus?.length || 0)
+        logger.debug('📊 Expected vs actual:', { expected: filters.status, actual: invoiceList?.map(inv => inv.status) })
       }
 
       invoices.value = invoiceList || []
@@ -478,7 +478,7 @@ export const useInvoices = () => {
       
       if (error) throw error
       
-      console.log('📤 Invoice sent:', id)
+      logger.debug('📤 Invoice sent:', id)
       return { success: true, data: data || null }
     } catch (err: any) {
       console.error('Fehler beim Versenden der Rechnung:', err)
@@ -499,13 +499,13 @@ export const useInvoices = () => {
   // Rechnungszusammenfassung abrufen
   const fetchInvoiceSummary = async (): Promise<InvoiceSummary | null> => {
     try {
-      console.log('🔄 Starting fetchInvoiceSummary...')
+      logger.debug('🔄 Starting fetchInvoiceSummary...')
       
       const { getSupabase } = await import('~/utils/supabase')
-      console.log('📦 Supabase module imported successfully')
+      logger.debug('📦 Supabase module imported successfully')
       
       const supabase = getSupabase()
-      console.log('🔗 Supabase client obtained:', !!supabase)
+      logger.debug('🔗 Supabase client obtained:', !!supabase)
       
       // Get current user's tenant_id
       const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -515,10 +515,10 @@ export const useInvoices = () => {
         .eq('auth_user_id', currentUser?.id)
         .single()
       const tenantId = userProfile?.tenant_id
-      console.log('🔍 Admin Invoice Summary - Current tenant_id:', tenantId)
+      logger.debug('🔍 Admin Invoice Summary - Current tenant_id:', tenantId)
       
       // Test connection first
-      console.log('🧪 Testing Supabase connection...')
+      logger.debug('🧪 Testing Supabase connection...')
       const { data: testData, error: testError } = await supabase
         .from('invoices')
         .select('id')
@@ -530,10 +530,10 @@ export const useInvoices = () => {
         throw testError
       }
       
-      console.log('✅ Connection test successful, test data:', testData)
+      logger.debug('✅ Connection test successful, test data:', testData)
 
       // Einfache SQL-Abfrage anstatt RPC-Funktion - gefiltert nach tenant_id
-      console.log('📊 Fetching invoice summary data...')
+      logger.debug('📊 Fetching invoice summary data...')
       const { data: invoices, error } = await supabase
         .from('invoices')
         .select('status, payment_status, total_amount_rappen, due_date')
@@ -544,7 +544,7 @@ export const useInvoices = () => {
         throw error
       }
 
-      console.log('✅ Invoices fetched successfully, count:', invoices?.length)
+      logger.debug('✅ Invoices fetched successfully, count:', invoices?.length)
 
       // Zusammenfassung manuell berechnen
       const summary: InvoiceSummary = {
@@ -582,9 +582,9 @@ export const useInvoices = () => {
         }
       })
 
-      console.log('📊 Invoice summary calculated:', summary)
-      console.log('🔍 Raw invoices data:', invoices)
-      console.log('🔍 Summary breakdown:', {
+      logger.debug('📊 Invoice summary calculated:', summary)
+      logger.debug('🔍 Raw invoices data:', invoices)
+      logger.debug('🔍 Summary breakdown:', {
         total_invoices: summary.total_invoices,
         total_amount: summary.total_amount,
         paid_amount: summary.paid_amount,

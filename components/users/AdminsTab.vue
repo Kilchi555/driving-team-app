@@ -356,7 +356,7 @@ const loadAdmins = async () => {
   error.value = null
   
   try {
-    console.log('🔄 Loading admins from database...')
+    logger.debug('🔄 Loading admins from database...')
     
     // Get current user's tenant_id
     const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -393,7 +393,7 @@ const loadAdmins = async () => {
     }
 
     adminList.value = adminData || []
-    console.log('✅ Admins loaded successfully:', adminList.value.length)
+    logger.debug('✅ Admins loaded successfully:', adminList.value.length)
 
   } catch (err: any) {
     console.error('❌ Error loading admins:', err)
@@ -420,7 +420,7 @@ const createAdmin = async () => {
   isCreatingAdmin.value = true
   
   try {
-    console.log('🔄 Creating new admin...')
+    logger.debug('🔄 Creating new admin...')
     
     // Get current user's tenant_id
     const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -483,7 +483,7 @@ const updateAdmin = async () => {
   isUpdatingAdmin.value = true
   
   try {
-    console.log('🔄 Updating admin:', editingAdmin.value.id)
+    logger.debug('🔄 Updating admin:', editingAdmin.value.id)
     
     const { error } = await supabase
       .from('users')
@@ -522,7 +522,7 @@ const updateAdmin = async () => {
 
 const toggleAdminStatus = async (admin: any) => {
   try {
-    console.log('🔄 Toggling admin status:', admin.id, !admin.is_active)
+    logger.debug('🔄 Toggling admin status:', admin.id, !admin.is_active)
     
     const { error } = await supabase
       .from('users')
@@ -557,7 +557,7 @@ const deleteAdmin = async (admin: any) => {
   }
   
   try {
-    console.log('🔄 Deleting admin:', admin.id)
+    logger.debug('🔄 Deleting admin:', admin.id)
     
     const { error } = await supabase
       .from('users')

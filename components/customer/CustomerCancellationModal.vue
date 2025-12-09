@@ -195,7 +195,7 @@ const hoursUntilAppointment = computed(() => {
   const nowZurich = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
   
   const hours = (appointmentZurich.getTime() - nowZurich.getTime()) / (1000 * 60 * 60)
-  console.log('🕐 Hours until appointment (Zurich TZ):', hours.toFixed(2), {
+  logger.debug('🕐 Hours until appointment (Zurich TZ):', hours.toFixed(2), {
     appointment: props.appointment.start_time,
     appointmentZurich: appointmentZurich.toISOString(),
     nowZurich: nowZurich.toISOString()

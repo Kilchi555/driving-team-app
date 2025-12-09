@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('📧 Sending Wallee payment link email to:', email)
+    logger.debug('📧 Sending Wallee payment link email to:', email)
 
     const supabase = getSupabaseAdmin()
 
@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Email sent successfully:', data)
+    logger.debug('✅ Email sent successfully:', data)
 
     return {
       success: true,

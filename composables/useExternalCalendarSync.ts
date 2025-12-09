@@ -13,26 +13,26 @@ export const useExternalCalendarSync = () => {
     // Prüfe Cooldown
     const now = Date.now()
     if (now - lastSyncTime.value < SYNC_COOLDOWN) {
-      console.log('⏭️ Skipping calendar sync (last sync less than 5 minutes ago)')
+      logger.debug('⏭️ Skipping calendar sync (last sync less than 5 minutes ago)')
       return { success: true, skipped: true }
     }
 
     // Prüfe ob bereits ein Sync läuft
     if (isSyncing.value) {
-      console.log('⏭️ Calendar sync already in progress')
+      logger.debug('⏭️ Calendar sync already in progress')
       return { success: true, skipped: true }
     }
 
     try {
       isSyncing.value = true
-      console.log('🔄 Auto-syncing external calendars...')
+      logger.debug('🔄 Auto-syncing external calendars...')
 
       // Get user ID if not provided
       let userId = staffId
       if (!userId) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
-          console.log('⚠️ No authenticated user for calendar sync')
+          logger.debug('⚠️ No authenticated user for calendar sync')
           return { success: false, error: 'Not authenticated' }
         }
 
@@ -46,7 +46,7 @@ export const useExternalCalendarSync = () => {
       }
 
       if (!userId) {
-        console.log('⚠️ Could not determine user ID for calendar sync')
+        logger.debug('⚠️ Could not determine user ID for calendar sync')
         return { success: false, error: 'User ID not found' }
       }
 
@@ -58,11 +58,11 @@ export const useExternalCalendarSync = () => {
         .eq('sync_enabled', true)
 
       if (calendarsError || !calendars || calendars.length === 0) {
-        console.log('📅 No calendars to sync')
+        logger.debug('📅 No calendars to sync')
         return { success: true, calendars: 0 }
       }
 
-      console.log(`📅 Found ${calendars.length} calendars to sync`)
+      logger.debug(`📅 Found ${calendars.length} calendars to sync`)
 
       let syncedCount = 0
       const errors: string[] = []
@@ -74,7 +74,7 @@ export const useExternalCalendarSync = () => {
           if (calendar.last_sync_at) {
             const lastSync = new Date(calendar.last_sync_at).getTime()
             if (now - lastSync < SYNC_COOLDOWN) {
-              console.log(`⏭️ Skipping calendar ${calendar.id} (synced ${Math.round((now - lastSync) / 60000)} min ago)`)
+              logger.debug(`⏭️ Skipping calendar ${calendar.id} (synced ${Math.round((now - lastSync) / 60000)} min ago)`)
               continue
             }
           }
@@ -89,7 +89,7 @@ export const useExternalCalendarSync = () => {
 
           if (response.success) {
             syncedCount++
-            console.log(`✅ Synced calendar ${calendar.id}: ${response.imported_events} events`)
+            logger.debug(`✅ Synced calendar ${calendar.id}: ${response.imported_events} events`)
           } else {
             errors.push(`Calendar ${calendar.id}: ${response.message}`)
           }
@@ -100,7 +100,7 @@ export const useExternalCalendarSync = () => {
       }
 
       lastSyncTime.value = now
-      console.log(`✅ Auto-sync completed: ${syncedCount}/${calendars.length} calendars`)
+      logger.debug(`✅ Auto-sync completed: ${syncedCount}/${calendars.length} calendars`)
 
       return {
         success: true,

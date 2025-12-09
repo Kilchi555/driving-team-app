@@ -122,10 +122,10 @@ In Development wird Debug-Information am Ende der `/auswahl` Seite angezeigt:
 ### Console Logs
 ```javascript
 // Tenant-Erkennung
-console.log('🏢 Tenant detected from URL parameter:', tenantParam)
+logger.debug('🏢 Tenant detected from URL parameter:', tenantParam)
 
 // Tenant laden
-console.log('🏢 Loaded tenant:', data.name, `(${data.slug})`)
+logger.debug('🏢 Loaded tenant:', data.name, `(${data.slug})`)
 ```
 
 ## Erweiterte Features (Future)

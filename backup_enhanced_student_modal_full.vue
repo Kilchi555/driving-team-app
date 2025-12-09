@@ -68,7 +68,7 @@
           </button>
 
           <button
-            @click="() => { console.log('🔧 Switching to documents tab'); activeTab = 'documents' }"
+            @click="() => { logger.debug('🔧 Switching to documents tab'); activeTab = 'documents' }"
             :class="[
               'px-2 py-1 font-medium text-sm border-b-2 transition-colors',
               activeTab === 'documents'
@@ -1344,7 +1344,7 @@ const deleteSpecificDocument = async (fieldName: string) => {
       [fieldName]: null
     })
     
-    console.log('✅ Document deleted successfully')
+    logger.debug('✅ Document deleted successfully')
     
   } catch (error) {
     console.error('Error deleting document:', error)
@@ -1371,7 +1371,7 @@ const deleteDocument = async (doc: any) => {
       .update({ [doc.field]: null })
       .eq('id', selectedStudent.value?.id)
     
-    console.log('✅ Document deleted successfully')
+    logger.debug('✅ Document deleted successfully')
     
   } catch (error) {
     console.error('Error deleting document:', error)
@@ -1479,7 +1479,7 @@ const uploadCurrentFile = async (file: File) => {
     const publicUrl = urlData.publicUrl
     
     // Update database
-    console.log('📝 Attempting database update...', {
+    logger.debug('📝 Attempting database update...', {
       userId: selectedStudent.value.id,
       fieldName: fieldName,
       publicUrl: publicUrl
@@ -1502,7 +1502,7 @@ const uploadCurrentFile = async (file: File) => {
       return
     }
     
-    console.log('✅ Database update successful')
+    logger.debug('✅ Database update successful')
     
     // Verify the update worked
     const { data: verifyData, error: verifyError } = await supabase
@@ -1514,7 +1514,7 @@ const uploadCurrentFile = async (file: File) => {
     if (verifyError) {
       console.error('❌ Verification failed:', verifyError)
     } else {
-      console.log('✅ Verification successful:', verifyData)
+      logger.debug('✅ Verification successful:', verifyData)
     }
     
     // Store in temp state
@@ -1526,7 +1526,7 @@ const uploadCurrentFile = async (file: File) => {
       [fieldName]: publicUrl
     })
     
-    console.log('✅ Document uploaded successfully:', fileName)
+    logger.debug('✅ Document uploaded successfully:', fileName)
     
     // Nach erfolgreichem Upload automatisch schließen
     setTimeout(() => {
@@ -1622,7 +1622,7 @@ const uploadFrontFile = async (file: File) => {
   isUploadingFront.value = true
   
   try {
-    console.log('📸 Uploading front license for user:', selectedStudent.value?.id)
+    logger.debug('📸 Uploading front license for user:', selectedStudent.value?.id)
     
     if (!selectedStudent.value?.id) {
       alert('❌ Kein Benutzer ausgewählt')
@@ -1648,7 +1648,7 @@ const uploadFrontFile = async (file: File) => {
       return
     }
     
-    console.log('✅ Front image uploaded:', uploadData.path)
+    logger.debug('✅ Front image uploaded:', uploadData.path)
     
     // Update user record
     const { error: updateError } = await supabase
@@ -1670,7 +1670,7 @@ const uploadFrontFile = async (file: File) => {
       selectedStudent.value.lernfahrausweis_url = uploadData.path
     }
     
-    console.log('✅ Front license updated successfully')
+    logger.debug('✅ Front license updated successfully')
     alert('✅ Lernfahrausweis Vorderseite erfolgreich hochgeladen!')
     
   } catch (error: any) {
@@ -1691,7 +1691,7 @@ const uploadBackFile = async (file: File) => {
   isUploadingBack.value = true
   
   try {
-    console.log('📸 Uploading back license for user:', selectedStudent.value?.id)
+    logger.debug('📸 Uploading back license for user:', selectedStudent.value?.id)
     
     if (!selectedStudent.value?.id) {
       alert('❌ Kein Benutzer ausgewählt')
@@ -1717,7 +1717,7 @@ const uploadBackFile = async (file: File) => {
       return
     }
     
-    console.log('✅ Back image uploaded:', uploadData.path)
+    logger.debug('✅ Back image uploaded:', uploadData.path)
     
     // Update user record
     const { error: updateError } = await supabase
@@ -1739,7 +1739,7 @@ const uploadBackFile = async (file: File) => {
       selectedStudent.value.lernfahrausweis_back_url = uploadData.path
     }
     
-    console.log('✅ Back license updated successfully')
+    logger.debug('✅ Back license updated successfully')
     alert('✅ Lernfahrausweis Rückseite erfolgreich hochgeladen!')
     
   } catch (error: any) {
@@ -1821,8 +1821,8 @@ const loadLessons = async () => {
 
     if (notesError) throw notesError
 
-    console.log('📝 Notes loaded:', notes)
-    console.log('🔍 Sample note:', notes?.[0])
+    logger.debug('📝 Notes loaded:', notes)
+    logger.debug('🔍 Sample note:', notes?.[0])
 
     // 3. Lade Kriterien-Namen
     let criteriaMap: Record<string, any> = {}
@@ -1861,7 +1861,7 @@ const loadLessons = async () => {
       return acc
     }, {} as Record<string, any[]>)
 
-    console.log('🔍 Notes by appointment:', notesByAppointment)
+    logger.debug('🔍 Notes by appointment:', notesByAppointment)
 
     // 5. Kombiniere alles
     lessons.value = appointments.map(appointment => ({
@@ -1873,7 +1873,7 @@ const loadLessons = async () => {
     progressData.value = lessons.value
       .filter(lesson => lesson.evaluations && lesson.evaluations.length > 0)
       .map(lesson => {
-        console.log('🔍 Processing lesson:', lesson.id, 'with evaluations:', lesson.evaluations)
+        logger.debug('🔍 Processing lesson:', lesson.id, 'with evaluations:', lesson.evaluations)
         return {
           appointment_id: lesson.id,
           date: formatDate(lesson.start_time),
@@ -1890,15 +1890,15 @@ const loadLessons = async () => {
               noteColorClass: getRatingNoteColorClass(evaluation.criteria_rating),
               borderColor: getRatingBorderColor(evaluation.criteria_rating)
             }
-            console.log('🔍 Processed evaluation:', processedEval)
+            logger.debug('🔍 Processed evaluation:', processedEval)
             return processedEval
           })
         }
       })
 
-    console.log('✅ Final lessons:', lessons.value?.length)
-    console.log('✅ Final progress data:', progressData.value)
-    console.log('🔍 Sample progress entry:', progressData.value?.[0])
+    logger.debug('✅ Final lessons:', lessons.value?.length)
+    logger.debug('✅ Final progress data:', progressData.value)
+    logger.debug('🔍 Sample progress entry:', progressData.value?.[0])
     
   } catch (error) {
     console.error('Error loading lessons:', error)
@@ -2070,7 +2070,7 @@ const markAsPaid = async () => {
   isProcessingBulkAction.value = true
   
   try {
-    console.log('✅ Marking payments as paid:', selectedPayments.value)
+    logger.debug('✅ Marking payments as paid:', selectedPayments.value)
     
     // Prüfe welche Zahlungen geändert werden können
     const paymentsToUpdate = payments.value.filter(p => 
@@ -2083,7 +2083,7 @@ const markAsPaid = async () => {
       return
     }
     
-    console.log('🔄 Updating payments:', paymentsToUpdate.map(p => ({
+    logger.debug('🔄 Updating payments:', paymentsToUpdate.map(p => ({
       id: p.id,
       current_method: p.payment_method,
       current_status: p.payment_status
@@ -2107,7 +2107,7 @@ const markAsPaid = async () => {
     // Clear selection
     selectedPayments.value = []
     
-    console.log('✅ Payments updated to cash and marked as paid successfully')
+    logger.debug('✅ Payments updated to cash and marked as paid successfully')
     
   } catch (error: any) {
     console.error('❌ Error marking payments as paid:', error)
@@ -2119,12 +2119,12 @@ const markAsPaid = async () => {
 
 const markAsInvoiced = async () => {
   // Implementation for marking payments as invoiced
-  console.log('Marking payments as invoiced:', selectedPayments.value)
+  logger.debug('Marking payments as invoiced:', selectedPayments.value)
 }
 
 const changePaymentMethod = async () => {
   // Implementation for changing payment method
-  console.log('Changing payment method for:', selectedPayments.value)
+  logger.debug('Changing payment method for:', selectedPayments.value)
 }
 
 // Watchers

@@ -1,6 +1,6 @@
 export const calculateEndTime = (startTime: string, durationMinutes: number): string => {
   if (!startTime || !durationMinutes) {
-    console.log('⚠️ Cannot calculate end time: Missing start time or duration')
+    logger.debug('⚠️ Cannot calculate end time: Missing start time or duration')
     return ''
   }
 
@@ -15,7 +15,7 @@ export const calculateEndTime = (startTime: string, durationMinutes: number): st
     const endMinutes = String(endDate.getMinutes()).padStart(2, '0')
 
     const result = `${endHours}:${endMinutes}`
-    console.log('⏰ End time calculated:', result)
+    logger.debug('⏰ End time calculated:', result)
     return result
   } catch (error) {
     console.error('❌ Error calculating end time:', error)

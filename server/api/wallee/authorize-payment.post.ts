@@ -9,11 +9,11 @@ import { buildMerchantReference } from '~/utils/merchantReference'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 
 export default defineEventHandler(async (event) => {
-  console.log('🔐 Wallee Authorization (Authorize & Capture)...')
+  logger.debug('🔐 Wallee Authorization (Authorize & Capture)...')
   
   try {
     const body = await readBody(event)
-    console.log('📨 Received authorization request:', body)
+    logger.debug('📨 Received authorization request:', body)
     
     const {
       paymentId,
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
     // ✅ Update Payment Status zu 'processing' ATOMARE mit Bedingung
     // Nur wenn aktuell 'pending', dann zu 'processing' setzen
     // Dies verhindert Race Conditions - nur EINE Request wird erfolgreich sein!
-    console.log('🔄 Marking payment as processing (acquiring lock)...')
+    logger.debug('🔄 Marking payment as processing (acquiring lock)...')
     const { data: lockResult, error: lockError } = await supabase
       .from('payments')
       .update({
@@ -87,7 +87,7 @@ export default defineEventHandler(async (event) => {
     
     // ✅ Check if the update succeeded (should have 1 row)
     if (!lockResult || lockResult.length === 0) {
-      console.log(`ℹ️ Payment already being processed or completed, skipping`)
+      logger.debug(`ℹ️ Payment already being processed or completed, skipping`)
       
       // Fetch current status to return it
       const { data: currentPayment, error: fetchError } = await supabase
@@ -111,7 +111,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    console.log('✅ Payment locked for processing')
+    logger.debug('✅ Payment locked for processing')
 
     // Hole User-Daten
     const { data: user, error: userError } = await supabase
@@ -151,7 +151,7 @@ export default defineEventHandler(async (event) => {
 
     // ✅ GET WALLEE CONFIG FOR TENANT (with fallback to env variables)
     const walleeConfig = await getWalleeConfigForTenant(tenantId)
-    console.log('🔧 Wallee Config:', { 
+    logger.debug('🔧 Wallee Config:', { 
       spaceId: walleeConfig.spaceId, 
       userId: walleeConfig.userId,
       forTenant: tenantId
@@ -165,12 +165,12 @@ export default defineEventHandler(async (event) => {
       ? `dt-${tenantId}-${userId}`
       : customerEmail.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()
 
-    console.log('🔑 Customer ID:', customerId)
+    logger.debug('🔑 Customer ID:', customerId)
 
     // ✅ Generiere kürzere Customer ID für Wallee (max 200 chars!)
     // Die aktuelle `dt-...` ID ist zu lang und kann Probleme verursachen
     const shortCustomerId = `${tenantId.substring(0, 8)}-${userId.substring(0, 8)}`
-    console.log('🔑 Short Customer ID:', shortCustomerId)
+    logger.debug('🔑 Short Customer ID:', shortCustomerId)
 
     // ✅ Hole gespeicherte Payment Method (Token)
     const { data: paymentMethod } = await supabase
@@ -197,8 +197,8 @@ export default defineEventHandler(async (event) => {
     // Priorität: wallee_customer_id (definitiv die richtige ID) > provider_payment_method_id (fallback)
     const savedCustomerId = paymentMethod.wallee_customer_id || paymentMethod.provider_payment_method_id || customerId
     
-    console.log('💳 Using customer-based tokenization (TWINT Force Storage mode)')
-    console.log('🔑 Payment method on file:', {
+    logger.debug('💳 Using customer-based tokenization (TWINT Force Storage mode)')
+    logger.debug('🔑 Payment method on file:', {
       provider_payment_method_id: paymentMethod.provider_payment_method_id,
       wallee_token: paymentMethod.wallee_token,
       wallee_customer_id: paymentMethod.wallee_customer_id,
@@ -213,8 +213,8 @@ export default defineEventHandler(async (event) => {
     
     if (appointmentTime) {
       const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
-      console.log('⏰ Hours until appointment:', hoursUntilAppointment)
-      console.log('💰 Payment threshold:', {
+      logger.debug('⏰ Hours until appointment:', hoursUntilAppointment)
+      logger.debug('💰 Payment threshold:', {
         automaticPaymentHoursBefore,
         hoursUntilAppointment,
         willChargeImmediately: hoursUntilAppointment < automaticPaymentHoursBefore
@@ -224,10 +224,10 @@ export default defineEventHandler(async (event) => {
       // Sonst: Nur Zustimmung sammeln, kein Charge (COMPLETE_DEFERRED)
       if (hoursUntilAppointment < automaticPaymentHoursBefore) {
         completionBehavior = 'COMPLETE_IMMEDIATELY'
-        console.log('⚡ Short-term appointment (< 24h) - using COMPLETE_IMMEDIATELY for immediate charge')
+        logger.debug('⚡ Short-term appointment (< 24h) - using COMPLETE_IMMEDIATELY for immediate charge')
       } else {
         completionBehavior = 'COMPLETE_DEFERRED'
-        console.log('ℹ️ Long-term appointment (>= 24h) - using COMPLETE_DEFERRED, charge will happen via cron 24h before')
+        logger.debug('ℹ️ Long-term appointment (>= 24h) - using COMPLETE_DEFERRED, charge will happen via cron 24h before')
       }
     }
 
@@ -264,7 +264,7 @@ export default defineEventHandler(async (event) => {
     
     const hasRealTokenId = (isNumeric || isUUID) && !isCustomerId
     
-    console.log('🔍 Token ID check:', {
+    logger.debug('🔍 Token ID check:', {
       providerId: providerId.substring(0, 40) + '...',
       isNumeric,
       isUUID,
@@ -275,7 +275,7 @@ export default defineEventHandler(async (event) => {
     
     if (hasRealTokenId) {
       // ✅ OPTION 1: Use TOKEN ID (preferred for One-Click Payment)
-      console.log('💳 Using stored token ID for one-click payment')
+      logger.debug('💳 Using stored token ID for one-click payment')
       transactionData.token = parseInt(paymentMethod.wallee_token || paymentMethod.provider_payment_method_id) // ✅ Numerisch!
       // ✅ Per Wallee Docs: customerId auch für One-Click Payment erforderlich
       // WICHTIG: token ZUERST setzen, dann customerId!
@@ -285,7 +285,7 @@ export default defineEventHandler(async (event) => {
       transactionData.completionBehavior = completionBehavior
     } else {
       // ✅ OPTION 2: Use CUSTOMER ID (fallback - Wallee searches for payment methods)
-      console.log('💳 Using customer ID - Wallee will search for stored payment method')
+      logger.debug('💳 Using customer ID - Wallee will search for stored payment method')
       transactionData.customerId = savedCustomerId
       transactionData.autoConfirmationEnabled = true
       transactionData.chargeRetryEnabled = false
@@ -293,10 +293,10 @@ export default defineEventHandler(async (event) => {
       // ❌ NICHT tokenizationMode setzen - wir wollen einen BESTEHENDEN Token verwenden, nicht einen neuen erstellen!
     }
 
-    console.log('📤 Creating AUTHORIZED transaction with token...')
-    console.log('🔍 completionBehavior variable:', completionBehavior)
-    console.log('🔍 completionBehavior type:', typeof completionBehavior)
-    console.log('🔍 Transaction data being sent:', {
+    logger.debug('📤 Creating AUTHORIZED transaction with token...')
+    logger.debug('🔍 completionBehavior variable:', completionBehavior)
+    logger.debug('🔍 completionBehavior type:', typeof completionBehavior)
+    logger.debug('🔍 Transaction data being sent:', {
       hasToken: !!transactionData.token,
       tokenValue: transactionData.token,
       hasCustomerId: !!transactionData.customerId,
@@ -304,23 +304,23 @@ export default defineEventHandler(async (event) => {
       completionBehavior: transactionData.completionBehavior,
       completionBehaviorType: typeof transactionData.completionBehavior
     })
-    console.log('🔍 Full transactionData:', JSON.stringify(transactionData, null, 2))
+    logger.debug('🔍 Full transactionData:', JSON.stringify(transactionData, null, 2))
     
     const authorizeResponse = await transactionService.create(walleeConfig.spaceId, transactionData)
     const authorizedTransaction: any = authorizeResponse.body
 
-    console.log('✅ Transaction created:', {
+    logger.debug('✅ Transaction created:', {
       id: authorizedTransaction.id,
       state: authorizedTransaction.state
     })
 
     // ✅ Processiere die Transaction, um die Autorisierung zu starten
-    console.log('🔄 Processing transaction to authorize...')
+    logger.debug('🔄 Processing transaction to authorize...')
     
     const processResponse = await transactionService.processWithoutUserInteraction(walleeConfig.spaceId, authorizedTransaction.id as number)
     const processedTransaction: any = processResponse.body
     
-    console.log('✅ Transaction processed:', {
+    logger.debug('✅ Transaction processed:', {
       id: processedTransaction.id,
       state: processedTransaction.state
     })
@@ -331,7 +331,7 @@ export default defineEventHandler(async (event) => {
     const updatedResponse = await transactionService.read(walleeConfig.spaceId, authorizedTransaction.id as number)
     const updatedTransaction: any = updatedResponse.body
     
-    console.log('✅ Transaction state after processing:', {
+    logger.debug('✅ Transaction state after processing:', {
       id: updatedTransaction.id,
       state: updatedTransaction.state
     })
@@ -347,7 +347,7 @@ export default defineEventHandler(async (event) => {
       })
       .eq('id', paymentId)
 
-    console.log('✅ Payment updated with authorization')
+    logger.debug('✅ Payment updated with authorization')
 
     return {
       success: true,

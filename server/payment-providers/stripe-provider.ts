@@ -33,7 +33,7 @@ export class StripeProvider implements IPaymentProvider {
 
   async createTransaction(request: CreateTransactionRequest): Promise<TransactionResponse> {
     try {
-      console.log('🔄 [Stripe] Creating transaction...', { orderId: request.orderId })
+      logger.debug('🔄 [Stripe] Creating transaction...', { orderId: request.orderId })
 
       // Erstelle Line Items für Stripe
       const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
@@ -80,7 +80,7 @@ export class StripeProvider implements IPaymentProvider {
         }
       })
 
-      console.log('✅ [Stripe] Session created:', {
+      logger.debug('✅ [Stripe] Session created:', {
         id: session.id,
         status: session.payment_status
       })
@@ -109,7 +109,7 @@ export class StripeProvider implements IPaymentProvider {
 
   async processWebhook(payload: any, signature?: string): Promise<WebhookPayload> {
     try {
-      console.log('🔄 [Stripe] Processing webhook...')
+      logger.debug('🔄 [Stripe] Processing webhook...')
 
       let event: Stripe.Event
 
@@ -190,7 +190,7 @@ export class StripeProvider implements IPaymentProvider {
 
   async createRefund(request: RefundRequest): Promise<RefundResponse> {
     try {
-      console.log('🔄 [Stripe] Creating refund...', { transactionId: request.transactionId })
+      logger.debug('🔄 [Stripe] Creating refund...', { transactionId: request.transactionId })
 
       // Bei Stripe müssen wir die Session abrufen um die Payment Intent zu finden
       let paymentIntentId: string
@@ -211,7 +211,7 @@ export class StripeProvider implements IPaymentProvider {
         metadata: request.metadata
       })
 
-      console.log('✅ [Stripe] Refund created:', refund.id)
+      logger.debug('✅ [Stripe] Refund created:', refund.id)
 
       return {
         success: true,

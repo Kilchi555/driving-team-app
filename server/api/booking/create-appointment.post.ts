@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
       reservation_id // Optional: booking_reservations ID
     } = body
 
-    console.log('📝 Creating appointment:', body)
+    logger.debug('📝 Creating appointment:', body)
 
     // Validierung
     if (!user_id || !staff_id || !start_time || !end_time || !type || !tenant_id) {
@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
         console.warn('⚠️ Could not delete booking reservation:', deleteReservationError)
         // Nicht kritisch, fahre fort
       } else {
-        console.log('✅ Booking reservation deleted:', reservation_id)
+        logger.debug('✅ Booking reservation deleted:', reservation_id)
       }
     }
 
@@ -87,7 +87,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Appointment created:', appointment.id)
+    logger.debug('✅ Appointment created:', appointment.id)
 
     // 1b. Auto-assign staff to customer on first appointment with this staff
     try {
@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
           // Add staff to the array
           const updatedStaffIds = [...currentStaffIds, staff_id]
           
-          console.log(`👤 Adding staff ${staff_id} to customer ${user_id}'s assigned_staff_ids`, {
+          logger.debug(`👤 Adding staff ${staff_id} to customer ${user_id}'s assigned_staff_ids`, {
             before: currentStaffIds,
             after: updatedStaffIds
           })
@@ -120,10 +120,10 @@ export default defineEventHandler(async (event) => {
           if (updateError) {
             console.warn('⚠️ Could not update assigned_staff_ids:', updateError)
           } else {
-            console.log('✅ Staff added to customer assigned_staff_ids')
+            logger.debug('✅ Staff added to customer assigned_staff_ids')
           }
         } else {
-          console.log(`ℹ️ Staff ${staff_id} already in customer's assigned_staff_ids`)
+          logger.debug(`ℹ️ Staff ${staff_id} already in customer's assigned_staff_ids`)
         }
       }
     } catch (error: any) {
@@ -181,25 +181,25 @@ export default defineEventHandler(async (event) => {
           // ✅ Admin Fee ist noch gültig wenn:
           if (!appointment.deleted_at) {
             // 1. Termin wurde NICHT storniert → Fee ist gültig!
-            console.log('✅ Admin fee still valid - appointment not cancelled')
+            logger.debug('✅ Admin fee still valid - appointment not cancelled')
             hasValidAdminFeePayment = true
             break
           } else if (appointment.deleted_at && appointment.cancellation_charge_percentage > 0) {
             // 2. Termin wurde KOSTENPFLICHTIG storniert → Fee bleibt bei Kunde!
-            console.log('✅ Admin fee still valid - appointment cancelled but with charge (< 24h)')
+            logger.debug('✅ Admin fee still valid - appointment cancelled but with charge (< 24h)')
             hasValidAdminFeePayment = true
             break
           } else if (appointment.deleted_at && appointment.cancellation_charge_percentage === 0) {
             // 3. Termin wurde KOSTENLOS storniert → Fee sollte erstattet sein
             //    → Admin Fee kann erneut berechnet werden!
-            console.log('ℹ️ Admin fee was refunded (appointment cancelled for free, > 24h)')
+            logger.debug('ℹ️ Admin fee was refunded (appointment cancelled for free, > 24h)')
             // Weiter zur nächsten Payment oder berechne neue Fee
           }
         }
       }
       
       if (hasValidAdminFeePayment) {
-        console.log('ℹ️ Customer has already paid admin fee (still valid) - no admin fee for this appointment')
+        logger.debug('ℹ️ Customer has already paid admin fee (still valid) - no admin fee for this appointment')
         adminFee = 0
       } else {
         // Zähle, wie viele Termine der Kunde bereits hat (für diesen event_type_code)
@@ -216,7 +216,7 @@ export default defineEventHandler(async (event) => {
         
         const appointmentNumber = (existingAppointmentsCount || 0) + 1 // +1 for current appointment being created
         
-        console.log('💰 Admin fee check:', {
+        logger.debug('💰 Admin fee check:', {
           eventTypeCode: event_type_code || 'lesson',
           existingAppointments: existingAppointmentsCount,
           appointmentNumber,
@@ -228,9 +228,9 @@ export default defineEventHandler(async (event) => {
         // Admin Fee nur beim 2. Termin
         if (appointmentNumber === 2) {
           adminFee = eventType.default_fee_rappen
-          console.log('✅ Admin fee will be charged (2nd appointment):', adminFee / 100, 'CHF')
+          logger.debug('✅ Admin fee will be charged (2nd appointment):', adminFee / 100, 'CHF')
         } else {
-          console.log('ℹ️ No admin fee (appointment #' + appointmentNumber + ')')
+          logger.debug('ℹ️ No admin fee (appointment #' + appointmentNumber + ')')
         }
       }
     }
@@ -271,7 +271,7 @@ export default defineEventHandler(async (event) => {
         scheduledAuthorizationDate.setMilliseconds(0)
       } else {
         // Termin < 24h: sofort autorisieren
-        console.log('⚡ Appointment < 24h away - will authorize immediately')
+        logger.debug('⚡ Appointment < 24h away - will authorize immediately')
         scheduledAuthorizationDate = new Date()
         scheduledAuthorizationDate.setSeconds(0)
         scheduledAuthorizationDate.setMilliseconds(0)
@@ -303,7 +303,7 @@ export default defineEventHandler(async (event) => {
         // Don't fail the whole request, just log the error
       } else {
         paymentId = payment.id
-        console.log('✅ Payment created:', payment.id)
+        logger.debug('✅ Payment created:', payment.id)
         
         // ✅ Erstelle payment_items für dieses Payment
         const paymentItems = []
@@ -340,7 +340,7 @@ export default defineEventHandler(async (event) => {
         if (itemsError) {
           console.error('Error creating payment items:', itemsError)
         } else {
-          console.log('✅ Payment items created:', paymentItems.length)
+          logger.debug('✅ Payment items created:', paymentItems.length)
         }
       }
     }

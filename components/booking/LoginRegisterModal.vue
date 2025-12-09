@@ -219,7 +219,7 @@ const handleLogin = async () => {
 
     if (authError) throw authError
 
-    console.log('✅ Login successful')
+    logger.debug('✅ Login successful')
     emit('success')
   } catch (err: any) {
     console.error('Login error:', err)
@@ -271,7 +271,7 @@ const handleRegister = async () => {
 
     if (profileError) throw profileError
 
-    console.log('✅ Registration successful')
+    logger.debug('✅ Registration successful')
     emit('success')
   } catch (err: any) {
     console.error('Registration error:', err)

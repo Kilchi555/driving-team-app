@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
       throw new Error('Voucher ID is required')
     }
 
-    console.log('🎁 Generating PDF for voucher:', voucherId)
+    logger.debug('🎁 Generating PDF for voucher:', voucherId)
 
     // Gutschein-Daten aus der Datenbank abrufen (server-side admin client to bypass RLS)
     const supabase = getSupabaseAdmin()
@@ -109,7 +109,7 @@ export default defineEventHandler(async (event) => {
     await page.close()
     await browser.close()
 
-    console.log('✅ Voucher PDF generated successfully for:', voucher.code)
+    logger.debug('✅ Voucher PDF generated successfully for:', voucher.code)
 
     // Stream als echtes PDF zurückgeben
     setHeader(event, 'Content-Type', 'application/pdf')

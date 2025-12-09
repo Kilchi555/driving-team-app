@@ -279,7 +279,7 @@ const handleWalleeReturn = async () => {
   
   if (!walleeToken && !transactionId) return
   
-  console.log('🔍 Wallee return detected:', { 
+  logger.debug('🔍 Wallee return detected:', { 
     walleeToken, 
     transactionId,
     allQueryParams: route.query 
@@ -302,7 +302,7 @@ const handleWalleeReturn = async () => {
 
     if (transactionId && (walleeToken === 'success' || !walleeToken)) {
       // ✅ Versuche Token von Wallee zu holen und zu speichern
-      console.log('💳 Attempting to save payment token from transaction:', transactionId)
+      logger.debug('💳 Attempting to save payment token from transaction:', transactionId)
       
       try {
         const result = await $fetch('/api/wallee/save-payment-token', {
@@ -315,7 +315,7 @@ const handleWalleeReturn = async () => {
         })
         
         if (result.success) {
-          console.log('✅ Payment method token saved successfully:', result.tokenId)
+          logger.debug('✅ Payment method token saved successfully:', result.tokenId)
           // Reload payment methods
           await loadPaymentMethods()
           // Remove query parameters from URL

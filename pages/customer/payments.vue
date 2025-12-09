@@ -447,7 +447,7 @@ const loadAllData = async () => {
 
     preferredPaymentMethod.value = userData.preferred_payment_method
 
-    console.log('🔍 Loading data for user:', userData.id)
+    logger.debug('🔍 Loading data for user:', userData.id)
 
     // ✅ Lade Student Credit Balance
     const { data: creditData, error: creditError } = await supabase
@@ -460,16 +460,16 @@ const loadAllData = async () => {
       console.warn('⚠️ Could not load student credit:', creditError)
     } else if (creditData) {
       studentBalance.value = creditData.balance_rappen || 0
-      console.log('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
+      logger.debug('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
     }
 
     // ✅ Verwende das neue useCustomerPayments Composable
     await loadCustomerPayments()
     
     // Debug: Log all payments with paid_at field
-    console.log('📋 All customer payments after loading:')
+    logger.debug('📋 All customer payments after loading:')
     customerPayments.value.forEach((p, idx) => {
-      console.log(`Payment ${idx + 1}:`, {
+      logger.debug(`Payment ${idx + 1}:`, {
         id: p.id,
         payment_status: p.payment_status,
         paid_at: p.paid_at,
@@ -511,7 +511,7 @@ const payIndividual = async (payment: any) => {
   if (payment.payment_method !== 'wallee') {
     isConvertingToOnline.value = true
     try {
-      console.log('🔄 Converting payment to online first:', payment.id)
+      logger.debug('🔄 Converting payment to online first:', payment.id)
       
       const result = await $fetch('/api/payments/convert-to-online', {
         method: 'POST',
@@ -521,7 +521,7 @@ const payIndividual = async (payment: any) => {
         }
       })
       
-      console.log('✅ Payment converted to online:', result)
+      logger.debug('✅ Payment converted to online:', result)
       
       // Reload payments to get updated data
       await loadAllData()
@@ -564,26 +564,26 @@ const downloadAllReceipts = async () => {
   isProcessingReceipt.value = true
   
   try {
-    console.log('📄 Starting receipt download...')
+    logger.debug('📄 Starting receipt download...')
     const paymentIds = paidPayments.value.map(p => p.id)
-    console.log('📄 Payment IDs:', paymentIds.length)
+    logger.debug('📄 Payment IDs:', paymentIds.length)
     
     const response = await $fetch('/api/payments/receipt', {
       method: 'POST',
       body: { paymentIds }
     }) as { success: boolean; pdfUrl?: string; filename?: string; error?: string }
     
-    console.log('📄 API Response:', response)
+    logger.debug('📄 API Response:', response)
     
     if (!response.success || !response.pdfUrl) {
       throw new Error(response.error || 'PDF konnte nicht generiert werden')
     }
     
-    console.log('✅ Receipt PDF URL:', response.pdfUrl)
-    console.log('📄 Filename:', response.filename)
+    logger.debug('✅ Receipt PDF URL:', response.pdfUrl)
+    logger.debug('📄 Filename:', response.filename)
     
     // Fetch the PDF as a blob and trigger download
-    console.log('📥 Fetching PDF from URL...')
+    logger.debug('📥 Fetching PDF from URL...')
     const pdfResponse = await fetch(response.pdfUrl)
     
     if (!pdfResponse.ok) {
@@ -591,7 +591,7 @@ const downloadAllReceipts = async () => {
     }
     
     const blob = await pdfResponse.blob()
-    console.log('✅ PDF blob received, size:', blob.size, 'bytes')
+    logger.debug('✅ PDF blob received, size:', blob.size, 'bytes')
     
     // Create download link
     const url = URL.createObjectURL(blob)
@@ -603,7 +603,7 @@ const downloadAllReceipts = async () => {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
     
-    console.log('✅ Download triggered!')
+    logger.debug('✅ Download triggered!')
   } catch (err: any) {
     console.error('❌ Error downloading receipts:', err)
     alert(`Fehler beim Erstellen der Quittungen: ${err.message}`)
@@ -935,7 +935,7 @@ const closeMedicalCertificateModal = () => {
 
 // ✅ NEW: Voucher redemption handler
 const handleVoucherRedeemed = async (newBalance: number) => {
-  console.log('✅ Voucher redeemed, new balance:', newBalance)
+  logger.debug('✅ Voucher redeemed, new balance:', newBalance)
   studentBalance.value = newBalance
   // Refresh all data to show updated balance
   await loadAllData()
@@ -971,7 +971,7 @@ const closeCancellationModal = () => {
 }
 
 const onAppointmentCancelled = async (appointmentId: string) => {
-  console.log('✅ Appointment cancelled:', appointmentId)
+  logger.debug('✅ Appointment cancelled:', appointmentId)
   
   // Close modal first
   closeCancellationModal()
@@ -1035,14 +1035,14 @@ const getAppointmentDateTime = (payment: any): string => {
 // Watch for user role changes
 watch([currentUser], ([newUser]) => {
   if (newUser && !isClient.value) {
-    console.log('🔄 User is not a client, redirecting to main dashboard')
+    logger.debug('🔄 User is not a client, redirecting to main dashboard')
     navigateTo('/')
   }
 }, { immediate: true })
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🔥 Customer Payments mounted')
+  logger.debug('🔥 Customer Payments mounted')
   
   if (!isClient.value) {
     console.warn('⚠️ User is not a client, redirecting...')

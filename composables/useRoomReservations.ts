@@ -47,7 +47,7 @@ export const useRoomReservations = () => {
 
   // Load available rooms (public + tenant rooms)
   const loadRooms = async () => {
-    console.log('🔄 loadRooms called')
+    logger.debug('🔄 loadRooms called')
     
     isLoading.value = true
     error.value = null
@@ -74,8 +74,8 @@ export const useRoomReservations = () => {
 
       if (roomsError) throw roomsError
       
-      console.log('✅ Rooms loaded for tenant:', userProfile.tenant_id, 'count:', data?.length || 0)
-      console.log('🏢 Rooms data:', data)
+      logger.debug('✅ Rooms loaded for tenant:', userProfile.tenant_id, 'count:', data?.length || 0)
+      logger.debug('🏢 Rooms data:', data)
       
       rooms.value = data || []
 

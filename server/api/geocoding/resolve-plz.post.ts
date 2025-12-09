@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    console.log(`🔍 Resolving postal code for location: ${location_name}`);
+    logger.debug(`🔍 Resolving postal code for location: ${location_name}`);
 
     const supabase = getSupabaseAdmin();
 
@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
       .single();
 
     if (cached) {
-      console.log(`✅ Found in cache: ${location_name} -> ${cached.postal_code} ${cached.city}`);
+      logger.debug(`✅ Found in cache: ${location_name} -> ${cached.postal_code} ${cached.city}`);
       return {
         postal_code: cached.postal_code,
         city: cached.city,
@@ -73,7 +73,7 @@ export default defineEventHandler(async (event) => {
       location_name
     )}&key=${GOOGLE_GEOCODING_API_KEY}`;
 
-    console.log(`🌐 Calling Google Geocoding API for: ${location_name}`);
+    logger.debug(`🌐 Calling Google Geocoding API for: ${location_name}`);
 
     const response = await fetch(googleUrl);
     const data = await response.json();
@@ -112,7 +112,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    console.log(`✅ Google API result: ${postal_code} ${city} (${lat}, ${lng})`);
+    logger.debug(`✅ Google API result: ${postal_code} ${city} (${lat}, ${lng})`);
 
     // Step 3: Cache in plz_distance_cache
     await supabase.from('plz_distance_cache').insert({
@@ -124,7 +124,7 @@ export default defineEventHandler(async (event) => {
       created_at: new Date().toISOString(),
     });
 
-    console.log(`✅ Cached: ${location_name} -> ${postal_code} ${city}`);
+    logger.debug(`✅ Cached: ${location_name} -> ${postal_code} ${city}`);
 
     // Step 4: Try to auto-populate locations table if matching name exists
     if (tenant_id) {
@@ -147,7 +147,7 @@ export default defineEventHandler(async (event) => {
           })
           .eq('id', location.id);
 
-        console.log(`✅ Auto-populated location in DB: ${city} (${postal_code})`);
+        logger.debug(`✅ Auto-populated location in DB: ${city} (${postal_code})`);
       }
     }
 

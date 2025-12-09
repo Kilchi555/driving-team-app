@@ -140,7 +140,7 @@ const registerTenant = async () => {
   debugOutput.value = ''
 
   try {
-    console.log('🚀 Starting tenant registration...')
+    logger.debug('🚀 Starting tenant registration...')
     debugOutput.value += '🚀 Starting tenant registration...\n'
     debugOutput.value += `📝 Form data: ${JSON.stringify(form.value, null, 2)}\n\n`
 
@@ -149,7 +149,7 @@ const registerTenant = async () => {
       body: form.value
     })
 
-    console.log('✅ Registration response:', response)
+    logger.debug('✅ Registration response:', response)
     debugOutput.value += `✅ Registration response: ${JSON.stringify(response, null, 2)}\n`
 
     if (response.success) {

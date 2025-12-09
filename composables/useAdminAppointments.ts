@@ -32,7 +32,7 @@ export function useAdminAppointments() {
 
       if (fetchError) throw fetchError
 
-      console.log('🗑️ Found deleted appointments:', data?.length)
+      logger.debug('🗑️ Found deleted appointments:', data?.length)
       return data
 
     } catch (err: any) {
@@ -67,7 +67,7 @@ export function useAdminAppointments() {
 
       if (restoreError) throw restoreError
 
-      console.log('✅ Appointment restored successfully:', data)
+      logger.debug('✅ Appointment restored successfully:', data)
       return data
 
     } catch (err: any) {
@@ -98,7 +98,7 @@ export function useAdminAppointments() {
 
       if (deleteError) throw deleteError
 
-      console.log('🗑️ Appointment permanently deleted:', appointmentId)
+      logger.debug('🗑️ Appointment permanently deleted:', appointmentId)
       return true
 
     } catch (err: any) {

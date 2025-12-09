@@ -42,7 +42,7 @@ export const useWalleeTokenization = () => {
   // ✅ Gespeicherte Zahlungsmethoden eines Kunden abrufen
   const getCustomerPaymentMethods = async (customerEmailOrIds: string | { userId: string; tenantId: string }): Promise<WalleeCustomerPaymentMethods> => {
     try {
-      console.log('🔍 Getting payment methods for customer:', typeof customerEmailOrIds === 'string' ? customerEmailOrIds : { hasTenantId: !!customerEmailOrIds.tenantId, hasUserId: !!customerEmailOrIds.userId })
+      logger.debug('🔍 Getting payment methods for customer:', typeof customerEmailOrIds === 'string' ? customerEmailOrIds : { hasTenantId: !!customerEmailOrIds.tenantId, hasUserId: !!customerEmailOrIds.userId })
       
       const response = await $fetch('/api/wallee/get-customer-payment-methods', {
         method: 'POST',
@@ -51,7 +51,7 @@ export const useWalleeTokenization = () => {
           : { userId: customerEmailOrIds.userId, tenantId: customerEmailOrIds.tenantId }
       }) as WalleeCustomerPaymentMethods
       
-      console.log('✅ Customer payment methods retrieved:', {
+      logger.debug('✅ Customer payment methods retrieved:', {
         customerId: response.customerId,
         methodCount: response.paymentMethods.length,
         totalTransactions: response.totalTransactions
@@ -68,14 +68,14 @@ export const useWalleeTokenization = () => {
   // ✅ Wiederkehrende Zahlung mit gespeicherten Zahlungsmethoden
   const createRecurringTransaction = async (request: WalleeRecurringTransactionRequest): Promise<WalleeRecurringTransactionResult> => {
     try {
-      console.log('🔄 Creating recurring transaction:', request)
+      logger.debug('🔄 Creating recurring transaction:', request)
       
       const response = await $fetch('/api/wallee/create-recurring-transaction', {
         method: 'POST',
         body: request
       }) as WalleeRecurringTransactionResult
       
-      console.log('✅ Recurring transaction created:', {
+      logger.debug('✅ Recurring transaction created:', {
         transactionId: response.transactionId,
         customerId: response.customerId
       })

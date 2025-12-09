@@ -31,7 +31,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 async function executeSQLFile() {
   try {
-    console.log('🔧 Loading SQL file...')
+    logger.debug('🔧 Loading SQL file...')
     
     // Read the SQL file
     const sqlContent = readFileSync(
@@ -39,7 +39,7 @@ async function executeSQLFile() {
       'utf8'
     )
     
-    console.log('📝 SQL content loaded, length:', sqlContent.length)
+    logger.debug('📝 SQL content loaded, length:', sqlContent.length)
     
     // Split SQL into individual statements (simple split by semicolon + newline)
     const statements = sqlContent
@@ -47,15 +47,15 @@ async function executeSQLFile() {
       .map(stmt => stmt.trim())
       .filter(stmt => stmt && !stmt.startsWith('--') && stmt !== '')
     
-    console.log('📋 Found', statements.length, 'SQL statements')
+    logger.debug('📋 Found', statements.length, 'SQL statements')
     
     // Execute each statement
     for (let i = 0; i < statements.length; i++) {
       const statement = statements[i]
       if (statement.length < 10) continue // Skip very short statements
       
-      console.log(`\n🔄 Executing statement ${i + 1}/${statements.length}...`)
-      console.log('📝 Statement preview:', statement.substring(0, 100) + '...')
+      logger.debug(`\n🔄 Executing statement ${i + 1}/${statements.length}...`)
+      logger.debug('📝 Statement preview:', statement.substring(0, 100) + '...')
       
       try {
         const { data, error } = await supabase.rpc('exec_sql', { 
@@ -75,19 +75,19 @@ async function executeSQLFile() {
             console.error('❌ Direct query also failed:', directError)
             throw error
           } else {
-            console.log('✅ Connection is working, but exec_sql RPC might not exist')
-            console.log('💡 You may need to execute this SQL manually in Supabase Dashboard')
+            logger.debug('✅ Connection is working, but exec_sql RPC might not exist')
+            logger.debug('💡 You may need to execute this SQL manually in Supabase Dashboard')
             break
           }
         } else {
-          console.log(`✅ Statement ${i + 1} executed successfully`)
+          logger.debug(`✅ Statement ${i + 1} executed successfully`)
         }
       } catch (err) {
         console.error(`❌ Exception in statement ${i + 1}:`, err.message)
         
         // Continue with next statement for non-critical errors
         if (err.message.includes('already exists') || err.message.includes('does not exist')) {
-          console.log('⚠️  Continuing with next statement...')
+          logger.debug('⚠️  Continuing with next statement...')
           continue
         } else {
           throw err
@@ -95,10 +95,10 @@ async function executeSQLFile() {
       }
     }
     
-    console.log('\n🎉 SQL execution completed!')
+    logger.debug('\n🎉 SQL execution completed!')
     
     // Test the trigger by checking existing staff
-    console.log('\n🔍 Checking existing staff members...')
+    logger.debug('\n🔍 Checking existing staff members...')
     const { data: staff, error: staffError } = await supabase
       .from('users')
       .select(`
@@ -112,19 +112,19 @@ async function executeSQLFile() {
     if (staffError) {
       console.error('❌ Error checking staff:', staffError)
     } else {
-      console.log('👥 Found', staff?.length || 0, 'staff members')
+      logger.debug('👥 Found', staff?.length || 0, 'staff members')
       staff?.forEach(s => {
-        console.log(`  - ${s.first_name} ${s.last_name} (${s.email})`, 
+        logger.debug(`  - ${s.first_name} ${s.last_name} (${s.email})`, 
                    s.cash_balances?.length ? '✅ Has cash register' : '❌ No cash register')
       })
     }
     
   } catch (error) {
     console.error('❌ Fatal error:', error.message)
-    console.log('\n💡 Manual execution required:')
-    console.log('1. Go to Supabase Dashboard > SQL Editor')
-    console.log('2. Copy the content from database_trigger_auto_create_staff_cash.sql')
-    console.log('3. Execute it manually')
+    logger.debug('\n💡 Manual execution required:')
+    logger.debug('1. Go to Supabase Dashboard > SQL Editor')
+    logger.debug('2. Copy the content from database_trigger_auto_create_staff_cash.sql')
+    logger.debug('3. Execute it manually')
     process.exit(1)
   }
 }

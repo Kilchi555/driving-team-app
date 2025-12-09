@@ -985,7 +985,7 @@ async function runValidation() {
       }
     })
     validationResult.value = res as any
-    console.log('Validation result saved:', validationResult.value)
+    logger.debug('Validation result saved:', validationResult.value)
   } catch (err: any) {
     console.error('Validation failed', err)
     alert(err?.message ?? 'Validierung fehlgeschlagen')
@@ -1174,7 +1174,7 @@ async function loadBatchData() {
     // Use general search instead of column-specific search
     const search = generalSearch.value.trim() || undefined
     
-    console.log('🔍 General search:', search)
+    logger.debug('🔍 General search:', search)
     
     // Prepare query parameters
     const queryParams = {

@@ -248,19 +248,19 @@ const isFormValid = computed(() => {
 // Methods
 const handleStudentSelected = (student: any) => {
   selectedStudent.value = student
-  console.log('👤 Student selected:', student.first_name)
+  logger.debug('👤 Student selected:', student.first_name)
 }
 
 const handleStudentCleared = () => {
   selectedStudent.value = null
-  console.log('👤 Student cleared')
+  logger.debug('👤 Student cleared')
 }
 
 const saveProductSale = async () => {
   if (!isFormValid.value) return
 
   try {
-    console.log('💾 Saving product sale...')
+    logger.debug('💾 Saving product sale...')
     
     const saleData = {
       user_id: selectedStudent.value.id,
@@ -281,7 +281,7 @@ const saveProductSale = async () => {
     const result = await createProductSale(saleData)
     
     if (result) {
-      console.log('✅ Product sale created:', result.id)
+      logger.debug('✅ Product sale created:', result.id)
       emit('sale-created', result.id)
       emit('close')
     } else {

@@ -49,9 +49,9 @@ export const useCustomerPayments = () => {
       if (!userData) throw new Error('User nicht in Datenbank gefunden')
       if (!userData.tenant_id) throw new Error('User has no tenant assigned')
 
-      console.log('🔍 Loading payments for user:', userData.id, 'tenant:', userData.tenant_id)
-      console.log('🔍 Current auth user ID:', currentUser.value?.id)
-      console.log('🔍 User table auth_user_id:', userData.auth_user_id)
+      logger.debug('🔍 Loading payments for user:', userData.id, 'tenant:', userData.tenant_id)
+      logger.debug('🔍 Current auth user ID:', currentUser.value?.id)
+      logger.debug('🔍 User table auth_user_id:', userData.auth_user_id)
 
       // ✅ Lade nur echte payments aus der payments Tabelle
       let allPayments: any[] = []
@@ -110,14 +110,14 @@ export const useCustomerPayments = () => {
           .or(`user_id.eq.${userData.id},user_id.eq.${currentUser.value.id}`)
           .order('created_at', { ascending: false })
 
-        console.log('🔍 Searching payments with user_id:', userData.id, 'tenant:', userData.tenant_id)
+        logger.debug('🔍 Searching payments with user_id:', userData.id, 'tenant:', userData.tenant_id)
 
         if (paymentsError) {
           console.warn('⚠️ Error loading payments:', paymentsError)
           console.error('⚠️ Full error details:', paymentsError)
         } else {
-          console.log('✅ Payments loaded:', paymentsData?.length || 0)
-          console.log('📊 Payments details:', paymentsData?.map(p => ({
+          logger.debug('✅ Payments loaded:', paymentsData?.length || 0)
+          logger.debug('📊 Payments details:', paymentsData?.map(p => ({
             id: p.id,
             appointment_id: p.appointment_id,
             lesson_price: p.lesson_price_rappen / 100,
@@ -139,8 +139,8 @@ export const useCustomerPayments = () => {
         return dateB.getTime() - dateA.getTime()
       })
 
-      console.log('✅ Total payments loaded:', allPayments.length)
-      console.log('📊 Payments summary:', allPayments.map(p => ({
+      logger.debug('✅ Total payments loaded:', allPayments.length)
+      logger.debug('📊 Payments summary:', allPayments.map(p => ({
         id: p.id,
         appointment_id: p.appointment_id,
         lesson_price: p.lesson_price_rappen / 100,
@@ -149,7 +149,7 @@ export const useCustomerPayments = () => {
         status: p.payment_status,
         paid_at: p.paid_at
       })))
-      console.log('📋 Full payment details with paid_at:', allPayments.map(p => ({
+      logger.debug('📋 Full payment details with paid_at:', allPayments.map(p => ({
         id: p.id,
         payment_status: p.payment_status,
         paid_at: p.paid_at,

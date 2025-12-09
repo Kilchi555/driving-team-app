@@ -6,7 +6,7 @@ import { Wallee } from 'wallee'
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🔄 Manual Wallee payment sync requested...')
+    logger.debug('🔄 Manual Wallee payment sync requested...')
     
     const body = await readBody(event)
     const { paymentId, transactionId } = body
@@ -62,14 +62,14 @@ export default defineEventHandler(async (event) => {
       walleeTransactionId = transactionId
     }
 
-    console.log('🔍 Fetching transaction from Wallee:', walleeTransactionId)
+    logger.debug('🔍 Fetching transaction from Wallee:', walleeTransactionId)
 
     // Hole Transaction von Wallee
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
     const transactionResponse = await transactionService.read(spaceId, parseInt(walleeTransactionId))
     const walleeTransaction = transactionResponse.body
 
-    console.log('📋 Wallee transaction state:', (walleeTransaction as any).state)
+    logger.debug('📋 Wallee transaction state:', (walleeTransaction as any).state)
 
     // Map Wallee state to our payment status
     const statusMapping: Record<string, string> = {
@@ -87,7 +87,7 @@ export default defineEventHandler(async (event) => {
     const walleeState = (walleeTransaction as any).state
     const paymentStatus = statusMapping[walleeState] || 'pending'
 
-    console.log(`🔄 Mapping Wallee state "${walleeState}" to payment status "${paymentStatus}"`)
+    logger.debug(`🔄 Mapping Wallee state "${walleeState}" to payment status "${paymentStatus}"`)
 
     // Update payment in DB
     const updateData: any = {
@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Payment updated:', updatedPayment.id)
+    logger.debug('✅ Payment updated:', updatedPayment.id)
 
     // Update appointment if payment completed
     if (paymentStatus === 'completed' && updatedPayment.appointment_id) {
@@ -126,7 +126,7 @@ export default defineEventHandler(async (event) => {
         })
         .eq('id', updatedPayment.appointment_id)
 
-      console.log('✅ Appointment confirmed')
+      logger.debug('✅ Appointment confirmed')
     }
 
     // Sync payment methods if payment completed
@@ -140,7 +140,7 @@ export default defineEventHandler(async (event) => {
             transactionId: walleeTransactionId
           }
         })
-        console.log('✅ Payment methods synced:', syncResult)
+        logger.debug('✅ Payment methods synced:', syncResult)
       } catch (syncError: any) {
         console.warn('⚠️ Could not sync payment methods:', syncError.message)
       }

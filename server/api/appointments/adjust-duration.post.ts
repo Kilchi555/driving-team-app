@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabase()
     const { appointmentId, newDurationMinutes, oldDurationMinutes, pricePerMinute } = await readBody(event)
 
-    console.log('⏱️ Adjusting appointment duration:', {
+    logger.debug('⏱️ Adjusting appointment duration:', {
       appointmentId,
       oldDurationMinutes,
       newDurationMinutes,
@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!payment) {
-      console.log('⚠️ No payment found for appointment - this is OK, just update the appointment duration locally')
+      logger.debug('⚠️ No payment found for appointment - this is OK, just update the appointment duration locally')
       return { 
         success: true, 
         message: 'No payment found - duration change noted but no payment reconciliation needed',
@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
     const priceDifference = newPrice - oldPrice
     const priceDifferenceRappen = Math.round(priceDifference * 100)
 
-    console.log('💰 Price calculation:', {
+    logger.debug('💰 Price calculation:', {
       oldPrice,
       newPrice,
       priceDifference,
@@ -67,11 +67,11 @@ export default defineEventHandler(async (event) => {
 
     // 3. Handle based on payment status
     if (payment.payment_status === 'completed' || payment.payment_status === 'authorized') {
-      console.log('✅ Payment already processed:', payment.payment_status)
+      logger.debug('✅ Payment already processed:', payment.payment_status)
 
       if (priceDifference > 0) {
         // Price increased - create second payment for difference
-        console.log('📈 Price increased - creating additional payment for difference')
+        logger.debug('📈 Price increased - creating additional payment for difference')
         return await handlePriceIncrease(
           supabase,
           appointmentId,
@@ -82,7 +82,7 @@ export default defineEventHandler(async (event) => {
         )
       } else if (priceDifference < 0) {
         // Price decreased - credit to student balance
-        console.log('📉 Price decreased - crediting student balance')
+        logger.debug('📉 Price decreased - crediting student balance')
         return await handlePriceDecrease(
           supabase,
           appointmentId,
@@ -92,12 +92,12 @@ export default defineEventHandler(async (event) => {
           oldDurationMinutes
         )
       } else {
-        console.log('➡️ No price change')
+        logger.debug('➡️ No price change')
         return { success: true, message: 'No price difference', priceDifference: 0 }
       }
     } else {
       // Payment not yet completed - just update existing payment
-      console.log('🔄 Payment not yet completed - updating existing payment')
+      logger.debug('🔄 Payment not yet completed - updating existing payment')
       return await updatePendingPayment(
         supabase,
         appointmentId,
@@ -147,7 +147,7 @@ async function handlePriceIncrease(
 
     if (createError) throw new Error(`Failed to create second payment: ${createError.message}`)
 
-    console.log('✅ Second payment created:', secondPayment.id)
+    logger.debug('✅ Second payment created:', secondPayment.id)
 
     return {
       success: true,
@@ -212,7 +212,7 @@ async function handlePriceDecrease(
 
     if (updateError) throw new Error(`Failed to update student credit: ${updateError.message}`)
 
-    console.log('✅ Student credit balance updated:', {
+    logger.debug('✅ Student credit balance updated:', {
       oldBalance: (oldBalance / 100).toFixed(2),
       refund: (refundRappen / 100).toFixed(2),
       newBalance: (newBalance / 100).toFixed(2)
@@ -238,7 +238,7 @@ async function handlePriceDecrease(
 
     if (transError) throw new Error(`Failed to create credit transaction: ${transError.message}`)
 
-    console.log('✅ Credit transaction created:', transaction.id)
+    logger.debug('✅ Credit transaction created:', transaction.id)
 
     return {
       success: true,
@@ -289,7 +289,7 @@ async function updatePendingPayment(
 
     if (updateError) throw new Error(`Failed to update payment: ${updateError.message}`)
 
-    console.log('✅ Pending payment updated:', {
+    logger.debug('✅ Pending payment updated:', {
       oldPrice: (oldPriceRappen / 100).toFixed(2),
       newPrice: (newPriceRappen / 100).toFixed(2),
       oldTotal: (payment.total_amount_rappen / 100).toFixed(2),

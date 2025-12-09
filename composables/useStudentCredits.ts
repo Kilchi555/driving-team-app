@@ -158,7 +158,7 @@ export const useStudentCredits = () => {
 
         if (historyError) throw historyError
 
-        console.log('✅ Credit deposit successful:', {
+        logger.debug('✅ Credit deposit successful:', {
           userId: depositData.user_id,
           amount: depositData.amount_rappen,
           newBalance
@@ -235,7 +235,7 @@ export const useStudentCredits = () => {
 
         if (historyError) throw historyError
 
-        console.log('✅ Credit withdrawal successful:', {
+        logger.debug('✅ Credit withdrawal successful:', {
           userId: withdrawalData.user_id,
           amount: withdrawalData.amount_rappen,
           newBalance
@@ -325,7 +325,7 @@ export const useStudentCredits = () => {
 
         if (historyError) throw historyError
 
-        console.log('✅ Credit used for appointment:', {
+        logger.debug('✅ Credit used for appointment:', {
           userId: paymentData.user_id,
           appointmentId: paymentData.appointment_id,
           amountUsed: availableCredit,

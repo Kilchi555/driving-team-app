@@ -201,7 +201,7 @@ const toggleDurationForCategory = (categoryCode: string, duration: number) => {
 
 // Data Loading
 const loadCategories = async () => {
-  console.log('🔥 Loading categories for staff settings')
+  logger.debug('🔥 Loading categories for staff settings')
   
   try {
     const supabase = getSupabase()
@@ -215,7 +215,7 @@ const loadCategories = async () => {
     if (fetchError) throw fetchError
 
     availableCategories.value = data || []
-    console.log('✅ Categories loaded:', data?.length)
+    logger.debug('✅ Categories loaded:', data?.length)
   } catch (err: any) {
     console.error('❌ Error loading categories:', err)
     error.value = err.message
@@ -225,7 +225,7 @@ const loadCategories = async () => {
 const loadCurrentDurations = async () => {
   if (!props.currentUser?.id) return
 
-  console.log('🔥 Loading current staff durations')
+  logger.debug('🔥 Loading current staff durations')
   
   try {
     const supabase = getSupabase()
@@ -249,7 +249,7 @@ const loadCurrentDurations = async () => {
     })
 
     categoryDurations.value = grouped
-    console.log('✅ Current durations loaded:', grouped)
+    logger.debug('✅ Current durations loaded:', grouped)
   } catch (err: any) {
     console.error('❌ Error loading current durations:', err)
     error.value = err.message
@@ -292,7 +292,7 @@ const saveAllDurations = async () => {
     await Promise.all(savePromises)
     
     saveSuccess.value = true
-    console.log('✅ All durations saved successfully')
+    logger.debug('✅ All durations saved successfully')
     
     // Success message nach 3 Sekunden ausblenden
     setTimeout(() => {

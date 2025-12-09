@@ -318,7 +318,7 @@ const loadAppointment = async () => {
 
     // Load customer payment methods if automatic payment is enabled
     // ✅ WICHTIG: Lade Wallee-Token aus unserer Datenbank (keine sensiblen Daten!)
-    console.log('🔍 Payment settings check:', {
+    logger.debug('🔍 Payment settings check:', {
       automaticPaymentEnabled: automaticPaymentEnabled.value,
       userId: appointmentData.user_id,
       willLoadMethods: automaticPaymentEnabled.value && appointmentData.user_id
@@ -372,7 +372,7 @@ const loadPaymentMethods = async (userId: string) => {
       selectedPaymentMethodId.value = paymentMethods.value[0].id
     }
     
-    console.log('✅ Payment methods loaded:', {
+    logger.debug('✅ Payment methods loaded:', {
       count: paymentMethods.value.length,
       selectedId: selectedPaymentMethodId.value,
       methods: paymentMethods.value.map(m => ({ id: m.id, display_name: m.display_name, is_default: m.is_default }))
@@ -458,7 +458,7 @@ const confirmAppointment = async () => {
           : roundedAuthDate.toISOString()
       }
       
-      console.log('💰 Scheduled payment dates calculated:', {
+      logger.debug('💰 Scheduled payment dates calculated:', {
         appointmentDate: appointmentDate.toISOString(),
         hoursBefore,
         authHoursBefore,
@@ -473,7 +473,7 @@ const confirmAppointment = async () => {
       
       // Speichere Flag für sofortige Verarbeitung
       if (shouldProcessImmediately) {
-        console.log('⚡ Payment will be processed immediately (confirmation too late)')
+        logger.debug('⚡ Payment will be processed immediately (confirmation too late)')
       }
     }
 
@@ -534,7 +534,7 @@ const confirmAppointment = async () => {
             throw new Error('Fehler beim Aktualisieren der Zahlung: ' + updateError.message)
           }
 
-          console.log('✅ Existing payment updated for automatic collection')
+          logger.debug('✅ Existing payment updated for automatic collection')
           isConfirmed.value = true
           return
         }
@@ -592,11 +592,11 @@ const confirmAppointment = async () => {
           throw new Error('Fehler beim Erstellen der Zahlung: ' + paymentError.message)
         }
 
-        console.log('✅ Payment created for automatic collection:', paymentData.id)
+        logger.debug('✅ Payment created for automatic collection:', paymentData.id)
 
         // ✅ SOFORTIGE VERARBEITUNG: Wenn Bestätigung zu spät kommt (< hoursBefore vor Termin)
         if (shouldProcessImmediately) {
-          console.log('⚡ Immediate payment required - checking payment methods...', {
+          logger.debug('⚡ Immediate payment required - checking payment methods...', {
             hasPaymentMethods: paymentMethods.value.length > 0,
             selectedPaymentMethodId: selectedPaymentMethodId.value,
             allMethods: paymentMethods.value.map(m => ({ id: m.id, name: m.display_name }))
@@ -614,7 +614,7 @@ const confirmAppointment = async () => {
               }) as { success?: boolean; error?: string }
 
               if (immediateResult.success) {
-                console.log('✅ Immediate payment processed successfully:', immediateResult)
+                logger.debug('✅ Immediate payment processed successfully:', immediateResult)
                 alert('Termin bestätigt! Die Zahlung wurde sofort verarbeitet.')
                 return // Fertig!
               } else {
@@ -626,7 +626,7 @@ const confirmAppointment = async () => {
           }
           
           // Kein Token oder Fehler → Leite zur normalen Zahlungsseite weiter
-          console.log('💳 Redirecting to payment page for immediate payment...')
+          logger.debug('💳 Redirecting to payment page for immediate payment...')
           
           // Leite zur Payment-Seite weiter (wird dort sofort verarbeitet)
           const tenantSlug = window.location.pathname.split('/')[1] || ''
@@ -801,7 +801,7 @@ const handlePaymentReturn = async () => {
   
   try {
     if (paymentStatus === 'success') {
-      console.log('✅ Payment return detected: success')
+      logger.debug('✅ Payment return detected: success')
       
       // Lade Appointment zuerst, damit wir die ID haben
       const supabase = getSupabase()
@@ -829,10 +829,10 @@ const handlePaymentReturn = async () => {
         .maybeSingle()
       
       if (updatedAppointment?.status === 'scheduled') {
-        console.log('✅ Appointment already confirmed via webhook')
+        logger.debug('✅ Appointment already confirmed via webhook')
       } else {
         // Falls noch nicht bestätigt, aktualisiere manuell
-        console.log('⚠️ Appointment not yet confirmed, updating manually...')
+        logger.debug('⚠️ Appointment not yet confirmed, updating manually...')
         const { error: updateError } = await supabase
           .from('appointments')
           .update({
@@ -844,7 +844,7 @@ const handlePaymentReturn = async () => {
         if (updateError) {
           console.error('❌ Error confirming appointment:', updateError)
         } else {
-          console.log('✅ Appointment confirmed manually')
+          logger.debug('✅ Appointment confirmed manually')
         }
       }
       

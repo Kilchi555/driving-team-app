@@ -16,7 +16,7 @@ export const useAutoPayment = () => {
     error.value = null
 
     try {
-      console.log('💳 Starting automatic payment for appointment:', appointmentId)
+      logger.debug('💳 Starting automatic payment for appointment:', appointmentId)
 
       // 1. Lade Payment-Daten
       const { data: payment, error: paymentError } = await supabase
@@ -38,7 +38,7 @@ export const useAutoPayment = () => {
       if (paymentError) throw paymentError
       if (!payment) throw new Error('Payment not found')
 
-      console.log('✅ Payment loaded:', payment)
+      logger.debug('✅ Payment loaded:', payment)
 
       // 2. Lade User-Daten für Zahlung
       const { data: userData, error: userError } = await supabase
@@ -50,7 +50,7 @@ export const useAutoPayment = () => {
       if (userError) throw userError
       if (!userData) throw new Error('User not found')
 
-      console.log('✅ User data loaded:', userData)
+      logger.debug('✅ User data loaded:', userData)
 
       // 3. Erstelle Wallee-Transaction
       const walleeResponse = await $fetch('/api/wallee/create-transaction', {
@@ -71,7 +71,7 @@ export const useAutoPayment = () => {
         throw new Error(walleeResponse.error || 'Wallee transaction failed')
       }
 
-      console.log('✅ Wallee transaction created:', walleeResponse)
+      logger.debug('✅ Wallee transaction created:', walleeResponse)
 
       // 4. Update Payment mit Wallee-Daten
       const { error: updateError } = await supabase
@@ -86,7 +86,7 @@ export const useAutoPayment = () => {
 
       if (updateError) throw updateError
 
-      console.log('✅ Payment updated with Wallee data')
+      logger.debug('✅ Payment updated with Wallee data')
 
       // 5. Update Appointment Status
       const { error: appointmentError } = await supabase
@@ -99,7 +99,7 @@ export const useAutoPayment = () => {
 
       if (appointmentError) throw appointmentError
 
-      console.log('✅ Appointment status updated to payment_processing')
+      logger.debug('✅ Appointment status updated to payment_processing')
 
       // 6. Redirect zu Wallee (im Browser)
       if (typeof window !== 'undefined') {
@@ -140,7 +140,7 @@ export const useAutoPayment = () => {
    */
   const processManualPayment = async (appointmentId: string) => {
     try {
-      console.log('💳 Processing manual payment for appointment:', appointmentId)
+      logger.debug('💳 Processing manual payment for appointment:', appointmentId)
 
       // Lade Payment-Daten
       const { data: payment, error: paymentError } = await supabase

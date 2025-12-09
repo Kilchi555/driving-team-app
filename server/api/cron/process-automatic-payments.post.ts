@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
     const now = new Date()
 
-    console.log('💳 [CRON] Processing automatic payments - checking scheduled_authorization_date...')
+    logger.debug('💳 [CRON] Processing automatic payments - checking scheduled_authorization_date...')
 
     // Find payments that should be authorized NOW:
     // - payment_status is 'pending' (not yet authorized)
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!payments || payments.length === 0) {
-      console.log('ℹ️ No pending payments to authorize')
+      logger.debug('ℹ️ No pending payments to authorize')
       return {
         success: true,
         processed: 0,
@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    console.log(`📋 Found ${payments.length} payment(s) to authorize`)
+    logger.debug(`📋 Found ${payments.length} payment(s) to authorize`)
 
     let successCount = 0
     let skipCount = 0
@@ -69,13 +69,13 @@ export default defineEventHandler(async (event) => {
 
         // Skip if appointment is cancelled
         if (appointment.status === 'cancelled') {
-          console.log(`⏭️  Skipping cancelled appointment payment: ${payment.id}`)
+          logger.debug(`⏭️  Skipping cancelled appointment payment: ${payment.id}`)
           skipCount++
           continue
         }
 
         const hoursUntilAppointment = (new Date(appointment.start_time).getTime() - now.getTime()) / (1000 * 60 * 60)
-        console.log(`🔐 [${payment.id}] Authorizing payment (${hoursUntilAppointment.toFixed(1)}h until appointment)...`)
+        logger.debug(`🔐 [${payment.id}] Authorizing payment (${hoursUntilAppointment.toFixed(1)}h until appointment)...`)
 
         // Call authorize-payment endpoint
         const authResponse = await $fetch('/api/wallee/authorize-payment', {
@@ -90,7 +90,7 @@ export default defineEventHandler(async (event) => {
         })
 
         if (authResponse?.success) {
-          console.log(`✅ [${payment.id}] Payment authorized - State: ${authResponse.state}`)
+          logger.debug(`✅ [${payment.id}] Payment authorized - State: ${authResponse.state}`)
           successCount++
         } else {
           console.warn(`⚠️ [${payment.id}] Authorization returned non-success:`, authResponse)
@@ -113,7 +113,7 @@ export default defineEventHandler(async (event) => {
       message: `Processed ${payments.length} payments: ${successCount} authorized, ${skipCount} skipped, ${failureCount} failed`
     }
 
-    console.log(`📊 [CRON] Processing complete:`, result)
+    logger.debug(`📊 [CRON] Processing complete:`, result)
     return result
 
   } catch (error: any) {

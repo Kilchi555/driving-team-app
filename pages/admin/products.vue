@@ -642,7 +642,7 @@ const loadProducts = async () => {
       throw new Error('User has no tenant assigned')
     }
     
-    console.log('🔍 Loading products for tenant:', tenantId)
+    logger.debug('🔍 Loading products for tenant:', tenantId)
     
     const { data, error } = await supabase
       .from('products')
@@ -654,7 +654,7 @@ const loadProducts = async () => {
     if (error) throw error
 
     products.value = data || []
-    console.log('✅ Products loaded:', products.value.length)
+    logger.debug('✅ Products loaded:', products.value.length)
 
     // Lade zusätzlich die Verkaufsstatistiken
     await loadTopSellingProduct()
@@ -725,7 +725,7 @@ const loadTopSellingProduct = async () => {
     }
     
     topSellingProduct.value = topProduct
-    console.log('🏆 Top selling product:', topProduct)
+    logger.debug('🏆 Top selling product:', topProduct)
     
   } catch (error: any) {
     console.error('❌ Error loading top selling product:', error)
@@ -780,7 +780,7 @@ const closeModal = () => {
 }
 
 const saveProduct = async () => {
-  console.log('🔍 Form validation:', {
+  logger.debug('🔍 Form validation:', {
     isValid: isFormValid.value,
     name: formData.value.name,
     price: formData.value.price,
@@ -788,7 +788,7 @@ const saveProduct = async () => {
   })
   
   if (!isFormValid.value) {
-    console.log('❌ Form validation failed')
+    logger.debug('❌ Form validation failed')
     return
   }
 
@@ -825,7 +825,7 @@ const saveProduct = async () => {
       tenant_id: tenantId // ✅ Tenant ID hinzufügen
     }
 
-    console.log('📦 Product data to save:', productData)
+    logger.debug('📦 Product data to save:', productData)
 
     if (editingProduct.value) {
       // Update existing product
@@ -836,7 +836,7 @@ const saveProduct = async () => {
 
       if (error) throw error
 
-      console.log('✅ Product updated:', editingProduct.value.id)
+      logger.debug('✅ Product updated:', editingProduct.value.id)
       alert('✅ Produkt erfolgreich aktualisiert!')
 
     } else {
@@ -847,7 +847,7 @@ const saveProduct = async () => {
 
       if (error) throw error
 
-      console.log('✅ Product created')
+      logger.debug('✅ Product created')
       alert('✅ Produkt erfolgreich erstellt!')
     }
 
@@ -876,7 +876,7 @@ const toggleProductStatus = async (product: Product) => {
     product.is_active = newStatus
     
     const status = newStatus ? 'aktiviert' : 'deaktiviert'
-    console.log(`✅ Product ${status}:`, product.name)
+    logger.debug(`✅ Product ${status}:`, product.name)
     alert(`✅ ${product.name} wurde ${status}`)
 
   } catch (error: any) {
@@ -893,7 +893,7 @@ loadProducts()
 const authStore = useAuthStore()
 
 onMounted(async () => {
-  console.log('🔍 Products page mounted, checking auth...')
+  logger.debug('🔍 Products page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -902,7 +902,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -911,19 +911,19 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, products page ready')
+  logger.debug('✅ Auth check passed, products page ready')
   // Page is already displayed, data loads in background
-  console.log('🛍️ Products page mounted, data loading in background')
+  logger.debug('🛍️ Products page mounted, data loading in background')
 })
 </script>
 

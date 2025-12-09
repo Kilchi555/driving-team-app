@@ -3,11 +3,11 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   const requestId = Math.random().toString(36).substr(2, 9)
-  console.log(`🚀 [${requestId}] Upgrade request started`)
+  logger.debug(`🚀 [${requestId}] Upgrade request started`)
   
   try {
     const body = await readBody(event)
-    console.log(`📋 [${requestId}] Upgrade request:`, body)
+    logger.debug(`📋 [${requestId}] Upgrade request:`, body)
     
     const { plan, paymentMethod } = body
     
@@ -47,11 +47,11 @@ export default defineEventHandler(async (event) => {
     
     const amount = planPrices[plan as keyof typeof planPrices]
     
-    console.log(`💰 [${requestId}] Upgrading to ${plan} plan (${amount} Rappen)`)
+    logger.debug(`💰 [${requestId}] Upgrading to ${plan} plan (${amount} Rappen)`)
     
     // Hier würde die Wallee Payment Integration kommen
     // Für jetzt simulieren wir den Zahlungsprozess
-    console.log(`💳 [${requestId}] Processing payment for ${amount} Rappen...`)
+    logger.debug(`💳 [${requestId}] Processing payment for ${amount} Rappen...`)
     
     // Simuliere Zahlungsverarbeitung
     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    console.log(`✅ [${requestId}] Tenant upgraded successfully:`, updatedTenant.name)
+    logger.debug(`✅ [${requestId}] Tenant upgraded successfully:`, updatedTenant.name)
     
     return {
       success: true,

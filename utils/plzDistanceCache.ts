@@ -127,7 +127,7 @@ export async function getCachedTravelTime(
     }
     
     if (!data) {
-      console.log(`No cache entry found for ${normalizedFromPLZ} -> ${normalizedToPLZ}`)
+      logger.debug(`No cache entry found for ${normalizedFromPLZ} -> ${normalizedToPLZ}`)
       return null
     }
     
@@ -137,7 +137,7 @@ export async function getCachedTravelTime(
       ? data.driving_time_minutes_peak 
       : data.driving_time_minutes_offpeak
     
-    console.log(`✅ Cache hit: ${normalizedFromPLZ} -> ${normalizedToPLZ} = ${travelTime} min (${usePeakTime ? 'Peak' : 'Offpeak'})`)
+    logger.debug(`✅ Cache hit: ${normalizedFromPLZ} -> ${normalizedToPLZ} = ${travelTime} min (${usePeakTime ? 'Peak' : 'Offpeak'})`)
     
     return travelTime
   } catch (err) {
@@ -159,7 +159,7 @@ export async function cacheTravelTime(
     const normalizedFromPLZ = fromPLZ.trim()
     const normalizedToPLZ = toPLZ.trim()
     
-    console.log(`🔄 Fetching travel time via API: ${normalizedFromPLZ} -> ${normalizedToPLZ}`)
+    logger.debug(`🔄 Fetching travel time via API: ${normalizedFromPLZ} -> ${normalizedToPLZ}`)
     
     // Use our server-side API endpoint to avoid CORS issues
     const response = await $fetch<{
@@ -187,9 +187,9 @@ export async function cacheTravelTime(
     const offpeakMinutes = response.travelTimeOffpeak || response.travelTime
     const peakMinutes = response.travelTimePeak || response.travelTime
     
-    console.log(`✅ Travel time fetched: ${normalizedFromPLZ} -> ${normalizedToPLZ}`)
-    console.log(`   Offpeak: ${offpeakMinutes} min`)
-    console.log(`   Peak: ${peakMinutes} min`)
+    logger.debug(`✅ Travel time fetched: ${normalizedFromPLZ} -> ${normalizedToPLZ}`)
+    logger.debug(`   Offpeak: ${offpeakMinutes} min`)
+    logger.debug(`   Peak: ${peakMinutes} min`)
     
     return { peak: peakMinutes, offpeak: offpeakMinutes }
   } catch (err) {
@@ -215,7 +215,7 @@ export async function getTravelTime(
 ): Promise<number | null> {
   // Spezialfall: Gleiche PLZ = 0 Minuten
   if (fromPLZ === toPLZ) {
-    console.log(`✅ Same PLZ (${fromPLZ}), returning 0 minutes`)
+    logger.debug(`✅ Same PLZ (${fromPLZ}), returning 0 minutes`)
     return 0
   }
   
@@ -231,7 +231,7 @@ export async function getTravelTime(
   if (cached && (now - cached.timestamp) < CACHE_TTL) {
     const usePeakTime = isPeakTime(appointmentTime, peakSettings)
     const travelTime = usePeakTime ? cached.peak : cached.offpeak
-    console.log(`✅ In-memory cache hit: ${fromPLZ} -> ${toPLZ} = ${travelTime} min`)
+    logger.debug(`✅ In-memory cache hit: ${fromPLZ} -> ${toPLZ} = ${travelTime} min`)
     return travelTime
   }
   
@@ -243,7 +243,7 @@ export async function getTravelTime(
   }
   
   // Cache Miss - rufe API auf (server-side to avoid CORS)
-  console.log('Cache miss, calling API...')
+  logger.debug('Cache miss, calling API...')
   try {
     const response = await $fetch<{
       success: boolean
@@ -259,7 +259,7 @@ export async function getTravelTime(
     })
     
     if (response.success && response.travelTime !== null) {
-      console.log(`✅ API returned: ${response.travelTime} min`)
+      logger.debug(`✅ API returned: ${response.travelTime} min`)
       
       // Store in in-memory cache (assume peak = offpeak * 1.3 if not provided)
       const offpeak = response.travelTime

@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
             const result = await response.json()
             if (result.success) {
               syncedCount++
-              console.log(`✅ Synced calendar ${calendar.id}: ${result.imported_events} events`)
+              logger.debug(`✅ Synced calendar ${calendar.id}: ${result.imported_events} events`)
             } else {
               errors.push(`Calendar ${calendar.id}: ${result.message}`)
             }
@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
           }
         } else {
           // TODO: Implement OAuth sync for other providers
-          console.log(`⏭️ Skipping OAuth calendar ${calendar.id} (not implemented)`)
+          logger.debug(`⏭️ Skipping OAuth calendar ${calendar.id} (not implemented)`)
         }
       } catch (err: any) {
         console.error(`❌ Error syncing calendar ${calendar.id}:`, err)

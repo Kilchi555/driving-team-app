@@ -42,7 +42,7 @@ export const useTenant = () => {
     // 1. URL Parameter (?tenant=slug)
     const tenantParam = url.searchParams.get('tenant')
     if (tenantParam) {
-      console.log('🏢 Tenant detected from URL parameter:', tenantParam)
+      logger.debug('🏢 Tenant detected from URL parameter:', tenantParam)
       return tenantParam
     }
     
@@ -51,17 +51,17 @@ export const useTenant = () => {
     const parts = hostname.split('.')
     if (parts.length >= 3 && parts[0] !== 'www') {
       const subdomain = parts[0]
-      console.log('🏢 Tenant detected from subdomain:', subdomain)
+      logger.debug('🏢 Tenant detected from subdomain:', subdomain)
       return subdomain
     }
     
     // 3. Custom Domain (stored in tenants.domain)
     if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      console.log('🏢 Potential custom domain detected:', hostname)
+      logger.debug('🏢 Potential custom domain detected:', hostname)
       return hostname
     }
     
-    console.log('🏢 No tenant detected from URL, using default')
+    logger.debug('🏢 No tenant detected from URL, using default')
     return null
   }
   
@@ -75,7 +75,7 @@ export const useTenant = () => {
     
     if (!identifier) {
       // Kein Fallback - Tenant muss explizit angegeben werden
-      console.log('🏢 No tenant identifier provided, cannot load tenant')
+      logger.debug('🏢 No tenant identifier provided, cannot load tenant')
       throw new Error('Kein Tenant-Identifier angegeben')
     }
     
@@ -108,7 +108,7 @@ export const useTenant = () => {
       }
       
       currentTenant.value = data
-      console.log('🏢 Loaded tenant:', data.name, `(${data.slug})`)
+      logger.debug('🏢 Loaded tenant:', data.name, `(${data.slug})`)
       return data
       
     } catch (err: any) {
@@ -125,7 +125,7 @@ export const useTenant = () => {
    */
   const setTenant = (tenant: Tenant) => {
     currentTenant.value = tenant
-    console.log('🏢 Tenant set to:', tenant.name)
+    logger.debug('🏢 Tenant set to:', tenant.name)
   }
   
   /**

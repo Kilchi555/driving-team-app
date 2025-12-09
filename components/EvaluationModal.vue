@@ -261,13 +261,13 @@ const filteredCriteria = computed(() => {
     !selectedCriteriaOrder.value.includes(criteria.id)
   )
   
-  console.log('📚 filteredCriteria - allCriteria.value:', allCriteria.value.length)
-  console.log('📚 filteredCriteria - unratedCriteria:', unratedCriteria.length)
-  console.log('📚 filteredCriteria - first unrated:', unratedCriteria[0])
+  logger.debug('📚 filteredCriteria - allCriteria.value:', allCriteria.value.length)
+  logger.debug('📚 filteredCriteria - unratedCriteria:', unratedCriteria.length)
+  logger.debug('📚 filteredCriteria - first unrated:', unratedCriteria[0])
   
   // Wenn kein Suchtext eingegeben, zeige alle unbewerteten
   if (!searchQuery.value || searchQuery.value.trim() === '') {
-    console.log('📚 filteredCriteria - returning unratedCriteria (no search)')
+    logger.debug('📚 filteredCriteria - returning unratedCriteria (no search)')
     return unratedCriteria
   }
   
@@ -279,7 +279,7 @@ const filteredCriteria = computed(() => {
      false)
   )
   
-  console.log('📚 filteredCriteria - returning filtered:', filtered.length)
+  logger.debug('📚 filteredCriteria - returning filtered:', filtered.length)
   return filtered
 })
 
@@ -287,19 +287,19 @@ const filteredCriteria = computed(() => {
 const groupedCriteria = computed(() => {
   const groups: Record<string, any[]> = {}
   
-  console.log('📚 groupedCriteria - filteredCriteria.value:', filteredCriteria.value.length)
-  console.log('📚 groupedCriteria - first criterion:', filteredCriteria.value[0])
+  logger.debug('📚 groupedCriteria - filteredCriteria.value:', filteredCriteria.value.length)
+  logger.debug('📚 groupedCriteria - first criterion:', filteredCriteria.value[0])
   
   filteredCriteria.value.forEach(criteria => {
     const categoryName = criteria.evaluation_categories?.name || 'Unbekannte Kategorie'
-    console.log('📚 groupedCriteria - processing:', criteria.name, 'categoryName:', categoryName)
+    logger.debug('📚 groupedCriteria - processing:', criteria.name, 'categoryName:', categoryName)
     if (!groups[categoryName]) {
       groups[categoryName] = []
     }
     groups[categoryName].push(criteria)
   })
   
-  console.log('📚 groupedCriteria - final groups:', Object.keys(groups))
+  logger.debug('📚 groupedCriteria - final groups:', Object.keys(groups))
   return groups
 })
 
@@ -334,19 +334,19 @@ const missingRequiredRatings = computed(() => {
 
 // Verbesserte sortedCriteriaOrder mit Lektionsdatum
 const sortedCriteriaOrder = computed(() => {
-  console.log('🔍 SORT DEBUG - sortByNewest:', sortByNewest.value)
-  console.log('🔍 SORT DEBUG - selectedCriteriaOrder:', selectedCriteriaOrder.value)
-  console.log('🔍 SORT DEBUG - criteriaRatings:', criteriaRatings.value)
+  logger.debug('🔍 SORT DEBUG - sortByNewest:', sortByNewest.value)
+  logger.debug('🔍 SORT DEBUG - selectedCriteriaOrder:', selectedCriteriaOrder.value)
+  logger.debug('🔍 SORT DEBUG - criteriaRatings:', criteriaRatings.value)
   
   if (!sortByNewest.value) {
     // Sortiere nach Bewertung (schlechteste zuerst)
     const sorted = [...selectedCriteriaOrder.value].sort((a, b) => {
       const ratingA = criteriaRatings.value[a] || 7
       const ratingB = criteriaRatings.value[b] || 7
-      console.log('🔍 RATING SORT:', a, 'rating:', ratingA, 'vs', b, 'rating:', ratingB, 'result:', ratingA - ratingB)
+      logger.debug('🔍 RATING SORT:', a, 'rating:', ratingA, 'vs', b, 'rating:', ratingB, 'result:', ratingA - ratingB)
       return ratingA - ratingB
     })
-    console.log('🔍 AFTER RATING SORT:', sorted)
+    logger.debug('🔍 AFTER RATING SORT:', sorted)
     return sorted
   } else {
     // Sortiere nach Lektionsdatum (neueste Lektionen zuerst)
@@ -355,23 +355,23 @@ const sortedCriteriaOrder = computed(() => {
       const appointmentB = criteriaAppointments.value[b]
       
       if (appointmentA?.start_time && appointmentB?.start_time) {
-        console.log('🔍 DATE SORT:', appointmentA.start_time, 'vs', appointmentB.start_time)
+        logger.debug('🔍 DATE SORT:', appointmentA.start_time, 'vs', appointmentB.start_time)
         return new Date(appointmentB.start_time).getTime() - new Date(appointmentA.start_time).getTime()
       }
       
-      console.log('🔍 FALLBACK SORT for:', a, b)
+      logger.debug('🔍 FALLBACK SORT for:', a, b)
       const indexA = selectedCriteriaOrder.value.indexOf(a)
       const indexB = selectedCriteriaOrder.value.indexOf(b)
       return indexA - indexB
     })
-    console.log('🔍 AFTER DATE SORT:', sorted)
+    logger.debug('🔍 AFTER DATE SORT:', sorted)
     return sorted
   }
 })
 
 // Methods
 const closeModal = () => {
-  console.log('🔥 EvaluationModal - closing modal')
+  logger.debug('🔥 EvaluationModal - closing modal')
   emit('close')
 }
 
@@ -406,7 +406,7 @@ const loadAllCriteria = async () => {
     let cError: any = null
 
     if (isTheoryLesson) {
-      console.log('📚 Loading evaluation criteria for theory lesson - category:', props.studentCategory)
+      logger.debug('📚 Loading evaluation criteria for theory lesson - category:', props.studentCategory)
       // Bei Theorielektionen: Lade NUR Theorie-Kriterien
       
       // 1. Lade tenant-spezifische Theorie-Kriterien
@@ -450,43 +450,43 @@ const loadAllCriteria = async () => {
       criteria = [...(tenantTheoryResult.data || []), ...(globalTheoryResult.data || [])]
       
       // Debug: Logge die ersten Kriterien um zu sehen was geladen wird
-      console.log('📚 Loaded criteria for theory lesson:', {
+      logger.debug('📚 Loaded criteria for theory lesson:', {
         tenant: tenantTheoryResult.data?.length || 0,
         global: globalTheoryResult.data?.length || 0,
         total: criteria.length
       })
-      console.log('📚 First criteria sample:', criteria[0])
-      console.log('📚 First criteria evaluation_categories:', criteria[0]?.evaluation_categories)
+      logger.debug('📚 First criteria sample:', criteria[0])
+      logger.debug('📚 First criteria evaluation_categories:', criteria[0]?.evaluation_categories)
       
       // Lade Kategorie-Namen separat falls sie fehlen
       const categoryIds = [...new Set(criteria.map(c => c.category_id))]
-      console.log('📚 Category IDs to load:', categoryIds)
+      logger.debug('📚 Category IDs to load:', categoryIds)
       
       const { data: categoriesData } = await supabase
         .from('evaluation_categories')
         .select('id, name')
         .in('id', categoryIds)
       
-      console.log('📚 Loaded categories data:', categoriesData)
+      logger.debug('📚 Loaded categories data:', categoriesData)
       
       // Füge Kategorie-Namen zu den Kriterien hinzu
       criteria = criteria.map(criterion => {
-        console.log('📚 Processing criterion:', criterion.name, 'category_id:', criterion.category_id)
-        console.log('📚 Current evaluation_categories:', criterion.evaluation_categories)
+        logger.debug('📚 Processing criterion:', criterion.name, 'category_id:', criterion.category_id)
+        logger.debug('📚 Current evaluation_categories:', criterion.evaluation_categories)
         
         if (!criterion.evaluation_categories?.name) {
           const category = categoriesData?.find(c => c.id === criterion.category_id)
-          console.log('📚 Found category for criterion:', category)
+          logger.debug('📚 Found category for criterion:', category)
           criterion.evaluation_categories = { 
             name: category?.name || 'Unbekannte Kategorie',
             ...criterion.evaluation_categories 
           }
         }
-        console.log('📚 Final evaluation_categories:', criterion.evaluation_categories)
+        logger.debug('📚 Final evaluation_categories:', criterion.evaluation_categories)
         return criterion
       })
     } else {
-      console.log('📚 Loading regular evaluation criteria for category:', props.studentCategory)
+      logger.debug('📚 Loading regular evaluation criteria for category:', props.studentCategory)
       // Normale Lektion: Lade nur normale Fahrkategorie-Kriterien
       const result = await supabase
         .from('evaluation_criteria')
@@ -558,7 +558,7 @@ const loadAllCriteria = async () => {
       return a.criteria_order - b.criteria_order
     })
 
-    console.log('✅ Loaded criteria with new system:', allCriteria.value.length, 'criteria')
+    logger.debug('✅ Loaded criteria with new system:', allCriteria.value.length, 'criteria')
 
   } catch (err: any) {
     console.error('❌ Error loading criteria:', err)
@@ -649,10 +649,10 @@ const getRatingText = (rating: number | null) => {
 }
 
 const saveEvaluation = async () => {
-  console.log('🔥 EvaluationModal - saveEvaluation called')
+  logger.debug('🔥 EvaluationModal - saveEvaluation called')
   
   if (!isValid.value || !props.appointment?.id) {
-    console.log('❌ Validation failed or no appointment ID')
+    logger.debug('❌ Validation failed or no appointment ID')
     // Fehler anzeigen, wenn isValid false ist, z.B. über ein Toast
     error.value = missingRequiredRatings.value.length > 0
       ? `Bitte bewerten Sie alle ausgewählten Kriterien: ${missingRequiredRatings.value.join(', ')}`
@@ -676,9 +676,9 @@ const saveEvaluation = async () => {
         }
       })
     
-    console.log(`🔥 Saving only ${evaluationsToSave.length} newly rated criteria (filtered from ${selectedCriteriaOrder.value.length} total)`)
+    logger.debug(`🔥 Saving only ${evaluationsToSave.length} newly rated criteria (filtered from ${selectedCriteriaOrder.value.length} total)`)
 
-    console.log('🔥 EvaluationModal - calling saveCriteriaEvaluations with:', {
+    logger.debug('🔥 EvaluationModal - calling saveCriteriaEvaluations with:', {
       appointmentId: props.appointment.id,
       evaluations: evaluationsToSave,
       currentUser: props.currentUser?.id
@@ -691,7 +691,7 @@ const saveEvaluation = async () => {
       props.currentUser?.id
     )
 
-    console.log('✅ EvaluationModal - evaluations saved successfully via composable')
+    logger.debug('✅ EvaluationModal - evaluations saved successfully via composable')
     
 
     
@@ -707,10 +707,10 @@ const saveEvaluation = async () => {
 }
 // NEU: Lade Bewertungen für den AKTUELLEN Termin
 const loadCurrentAppointmentEvaluations = async () => {
-  console.log('🔍 Loading evaluations for current appointment:', props.appointment?.id)
+  logger.debug('🔍 Loading evaluations for current appointment:', props.appointment?.id)
   
   if (!props.appointment?.id) {
-    console.log('❌ No appointment ID')
+    logger.debug('❌ No appointment ID')
     return false // Zeigt an, dass keine aktuellen Bewertungen geladen wurden
   }
 
@@ -730,7 +730,7 @@ const loadCurrentAppointmentEvaluations = async () => {
       return false
     }
 
-    console.log('✅ Found', currentNotes?.length || 0, 'evaluations for current appointment')
+    logger.debug('✅ Found', currentNotes?.length || 0, 'evaluations for current appointment')
 
     if (currentNotes && currentNotes.length > 0) {
       // Fülle die Ratings und Notes mit den vorhandenen Bewertungen
@@ -755,11 +755,11 @@ const loadCurrentAppointmentEvaluations = async () => {
 }
 
 const loadStudentEvaluationHistory = async () => {
-  console.log('🔍 DEBUG: Loading student evaluation history')
-  console.log('🔍 DEBUG: student ID:', props.appointment?.user_id)
-  console.log('🔍 DEBUG: current category:', props.studentCategory)
+  logger.debug('🔍 DEBUG: Loading student evaluation history')
+  logger.debug('🔍 DEBUG: student ID:', props.appointment?.user_id)
+  logger.debug('🔍 DEBUG: current category:', props.studentCategory)
   if (!props.appointment?.user_id) {
-    console.log('❌ No student ID')
+    logger.debug('❌ No student ID')
     return
   }
 
@@ -774,7 +774,7 @@ const loadStudentEvaluationHistory = async () => {
     if (appointmentsError) throw appointmentsError
 
     const appointmentIds = appointments?.map(app => app.id) || []
-    console.log('🔍 DEBUG: found appointments for student:', appointmentIds.length)
+    logger.debug('🔍 DEBUG: found appointments for student:', appointmentIds.length)
     if (appointmentIds.length === 0) return
 
     // Erstelle ein Mapping von appointment_id zu start_time und type
@@ -797,18 +797,18 @@ const loadStudentEvaluationHistory = async () => {
       .in('appointment_id', appointmentIds)
       .not('evaluation_criteria_id', 'is', null)
 
-    console.log('🔍 DEBUG: found historical notes:', data?.length)
+    logger.debug('🔍 DEBUG: found historical notes:', data?.length)
     if (supabaseError) throw supabaseError
 
     // Schritt 3: Filtere Notes nach Kategorie - nur Notes von Terminen der gleichen Kategorie
     const filteredNotes = data?.filter(note => {
       const appointmentType = appointmentTypeMap.get(note.appointment_id)
       const isSameCategory = appointmentType === props.studentCategory
-      console.log(`🔍 Note ${note.evaluation_criteria_id} from appointment ${note.appointment_id}: type=${appointmentType}, current=${props.studentCategory}, include=${isSameCategory}`)
+      logger.debug(`🔍 Note ${note.evaluation_criteria_id} from appointment ${note.appointment_id}: type=${appointmentType}, current=${props.studentCategory}, include=${isSameCategory}`)
       return isSameCategory
     }) || []
 
-    console.log('🔍 DEBUG: filtered notes for current category:', filteredNotes.length)
+    logger.debug('🔍 DEBUG: filtered notes for current category:', filteredNotes.length)
 
     // Gruppiere Bewertungen nach Kriterien (zeige die neueste pro Kriterium)
     const latestByCriteria = new Map()
@@ -852,8 +852,8 @@ const loadStudentEvaluationHistory = async () => {
       }
     })
 
-    console.log('🔍 DEBUG: loaded historical criteria:', selectedCriteriaOrder.value.length)
-    console.log('🔍 DEBUG: lesson dates saved:', criteriaAppointments.value)
+    logger.debug('🔍 DEBUG: loaded historical criteria:', selectedCriteriaOrder.value.length)
+    logger.debug('🔍 DEBUG: lesson dates saved:', criteriaAppointments.value)
 
   } catch (err: any) {
     console.error('❌ Error loading student history:', err)
@@ -909,7 +909,7 @@ watch(showDropdown, (isOpen) => {
 watch(() => props.isOpen, (isOpen) => {
   
   if (isOpen) {
-    console.log('🔄 EvaluationModal - loading data...')
+    logger.debug('🔄 EvaluationModal - loading data...')
     // Kleine Verzögerung um sicherzustellen dass alle Props gesetzt sind
     nextTick(async () => {
       await loadAllCriteria()
@@ -919,14 +919,14 @@ watch(() => props.isOpen, (isOpen) => {
       
       // Wenn keine aktuellen Bewertungen vorhanden sind, lade die Historie
       if (!hasCurrentEvaluations) {
-        console.log('📚 No current evaluations found, loading history...')
+        logger.debug('📚 No current evaluations found, loading history...')
         await loadStudentEvaluationHistory()
       } else {
-        console.log('✅ Current evaluations loaded, skipping history')
+        logger.debug('✅ Current evaluations loaded, skipping history')
       }
     })
   } else {
-    console.log('🔥 EvaluationModal - resetting form...')
+    logger.debug('🔥 EvaluationModal - resetting form...')
     // Reset form
     searchQuery.value = ''
     showDropdown.value = false
@@ -949,9 +949,9 @@ watch(() => props.isOpen, (isOpen) => {
 
 // Zusätzlicher Watch für studentCategory
 watch(() => props.studentCategory, (newCategory) => {
-  console.log('🔄 Student category changed to:', newCategory)
+  logger.debug('🔄 Student category changed to:', newCategory)
   if (props.isOpen && newCategory) {
-    console.log('🔄 Reloading criteria for new category...')
+    logger.debug('🔄 Reloading criteria for new category...')
     loadAllCriteria()
   }
 }, { immediate: true })

@@ -9,11 +9,11 @@ export default defineNuxtRouteMiddleware((to) => {
       const now = new Date()
       const daysLeft = Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
       
-      console.log(`🔍 Trial check: ${daysLeft} days left`)
+      logger.debug(`🔍 Trial check: ${daysLeft} days left`)
       
       if (daysLeft <= 0) {
         // Trial abgelaufen - zu Upgrade weiterleiten
-        console.log('❌ Trial expired, redirecting to upgrade')
+        logger.debug('❌ Trial expired, redirecting to upgrade')
         return navigateTo('/upgrade')
       }
     }

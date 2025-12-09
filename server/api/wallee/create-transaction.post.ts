@@ -6,11 +6,11 @@ import { buildMerchantReference } from '~/utils/merchantReference'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 
 export default defineEventHandler(async (event) => {
-  console.log('🚀 Wallee Transaction Creation (SDK)...')
+  logger.debug('🚀 Wallee Transaction Creation (SDK)...')
   
   try {
     const body = await readBody(event)
-    console.log('📨 Received body:', body)
+    logger.debug('📨 Received body:', body)
     
     const {
       orderId,
@@ -41,11 +41,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ GET WALLEE CONFIG FOR TENANT (from database only - NEVER from frontend)
-    console.log('🔍 Fetching Wallee config for tenant from database:', requestTenantId)
+    logger.debug('🔍 Fetching Wallee config for tenant from database:', requestTenantId)
     const walleeConfig = await getWalleeConfigForTenant(requestTenantId)
     const spaceId = walleeConfig.spaceId
     
-    console.log('🔧 SDK Config:', { 
+    logger.debug('🔧 SDK Config:', { 
       spaceId: spaceId, 
       userId: walleeConfig.userId, 
       apiSecretPreview: walleeConfig.apiSecret.substring(0, 10) + '...',
@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
     
     // ✅ Debug: Log amount to check if it's in CHF or Rappen
-    console.log('💰 Amount received:', { 
+    logger.debug('💰 Amount received:', { 
       amount: amount,
       type: typeof amount,
       inCHF: (amount / 100).toFixed(2) + ' CHF (if in Rappen)',
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
     // ✅ Generate short uniqueId (max 200 chars, Wallee requirement)
     // Use timestamp + short hash instead of full orderId
     const shortUniqueId = `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    console.log('🔑 UniqueId generated:', { 
+    logger.debug('🔑 UniqueId generated:', { 
       orderId: orderId,
       orderIdLength: orderId.length,
       shortUniqueId: shortUniqueId,
@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
       fallback: fallbackMerchantRef
     })
     
-    console.log('🔑 Transaction IDs generated:', { 
+    logger.debug('🔑 Transaction IDs generated:', { 
       customerId: shortCustomerId,
       customerIdLength: shortCustomerId.length,
       emailPreview: customerEmail ? `${customerEmail.split('@')[0].slice(0,3)}***@***` : undefined,
@@ -126,7 +126,7 @@ export default defineEventHandler(async (event) => {
         const activePaymentMethods = paymentMethodsResponse.body.filter((pm: any) => pm.state === 'ACTIVE')
         availablePaymentMethodIds = activePaymentMethods.map((pm: any) => pm.id as number)
         
-        console.log('💳 Available payment methods in Space:', {
+        logger.debug('💳 Available payment methods in Space:', {
           total: paymentMethodsResponse.body.length,
           active: activePaymentMethods.length,
           ids: availablePaymentMethodIds,
@@ -158,7 +158,7 @@ export default defineEventHandler(async (event) => {
         isTokenizationOnly: 'true',
         tokenizationPurpose: 'payment_method_storage'
       }
-      console.log('🔑 Tokenization-only transaction flagged for auto-refund')
+      logger.debug('🔑 Tokenization-only transaction flagged for auto-refund')
     }
     
     // ✅ SETZE VERFÜGBARE ZAHLUNGSMETHODEN
@@ -166,7 +166,7 @@ export default defineEventHandler(async (event) => {
     if (Array.isArray(allowedPaymentMethodConfigurationIds) && allowedPaymentMethodConfigurationIds.length > 0) {
       try {
         transaction.allowedPaymentMethodConfigurations = allowedPaymentMethodConfigurationIds.map((id: any) => Number(id)).filter((n: number) => Number.isFinite(n))
-        console.log('🧩 Using provided payment method configuration IDs:', transaction.allowedPaymentMethodConfigurations)
+        logger.debug('🧩 Using provided payment method configuration IDs:', transaction.allowedPaymentMethodConfigurations)
       } catch (e) {
         console.warn('⚠️ Could not set provided allowedPaymentMethodConfigurations:', e)
       }
@@ -174,7 +174,7 @@ export default defineEventHandler(async (event) => {
     // Sonst: Verwende alle verfügbaren aktiven Zahlungsmethoden aus dem Space
     else if (availablePaymentMethodIds.length > 0) {
       transaction.allowedPaymentMethodConfigurations = availablePaymentMethodIds
-      console.log('💳 Using all available active payment methods from Space:', transaction.allowedPaymentMethodConfigurations)
+      logger.debug('💳 Using all available active payment methods from Space:', transaction.allowedPaymentMethodConfigurations)
     } else {
       console.warn('⚠️ No payment methods found in Space - Wallee will show error "Keine geeignete Zahlart"')
       console.warn('⚠️ Lösung: Aktiviere Zahlungsmethoden im Wallee Dashboard unter Space → Payment Methods')
@@ -188,7 +188,7 @@ export default defineEventHandler(async (event) => {
       transaction.failedUrl = failedUrl
     }
     
-    console.log('📤 SDK Transaction Data:', JSON.stringify(transaction, null, 2))
+    logger.debug('📤 SDK Transaction Data:', JSON.stringify(transaction, null, 2))
     
     // ✅ SDK TRANSACTION CREATE
     let response
@@ -207,7 +207,7 @@ export default defineEventHandler(async (event) => {
     
     const transactionCreate: Wallee.model.Transaction = response.body
     
-    console.log('✅ SDK Transaction SUCCESS:', {
+    logger.debug('✅ SDK Transaction SUCCESS:', {
       id: transactionCreate.id,
       state: transactionCreate.state,
       currency: transactionCreate.currency
@@ -218,9 +218,9 @@ export default defineEventHandler(async (event) => {
     const paymentPageResponse = await paymentPageService.paymentPageUrl(spaceId, transactionCreate.id as number)
     const paymentPageUrl = paymentPageResponse.body
     
-    console.log('✅ Payment Page URL generated:', paymentPageUrl)
+    logger.debug('✅ Payment Page URL generated:', paymentPageUrl)
     
-    console.log('✅ Transaction created:', {
+    logger.debug('✅ Transaction created:', {
       id: transactionCreate.id,
       state: transactionCreate.state,
       currency: transactionCreate.currency,

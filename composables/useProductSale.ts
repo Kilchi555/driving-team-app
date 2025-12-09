@@ -67,7 +67,7 @@ const loadAvailableProducts = async () => {
       description: product.description
     }))
     
-    console.log('✅ Available products loaded:', availableProducts.value.length)
+    logger.debug('✅ Available products loaded:', availableProducts.value.length)
     
   } catch (err) {
     console.error('❌ Error loading available products:', err)
@@ -100,9 +100,9 @@ const loadProducts = async (appointmentId: string) => {
         total: item.total_price_rappen / 100
       }))
 
-      console.log('✅ Products loaded from product_sales:', selectedProducts.value.length)
+      logger.debug('✅ Products loaded from product_sales:', selectedProducts.value.length)
     } else {
-      console.log('📦 No products found in product_sales')
+      logger.debug('📦 No products found in product_sales')
       selectedProducts.value = []
     }
     
@@ -125,18 +125,18 @@ const loadProducts = async (appointmentId: string) => {
       })
     }
     
-    console.log('📦 Product added:', product.name)
+    logger.debug('📦 Product added:', product.name)
     
     // ✅ NEU: Produktkatalog nach Auswahl automatisch schließen
     showProductSelector.value = false
-    console.log('✅ Product selector closed automatically after selection')
+    logger.debug('✅ Product selector closed automatically after selection')
   }
 
   const removeProduct = (productId: string) => {
     const index = selectedProducts.value.findIndex(item => item.product.id === productId)
     if (index > -1) {
       selectedProducts.value.splice(index, 1)
-      console.log('🗑️ Product removed')
+      logger.debug('🗑️ Product removed')
     }
   }
 
@@ -150,7 +150,7 @@ const loadProducts = async (appointmentId: string) => {
 // ✅ NEUE FUNKTION: Produkte in product_sales kopieren
 const saveToProductSales = async (appointmentId: string) => {
   if (!appointmentId || selectedProducts.value.length === 0) {
-    console.log('❌ No appointmentId or products to copy')
+    logger.debug('❌ No appointmentId or products to copy')
     return
   }
 
@@ -189,7 +189,7 @@ const saveToProductSales = async (appointmentId: string) => {
     const result = await createProductSale(saleData)
     
     if (result) {
-      console.log('✅ Product sale created successfully:', result.id)
+      logger.debug('✅ Product sale created successfully:', result.id)
     } else {
       throw new Error('Failed to create product sale')
     }

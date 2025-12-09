@@ -32,7 +32,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         const supportedLocales = $i18n.locales.value.map((l: any) => l.code)
         if (supportedLocales.includes(userProfile.language)) {
           $i18n.setLocale(userProfile.language)
-          console.log(`🌍 User language set to: ${userProfile.language}`)
+          logger.debug(`🌍 User language set to: ${userProfile.language}`)
         }
       }
     }

@@ -171,7 +171,7 @@ const triggerCronJob = async () => {
     })
 
     cronResult.value = result
-    console.log('✅ Cron job result:', result)
+    logger.debug('✅ Cron job result:', result)
     
     // Lade Payments neu
     await loadPayments()
@@ -219,7 +219,7 @@ const loadPayments = async () => {
     if (error) throw error
 
     payments.value = data || []
-    console.log('✅ Loaded payments:', payments.value.length)
+    logger.debug('✅ Loaded payments:', payments.value.length)
   } catch (error: any) {
     console.error('❌ Error loading payments:', error)
     alert('Fehler beim Laden der Zahlungen: ' + error.message)

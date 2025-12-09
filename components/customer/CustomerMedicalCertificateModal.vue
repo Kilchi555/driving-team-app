@@ -167,7 +167,7 @@ const upload = async () => {
     const filename = `medical-cert-${appointment.id}-${timestamp}.${selectedFile.value.name.split('.').pop()}`
     const storagePath = `user-documents/medical-certificates/${appointment.user_id}/${filename}`
     
-    console.log('📤 Uploading medical certificate:', storagePath)
+    logger.debug('📤 Uploading medical certificate:', storagePath)
     
     // Upload file
     const { error: uploadError } = await supabase.storage
@@ -191,7 +191,7 @@ const upload = async () => {
     
     if (updateError) throw updateError
     
-    console.log('✅ Medical certificate uploaded successfully')
+    logger.debug('✅ Medical certificate uploaded successfully')
     
     // Notify parent
     emit('uploaded')

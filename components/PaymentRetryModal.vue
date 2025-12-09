@@ -199,7 +199,7 @@ const retryPayment = async () => {
   isProcessing.value = true
   
   try {
-    console.log('🔄 Retrying payment with method:', selectedPaymentMethod.value)
+    logger.debug('🔄 Retrying payment with method:', selectedPaymentMethod.value)
     
     // Create new payment record
     const newPaymentData = {

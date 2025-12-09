@@ -13,20 +13,20 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         const $router = nuxtApp.$router
         currentRoute = $router?.currentRoute?.value
       } catch (e) {
-        console.log('⚠️ Router not available in getTenantInfo:', e)
+        logger.debug('⚠️ Router not available in getTenantInfo:', e)
         // Router not ready yet
       }
     }
     
     // 1. Prüfe Login-Seiten mit Tenant-Slug in Route-Parametern
     if (currentRoute?.params?.tenant) {
-      console.log('🎨 getTenantInfo: Found tenant param:', currentRoute.params.tenant, 'from route:', currentRoute.name)
+      logger.debug('🎨 getTenantInfo: Found tenant param:', currentRoute.params.tenant, 'from route:', currentRoute.name)
       return { type: 'slug', value: currentRoute.params.tenant as string }
     }
     
     // 1b. Prüfe auch [slug] Route für public pages
     if (currentRoute?.params?.slug && currentRoute?.path && !currentRoute.path.includes('admin') && !currentRoute.path.includes('dashboard')) {
-      console.log('🎨 getTenantInfo: Found slug param:', currentRoute.params.slug, 'from route:', currentRoute.name)
+      logger.debug('🎨 getTenantInfo: Found slug param:', currentRoute.params.slug, 'from route:', currentRoute.name)
       return { type: 'slug', value: currentRoute.params.slug as string }
     }
     
@@ -37,11 +37,11 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         await nextTick() // Warte bis User geladen ist
         
         if (currentUser.value?.tenant_id) {
-          console.log('🎨 Using tenant_id from current user:', currentUser.value.tenant_id)
+          logger.debug('🎨 Using tenant_id from current user:', currentUser.value.tenant_id)
           return { type: 'id', value: currentUser.value.tenant_id }
         }
       } catch (error) {
-        console.log('⚠️ Could not get user tenant_id:', error)
+        logger.debug('⚠️ Could not get user tenant_id:', error)
       }
     }
     
@@ -54,7 +54,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       const tenantInfo = await getTenantInfo()
       
       if (tenantInfo) {
-        console.log('🎨 Initializing tenant branding:', tenantInfo)
+        logger.debug('🎨 Initializing tenant branding:', tenantInfo)
         
         // Tenant-Branding laden (by ID oder by slug)
         if (tenantInfo.type === 'id') {
@@ -71,10 +71,10 @@ export default defineNuxtPlugin(async (nuxtApp) => {
             allowThemeSwitch: branding.allowThemeSwitch
           })
           
-          console.log('✅ Tenant branding applied successfully for:', branding.name)
+          logger.debug('✅ Tenant branding applied successfully for:', branding.name)
         }
       } else {
-        console.log('🎨 Initializing standard theme (no tenant context)')
+        logger.debug('🎨 Initializing standard theme (no tenant context)')
       }
       
       // Theme initialisieren
@@ -90,18 +90,18 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 
   // Branding bei Route-Wechsel aktualisieren
   const handleRouteChange = async (to: any) => {
-    console.log('🔄 Route changed to:', to?.path, 'params:', to?.params)
+    logger.debug('🔄 Route changed to:', to?.path, 'params:', to?.params)
     
     const newTenantInfo = await getTenantInfo(to)
     const currentBranding = useTenantBranding().currentTenantBranding.value
     
-    console.log('🔄 Tenant info detected:', newTenantInfo)
+    logger.debug('🔄 Tenant info detected:', newTenantInfo)
     
     // Nur neu laden wenn sich der Tenant geändert hat
     if (newTenantInfo && (!currentBranding || 
         (newTenantInfo.type === 'id' && currentBranding.id !== newTenantInfo.value) ||
         (newTenantInfo.type === 'slug' && currentBranding.slug !== newTenantInfo.value))) {
-      console.log('🔄 Tenant changed, updating branding:', newTenantInfo)
+      logger.debug('🔄 Tenant changed, updating branding:', newTenantInfo)
       
       if (newTenantInfo.type === 'id') {
         await loadTenantBrandingById(newTenantInfo.value)
@@ -117,24 +117,24 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     try {
       const $router = nuxtApp.$router
       if ($router && $router.beforeEach) {
-        console.log('✅ Registering router guard immediately on plugin load')
+        logger.debug('✅ Registering router guard immediately on plugin load')
         $router.beforeEach(async (to: any, from: any) => {
-          console.log('🔄 beforeEach guard triggered:', to.path)
+          logger.debug('🔄 beforeEach guard triggered:', to.path)
           await handleRouteChange(to)
           // Vue Router 4: Just return undefined (or nothing) to proceed
         })
       }
     } catch (e) {
-      console.log('⚠️ Router not available immediately, will register in app:mounted')
+      logger.debug('⚠️ Router not available immediately, will register in app:mounted')
       
       // Fallback: Register in app:mounted hook if not available yet
       nuxtApp.hook('app:mounted', () => {
         const $router = nuxtApp.$router
         
         if ($router && $router.beforeEach) {
-          console.log('✅ Router guard for tenant branding registered (app:mounted)')
+          logger.debug('✅ Router guard for tenant branding registered (app:mounted)')
           $router.beforeEach(async (to: any, from: any) => {
-            console.log('🔄 beforeEach guard triggered (app:mounted):', to.path)
+            logger.debug('🔄 beforeEach guard triggered (app:mounted):', to.path)
             await handleRouteChange(to)
           })
         } else {
@@ -145,7 +145,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   }
 
   // Also load branding initially for current route
-  console.log('🎨 Loading initial branding on plugin load')
+  logger.debug('🎨 Loading initial branding on plugin load')
   await initializeBranding()
 
   return {

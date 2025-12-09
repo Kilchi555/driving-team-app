@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // Test 1: Try to list users (this should work with service role)
-    console.log('🔍 Testing auth admin listUsers...')
+    logger.debug('🔍 Testing auth admin listUsers...')
     const { data: users, error: listError } = await adminClient.auth.admin.listUsers()
     
     if (listError) {
@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Test 2: Try to get auth settings
-    console.log('🔍 Testing auth settings...')
+    logger.debug('🔍 Testing auth settings...')
     const { data: settings, error: settingsError } = await adminClient.auth.admin.getSettings()
     
     if (settingsError) {
@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Test 3: Try to create a test user (and immediately delete it)
-    console.log('🔍 Testing user creation...')
+    logger.debug('🔍 Testing user creation...')
     const testEmail = `test-${Date.now()}@example.com`
     const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
       email: testEmail,
@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
 
     // Clean up: Delete the test user
     if (createData.user) {
-      console.log('🧹 Cleaning up test user...')
+      logger.debug('🧹 Cleaning up test user...')
       await adminClient.auth.admin.deleteUser(createData.user.id)
     }
 

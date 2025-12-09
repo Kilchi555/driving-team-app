@@ -173,9 +173,9 @@ VITE_GOOGLE_MAPS_API_KEY=dein_api_key
 **Debug:**
 ```javascript
 // In Browser Console:
-console.log('Selected Category:', selectedCategory.value)
-console.log('Available Locations:', availableLocations.value)
-console.log('Pickup Available:', isPickupAvailableForCategory.value)
+logger.debug('Selected Category:', selectedCategory.value)
+logger.debug('Available Locations:', availableLocations.value)
+logger.debug('Pickup Available:', isPickupAvailableForCategory.value)
 ```
 
 ### Problem: "Could not calculate travel time"

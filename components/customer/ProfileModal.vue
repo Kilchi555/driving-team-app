@@ -365,11 +365,11 @@ const formData = ref({
 // Load user data when modal opens
 const loadUserData = () => {
   try {
-    console.log('📥 Loading user profile data...')
-    console.log('props.userData:', props.userData)
+    logger.debug('📥 Loading user profile data...')
+    logger.debug('props.userData:', props.userData)
     
     if (props.userData) {
-      console.log('✅ Using userData from props')
+      logger.debug('✅ Using userData from props')
       formData.value = {
         firstName: props.userData.first_name || '',
         lastName: props.userData.last_name || '',
@@ -382,10 +382,10 @@ const loadUserData = () => {
         city: props.userData.city || ''
       }
     } else {
-      console.log('⚠️ No userData provided')
+      logger.debug('⚠️ No userData provided')
       formData.value.email = props.userEmail || ''
     }
-    console.log('📋 Final formData:', formData.value)
+    logger.debug('📋 Final formData:', formData.value)
   } catch (err: any) {
     console.error('❌ Error loading user profile:', err)
   }
@@ -430,7 +430,7 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
       throw new Error('Kein Benutzer angemeldet')
     }
 
-    console.log('📤 Uploading document for category:', categoryCode, 'File:', file.name)
+    logger.debug('📤 Uploading document for category:', categoryCode, 'File:', file.name)
     
     // Create FormData
     const formData = new FormData()
@@ -438,19 +438,19 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
     formData.append('userId', currentUser.id)
     formData.append('type', 'student-document') // Document type
     
-    console.log('📝 FormData prepared with keys:', Array.from(formData.keys()))
+    logger.debug('📝 FormData prepared with keys:', Array.from(formData.keys()))
     
     // Upload via API
-    console.log('🌐 Sending request to /api/students/upload-document')
+    logger.debug('🌐 Sending request to /api/students/upload-document')
     const response = await $fetch('/api/students/upload-document', {
       method: 'POST',
       body: formData
     }) as any
     
-    console.log('✅ Upload response received:', response)
+    logger.debug('✅ Upload response received:', response)
     
     if (response?.success) {
-      console.log('✅ Document uploaded successfully to Storage:', response.url)
+      logger.debug('✅ Document uploaded successfully to Storage:', response.url)
       successMessage.value = `${categoryName} erfolgreich hochgeladen`
       showSuccess('Erfolg', `${categoryName} erfolgreich hochgeladen`)
       setTimeout(() => { successMessage.value = '' }, 3000)
@@ -483,7 +483,7 @@ const saveProfile = async () => {
   successMessage.value = ''
 
   try {
-    console.log('💾 Saving profile with data:', formData.value)
+    logger.debug('💾 Saving profile with data:', formData.value)
     
     const response = await $fetch('/api/customer/update-profile', {
       method: 'POST',
@@ -503,7 +503,7 @@ const saveProfile = async () => {
     if (response?.success) {
       successMessage.value = 'Profil erfolgreich gespeichert'
       showSuccess('Erfolg', 'Profil gespeichert')
-      console.log('✅ Profile saved successfully')
+      logger.debug('✅ Profile saved successfully')
       setTimeout(() => { successMessage.value = '' }, 3000)
     } else {
       error.value = response?.message || 'Fehler beim Speichern'
@@ -527,12 +527,12 @@ const formatDate = (dateString: string) => {
 }
 
 const getDocumentUrl = (doc: any) => {
-  console.log('🔍 getDocumentUrl called with doc:', doc)
-  console.log('🔍 doc keys:', Object.keys(doc))
+  logger.debug('🔍 getDocumentUrl called with doc:', doc)
+  logger.debug('🔍 doc keys:', Object.keys(doc))
   
   // Documents from Storage API already have publicUrl!
   if (doc.publicUrl) {
-    console.log('✅ Using publicUrl directly:', doc.publicUrl)
+    logger.debug('✅ Using publicUrl directly:', doc.publicUrl)
     return doc.publicUrl
   }
   
@@ -559,16 +559,16 @@ const getDocumentUrl = (doc: any) => {
   // Clean up any double slashes
   path = path.replace(/\/+/g, '/')
   
-  console.log('📷 Building URL for doc:', doc.file_name, 'path:', path)
+  logger.debug('📷 Building URL for doc:', doc.file_name, 'path:', path)
   
   const finalUrl = `${supabaseUrl}/storage/v1/object/public/${path}`
-  console.log('📷 Final URL:', finalUrl)
+  logger.debug('📷 Final URL:', finalUrl)
   
   return finalUrl
 }
 
 const handleImageLoad = (doc: any) => {
-  console.log('✅ Image loaded:', doc.file_name)
+  logger.debug('✅ Image loaded:', doc.file_name)
 }
 
 const handleImageError = (e: Event) => {
@@ -586,7 +586,7 @@ watch(() => props.isOpen, (newVal) => {
     // Use categories from props if provided
     if (props.categories) {
       categories.value = props.categories
-      console.log('📂 Categories loaded from props:', categories.value.length)
+      logger.debug('📂 Categories loaded from props:', categories.value.length)
     }
   }
 })
@@ -595,7 +595,7 @@ watch(() => props.isOpen, (newVal) => {
 watch(() => props.categories, (newVal) => {
   if (newVal && newVal.length > 0) {
     categories.value = newVal
-    console.log('📂 Categories updated from props:', newVal.length)
+    logger.debug('📂 Categories updated from props:', newVal.length)
   }
 }, { deep: true })
 </script>

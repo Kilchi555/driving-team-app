@@ -229,7 +229,7 @@ const loadReviews = async () => {
     
     reviews.value = (data || []).map(r => ({ ...r, notes: r.medical_certificate_notes || '' }))
     
-    console.log('✅ Loaded reviews:', reviews.value.length)
+    logger.debug('✅ Loaded reviews:', reviews.value.length)
     
   } catch (err: any) {
     console.error('❌ Error loading reviews:', err)
@@ -260,7 +260,7 @@ const approve = async (review: any) => {
       }
     })
 
-    console.log('✅ Approved:', response)
+    logger.debug('✅ Approved:', response)
     alert(`Arztzeugnis genehmigt!\n\n${response.message}`)
     
     // Reload reviews
@@ -295,7 +295,7 @@ const reject = async (review: any) => {
       }
     })
 
-    console.log('✅ Rejected:', response)
+    logger.debug('✅ Rejected:', response)
     alert('Arztzeugnis abgelehnt')
     
     // Reload reviews

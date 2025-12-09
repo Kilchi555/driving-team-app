@@ -206,7 +206,7 @@ const loadTransactions = async () => {
     // TODO: Load actual transactions from database
     // For now, mock data
     transactions.value = []
-    console.log('✅ Transactions loaded')
+    logger.debug('✅ Transactions loaded')
   } catch (err) {
     console.error('❌ Error loading transactions:', err)
   } finally {

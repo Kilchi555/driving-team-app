@@ -342,7 +342,7 @@
 </template>
 
 <script setup lang="ts">
-console.log('📄 [slug].vue script setup initializing...')
+logger.debug('📄 [slug].vue script setup initializing...')
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, definePageMeta, useHead } from '#imports'
@@ -352,7 +352,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { getSupabase } from '~/utils/supabase'
 
-console.log('📄 [slug].vue imports completed')
+logger.debug('📄 [slug].vue imports completed')
 
 // Types
 interface User {
@@ -453,7 +453,7 @@ const handleLogin = async () => {
   pendingAuthUserId.value = null
 
   try {
-    console.log('🔑 Starting login attempt for:', loginForm.value.email)
+    logger.debug('🔑 Starting login attempt for:', loginForm.value.email)
     
     // 1. First validate that user belongs to this tenant
     const { data: validationResult, error: validationError } = await supabase
@@ -482,10 +482,10 @@ const handleLogin = async () => {
       return
     }
     
-    console.log('✅ Login successful')
+    logger.debug('✅ Login successful')
     
     // Wait for auth store to update with user profile
-    console.log('⏳ Waiting for user profile to load...')
+    logger.debug('⏳ Waiting for user profile to load...')
     let attempts = 0
     while (!authStore.userProfile && attempts < 20) {
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -499,18 +499,18 @@ const handleLogin = async () => {
       return
     }
     
-    console.log('✅ User profile loaded:', authStore.userProfile.email)
+    logger.debug('✅ User profile loaded:', authStore.userProfile.email)
     
     // Device security temporarily disabled - will be re-enabled with logging functionality
     
     // ✅ Erfolgsmeldung und sofortiger Redirect - Device-Check blockiert NICHT
-    console.log('✅ Login completed, redirecting to dashboard...')
+    logger.debug('✅ Login completed, redirecting to dashboard...')
     showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
     
     // Check if there's a redirect parameter first
     const redirectUrl = route.query.redirect as string
     if (redirectUrl) {
-      console.log('🔄 Redirecting to:', redirectUrl)
+      logger.debug('🔄 Redirecting to:', redirectUrl)
       // Remove base URL if present to make it relative
       const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
       let relativeUrl = decodeURIComponent(redirectUrl)
@@ -520,7 +520,7 @@ const handleLogin = async () => {
         relativeUrl = relativeUrl.replace(baseUrl, '')
       }
       
-      console.log('🔄 Relative redirect URL:', relativeUrl)
+      logger.debug('🔄 Relative redirect URL:', relativeUrl)
       router.push(relativeUrl)
       return
     }
@@ -616,7 +616,7 @@ const handlePasswordReset = async () => {
   resetIsLoading.value = true
 
   try {
-    console.log('🔐 Requesting password reset for:', contact)
+    logger.debug('🔐 Requesting password reset for:', contact)
     
     const response = await $fetch('/api/auth/password-reset-request', {
       method: 'POST',
@@ -627,7 +627,7 @@ const handlePasswordReset = async () => {
       }
     }) as any
 
-    console.log('📧 Password reset response:', response)
+    logger.debug('📧 Password reset response:', response)
 
     if (response?.success) {
       resetSuccess.value = resetContactMethod.value === 'email'
@@ -674,7 +674,7 @@ const generateDeviceFingerprint = async (): Promise<string | null> => {
     const hashArray = Array.from(new Uint8Array(hash))
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
     
-    console.log('🔐 Generated device fingerprint:', {
+    logger.debug('🔐 Generated device fingerprint:', {
       hash: hashHex.substring(0, 16),
       components: fingerprint
     })
@@ -762,7 +762,7 @@ onMounted(async () => {
   // Skip für bestimmte Unterpfade (services, register)
   const currentPath = route.path
   if (currentPath.includes('/services') || currentPath.includes('/register')) {
-    console.log('🔓 Skipping login page for sub-route:', currentPath)
+    logger.debug('🔓 Skipping login page for sub-route:', currentPath)
     return
   }
   
@@ -782,7 +782,7 @@ onMounted(async () => {
   try {
     // Setze Timeout für Session-Check (max 2 Sekunden)
     const sessionCheckTimeout = setTimeout(() => {
-      console.log('⏱️ Session check timeout - showing login form')
+      logger.debug('⏱️ Session check timeout - showing login form')
       isCheckingSession.value = false
     }, 2000)
     
@@ -790,13 +790,13 @@ onMounted(async () => {
     clearTimeout(sessionCheckTimeout)
     
     if (!session) {
-      console.log('✅ No session found - user is logged out, showing login form')
+      logger.debug('✅ No session found - user is logged out, showing login form')
       isCheckingSession.value = false
       return
     }
     
     // Session existiert - prüfe ob User authentifiziert ist
-    console.log('✅ Session found, checking authentication status')
+    logger.debug('✅ Session found, checking authentication status')
     
     // Warte kurz auf Auth-Store Initialisierung
     let attempts = 0
@@ -812,7 +812,7 @@ onMounted(async () => {
     
     // Prüfe ob bereits angemeldet
     if (isAuthenticated.value && !isLoading.value) {
-      console.log('🔄 User already authenticated, checking profile...')
+      logger.debug('🔄 User already authenticated, checking profile...')
       const authStore = useAuthStore()
       
       // Warte kurz auf User-Profil
@@ -831,7 +831,7 @@ onMounted(async () => {
         return
       }
       
-      console.log('✅ User profile found, redirecting...')
+      logger.debug('✅ User profile found, redirecting...')
       if (user?.role === 'admin' || user?.role === 'tenant_admin') {
         router.push('/admin')
       } else if (user?.role === 'staff') {
@@ -841,7 +841,7 @@ onMounted(async () => {
       }
     }
   } catch (sessionError) {
-    console.log('✅ Session check failed (user logged out):', sessionError)
+    logger.debug('✅ Session check failed (user logged out):', sessionError)
     isCheckingSession.value = false
     // Session-Check ist abgeschlossen - Login-Formular anzeigen
   }

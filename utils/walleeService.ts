@@ -28,7 +28,7 @@ export class WalleeService {
 
   async createTransaction(amount: number, currency: string = 'CHF'): Promise<WalleeTransactionResult> {
     try {
-      console.log('🔄 Wallee: Creating transaction...', { amount, currency })
+      logger.debug('🔄 Wallee: Creating transaction...', { amount, currency })
       
       if (!this.isConfigured()) {
         return {
@@ -58,7 +58,7 @@ export class WalleeService {
 
   async testConnection(): Promise<WalleeConnectionResult> {
     try {
-      console.log('🔄 Testing Wallee connection...')
+      logger.debug('🔄 Testing Wallee connection...')
       
       if (!this.isConfigured()) {
         return {

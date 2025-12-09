@@ -777,7 +777,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // ✅ DEBUG: Log props beim ersten Laden
-console.log('🚀 EventModal initialized with props:', {
+logger.debug('🚀 EventModal initialized with props:', {
   currentUser: props.currentUser,
   currentUserRole: props.currentUser?.role,
   currentUserId: props.currentUser?.id,
@@ -904,7 +904,7 @@ const dynamicPricing = ref({
 })
 
 const currentUser = computed(() => {
-  console.log('🔄 EventModal currentUser computed:', {
+  logger.debug('🔄 EventModal currentUser computed:', {
     propsCurrentUser: props.currentUser,
     composableCurrentUser: composableCurrentUser.value,
     result: props.currentUser || composableCurrentUser.value
@@ -915,7 +915,7 @@ const currentUser = computed(() => {
   
   // ✅ QUICK FIX: Wenn die User-ID falsch ist, korrigiere sie
   if (actualUser && actualUser.id === '095b118b-f1b1-46af-800a-c21055be36d6') {
-    console.log('🔧 CORRECTING WRONG USER ID to correct staff ID')
+    logger.debug('🔧 CORRECTING WRONG USER ID to correct staff ID')
     return {
       ...actualUser,
       id: '091afa9b-e8a1-43b8-9cae-3195621619ae',
@@ -959,7 +959,7 @@ const isPastAppointment = computed(() => {
   }
   
   if (!formData.value.startDate || !formData.value.startTime) {
-    console.log('🚫 isPastAppointment: Kein Datum/Zeit gesetzt:', { 
+    logger.debug('🚫 isPastAppointment: Kein Datum/Zeit gesetzt:', { 
       startDate: formData.value.startDate, 
       startTime: formData.value.startTime 
     })
@@ -971,7 +971,7 @@ const isPastAppointment = computed(() => {
   
   const isPast = appointmentDateTime < now
   
-  console.log('⏰ isPastAppointment Check:', {
+  logger.debug('⏰ isPastAppointment Check:', {
     mode: props.mode,
     startDate: formData.value.startDate,
     startTime: formData.value.startTime,
@@ -985,7 +985,7 @@ const isPastAppointment = computed(() => {
 
 // Helper function für Lesson Type Text
 const getLessonTypeText = (appointmentType: string): string => {
-  console.log('🔍 getLessonTypeText called with:', appointmentType)
+  logger.debug('🔍 getLessonTypeText called with:', appointmentType)
   switch (appointmentType) {
     case 'lesson':
       return 'Fahrlektion'
@@ -1012,7 +1012,7 @@ const getLessonTypeText = (appointmentType: string): string => {
     case 'other':
       return 'Sonstiges'
     default:
-      console.log('⚠️ Unknown appointment type, using default')
+      logger.debug('⚠️ Unknown appointment type, using default')
       return 'Fahrlektion'
   }
 }
@@ -1020,7 +1020,7 @@ const getLessonTypeText = (appointmentType: string): string => {
 // 3. Callback-Funktion für SMS-Integration erstellen
 const handleCustomerInvites = async (appointmentData: any) => {
   if (invitedCustomers.value.length > 0 && customerInviteSelectorRef.value) {
-    console.log('📱 Creating customer invites with SMS...')
+    logger.debug('📱 Creating customer invites with SMS...')
     try {
       // Staff- und Location-Informationen zur appointmentData hinzufügen
       const appointmentDataWithStaff = {
@@ -1034,7 +1034,7 @@ const handleCustomerInvites = async (appointmentData: any) => {
       }
       
       const customerInvites = await customerInviteSelectorRef.value.createInvitedCustomers(appointmentDataWithStaff)
-      console.log('✅ Customer invites created with SMS:', customerInvites.length)
+      logger.debug('✅ Customer invites created with SMS:', customerInvites.length)
       return customerInvites
     } catch (error) {
       console.error('❌ Error creating customer invites:', error)
@@ -1047,16 +1047,16 @@ const handleCustomerInvites = async (appointmentData: any) => {
 // ✅ NEUE FUNKTION: Handle appointment save
 const handleSaveAppointment = async () => {
   try {
-    console.log('💾 Starting appointment save...')
+    logger.debug('💾 Starting appointment save...')
     isLoading.value = true
     error.value = ''
     
     // ✅ NEU: Auto-save billing address before saving appointment
     if (selectedStudent.value && priceDisplayRef.value) {
       try {
-        console.log('💾 Auto-saving billing address before appointment save...')
+        logger.debug('💾 Auto-saving billing address before appointment save...')
         await priceDisplayRef.value.saveInvoiceAddress()
-        console.log('✅ Billing address auto-saved')
+        logger.debug('✅ Billing address auto-saved')
       } catch (billingError) {
         console.warn('⚠️ Could not auto-save billing address:', billingError)
         // Nicht den Termin-Speicher abbrechen, nur loggen
@@ -1066,12 +1066,12 @@ const handleSaveAppointment = async () => {
     // Call the saveAppointment function from the composable
     const savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
     
-    console.log('✅ Appointment saved successfully:', savedAppointment)
+    logger.debug('✅ Appointment saved successfully:', savedAppointment)
     
     // ✅ NEU: Automatische Guthaben-Verwendung nach dem Speichern
     if (props.mode === 'create' && selectedStudent.value && studentCredit.value && studentCredit.value.balance_rappen > 0) {
       try {
-        console.log('💳 Automatically using credit for new appointment...')
+        logger.debug('💳 Automatically using credit for new appointment...')
         
         // Berechne den Preis für die Lektion
         const lessonPrice = (formData.value.duration_minutes || 45) * (dynamicPricing.value.pricePerMinute || 2.11) * 100 // In Rappen
@@ -1083,12 +1083,12 @@ const handleSaveAppointment = async () => {
           notes: `Automatische Guthaben-Verwendung für Lektion: ${formData.value.title || 'Fahrstunde'}`
         }
         
-        console.log('💳 Using credit for appointment:', creditData)
+        logger.debug('💳 Using credit for appointment:', creditData)
         
         const result = await useCreditForAppointment(creditData)
         
         if (result.success) {
-          console.log('✅ Credit used successfully:', result)
+          logger.debug('✅ Credit used successfully:', result)
           
           // ✅ NEU: Payment mit Guthaben-Info aktualisieren
           const supabase = getSupabase()
@@ -1103,7 +1103,7 @@ const handleSaveAppointment = async () => {
           if (paymentError) {
             console.warn('⚠️ Could not update payment with credit info:', paymentError)
           } else {
-            console.log('✅ Payment updated with credit information')
+            logger.debug('✅ Payment updated with credit information')
           }
           
         } else {
@@ -1150,9 +1150,9 @@ const handleSaveAppointment = async () => {
 
 // ✅ Payment Method wird in payments Tabelle gespeichert, nicht in appointments
 // const setOnlineManually = () => {
-//   console.log('🔧 Setting payment method to online manually')
+//   logger.debug('🔧 Setting payment method to online manually')
 //   formData.value.payment_method = 'twint' // ← ENTFERNT: gehört nicht in appointments
-//   console.log('✅ Payment method now:', formData.value.payment_method)
+//   logger.debug('✅ Payment method now:', formData.value.payment_method)
 // }
 
 // ✅ Payment Method State für späteres Speichern
@@ -1222,7 +1222,7 @@ const {
 
 // ✅ Enhanced handleCategorySelected with DB duration loading
 const handleCategorySelected = async (category: any) => {
-  console.log('🎯 Enhanced category selected:', category?.code)
+  logger.debug('🎯 Enhanced category selected:', category?.code)
   
   // Call original handler first
   await originalHandleCategorySelected(category)
@@ -1237,32 +1237,32 @@ const handleCategorySelected = async (category: any) => {
     // ✅ Versuche zuerst die Dauer des letzten Termins des Fahrschülers zu laden
     // ✅ WICHTIG: Beim Edit-Modus die ursprüngliche duration_minutes aus der DB beibehalten
     if (props.mode === 'edit' && formData.value.duration_minutes) {
-      console.log('✅ Edit mode - keeping original duration from database:', formData.value.duration_minutes, 'min')
+      logger.debug('✅ Edit mode - keeping original duration from database:', formData.value.duration_minutes, 'min')
       // Stelle sicher, dass die ursprüngliche Dauer in availableDurations enthalten ist
       if (!availableDurations.value.includes(formData.value.duration_minutes)) {
         availableDurations.value.unshift(formData.value.duration_minutes)
         availableDurations.value.sort((a, b) => a - b)
-        console.log('✅ Added original duration to available durations:', availableDurations.value)
+        logger.debug('✅ Added original duration to available durations:', availableDurations.value)
       }
     } else if (selectedStudent.value?.id) {
       try {
         const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
         if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
-          console.log('✅ Category change - using last appointment duration:', lastDuration, 'min')
+          logger.debug('✅ Category change - using last appointment duration:', lastDuration, 'min')
           formData.value.duration_minutes = lastDuration
         } else {
           // ✅ FALLBACK: Auto-select first available duration
           formData.value.duration_minutes = availableDurations.value[0]
-          console.log('⏱️ Category change - using first available duration:', availableDurations.value[0], 'min')
+          logger.debug('⏱️ Category change - using first available duration:', availableDurations.value[0], 'min')
         }
       } catch (err) {
-        console.log('⚠️ Category change - could not load last duration, using first available')
+        logger.debug('⚠️ Category change - could not load last duration, using first available')
         formData.value.duration_minutes = availableDurations.value[0]
       }
     } else {
       // ✅ FALLBACK: Auto-select first available duration
       formData.value.duration_minutes = availableDurations.value[0]
-      console.log('⏱️ Category change - no student, using first available duration:', availableDurations.value[0], 'min')
+      logger.debug('⏱️ Category change - no student, using first available duration:', availableDurations.value[0], 'min')
     }
   }
 }
@@ -1274,7 +1274,7 @@ const customMessagePlaceholder = ref('Hallo, vielen Dank für deine Anmeldung. B
 const currentLessonTypeText = computed(() => {
   const appointmentType = formData.value.appointment_type || formData.value.type || formData.value.eventType
   const text = appointmentType ? getLessonTypeText(appointmentType) : 'Termin'
-  console.log('🔍 currentLessonTypeText computed:', {
+  logger.debug('🔍 currentLessonTypeText computed:', {
     appointmentType,
     text,
     selectedLessonType: selectedLessonType.value,
@@ -1304,18 +1304,18 @@ const handleSendSmsRequest = async ({
 }
 
 const handleProductsChanged = (products: any[]) => {
-  console.log('📦 Products changed:', products.length)
+  logger.debug('📦 Products changed:', products.length)
   // Die Produkte werden im productSale composable verwaltet
 }
 
 const handleProductRemoved = (productId: string) => {
-  console.log('🗑️ Product removed:', productId)
+  logger.debug('🗑️ Product removed:', productId)
   // ✅ NEU: Verwende removeProduct aus useProductSale
   removeProduct(productId)
 }
 
 const handleProductAdded = (product: any) => {
-  console.log('➕ Product added:', product)
+  logger.debug('➕ Product added:', product)
   // ✅ NEU: Verwende addProduct aus useProductSale
   addProduct({
     id: product.id,
@@ -1358,7 +1358,7 @@ const eventTypeForTitle = computed((): 'lesson' | 'staff_meeting' | 'other' | 'm
 const shouldAutoLoadStudents = computed(() => {
   // ✅ Schüler laden aber NIEMALS automatisch auswählen
   if (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') {
-    console.log('🎯 Free slot click detected - loading students but not auto-selecting')
+    logger.debug('🎯 Free slot click detected - loading students but not auto-selecting')
     return true  // Schüler laden, aber nicht automatisch auswählen
   }
   
@@ -1369,7 +1369,7 @@ const shouldAutoLoadStudents = computed(() => {
 
 // showStudentSelector computed:
 const showStudentSelector = computed(() => {
-  console.log('🔍 showStudentSelector check:', {
+  logger.debug('🔍 showStudentSelector check:', {
     eventType: formData.value.eventType,
     showEventTypeSelection: showEventTypeSelection.value,
     appointmentType: formData.value.appointment_type,  // ✅ RICHTIG
@@ -1391,7 +1391,7 @@ const showEventTypeSelector = computed(() => {
   // 2. Es ist 'other' (generischer Typ, Benutzer kann spezifischen Typ wählen)
   const result = showEventTypeSelection.value || (formData.value.eventType === 'other')
   
-  console.log('🔍 showEventTypeSelector:', {
+  logger.debug('🔍 showEventTypeSelector:', {
     eventType: formData.value.eventType,
     showEventTypeSelection: showEventTypeSelection.value,
     result
@@ -1402,7 +1402,7 @@ const showEventTypeSelector = computed(() => {
 // showTimeSection computed:
 // In EventModal.vue - prüfen Sie diese computed property:
 const showTimeSection = computed(() => {
-  console.log('🔍 showTimeSection computed:', {
+  logger.debug('🔍 showTimeSection computed:', {
     eventType: formData.value.eventType,
     selectedStudent: !!selectedStudent.value,
     appointmentType: formData.value.appointment_type,  // ✅ RICHTIG
@@ -1414,7 +1414,7 @@ const showTimeSection = computed(() => {
   if (isLessonType(formData.value.eventType)) {
     // ✅ Zeit-Sektion nur anzeigen wenn Schüler ausgewählt wurde
     if (formData.value.appointment_type === 'exam' || selectedLessonType.value === 'exam') {
-      console.log('📋 EXAM detected - showing time section even without selected student')
+      logger.debug('📋 EXAM detected - showing time section even without selected student')
       return true  // ✅ Zeige auch ohne Student bei Prüfungen
     }
     
@@ -1428,7 +1428,7 @@ const showTimeSection = computed(() => {
 // Irgendwo nach den imports und props, vor dem Template:
 const isFreeslotMode = computed(() => {
   const result = !!(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')
-  console.log('🔍 isFreeslotMode computed:', {
+  logger.debug('🔍 isFreeslotMode computed:', {
     result,
     isFreeslotClick: props.eventData?.isFreeslotClick,
     clickSource: props.eventData?.clickSource,
@@ -1447,7 +1447,7 @@ watch(
       if (formData?.value) {
         formData.value.user_id = null as any
       }
-      console.log('🧹 Cleared student selection due to free-slot create')
+      logger.debug('🧹 Cleared student selection due to free-slot create')
     }
   },
   { immediate: true, deep: true }
@@ -1468,9 +1468,9 @@ const handleStaffChanged = async (event: Event) => {
   const newStaffId = target.value
   formData.value.staff_id = newStaffId
   
-  console.log('👨‍🏫 Staff changed to:', newStaffId)
-  console.log('👨‍🏫 Select element value:', target.value)
-  console.log('👨‍🏫 FormData staff_id after change:', formData.value.staff_id)
+  logger.debug('👨‍🏫 Staff changed to:', newStaffId)
+  logger.debug('👨‍🏫 Select element value:', target.value)
+  logger.debug('👨‍🏫 FormData staff_id after change:', formData.value.staff_id)
   
   // Beende den Edit-Modus
   isEditingStaff.value = false
@@ -1487,17 +1487,17 @@ const handleStaffChanged = async (event: Event) => {
       
       if (!staffError && staffData) {
         const staffName = `${staffData.first_name} ${staffData.last_name}`.trim()
-        console.log('✅ Staff name loaded:', staffName)
+        logger.debug('✅ Staff name loaded:', staffName)
         
         // Aktualisiere den Titel falls nötig
         if (formData.value.title && !formData.value.title.includes(staffName)) {
           const newTitle = `${selectedStudent.value.first_name} - ${staffName}`
           formData.value.title = newTitle
-          console.log('✅ Title updated with new staff:', newTitle)
+          logger.debug('✅ Title updated with new staff:', newTitle)
         }
       }
     } catch (error) {
-      console.log('⚠️ Could not update title with new staff:', error)
+      logger.debug('⚠️ Could not update title with new staff:', error)
     }
   }
 }
@@ -1505,7 +1505,7 @@ const handleStaffChanged = async (event: Event) => {
 // Load available staff members with availability check
 const loadAvailableStaff = async () => {
   try {
-    console.log('👥 Loading staff with params:', {
+    logger.debug('👥 Loading staff with params:', {
       startDate: formData.value.startDate,
       startTime: formData.value.startTime,
       endTime: formData.value.endTime,
@@ -1518,7 +1518,7 @@ const loadAvailableStaff = async () => {
     // Get current user's tenant_id
     const currentUserTenantId = currentUser.value?.tenant_id
     
-    console.log('🏢 Loading staff for tenant:', currentUserTenantId)
+    logger.debug('🏢 Loading staff for tenant:', currentUserTenantId)
     
     if (!currentUserTenantId) {
       console.error('❌ No tenant_id found for current user')
@@ -1541,17 +1541,17 @@ const loadAvailableStaff = async () => {
     }
     
     if (!allStaff || allStaff.length === 0) {
-      console.log('⚠️ No staff members found in database')
+      logger.debug('⚠️ No staff members found in database')
       availableStaff.value = []
       return
     }
     
-    console.log('👥 Found staff members in database:', allStaff.length)
+    logger.debug('👥 Found staff members in database:', allStaff.length)
     
     // ✅ Check availability if we have time data
     let staffWithAvailability = []
     if (formData.value.startDate && formData.value.startTime && formData.value.endTime) {
-      console.log('⏰ Checking staff availability for time slot...')
+      logger.debug('⏰ Checking staff availability for time slot...')
       try {
         staffWithAvailability = await loadStaffWithAvailability(
           formData.value.startDate,
@@ -1560,7 +1560,7 @@ const loadAvailableStaff = async () => {
           props.eventData?.id
         )
       } catch (availabilityError) {
-        console.log('⚠️ Could not check availability, using all staff:', availabilityError)
+        logger.debug('⚠️ Could not check availability, using all staff:', availabilityError)
               // Fallback: Alle Staff als verfügbar markieren
       staffWithAvailability = allStaff.map(staff => ({
         ...staff,
@@ -1570,7 +1570,7 @@ const loadAvailableStaff = async () => {
       }
     } else {
       // Keine Zeitdaten vorhanden, alle Staff als verfügbar markieren
-      console.log('⏰ No time data available, marking all staff as available')
+      logger.debug('⏰ No time data available, marking all staff as available')
       staffWithAvailability = allStaff.map(staff => ({
         ...staff,
         isAvailable: true,
@@ -1582,7 +1582,7 @@ const loadAvailableStaff = async () => {
     
     // ✅ WICHTIG: Automatisch den currentUser auswählen falls er Staff ist
     const actualCurrentUser = currentUser.value
-    console.log('🔍 Auto-selection check:', {
+    logger.debug('🔍 Auto-selection check:', {
       propsCurrentUserRole: props.currentUser?.role,
       propsCurrentUserId: props.currentUser?.id,
       composableCurrentUserRole: composableCurrentUser.value?.role,
@@ -1598,17 +1598,17 @@ const loadAvailableStaff = async () => {
       const currentStaffMember = staffWithAvailability.find(s => s.id === actualCurrentUser?.id)
       if (currentStaffMember) {
         formData.value.staff_id = actualCurrentUser.id
-        console.log('✅ Auto-selected current staff member:', actualCurrentUser.first_name, actualCurrentUser.last_name)
+        logger.debug('✅ Auto-selected current staff member:', actualCurrentUser.first_name, actualCurrentUser.last_name)
       } else {
-        console.log('⚠️ Current user not found in staff list. User ID:', actualCurrentUser?.id)
+        logger.debug('⚠️ Current user not found in staff list. User ID:', actualCurrentUser?.id)
       }
     } else if (actualCurrentUser?.role === 'staff' && formData.value.staff_id) {
-      console.log('ℹ️ Staff already selected:', formData.value.staff_id)
+      logger.debug('ℹ️ Staff already selected:', formData.value.staff_id)
     } else if (actualCurrentUser?.role !== 'staff') {
-      console.log('ℹ️ Current user is not staff, role:', actualCurrentUser?.role)
+      logger.debug('ℹ️ Current user is not staff, role:', actualCurrentUser?.role)
     }
     
-    console.log('👥 Final available staff:', availableStaff.value.length, 'members, selected:', formData.value.staff_id)
+    logger.debug('👥 Final available staff:', availableStaff.value.length, 'members, selected:', formData.value.staff_id)
   } catch (error) {
     console.error('❌ Error loading staff:', error)
     availableStaff.value = []
@@ -1645,17 +1645,17 @@ const getCurrentStaffName = (): string => {
 // Staff editing functions
 const startEditStaff = () => {
   isEditingStaff.value = true
-  console.log('✏️ Starting staff edit mode')
+  logger.debug('✏️ Starting staff edit mode')
 }
 
 const cancelEditStaff = () => {
   isEditingStaff.value = false
-  console.log('❌ Cancelled staff edit mode')
+  logger.debug('❌ Cancelled staff edit mode')
 }
 
 // ✅ 1. START DATE HANDLER
 const handleStartDateUpdate = (newStartDate: string) => {
-  console.log('📅 START DATE DIRECTLY UPDATED:', newStartDate)
+  logger.debug('📅 START DATE DIRECTLY UPDATED:', newStartDate)
   formData.value.startDate = newStartDate
   
   // Trigger time recalculation if we have start/end times
@@ -1668,7 +1668,7 @@ const handleStartDateUpdate = (newStartDate: string) => {
 
 // ✅ 2. START TIME HANDLER
 const handleStartTimeUpdate = (newStartTime: string) => {
-  console.log('🕐 START TIME DIRECTLY UPDATED:', newStartTime)
+  logger.debug('🕐 START TIME DIRECTLY UPDATED:', newStartTime)
   formData.value.startTime = newStartTime
   
   // Trigger duration recalculation if we have end time
@@ -1684,12 +1684,12 @@ const handleStartTimeUpdate = (newStartTime: string) => {
 
 // ✅ 3. END TIME HANDLER (mit vollständiger Logik)
 const handleEndTimeUpdate = (newEndTime: string) => {
-  console.log('🔥 DEBUG: handleEndTimeUpdate called with:', newEndTime)
-  console.log('🔥 DEBUG: Current formData.endTime before update:', formData.value.endTime)
+  logger.debug('🔥 DEBUG: handleEndTimeUpdate called with:', newEndTime)
+  logger.debug('🔥 DEBUG: Current formData.endTime before update:', formData.value.endTime)
   
   formData.value.endTime = newEndTime
   
-  console.log('🔥 DEBUG: Current formData after update:', {
+  logger.debug('🔥 DEBUG: Current formData after update:', {
     startTime: formData.value.startTime,
     endTime: formData.value.endTime,
     duration: formData.value.duration_minutes
@@ -1705,11 +1705,11 @@ const handleEndTimeUpdate = (newEndTime: string) => {
     }
     
     const newDurationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
-    console.log('🔥 DEBUG: Calculated duration:', newDurationMinutes)
+    logger.debug('🔥 DEBUG: Calculated duration:', newDurationMinutes)
     
     if (newDurationMinutes > 0) {
       formData.value.duration_minutes = newDurationMinutes
-      console.log('🔥 DEBUG: Duration updated to:', newDurationMinutes)
+      logger.debug('🔥 DEBUG: Duration updated to:', newDurationMinutes)
     }
   }
 }
@@ -1717,7 +1717,7 @@ const handleEndTimeUpdate = (newEndTime: string) => {
 // ✅ 4. ZENTRALE PREISBERECHNUNG (mit appointment_type Support)
 const calculatePriceForCurrentData = async () => {
   if (!formData.value.type || !formData.value.duration_minutes || formData.value.eventType !== 'lesson') {
-    console.log('🚫 Skipping price calculation - missing data:', {
+    logger.debug('🚫 Skipping price calculation - missing data:', {
       type: formData.value.type,
       duration: formData.value.duration_minutes,
       eventType: formData.value.eventType
@@ -1729,14 +1729,14 @@ const calculatePriceForCurrentData = async () => {
   let durationValue = formData.value.duration_minutes
   if (Array.isArray(durationValue)) {
     durationValue = durationValue[0] || 45 // Nimm den ersten Wert oder 45 als Fallback
-    console.log('⚠️ duration_minutes war ein Array, verwende ersten Wert:', durationValue)
+    logger.debug('⚠️ duration_minutes war ein Array, verwende ersten Wert:', durationValue)
     // ✅ KORRIGIERT: Setze die formData direkt auf die einzelne Zahl
     formData.value.duration_minutes = durationValue
   }
 
   const appointmentNum = appointmentNumber?.value || 1
   
-  console.log('💰 Calculating price for current data:', {
+  logger.debug('💰 Calculating price for current data:', {
     category: formData.value.type,
     duration: durationValue, // ✅ Verwende den korrigierten durationValue
     originalDuration: formData.value.duration_minutes, // ✅ Zeige auch den ursprünglichen Wert
@@ -1758,7 +1758,7 @@ const calculatePriceForCurrentData = async () => {
         props.eventData?.id // ✅ NEU: Appointment ID für Edit-Mode
       )
       
-      console.log('✅ Online price calculated:', priceResult)
+      logger.debug('✅ Online price calculated:', priceResult)
       
       // Update dynamic pricing
       const calculatedPricePerMinute = priceResult.base_price_rappen / durationValue / 100
@@ -1776,7 +1776,7 @@ const calculatePriceForCurrentData = async () => {
         error: ''
       }
       
-      console.log('💰 EventModal - Updated pricing data:', {
+      logger.debug('💰 EventModal - Updated pricing data:', {
         category: formData.value.type,
         appointmentType: formData.value.appointment_type, // ✅ NEU: appointment_type loggen
         pricePerMinute: calculatedPricePerMinute,
@@ -1786,11 +1786,11 @@ const calculatePriceForCurrentData = async () => {
       
     } else {
       // ✅ Offline Berechnung
-      console.log('📱 Using offline calculation')
+      logger.debug('📱 Using offline calculation')
       calculateOfflinePrice(formData.value.type, durationValue, appointmentNum)
     }
   } catch (error) {
-    console.log('🔄 Price calculation failed, using offline fallback:', error)
+    logger.debug('🔄 Price calculation failed, using offline fallback:', error)
     calculateOfflinePrice(formData.value.type, durationValue, appointmentNum)
   }
 }
@@ -1815,11 +1815,11 @@ const getFallbackDuration = (categoryCode?: string): number => {
 // ✅ Load durations from categories table
 const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) => {
   if (!staffId || !categoryCode) {
-    console.log('⚠️ Missing staffId or categoryCode for duration loading')
+    logger.debug('⚠️ Missing staffId or categoryCode for duration loading')
     return
   }
 
-  console.log('🔄 Loading durations from categories table:', { staffId, categoryCode })
+  logger.debug('🔄 Loading durations from categories table:', { staffId, categoryCode })
   
   try {
     // Load durations directly from categories table
@@ -1881,38 +1881,38 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
       // ✅ NEU: Versuche zuerst die Dauer des letzten Termins des Fahrschülers zu laden
       // ✅ WICHTIG: Beim Edit-Modus die ursprüngliche duration_minutes aus der DB beibehalten
       if (props.mode === 'edit' && formData.value.duration_minutes) {
-        console.log('✅ Edit mode - keeping original duration from database:', formData.value.duration_minutes, 'min')
+        logger.debug('✅ Edit mode - keeping original duration from database:', formData.value.duration_minutes, 'min')
         // Stelle sicher, dass die ursprüngliche Dauer in availableDurations enthalten ist
         if (!availableDurations.value.includes(formData.value.duration_minutes)) {
           availableDurations.value.unshift(formData.value.duration_minutes)
           availableDurations.value.sort((a, b) => a - b)
-          console.log('✅ Added original duration to available durations:', availableDurations.value)
+          logger.debug('✅ Added original duration to available durations:', availableDurations.value)
         }
       } else if (selectedStudent.value?.id) {
         try {
           const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
           if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
-            console.log('✅ Database load - using last appointment duration:', lastDuration, 'min')
+            logger.debug('✅ Database load - using last appointment duration:', lastDuration, 'min')
             formData.value.duration_minutes = lastDuration
           } else {
             // ✅ FALLBACK: Auto-select first available duration
             formData.value.duration_minutes = availableDurations.value[0]
-            console.log('⏱️ Database load - using first available duration:', availableDurations.value[0], 'min')
+            logger.debug('⏱️ Database load - using first available duration:', availableDurations.value[0], 'min')
           }
         } catch (err) {
-          console.log('⚠️ Database load - could not load last duration, using first available')
+          logger.debug('⚠️ Database load - could not load last duration, using first available')
           formData.value.duration_minutes = availableDurations.value[0]
         }
       } else {
         // ✅ FALLBACK: Auto-select first available duration
         formData.value.duration_minutes = availableDurations.value[0]
-        console.log('⏱️ Database load - no student, using first available duration:', availableDurations.value[0], 'min')
+        logger.debug('⏱️ Database load - no student, using first available duration:', availableDurations.value[0], 'min')
       }
     } else {
       // Fallback based on category code
       const fallbackDuration = getFallbackDuration(categoryCode)
       availableDurations.value = [fallbackDuration]
-      console.log(`⚠️ No durations found in categories table, using fallback: ${fallbackDuration}min`)
+      logger.debug(`⚠️ No durations found in categories table, using fallback: ${fallbackDuration}min`)
     }
   } catch (error) {
     console.error('❌ Error loading durations from categories table:', error)
@@ -1925,11 +1925,11 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
 // ✅ Load theory durations from categories table
 const loadTheoryDurations = async (categoryCode: string) => {
   if (!categoryCode) {
-    console.log('⚠️ No category code provided for theory durations')
+    logger.debug('⚠️ No category code provided for theory durations')
     return
   }
 
-  console.log('🔄 Loading theory durations for category:', categoryCode)
+  logger.debug('🔄 Loading theory durations for category:', categoryCode)
   
   try {
     const supabase = getSupabase()
@@ -1987,24 +1987,24 @@ const loadTheoryDurations = async (categoryCode: string) => {
         try {
           const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
           if (lastDuration && lastDuration > 0 && theoryDurations.includes(lastDuration)) {
-            console.log('✅ Theory load - using last appointment duration:', lastDuration, 'min')
+            logger.debug('✅ Theory load - using last appointment duration:', lastDuration, 'min')
             formData.value.duration_minutes = lastDuration
           } else {
             // ✅ FALLBACK: Auto-select first available theory duration
             formData.value.duration_minutes = theoryDurations[0]
-            console.log('⏱️ Theory load - using first available theory duration:', theoryDurations[0], 'min')
+            logger.debug('⏱️ Theory load - using first available theory duration:', theoryDurations[0], 'min')
           }
         } catch (err) {
-          console.log('⚠️ Theory load - could not load last duration, using first available')
+          logger.debug('⚠️ Theory load - could not load last duration, using first available')
           formData.value.duration_minutes = theoryDurations[0]
         }
       } else {
         // ✅ FALLBACK: Auto-select first available theory duration
         formData.value.duration_minutes = theoryDurations[0]
-        console.log('⏱️ Theory load - no student, using first available theory duration:', theoryDurations[0], 'min')
+        logger.debug('⏱️ Theory load - no student, using first available theory duration:', theoryDurations[0], 'min')
       }
     } else {
-      console.log('⚠️ No theory durations found, using default 45 minutes')
+      logger.debug('⚠️ No theory durations found, using default 45 minutes')
       formData.value.duration_minutes = 45
       availableDurations.value = [45]
     }
@@ -2018,21 +2018,21 @@ const loadTheoryDurations = async (categoryCode: string) => {
 
 // ✅ Load default durations when no category is selected
 const loadDefaultDurations = async () => {
-  console.log('⏱️ loadDefaultDurations called - checking for last appointment duration')
+  logger.debug('⏱️ loadDefaultDurations called - checking for last appointment duration')
   
   // ✅ NEU: Versuche zuerst die Dauer des letzten Termins des Fahrschülers zu laden
   if (selectedStudent.value?.id) {
     try {
       const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
       if (lastDuration && lastDuration > 0) {
-        console.log('✅ Using last appointment duration:', lastDuration, 'min')
+        logger.debug('✅ Using last appointment duration:', lastDuration, 'min')
         formData.value.duration_minutes = lastDuration
         availableDurations.value = [lastDuration]
         await nextTick()
         return
       }
     } catch (err) {
-      console.log('⚠️ Could not load last appointment duration, using fallback')
+      logger.debug('⚠️ Could not load last appointment duration, using fallback')
     }
   }
   
@@ -2041,12 +2041,12 @@ const loadDefaultDurations = async () => {
     // Für Theorielektionen: Standard 45 Minuten
     availableDurations.value = [45]
     formData.value.duration_minutes = 45
-    console.log('📚 Theory lesson - using default duration: 45min')
+    logger.debug('📚 Theory lesson - using default duration: 45min')
   } else {
     // Für normale Fahrstunden: Standard 45 Minuten
     availableDurations.value = [45]
     formData.value.duration_minutes = 45
-    console.log('🚗 Normal lesson - using default duration: 45min')
+    logger.debug('🚗 Normal lesson - using default duration: 45min')
   }
   
   // ✅ WICHTIG: Stelle sicher, dass die Dauer auch im Template angezeigt wird
@@ -2092,21 +2092,21 @@ const loadCategoriesForEventModal = async () => {
             try {
               const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
               if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
-                console.log('✅ Using last appointment duration from category load:', lastDuration, 'min')
+                logger.debug('✅ Using last appointment duration from category load:', lastDuration, 'min')
                 formData.value.duration_minutes = lastDuration
               } else {
                 // ✅ FALLBACK: Auto-select first available duration
                 formData.value.duration_minutes = availableDurations.value[0]
-                console.log('⏱️ Using first available duration:', availableDurations.value[0], 'min')
+                logger.debug('⏱️ Using first available duration:', availableDurations.value[0], 'min')
               }
             } catch (err) {
-              console.log('⚠️ Could not load last appointment duration, using first available')
+              logger.debug('⚠️ Could not load last appointment duration, using first available')
               formData.value.duration_minutes = availableDurations.value[0]
             }
           } else {
             // ✅ FALLBACK: Auto-select first available duration
             formData.value.duration_minutes = availableDurations.value[0]
-            console.log('⏱️ No student selected, using first available duration:', availableDurations.value[0], 'min')
+            logger.debug('⏱️ No student selected, using first available duration:', availableDurations.value[0], 'min')
           }
         }
       }
@@ -2161,7 +2161,7 @@ const calculateAdminFee = (): number => {
   const categoryCode = formData.value.type || 'A'
   const studentId = selectedStudent.value?.id
   
-  console.log('💰 calculateAdminFee:', {
+  logger.debug('💰 calculateAdminFee:', {
     categoryCode,
     studentId,
     isCreateMode: props.mode === 'create'
@@ -2185,7 +2185,7 @@ const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) =
 
   try {
     isLoadingAdminFee.value = true
-    console.log('🧮 Calculating admin fee for:', { categoryCode, studentId })
+    logger.debug('🧮 Calculating admin fee for:', { categoryCode, studentId })
 
     // 1. Zähle bestehende NICHT-stornierte Termine für diesen Schüler + Kategorie
     const { data: existingAppointments, error: countError } = await supabase
@@ -2203,7 +2203,7 @@ const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) =
     }
 
     const appointmentCount = existingAppointments?.length || 0
-    console.log('📊 Existing appointments count:', appointmentCount)
+    logger.debug('📊 Existing appointments count:', appointmentCount)
 
     // 2. Admin-Fee ab dem 2. Termin (also wenn bereits >= 1 Termine existieren)
     if (appointmentCount >= 1) {
@@ -2220,7 +2220,7 @@ const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) =
         console.error('❌ Error loading pricing rule:', pricingError)
         // Fallback: Standard Admin-Fee von CHF 5.00
         calculatedAdminFee.value = 5.00
-        console.log('⚠️ Using fallback admin fee: CHF 5.00')
+        logger.debug('⚠️ Using fallback admin fee: CHF 5.00')
         return
       }
 
@@ -2228,7 +2228,7 @@ const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) =
       const adminFeeChf = adminFeeRappen / 100
 
       calculatedAdminFee.value = adminFeeChf
-      console.log('✅ Admin fee calculated:', {
+      logger.debug('✅ Admin fee calculated:', {
         appointmentCount,
         adminFeeRappen,
         adminFeeChf,
@@ -2236,7 +2236,7 @@ const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) =
       })
     } else {
       calculatedAdminFee.value = 0
-      console.log('ℹ️ No admin fee: First appointment')
+      logger.debug('ℹ️ No admin fee: First appointment')
     }
 
   } catch (error) {
@@ -2249,7 +2249,7 @@ const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) =
 
 // ✅ 6. TEST BUTTON (temporär für Debugging)
 const testManualTimeChange = () => {
-  console.log('🧪 TESTING manual time change...')
+  logger.debug('🧪 TESTING manual time change...')
   handleEndTimeUpdate('15:30')
 }
 
@@ -2258,16 +2258,16 @@ const testManualTimeChange = () => {
 
 const handleExamLocationSelected = (location: any) => {
   selectedExamLocation.value = location
-  console.log('🏛️ Exam location selected in modal:', location)
+  logger.debug('🏛️ Exam location selected in modal:', location)
   // Hier können Sie zusätzliche Logik hinzufügen, z.B. in formData speichern
 }
 
 const handleStudentSelected = async (student: Student | null) => {
-  console.log('👤 Student selected in EventModal:', student?.first_name)
+  logger.debug('👤 Student selected in EventModal:', student?.first_name)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
   if (isPastAppointment.value) {
-    console.log('🚫 Cannot change student for past appointment')
+    logger.debug('🚫 Cannot change student for past appointment')
     return
   }
   
@@ -2276,12 +2276,12 @@ const handleStudentSelected = async (student: Student | null) => {
   selectedStudent.value = student
   formData.value.user_id = student?.id || ''
   
-  console.log('✅ Student selected successfully:', student?.first_name)
+  logger.debug('✅ Student selected successfully:', student?.first_name)
   
   // 🔧 FIX: staff_id setzen wenn Student ausgewählt wird
   if (currentUser.value?.id) {
     formData.value.staff_id = currentUser.value.id
-    console.log('✅ staff_id gesetzt bei Student-Auswahl:', currentUser.value.id)
+    logger.debug('✅ staff_id gesetzt bei Student-Auswahl:', currentUser.value.id)
   }
   
   // ✅ NEU: Load default event type if not already set (create mode only)
@@ -2305,7 +2305,7 @@ const handleStudentSelected = async (student: Student | null) => {
           formData.value.duration_minutes = defaultEventType.default_duration_minutes || 45
           calculateEndTime()
           
-          console.log('✅ Default lesson type set:', {
+          logger.debug('✅ Default lesson type set:', {
             eventType: formData.value.eventType,
             appointmentType: formData.value.appointment_type,
             selectedLessonType: selectedLessonType.value
@@ -2320,17 +2320,17 @@ const handleStudentSelected = async (student: Student | null) => {
           formData.value.duration_minutes = defaultEventType.default_duration_minutes || 60
           calculateEndTime()
           
-          console.log('✅ Default event type set:', {
+          logger.debug('✅ Default event type set:', {
             name: defaultEventType.name,
             code: defaultEventType.code,
             duration: defaultEventType.default_duration_minutes
           })
         }
       } else {
-        console.log('ℹ️ No default event type found')
+        logger.debug('ℹ️ No default event type found')
       }
     } catch (err) {
-      console.log('⚠️ Could not load default event type:', err)
+      logger.debug('⚠️ Could not load default event type:', err)
     }
   }
   
@@ -2344,7 +2344,7 @@ const handleStudentSelected = async (student: Student | null) => {
     formData.value.startTime = timeOnly
     calculateEndTime()
     
-    console.log('🕐 Zeit nach Student-Auswahl gesetzt:', {
+    logger.debug('🕐 Zeit nach Student-Auswahl gesetzt:', {
       startDate: formData.value.startDate,
       startTime: formData.value.startTime,
       endTime: formData.value.endTime
@@ -2355,7 +2355,7 @@ const handleStudentSelected = async (student: Student | null) => {
   // 🚫 ABER NICHT bei Freeslot-Modus - dort soll der User die Kategorie selbst wählen
   if (student?.id && !(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')) {
     try {
-      console.log('🔄 Loading last appointment category for student:', student.first_name)
+      logger.debug('🔄 Loading last appointment category for student:', student.first_name)
       
       // Suche nach dem letzten Termin des Schülers
       const { data: lastAppointment, error } = await supabase
@@ -2371,7 +2371,7 @@ const handleStudentSelected = async (student: Student | null) => {
       }
       
       if (lastAppointment && lastAppointment.type) {
-        console.log('✅ Last appointment category found:', lastAppointment.type)
+        logger.debug('✅ Last appointment category found:', lastAppointment.type)
         formData.value.type = lastAppointment.type
         
         // ✅ Kategorie-Daten aus DB laden für Dauer-Berechnung
@@ -2393,7 +2393,7 @@ const handleStudentSelected = async (student: Student | null) => {
           
           if (categoryData) {
             selectedCategory.value = categoryData
-            console.log('✅ Category data loaded from last appointment:', categoryData)
+            logger.debug('✅ Category data loaded from last appointment:', categoryData)
             
             // ✅ Dauer basierend auf event_type_code setzen
             if (lastAppointment.event_type_code === 'exam') {
@@ -2409,14 +2409,14 @@ const handleStudentSelected = async (student: Student | null) => {
             // ✅ Load durations from database instead of hardcoded values
             if (currentUser.value?.id && categoryData?.code) {
               await loadDurationsFromDatabase(currentUser.value.id, categoryData.code)
-              console.log('✅ Durations loaded from DB for last appointment category')
+              logger.debug('✅ Durations loaded from DB for last appointment category')
             } else {
               // Fallback to category default
               availableDurations.value = [categoryData.lesson_duration_minutes || 45]
-              console.log('✅ Available durations updated (fallback):', availableDurations.value)
+              logger.debug('✅ Available durations updated (fallback):', availableDurations.value)
             }
             
-            console.log('✅ Duration and lesson type set from last appointment:', {
+            logger.debug('✅ Duration and lesson type set from last appointment:', {
               duration: formData.value.duration_minutes,
               lessonType: selectedLessonType.value,
               appointmentType: formData.value.appointment_type,
@@ -2425,11 +2425,11 @@ const handleStudentSelected = async (student: Student | null) => {
             
             // ✅ NEU: Auch den letzten Standort des Schülers laden
             try {
-              console.log('📍 Loading last location for student:', student.first_name)
+              logger.debug('📍 Loading last location for student:', student.first_name)
               const lastLocation = await modalForm.loadLastAppointmentLocation?.(student.id)
               
               if (lastLocation.location_id && lastLocation.location_id !== formData.value.location_id) {
-                console.log('🔄 Updating location to student\'s last used location:', lastLocation.location_id)
+                logger.debug('🔄 Updating location to student\'s last used location:', lastLocation.location_id)
                 formData.value.location_id = lastLocation.location_id
                 
                 // ✅ Auch selectedLocation aktualisieren
@@ -2441,11 +2441,11 @@ const handleStudentSelected = async (student: Student | null) => {
                 
                 if (!locationError && locationData) {
                   selectedLocation.value = locationData
-                  console.log('✅ Location updated to student\'s last used location:', locationData.name)
+                  logger.debug('✅ Location updated to student\'s last used location:', locationData.name)
                 }
               }
             } catch (locationError) {
-              console.log('⚠️ Could not load student\'s last location:', locationError)
+              logger.debug('⚠️ Could not load student\'s last location:', locationError)
             }
             
             // ✅ Preise neu berechnen nach Kategorie-Änderung
@@ -2464,15 +2464,15 @@ const handleStudentSelected = async (student: Student | null) => {
           formData.value.duration_minutes = 45
           const fallbackDuration = getFallbackDuration(lastAppointment.type)
           availableDurations.value = [fallbackDuration]
-          console.log('✅ Using fallback category data:', selectedCategory.value)
+          logger.debug('✅ Using fallback category data:', selectedCategory.value)
         }
       } else {
-        console.log('ℹ️ No previous appointments found, using student category')
+        logger.debug('ℹ️ No previous appointments found, using student category')
         // Fallback: Verwende die Kategorie aus dem Schüler-Profil
         if (student?.category) {
           const primaryCategory = student.category.split(',')[0].trim()
           formData.value.type = primaryCategory
-          console.log('✅ Using student profile category:', primaryCategory)
+          logger.debug('✅ Using student profile category:', primaryCategory)
           
           // ✅ Auch hier availableDurations aktualisieren
           const fallbackDuration = getFallbackDuration(primaryCategory)
@@ -2486,7 +2486,7 @@ const handleStudentSelected = async (student: Student | null) => {
       if (student?.category) {
         const primaryCategory = student.category.split(',')[0].trim()
         formData.value.type = primaryCategory
-        console.log('✅ Fallback to student profile category:', primaryCategory)
+        logger.debug('✅ Fallback to student profile category:', primaryCategory)
         
         // ✅ Load durations from database for student category
         if (currentUser.value?.id && primaryCategory) {
@@ -2498,16 +2498,16 @@ const handleStudentSelected = async (student: Student | null) => {
       }
     }
   } else if (student?.id && (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')) {
-    console.log('🎯 Freeslot mode detected - but still loading student-specific data')
+    logger.debug('🎯 Freeslot mode detected - but still loading student-specific data')
     
     // ✅ NEU: Auch bei Freeslot-Modus Schüler-spezifische Daten laden
     try {
-      console.log('🔄 Loading last appointment data for student in freeslot mode:', student.first_name)
+      logger.debug('🔄 Loading last appointment data for student in freeslot mode:', student.first_name)
       
       // 1. Letzte Kategorie für diesen Schüler laden
       const lastCategory = await modalForm.loadLastAppointmentCategory(student.id)
       if (lastCategory && lastCategory !== formData.value.type) {
-        console.log('🔄 Updating category to student\'s last used:', lastCategory)
+        logger.debug('🔄 Updating category to student\'s last used:', lastCategory)
         formData.value.type = lastCategory
         selectedCategory.value = { code: lastCategory }
         
@@ -2523,17 +2523,17 @@ const handleStudentSelected = async (student: Student | null) => {
             ? categoryData.lesson_duration_minutes 
             : [categoryData.lesson_duration_minutes]
           availableDurations.value = [...durations]
-          console.log('✅ Available durations loaded for student category:', durations)
+          logger.debug('✅ Available durations loaded for student category:', durations)
         }
         } catch (durationError) {
-          console.log('ℹ️ Could not load durations for student category, using default')
+          logger.debug('ℹ️ Could not load durations for student category, using default')
         }
       }
       
       // 2. Letzten Standort für diesen Schüler laden
       const lastLocation = await modalForm.loadLastAppointmentLocation(student.id)
       if (lastLocation.location_id && lastLocation.location_id !== formData.value.location_id) {
-        console.log('🔄 Updating location to student\'s last used:', lastLocation.location_id)
+        logger.debug('🔄 Updating location to student\'s last used:', lastLocation.location_id)
         formData.value.location_id = lastLocation.location_id
         
         // ✅ Auch selectedLocation aktualisieren
@@ -2547,16 +2547,16 @@ const handleStudentSelected = async (student: Student | null) => {
           // ✅ NEU: Füge die custom_location_address hinzu, falls verfügbar
           if (lastLocation.custom_location_address) {
             locationData.custom_location_address = lastLocation.custom_location_address
-            console.log('✅ Added custom_location_address to location data:', lastLocation.custom_location_address)
+            logger.debug('✅ Added custom_location_address to location data:', lastLocation.custom_location_address)
           }
           
           selectedLocation.value = locationData
-          console.log('✅ Location updated to student\'s last used location:', locationData.name)
+          logger.debug('✅ Location updated to student\'s last used location:', locationData.name)
           
           // ✅ Titel neu generieren nach Standort-Änderung
           nextTick(() => {
             if (selectedStudent.value && locationData) {
-              console.log('🔄 Regenerating title after location change...')
+              logger.debug('🔄 Regenerating title after location change...')
               // Der TitleInput wird automatisch aktualisiert, da er an selectedLocation gebunden ist
               
               // ✅ NEU: Titel explizit neu generieren mit vollständigen Location-Daten
@@ -2566,28 +2566,28 @@ const handleStudentSelected = async (student: Student | null) => {
                 let locationText = locationData.name
                 if (locationData.custom_location_address?.address) {
                   locationText = locationData.custom_location_address.address
-                  console.log('📍 Using custom_location_address for title:', locationText)
+                  logger.debug('📍 Using custom_location_address for title:', locationText)
                 } else if (locationData.address) {
                   locationText = locationData.address
-                  console.log('📍 Using location address for title:', locationText)
+                  logger.debug('📍 Using location address for title:', locationText)
                 }
                 
                 const newTitle = `${studentName} - ${locationText}`
                 formData.value.title = newTitle
-                console.log('✅ Title regenerated with full location:', newTitle)
+                logger.debug('✅ Title regenerated with full location:', newTitle)
               }
             }
           })
         }
       }
       
-      console.log('✅ Student-specific data loaded in freeslot mode')
+      logger.debug('✅ Student-specific data loaded in freeslot mode')
     } catch (error) {
-      console.log('⚠️ Could not load student-specific data in freeslot mode:', error)
+      logger.debug('⚠️ Could not load student-specific data in freeslot mode:', error)
     }
   }
   
-  console.log('✅ Student selection completed - selectedStudent:', selectedStudent.value?.first_name)
+  logger.debug('✅ Student selection completed - selectedStudent:', selectedStudent.value?.first_name)
   
   // ✅ NEU: Guthaben des Schülers laden
   if (selectedStudent.value?.id) {
@@ -2601,7 +2601,7 @@ const loadStudentCredit = async (studentId: string) => {
     isLoadingStudentCredit.value = true
     const credit = await getStudentCredit(studentId)
     studentCredit.value = credit
-    console.log('✅ Student credit loaded:', credit)
+    logger.debug('✅ Student credit loaded:', credit)
   } catch (err) {
     console.error('❌ Error loading student credit:', err)
     studentCredit.value = null
@@ -2612,7 +2612,7 @@ const loadStudentCredit = async (studentId: string) => {
 
 const useCreditForCurrentLesson = async () => {
   if (!selectedStudent.value || !studentCredit.value || studentCredit.value.balance_rappen <= 0) {
-    console.log('❌ Cannot use credit - no student, no credit, or insufficient balance')
+    logger.debug('❌ Cannot use credit - no student, no credit, or insufficient balance')
     return
   }
 
@@ -2629,12 +2629,12 @@ const useCreditForCurrentLesson = async () => {
       notes: `Guthaben für Lektion: ${formData.value.title || 'Fahrstunde'}`
     }
     
-    console.log('💳 Using credit for lesson:', creditData)
+    logger.debug('💳 Using credit for lesson:', creditData)
     
     const result = await useCreditForAppointment(creditData)
     
     if (result.success) {
-      console.log('✅ Credit used successfully:', result)
+      logger.debug('✅ Credit used successfully:', result)
       // Guthaben neu laden
       await loadStudentCredit(selectedStudent.value.id)
       // Preis neu berechnen
@@ -2650,11 +2650,11 @@ const useCreditForCurrentLesson = async () => {
 }
 
 const handleStudentCleared = () => {
-  console.log('🗑️ Student cleared')
+  logger.debug('🗑️ Student cleared')
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
   if (isPastAppointment.value) {
-    console.log('🚫 Cannot clear student for past appointment')
+    logger.debug('🚫 Cannot clear student for past appointment')
     return
   }
   
@@ -2666,8 +2666,8 @@ const handleStudentCleared = () => {
 }
 
 const switchToOtherEventType = () => {
-  console.log('🔄 Switching to other event types')
-  console.log('📍 SWITCH EVENTMODAL STACK:', new Error().stack)
+  logger.debug('🔄 Switching to other event types')
+  logger.debug('📍 SWITCH EVENTMODAL STACK:', new Error().stack)
   
   formData.value.eventType = 'other' // Wird später überschrieben wenn User wählt
   showEventTypeSelection.value = true
@@ -2677,7 +2677,7 @@ const switchToOtherEventType = () => {
 }
 
 const changeEventType = () => {
-  console.log('🔄 Changing event type')
+  logger.debug('🔄 Changing event type')
   
   // Erlaube Typ-Änderung auch bei bestehenden Events
   showEventTypeSelection.value = true
@@ -2687,11 +2687,11 @@ const changeEventType = () => {
 
 
 const handleEventTypeSelected = (eventType: any) => {
-  console.log('🎯 Event type selected:', eventType)
+  logger.debug('🎯 Event type selected:', eventType)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
   if (isPastAppointment.value) {
-    console.log('🚫 Cannot change event type for past appointment')
+    logger.debug('🚫 Cannot change event type for past appointment')
     return
   }
   
@@ -2711,11 +2711,11 @@ const handleEventTypeSelected = (eventType: any) => {
   
   // ✅ EventTypeSelector ausblenden nach Auswahl
   showEventTypeSelection.value = false
-  console.log('✅ EventTypeSelector hidden after selection')
+  logger.debug('✅ EventTypeSelector hidden after selection')
 }
 
 const backToStudentSelection = () => {
-  console.log('⬅️ Back to student selection')
+  logger.debug('⬅️ Back to student selection')
   showEventTypeSelection.value = false
   formData.value.eventType = 'lesson'
   formData.value.selectedSpecialType = ''
@@ -2725,16 +2725,16 @@ const backToStudentSelection = () => {
 
 // ✅ IN EVENTMODAL.VUE:
 const handleLessonTypeSelected = async (lessonType: any) => {
-  console.log('🎯 Lesson type selected:', lessonType.name)
+  logger.debug('🎯 Lesson type selected:', lessonType.name)
   selectedLessonType.value = lessonType.code
   formData.value.appointment_type = lessonType.code
   
   // ✅ AKTUALISIERE DAUERN basierend auf dem gewählten Lesson-Type
   if (formData.value.type && selectedCategory.value) {
-    console.log('🔄 Updating durations for lesson type change:', lessonType.code, 'category:', formData.value.type)
+    logger.debug('🔄 Updating durations for lesson type change:', lessonType.code, 'category:', formData.value.type)
     
     if (lessonType.code === 'theory') {
-      console.log('📚 Theorielektion erkannt: Lade theory_durations')
+      logger.debug('📚 Theorielektion erkannt: Lade theory_durations')
       
       // ✅ Lade theory_durations aus der categories Tabelle
       if (currentUser.value?.id) {
@@ -2745,15 +2745,15 @@ const handleLessonTypeSelected = async (lessonType: any) => {
         availableDurations.value = [45]
       }
     } else if (lessonType.code === 'exam') {
-      console.log('📝 Prüfung erkannt: Verwende exam_duration_minutes')
+      logger.debug('📝 Prüfung erkannt: Verwende exam_duration_minutes')
       
       // ✅ Verwende exam_duration_minutes aus der selectedCategory
       const examDuration = selectedCategory.value?.exam_duration_minutes || 135
       formData.value.duration_minutes = examDuration
       availableDurations.value = [examDuration]
-      console.log('📝 Set exam duration:', examDuration)
+      logger.debug('📝 Set exam duration:', examDuration)
     } else if (lessonType.code === 'lesson') {
-      console.log('🚗 Fahrstunde erkannt: Lade lesson_duration_minutes aus DB')
+      logger.debug('🚗 Fahrstunde erkannt: Lade lesson_duration_minutes aus DB')
       
       // ✅ WICHTIG: Dauern direkt aus der Datenbank laden, nicht aus selectedCategory
       if (formData.value.type && currentUser.value?.id) {
@@ -2794,25 +2794,25 @@ const handleLessonTypeSelected = async (lessonType: any) => {
             }
             
             availableDurations.value = lessonDurations
-            console.log('✅ Lesson durations loaded from DB:', lessonDurations)
+            logger.debug('✅ Lesson durations loaded from DB:', lessonDurations)
             
             // ✅ Intelligente Dauer-Auswahl
             const currentDuration = formData.value.duration_minutes
             if (lessonDurations.includes(currentDuration)) {
-              console.log('✅ Keeping current duration:', currentDuration)
+              logger.debug('✅ Keeping current duration:', currentDuration)
             } else {
               // Versuche eine ähnliche Dauer zu finden
               const similarDuration = lessonDurations.find((d: number) => Math.abs(d - currentDuration) <= 15)
               if (similarDuration) {
                 formData.value.duration_minutes = similarDuration
-                console.log('🎯 Found similar duration:', similarDuration, 'instead of', currentDuration)
+                logger.debug('🎯 Found similar duration:', similarDuration, 'instead of', currentDuration)
               } else {
                 formData.value.duration_minutes = lessonDurations[0]
-                console.log('🔄 Set lesson duration to first available:', lessonDurations[0])
+                logger.debug('🔄 Set lesson duration to first available:', lessonDurations[0])
               }
             }
           } else {
-            console.log('⚠️ Could not load durations from DB, using fallback')
+            logger.debug('⚠️ Could not load durations from DB, using fallback')
             availableDurations.value = [45]
             formData.value.duration_minutes = 45
           }
@@ -2823,13 +2823,13 @@ const handleLessonTypeSelected = async (lessonType: any) => {
         }
       } else {
         // Fallback wenn keine Kategorie oder User
-        console.log('⚠️ No category or user - using fallback durations')
+        logger.debug('⚠️ No category or user - using fallback durations')
         availableDurations.value = [45]
         formData.value.duration_minutes = 45
       }
     }
   } else {
-    console.log('⚠️ No category selected yet - using defaults')
+    logger.debug('⚠️ No category selected yet - using defaults')
     
     // Fallback wenn noch keine Kategorie ausgewählt
     if (lessonType.code === 'theory') {
@@ -2851,7 +2851,7 @@ const handleLessonTypeSelected = async (lessonType: any) => {
     }
   })
   
-  console.log('✅ Lesson type change completed:', {
+  logger.debug('✅ Lesson type change completed:', {
     lessonType: lessonType.code,
     category: formData.value.type,
     duration: formData.value.duration_minutes,
@@ -2864,29 +2864,29 @@ const handleLessonTypeSelected = async (lessonType: any) => {
     const locationName = selectedLocation.value.name || selectedLocation.value.address || 'Unbekannter Ort'
     const lessonTypeText = getLessonTypeText(lessonType.code)
     formData.value.title = `${studentName} - ${locationName} (${lessonTypeText})`
-    console.log('✅ Title updated with new lesson type:', formData.value.title)
+    logger.debug('✅ Title updated with new lesson type:', formData.value.title)
   } else if (selectedStudent.value) {
     const studentName = selectedStudent.value.first_name
     const lessonTypeText = getLessonTypeText(lessonType.code)
     formData.value.title = `${studentName} - ${lessonTypeText}`
-    console.log('✅ Title updated with student and lesson type:', formData.value.title)
+    logger.debug('✅ Title updated with student and lesson type:', formData.value.title)
   }
   
-  console.log('📝 Appointment type set to:', lessonType.code)
+  logger.debug('📝 Appointment type set to:', lessonType.code)
 }
 
 const handlePriceChanged = (price: number) => {
-    console.log('💰 Price changed in EventModal:', price)
+    logger.debug('💰 Price changed in EventModal:', price)
   // Preis wird jetzt aus der Datenbank berechnet
-  console.log('💰 Price changed in EventModal:', price)
+  logger.debug('💰 Price changed in EventModal:', price)
 }
 
 const handleDurationChanged = (newDuration: number) => {
-  console.log('⏱️ Duration changed to:', newDuration)
+  logger.debug('⏱️ Duration changed to:', newDuration)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
   if (isPastAppointment.value) {
-    console.log('🚫 Cannot change duration for past appointment')
+    logger.debug('🚫 Cannot change duration for past appointment')
     return
   }
   
@@ -2895,13 +2895,13 @@ const handleDurationChanged = (newDuration: number) => {
 }
 
 const handleDiscountChanged = (discount: number, discountType: "fixed" | "percentage", reason: string) => {
-  console.log('💰 Discount changed:', { discount, discountType, reason })
+  logger.debug('💰 Discount changed:', { discount, discountType, reason })
   formData.value.discount = discount
   formData.value.discount_type = discountType
   formData.value.discount_reason = reason
   
   // ✅ DEBUG: Überprüfe ob formData korrekt aktualisiert wurde
-  console.log('✅ formData updated:', {
+  logger.debug('✅ formData updated:', {
     discount: formData.value.discount,
     discount_type: formData.value.discount_type,
     discount_reason: formData.value.discount_reason
@@ -2910,14 +2910,14 @@ const handleDiscountChanged = (discount: number, discountType: "fixed" | "percen
 
 const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => {
   // ✅ Payment status wird in payments Tabelle gespeichert, nicht in appointments
-  console.log('💳 Payment status changed:', { isPaid, paymentMethod })
+  logger.debug('💳 Payment status changed:', { isPaid, paymentMethod })
   
   // Hier können Sie zusätzliche Logik für das Speichern hinzufügen
   // z.B. sofort in der payments Tabelle aktualisieren
 }
 
 const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, appointmentNum: number = 1) => {
-  console.log('💰 Calculating offline price:', { categoryCode, durationMinutes, appointmentNum })
+  logger.debug('💰 Calculating offline price:', { categoryCode, durationMinutes, appointmentNum })
   
   const offlinePrices: Record<string, { pricePerLesson: number, adminFee: number, adminFrom: number }> = {
     'B': { pricePerLesson: 95, adminFee: 120, adminFrom: 2 },
@@ -2957,7 +2957,7 @@ const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, ap
   
         // Preis wird jetzt aus der Datenbank berechnet
   
-  console.log('✅ Offline price calculated:', {
+  logger.debug('✅ Offline price calculated:', {
     basePrice: basePrice.toFixed(2),
     adminFee: adminFee.toFixed(2),
     totalPrice: totalPrice.toFixed(2)
@@ -2965,7 +2965,7 @@ const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, ap
 }
 
 const handleTimeChanged = (timeData: { startDate: string, startTime: string, endTime: string }) => {
-  console.log('🕐 Time manually changed:', timeData)
+  logger.debug('🕐 Time manually changed:', timeData)
   
   // ✅ 1. Update form data
   formData.value.startDate = timeData.startDate
@@ -2974,7 +2974,7 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
   
   // ✅ 2. KRITISCH: Calculate duration from manual time changes
   if (timeData.startTime && timeData.endTime) {
-    console.log('⏰ Calculating duration from time change...')
+    logger.debug('⏰ Calculating duration from time change...')
     
     const startTime = new Date(`1970-01-01T${timeData.startTime}:00`)
     const endTime = new Date(`1970-01-01T${timeData.endTime}:00`)
@@ -2987,7 +2987,7 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
     const newDurationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
     
     if (newDurationMinutes > 0 && newDurationMinutes !== formData.value.duration_minutes) {
-      console.log('⏰ Duration calculated from manual time change:', 
+      logger.debug('⏰ Duration calculated from manual time change:', 
         `${formData.value.duration_minutes}min → ${newDurationMinutes}min`)
       
       // ✅ 3. Update duration (this will trigger price recalculation via watcher)
@@ -2996,7 +2996,7 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
       // ✅ 4. Add custom duration to available options
       if (!availableDurations.value.includes(newDurationMinutes)) {
         availableDurations.value = [...availableDurations.value, newDurationMinutes].sort((a, b) => a - b)
-        console.log('⏱️ Added custom duration to available options:', availableDurations.value)
+        logger.debug('⏱️ Added custom duration to available options:', availableDurations.value)
       }
       
       // ✅ 5. SOFORTIGE Preisberechnung (online + offline)
@@ -3017,7 +3017,7 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
               props.eventData?.id
             )
               .then(priceResult => {
-                console.log('✅ Online price calculated:', priceResult.total_chf)
+                logger.debug('✅ Online price calculated:', priceResult.total_chf)
                 
                 // Update dynamic pricing mit online Daten
                 dynamicPricing.value = {
@@ -3037,16 +3037,16 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
                 // Preis wird jetzt aus der Datenbank berechnet
               })
               .catch(error => {
-                console.log('🔄 Online pricing failed, using offline calculation:', error)
+                logger.debug('🔄 Online pricing failed, using offline calculation:', error)
                 calculateOfflinePrice(formData.value.type, newDurationMinutes, appointmentNum)
               })
           } else {
             // ✅ Offline: Direkte Offline-Berechnung
-            console.log('📱 Offline mode detected, using offline calculation')
+            logger.debug('📱 Offline mode detected, using offline calculation')
             calculateOfflinePrice(formData.value.type, newDurationMinutes, appointmentNum)
           }
         } catch (error) {
-          console.log('🔄 Error in price calculation, using offline fallback:', error)
+          logger.debug('🔄 Error in price calculation, using offline fallback:', error)
           calculateOfflinePrice(formData.value.type, newDurationMinutes, appointmentNum)
         }
       }
@@ -3059,7 +3059,7 @@ const handleTitleGenerated = (title: string) => {
 }
 
 const handleOpenPaymentModal = () => {
-  console.log('💳 Opening payment modal for online payment')
+  logger.debug('💳 Opening payment modal for online payment')
   // Hier würden Sie das PaymentModal öffnen
   // emit('open-payment-modal') oder ein separates Modal anzeigen
 }
@@ -3069,11 +3069,11 @@ const updateLocationId = (locationId: string | null) => {
 }
 
 const handleLocationSelected = (location: any) => {
-  console.log('📍 Location selected:', location)
+  logger.debug('📍 Location selected:', location)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
   if (isPastAppointment.value) {
-    console.log('🚫 Cannot change location for past appointment')
+    logger.debug('🚫 Cannot change location for past appointment')
     return
   }
   
@@ -3084,7 +3084,7 @@ const handleLocationSelected = (location: any) => {
 const triggerStudentLoad = () => {
   // ✅ FIX: Bei free slot clicks Schüler laden aber nicht automatisch auswählen
   if (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') {
-    console.log('🎯 Free slot click detected - loading students but not auto-selecting')
+    logger.debug('🎯 Free slot click detected - loading students but not auto-selecting')
     // Schüler laden falls noch nicht geladen, aber keinen automatisch auswählen
     if (studentSelectorRef.value) {
       // Wichtig: Bei Freeslot-Modus nur Schüler laden, nicht auswählen
@@ -3094,14 +3094,14 @@ const triggerStudentLoad = () => {
     return
   }
   
-  console.log('🔄 Triggering student load...')
+  logger.debug('🔄 Triggering student load...')
   if (studentSelectorRef.value) {
     studentSelectorRef.value.loadStudents()
   }
 }
 
 const resetForm = () => {
-  console.log('🔄 RESET FORM CALLED - Before reset:', {
+  logger.debug('🔄 RESET FORM CALLED - Before reset:', {
     appointment_type: formData.value.appointment_type,
     location_id: formData.value.location_id,
     selectedProducts: selectedProducts.value.length
@@ -3141,7 +3141,7 @@ const resetForm = () => {
     // payment_method und payment_data entfernt - werden in der payments Tabelle gespeichert
   }
   
-  console.log('🔄 RESET FORM COMPLETED - After reset:', {
+  logger.debug('🔄 RESET FORM COMPLETED - After reset:', {
     appointment_type: formData.value.appointment_type,
     location_id: formData.value.location_id,
     selectedProducts: selectedProducts.value.length
@@ -3152,12 +3152,12 @@ const resetForm = () => {
   
   // ✅ NEU: Standard-Zahlungsmethode beim Reset setzen
   selectedPaymentMethod.value = 'wallee'
-  console.log('💳 Payment method reset to default: wallee')
+  logger.debug('💳 Payment method reset to default: wallee')
 }
 
 // Staff Selection Handler
 const handleStaffSelectionChanged = (staffIds: string[], staffMembers: any[]) => {
-  console.log('👥 Staff selection changed:', { 
+  logger.debug('👥 Staff selection changed:', { 
     selectedIds: staffIds, 
     selectedMembers: staffMembers.length 
   })
@@ -3166,23 +3166,23 @@ const handleStaffSelectionChanged = (staffIds: string[], staffMembers: any[]) =>
   
   // Optional: Weitere Logik für Team-Einladungen
   if (staffIds.length > 0) {
-    console.log('✅ Team members selected for invitation')
+    logger.debug('✅ Team members selected for invitation')
   }
 }
 
 // Customer Invite Handlers
 const handleCustomersAdded = (customers: any[]) => {
-  console.log('📞 Customers added to invite list:', customers.length)
+  logger.debug('📞 Customers added to invite list:', customers.length)
 }
 
 const handleCustomersCleared = () => {
-  console.log('🗑️ Customer invite list cleared')
+  logger.debug('🗑️ Customer invite list cleared')
   invitedCustomers.value = []
 }
 
 const loadCategoryData = async (categoryCode: string) => {
   try {
-    console.log('🔄 Loading category data for:', categoryCode)
+    logger.debug('🔄 Loading category data for:', categoryCode)
     const { data, error } = await supabase
       .from('categories')
       .select('code, lesson_duration_minutes, exam_duration_minutes')
@@ -3193,7 +3193,7 @@ const loadCategoryData = async (categoryCode: string) => {
     if (error) throw error
     
     selectedCategory.value = data
-    console.log('✅ Category data loaded:', data)
+    logger.debug('✅ Category data loaded:', data)
     
     return data
   } catch (err) {
@@ -3206,7 +3206,7 @@ const loadCategoryData = async (categoryCode: string) => {
 
 
 const handleClose = () => {
-  console.log('🚪 Closing modal')
+  logger.debug('🚪 Closing modal')
   resetForm()
   emit('close')
 }
@@ -3214,7 +3214,7 @@ const handleClose = () => {
 const handleCopy = () => {
   if (!props.eventData?.id) return
   
-  console.log('📋 Copying appointment:', props.eventData.id)
+  logger.debug('📋 Copying appointment:', props.eventData.id)
   
   // Alle aktuellen Daten kopieren, aber ID entfernen und Zeit anpassen
   const copiedData = {
@@ -3281,9 +3281,9 @@ const getNextDay = (currentDate: string): string => {
 // In EventModal.vue - ersetze die handleDelete Funktion:
 
 const handleDelete = async () => {
-  console.log('🔥 handleDelete called!')
+  logger.debug('🔥 handleDelete called!')
   if (!props.eventData?.id) {
-    console.log('❌ No event ID found for deletion')
+    logger.debug('❌ No event ID found for deletion')
     return
   }
   
@@ -3297,22 +3297,22 @@ const handleDelete = async () => {
   
   const isPayableAppointment = isLessonType(appointmentType)
   
-  console.log('🗑️ FULL EVENT DATA:', props.eventData)
-  console.log('🗑️ AVAILABLE FIELDS:', Object.keys(props.eventData || {}))
-  console.log('🗑️ event_type_code:', props.eventData.event_type_code)
-  console.log('🗑️ type:', props.eventData.type)
-  console.log('🗑️ appointmentType:', appointmentType)
-  console.log('🗑️ isPayableAppointment:', isPayableAppointment)
+  logger.debug('🗑️ FULL EVENT DATA:', props.eventData)
+  logger.debug('🗑️ AVAILABLE FIELDS:', Object.keys(props.eventData || {}))
+  logger.debug('🗑️ event_type_code:', props.eventData.event_type_code)
+  logger.debug('🗑️ type:', props.eventData.type)
+  logger.debug('🗑️ appointmentType:', appointmentType)
+  logger.debug('🗑️ isPayableAppointment:', isPayableAppointment)
   
   // ✅ FÜR OTHER EVENT TYPES: Direkt löschen ohne Absage-Gründe
   if (!isPayableAppointment) {
-    console.log('🗑️ Other event type - direct delete without cancellation reasons')
+    logger.debug('🗑️ Other event type - direct delete without cancellation reasons')
     showDeleteConfirmation.value = true
     return
   }
   
   // ✅ FÜR LEKTIONEN: Erst Absage-Gründe erfragen
-  console.log('🗑️ Lesson/Exam/Theory - show cancellation reason modal first')
+  logger.debug('🗑️ Lesson/Exam/Theory - show cancellation reason modal first')
   cancellationStep.value = 0 // Starte mit Schritt 1 (Wer hat abgesagt?)
   cancellationType.value = null // Benutzer muss wählen
   await fetchCancellationReasons()
@@ -3323,10 +3323,10 @@ const handleDelete = async () => {
 const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, status: string = 'cancelled') => {
   if (!props.eventData?.id) return
   
-  console.log('🗑️ Performing soft delete WITHOUT payment cleanup for appointment:', props.eventData.id)
-  console.log('🗑️ Deletion reason:', deletionReason)
-  console.log('🗑️ Status:', status)
-  console.log('🗑️ Current user:', props.currentUser?.id)
+  logger.debug('🗑️ Performing soft delete WITHOUT payment cleanup for appointment:', props.eventData.id)
+  logger.debug('🗑️ Deletion reason:', deletionReason)
+  logger.debug('🗑️ Status:', status)
+  logger.debug('🗑️ Current user:', props.currentUser?.id)
   
   try {
     isLoading.value = true
@@ -3339,7 +3339,7 @@ const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, st
       status: status
     }
     
-    console.log('🗑️ Update data:', updateData)
+    logger.debug('🗑️ Update data:', updateData)
     
     const { error: updateError } = await supabase
       .from('appointments')
@@ -3351,7 +3351,7 @@ const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, st
       throw updateError
     }
     
-    console.log('✅ Appointment soft deleted successfully (without payment cleanup)')
+    logger.debug('✅ Appointment soft deleted successfully (without payment cleanup)')
     
     // ✅ Schließe das Modal
     emit('close')
@@ -3368,16 +3368,16 @@ const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, st
 const performSoftDelete = async (deletionReason: string, status: string = 'cancelled') => {
   if (!props.eventData?.id) return
   
-  console.log('🗑️ Performing soft delete for appointment:', props.eventData.id)
-  console.log('🗑️ Deletion reason:', deletionReason)
-  console.log('🗑️ Status:', status)
-  console.log('🗑️ Current user:', props.currentUser?.id)
+  logger.debug('🗑️ Performing soft delete for appointment:', props.eventData.id)
+  logger.debug('🗑️ Deletion reason:', deletionReason)
+  logger.debug('🗑️ Status:', status)
+  logger.debug('🗑️ Current user:', props.currentUser?.id)
   
   try {
     isLoading.value = true
     
     // ✅ SCHRITT 1: Hole Payment-Infos für Refund-Berechnung
-    console.log('💳 Fetching payment for appointment:', props.eventData.id)
+    logger.debug('💳 Fetching payment for appointment:', props.eventData.id)
     
     const { data: payments, error: getPaymentError } = await supabase
       .from('payments')
@@ -3391,15 +3391,15 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
       console.warn('⚠️ Could not fetch payment:', getPaymentError)
     } else if (payments && payments.length > 0) {
       const payment = payments[0]
-      console.log('📋 Current payment:', payment)
+      logger.debug('📋 Current payment:', payment)
       lessonPriceRappen = payment.lesson_price_rappen || 0
       adminFeeRappen = payment.admin_fee_rappen || 0
     } else {
-      console.log('ℹ️ No payment found for appointment')
+      logger.debug('ℹ️ No payment found for appointment')
     }
     
     // ✅ SCHRITT 1.5: Call API endpoint to handle refund if needed
-    console.log('📡 Calling handle-cancellation endpoint...')
+    logger.debug('📡 Calling handle-cancellation endpoint...')
     try {
       // ✅ NEW: Pass the full payment info and cancellation policy to handle-cancellation
       const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
@@ -3418,11 +3418,11 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
         }
       })
       
-      console.log('✅ Cancellation processed:', cancellationResult)
+      logger.debug('✅ Cancellation processed:', cancellationResult)
       // @ts-ignore - cancellationResult is of type unknown
       if (cancellationResult.action === 'refund_processed') {
         // @ts-ignore
-        console.log(`💰 Refund applied: CHF ${cancellationResult.details.refundAmount}`)
+        logger.debug(`💰 Refund applied: CHF ${cancellationResult.details.refundAmount}`)
       }
     } catch (error: any) {
       console.warn('⚠️ Error calling handle-cancellation endpoint:', error)
@@ -3446,12 +3446,12 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
       if (updatePaymentError) {
         console.warn('⚠️ Could not update payment:', updatePaymentError)
       } else {
-        console.log('✅ Payment updated - lesson_price and admin_fee removed, total recalculated')
+        logger.debug('✅ Payment updated - lesson_price and admin_fee removed, total recalculated')
       }
     }
     
     // ✅ WICHTIG: Product sales NICHT löschen! Sie bleiben für die Kostenverrechnung erhalten!
-    console.log('ℹ️ Product sales are NOT deleted - keeping them for accounting purposes')
+    logger.debug('ℹ️ Product sales are NOT deleted - keeping them for accounting purposes')
     
     // ✅ SCHRITT 3: SOFT DELETE: Termin als gelöscht markieren
     const eventType = props.eventData.type || props.eventData.event_type_code
@@ -3464,8 +3464,8 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
       status: status
     }
     
-    console.log('🗑️ Update data:', updateData)
-    console.log('🎯 Event type:', eventType, 'isOtherEventType:', isOtherEventType)
+    logger.debug('🗑️ Update data:', updateData)
+    logger.debug('🎯 Event type:', eventType, 'isOtherEventType:', isOtherEventType)
     
     const { data, error } = await supabase
       .from('appointments')
@@ -3478,10 +3478,10 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
       throw error
     }
     
-    console.log('✅ Appointment soft deleted successfully:', data)
-    console.log('✅ Status set to:', status)
-    console.log('✅ Deletion reason:', deletionReason)
-    console.log('✅ Database response:', data)
+    logger.debug('✅ Appointment soft deleted successfully:', data)
+    logger.debug('✅ Status set to:', status)
+    logger.debug('✅ Deletion reason:', deletionReason)
+    logger.debug('✅ Database response:', data)
     
     // ✅ NEU: SMS und Email versenden bei Löschung
     const phoneNumber = props.eventData?.phone || props.eventData?.extendedProps?.phone
@@ -3500,7 +3500,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     
     // SMS versenden
     if (phoneNumber) {
-      console.log('📱 Sending SMS notification for cancelled appointment...')
+      logger.debug('📱 Sending SMS notification for cancelled appointment...')
       try {
         const result = await $fetch('/api/sms/send', {
           method: 'POST',
@@ -3509,12 +3509,12 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
             message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`
           }
         })
-        console.log('✅ SMS sent successfully:', result)
+        logger.debug('✅ SMS sent successfully:', result)
       } catch (smsError: any) {
         console.error('❌ Failed to send SMS:', smsError)
       }
     } else {
-      console.log('⚠️ No phone number available for SMS', { 
+      logger.debug('⚠️ No phone number available for SMS', { 
         'eventData.phone': props.eventData?.phone,
         'extendedProps.phone': props.eventData?.extendedProps?.phone 
       })
@@ -3522,7 +3522,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     
     // Email versenden
     if (studentEmail) {
-      console.log('📧 Sending Email notification for cancelled appointment...')
+      logger.debug('📧 Sending Email notification for cancelled appointment...')
       try {
         const result = await $fetch('/api/email/send-appointment-notification', {
           method: 'POST',
@@ -3537,12 +3537,12 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
             tenantId: props.currentUser?.tenant_id
           }
         })
-        console.log('✅ Email sent successfully:', result)
+        logger.debug('✅ Email sent successfully:', result)
       } catch (emailError: any) {
         console.error('❌ Failed to send Email:', emailError)
       }
     } else {
-      console.log('⚠️ No email address available for email notification', {
+      logger.debug('⚠️ No email address available for email notification', {
         'eventData.email': props.eventData?.email,
         'extendedProps.email': props.eventData?.extendedProps?.email
       })
@@ -3568,12 +3568,12 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
 const performSoftDeleteWithReason = async (deletionReason: string, cancellationReasonId: string, status: string = 'cancelled', cancellationType: 'student' | 'staff', withCosts: boolean = true) => {
   if (!props.eventData?.id) return
   
-  console.log('🗑️ Performing soft delete with reason for appointment:', props.eventData.id)
-  console.log('🗑️ Deletion reason:', deletionReason)
-  console.log('🗑️ Cancellation reason ID:', cancellationReasonId)
-  console.log('🗑️ Status:', status)
-  console.log('🗑️ Current user:', props.currentUser?.id)
-  console.log('💳 withCosts parameter:', withCosts)
+  logger.debug('🗑️ Performing soft delete with reason for appointment:', props.eventData.id)
+  logger.debug('🗑️ Deletion reason:', deletionReason)
+  logger.debug('🗑️ Cancellation reason ID:', cancellationReasonId)
+  logger.debug('🗑️ Status:', status)
+  logger.debug('🗑️ Current user:', props.currentUser?.id)
+  logger.debug('💳 withCosts parameter:', withCosts)
   
   try {
     isLoading.value = true
@@ -3600,7 +3600,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       adminFeeRappen = payment.admin_fee_rappen || 0
     }
     
-    console.log('🔍 DEBUG performSoftDeleteWithReason:', {
+    logger.debug('🔍 DEBUG performSoftDeleteWithReason:', {
       eventType,
       isLessonType,
       withCosts,
@@ -3610,17 +3610,17 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     })
     
     if (isLessonType && withCosts) {
-      console.log('💳 Appointment will be charged cancellation fee - keeping all payment data')
-      console.log('   - lesson_price_rappen: KEPT (for cancellation fee)')
-      console.log('   - products_price_rappen: KEPT (for cancellation fee)')
-      console.log('   - product_sales: KEPT (for accounting)')
+      logger.debug('💳 Appointment will be charged cancellation fee - keeping all payment data')
+      logger.debug('   - lesson_price_rappen: KEPT (for cancellation fee)')
+      logger.debug('   - products_price_rappen: KEPT (for cancellation fee)')
+      logger.debug('   - product_sales: KEPT (for accounting)')
       chargePercentage = 100 // Full charge
     } else if (isLessonType && !withCosts) {
-      console.log('💳 Appointment cancelled without charge - processing refund via handle-cancellation')
+      logger.debug('💳 Appointment cancelled without charge - processing refund via handle-cancellation')
       chargePercentage = 0 // No charge
       
       // ✅ NEW: Call handle-cancellation endpoint to process refunds
-      console.log('📡 Calling handle-cancellation endpoint for refund processing...')
+      logger.debug('📡 Calling handle-cancellation endpoint for refund processing...')
       try {
         const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
           method: 'POST',
@@ -3636,11 +3636,11 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
           }
         })
         
-        console.log('✅ Cancellation refund processed:', cancellationResult)
+        logger.debug('✅ Cancellation refund processed:', cancellationResult)
         // @ts-ignore - cancellationResult is of type unknown
         if (cancellationResult.action === 'refund_processed' || cancellationResult.action === 'credit_created_no_payment') {
           // @ts-ignore
-          console.log(`💰 Refund/Credit applied: CHF ${cancellationResult.details?.refundAmount || cancellationResult.refundAmount}`)
+          logger.debug(`💰 Refund/Credit applied: CHF ${cancellationResult.details?.refundAmount || cancellationResult.refundAmount}`)
         }
       } catch (error: any) {
         console.error('❌ Error calling handle-cancellation endpoint:', {
@@ -3667,7 +3667,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
           .not('wallee_transaction_id', 'is', null)
         
         if (authorizedPayments && authorizedPayments.length > 0) {
-          console.log(`🔙 Voiding ${authorizedPayments.length} authorized payment(s) for cancellation >24h before appointment`)
+          logger.debug(`🔙 Voiding ${authorizedPayments.length} authorized payment(s) for cancellation >24h before appointment`)
           
           for (const payment of authorizedPayments) {
             try {
@@ -3679,7 +3679,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
                   reason: `Appointment cancelled more than 24h before start: ${deletionReason}`
                 }
               })
-              console.log(`✅ Payment ${payment.id} voided successfully`)
+              logger.debug(`✅ Payment ${payment.id} voided successfully`)
             } catch (voidError: any) {
               console.warn(`⚠️ Could not void payment ${payment.id}:`, voidError.message)
             }
@@ -3694,7 +3694,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       // This allows full tracking of all financial transactions
       
       // 1.2 Product sales und items löschen (inklusive Rabatte)
-      console.log('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
+      logger.debug('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
       
       // Zuerst alle product_sale_ids sammeln
       const { data: productSales } = await supabase
@@ -3704,7 +3704,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       
       if (productSales && productSales.length > 0) {
         const productSaleIds = productSales.map(ps => ps.id)
-        console.log('🗑️ Found product sales to delete:', productSaleIds)
+        logger.debug('🗑️ Found product sales to delete:', productSaleIds)
         
         // Product sale items löschen (zuerst)
         const { error: productSaleItemsError } = await supabase
@@ -3715,7 +3715,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
         if (productSaleItemsError) {
           console.warn('⚠️ Could not delete product sale items:', productSaleItemsError)
         } else {
-          console.log('✅ Product sale items deleted successfully')
+          logger.debug('✅ Product sale items deleted successfully')
         }
         
         // Dann product_sales löschen (inklusive Rabatte)
@@ -3727,13 +3727,13 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
         if (productSalesError) {
           console.warn('⚠️ Could not delete product sales:', productSalesError)
         } else {
-          console.log('✅ Product sales deleted successfully')
+          logger.debug('✅ Product sales deleted successfully')
         }
       }
     }
     
     // ✅ SCHRITT 2: Soft Delete des Appointments mit Absage-Grund
-    console.log('🗑️ Soft deleting appointment with cancellation reason')
+    logger.debug('🗑️ Soft deleting appointment with cancellation reason')
     
     // Get the cancellation reason to check if medical certificate is required and force_charge_percentage
     const { data: reasonData } = await supabase
@@ -3742,7 +3742,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       .eq('id', cancellationReasonId)
       .single()
     
-    console.log('🔍 Cancellation reason data:', reasonData)
+    logger.debug('🔍 Cancellation reason data:', reasonData)
     
     // Prepare update data with policy information
     const updateData: any = {
@@ -3758,23 +3758,23 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     if (reasonData?.force_charge_percentage !== null && reasonData?.force_charge_percentage !== undefined) {
       const chargePercentage = reasonData.force_charge_percentage
       updateData.cancellation_charge_percentage = chargePercentage
-      console.log(`💰 Using force_charge_percentage from cancellation reason: ${chargePercentage}%`)
+      logger.debug(`💰 Using force_charge_percentage from cancellation reason: ${chargePercentage}%`)
       
       // If staff cancels (force_charge_percentage = 0), don't charge customer
       if (chargePercentage === 0) {
-        console.log('✅ Staff cancellation - NO CHARGE for customer')
+        logger.debug('✅ Staff cancellation - NO CHARGE for customer')
       }
     } else if (cancellationPolicyResult.value) {
       // Fallback: Use calculated policy if no force_charge_percentage
       updateData.cancellation_charge_percentage = cancellationPolicyResult.value.calculation.chargePercentage
-      console.log(`💳 Using calculated policy charge percentage: ${cancellationPolicyResult.value.calculation.chargePercentage}%`)
+      logger.debug(`💳 Using calculated policy charge percentage: ${cancellationPolicyResult.value.calculation.chargePercentage}%`)
     }
 
     // ✅ Set medical certificate status if required
     if (reasonData?.requires_proof) {
       updateData.medical_certificate_status = 'pending'
       updateData.original_charge_percentage = updateData.cancellation_charge_percentage || 100
-      console.log('📄 Medical certificate required - status set to pending')
+      logger.debug('📄 Medical certificate required - status set to pending')
     }
 
     // Add credit hours information if available
@@ -3796,15 +3796,15 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       throw error
     }
     
-    console.log('✅ Appointment soft deleted successfully with reason:', data)
-    console.log('✅ Status set to:', status)
-    console.log('✅ Deletion reason:', deletionReason)
-    console.log('✅ Cancellation reason ID:', cancellationReasonId)
-    console.log('✅ Database response:', data)
+    logger.debug('✅ Appointment soft deleted successfully with reason:', data)
+    logger.debug('✅ Status set to:', status)
+    logger.debug('✅ Deletion reason:', deletionReason)
+    logger.debug('✅ Cancellation reason ID:', cancellationReasonId)
+    logger.debug('✅ Database response:', data)
     
     // Create cancellation fee invoice if policy charges apply
     if (cancellationPolicyResult.value?.shouldCreateInvoice && cancellationPolicyResult.value.chargeAmountRappen > 0) {
-      console.log('💰 Creating cancellation fee invoice...')
+      logger.debug('💰 Creating cancellation fee invoice...')
       
       const appointmentData = {
         id: props.eventData.id,
@@ -3823,7 +3823,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       )
       
       if (invoiceResult.success) {
-        console.log('✅ Cancellation fee invoice created:', invoiceResult.invoiceId)
+        logger.debug('✅ Cancellation fee invoice created:', invoiceResult.invoiceId)
       } else {
         console.warn('⚠️ Could not create cancellation fee invoice:', invoiceResult.error)
       }
@@ -3846,7 +3846,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     
     // SMS versenden
     if (phoneNumber) {
-      console.log('📱 Sending SMS notification for cancelled appointment...')
+      logger.debug('📱 Sending SMS notification for cancelled appointment...')
       try {
         const result = await $fetch('/api/sms/send', {
           method: 'POST',
@@ -3855,12 +3855,12 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
             message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`
           }
         })
-        console.log('✅ SMS sent successfully:', result)
+        logger.debug('✅ SMS sent successfully:', result)
       } catch (smsError: any) {
         console.error('❌ Failed to send SMS:', smsError)
       }
     } else {
-      console.log('⚠️ No phone number available for SMS', { 
+      logger.debug('⚠️ No phone number available for SMS', { 
         'eventData.phone': props.eventData?.phone,
         'extendedProps.phone': props.eventData?.extendedProps?.phone 
       })
@@ -3868,7 +3868,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     
     // Email versenden
     if (studentEmail) {
-      console.log('📧 Sending Email notification for cancelled appointment...')
+      logger.debug('📧 Sending Email notification for cancelled appointment...')
       try {
         const result = await $fetch('/api/email/send-appointment-notification', {
           method: 'POST',
@@ -3883,12 +3883,12 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
             tenantId: props.currentUser?.tenant_id
           }
         })
-        console.log('✅ Email sent successfully:', result)
+        logger.debug('✅ Email sent successfully:', result)
       } catch (emailError: any) {
         console.error('❌ Failed to send Email:', emailError)
       }
     } else {
-      console.log('⚠️ No email address available for email notification', {
+      logger.debug('⚠️ No email address available for email notification', {
         'eventData.email': props.eventData?.email,
         'extendedProps.email': props.eventData?.extendedProps?.email
       })
@@ -3928,13 +3928,13 @@ const confirmDelete = async () => {
 // 4. Handler für Cancel
 const cancelDelete = () => {
   showDeleteConfirmation.value = false
-  console.log('🚫 Deletion cancelled by user')
+  logger.debug('🚫 Deletion cancelled by user')
 }
 
 // ✅ NEUE HANDLER für Absage-Grund Modal
 const confirmCancellationWithReason = async () => {
   if (!selectedCancellationReasonId.value || !props.eventData?.id) {
-    console.log('❌ No cancellation reason selected')
+    logger.debug('❌ No cancellation reason selected')
     return
   }
 
@@ -3945,8 +3945,8 @@ const confirmCancellationWithReason = async () => {
     return
   }
 
-  console.log('🗑️ Cancellation reason selected:', selectedReason.name_de)
-  console.log('📋 Policy result:', cancellationPolicyResult.value)
+  logger.debug('🗑️ Cancellation reason selected:', selectedReason.name_de)
+  logger.debug('📋 Policy result:', cancellationPolicyResult.value)
   
   // ✅ SCHRITT 1: Absage-Grund und Policy-Information speichern
   pendingCancellationReason.value = selectedReason
@@ -3957,7 +3957,7 @@ const confirmCancellationWithReason = async () => {
   // ✅ NEU: Prüfe ob Arztzeugnis erforderlich ist (nur logging, Kunde lädt später hoch)
   // @ts-ignore - selectedReason may have additional properties from database
   if (selectedReason.requires_proof) {
-    console.log('📄 Medical certificate required for this reason - customer can upload later')
+    logger.debug('📄 Medical certificate required for this reason - customer can upload later')
   }
   
   // ✅ SCHRITT 3: Prüfe ob Bezahlnachfrage nötig ist
@@ -3967,7 +3967,7 @@ const confirmCancellationWithReason = async () => {
   
   const isPaid = props.eventData.is_paid || props.eventData.payment_status === 'paid'
   
-  console.log('💰 Payment check after cancellation reason:', {
+  logger.debug('💰 Payment check after cancellation reason:', {
     hoursUntilAppointment,
     isPaid,
     needsPaymentInquiry: hoursUntilAppointment < 24 && !isPaid,
@@ -3975,7 +3975,7 @@ const confirmCancellationWithReason = async () => {
   })
   
   // ✅ SCHRITT 4: Direkt mit dem Löschen fortfahren
-  console.log('🗑️ Proceeding with cancellation')
+  logger.debug('🗑️ Proceeding with cancellation')
   await proceedWithCancellation(selectedReason)
 }
 
@@ -3998,7 +3998,7 @@ const proceedWithCancellation = async (selectedReason: any) => {
     
     // ✅ NEW: Determine withCosts based on cancellation policy
     const withCosts = (cancellationPolicyResult.value?.chargeAmountRappen || 0) > 0
-    console.log('💳 Determining withCosts from policy:', {
+    logger.debug('💳 Determining withCosts from policy:', {
       chargeAmountRappen: cancellationPolicyResult.value?.chargeAmountRappen,
       withCosts: withCosts
     })
@@ -4030,12 +4030,12 @@ const cancelCancellationReason = () => {
   cancellationType.value = null
   selectedCancellationPolicyId.value = ''
   cancellationPolicyResult.value = null
-  console.log('🚫 Cancellation reason selection cancelled by user')
+  logger.debug('🚫 Cancellation reason selection cancelled by user')
 }
 
 // ✅ NEUE FUNKTIONEN für zweistufige Absage-Auswahl
 const selectCancellationType = (type: 'student' | 'staff') => {
-  console.log('👤 Cancellation type selected:', type)
+  logger.debug('👤 Cancellation type selected:', type)
   cancellationType.value = type
   cancellationStep.value = 1 // Gehe zu Schritt 2 (Absagegründe)
   selectedCancellationReasonId.value = null
@@ -4045,17 +4045,17 @@ const goBackToCancellationType = () => {
   cancellationStep.value = 0
   cancellationType.value = null
   selectedCancellationReasonId.value = null
-  console.log('⬅️ Going back to cancellation type selection')
+  logger.debug('⬅️ Going back to cancellation type selection')
 }
 
 // Load policies and price when modal opens
 const loadCancellationData = async () => {
-  console.log('📋 Loading cancellation data')
+  logger.debug('📋 Loading cancellation data')
   
   // Determine applies_to - appointments table doesn't have course_id field
   // So we default to 'appointments' and let the policy be determined by appointment type
   let appliesTo: 'appointments' | 'courses' | undefined = 'appointments'
-  console.log('📋 Using appointments as cancellation policy applies_to')
+  logger.debug('📋 Using appointments as cancellation policy applies_to')
   
   // Load policies filtered by applies_to
   if (!defaultPolicy.value || (appliesTo && defaultPolicy.value.applies_to !== appliesTo)) {
@@ -4071,19 +4071,19 @@ const loadCancellationData = async () => {
 
 // New methods for policy flow
 const selectReasonAndContinue = async (reasonId: string) => {
-  console.log('🎯 Reason selected and continuing:', reasonId)
+  logger.debug('🎯 Reason selected and continuing:', reasonId)
   selectedCancellationReasonId.value = reasonId
   await goToPolicySelection()
 }
 
 const goToPolicySelection = async () => {
-  console.log('📋 Going to policy selection')
+  logger.debug('📋 Going to policy selection')
   
   // ✅ NEW: Check if selected reason has force_charge_percentage
   const selectedReason = cancellationReasons.value.find(r => r.id === selectedCancellationReasonId.value)
   // @ts-ignore - selectedReason may have additional properties from database
   if (selectedReason && (selectedReason as any).force_charge_percentage !== null && (selectedReason as any).force_charge_percentage !== undefined) {
-    console.log('✅ Force charge percentage found:', (selectedReason as any).force_charge_percentage)
+    logger.debug('✅ Force charge percentage found:', (selectedReason as any).force_charge_percentage)
     // Load appointment price first
     if (props.eventData?.id) {
       const price = await loadAppointmentPrice(props.eventData.id)
@@ -4101,7 +4101,7 @@ const goToPolicySelection = async () => {
         ? 'Kostenlose Stornierung durch Fahrlehrer'
         : `Stornogebühr für Termin (${(selectedReason as any).force_charge_percentage}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
     }
-    console.log('✅ Policy result set with force_charge_percentage:', cancellationPolicyResult.value)
+    logger.debug('✅ Policy result set with force_charge_percentage:', cancellationPolicyResult.value)
     // ✅ IMPORTANT: Skip policy selection modal and go directly to confirmation!
     cancellationStep.value = 3
     return
@@ -4113,7 +4113,7 @@ const goToPolicySelection = async () => {
   // Otherwise, load policies normally
   // Determine applies_to - appointments table doesn't have course_id field
   let appliesTo: 'appointments' | 'courses' | undefined = 'appointments'
-  console.log('📋 Using appointments as cancellation policy applies_to')
+  logger.debug('📋 Using appointments as cancellation policy applies_to')
   
   // Load policies filtered by applies_to
   if (!defaultPolicy.value || (appliesTo && defaultPolicy.value.applies_to !== appliesTo)) {
@@ -4145,17 +4145,17 @@ const goBackInCancellationFlow = () => {
     cancellationStep.value = 0
     selectedCancellationReasonId.value = null
   }
-  console.log('⬅️ Going back in cancellation flow, step:', cancellationStep.value)
+  logger.debug('⬅️ Going back in cancellation flow, step:', cancellationStep.value)
 }
 
 const onPolicyChanged = (result: any) => {
   // ✅ Skip if we're in the middle of resetting the policy
   if (isResetingPolicy.value) {
-    console.log('⏭️ Skipping onPolicyChanged during policy reset')
+    logger.debug('⏭️ Skipping onPolicyChanged during policy reset')
     return
   }
   
-  console.log('📋 Policy changed:', result)
+  logger.debug('📋 Policy changed:', result)
   cancellationPolicyResult.value = result
   
   // Update time until appointment for display
@@ -4200,12 +4200,12 @@ const loadAppointmentPrice = async (appointmentId: string) => {
       .single()
     
     if (error) {
-      console.log('⚠️ No payment found for appointment:', appointmentId, error.message)
+      logger.debug('⚠️ No payment found for appointment:', appointmentId, error.message)
       return 0
     }
     
     const price = payment?.lesson_price_rappen || 0
-    console.log('💰 Loaded appointment price from payments:', price)
+    logger.debug('💰 Loaded appointment price from payments:', price)
     return price
   } catch (err) {
     console.error('❌ Error loading appointment price:', err)
@@ -4230,7 +4230,7 @@ const appointmentDataForPolicy = computed(() => {
 const confirmDeleteWithCosts = async (withCosts: boolean) => {
   if (!props.eventData?.id) return
   
-  console.log('🗑️ Soft deleting appointment with cost handling:', {
+  logger.debug('🗑️ Soft deleting appointment with cost handling:', {
     appointmentId: props.eventData.id,
     withCosts: withCosts
   })
@@ -4245,7 +4245,7 @@ const confirmDeleteWithCosts = async (withCosts: boolean) => {
   
   // ✅ Wenn Kosten verrechnet werden sollen, logge das nur (keine automatische Rechnung)
   if (withCosts) {
-    console.log('💰 Appointment cancelled with cost handling - no automatic invoice created')
+    logger.debug('💰 Appointment cancelled with cost handling - no automatic invoice created')
   }
   
   // ✅ Soft Delete OHNE Payment-Löschung wenn Kosten verrechnet werden
@@ -4259,7 +4259,7 @@ const confirmDeleteWithCosts = async (withCosts: boolean) => {
 // ✅ Hilfsfunktion für Stornierungs-Rechnung
 const createCancellationInvoice = async (appointment: any) => {
   try {
-    console.log('📄 Creating cancellation invoice for appointment:', appointment.id)
+    logger.debug('📄 Creating cancellation invoice for appointment:', appointment.id)
     
     // ✅ Hier können Sie die Logik für die Stornierungs-Rechnung implementieren
     // z.B. 50% der ursprünglichen Kosten als Stornogebühr
@@ -4284,7 +4284,7 @@ const createCancellationInvoice = async (appointment: any) => {
       return
     }
     
-    console.log('✅ Cancellation invoice created:', invoice.id)
+    logger.debug('✅ Cancellation invoice created:', invoice.id)
     
     // ✅ Speichere die Rechnungsdaten für das Modal
     cancellationInvoiceData.value = {
@@ -4300,7 +4300,7 @@ const createCancellationInvoice = async (appointment: any) => {
 
 // ✅ NEUE FUNKTIONEN für Rückerstattungs-Optionen
 const handleRefundFull = async () => {
-  console.log('💰 Vollständige Rückerstattung gewählt')
+  logger.debug('💰 Vollständige Rückerstattung gewählt')
   showRefundOptionsModal.value = false
   
   // ✅ SOFT DELETE mit vollständiger Rückerstattung
@@ -4308,7 +4308,7 @@ const handleRefundFull = async () => {
 }
 
 const handleRefundPartial = async () => {
-  console.log('💸 Teilweise Rückerstattung gewählt')
+  logger.debug('💸 Teilweise Rückerstattung gewählt')
   showRefundOptionsModal.value = false
   
   // ✅ SOFT DELETE mit teilweiser Rückerstattung
@@ -4316,7 +4316,7 @@ const handleRefundPartial = async () => {
 }
 
 const handleNoRefund = async () => {
-  console.log('🚫 Keine Rückerstattung gewählt')
+  logger.debug('🚫 Keine Rückerstattung gewählt')
   showRefundOptionsModal.value = false
   
   // ✅ SOFT DELETE ohne Rückerstattung
@@ -4326,7 +4326,7 @@ const handleNoRefund = async () => {
 const confirmDeleteWithRefund = async (refundType: 'full_refund' | 'partial_refund' | 'no_refund') => {
   if (!props.eventData?.id) return
   
-  console.log('🗑️ Soft deleting appointment with refund handling:', {
+  logger.debug('🗑️ Soft deleting appointment with refund handling:', {
     appointmentId: props.eventData.id,
     refundType: refundType
   })
@@ -4347,7 +4347,7 @@ const confirmDeleteWithRefund = async (refundType: 'full_refund' | 'partial_refu
   
   // ✅ Rückerstattungs-Rechnung erstellen basierend auf Typ
   if (refundType !== 'no_refund') {
-    console.log('💰 Creating refund invoice for cancelled appointment')
+    logger.debug('💰 Creating refund invoice for cancelled appointment')
     await createRefundInvoice(props.eventData, refundType)
   }
 }
@@ -4355,7 +4355,7 @@ const confirmDeleteWithRefund = async (refundType: 'full_refund' | 'partial_refu
 // ✅ Hilfsfunktion für Rückerstattungs-Rechnungen
 const createRefundInvoice = async (appointment: any, refundType: 'full_refund' | 'partial_refund') => {
   try {
-    console.log('📄 Creating refund invoice for appointment:', appointment.id, 'Type:', refundType)
+    logger.debug('📄 Creating refund invoice for appointment:', appointment.id, 'Type:', refundType)
     
     let amountRappen: number
     let description: string
@@ -4392,7 +4392,7 @@ const createRefundInvoice = async (appointment: any, refundType: 'full_refund' |
       return
     }
     
-    console.log('✅ Refund invoice created:', invoice.id)
+    logger.debug('✅ Refund invoice created:', invoice.id)
     
   } catch (err: any) {
     console.error('❌ Error in createRefundInvoice:', err)
@@ -4454,7 +4454,7 @@ const markInvoiceAsPaid = async () => {
   if (!cancellationInvoiceData.value?.id) return
   
   try {
-    console.log('💰 Marking invoice as paid:', cancellationInvoiceData.value.id)
+    logger.debug('💰 Marking invoice as paid:', cancellationInvoiceData.value.id)
     
     const { data, error } = await supabase
       .from('invoices')
@@ -4471,7 +4471,7 @@ const markInvoiceAsPaid = async () => {
       return
     }
     
-    console.log('✅ Invoice marked as paid:', data)
+    logger.debug('✅ Invoice marked as paid:', data)
     
     // ✅ Aktualisiere die lokalen Daten
     cancellationInvoiceData.value = {
@@ -4488,7 +4488,7 @@ const markInvoiceAsPaid = async () => {
 // ✅ Funktion zum Anzeigen des Payment Status Modals
 const showPaymentStatus = async (appointmentId: string) => {
   try {
-    console.log('🔍 Loading payment status for appointment:', appointmentId)
+    logger.debug('🔍 Loading payment status for appointment:', appointmentId)
     
     // ✅ Lade die Stornierungs-Rechnung für diesen Termin
     const { data: invoice, error } = await supabase
@@ -4519,10 +4519,10 @@ const showPaymentStatus = async (appointmentId: string) => {
         }
         
         showPaymentStatusModal.value = true
-        console.log('✅ Payment status modal opened')
+        logger.debug('✅ Payment status modal opened')
       }
     } else {
-      console.log('ℹ️ No cancellation invoice found for appointment')
+      logger.debug('ℹ️ No cancellation invoice found for appointment')
     }
     
   } catch (err: any) {
@@ -4534,54 +4534,54 @@ const showPaymentStatus = async (appointmentId: string) => {
 // In EventModal.vue - ersetzen Sie die initializeFormData Funktion:
 
 const initializeFormData = async () => {
-  console.log('🎯 Initializing form data, mode:', props.mode)
-    console.log('🎯 props.eventData:', props.eventData) 
+  logger.debug('🎯 Initializing form data, mode:', props.mode)
+    logger.debug('🎯 props.eventData:', props.eventData) 
 
       // ✅ NEUE ZEILE: Staff ID automatisch auf currentUser setzen (nur wenn Staff)
   if (props.currentUser?.role === 'staff' && props.currentUser?.id) {
     formData.value.staff_id = props.currentUser.id
-    console.log('👤 Staff ID automatically set to currentUser (staff role):', props.currentUser.id)
+    logger.debug('👤 Staff ID automatically set to currentUser (staff role):', props.currentUser.id)
   }
 
   // ✅ WICHTIG: Grundlegende Werte setzen falls nicht vorhanden
   if (!formData.value.type) {
     formData.value.type = 'B'
-    console.log('✅ Default category set to B')
+    logger.debug('✅ Default category set to B')
   }
   
   if (!formData.value.eventType) {
     formData.value.eventType = 'lesson'
-    console.log('✅ Default event type set to lesson')
+    logger.debug('✅ Default event type set to lesson')
   }
   
   // ✅ WICHTIG: Duration-Logik NUR für Create-Modus hier, Edit-Modus wird später behandelt
   if (props.mode === 'create' && !formData.value.duration_minutes) {
     formData.value.duration_minutes = 45
-    console.log('✅ Default duration set to 45 minutes (create mode)')
+    logger.debug('✅ Default duration set to 45 minutes (create mode)')
   }
 
   // ✅ WICHTIG: selectedCategory für UI setzen
   if (!selectedCategory.value && formData.value.type) {
     selectedCategory.value = { code: formData.value.type }
-    console.log('✅ selectedCategory set to:', formData.value.type)
+    logger.debug('✅ selectedCategory set to:', formData.value.type)
   }
 
   // ✅ WICHTIG: availableDurations setzen falls nicht vorhanden
   if (!availableDurations.value || availableDurations.value.length === 0) {
     const fallbackDuration = getFallbackDuration(formData.value.type)
     availableDurations.value = [fallbackDuration]
-    console.log(`✅ Default availableDurations set to [${fallbackDuration}]`)
+    logger.debug(`✅ Default availableDurations set to [${fallbackDuration}]`)
   }
 
   // ✅ WICHTIG: Location vom letzten Termin laden falls nicht vorhanden
   if (!formData.value.location_id && props.currentUser?.id) {
     try {
-      console.log('📍 Loading last location for current user...')
+      logger.debug('📍 Loading last location for current user...')
       const lastLocation = await modalForm.loadLastAppointmentLocation()
       
       if (lastLocation.location_id) {
         formData.value.location_id = lastLocation.location_id
-        console.log('✅ Last location loaded:', lastLocation.location_id)
+        logger.debug('✅ Last location loaded:', lastLocation.location_id)
         
         // Auch selectedLocation für UI setzen
         const { data: locationData, error: locationError } = await supabase
@@ -4592,36 +4592,36 @@ const initializeFormData = async () => {
         
         if (!locationError && locationData) {
           selectedLocation.value = locationData
-          console.log('✅ Location data loaded for UI:', locationData.name)
+          logger.debug('✅ Location data loaded for UI:', locationData.name)
         }
       }
     } catch (locationError) {
-      console.log('⚠️ Could not load last location:', locationError)
+      logger.debug('⚠️ Could not load last location:', locationError)
     }
   }
 
   // ✅ WICHTIG: selectedLessonType setzen falls nicht vorhanden
   if (!selectedLessonType.value) {
     selectedLessonType.value = 'lesson'
-    console.log('✅ Default selectedLessonType set to lesson')
+    logger.debug('✅ Default selectedLessonType set to lesson')
   }
 
   // ✅ WICHTIG: appointment_type setzen falls nicht vorhanden
   if (!formData.value.appointment_type) {
     formData.value.appointment_type = 'lesson'
-    console.log('✅ Default appointment_type set to lesson')
+    logger.debug('✅ Default appointment_type set to lesson')
   }
 
   // ✅ WICHTIG: Zeit- und Datumswerte setzen falls nicht vorhanden
   if (!formData.value.startDate) {
     const today = new Date()
     formData.value.startDate = today.toISOString().split('T')[0]
-    console.log('✅ Default startDate set to today:', formData.value.startDate)
+    logger.debug('✅ Default startDate set to today:', formData.value.startDate)
   }
   
   if (!formData.value.startTime) {
     formData.value.startTime = '09:00'
-    console.log('✅ Default startTime set to 09:00')
+    logger.debug('✅ Default startTime set to 09:00')
   }
   
   if (!formData.value.endTime) {
@@ -4631,19 +4631,19 @@ const initializeFormData = async () => {
     const startDate = new Date()
     startDate.setHours(hours, minutes + (formData.value.duration_minutes || 45), 0, 0)
     formData.value.endTime = startDate.toTimeString().slice(0, 5)
-    console.log('✅ Default endTime calculated:', formData.value.endTime)
+    logger.debug('✅ Default endTime calculated:', formData.value.endTime)
   }
 
     // ✅ NEUER CODE: Free slot → Student explizit clearen
   if (props.eventData?.isFreeslotClick && props.mode === 'create') {
-    console.log('🧹 FREE SLOT detected - clearing any cached student')
+    logger.debug('🧹 FREE SLOT detected - clearing any cached student')
     selectedStudent.value = null
     formData.value.user_id = ''
     formData.value.title = ''
     
     // ✅ NEU: Bei Freeslot-Klick letzte Kategorie UND Standort aus Cloud Supabase laden
     try {
-      console.log('🎯 Loading last appointment data for freeslot...')
+      logger.debug('🎯 Loading last appointment data for freeslot...')
       
       // 1. Letzte Kategorie laden
       const lastCategory = await modalForm.loadLastAppointmentCategory()
@@ -4651,7 +4651,7 @@ const initializeFormData = async () => {
         formData.value.type = lastCategory
         // ✅ Auch selectedCategory setzen für UI-Anzeige
         selectedCategory.value = { code: lastCategory }
-        console.log('✅ Last appointment category loaded for freeslot:', lastCategory)
+        logger.debug('✅ Last appointment category loaded for freeslot:', lastCategory)
         
         // ✅ Verfügbare Dauer-Optionen basierend auf der Kategorie laden
         try {
@@ -4666,13 +4666,13 @@ const initializeFormData = async () => {
             ? categoryData.lesson_duration_minutes 
             : [categoryData.lesson_duration_minutes]
           availableDurations.value = [...durations]
-          console.log('✅ Available durations loaded for category:', durations)
+          logger.debug('✅ Available durations loaded for category:', durations)
         }
         } catch (durationError) {
-          console.log('ℹ️ Could not load durations for category, using default')
+          logger.debug('ℹ️ Could not load durations for category, using default')
         }
       } else {
-        console.log('ℹ️ No last appointment category found, using default')
+        logger.debug('ℹ️ No last appointment category found, using default')
         formData.value.type = 'B' // Default Kategorie
         selectedCategory.value = { code: 'B' }
       }
@@ -4682,7 +4682,7 @@ const initializeFormData = async () => {
       if (lastLocation.location_id || lastLocation.custom_location_address) {
         if (lastLocation.location_id) {
           formData.value.location_id = lastLocation.location_id
-          console.log('✅ Last appointment location_id loaded for freeslot:', lastLocation.location_id)
+          logger.debug('✅ Last appointment location_id loaded for freeslot:', lastLocation.location_id)
           
           // ✅ Auch selectedLocation setzen für UI-Anzeige
           try {
@@ -4695,19 +4695,19 @@ const initializeFormData = async () => {
             
             if (!locationError && locationData) {
               selectedLocation.value = locationData
-              console.log('✅ Location data loaded for UI:', locationData.name)
+              logger.debug('✅ Location data loaded for UI:', locationData.name)
             }
           } catch (locationError) {
-            console.log('⚠️ Could not load full location data for UI:', locationError)
+            logger.debug('⚠️ Could not load full location data for UI:', locationError)
           }
         }
         
         if (lastLocation.custom_location_address) {
           // ✅ Adressdaten direkt verwenden (falls vorhanden)
-          console.log('✅ Last appointment custom_location_address loaded for freeslot:', lastLocation.custom_location_address)
+          logger.debug('✅ Last appointment custom_location_address loaded for freeslot:', lastLocation.custom_location_address)
         }
       } else {
-        console.log('ℹ️ No last appointment location found')
+        logger.debug('ℹ️ No last appointment location found')
       }
       
     } catch (error) {
@@ -4719,45 +4719,45 @@ const initializeFormData = async () => {
   // ✅ SCHRITT 1: Form populieren für Edit-Modus
   if (props.mode === 'edit' && props.eventData) {
     await populateFormFromAppointment(props.eventData)
-    console.log('🔍 AFTER populate - eventType:', formData.value.eventType)
+    logger.debug('🔍 AFTER populate - eventType:', formData.value.eventType)
     
     // ✅ SCHRITT 1.5: Ursprüngliche Duration zu availableDurations hinzufügen
     if (formData.value.duration_minutes && !availableDurations.value.includes(formData.value.duration_minutes)) {
       availableDurations.value.unshift(formData.value.duration_minutes)
       availableDurations.value.sort((a, b) => a - b)
-      console.log('✅ Added original duration to available durations:', availableDurations.value)
+      logger.debug('✅ Added original duration to available durations:', availableDurations.value)
     }
     
     // ✅ SCHRITT 1.7: Duration als Zahl beibehalten (nicht als Array)
     if (Array.isArray(formData.value.duration_minutes)) {
       formData.value.duration_minutes = formData.value.duration_minutes[0] || 45
-      console.log('✅ Fixed duration from array to number:', formData.value.duration_minutes)
+      logger.debug('✅ Fixed duration from array to number:', formData.value.duration_minutes)
     }
     
     // ✅ SCHRITT 1.8: Duration explizit auf 90 setzen für diesen Test
     if (props.eventData && props.eventData.duration_minutes === 90) {
       formData.value.duration_minutes = 90
-      console.log('✅ FORCED duration to 90 minutes for this test')
+      logger.debug('✅ FORCED duration to 90 minutes for this test')
     }
     
   // ✅ SCHRITT 1.9: Duration NOCHMAL explizit setzen nach allen anderen Operationen
   if (props.eventData && props.eventData.duration_minutes) {
     formData.value.duration_minutes = props.eventData.duration_minutes
-    console.log('✅ FINAL duration set to:', formData.value.duration_minutes, 'min')
+    logger.debug('✅ FINAL duration set to:', formData.value.duration_minutes, 'min')
   }
   
   // ✅ SCHRITT 1.10: Duration nach nextTick nochmal setzen (nach allen Watchers)
   await nextTick()
   if (props.eventData && props.eventData.duration_minutes) {
     formData.value.duration_minutes = props.eventData.duration_minutes
-    console.log('✅ POST-TICK duration set to:', formData.value.duration_minutes, 'min')
+    logger.debug('✅ POST-TICK duration set to:', formData.value.duration_minutes, 'min')
   }
   
   // ✅ SCHRITT 1.11: Duration nach setTimeout nochmal setzen (nach allen async Operationen)
   setTimeout(() => {
     if (props.eventData && props.eventData.duration_minutes) {
       formData.value.duration_minutes = props.eventData.duration_minutes
-      console.log('✅ POST-TIMEOUT duration set to:', formData.value.duration_minutes, 'min')
+      logger.debug('✅ POST-TIMEOUT duration set to:', formData.value.duration_minutes, 'min')
     }
   }, 100)
   
@@ -4765,7 +4765,7 @@ const initializeFormData = async () => {
   setTimeout(() => {
     if (props.eventData && props.eventData.duration_minutes) {
       formData.value.duration_minutes = props.eventData.duration_minutes
-      console.log('✅ POST-TIMEOUT-500 duration set to:', formData.value.duration_minutes, 'min')
+      logger.debug('✅ POST-TIMEOUT-500 duration set to:', formData.value.duration_minutes, 'min')
     }
   }, 500)
   
@@ -4773,13 +4773,13 @@ const initializeFormData = async () => {
   setTimeout(() => {
     if (props.eventData && props.eventData.duration_minutes) {
       formData.value.duration_minutes = props.eventData.duration_minutes
-      console.log('✅ POST-TIMEOUT-1000 duration set to:', formData.value.duration_minutes, 'min')
+      logger.debug('✅ POST-TIMEOUT-1000 duration set to:', formData.value.duration_minutes, 'min')
     }
   }, 1000)
     
     // ✅ SCHRITT 1.6: Duration-Logik nach populateFormFromAppointment
     if (formData.value.duration_minutes) {
-      console.log('✅ Keeping existing duration from database:', formData.value.duration_minutes, 'min')
+      logger.debug('✅ Keeping existing duration from database:', formData.value.duration_minutes, 'min')
     }
   }
 }
@@ -4787,7 +4787,7 @@ const initializeFormData = async () => {
 // ✅ SCHRITT 2: LessonType NUR bei Edit-Mode setzen
 const handleEditModeLessonType = async () => {
   if (formData.value.eventType === 'lesson' && formData.value.appointment_type) {
-    console.log('🎯 EDIT MODE: Setting selectedLessonType from appointment_type:', {
+    logger.debug('🎯 EDIT MODE: Setting selectedLessonType from appointment_type:', {
       from: selectedLessonType.value,
       to: formData.value.appointment_type,
       formDataEventType: formData.value.eventType,
@@ -4800,27 +4800,27 @@ const handleEditModeLessonType = async () => {
     
     // ✅ STUDENT LADEN FÜR EDIT MODE - NUR FÜR LEKTIONEN
     if (formData.value.user_id && !selectedStudent.value && isLessonType(formData.value.eventType)) {
-      console.log('👤 Loading student for edit mode:', formData.value.user_id)
+      logger.debug('👤 Loading student for edit mode:', formData.value.user_id)
       await loadStudentForEdit(formData.value.user_id)
     } else if (formData.value.user_id && !isLessonType(formData.value.eventType)) {
-      console.log('🚫 Not loading student for other event type:', formData.value.eventType)
+      logger.debug('🚫 Not loading student for other event type:', formData.value.eventType)
       selectedStudent.value = null
     }
     
-    console.log('🎯 EDIT MODE: formData.appointment_type:', formData.value.appointment_type)
-    console.log('🎯 EDIT MODE: formData.type:', formData.value.type)
-    console.log('🎯 EDIT MODE: formData.duration_minutes:', formData.value.duration_minutes)
-    console.log('🎯 EDIT MODE: selectedLessonType set to:', selectedLessonType.value)
-    console.log('🎯 EDIT MODE: selectedCategory set to:', selectedCategory.value)
-    console.log('🎯 EDIT MODE: selectedStudent loaded:', selectedStudent.value?.first_name || 'none')
+    logger.debug('🎯 EDIT MODE: formData.appointment_type:', formData.value.appointment_type)
+    logger.debug('🎯 EDIT MODE: formData.type:', formData.value.type)
+    logger.debug('🎯 EDIT MODE: formData.duration_minutes:', formData.value.duration_minutes)
+    logger.debug('🎯 EDIT MODE: selectedLessonType set to:', selectedLessonType.value)
+    logger.debug('🎯 EDIT MODE: selectedCategory set to:', selectedCategory.value)
+    logger.debug('🎯 EDIT MODE: selectedStudent loaded:', selectedStudent.value?.first_name || 'none')
     
     // ✅ KURZE PAUSE damit LessonTypeSelector sich aktualisiert
     await new Promise(resolve => setTimeout(resolve, 200))
     
     // ✅ Nochmal prüfen nach der Pause
-    console.log('🔍 After pause - selectedLessonType:', selectedLessonType.value)
+    logger.debug('🔍 After pause - selectedLessonType:', selectedLessonType.value)
   } else {
-    console.log('⚠️ EDIT MODE: Not setting lesson type because:', {
+    logger.debug('⚠️ EDIT MODE: Not setting lesson type because:', {
       eventType: formData.value.eventType,
       appointmentType: formData.value.appointment_type,
       condition: formData.value.eventType === 'lesson' && formData.value.appointment_type
@@ -4831,7 +4831,7 @@ const handleEditModeLessonType = async () => {
   try {
     if (props.eventData.payment_method) {
       selectedPaymentMethod.value = props.eventData.payment_method
-      console.log('💳 Payment method loaded from appointment:', props.eventData.payment_method)
+      logger.debug('💳 Payment method loaded from appointment:', props.eventData.payment_method)
     } else {
       // Fallback: Lade aus der users Tabelle
       if (props.eventData.user_id) {
@@ -4843,22 +4843,22 @@ const handleEditModeLessonType = async () => {
         
         if (!userError && userData?.preferred_payment_method) {
           selectedPaymentMethod.value = userData.preferred_payment_method
-          console.log('💳 Payment method loaded from user preferences:', userData.preferred_payment_method)
+          logger.debug('💳 Payment method loaded from user preferences:', userData.preferred_payment_method)
         } else {
           selectedPaymentMethod.value = 'wallee' // Standard
-          console.log('💳 Using default payment method: wallee')
+          logger.debug('💳 Using default payment method: wallee')
         }
       }
     }
   } catch (paymentErr) {
-    console.log('⚠️ Could not load payment method, using default: wallee')
+    logger.debug('⚠️ Could not load payment method, using default: wallee')
     selectedPaymentMethod.value = 'wallee'
   }
   
   // ✅ NEU: Standard-Zahlungsmethode setzen falls noch nicht gesetzt
   if (!selectedPaymentMethod.value) {
     selectedPaymentMethod.value = 'wallee'
-    console.log('💳 Default payment method set to wallee (fallback)')
+    logger.debug('💳 Default payment method set to wallee (fallback)')
   }
   
   // ✅ NEU: Wenn ein Student geladen wurde, lade auch dessen Zahlungspräferenzen
@@ -4875,59 +4875,59 @@ const handleCreateMode = async () => {
     
     // ✅ NEU: Bei Create-Mode selectedLessonType auf Standard setzen
     selectedLessonType.value = 'lesson'
-    console.log('🎯 CREATE MODE: Set selectedLessonType to default: lesson')
+    logger.debug('🎯 CREATE MODE: Set selectedLessonType to default: lesson')
     
     // ✅ NEU: Standard-Zahlungsmethode für Create-Mode setzen
     selectedPaymentMethod.value = 'wallee'
-    console.log('💳 CREATE MODE: Default payment method set to wallee')
+    logger.debug('💳 CREATE MODE: Default payment method set to wallee')
     
     // ✅ NEU: Standard-Kategorie für Create-Mode setzen
     formData.value.type = 'B' // Standard-Kategorie
-    console.log('🎯 CREATE MODE: Set default category to B')
+    logger.debug('🎯 CREATE MODE: Set default category to B')
     
     // ✅ NEU: Standard-Dauer für Create-Mode setzen
     formData.value.duration_minutes = 45
-    console.log('🎯 CREATE MODE: Set default duration to 45 minutes')
+    logger.debug('🎯 CREATE MODE: Set default duration to 45 minutes')
     
     // ✅ NEU: Standard-Location für Create-Mode setzen (falls verfügbar)
     if (currentUser.value?.preferred_location_id) {
       formData.value.location_id = currentUser.value.preferred_location_id
-      console.log('🎯 CREATE MODE: Set default location from user preferences')
+      logger.debug('🎯 CREATE MODE: Set default location from user preferences')
     } else if (selectedLocation.value?.id) {
       formData.value.location_id = selectedLocation.value.id
-      console.log('🎯 CREATE MODE: Set default location from selectedLocation')
+      logger.debug('🎯 CREATE MODE: Set default location from selectedLocation')
     } else {
-      console.log('⚠️ CREATE MODE: No default location available')
+      logger.debug('⚠️ CREATE MODE: No default location available')
     }
     
     // ✅ WICHTIG: Nicht die Zeit nochmal setzen - sie wurde bereits oben extrahiert und konvertiert!
     // Die Zeit wurde in der watch-Funktion bereits korrekt aus dem Calendar extrahiert
     // und von UTC zu Zurich local konvertiert
-    console.log('✅ CREATE MODE: Keeping already-extracted time (no override)')
+    logger.debug('✅ CREATE MODE: Keeping already-extracted time (no override)')
     
     // ✅ NEU: Standard-Dauern laden für Create-Mode
     await loadDefaultDurations()
-    console.log('🎯 CREATE MODE: Default durations loaded')
+    logger.debug('🎯 CREATE MODE: Default durations loaded')
     
     // ✅ NEU: Standard-Titel für Create-Mode setzen
     if (selectedStudent.value?.first_name && selectedLocation.value) {
       // ✅ Vollständiger Titel: Vorname + Name/Adresse des Treffpunkts
       const locationName = selectedLocation.value.name || selectedLocation.value.address || 'Unbekannter Ort'
       formData.value.title = `${selectedStudent.value.first_name} - ${locationName}`
-      console.log('🎯 CREATE MODE: Set default title with student and location')
+      logger.debug('🎯 CREATE MODE: Set default title with student and location')
     } else if (selectedStudent.value?.first_name) {
       formData.value.title = `${selectedStudent.value.first_name} - Fahrstunde`
-      console.log('🎯 CREATE MODE: Set default title with student name only')
+      logger.debug('🎯 CREATE MODE: Set default title with student name only')
     } else {
       // ✅ WICHTIG: Titel so setzen, dass TitleInput ihn als auto-update-fähig erkennt
       formData.value.title = 'Fahrstunde'
-      console.log('🎯 CREATE MODE: Set default title for auto-update')
+      logger.debug('🎯 CREATE MODE: Set default title for auto-update')
     }
   }
 }
 
 const triggerInitialCalculations = async () => {
-  console.log('🚀 Triggering initial calculations...')
+  logger.debug('🚀 Triggering initial calculations...')
   
   try {
     // Warte bis alle Daten geladen sind
@@ -4938,7 +4938,7 @@ const triggerInitialCalculations = async () => {
                            formData.value.duration_minutes && 
                            formData.value.eventType === 'lesson'
     
-    console.log('🔍 Required data check:', {
+    logger.debug('🔍 Required data check:', {
       hasType: !!formData.value.type,
       hasDuration: !!formData.value.duration_minutes,
       hasEventType: formData.value.eventType === 'lesson',
@@ -4947,7 +4947,7 @@ const triggerInitialCalculations = async () => {
     
     // Nur triggern wenn alle Daten da sind
     if (hasRequiredData) {
-      console.log('💰 All required data available - triggering price calculation')
+      logger.debug('💰 All required data available - triggering price calculation')
       // ✅ PriceDisplay berechnet die Preise selbst basierend auf den Props
       
       // ✅ NEU: Kurze Verzögerung um sicherzustellen, dass alle Komponenten geladen sind
@@ -4956,7 +4956,7 @@ const triggerInitialCalculations = async () => {
       // ✅ NEU: Preisberechnung explizit auslösen
       await calculatePriceForCurrentData()
     } else {
-      console.log('⚠️ Missing required data for price calculation')
+      logger.debug('⚠️ Missing required data for price calculation')
     }
     
     // End time berechnen
@@ -4975,7 +4975,7 @@ const loadStudentForEdit = async (userId: string) => {
   try {
     // ✅ PRÜFE ZUERST: Ist das ein bezahlbarer Termin (Lektion)?
     if (!isLessonType(formData.value.eventType)) {
-      console.log('🚫 Not loading student for other event type:', formData.value.eventType)
+      logger.debug('🚫 Not loading student for other event type:', formData.value.eventType)
       selectedStudent.value = null
       return
     }
@@ -4990,7 +4990,7 @@ const loadStudentForEdit = async (userId: string) => {
     
     if (data) {
       selectedStudent.value = data
-      console.log('👤 Student loaded for edit mode:', data.first_name)
+      logger.debug('👤 Student loaded for edit mode:', data.first_name)
     }
   } catch (err) {
     console.error('❌ Error loading student for edit:', err)
@@ -5002,7 +5002,7 @@ const loadStudentForEdit = async (userId: string) => {
 
 // 1. Watcher für formData.title
 watch(() => formData.value.title, (newTitle, oldTitle) => {
-  console.log('🔍 TITEL CHANGED:', {
+  logger.debug('🔍 TITEL CHANGED:', {
     from: oldTitle,
     to: newTitle,
     stack: new Error().stack?.split('\n')[1] || 'Stack not available' // ← Sicherer Zugriff
@@ -5011,7 +5011,7 @@ watch(() => formData.value.title, (newTitle, oldTitle) => {
 
 // 3. Beim Speichern loggen
 // In der saveAppointment Funktion:
-console.log('💾 SAVING WITH TITLE:', formData.value.title)
+logger.debug('💾 SAVING WITH TITLE:', formData.value.title)
 
 const saveStudentPaymentPreferences = async (studentId: string, paymentMode: string, data?: any) => {
  
@@ -5037,7 +5037,7 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
    
    // 🔧 DEBUG: Prüfe zuerst, ob der aktuelle Wert des Users gültig ist
    try {
-     console.log('🔍 Testing if current user payment method is valid...')
+     logger.debug('🔍 Testing if current user payment method is valid...')
      const { data: testData, error: testError } = await supabase
        .from('users')
        .select('preferred_payment_method')
@@ -5045,7 +5045,7 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
        .single()
      
      if (!testError && testData?.preferred_payment_method) {
-       console.log('🔍 Current user payment method:', testData.preferred_payment_method)
+       logger.debug('🔍 Current user payment method:', testData.preferred_payment_method)
        
        // Versuche den aktuellen Wert zu aktualisieren (sollte funktionieren)
        const { error: updateTestError } = await supabase
@@ -5062,11 +5062,11 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
            hint: updateTestError.hint
          })
        } else {
-         console.log('✅ Current value works, but new value might not')
+         logger.debug('✅ Current value works, but new value might not')
        }
      }
    } catch (testErr) {
-     console.log('⚠️ Could not test current value:', testErr)
+     logger.debug('⚠️ Could not test current value:', testErr)
    }
    
    const updateData: any = {
@@ -5076,12 +5076,12 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
    // Falls Rechnungsadresse gewählt und Adresse gespeichert
    if (paymentMode === 'invoice' && data?.currentAddress?.id) {
      updateData.default_company_billing_address_id = data.currentAddress.id
-     console.log('📋 Adding billing address ID:', data.currentAddress.id)
+     logger.debug('📋 Adding billing address ID:', data.currentAddress.id)
    }
    
-   console.log('💾 Mapping:', paymentMode, '→', actualMethodCode)
-   console.log('💾 Updating user with data:', updateData)
-   console.log('👤 For student ID:', studentId)
+   logger.debug('💾 Mapping:', paymentMode, '→', actualMethodCode)
+   logger.debug('💾 Updating user with data:', updateData)
+   logger.debug('👤 For student ID:', studentId)
    
    const { error, data: result } = await supabase
      .from('users')
@@ -5100,12 +5100,12 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
      
      // 🔧 FALLBACK: Versuche es ohne preferred_payment_method
      if (error.code === '23503' && error.message.includes('payment_methods')) {
-       console.log('🔄 Foreign key constraint error - trying without payment method...')
+       logger.debug('🔄 Foreign key constraint error - trying without payment method...')
        
        const fallbackUpdateData = { ...updateData }
        delete fallbackUpdateData.preferred_payment_method
        
-       console.log('🔄 Fallback update data:', fallbackUpdateData)
+       logger.debug('🔄 Fallback update data:', fallbackUpdateData)
        
        const { error: fallbackError, data: fallbackResult } = await supabase
          .from('users')
@@ -5117,10 +5117,10 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
          console.error('❌ Fallback also failed:', fallbackError)
          throw fallbackError
        } else {
-         console.log('✅ Fallback update successful (without payment method)')
+         logger.debug('✅ Fallback update successful (without payment method)')
          
          // ✅ NEU: Lokale Speicherung der Zahlungsmethode für diesen Termin
-         console.log('💳 Payment method saved locally for this appointment:', paymentMode)
+         logger.debug('💳 Payment method saved locally for this appointment:', paymentMode)
          
          return // Erfolgreich, aber ohne payment method in der users Tabelle
        }
@@ -5129,8 +5129,8 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
      throw error
    }
    
-   console.log('✅ Update result:', result)
-   console.log('✅ Payment preferences saved successfully!')
+   logger.debug('✅ Update result:', result)
+   logger.debug('✅ Payment preferences saved successfully!')
    
  } catch (err) {
    console.error('❌ Error saving payment preferences:', err)
@@ -5138,7 +5138,7 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
 }
 
 const handlePaymentModeChanged = (paymentMode: string, data?: any) => { // ← string statt 'invoice' | 'cash' | 'online'
-  console.log('💳 handlePaymentModeChanged called:', { paymentMode, data, selectedStudentId: selectedStudent.value?.id, selectedStudentName: selectedStudent.value?.first_name })
+  logger.debug('💳 handlePaymentModeChanged called:', { paymentMode, data, selectedStudentId: selectedStudent.value?.id, selectedStudentName: selectedStudent.value?.first_name })
   
   // ✅ Payment Method für späteres Speichern in payments Tabelle
   selectedPaymentMethod.value = paymentMode
@@ -5146,7 +5146,7 @@ const handlePaymentModeChanged = (paymentMode: string, data?: any) => { // ← s
   
   // NEU: Wenn Invoice-Mode und wir haben eine Standard-Adresse geladen
   if (paymentMode === 'invoice' && defaultBillingAddress.value && !data?.currentAddress) {
-    console.log('🏠 Using default billing address for invoice mode')
+    logger.debug('🏠 Using default billing address for invoice mode')
     const address = defaultBillingAddress.value as any
     data = {
       formData: {
@@ -5170,7 +5170,7 @@ const handlePaymentModeChanged = (paymentMode: string, data?: any) => { // ← s
   
   // Save preferences if student selected
   if (selectedStudent.value?.id) {
-    console.log('🎯 Calling saveStudentPaymentPreferences...')
+    logger.debug('🎯 Calling saveStudentPaymentPreferences...')
     saveStudentPaymentPreferences(selectedStudent.value.id, paymentMode, data)
   }
   
@@ -5179,14 +5179,14 @@ const handlePaymentModeChanged = (paymentMode: string, data?: any) => { // ← s
 }
 
 const handleInvoiceAddressSaved = (address: any) => {
-  console.log('📄 Invoice address saved:', address)
+  logger.debug('📄 Invoice address saved:', address)
   
   // ✅ NEU: Speichere Company Billing Address ID für Payment-Erstellung
   if (address?.id) {
     savedCompanyBillingAddressId.value = address.id
     // ✅ Set global scope for useEventModalForm access
     ;(globalThis as any).savedCompanyBillingAddressId = address.id
-    console.log('🏢 Company billing address ID saved for payment:', address.id)
+    logger.debug('🏢 Company billing address ID saved for payment:', address.id)
   }
   
   // Speichere die Rechnungsadresse für späteres Speichern
@@ -5194,20 +5194,20 @@ const handleInvoiceAddressSaved = (address: any) => {
   
   // Wenn ein Schüler ausgewählt ist, speichere die Präferenz
   if (selectedStudent.value?.id) {
-    console.log('🎯 Saving invoice address preference for student')
+    logger.debug('🎯 Saving invoice address preference for student')
     saveStudentPaymentPreferences(selectedStudent.value.id, 'invoice', { address })
   }
 }
 
 const handleInvoiceDataChanged = (invoiceData: any, isValid: boolean) => {
-  console.log('📄 Invoice data changed:', invoiceData, isValid)
+  logger.debug('📄 Invoice data changed:', invoiceData, isValid)
   // Hier kannst du die Rechnungsdaten speichern falls nötig
   // formData.value.invoiceData = invoiceData
   // formData.value.invoiceValid = isValid
 }
 
 // Debug staff_id Problem
-console.log('🔍 Staff ID Debug:', {
+logger.debug('🔍 Staff ID Debug:', {
   currentUserValue: currentUser.value,
   formDataStaffId: formData.value.staff_id,
   shouldAutoSet: !!currentUser.value?.id && !formData.value.staff_id
@@ -5216,12 +5216,12 @@ console.log('🔍 Staff ID Debug:', {
 // Force staff_id setzen als Test
 if (currentUser.value?.id) {
   formData.value.staff_id = currentUser.value.id
-  console.log('🔧 FORCE SET staff_id:', currentUser.value.id)
+  logger.debug('🔧 FORCE SET staff_id:', currentUser.value.id)
 }
 
 // Watch currentUser changes
 watch(currentUser, (newUser, oldUser) => {
-  console.log('🔄 EventModal: currentUser changed:', {
+  logger.debug('🔄 EventModal: currentUser changed:', {
     newUser: newUser,
     oldUser: oldUser,
     newRole: newUser?.role,
@@ -5233,7 +5233,7 @@ watch(currentUser, (newUser, oldUser) => {
   // ✅ Nur Staff automatisch setzen, nicht Admin
   if (newUser?.role === 'staff' && newUser?.id && !formData.value.staff_id) {
     formData.value.staff_id = newUser.id
-    console.log('✅ Staff ID auto-set (staff role):', newUser.id)
+    logger.debug('✅ Staff ID auto-set (staff role):', newUser.id)
     
     // ✅ Staff-Liste neu laden um sicherzustellen dass er drin ist
     nextTick(() => {
@@ -5244,7 +5244,7 @@ watch(currentUser, (newUser, oldUser) => {
 
 // ✅ NEUE FUNKTION: Initialisierung für Paste-Operationen
 const initializePastedAppointment = async () => {
-  console.log('📋 Initializing pasted appointment with data:', props.eventData)
+  logger.debug('📋 Initializing pasted appointment with data:', props.eventData)
   
   try {
     // ✅ WICHTIG: NICHT resetForm() aufrufen bei Paste-Operationen!
@@ -5252,8 +5252,8 @@ const initializePastedAppointment = async () => {
     
     // ✅ Kopierte Daten in Form übertragen
     if (props.eventData) {
-      console.log('📋 initializePastedAppointment - props.eventData:', props.eventData)
-      console.log('📋 initializePastedAppointment - props.eventData keys:', Object.keys(props.eventData))
+      logger.debug('📋 initializePastedAppointment - props.eventData:', props.eventData)
+      logger.debug('📋 initializePastedAppointment - props.eventData keys:', Object.keys(props.eventData))
       
       // ✅ ZUERST: Basis-Werte setzen ohne resetForm
       formData.value.title = props.eventData.title || ''
@@ -5274,10 +5274,10 @@ const initializePastedAppointment = async () => {
       // ✅ FÜR OTHER EVENT TYPES: EventTypeSelector anzeigen beim Editieren
       if (isOtherEvent && props.mode === 'edit') {
         showEventTypeSelection.value = true
-        console.log('🎯 Other event type detected - showing EventTypeSelector for editing')
+        logger.debug('🎯 Other event type detected - showing EventTypeSelector for editing')
       }
       
-      console.log('🎯 EventType determined:', {
+      logger.debug('🎯 EventType determined:', {
         appointmentType,
         isOtherEvent,
         eventType: formData.value.eventType,
@@ -5296,9 +5296,9 @@ const initializePastedAppointment = async () => {
       formData.value.discount = 0
       formData.value.discount_type = 'fixed'
       formData.value.discount_reason = ''
-      console.log('🛒 Products and discounts cleared for pasted appointment')
+      logger.debug('🛒 Products and discounts cleared for pasted appointment')
       
-      console.log('📋 initializePastedAppointment - formData after setting:', {
+      logger.debug('📋 initializePastedAppointment - formData after setting:', {
         title: formData.value.title,
         user_id: formData.value.user_id,
         staff_id: formData.value.staff_id,
@@ -5309,7 +5309,7 @@ const initializePastedAppointment = async () => {
       })
       
       // ✅ Zeit-Daten
-      console.log('⏰ initializePastedAppointment - Zeit-Daten:', {
+      logger.debug('⏰ initializePastedAppointment - Zeit-Daten:', {
         start: props.eventData.start,
         end: props.eventData.end
       })
@@ -5343,7 +5343,7 @@ const initializePastedAppointment = async () => {
         formData.value.startDate = `${year}-${month}-${day}`
         formData.value.startTime = `${hour}:${minute}`
         
-        console.log('⏰ Start-Daten gesetzt (mit Zurich timezone):', {
+        logger.debug('⏰ Start-Daten gesetzt (mit Zurich timezone):', {
           startDate: formData.value.startDate,
           startTime: formData.value.startTime,
           inputUTC: props.eventData.start
@@ -5353,18 +5353,18 @@ const initializePastedAppointment = async () => {
       if (props.eventData.end) {
         const endDate = new Date(props.eventData.end)
         formData.value.endTime = endDate.toTimeString().slice(0, 5)
-        console.log('⏰ End-Daten gesetzt:', {
+        logger.debug('⏰ End-Daten gesetzt:', {
           endTime: formData.value.endTime
         })
       }
       
-      console.log('⏰ Finale Zeit-Daten:', {
+      logger.debug('⏰ Finale Zeit-Daten:', {
         startDate: formData.value.startDate,
         startTime: formData.value.startTime,
         endTime: formData.value.endTime
       })
       
-      console.log('📋 Pasted appointment data fully set:', {
+      logger.debug('📋 Pasted appointment data fully set:', {
         type: formData.value.type,
         selectedCategory: selectedCategory.value?.code,
         eventType: formData.value.eventType,
@@ -5375,16 +5375,16 @@ const initializePastedAppointment = async () => {
     
     // ✅ Student laden falls user_id vorhanden UND es ist eine Lektion
     if (formData.value.user_id && isLessonType(formData.value.eventType)) {
-      console.log('👤 Loading student for pasted appointment:', formData.value.user_id)
+      logger.debug('👤 Loading student for pasted appointment:', formData.value.user_id)
       await modalForm.loadStudentById(formData.value.user_id)
-      console.log('🎯 Student loaded, selectedStudent:', selectedStudent.value?.first_name || 'not found')
+      logger.debug('🎯 Student loaded, selectedStudent:', selectedStudent.value?.first_name || 'not found')
     } else if (formData.value.user_id && !isLessonType(formData.value.eventType)) {
-      console.log('🚫 Not loading student for other event type:', formData.value.eventType)
+      logger.debug('🚫 Not loading student for other event type:', formData.value.eventType)
       selectedStudent.value = null
     }
     
     // ✅ Staff aus dem kopierten Termin übernehmen (bereits in Zeile 3395 gesetzt)
-    console.log('👨‍🏫 Staff check after initialization:', {
+    logger.debug('👨‍🏫 Staff check after initialization:', {
       eventDataStaffId: props.eventData?.staff_id,
       formDataStaffId: formData.value.staff_id,
       currentUserId: props.currentUser?.id
@@ -5392,16 +5392,16 @@ const initializePastedAppointment = async () => {
     
     // ✅ NEU: Available Staff laden für Staff-Selector
     if (formData.value.startDate && formData.value.startTime && formData.value.endTime) {
-      console.log('👥 Loading available staff for pasted appointment...')
+      logger.debug('👥 Loading available staff for pasted appointment...')
       await loadAvailableStaff()
-      console.log('👥 Available staff loaded:', availableStaff.value.length, 'staff members')
+      logger.debug('👥 Available staff loaded:', availableStaff.value.length, 'staff members')
       
       // ✅ NEU: Staff-Selector explizit aktualisieren
       await nextTick()
-      console.log('🔄 After nextTick - Staff should be visible now')
+      logger.debug('🔄 After nextTick - Staff should be visible now')
       
       // ✅ Zusätzliche Debug-Ausgabe
-      console.log('🔍 Final staff state:', {
+      logger.debug('🔍 Final staff state:', {
         formDataStaffId: formData.value.staff_id,
         availableStaffCount: availableStaff.value.length,
         availableStaffIds: availableStaff.value.map(s => s.id),
@@ -5410,7 +5410,7 @@ const initializePastedAppointment = async () => {
     }
     
     // ✅ Produkte und Rabatte werden NICHT mitkopiert (bewusste Entscheidung)
-    console.log('ℹ️ Products and discounts are not copied with pasted appointments')
+    logger.debug('ℹ️ Products and discounts are not copied with pasted appointments')
     
     // ✅ Preisberechnung für neuen Termin (inkl. Admingebühr-Prüfung)
     if (formData.value.type && formData.value.duration_minutes && formData.value.eventType === 'lesson') {
@@ -5418,7 +5418,7 @@ const initializePastedAppointment = async () => {
     }
     
     // ✅ Final state check
-    console.log('✅ Pasted appointment initialized successfully', {
+    logger.debug('✅ Pasted appointment initialized successfully', {
       studentLoaded: !!selectedStudent.value,
       studentName: selectedStudent.value ? `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}` : 'none',
       formDataUserId: formData.value.user_id,
@@ -5439,7 +5439,7 @@ const initializePastedAppointment = async () => {
 // Direkt nach initializeFormData in der watch-Funktion:
 watch(() => props.isVisible, async (newVisible) => {
   if (newVisible) {
-    console.log('✅ Modal opened:', { 
+    logger.debug('✅ Modal opened:', { 
       mode: props.mode, 
       hasEventData: !!props.eventData,
       eventData: props.eventData,
@@ -5458,7 +5458,7 @@ watch(() => props.isVisible, async (newVisible) => {
         
         if (tenantData?.name) {
           tenantName.value = tenantData.name
-          console.log('🏢 Tenant name loaded:', tenantName.value)
+          logger.debug('🏢 Tenant name loaded:', tenantName.value)
         }
       }
     } catch (error) {
@@ -5468,23 +5468,23 @@ watch(() => props.isVisible, async (newVisible) => {
     
     try {
       if (props.eventData && props.eventData.id) {
-        console.log('📝 Editing existing appointment')
+        logger.debug('📝 Editing existing appointment')
         await initializeFormData()
         
         // ✅ SCHRITT 1: Form populieren (nach initializeFormData)
         await populateFormFromAppointment(props.eventData)
-        console.log('🔍 AFTER populate - eventType:', formData.value.eventType)
+        logger.debug('🔍 AFTER populate - eventType:', formData.value.eventType)
         
         // ✅ SCHRITT 1.5: Ursprüngliche Duration zu availableDurations hinzufügen
         if (formData.value.duration_minutes && !availableDurations.value.includes(formData.value.duration_minutes)) {
           availableDurations.value.unshift(formData.value.duration_minutes)
           availableDurations.value.sort((a, b) => a - b)
-          console.log('✅ Added original duration to available durations:', availableDurations.value)
+          logger.debug('✅ Added original duration to available durations:', availableDurations.value)
         }
         
         // ✅ SCHRITT 1.6: Duration-Logik nach populateFormFromAppointment
         if (formData.value.duration_minutes) {
-          console.log('✅ Keeping existing duration from database:', formData.value.duration_minutes, 'min')
+          logger.debug('✅ Keeping existing duration from database:', formData.value.duration_minutes, 'min')
         }
         
         // ✅ SCHRITT 2: Payment-Daten laden
@@ -5496,11 +5496,11 @@ watch(() => props.isVisible, async (newVisible) => {
         await handleEditModeLessonType()
       } else if (props.eventData && props.eventData.isPasteOperation) {
         // ✅ PASTE OPERATION: Spezielle Behandlung für kopierte Termine
-        console.log('📋 Initializing pasted appointment')
+        logger.debug('📋 Initializing pasted appointment')
         await initializePastedAppointment()
       } else {
         // ✅ FALLBACK: Einfache Initialisierung für neue Termine
-        console.log('🆕 Creating new appointment - using calendar data:', props.eventData)
+        logger.debug('🆕 Creating new appointment - using calendar data:', props.eventData)
         
         // ✅ ZUERST: Zeit und Datum aus eventData extrahieren (vom Kalender-Click)
         const eventData = props.eventData
@@ -5532,7 +5532,7 @@ watch(() => props.isVisible, async (newVisible) => {
             startDate = `${startParts.find(p => p.type === 'year')?.value}-${startParts.find(p => p.type === 'month')?.value}-${startParts.find(p => p.type === 'day')?.value}`
             startTime = `${startParts.find(p => p.type === 'hour')?.value}:${startParts.find(p => p.type === 'minute')?.value}`
             
-            console.log('⏰ UTC from DB → Zurich local:', {
+            logger.debug('⏰ UTC from DB → Zurich local:', {
               inputUTC: eventData.start,
               zurichDate: startDate,
               zurichTime: startTime
@@ -5553,7 +5553,7 @@ watch(() => props.isVisible, async (newVisible) => {
             startDate = datePart
             startTime = timePart.substring(0, 5) // HH:MM
             
-            console.log('⏰ Already local time (from calendar click):', {
+            logger.debug('⏰ Already local time (from calendar click):', {
               inputLocal: eventData.start,
               extractedDate: startDate,
               extractedTime: startTime
@@ -5571,7 +5571,7 @@ watch(() => props.isVisible, async (newVisible) => {
             }
           }
           
-          console.log('⏰ Extracted calendar time data:', {
+          logger.debug('⏰ Extracted calendar time data:', {
             startDate,
             startTime,
             endTime,
@@ -5592,7 +5592,7 @@ watch(() => props.isVisible, async (newVisible) => {
         // ✅ FIX: EventType aus eventData bestimmen falls vorhanden
         if (eventData?.extendedProps?.eventType) {
           formData.value.eventType = eventData.extendedProps.eventType
-          console.log('🎯 EventType from extendedProps:', formData.value.eventType)
+          logger.debug('🎯 EventType from extendedProps:', formData.value.eventType)
         } else {
           formData.value.eventType = 'lesson' // Default für neue Termine
         }
@@ -5603,7 +5603,7 @@ watch(() => props.isVisible, async (newVisible) => {
         selectedLessonType.value = 'lesson'
         selectedCategory.value = { code: 'B' }
         
-        console.log('🎯 Form data after calendar extraction:', {
+        logger.debug('🎯 Form data after calendar extraction:', {
           startDate: formData.value.startDate,
           startTime: formData.value.startTime,
           endTime: formData.value.endTime,
@@ -5614,7 +5614,7 @@ watch(() => props.isVisible, async (newVisible) => {
         
         // ✅ NEU: Standard-Zahlungsmethode für neue Termine setzen
         selectedPaymentMethod.value = 'wallee'
-        console.log('💳 Default payment method for new appointment: wallee')
+        logger.debug('💳 Default payment method for new appointment: wallee')
         
         // ✅ WICHTIG: Nicht initializeFormData aufrufen - wir haben die Zeit schon oben extrahiert!
         // initializeFormData würde die Zeit NOCHMAL auslesen und dabei die falsche Zeit einsetzen
@@ -5623,7 +5623,7 @@ watch(() => props.isVisible, async (newVisible) => {
         // ✅ Create-Mode handling
         await handleCreateMode()
         
-        console.log('🔄 AFTER calling initializeFormData:', {
+        logger.debug('🔄 AFTER calling initializeFormData:', {
           appointment_type: formData.value.appointment_type,
           location_id: formData.value.location_id,
           type: formData.value.type,
@@ -5633,7 +5633,7 @@ watch(() => props.isVisible, async (newVisible) => {
       }
       
       // ✅ DEBUG NACH initializeFormData:
-      console.log('🔍 AFTER initializeFormData:', {
+      logger.debug('🔍 AFTER initializeFormData:', {
         eventType: formData.value.eventType,
         showEventTypeSelection: showEventTypeSelection.value,
         selectedLessonType: selectedLessonType.value
@@ -5673,7 +5673,7 @@ watch(() => props.isVisible, async (newVisible) => {
 
 watch(() => formData.value.duration_minutes, (newDuration, oldDuration) => {
   try {
-    console.log('🔍 DEBUG: Duration watcher triggered:', {
+    logger.debug('🔍 DEBUG: Duration watcher triggered:', {
       oldDuration,
       newDuration,
       startTime: formData.value.startTime,
@@ -5690,8 +5690,8 @@ watch(() => formData.value.duration_minutes, (newDuration, oldDuration) => {
 watch(() => selectedStudent.value, (newStudent, oldStudent) => {
   try {
     if (newStudent && !oldStudent) {
-      console.log('🔍 Student selection detected:', newStudent.first_name, newStudent.last_name)
-      console.log('🔍 Is Free-Slot mode?', isFreeslotMode.value)
+      logger.debug('🔍 Student selection detected:', newStudent.first_name, newStudent.last_name)
+      logger.debug('🔍 Is Free-Slot mode?', isFreeslotMode.value)
     }
     
     // ✅ Trigger pricing calculation when student changes
@@ -5725,7 +5725,7 @@ watch(() => formData.value.type, (newType) => {
 
 // ✅ Im EventModal.vue - bei den anderen Watchers hinzufügen:
 watch(() => formData.value.eventType, (newVal, oldVal) => {
-  console.log('🚨 formData.eventType CHANGED:', {
+  logger.debug('🚨 formData.eventType CHANGED:', {
     from: oldVal,
     to: newVal,
     stack: new Error().stack
@@ -5739,7 +5739,7 @@ watch(() => formData.value.eventType, (newVal, oldVal) => {
 
 // ✅ Add watcher for category/type changes
 watch(() => formData.value.type, (newType, oldType) => {
-  console.log('🚨 formData.type CHANGED:', {
+  logger.debug('🚨 formData.type CHANGED:', {
     from: oldType,
     to: newType
   })
@@ -5752,24 +5752,24 @@ watch(() => formData.value.type, (newType, oldType) => {
 
 // ✅ NEU: Watch für mode changes - reset form when switching to create mode
 watch(() => props.mode, (newMode, oldMode) => {
-  console.log('🚨 MODE CHANGED:', { from: oldMode, to: newMode })
+  logger.debug('🚨 MODE CHANGED:', { from: oldMode, to: newMode })
   
   // ✅ WICHTIG: Bei Paste-Operationen NICHT resetForm aufrufen
   const isPasteOperation = props.eventData?.isPasteOperation
   
   // Wenn von edit/view zu create gewechselt wird, form zurücksetzen (aber NICHT bei Paste)
   if (newMode === 'create' && (oldMode === 'edit' || oldMode === 'view') && !isPasteOperation) {
-    console.log('🔄 Switching to create mode - resetting form')
+    logger.debug('🔄 Switching to create mode - resetting form')
     resetForm()
   } else if (isPasteOperation) {
-    console.log('📋 Mode change ignored - this is a paste operation')
+    logger.debug('📋 Mode change ignored - this is a paste operation')
   }
 })
 
 // ✅ NEU: Funktion zum Laden der User-Zahlungspräferenzen
 const loadUserPaymentPreferences = async (userId: string) => {
   try {
-    console.log('💳 Loading payment preferences for user:', userId)
+    logger.debug('💳 Loading payment preferences for user:', userId)
     
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -5782,13 +5782,13 @@ const loadUserPaymentPreferences = async (userId: string) => {
       let paymentMethod = userData.preferred_payment_method
       if (paymentMethod === 'twint' || paymentMethod === 'wallee') {
         paymentMethod = 'wallee'
-        console.log('💳 Mapped payment method to "wallee" for better UX:', userData.preferred_payment_method)
+        logger.debug('💳 Mapped payment method to "wallee" for better UX:', userData.preferred_payment_method)
       }
       
       selectedPaymentMethod.value = paymentMethod
-      console.log('💳 Payment method loaded from user preferences:', paymentMethod)
+      logger.debug('💳 Payment method loaded from user preferences:', paymentMethod)
     } else {
-      console.log('ℹ️ No user payment preferences found, keeping default: wallee')
+      logger.debug('ℹ️ No user payment preferences found, keeping default: wallee')
     }
   } catch (error) {
     console.error('❌ Error loading user payment preferences:', error)
@@ -5818,7 +5818,7 @@ onMounted(async () => {
       // ✅ WICHTIG: Nach tenant_id filtern, falls verfügbar
       if (currentUser.value?.tenant_id) {
         productQuery = productQuery.eq('tenant_id', currentUser.value.tenant_id)
-        console.log('🏢 Filtering products by tenant_id:', currentUser.value.tenant_id)
+        logger.debug('🏢 Filtering products by tenant_id:', currentUser.value.tenant_id)
       }
       
       const { data, error } = await productQuery.order('display_order')
@@ -5869,12 +5869,12 @@ onMounted(async () => {
 const showPostAppointmentModal = ref(false)
 
 const handlePostAppointmentActions = () => {
-  console.log('🎯 Post-appointment actions for:', formData.value.id)
+  logger.debug('🎯 Post-appointment actions for:', formData.value.id)
   showPostAppointmentModal.value = true
 }
 
 const onPostAppointmentSaved = (data: any) => {
-  console.log('✅ Post-appointment data saved:', data)
+  logger.debug('✅ Post-appointment data saved:', data)
   // Hier können wir weitere Aktionen ausführen
   showPostAppointmentModal.value = false
 }

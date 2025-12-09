@@ -158,7 +158,7 @@ export const useAutoSave = <T>(
       lastMessageUpdate = now
       
       finalConfig.onSave?.(data)
-      console.log(`💾 LocalStorage saved: ${config.formId}`)
+      logger.debug(`💾 LocalStorage saved: ${config.formId}`)
       
       // Dispatch event for other components to react to save
       window.dispatchEvent(new CustomEvent('autosave-success', {
@@ -220,7 +220,7 @@ export const useAutoSave = <T>(
           
           if (existingResult.data) {
             // Update existing record
-            console.log(`🔄 Found existing draft with phone ${draftData.phone}, updating...`)
+            logger.debug(`🔄 Found existing draft with phone ${draftData.phone}, updating...`)
             draftId.value = existingResult.data.id
             result = await supabase
               .from(config.tableName)
@@ -256,12 +256,12 @@ export const useAutoSave = <T>(
       saveToLocalStorage()
       
       finalConfig.onSave?.(result.data)
-      console.log(`✅ Database draft saved: ${config.formId} -> ${draftId.value}`)
+      logger.debug(`✅ Database draft saved: ${config.formId} -> ${draftId.value}`)
       
     } catch (error: any) {
       // Handle duplicate key error by finding and updating existing record
       if (error.code === '23505' && config.formId === 'shop-order' && draftData.phone && draftData.tenant_id) {
-        console.log(`🔄 Duplicate phone ${draftData.phone} for tenant ${draftData.tenant_id}, finding existing record...`)
+        logger.debug(`🔄 Duplicate phone ${draftData.phone} for tenant ${draftData.tenant_id}, finding existing record...`)
         
         try {
           const supabase = getSupabase()
@@ -274,7 +274,7 @@ export const useAutoSave = <T>(
             .single()
           
           if (existingData && !findError) {
-            console.log(`✅ Found existing record ${existingData.id}, updating...`)
+            logger.debug(`✅ Found existing record ${existingData.id}, updating...`)
             draftId.value = existingData.id
             
             const updateResult = await supabase
@@ -290,7 +290,7 @@ export const useAutoSave = <T>(
             saveStatus.value = 'saved'
             saveToLocalStorage()
             finalConfig.onSave?.(updateResult.data)
-            console.log(`✅ Database draft updated: ${config.formId} -> ${draftId.value}`)
+            logger.debug(`✅ Database draft updated: ${config.formId} -> ${draftId.value}`)
             return
           }
         } catch (retryError) {
@@ -417,7 +417,7 @@ export const useAutoSave = <T>(
           }
         }
       } catch (error) {
-        console.log('No existing draft found by phone:', error)
+        logger.debug('No existing draft found by phone:', error)
       }
     }
     
@@ -443,7 +443,7 @@ export const useAutoSave = <T>(
       recoveryData.value = null
       
       finalConfig.onRestore?.(dataToRestore)
-      console.log(`✅ Data restored from ${recovery.source}`)
+      logger.debug(`✅ Data restored from ${recovery.source}`)
       
     } catch (error) {
       finalConfig.onError?.(error)
@@ -459,7 +459,7 @@ export const useAutoSave = <T>(
     lastSaved.value = null
     saveStatus.value = 'idle'
     
-    console.log(`🗑️ Draft cleared: ${config.formId}`)
+    logger.debug(`🗑️ Draft cleared: ${config.formId}`)
   }
   
   // === FINALIZE FUNCTIONS ===

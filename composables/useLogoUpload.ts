@@ -40,7 +40,7 @@ export const useLogoUpload = () => {
       const fileName = `${tenantSlug}-logo-${timestamp}.${fileExtension}`
       const filePath = `tenant-logos/${fileName}`
 
-      console.log('🔄 Uploading logo:', filePath)
+      logger.debug('🔄 Uploading logo:', filePath)
 
       // Upload zu Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -55,7 +55,7 @@ export const useLogoUpload = () => {
         throw new Error(`Upload fehlgeschlagen: ${uploadError.message}`)
       }
 
-      console.log('✅ Upload successful:', uploadData.path)
+      logger.debug('✅ Upload successful:', uploadData.path)
 
       // Öffentliche URL generieren
       const { data: urlData } = supabase.storage
@@ -66,7 +66,7 @@ export const useLogoUpload = () => {
         throw new Error('Konnte keine öffentliche URL generieren')
       }
 
-      console.log('✅ Public URL generated:', urlData.publicUrl)
+      logger.debug('✅ Public URL generated:', urlData.publicUrl)
       uploadProgress.value = 100
 
       return urlData.publicUrl
@@ -95,7 +95,7 @@ export const useLogoUpload = () => {
       }
       
       const filePath = pathParts[1]
-      console.log('🗑️ Deleting logo:', filePath)
+      logger.debug('🗑️ Deleting logo:', filePath)
 
       const { error: deleteError } = await supabase.storage
         .from('public')
@@ -106,7 +106,7 @@ export const useLogoUpload = () => {
         throw new Error(`Löschen fehlgeschlagen: ${deleteError.message}`)
       }
 
-      console.log('✅ Logo deleted successfully')
+      logger.debug('✅ Logo deleted successfully')
       return true
 
     } catch (err: any) {
@@ -123,7 +123,7 @@ export const useLogoUpload = () => {
     try {
       const supabase = getSupabase()
       
-      console.log('🔄 Updating tenant logo:', tenantId, logoUrl)
+      logger.debug('🔄 Updating tenant logo:', tenantId, logoUrl)
 
       const { error: updateError } = await supabase
         .from('tenants')
@@ -138,7 +138,7 @@ export const useLogoUpload = () => {
         throw new Error(`Update fehlgeschlagen: ${updateError.message}`)
       }
 
-      console.log('✅ Tenant logo updated successfully')
+      logger.debug('✅ Tenant logo updated successfully')
       return true
 
     } catch (err: any) {

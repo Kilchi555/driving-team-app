@@ -287,7 +287,7 @@ const loadExternalCalendars = async () => {
       return
     }
 
-    console.log('🔍 Loading calendars for staff_id:', userData.id)
+    logger.debug('🔍 Loading calendars for staff_id:', userData.id)
 
     const { data: calendars, error } = await supabase
       .from('external_calendars')
@@ -301,7 +301,7 @@ const loadExternalCalendars = async () => {
     }
     
     externalCalendars.value = calendars || []
-    console.log('✅ Loaded calendars:', calendars?.length || 0, calendars)
+    logger.debug('✅ Loaded calendars:', calendars?.length || 0, calendars)
   } catch (err: any) {
     console.error('Error loading external calendars:', err)
     error.value = 'Fehler beim Laden der Kalender-Verbindungen'
@@ -374,7 +374,7 @@ const syncCalendar = async (calendarId: string) => {
 
   try {
     addDebugLog('🔄 Starte Synchronisation...', 'info')
-    console.log('🔄 Starting calendar sync for:', calendarId)
+    logger.debug('🔄 Starting calendar sync for:', calendarId)
     
     const calendar = externalCalendars.value.find(c => c.id === calendarId)
     if (!calendar) {
@@ -383,13 +383,13 @@ const syncCalendar = async (calendarId: string) => {
     }
 
     addDebugLog(`📅 Kalender: ${calendar.calendar_name}`, 'info')
-    console.log('📅 Calendar found:', calendar.calendar_name, 'ICS URL:', calendar.ics_url ? 'Yes' : 'No')
+    logger.debug('📅 Calendar found:', calendar.calendar_name, 'ICS URL:', calendar.ics_url ? 'Yes' : 'No')
 
     // Fallback: Wenn eine ICS-URL vorhanden ist, immer darüber synchronisieren
     if (calendar.ics_url) {
       // Sync ICS calendar
       addDebugLog('🌐 Rufe API auf...', 'info')
-      console.log('🌐 Fetching from API: /api/external-calendars/sync-ics')
+      logger.debug('🌐 Fetching from API: /api/external-calendars/sync-ics')
       
       const response = await $fetch<{ success: boolean, imported_events?: number, message?: string, error?: string }>('/api/external-calendars/sync-ics', {
         method: 'POST',
@@ -400,16 +400,16 @@ const syncCalendar = async (calendarId: string) => {
       })
 
       addDebugLog(`📡 API Antwort: ${JSON.stringify(response)}`, 'info')
-      console.log('📡 API Response:', response)
+      logger.debug('📡 API Response:', response)
 
       if (response.success) {
         const successMsg = `Kalender synchronisiert! ${response.imported_events || 0} Termine importiert.`
         success.value = successMsg
         addDebugLog(`✅ ${successMsg}`, 'success')
-        console.log('✅ Sync successful, reloading calendars...')
+        logger.debug('✅ Sync successful, reloading calendars...')
         await loadExternalCalendars()
         addDebugLog('✅ Kalender neu geladen', 'success')
-        console.log('✅ Calendars reloaded')
+        logger.debug('✅ Calendars reloaded')
       } else {
         // Zeige detaillierten Fehler vom Server an
         const errorMsg = `${response.message}${response.error ? ' - ' + response.error : ''}`
@@ -438,7 +438,7 @@ const syncCalendar = async (calendarId: string) => {
   } finally {
     isSyncing.value = false
     addDebugLog('🏁 Sync abgeschlossen', 'info')
-    console.log('🏁 Sync process completed')
+    logger.debug('🏁 Sync process completed')
   }
 }
 

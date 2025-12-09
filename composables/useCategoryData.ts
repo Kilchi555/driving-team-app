@@ -47,7 +47,7 @@ export const useCategoryData = () => {
     isLoading.value = true
     
     try {
-      console.log('🔄 Loading categories from database...')
+      logger.debug('🔄 Loading categories from database...')
       
       // Get current user's tenant_id first
       const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -73,7 +73,7 @@ export const useCategoryData = () => {
       
       // Only load categories if business_type is driving_school
       if (tenantData?.business_type !== 'driving_school') {
-        console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+        logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
         allCategories.value = []
         isLoaded.value = true
         return
@@ -116,7 +116,7 @@ export const useCategoryData = () => {
       allCategories.value = processedData
       isLoaded.value = true
       
-      console.log('✅ Categories loaded and processed:', processedData.length)
+      logger.debug('✅ Categories loaded and processed:', processedData.length)
       
     } catch (err: any) {
       console.error('❌ Error loading categories:', err)

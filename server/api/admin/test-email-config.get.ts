@@ -9,14 +9,14 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabase()
     
     // Test 1: Check if we can access auth settings
-    console.log('🔍 Testing Supabase email configuration...')
+    logger.debug('🔍 Testing Supabase email configuration...')
     
     // Test 2: Try to get current auth settings (this might not work with anon key)
     try {
       const { data: authSettings, error: authError } = await supabase.auth.getSession()
-      console.log('📧 Auth session check:', { authSettings, authError })
+      logger.debug('📧 Auth session check:', { authSettings, authError })
     } catch (e) {
-      console.log('📧 Auth session check failed (expected with anon key):', e)
+      logger.debug('📧 Auth session check failed (expected with anon key):', e)
     }
     
     // Test 3: Check if we can send a test email (this will fail if not configured)
@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
         }
       })
       
-      console.log('📧 Test email signup result:', { testEmail, testError })
+      logger.debug('📧 Test email signup result:', { testEmail, testError })
       
       return {
         success: true,
@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
         }
       }
     } catch (e: any) {
-      console.log('📧 Test email failed:', e)
+      logger.debug('📧 Test email failed:', e)
       
       return {
         success: false,

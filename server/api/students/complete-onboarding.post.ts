@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    console.log('📝 Complete onboarding request body:', JSON.stringify(body, null, 2))
+    logger.debug('📝 Complete onboarding request body:', JSON.stringify(body, null, 2))
     
     const { token, firstName, lastName, phone, password, email, birthdate, categories, category, street, street_nr, zip, city, documentUrls } = body
 
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     )
 
     // 1. Find user by token
-    console.log('🔍 Looking for user with token:', token)
+    logger.debug('🔍 Looking for user with token:', token)
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('*')
@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Found user:', { id: user.id, email: user.email, tenant_id: user.tenant_id })
+    logger.debug('✅ Found user:', { id: user.id, email: user.email, tenant_id: user.tenant_id })
 
     // 2. Check token expiration
     const expiresAt = new Date(user.onboarding_token_expires)
@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // 3. Create Auth User
-    console.log('👤 Creating auth user for email:', email)
+    logger.debug('👤 Creating auth user for email:', email)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       password: password,
@@ -89,7 +89,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Auth user created:', { id: authData.user.id, email: authData.user.email })
+    logger.debug('✅ Auth user created:', { id: authData.user.id, email: authData.user.email })
 
     // 4. Update user record with all data
     // Ensure category stored as array - support both old (category) and new (categories) format
@@ -137,10 +137,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ User profile updated successfully')
+    logger.debug('✅ User profile updated successfully')
 
     // ✅ NEU: Aktualisiere auch den Auth User mit den korrekten Namen (Display Name)
-    console.log('🔐 Updating auth user display name...')
+    logger.debug('🔐 Updating auth user display name...')
     const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(authData.user.id, {
       user_metadata: {
         first_name: firstName,
@@ -152,10 +152,10 @@ export default defineEventHandler(async (event) => {
       console.warn('⚠️ Auth user update warning (non-critical):', authUpdateError)
       // Nicht den ganzen Prozess abbrechen, nur warnen
     } else {
-      console.log('✅ Auth user display name updated')
+      logger.debug('✅ Auth user display name updated')
     }
 
-    console.log('💰 Creating student_credits record...')
+    logger.debug('💰 Creating student_credits record...')
     const { data: studentCredit, error: creditError } = await supabaseAdmin
       .from('student_credits')
       .select('id')
@@ -176,16 +176,16 @@ export default defineEventHandler(async (event) => {
         console.warn('⚠️ Error creating student_credits (non-critical):', createCreditError)
         // Don't fail the whole onboarding if this fails
       } else {
-        console.log('✅ student_credits record created')
+        logger.debug('✅ student_credits record created')
       }
     } else {
-      console.log('ℹ️ student_credits already exists for user:', user.id)
+      logger.debug('ℹ️ student_credits already exists for user:', user.id)
     }
 
     // 6. Send pending payment reminders
     // After onboarding is complete, send first reminder for any payments that were skipped
     try {
-      console.log('📧 Checking for pending payment reminders...')
+      logger.debug('📧 Checking for pending payment reminders...')
       
       // Find all pending payments for this user where first reminder was not sent
       const { data: pendingPayments, error: paymentsError } = await supabaseAdmin
@@ -198,7 +198,7 @@ export default defineEventHandler(async (event) => {
       if (paymentsError) {
         console.error('⚠️ Error checking pending payments:', paymentsError)
       } else if (pendingPayments && pendingPayments.length > 0) {
-        console.log(`📧 Found ${pendingPayments.length} pending payment(s) without reminder, sending now...`)
+        logger.debug(`📧 Found ${pendingPayments.length} pending payment(s) without reminder, sending now...`)
         
         // Send first reminder for each pending payment
         for (const payment of pendingPayments) {
@@ -213,14 +213,14 @@ export default defineEventHandler(async (event) => {
               }
             })
             
-            console.log(`✅ First reminder sent for payment ${payment.id}:`, reminderResponse)
+            logger.debug(`✅ First reminder sent for payment ${payment.id}:`, reminderResponse)
           } catch (reminderError: any) {
             console.error(`⚠️ Error sending reminder for payment ${payment.id}:`, reminderError)
             // Don't fail the onboarding if reminder fails
           }
         }
       } else {
-        console.log('ℹ️ No pending payments found without reminder')
+        logger.debug('ℹ️ No pending payments found without reminder')
       }
     } catch (reminderCheckError) {
       console.error('⚠️ Error in reminder check (non-critical):', reminderCheckError)

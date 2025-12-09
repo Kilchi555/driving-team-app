@@ -773,7 +773,7 @@ const deleteReason = async (reason: any) => {
   if (confirm(`Möchten Sie den Grund "${reason.name_de}" wirklich löschen?`)) {
     try {
       await deleteCancellationReason(reason.id)
-      console.log('✅ Reason deleted successfully')
+      logger.debug('✅ Reason deleted successfully')
     } catch (error) {
       console.error('❌ Error deleting reason:', error)
       alert('Fehler beim Löschen des Grundes')
@@ -786,7 +786,7 @@ const authStore = useAuthStore()
 
 // Lade Daten beim Mount
 onMounted(async () => {
-  console.log('🔍 Cancellation management page mounted, checking auth...')
+  logger.debug('🔍 Cancellation management page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -795,7 +795,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -804,17 +804,17 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading cancellation management...')
+  logger.debug('✅ Auth check passed, loading cancellation management...')
   
   // Original onMounted logic
   await Promise.all([

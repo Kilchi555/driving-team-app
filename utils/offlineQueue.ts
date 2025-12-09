@@ -49,7 +49,7 @@ export const addToOfflineQueue = async (item: {
     queue.push(queueItem)
     localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
     
-    console.log('📦 Added to offline queue:', queueItem.originalOperation)
+    logger.debug('📦 Added to offline queue:', queueItem.originalOperation)
     
     // Event für UI-Updates
     window.dispatchEvent(new CustomEvent('offline-queue-updated', { 
@@ -112,17 +112,17 @@ export const processOfflineQueue = async (): Promise<{
   const errors: string[] = []
   
   if (queue.length === 0) {
-    console.log('✅ Offline queue is empty')
+    logger.debug('✅ Offline queue is empty')
     return { processed: 0, failed: 0, errors: [] }
   }
   
-  console.log(`🔄 Processing ${queue.length} items from offline queue`)
+  logger.debug(`🔄 Processing ${queue.length} items from offline queue`)
   
   const supabase = getSupabase()
   
   for (const item of queue) {
     try {
-      console.log(`📤 Syncing: ${item.originalOperation}`)
+      logger.debug(`📤 Syncing: ${item.originalOperation}`)
       
       let result
       
@@ -161,7 +161,7 @@ export const processOfflineQueue = async (): Promise<{
       removeFromQueue(item.id)
       processed++
       
-      console.log(`✅ Synced: ${item.originalOperation}`)
+      logger.debug(`✅ Synced: ${item.originalOperation}`)
       
     } catch (error: any) {
       console.error(`❌ Failed to sync: ${item.originalOperation}`, error)
@@ -189,7 +189,7 @@ export const processOfflineQueue = async (): Promise<{
     await new Promise(resolve => setTimeout(resolve, 100))
   }
   
-  console.log(`✅ Queue processing complete: ${processed} processed, ${failed} failed`)
+  logger.debug(`✅ Queue processing complete: ${processed} processed, ${failed} failed`)
   
   return { processed, failed, errors }
 }
@@ -224,11 +224,11 @@ export const saveWithOfflineSupport = async (
     
     if (result.error) throw result.error
     
-    console.log(`✅ Online save successful: ${operationName || action}`)
+    logger.debug(`✅ Online save successful: ${operationName || action}`)
     return result
     
   } catch (error: any) {
-    console.log(`📦 Network error, saving offline: ${operationName || action}`)
+    logger.debug(`📦 Network error, saving offline: ${operationName || action}`)
     
     // In Offline-Queue speichern
     await addToOfflineQueue({
@@ -250,7 +250,7 @@ export const saveWithOfflineSupport = async (
 export const initializeOfflineSupport = (): void => {
   // Online-Event listener
   window.addEventListener('online', async () => {
-    console.log('🌐 Browser is back online, processing queue...')
+    logger.debug('🌐 Browser is back online, processing queue...')
     
     // UI-Feedback
     window.dispatchEvent(new CustomEvent('connection-restored'))
@@ -271,7 +271,7 @@ export const initializeOfflineSupport = (): void => {
   
   // Offline-Event listener  
   window.addEventListener('offline', () => {
-    console.log('📡 Browser is offline, enabling offline mode')
+    logger.debug('📡 Browser is offline, enabling offline mode')
     window.dispatchEvent(new CustomEvent('connection-lost'))
   })
   
@@ -282,7 +282,7 @@ export const initializeOfflineSupport = (): void => {
     }, 2000) // 2s Delay für App-Initialization
   }
   
-  console.log('🔧 Offline support initialized')
+  logger.debug('🔧 Offline support initialized')
 }
 
 /**
@@ -302,5 +302,5 @@ export const clearOfflineQueue = (): void => {
   window.dispatchEvent(new CustomEvent('offline-queue-updated', { 
     detail: { queueSize: 0 }
   }))
-  console.log('🗑️ Offline queue cleared')
+  logger.debug('🗑️ Offline queue cleared')
 }

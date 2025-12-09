@@ -39,7 +39,7 @@ export const useEventModalHandlers = (
    * @returns The duration in minutes or null if no completed appointment is found.
    */
   const getLastAppointmentDuration = async (studentId: string): Promise<number | null> => {
-    console.log('⏱️ Checking last appointment duration for student:', studentId)
+    logger.debug('⏱️ Checking last appointment duration for student:', studentId)
     
     try {
       const { data, error } = await supabase
@@ -56,7 +56,7 @@ export const useEventModalHandlers = (
       if (error) throw error
       
       const lastDuration = data?.duration_minutes || null
-      console.log('📊 Last appointment duration:', lastDuration, 'minutes')
+      logger.debug('📊 Last appointment duration:', lastDuration, 'minutes')
       return lastDuration
 
     } catch (err: any) {
@@ -69,7 +69,7 @@ export const useEventModalHandlers = (
    * Gets the last appointment category for a given student.
    */
   const getLastAppointmentCategory = async (studentId: string): Promise<string | null> => {
-    console.log('🎯 Checking last appointment category for student:', studentId)
+    logger.debug('🎯 Checking last appointment category for student:', studentId)
     
     try {
       const { data, error } = await supabase
@@ -86,7 +86,7 @@ export const useEventModalHandlers = (
       if (error) throw error
       
       const lastCategory = data?.type || null
-      console.log('📊 Last appointment category:', lastCategory)
+      logger.debug('📊 Last appointment category:', lastCategory)
       return lastCategory
 
     } catch (err: any) {
@@ -100,7 +100,7 @@ export const useEventModalHandlers = (
    * @param student The selected student object.
    */
   const autoFillFromStudent = async (student: any) => {
-    console.log('👤 Auto-filling from student:', student.first_name, student.last_name)
+    logger.debug('👤 Auto-filling from student:', student.first_name, student.last_name)
     selectedStudent.value = student
 
     // Update title
@@ -111,19 +111,19 @@ export const useEventModalHandlers = (
     if (student.category) {
       const categories = student.category.split(',').map((c: string) => c.trim())
       formData.value.type = categories[0] // Use first category
-      console.log('🎯 Auto-set category from student profile:', formData.value.type)
+      logger.debug('🎯 Auto-set category from student profile:', formData.value.type)
     }
 
     // Set location preference
     if (student.preferred_location_id) {
       formData.value.location_id = student.preferred_location_id
-      console.log('📍 Auto-set location from student preference')
+      logger.debug('📍 Auto-set location from student preference')
     }
 
     // Set staff assignment
     if (student.assigned_staff_id) {
       formData.value.staff_id = student.assigned_staff_id
-      console.log('👨‍🏫 Auto-set staff from student assignment')
+      logger.debug('👨‍🏫 Auto-set staff from student assignment')
     }
 
     // Load last appointment duration
@@ -131,10 +131,10 @@ export const useEventModalHandlers = (
       const lastDuration = await getLastAppointmentDuration(student.id)
       if (lastDuration && lastDuration > 0) {
         formData.value.duration_minutes = lastDuration
-        console.log('⏱️ Auto-set duration from last appointment:', lastDuration, 'min')
+        logger.debug('⏱️ Auto-set duration from last appointment:', lastDuration, 'min')
       } else {
         formData.value.duration_minutes = student.preferred_duration || DEFAULT_DURATION_MINUTES
-        console.log('⏱️ Using preferred/default duration:', formData.value.duration_minutes, 'min')
+        logger.debug('⏱️ Using preferred/default duration:', formData.value.duration_minutes, 'min')
       }
     } catch (err) {
       console.error('❌ Error loading last duration, using default', DEFAULT_DURATION_MINUTES, 'min:', err)
@@ -144,14 +144,14 @@ export const useEventModalHandlers = (
     // ✅ PRICING wird automatisch durch die Watcher der neuen usePricing berechnet
     // Kein manueller Code mehr nötig - pricing.dynamicPricing.value wird automatisch aktualisiert!
 
-    console.log('✅ Student auto-fill completed - pricing calculated automatically')
+    logger.debug('✅ Student auto-fill completed - pricing calculated automatically')
   }
 
   /**
    * Handles clearing the selected student and resetting related form fields.
    */
   const handleStudentCleared = () => {
-    console.log('🗑️ Student cleared')
+    logger.debug('🗑️ Student cleared')
 
     selectedStudent.value = null
     formData.value.title = ''
@@ -170,7 +170,7 @@ export const useEventModalHandlers = (
    * @param category The selected category object.
    */
 const handleCategorySelected = async (category: any) => {
-  console.log('🎯 Category selected:', category?.code)
+  logger.debug('🎯 Category selected:', category?.code)
   selectedCategory.value = category
   
   if (category) {
@@ -184,10 +184,10 @@ const handleCategorySelected = async (category: any) => {
         .maybeSingle()
         
       if (categoryData) {
-        console.log('💰 Category data loaded from DB:', categoryData.price_per_lesson)
+        logger.debug('💰 Category data loaded from DB:', categoryData.price_per_lesson)
         selectedCategory.value = { ...category, ...categoryData }
       } else {
-        console.log('⚠️ Category not found in DB, fallback pricing will be used')
+        logger.debug('⚠️ Category not found in DB, fallback pricing will be used')
       }
     } catch (err) {
       console.error('❌ Error loading category from DB:', err)
@@ -197,12 +197,12 @@ const handleCategorySelected = async (category: any) => {
     try {
       const staffId = formData.value.staff_id || currentUser?.id
       if (staffId) {
-        console.log('⏱️ Loading durations for category:', category.code, 'staff:', staffId)
+        logger.debug('⏱️ Loading durations for category:', category.code, 'staff:', staffId)
         const durations = await loadStaffDurations(category.code, staffId)
         
         // Update available durations
         availableDurations.value = durations
-        console.log('✅ Durations updated:', durations)
+        logger.debug('✅ Durations updated:', durations)
         
         // ✅ Special handling for exams - use exam_duration_minutes from category
         const appointmentType = formData.value.appointment_type || 'lesson'
@@ -213,12 +213,12 @@ const handleCategorySelected = async (category: any) => {
           if (!availableDurations.value.includes(examDuration)) {
             availableDurations.value = [examDuration, ...availableDurations.value].sort((a, b) => a - b)
           }
-          console.log('🎯 Exam detected - using exam duration:', examDuration)
+          logger.debug('🎯 Exam detected - using exam duration:', examDuration)
         }
         // ✅ Auto-select first duration if current duration is not in the list (only for non-exams)
         else if (!durations.includes(formData.value.duration_minutes)) {
           formData.value.duration_minutes = durations[0] || 45
-          console.log('🔄 Auto-selected duration:', formData.value.duration_minutes)
+          logger.debug('🔄 Auto-selected duration:', formData.value.duration_minutes)
         }
       }
     } catch (err) {
@@ -235,13 +235,13 @@ const handleCategorySelected = async (category: any) => {
    * Sets duration based on lesson type and triggers automatic price calculation.
    */
   const setDurationForLessonType = (lessonTypeCode: string) => {
-    console.log('⏱️ Setting duration for lesson type:', lessonTypeCode)
+    logger.debug('⏱️ Setting duration for lesson type:', lessonTypeCode)
     
     switch (lessonTypeCode) {
       case 'exam':
         // Prüfung: Verwende category exam_duration_minutes
         const examDuration = selectedCategory.value?.exam_duration_minutes || 135
-        console.log('📝 Auto-setting EXAM duration:', examDuration, 'for category:', selectedCategory.value?.code)
+        logger.debug('📝 Auto-setting EXAM duration:', examDuration, 'for category:', selectedCategory.value?.code)
         
         formData.value.duration_minutes = examDuration
         availableDurations.value = [examDuration]
@@ -259,13 +259,13 @@ const handleCategorySelected = async (category: any) => {
         break
         
       case 'theory':
-        console.log('🎓 Setting theory duration: 45min')
+        logger.debug('🎓 Setting theory duration: 45min')
         formData.value.duration_minutes = 45
         availableDurations.value = [45]
         break
         
       default:
-        console.log('❓ Unknown lesson type, using default')
+        logger.debug('❓ Unknown lesson type, using default')
         if (availableDurations.value.length === 0) {
           availableDurations.value = [45]
         }
@@ -283,7 +283,7 @@ const handleCategorySelected = async (category: any) => {
    * Handles duration changes - price is automatically recalculated by pricing watcher.
    */
   const handleDurationChanged = (newDurationMinutes: number) => {
-    console.log('⏱️ Duration changed to:', newDurationMinutes, 'minutes')
+    logger.debug('⏱️ Duration changed to:', newDurationMinutes, 'minutes')
     
     // Update duration (this will trigger price recalculation via watcher)
     formData.value.duration_minutes = newDurationMinutes
@@ -291,19 +291,19 @@ const handleCategorySelected = async (category: any) => {
     // Add custom duration to available options
     if (!availableDurations.value.includes(newDurationMinutes)) {
       availableDurations.value = [...availableDurations.value, newDurationMinutes].sort((a, b) => a - b)
-      console.log('⏱️ Added custom duration to available options:', availableDurations.value)
+      logger.debug('⏱️ Added custom duration to available options:', availableDurations.value)
     }
     
     calculateEndTime()
     // ✅ PREIS wird automatisch durch pricing Watcher neu berechnet!
-    console.log('💰 Price will be automatically recalculated by pricing watcher')
+    logger.debug('💰 Price will be automatically recalculated by pricing watcher')
   }
 
   /**
    * Legacy price change handler - now simplified since pricing is automatic.
    */
   const handlePriceChanged = (pricePerMinute: number) => {
-    console.log('💰 Price manually changed:', pricePerMinute)
+    logger.debug('💰 Price manually changed:', pricePerMinute)
     formData.value.price_per_minute = pricePerMinute
   }
 
@@ -311,9 +311,9 @@ const handleCategorySelected = async (category: any) => {
    * Handles changes to available durations.
    */
 const handleDurationsChanged = (durations: number[]) => {
-  console.log('⏱️ Durations changed:', durations)
-  console.log('🔍 Current appointment_type:', formData.value.appointment_type)
-  console.log('🔍 Current duration:', formData.value.duration_minutes)
+  logger.debug('⏱️ Durations changed:', durations)
+  logger.debug('🔍 Current appointment_type:', formData.value.appointment_type)
+  logger.debug('🔍 Current duration:', formData.value.duration_minutes)
   
   // ✅ WICHTIG: Flatten nested arrays (handle Proxy arrays)
   let flatDurations: number[] = []
@@ -324,12 +324,12 @@ const handleDurationsChanged = (durations: number[]) => {
     flatDurations = [45] // Fallback
   }
   
-  console.log('📊 Flattened durations:', flatDurations)
+  logger.debug('📊 Flattened durations:', flatDurations)
   
   // ✅ FIX: Bei Prüfungen die exam_duration aus selectedCategory verwenden
   if (formData.value.appointment_type === 'exam') {
     const examDuration = selectedCategory.value?.exam_duration_minutes || 135
-    console.log('📝 OVERRIDE: Using exam duration instead of received durations:', examDuration)
+    logger.debug('📝 OVERRIDE: Using exam duration instead of received durations:', examDuration)
     availableDurations.value = [examDuration]
     formData.value.duration_minutes = examDuration
   } else {
@@ -341,7 +341,7 @@ const handleDurationsChanged = (durations: number[]) => {
       const currentDuration = formData.value.duration_minutes
       
       if (flatDurations.includes(currentDuration)) {
-        console.log('✅ Keeping current duration:', currentDuration, 'as it\'s available in new category')
+        logger.debug('✅ Keeping current duration:', currentDuration, 'as it\'s available in new category')
       } else {
         // Aktuelle Dauer nicht verfügbar - wähle intelligente Alternative
         let newDuration = flatDurations[0] // Fallback
@@ -356,9 +356,9 @@ const handleDurationsChanged = (durations: number[]) => {
         const similarDuration = flatDurations.find(d => Math.abs(d - currentDuration) <= 15)
         if (similarDuration) {
           newDuration = similarDuration
-          console.log('🎯 Found similar duration:', newDuration, 'instead of', currentDuration)
+          logger.debug('🎯 Found similar duration:', newDuration, 'instead of', currentDuration)
         } else {
-          console.log('⚠️ No similar duration found, using first available:', newDuration)
+          logger.debug('⚠️ No similar duration found, using first available:', newDuration)
         }
         
         formData.value.duration_minutes = newDuration
@@ -375,7 +375,7 @@ const handleDurationsChanged = (durations: number[]) => {
    * Handles location selection.
    */
   const handleLocationSelected = (location: any) => {
-    console.log('📍 Location selected:', location)
+    logger.debug('📍 Location selected:', location)
     selectedLocation.value = location
     formData.value.location_id = location?.id || ''
   }
@@ -386,7 +386,7 @@ const handleDurationsChanged = (durations: number[]) => {
    * Handles event type selection.
    */
   const handleEventTypeSelected = (eventType: string) => {
-    console.log('📝 Event type selected:', eventType)
+    logger.debug('📝 Event type selected:', eventType)
     formData.value.eventType = eventType
   }
 
@@ -394,7 +394,7 @@ const handleDurationsChanged = (durations: number[]) => {
    * Back to student selection handler.
    */
   const backToStudentSelection = () => {
-    console.log('⬅️ Back to student selection')
+    logger.debug('⬅️ Back to student selection')
     selectedStudent.value = null
     formData.value.user_id = ''
   }
@@ -405,7 +405,7 @@ const handleDurationsChanged = (durations: number[]) => {
    * Handles payment success.
    */
   const handlePaymentSuccess = (paymentData: any) => {
-    console.log('✅ Payment successful:', paymentData)
+    logger.debug('✅ Payment successful:', paymentData)
           // is_paid removed - not in appointments table
     formData.value.payment_method = paymentData.method
     formData.value.payment_data = paymentData
@@ -425,7 +425,7 @@ const handleDurationsChanged = (durations: number[]) => {
    * Handles payment started.
    */
   const handlePaymentStarted = () => {
-    console.log('🔄 Payment started')
+    logger.debug('🔄 Payment started')
     formData.value.payment_status = 'pending'
   }
 
@@ -433,7 +433,7 @@ const handleDurationsChanged = (durations: number[]) => {
    * Handles save required event.
    */
   const handleSaveRequired = () => {
-    console.log('💾 Save required before payment')
+    logger.debug('💾 Save required before payment')
     // Trigger save event
   }
 
@@ -441,7 +441,7 @@ const handleDurationsChanged = (durations: number[]) => {
    * Handles payment method selection.
    */
   const handlePaymentMethodSelected = (method: string) => {
-    console.log('💳 Payment method selected:', method)
+    logger.debug('💳 Payment method selected:', method)
     formData.value.payment_method = method
   }
 
@@ -474,7 +474,7 @@ const handleDurationsChanged = (durations: number[]) => {
    * Processes payment after save.
    */
   const processPaymentAfterSave = async (appointmentId: string) => {
-    console.log('💳 Processing payment for appointment:', appointmentId)
+    logger.debug('💳 Processing payment for appointment:', appointmentId)
     // Implementation depends on payment provider
   }
 
@@ -484,7 +484,7 @@ const handleDurationsChanged = (durations: number[]) => {
    * Handles discount changes.
    */
   const handleDiscountChanged = (discount: number, discountType: string, reason: string) => {
-    console.log('💰 Discount changed:', { discount, discountType, reason })
+    logger.debug('💰 Discount changed:', { discount, discountType, reason })
     formData.value.discount = discount
     formData.value.discount_type = discountType
     formData.value.discount_reason = reason
@@ -496,15 +496,15 @@ const handleDurationsChanged = (durations: number[]) => {
    * Handles team invite toggle.
    */
   const handleTeamInviteToggle = (staffId: string, invitedStaff: any) => {
-    console.log('👥 Team invite toggled for staff ID:', staffId)
+    logger.debug('👥 Team invite toggled for staff ID:', staffId)
 
     const index = invitedStaff.value.indexOf(staffId)
     if (index > -1) {
       invitedStaff.value.splice(index, 1)
-      console.log('➖ Staff removed from invite list.')
+      logger.debug('➖ Staff removed from invite list.')
     } else {
       invitedStaff.value.push(staffId)
-      console.log('➕ Staff added to invite list.')
+      logger.debug('➕ Staff added to invite list.')
     }
   }
 
@@ -513,7 +513,7 @@ const handleDurationsChanged = (durations: number[]) => {
    */
   const clearAllInvites = (invitedStaff: any) => {
     invitedStaff.value = []
-    console.log('🗑️ All team invites cleared.')
+    logger.debug('🗑️ All team invites cleared.')
   }
 
   /**
@@ -521,7 +521,7 @@ const handleDurationsChanged = (durations: number[]) => {
    */
   const inviteAllStaff = (availableStaff: any, invitedStaff: any) => {
     invitedStaff.value = availableStaff.value.map((s: any) => s.id)
-    console.log('👥 All staff invited:', invitedStaff.value.length, 'staff members.')
+    logger.debug('👥 All staff invited:', invitedStaff.value.length, 'staff members.')
   }
 
   // ============ UTILITY FUNCTIONS ============
@@ -530,7 +530,7 @@ const handleDurationsChanged = (durations: number[]) => {
    * Loads staff durations for a category.
    */
   const loadStaffDurations = async (categoryCode: string, staffId: string) => {
-    console.log('⏱️ Loading staff durations for category:', categoryCode, 'staff:', staffId)
+    logger.debug('⏱️ Loading staff durations for category:', categoryCode, 'staff:', staffId)
     
     try {
       // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
@@ -570,7 +570,7 @@ const handleDurationsChanged = (durations: number[]) => {
         durations = [isNaN(num) ? 45 : num]
       }
       
-      console.log('📊 Category durations loaded:', durations)
+      logger.debug('📊 Category durations loaded:', durations)
       return durations
 
     } catch (err: any) {

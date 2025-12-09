@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     const featureCheck = await validateFeatureAccess(tenantId, url)
     
     if (!featureCheck.enabled) {
-      console.log(`API Feature check failed for ${url}:`, featureCheck.message)
+      logger.debug(`API Feature check failed for ${url}:`, featureCheck.message)
       
       throw createError({
         statusCode: 403,
@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    console.log(`API Feature check passed for ${url}`)
+    logger.debug(`API Feature check passed for ${url}`)
     
   } catch (error: any) {
     // If it's already a createError, re-throw it

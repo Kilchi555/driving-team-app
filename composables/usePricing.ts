@@ -192,7 +192,7 @@ const getEventTypeByCode = async (code: string, tenantId: string) => {
     }
     
     // 2. Fallback: In categories suchen, wenn event_type nicht gefunden wurde
-    console.log(`⚠️ Event type "${code}" not found in event_types, checking categories table...`)
+    logger.debug(`⚠️ Event type "${code}" not found in event_types, checking categories table...`)
     const { data: categoryData, error: categoryError } = await supabase
       .from('categories')
       .select('code, name')
@@ -202,7 +202,7 @@ const getEventTypeByCode = async (code: string, tenantId: string) => {
       .maybeSingle()
     
     if (!categoryError && categoryData) {
-      console.log(`✅ Found category "${code}" in categories table, using as fallback`)
+      logger.debug(`✅ Found category "${code}" in categories table, using as fallback`)
       // Konvertiere category zu event_type Format
       // Categories haben keine default_price_rappen/default_fee_rappen, daher null
       // Das Pricing wird dann über pricing_rules oder Staff-Preise berechnet
@@ -290,7 +290,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
 
   // ===== CORE FUNCTIONS =====
   const createFallbackPricingRules = async (): Promise<void> => {
-    console.log('🔄 Using complete fallback pricing rules...')
+    logger.debug('🔄 Using complete fallback pricing rules...')
     
     const fallbackRules = COMPLETE_FALLBACK_RULES.map(rule => ({
       id: rule.id,
@@ -307,13 +307,13 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     
     pricingRules.value = fallbackRules
     lastLoaded.value = new Date()
-    console.log('✅ Fallback pricing rules loaded:', fallbackRules.length, 'categories')
+    logger.debug('✅ Fallback pricing rules loaded:', fallbackRules.length, 'categories')
   }
 
   const loadPricingRules = async (forceReload = false): Promise<void> => {
     if (!forceReload && lastLoaded.value && 
         isCacheValid(lastLoaded.value.getTime(), PRICING_RULES_CACHE_DURATION)) {
-      console.log('📦 Using cached pricing rules')
+      logger.debug('📦 Using cached pricing rules')
       return
     }
 
@@ -321,7 +321,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     pricingError.value = ''
 
     try {
-      console.log('🔄 Loading pricing rules from Supabase...')
+      logger.debug('🔄 Loading pricing rules from Supabase...')
       
       // Get current user's tenant_id
       const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -353,12 +353,12 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       
       // Only load pricing rules if business_type is driving_school
       if (tenantData?.business_type !== 'driving_school') {
-        console.log('🚫 Pricing rules not available for business_type:', tenantData?.business_type)
+        logger.debug('🚫 Pricing rules not available for business_type:', tenantData?.business_type)
         await createFallbackPricingRules()
         return
       }
       
-      console.log('🔍 Loading pricing rules for tenant:', userData.tenant_id)
+      logger.debug('🔍 Loading pricing rules for tenant:', userData.tenant_id)
       
       const { data, error } = await supabase
         .from('pricing_rules')
@@ -372,8 +372,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         throw new Error(`Database error: ${error.message}`)
       }
 
-      console.log('📊 Raw pricing rules from DB:', data?.length || 0, 'rules for tenant', userData.tenant_id)
-      console.log('📊 Pricing rules details:', data?.map(r => ({
+      logger.debug('📊 Raw pricing rules from DB:', data?.length || 0, 'rules for tenant', userData.tenant_id)
+      logger.debug('📊 Pricing rules details:', data?.map(r => ({
         id: r.id,
         category: r.category_code,
         rule_type: r.rule_type,
@@ -389,7 +389,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
 
       // ✅ KORRIGIERT: Kombiniere base_price und admin_fee Regeln basierend auf rule_type
       const rulesByCategory = data.reduce((acc, rule) => {
-        console.log(`🔍 Verarbeite Regel für ${rule.category_code}:`, {
+        logger.debug(`🔍 Verarbeite Regel für ${rule.category_code}:`, {
           rule_type: rule.rule_type,
           rule_name: rule.rule_name,
           price_per_minute: rule.price_per_minute_rappen,
@@ -409,13 +409,13 @@ export const usePricing = (options: UsePricingOptions = {}) => {
             valid_from: rule.valid_from,
             valid_until: rule.valid_until
           }
-          console.log(`🆕 Neue Kategorie erstellt: ${rule.category_code}`)
+          logger.debug(`🆕 Neue Kategorie erstellt: ${rule.category_code}`)
         }
         
         // ✅ KORRIGIERT: Kombiniere die Werte basierend auf dem rule_type
         if (rule.rule_type === 'base' || rule.rule_type === 'pricing' || rule.rule_type === 'base_price' || !rule.rule_type) {
           // Base/Pricing Regeln für Grundpreis
-          console.log(`📊 Base/Pricing Regel für ${rule.category_code}:`, {
+          logger.debug(`📊 Base/Pricing Regel für ${rule.category_code}:`, {
             price_per_minute: rule.price_per_minute_rappen,
             base_duration: rule.base_duration_minutes
           })
@@ -432,24 +432,24 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         
         if (rule.rule_type === 'admin_fee') {
           // ✅ Admin-Fee spezifische Regeln
-          console.log(`💰 Admin-Fee Regel für ${rule.category_code}:`, {
+          logger.debug(`💰 Admin-Fee Regel für ${rule.category_code}:`, {
             admin_fee_rappen: rule.admin_fee_rappen,
             admin_fee_applies_from: rule.admin_fee_applies_from
           })
           if (rule.admin_fee_rappen !== undefined) {
             acc[rule.category_code].admin_fee_rappen = rule.admin_fee_rappen
-            console.log(`💰 Admin-Fee Regel geladen für ${rule.category_code}: ${rule.admin_fee_rappen} Rappen`)
+            logger.debug(`💰 Admin-Fee Regel geladen für ${rule.category_code}: ${rule.admin_fee_rappen} Rappen`)
           }
           if (rule.admin_fee_applies_from !== undefined) {
             acc[rule.category_code].admin_fee_applies_from = rule.admin_fee_applies_from
-            console.log(`🎯 Admin-Fee ab Termin ${rule.admin_fee_applies_from} für ${rule.category_code}`)
+            logger.debug(`🎯 Admin-Fee ab Termin ${rule.admin_fee_applies_from} für ${rule.category_code}`)
           }
           if (rule.rule_name) {
             acc[rule.category_code].rule_name = rule.rule_name
           }
         }
         
-        console.log(`📊 Aktueller Stand für ${rule.category_code}:`, {
+        logger.debug(`📊 Aktueller Stand für ${rule.category_code}:`, {
           price_per_minute: acc[rule.category_code].price_per_minute_rappen,
           admin_fee: acc[rule.category_code].admin_fee_rappen,
           admin_fee_applies_from: acc[rule.category_code].admin_fee_applies_from
@@ -460,7 +460,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
 
       const pricingRulesData = Object.values(rulesByCategory) as PricingRule[]
 
-      console.log('📊 Processed pricing rules (combined by rule_type):', pricingRulesData.map((r: PricingRule) => ({
+      logger.debug('📊 Processed pricing rules (combined by rule_type):', pricingRulesData.map((r: PricingRule) => ({
         category: r.category_code,
         pricePerMinute: r.price_per_minute_rappen / 100,
         adminFee: r.admin_fee_rappen / 100,
@@ -471,7 +471,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       // ✅ SPEZIELLER DEBUG für Kategorie B
       const categoryBRule = pricingRulesData.find(r => r.category_code === 'B')
       if (categoryBRule) {
-        console.log('🎯 KATEGORIE B REGEL GELADEN:', {
+        logger.debug('🎯 KATEGORIE B REGEL GELADEN:', {
           category: categoryBRule.category_code,
           pricePerMinute: categoryBRule.price_per_minute_rappen / 100,
           adminFee: categoryBRule.admin_fee_rappen / 100,
@@ -489,7 +489,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       priceCalculationCache.value.clear()
       appointmentCountCache.value.clear()
 
-      console.log('✅ Pricing rules loaded:', pricingRulesData.length, 'categories (combined by rule_type)')
+      logger.debug('✅ Pricing rules loaded:', pricingRulesData.length, 'categories (combined by rule_type)')
 
     } catch (err: any) {
       console.error('❌ Error loading pricing rules:', err)
@@ -503,7 +503,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   // ✅ NEUE LOGIK: Admin-Fee basierend auf tatsächlichen Zahlungen
   const hasAdminFeeBeenPaid = async (userId: string, categoryCode: string): Promise<boolean> => {
     try {
-      console.log(`🔍 Checking if admin fee already paid for user ${userId} in category ${categoryCode}`)
+      logger.debug(`🔍 Checking if admin fee already paid for user ${userId} in category ${categoryCode}`)
       
       // ✅ KORRIGIERT: Verwende metadata um die Kategorie zu ermitteln (einfacher als JOIN)
       const { data, error } = await supabase
@@ -540,7 +540,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       }) || []
       
       const hasPaid = paymentsWithAdminFee.length > 0
-      console.log(`📊 Admin fee payment check: ${hasPaid ? 'Already paid' : 'Not yet paid'}`, {
+      logger.debug(`📊 Admin fee payment check: ${hasPaid ? 'Already paid' : 'Not yet paid'}`, {
         totalPayments: data?.length || 0,
         paymentsWithAdminFee: paymentsWithAdminFee.length,
         category: categoryCode
@@ -562,7 +562,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     
     const shouldApply = appointmentCount === 2 && !adminFeeAlreadyPaid
     
-    console.log(`🎯 Admin fee decision for ${categoryCode}:`, {
+    logger.debug(`🎯 Admin fee decision for ${categoryCode}:`, {
       appointmentCount,
       adminFeeAlreadyPaid,
       shouldApply,
@@ -605,7 +605,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         timestamp: Date.now()
       })
       
-      console.log(`📊 Appointment count for ${categoryCode}: ${appointmentNumber} (${count || 0} active + 1 new)`)
+      logger.debug(`📊 Appointment count for ${categoryCode}: ${appointmentNumber} (${count || 0} active + 1 new)`)
       
       return appointmentNumber
 
@@ -645,7 +645,7 @@ const roundToNearestFranken = (rappen: number): number => {
     
     // ✅ NEU: Bei vergangenen Terminen (Edit-Mode) direkt aus der Datenbank laden
     if (isEditMode && appointmentId) {
-      console.log(`📝 Edit-Mode: Loading existing pricing from database for appointment: ${appointmentId}`)
+      logger.debug(`📝 Edit-Mode: Loading existing pricing from database for appointment: ${appointmentId}`)
       try {
         const supabase = getSupabase()
         // ✅ Nur die essentiellen Spalten abfragen (credit Spalten optional)
@@ -659,7 +659,7 @@ const roundToNearestFranken = (rappen: number): number => {
           console.warn('⚠️ Error loading existing pricing from payments:', error)
           // Fallback zur normalen Berechnung
         } else if (payment) {
-          console.log('✅ Existing pricing loaded from database:', {
+          logger.debug('✅ Existing pricing loaded from database:', {
             lesson_price: (payment.lesson_price_rappen / 100).toFixed(2),
             admin_fee: (payment.admin_fee_rappen / 100).toFixed(2),
             total: (payment.total_amount_rappen / 100).toFixed(2)
@@ -677,7 +677,7 @@ const roundToNearestFranken = (rappen: number): number => {
             appointment_number: 1 // Nicht relevant für Edit-Mode
           }
         } else {
-          console.log('ℹ️ No existing payment found, will calculate new price')
+          logger.debug('ℹ️ No existing payment found, will calculate new price')
         }
       } catch (err: any) {
         console.error('❌ Error loading existing pricing from database:', err)
@@ -690,7 +690,7 @@ const roundToNearestFranken = (rappen: number): number => {
   
   // ✅ Theorielektionen: Immer 85.- CHF, unabhängig von der Kategorie
   if (appointmentType === 'theory') {
-    console.log(`📚 Theorielektion erkannt (appointment_type: ${appointmentType}): Verwende Standardpreis 85.- CHF`)
+    logger.debug(`📚 Theorielektion erkannt (appointment_type: ${appointmentType}): Verwende Standardpreis 85.- CHF`)
     
     const theoryPriceRappen = 8500 // 85.00 CHF in Rappen
     const totalRappen = theoryPriceRappen // Keine Admin-Fee für Theorielektionen
@@ -707,7 +707,7 @@ const roundToNearestFranken = (rappen: number): number => {
       appointment_number: 1
     }
     
-    console.log('✅ Theorielektion Preis berechnet:', {
+    logger.debug('✅ Theorielektion Preis berechnet:', {
       category: categoryCode, // Zeigt die gewählte Fahrkategorie
       appointmentType: appointmentType,
       duration: durationMinutes,
@@ -743,7 +743,7 @@ const roundToNearestFranken = (rappen: number): number => {
       
       if (categoryCheck) {
         isDrivingCategory = true
-        console.log(`✅ Category "${categoryCode}" found in categories table, treating as driving category`)
+        logger.debug(`✅ Category "${categoryCode}" found in categories table, treating as driving category`)
       }
     } catch (err) {
       console.warn('⚠️ Could not check if category exists in DB:', err)
@@ -752,12 +752,12 @@ const roundToNearestFranken = (rappen: number): number => {
   
   // ✅ Nicht-Fahrkategorien: Event-Type-basierte Preisberechnung
   if (!isDrivingCategory) {
-    console.log(`🔄 Using event-type-based pricing for: ${categoryCode}`)
+    logger.debug(`🔄 Using event-type-based pricing for: ${categoryCode}`)
     
     // Lade Event-Type für Preisberechnung
     const eventType = await getEventTypeByCode(categoryCode, actualTenantId!)
     if (!eventType || !eventType.require_payment) {
-      console.log(`🚫 Event type ${categoryCode} does not require payment`)
+      logger.debug(`🚫 Event type ${categoryCode} does not require payment`)
       return {
         base_price_rappen: 0,
         admin_fee_rappen: 0,
@@ -800,7 +800,7 @@ const roundToNearestFranken = (rappen: number): number => {
     // Prüfe Cache
     const cachedPrice = priceCalculationCache.value.get(cacheKey)
     if (cachedPrice && isCacheValid(cachedPrice.timestamp, PRICE_CALCULATION_CACHE_DURATION)) {
-      console.log('📦 Using cached price calculation:', cachedPrice.data.total_chf)
+      logger.debug('📦 Using cached price calculation:', cachedPrice.data.total_chf)
       return cachedPrice.data
     }
 
@@ -872,7 +872,7 @@ const roundToNearestFranken = (rappen: number): number => {
       timestamp: Date.now()
     })
     
-    console.log('✅ Price calculated and cached:', {
+    logger.debug('✅ Price calculated and cached:', {
       category: categoryCode,
       duration: Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes,
       originalDuration: durationMinutes,

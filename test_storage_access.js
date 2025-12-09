@@ -2,7 +2,7 @@
 // Run this in browser console on your app's page to test storage bucket access
 
 async function testStorageAccess() {
-  console.log('🧪 Testing Supabase Storage access...');
+  logger.debug('🧪 Testing Supabase Storage access...');
   
   try {
     // Check if Supabase is available (you need to be on your app's page)
@@ -14,7 +14,7 @@ async function testStorageAccess() {
     const supabase = window.getSupabase();
     
     // Test 1: List buckets
-    console.log('📦 Testing bucket access...');
+    logger.debug('📦 Testing bucket access...');
     const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
     
     if (bucketError) {
@@ -22,7 +22,7 @@ async function testStorageAccess() {
       return;
     }
     
-    console.log('✅ Available buckets:', buckets.map(b => b.name));
+    logger.debug('✅ Available buckets:', buckets.map(b => b.name));
     
     // Test 2: Check user-documents bucket
     const userDocsBucket = buckets.find(b => b.name === 'user-documents');
@@ -31,10 +31,10 @@ async function testStorageAccess() {
       return;
     }
     
-    console.log('✅ user-documents bucket found:', userDocsBucket);
+    logger.debug('✅ user-documents bucket found:', userDocsBucket);
     
     // Test 3: Try to list files in bucket
-    console.log('📁 Testing file listing...');
+    logger.debug('📁 Testing file listing...');
     const { data: files, error: listError } = await supabase.storage
       .from('user-documents')
       .list('lernfahrausweise', { limit: 5 });
@@ -42,11 +42,11 @@ async function testStorageAccess() {
     if (listError) {
       console.error('❌ Cannot list files:', listError);
     } else {
-      console.log('✅ Files in lernfahrausweise folder:', files?.length || 0);
+      logger.debug('✅ Files in lernfahrausweise folder:', files?.length || 0);
     }
     
     // Test 4: Create a test blob and try upload
-    console.log('📸 Testing upload capability...');
+    logger.debug('📸 Testing upload capability...');
     const testBlob = new Blob(['test data'], { type: 'text/plain' });
     const testFileName = `test_${Date.now()}.txt`;
     
@@ -60,16 +60,16 @@ async function testStorageAccess() {
     if (uploadError) {
       console.error('❌ Upload test failed:', uploadError);
     } else {
-      console.log('✅ Upload test successful:', uploadData.path);
+      logger.debug('✅ Upload test successful:', uploadData.path);
       
       // Clean up test file
       await supabase.storage
         .from('user-documents')
         .remove([`test/${testFileName}`]);
-      console.log('🧹 Test file cleaned up');
+      logger.debug('🧹 Test file cleaned up');
     }
     
-    console.log('✅ Storage access test completed successfully!');
+    logger.debug('✅ Storage access test completed successfully!');
     
   } catch (error) {
     console.error('❌ Storage test failed:', error);

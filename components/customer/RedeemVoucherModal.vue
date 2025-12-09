@@ -175,7 +175,7 @@ const redeemVoucher = async () => {
   errorMessage.value = ''
 
   try {
-    console.log('🎫 Redeeming voucher:', voucherCode.value)
+    logger.debug('🎫 Redeeming voucher:', voucherCode.value)
 
     const response = await $fetch('/api/vouchers/redeem', {
       method: 'POST',
@@ -184,7 +184,7 @@ const redeemVoucher = async () => {
       }
     })
 
-    console.log('✅ Voucher redeemed:', response)
+    logger.debug('✅ Voucher redeemed:', response)
 
     // Success!
     redemptionSuccess.value = true

@@ -13,7 +13,7 @@ export const useEventTypes = () => {
     
     try {
       const supabase = getSupabase()
-      console.log('🔄 Loading event types from database...')
+      logger.debug('🔄 Loading event types from database...')
       
       // Get current user's tenant_id first
       const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -39,25 +39,25 @@ export const useEventTypes = () => {
       
       if (loadFullObjects) {
         // ✅ DEBUG: Alle Event Type Codes anzeigen
-        console.log('🔍 All event type codes in DB:', (data || []).map(et => et.code))
+        logger.debug('🔍 All event type codes in DB:', (data || []).map(et => et.code))
         
         // Filter anwenden für komplette Objekte
         const filteredData = (data || []).filter(eventType => 
           !excludeTypes.includes(eventType.code)
         )
         
-        console.log('✅ Full event types loaded (filtered):', filteredData.length, 'of', data?.length, 'total')
+        logger.debug('✅ Full event types loaded (filtered):', filteredData.length, 'of', data?.length, 'total')
         return filteredData
         
       } else {
         // Original Code logic für nur Codes
         const allCodes = data?.map((et: any) => et.code) || []
-        console.log('🔍 All event type codes in DB:', allCodes)
+        logger.debug('🔍 All event type codes in DB:', allCodes)
         
         eventTypesCache.value = allCodes.filter(code => !excludeTypes.includes(code))
         isEventTypesLoaded.value = true
         
-        console.log('✅ Event types loaded:', eventTypesCache.value, excludeTypes.length > 0 ? `(excluded: ${excludeTypes.join(', ')})` : '')
+        logger.debug('✅ Event types loaded:', eventTypesCache.value, excludeTypes.length > 0 ? `(excluded: ${excludeTypes.join(', ')})` : '')
         return eventTypesCache.value
       }
       

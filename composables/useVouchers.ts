@@ -112,7 +112,7 @@ export const useVouchers = () => {
         status: determineVoucherStatus(voucher)
       }))
 
-      console.log('✅ Vouchers loaded:', vouchers.value.length)
+      logger.debug('✅ Vouchers loaded:', vouchers.value.length)
 
     } catch (err: any) {
       console.error('❌ Error loading vouchers:', err)
@@ -184,7 +184,7 @@ export const useVouchers = () => {
       }
 
       vouchers.value.unshift(newVoucher)
-      console.log('✅ Voucher created:', newVoucher.code)
+      logger.debug('✅ Voucher created:', newVoucher.code)
 
       return newVoucher
 
@@ -229,7 +229,7 @@ export const useVouchers = () => {
     voucher?: Voucher
   }> => {
     try {
-      console.log('🎁 Redeeming voucher via API:', { code, appointmentId, redeemerId })
+      logger.debug('🎁 Redeeming voucher via API:', { code, appointmentId, redeemerId })
 
       // Verwende die neue API-Route für bessere Validierung und Tracking
       const response = await $fetch('/api/vouchers/redeem', {
@@ -273,7 +273,7 @@ export const useVouchers = () => {
           vouchers.value[index] = updatedVoucher
         }
 
-        console.log('✅ Voucher redeemed successfully:', response.voucher.code)
+        logger.debug('✅ Voucher redeemed successfully:', response.voucher.code)
 
         return {
           success: true,
@@ -302,7 +302,7 @@ export const useVouchers = () => {
       const voucher = vouchers.value.find(v => v.id === voucherId)
       
       // If not found locally, still proceed with API call (voucher might be from payment)
-      console.log(`📄 Generating PDF for voucher: ${voucherId} (found locally: ${!!voucher})`)
+      logger.debug(`📄 Generating PDF for voucher: ${voucherId} (found locally: ${!!voucher})`)
 
       // Verwende die API-Route für PDF-Generierung
       const response = await $fetch('/api/vouchers/download-pdf', {
@@ -352,7 +352,7 @@ export const useVouchers = () => {
       }) as { success: boolean; message?: string; error?: string }
 
       if (response.success) {
-        console.log('✅ Voucher email sent:', voucher.code)
+        logger.debug('✅ Voucher email sent:', voucher.code)
         return {
           success: true,
           message: response.message || 'E-Mail erfolgreich gesendet'
@@ -393,7 +393,7 @@ export const useVouchers = () => {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      console.log('✅ Voucher PDF downloaded:', filename)
+      logger.debug('✅ Voucher PDF downloaded:', filename)
 
     } catch (err: any) {
       console.error('❌ Error downloading voucher PDF:', err)
@@ -450,7 +450,7 @@ export const useVouchers = () => {
           vouchers.value.unshift(newVoucher)
         }
         
-        console.log('✅ Vouchers created and added to local state:', response.vouchersCreated)
+        logger.debug('✅ Vouchers created and added to local state:', response.vouchersCreated)
       }
 
       return response

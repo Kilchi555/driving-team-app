@@ -6,15 +6,15 @@ export default defineNuxtPlugin(() => {
   // Nur im Browser
   if (!process.client) return
 
-  console.log('🚀 Auth init plugin starting...')
+  logger.debug('🚀 Auth init plugin starting...')
   
   try {
     // Setze isInitialized sofort auf true
     const authStore = useAuthStore()
     authStore.isInitialized = true
     
-    console.log('✅ Auth store initialized immediately')
-    console.log('🔍 Auth store state:', {
+    logger.debug('✅ Auth store initialized immediately')
+    logger.debug('🔍 Auth store state:', {
       isInitialized: authStore.isInitialized,
       isLoggedIn: authStore.isLoggedIn,
       hasProfile: authStore.hasProfile

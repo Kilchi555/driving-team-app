@@ -7,7 +7,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('🎫 [redeem] Handler started')
+    logger.debug('🎫 [redeem] Handler started')
     
     const body = await readBody(event)
     const { code } = body
@@ -19,16 +19,16 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🎫 [redeem] Redeeming voucher:', code)
+    logger.debug('🎫 [redeem] Redeeming voucher:', code)
 
     // Get auth token from Authorization header (set by @nuxtjs/supabase module)
-    console.log('🎫 [redeem] Getting auth header')
+    logger.debug('🎫 [redeem] Getting auth header')
     const authHeader = getHeader(event, 'authorization') || ''
     let accessToken: string | null = null
     
     if (authHeader.startsWith('Bearer ')) {
       accessToken = authHeader.substring(7)
-      console.log('🎫 [redeem] Found Bearer token')
+      logger.debug('🎫 [redeem] Found Bearer token')
     }
 
     if (!accessToken) {
@@ -59,9 +59,9 @@ export default defineEventHandler(async (event) => {
     })
 
     // Get current authenticated user
-    console.log('🎫 [redeem] Getting user from auth')
+    logger.debug('🎫 [redeem] Getting user from auth')
     const { data: { user: authUser }, error: authError } = await userClient.auth.getUser()
-    console.log('🎫 [redeem] Auth result:', { hasUser: !!authUser, hasError: !!authError })
+    logger.debug('🎫 [redeem] Auth result:', { hasUser: !!authUser, hasError: !!authError })
     
     if (authError || !authUser) {
       console.error('❌ Auth error:', authError)
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Authenticated user:', authUser.id, authUser.email)
+    logger.debug('✅ Authenticated user:', authUser.id, authUser.email)
 
     // Use admin client for database operations to bypass RLS
     const supabaseAdmin = getSupabaseAdmin()
@@ -90,7 +90,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🎫 Redeeming voucher:', {
+    logger.debug('🎫 Redeeming voucher:', {
       code: code.toUpperCase(),
       userId: userProfile.id,
       tenantId: userProfile.tenant_id
@@ -154,7 +154,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Voucher is valid:', {
+    logger.debug('✅ Voucher is valid:', {
       code: voucher.code,
       creditAmount: (voucher.credit_amount_rappen / 100).toFixed(2)
     })
@@ -192,7 +192,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('💰 Credit balance updated:', {
+    logger.debug('💰 Credit balance updated:', {
       oldBalance: (oldBalance / 100).toFixed(2),
       creditAdded: (voucher.credit_amount_rappen / 100).toFixed(2),
       newBalance: (newBalance / 100).toFixed(2)
@@ -245,7 +245,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Voucher redeemed successfully:', {
+    logger.debug('✅ Voucher redeemed successfully:', {
       voucherId: voucher.id,
       userId: userProfile.id,
       creditAdded: (voucher.credit_amount_rappen / 100).toFixed(2)

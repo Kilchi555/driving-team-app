@@ -304,7 +304,7 @@ const savePostAppointmentData = async () => {
       }
     }
     
-    console.log('✅ Post-appointment data saved successfully')
+    logger.debug('✅ Post-appointment data saved successfully')
     emit('saved', postAppointmentData.value)
     closeModal()
     
@@ -318,12 +318,12 @@ const savePostAppointmentData = async () => {
 
 const processRefund = async () => {
   // TODO: Implementierung der Rückerstattung
-  console.log('💰 Processing refund for payment:', currentPayment.value?.id)
+  logger.debug('💰 Processing refund for payment:', currentPayment.value?.id)
 }
 
 const processCredit = async () => {
   // TODO: Implementierung der Guthaben-Gutschrift
-  console.log('💳 Processing credit for user:', props.appointment.user_id)
+  logger.debug('💳 Processing credit for user:', props.appointment.user_id)
 }
 
 // Watch for appointment changes

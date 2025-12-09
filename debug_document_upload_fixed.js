@@ -2,7 +2,7 @@
 // Run in browser console on the driving team app page
 
 async function debugDocumentUpload() {
-  console.log('🔍 Debugging document upload...');
+  logger.debug('🔍 Debugging document upload...');
   
   try {
     // Try multiple ways to get Supabase client
@@ -11,27 +11,27 @@ async function debugDocumentUpload() {
     // Method 1: Check if there's a global getSupabase function
     if (typeof getSupabase !== 'undefined') {
       supabase = getSupabase();
-      console.log('✅ Found supabase via getSupabase()');
+      logger.debug('✅ Found supabase via getSupabase()');
     }
     // Method 2: Check window object
     else if (window.getSupabase) {
       supabase = window.getSupabase();
-      console.log('✅ Found supabase via window.getSupabase()');
+      logger.debug('✅ Found supabase via window.getSupabase()');
     }
     // Method 3: Check Nuxt instance
     else if (window.$nuxt && window.$nuxt.$supabase) {
       supabase = window.$nuxt.$supabase;
-      console.log('✅ Found supabase via window.$nuxt.$supabase');
+      logger.debug('✅ Found supabase via window.$nuxt.$supabase');
     }
     // Method 4: Check Vue app instance
     else if (window.__NUXT__ && window.__NUXT__.ssrContext) {
-      console.log('❌ SSR context found, try refreshing page');
+      logger.debug('❌ SSR context found, try refreshing page');
       return;
     }
     else {
       console.error('❌ Supabase client not found. Available objects:');
-      console.log('window keys:', Object.keys(window).filter(k => k.includes('supabase') || k.includes('Supabase')));
-      console.log('window.$nuxt:', window.$nuxt);
+      logger.debug('window keys:', Object.keys(window).filter(k => k.includes('supabase') || k.includes('Supabase')));
+      logger.debug('window.$nuxt:', window.$nuxt);
       return;
     }
     
@@ -40,10 +40,10 @@ async function debugDocumentUpload() {
       return;
     }
     
-    console.log('✅ Supabase client found');
+    logger.debug('✅ Supabase client found');
     
     // Test 1: Check current user
-    console.log('👤 Checking current user...');
+    logger.debug('👤 Checking current user...');
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError) {
@@ -56,11 +56,11 @@ async function debugDocumentUpload() {
       return;
     }
     
-    console.log('✅ Current user:', user.email, 'Role:', user.user_metadata?.role);
+    logger.debug('✅ Current user:', user.email, 'Role:', user.user_metadata?.role);
     
     // Test 2: Try to read Hans Meier's record
     const hansId = '9cca023a-ab9d-4df1-ae9d-488bae2b8e15';
-    console.log('📖 Reading Hans Meier record...');
+    logger.debug('📖 Reading Hans Meier record...');
     
     const { data: hansData, error: readError } = await supabase
       .from('users')
@@ -73,10 +73,10 @@ async function debugDocumentUpload() {
       return;
     }
     
-    console.log('✅ Hans Meier data:', hansData);
+    logger.debug('✅ Hans Meier data:', hansData);
     
     // Test 3: Try to update Hans Meier's lernfahrausweis_url
-    console.log('📝 Testing database update...');
+    logger.debug('📝 Testing database update...');
     const testUrl = `https://test-url-${Date.now()}.jpg`;
     
     const { data: updateData, error: updateError } = await supabase
@@ -93,11 +93,11 @@ async function debugDocumentUpload() {
         details: updateError.details,
         hint: updateError.hint
       });
-      console.log('🔍 This is likely an RLS policy issue!');
+      logger.debug('🔍 This is likely an RLS policy issue!');
       return;
     }
     
-    console.log('✅ Update successful!', updateData);
+    logger.debug('✅ Update successful!', updateData);
     
     // Test 4: Verify the update worked
     const { data: verifyData, error: verifyError } = await supabase
@@ -111,7 +111,7 @@ async function debugDocumentUpload() {
       return;
     }
     
-    console.log('✅ Verified update:', verifyData.lernfahrausweis_url);
+    logger.debug('✅ Verified update:', verifyData.lernfahrausweis_url);
     
     // Test 5: Clean up - reset to null
     await supabase
@@ -119,8 +119,8 @@ async function debugDocumentUpload() {
       .update({ lernfahrausweis_url: null })
       .eq('id', hansId);
     
-    console.log('🧹 Cleaned up test data');
-    console.log('🎉 All tests passed! Upload should work.');
+    logger.debug('🧹 Cleaned up test data');
+    logger.debug('🎉 All tests passed! Upload should work.');
     
   } catch (error) {
     console.error('❌ Debug failed:', error);

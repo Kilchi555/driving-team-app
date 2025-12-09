@@ -21,7 +21,7 @@ export const useStaffDurations = () => {
 
   // Verfügbare Dauern für Staff + Kategorie aus Datenbank laden
   const loadAvailableDurations = async (categoryCode: string, staffId: string) => {
-    console.log('🔥 Loading durations from DB for:', categoryCode, 'staff:', staffId)
+    logger.debug('🔥 Loading durations from DB for:', categoryCode, 'staff:', staffId)
     isLoading.value = true
     error.value = null
 
@@ -36,7 +36,7 @@ export const useStaffDurations = () => {
         .maybeSingle()
 
       if (staffError) {
-        console.log('⚠️ No staff settings found, will use category defaults')
+        logger.debug('⚠️ No staff settings found, will use category defaults')
       }
 
       // Get user's tenant_id first
@@ -56,7 +56,7 @@ export const useStaffDurations = () => {
         .single()
 
       if (tenantError || tenantData?.business_type !== 'driving_school') {
-        console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+        logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
         return null
       }
 
@@ -86,11 +86,11 @@ export const useStaffDurations = () => {
           .filter((d: number) => !isNaN(d) && d > 0)
           .sort((a: number, b: number) => a - b)
         
-        console.log('✅ Using staff configured durations:', finalDurations)
+        logger.debug('✅ Using staff configured durations:', finalDurations)
       } else {
         // Fallback: Standard-Dauer der Kategorie
         finalDurations = [category.lesson_duration || 45]
-        console.log('⚠️ No staff durations found, using category default:', finalDurations)
+        logger.debug('⚠️ No staff durations found, using category default:', finalDurations)
       }
 
       availableDurations.value = finalDurations
@@ -109,7 +109,7 @@ export const useStaffDurations = () => {
 
   // Staff preferred durations in DB updaten
   const updateStaffDurations = async (staffId: string, newDurations: number[]) => {
-    console.log('🔄 Updating staff durations in DB:', newDurations)
+    logger.debug('🔄 Updating staff durations in DB:', newDurations)
     
     try {
       const supabase = getSupabase()
@@ -126,7 +126,7 @@ export const useStaffDurations = () => {
 
       if (upsertError) throw upsertError
 
-      console.log('✅ Staff durations updated in DB as JSON:', durationsString)
+      logger.debug('✅ Staff durations updated in DB as JSON:', durationsString)
       
       // State aktualisieren
       availableDurations.value = newDurations.sort((a: number, b: number) => a - b)
@@ -140,7 +140,7 @@ export const useStaffDurations = () => {
 
   // Standard-Dauern für alle Kategorien aus DB laden (für Settings UI)
   const loadAllPossibleDurations = async () => {
-    console.log('🔥 Loading all possible durations from DB')
+    logger.debug('🔥 Loading all possible durations from DB')
     
     try {
       const supabase = getSupabase()
@@ -165,7 +165,7 @@ export const useStaffDurations = () => {
       
       // Only load categories if business_type is driving_school
       if (tenantData?.business_type !== 'driving_school') {
-        console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+        logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
         return []
       }
 
@@ -201,7 +201,7 @@ export const useStaffDurations = () => {
 
   // Staff-Settings für User laden
   const loadStaffSettings = async (staffId: string) => {
-    console.log('🔥 Loading complete staff settings from DB')
+    logger.debug('🔥 Loading complete staff settings from DB')
     
     try {
       const supabase = getSupabase()

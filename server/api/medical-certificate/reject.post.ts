@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
     const now = new Date()
 
-    console.log('❌ Rejecting medical certificate for appointment:', appointmentId)
+    logger.debug('❌ Rejecting medical certificate for appointment:', appointmentId)
 
     // Get appointment
     const { data: appointment, error: appointmentError } = await supabase
@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Medical certificate rejected')
+    logger.debug('✅ Medical certificate rejected')
 
     // TODO: Send notification to customer
     // await sendEmailNotification({

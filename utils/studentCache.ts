@@ -34,7 +34,7 @@ export const cacheStudents = (students: any[], staffId: string): void => {
     }
     
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
-    console.log(`✅ Cached ${students.length} students for staff ${staffId}`)
+    logger.debug(`✅ Cached ${students.length} students for staff ${staffId}`)
     
   } catch (error) {
     console.error('❌ Error caching students:', error)
@@ -48,7 +48,7 @@ export const getCachedStudents = (staffId: string): CachedStudent[] => {
   try {
     const cached = localStorage.getItem(CACHE_KEY)
     if (!cached) {
-      console.log('📦 No students in cache')
+      logger.debug('📦 No students in cache')
       return []
     }
     
@@ -56,7 +56,7 @@ export const getCachedStudents = (staffId: string): CachedStudent[] => {
     
     // Prüfe ob Cache für richtigen Staff
     if (cacheData.staff_id !== staffId) {
-      console.log('⚠️ Cache is for different staff, clearing')
+      logger.debug('⚠️ Cache is for different staff, clearing')
       localStorage.removeItem(CACHE_KEY)
       return []
     }
@@ -64,12 +64,12 @@ export const getCachedStudents = (staffId: string): CachedStudent[] => {
     // Prüfe Cache-Alter
     const cacheAge = Date.now() - cacheData.cached_at
     if (cacheAge > CACHE_DURATION) {
-      console.log('⚠️ Cache expired, clearing')
+      logger.debug('⚠️ Cache expired, clearing')
       localStorage.removeItem(CACHE_KEY)
       return []
     }
     
-    console.log(`📦 Loaded ${cacheData.students.length} students from cache`)
+    logger.debug(`📦 Loaded ${cacheData.students.length} students from cache`)
     return cacheData.students || []
     
   } catch (error) {
@@ -103,7 +103,7 @@ export const isCacheValid = (staffId: string): boolean => {
  */
 export const clearStudentCache = (): void => {
   localStorage.removeItem(CACHE_KEY)
-  console.log('🗑️ Student cache cleared')
+  logger.debug('🗑️ Student cache cleared')
 }
 
 /**

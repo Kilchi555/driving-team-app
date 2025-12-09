@@ -15,7 +15,7 @@ interface DebugTenantsResponse {
 
 export default defineEventHandler(async (event): Promise<DebugTenantsResponse> => {
   try {
-    console.log('🔍 Debug tenants API called')
+    logger.debug('🔍 Debug tenants API called')
     
     const supabase = getSupabase()
     
@@ -57,7 +57,7 @@ export default defineEventHandler(async (event): Promise<DebugTenantsResponse> =
     
     const rlsEnabledTables = rlsTables?.length || 0
     
-    console.log('✅ Debug data collected:', {
+    logger.debug('✅ Debug data collected:', {
       tenants: tenantsCount,
       users: usersWithTenant,
       appointments: appointmentsWithTenant,

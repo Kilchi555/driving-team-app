@@ -551,7 +551,7 @@ const loadSales = async () => {
         .eq('auth_user_id', currentUser?.id)
       .single()
     const tenantId = userProfile?.tenant_id
-    console.log('🔍 Admin Product Sales - Current tenant_id:', tenantId)
+    logger.debug('🔍 Admin Product Sales - Current tenant_id:', tenantId)
     
     // Load current tenant info
     if (tenantId) {
@@ -561,11 +561,11 @@ const loadSales = async () => {
         .eq('id', tenantId)
         .single()
       currentTenant.value = tenantData
-      console.log('🔍 Current tenant:', tenantData)
+      logger.debug('🔍 Current tenant:', tenantData)
     }
 
     // 1. Lade direkte Verkäufe (aus payments mit product items) - gefiltert nach tenant_id
-    console.log('🔄 Lade direkte Verkäufe...')
+    logger.debug('🔄 Lade direkte Verkäufe...')
     const { data: directSalesData, error: directSalesError } = await supabase
       .from('payments')
       .select(`
@@ -641,7 +641,7 @@ const loadSales = async () => {
     })
 
     // 1b. Lade anonyme Verkäufe (aus payments ohne user_id) - gefiltert nach tenant_id
-    console.log('🔄 Lade anonyme Verkäufe...')
+    logger.debug('🔄 Lade anonyme Verkäufe...')
     const { data: anonymousSalesData, error: anonymousSalesError } = await supabase
       .from('payments')
       .select(`
@@ -701,7 +701,7 @@ const loadSales = async () => {
     })
 
     // 2. Lade Shop-Verkäufe (aus invited_customers) - gefiltert nach tenant_id
-    console.log('🔄 Lade Shop-Verkäufe...')
+    logger.debug('🔄 Lade Shop-Verkäufe...')
     const { data: shopSalesData, error: shopSalesError } = await supabase
       .from('invited_customers')
       .select('*')
@@ -735,7 +735,7 @@ const loadSales = async () => {
     // Sortiere alle Verkäufe nach Datum (neueste zuerst)
     sales.value = allSales.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
-    console.log('✅ Alle Verkäufe geladen:', {
+    logger.debug('✅ Alle Verkäufe geladen:', {
       total: sales.value.length,
       direct: sales.value.filter(s => s.sale_type === 'direct').length,
       shop: sales.value.filter(s => s.sale_type === 'shop').length
@@ -744,7 +744,7 @@ const loadSales = async () => {
   } catch (error: any) {
     console.error('❌ Error loading sales:', error)
     if (error.code === 'PGRST200') {
-      console.log('ℹ️ Keine Verkäufe vorhanden oder Datenbankstruktur unterscheidet sich')
+      logger.debug('ℹ️ Keine Verkäufe vorhanden oder Datenbankstruktur unterscheidet sich')
       sales.value = []
     } else {
       alert(`❌ Fehler beim Laden der Verkäufe: ${error.message}`)
@@ -777,17 +777,17 @@ const handleSaleCompleted = () => {
 
 const viewSaleDetails = (sale: ProductSale) => {
   // TODO: Implementiere Verkaufsdetails-Modal
-  console.log('View sale details:', sale.id)
+  logger.debug('View sale details:', sale.id)
 }
 
 const editSale = (sale: ProductSale) => {
   // TODO: Implementiere Verkaufsbearbeitung
-  console.log('Edit sale:', sale.id)
+  logger.debug('Edit sale:', sale.id)
 }
 
 const duplicateSale = (sale: ProductSale) => {
   // TODO: Implementiere Verkauf duplizieren
-  console.log('Duplicate sale:', sale.id)
+  logger.debug('Duplicate sale:', sale.id)
 }
 
 const getStatusClass = (status: string) => {
@@ -893,7 +893,7 @@ const createAnonymousSale = async () => {
       anonymousCustomerNotes.value = ''
       anonymousPaymentMethod.value = 'cash'
       
-      console.log('✅ Anonymer Barverkauf erstellt:', saleData.id)
+      logger.debug('✅ Anonymer Barverkauf erstellt:', saleData.id)
     } else {
       // Bei Online-Zahlung: Erstelle eine spezielle anonyme Verkaufsseite
       showAnonymousSaleModal.value = false
@@ -909,7 +909,7 @@ const createAnonymousSale = async () => {
       anonymousCustomerNotes.value = ''
       anonymousPaymentMethod.value = 'cash'
       
-      console.log('✅ Anonymer Online-Verkauf erstellt:', saleData.id)
+      logger.debug('✅ Anonymer Online-Verkauf erstellt:', saleData.id)
     }
     
   } catch (error: any) {
@@ -923,7 +923,7 @@ const authStore = useAuthStore()
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🔍 Product sales page mounted, checking auth...')
+  logger.debug('🔍 Product sales page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -932,7 +932,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -941,17 +941,17 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading product sales...')
+  logger.debug('✅ Auth check passed, loading product sales...')
   
   // Original onMounted logic
   loadSales()

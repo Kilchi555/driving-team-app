@@ -1518,7 +1518,7 @@ const paidAppointments = computed(() => appointments.value.filter(apt => apt.is_
 const unpaidAppointments = computed(() => appointments.value.filter(apt => !apt.is_paid && apt.payment_status !== 'failed' && !apt.deleted_at).length)
 const failedAppointments = computed(() => {
   const failed = appointments.value.filter(apt => apt.payment_status === 'failed' && !apt.deleted_at)
-  console.log('🔴 DEBUG failedAppointments computed:', {
+  logger.debug('🔴 DEBUG failedAppointments computed:', {
     totalAppointments: appointments.value.length,
     failedCount: failed.length,
     failedIds: failed.map(f => ({ id: f.id, status: f.payment_status, title: f.title }))
@@ -1645,7 +1645,7 @@ const loadUserDetails = async () => {
     }
 
     userDetails.value = data
-    console.log('✅ User details loaded:', data)
+    logger.debug('✅ User details loaded:', data)
 
     // Load event types for this tenant
     if (data?.tenant_id) {
@@ -1796,7 +1796,7 @@ const loadUserAppointments = async () => {
           }
         })
         
-          console.log('✅ Loaded from payment_items:', allProducts.length, 'products,', allDiscounts.length, 'discounts')
+          logger.debug('✅ Loaded from payment_items:', allProducts.length, 'products,', allDiscounts.length, 'discounts')
         } else if (paymentItemsError) {
           console.warn('⚠️ Error loading payment_items:', paymentItemsError)
         }
@@ -1806,8 +1806,8 @@ const loadUserAppointments = async () => {
     // Kombiniere Termine mit Zahlungsinformationen
     const processedAppointments = []
     
-    console.log('🔍 DEBUG - Total payments loaded:', paymentsData.length)
-    console.log('🔍 DEBUG - Payments by status:', paymentsData.reduce((acc: any, p: any) => {
+    logger.debug('🔍 DEBUG - Total payments loaded:', paymentsData.length)
+    logger.debug('🔍 DEBUG - Payments by status:', paymentsData.reduce((acc: any, p: any) => {
       acc[p.payment_status] = (acc[p.payment_status] || 0) + 1
       return acc
     }, {}))
@@ -1822,7 +1822,7 @@ const loadUserAppointments = async () => {
       ;(appointment as any).payment_method = payment?.payment_method || 'pending'
       
       if (payment?.payment_status === 'failed') {
-        console.log('🔴 DEBUG - Found failed payment:', {
+        logger.debug('🔴 DEBUG - Found failed payment:', {
           appointmentId: appointment.id,
           appointmentTitle: appointment.title,
           paymentStatus: payment.payment_status,
@@ -1838,7 +1838,7 @@ const loadUserAppointments = async () => {
       
       // Debug: Log paid_at for each payment
       if (payment) {
-        console.log(`📅 Payment ${payment.id} - Status: ${payment.payment_status}, paid_at: ${payment.paid_at}`)
+        logger.debug(`📅 Payment ${payment.id} - Status: ${payment.payment_status}, paid_at: ${payment.paid_at}`)
       }
       
       // Bestimme ob Produkte oder Rabatte vorhanden sind
@@ -1849,7 +1849,7 @@ const loadUserAppointments = async () => {
       let products = undefined
       if (hasProducts) {
         const appointmentProducts = allProducts.filter(p => p.appointment_id === appointment.id)
-        console.log('🔍 Debug - appointmentProducts for appointment', appointment.id, ':', appointmentProducts)
+        logger.debug('🔍 Debug - appointmentProducts for appointment', appointment.id, ':', appointmentProducts)
         
         if (appointmentProducts.length > 0) {
           products = appointmentProducts.map(ap => {
@@ -1860,7 +1860,7 @@ const loadUserAppointments = async () => {
               (typeof productData === 'object' && productData !== null ? (productData as any)?.name : null) ||
               'Unbekanntes Produkt'
             
-            console.log('🔍 Debug - Product data:', {
+            logger.debug('🔍 Debug - Product data:', {
               ap,
               products: ap.products,
               productData,
@@ -1912,7 +1912,7 @@ const loadUserAppointments = async () => {
               }).filter(p => p.name !== 'Unbekanntes Produkt')
               
               if (products.length > 0) {
-                console.log('✅ Loaded products from fallback query:', products)
+                logger.debug('✅ Loaded products from fallback query:', products)
               }
             }
           }
@@ -1994,7 +1994,7 @@ const loadUserAppointments = async () => {
         discount_amount: discountAmount
       }
       
-      console.log(`📋 Final processed appointment ${appointment.id}:`, {
+      logger.debug(`📋 Final processed appointment ${appointment.id}:`, {
         lesson_price: processedAppointment.lesson_price,
         admin_fee: processedAppointment.admin_fee,
         products_price: processedAppointment.products_price,
@@ -2008,8 +2008,8 @@ const loadUserAppointments = async () => {
     
     appointments.value = processedAppointments
 
-    console.log('✅ Appointments with payment methods loaded:', appointments.value.length)
-    console.log('🔴 DEBUG - Appointments with failed status:', 
+    logger.debug('✅ Appointments with payment methods loaded:', appointments.value.length)
+    logger.debug('🔴 DEBUG - Appointments with failed status:', 
       appointments.value.filter(a => a.payment_status === 'failed').map(a => ({
         id: a.id,
         title: a.title,
@@ -2081,7 +2081,7 @@ const loadCompanyBillingAddress = async () => {
     }
 
     companyBillingAddress.value = data
-    console.log('✅ Company billing address loaded:', data)
+    logger.debug('✅ Company billing address loaded:', data)
 
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
@@ -2112,7 +2112,7 @@ const _sendPaymentReminder = async () => {
   if (!userDetails.value) return
 
   try {
-    console.log('Sending payment reminder to:', userDetails.value.email)
+    logger.debug('Sending payment reminder to:', userDetails.value.email)
     
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -2267,11 +2267,11 @@ const _markAsPaid = async (appointment: Appointment) => {
   
   isUpdatingPayment.value = true
   try {
-    console.log('🔄 Starting markAsPaid for appointment:', appointment.id)
+    logger.debug('🔄 Starting markAsPaid for appointment:', appointment.id)
     
     // Finde die Zahlung für diesen Termin
     const payment = await findPaymentForAppointment(appointment.id)
-    console.log('🔍 Found payment:', payment)
+    logger.debug('🔍 Found payment:', payment)
     
     if (payment) {
       // Aktualisiere den Zahlungsstatus
@@ -2289,7 +2289,7 @@ const _markAsPaid = async (appointment: Appointment) => {
         .eq('id', payment.id)
         .single()
       
-      console.log('✅ Payment updated to completed:', payment.id)
+      logger.debug('✅ Payment updated to completed:', payment.id)
     } else {
       // Erstelle eine neue Zahlung
       const { error: createError } = await supabase
@@ -2304,16 +2304,16 @@ const _markAsPaid = async (appointment: Appointment) => {
       
       if (createError) throw createError
       
-      console.log('✅ New payment created and marked as completed:', appointment.id)
+      logger.debug('✅ New payment created and marked as completed:', appointment.id)
     }
     
-    console.log('🔄 Reloading data...')
+    logger.debug('🔄 Reloading data...')
     // Kurze Verzögerung, um sicherzustellen, dass die Datenbank-Transaktion abgeschlossen ist
     await new Promise(resolve => setTimeout(resolve, 500))
     
     // Lade nur die aktualisierte Zahlung für diesen spezifischen Termin (Cache umgehen)
     const updatedPayment = await findPaymentForAppointment(appointment.id, true)
-    console.log('🔄 Updated payment data:', updatedPayment)
+    logger.debug('🔄 Updated payment data:', updatedPayment)
     
     if (updatedPayment) {
       // Aktualisiere den lokalen Termin-Status
@@ -2323,11 +2323,11 @@ const _markAsPaid = async (appointment: Appointment) => {
         appointments.value[appointmentIndex].payment_method = updatedPayment.payment_method
         appointments.value[appointmentIndex].payment_method_name = getPaymentMethodLabel(updatedPayment.payment_method)
         appointments.value[appointmentIndex].total_amount = (updatedPayment.total_amount_rappen || 0) / 100
-        console.log('✅ Local appointment updated:', appointments.value[appointmentIndex])
+        logger.debug('✅ Local appointment updated:', appointments.value[appointmentIndex])
       }
     }
     
-    console.log('✅ Data updated locally')
+    logger.debug('✅ Data updated locally')
     
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
@@ -2355,7 +2355,7 @@ const _markAsUnpaid = async (appointment: Appointment) => {
         
       if (updateError) throw updateError
       
-      console.log('✅ Payment marked as unpaid:', appointment.id)
+      logger.debug('✅ Payment marked as unpaid:', appointment.id)
     }
     
     // Lade die Daten neu, um den aktuellen Status zu zeigen
@@ -2396,7 +2396,7 @@ const _editPaymentMethod = async (appointment: Appointment) => {
       
       if (updateError) throw updateError
       
-      console.log('✅ Payment method updated:', appointment.id, newMethod)
+      logger.debug('✅ Payment method updated:', appointment.id, newMethod)
     } else {
       // Erstelle eine neue Zahlung
       const { error: createError } = await supabase
@@ -2411,7 +2411,7 @@ const _editPaymentMethod = async (appointment: Appointment) => {
       
       if (createError) throw createError
       
-      console.log('✅ New payment created with method:', appointment.id, newMethod)
+      logger.debug('✅ New payment created with method:', appointment.id, newMethod)
     }
     
     // Lade die Daten neu, um den aktuellen Status zu zeigen
@@ -2453,7 +2453,7 @@ const resetPaymentStatusAction = async (appointment: Appointment) => {
       
       if (updateError) throw updateError
       
-      console.log('✅ Payment status reset to pending:', appointment.id)
+      logger.debug('✅ Payment status reset to pending:', appointment.id)
     } else {
       // Erstelle eine neue Zahlung mit Status "pending"
       const { error: createError } = await supabase
@@ -2468,14 +2468,14 @@ const resetPaymentStatusAction = async (appointment: Appointment) => {
       
       if (createError) throw createError
       
-      console.log('✅ New payment created with pending status:', appointment.id)
+      logger.debug('✅ New payment created with pending status:', appointment.id)
     }
     
     // Aktualisiere den lokalen Termin-Status
     const appointmentIndex = appointments.value.findIndex(apt => apt.id === appointment.id)
     if (appointmentIndex !== -1) {
       appointments.value[appointmentIndex].is_paid = false
-      console.log('✅ Local appointment updated to unpaid')
+      logger.debug('✅ Local appointment updated to unpaid')
     }
     
     // Schöne Erfolgsmeldung
@@ -2522,7 +2522,7 @@ const resetFailedPaymentAction = async (appointment: Appointment) => {
       }
     })
     
-    console.log('✅ Payment reset result:', result)
+    logger.debug('✅ Payment reset result:', result)
     
     // Refresh data
     await refreshData()
@@ -2714,7 +2714,7 @@ const convertAppointmentToOnline = async (appointment: Appointment) => {
   isConvertingToOnline.value = true
   
   try {
-    console.log('🔄 Converting payment to online:', appointment.id)
+    logger.debug('🔄 Converting payment to online:', appointment.id)
     
     const result = await $fetch('/api/payments/convert-to-online', {
       method: 'POST',
@@ -2724,7 +2724,7 @@ const convertAppointmentToOnline = async (appointment: Appointment) => {
       }
     })
     
-    console.log('✅ Payment converted to online:', result)
+    logger.debug('✅ Payment converted to online:', result)
     
     showSuccessToast(
       '✅ Zahlung konvertiert',
@@ -2761,7 +2761,7 @@ const toggleInvoiceMenuWithPosition = (appointmentId: string, event: MouseEvent)
         top: Math.round(rect.bottom + 5), // rect.bottom is already in viewport coords for fixed positioning
         right: Math.round(window.innerWidth - rect.right)
       }
-      console.log('📍 Invoice menu opened at position:', {top: rect.bottom + 5, right: window.innerWidth - rect.right})
+      logger.debug('📍 Invoice menu opened at position:', {top: rect.bottom + 5, right: window.innerWidth - rect.right})
     } else {
       invoiceMenuPosition.value = {
         top: 100,
@@ -2795,7 +2795,7 @@ const downloadInvoice = async (appointment: Appointment) => {
       return
     }
     
-    console.log('📥 Downloading invoice:', payment.invoice_number)
+    logger.debug('📥 Downloading invoice:', payment.invoice_number)
     
     // Fetch the invoice from the invoices table
     const { data: invoice, error: invoiceError } = await supabase
@@ -2821,7 +2821,7 @@ const downloadInvoice = async (appointment: Appointment) => {
     if (result?.pdfUrl) {
       // Open PDF in new window
       window.open(result.pdfUrl, '_blank')
-      console.log('✅ Invoice downloaded')
+      logger.debug('✅ Invoice downloaded')
     } else {
       showErrorToast('Fehler', 'PDF konnte nicht generiert werden')
     }
@@ -3055,7 +3055,7 @@ const hasPriceDetails = (appointment: Appointment): boolean => {
   const hasAdminFee = !!(appointment.admin_fee && appointment.admin_fee > 0)
   const hasLessonPrice = !!(appointment.lesson_price && appointment.lesson_price > 0)
   
-  console.log(`🔍 hasPriceDetails check for appointment ${appointment.id}:`, {
+  logger.debug(`🔍 hasPriceDetails check for appointment ${appointment.id}:`, {
     hasProducts,
     hasDiscounts,
     hasAdminFee,
@@ -3150,25 +3150,25 @@ const findPaymentForAppointment = async (appointmentId: string, bypassCache: boo
 
 // Toast functions
 const showSuccessToast = (title: string, message: string = '') => {
-  console.log('🔔 showSuccessToast called:', { title, message })
+  logger.debug('🔔 showSuccessToast called:', { title, message })
   toastType.value = 'success'
   toastTitle.value = title
   toastMessage.value = message
   showToast.value = true
-  console.log('🔔 Toast state updated:', { showToast: showToast.value, type: toastType.value, title: toastTitle.value, message: toastMessage.value })
+  logger.debug('🔔 Toast state updated:', { showToast: showToast.value, type: toastType.value, title: toastTitle.value, message: toastMessage.value })
 }
 
 const showErrorToast = (title: string, message: string = '') => {
-  console.log('🔔 showErrorToast called:', { title, message })
+  logger.debug('🔔 showErrorToast called:', { title, message })
   toastType.value = 'error'
   toastTitle.value = title
   toastMessage.value = message
   showToast.value = true
-  console.log('🔔 Toast state updated:', { showToast: showToast.value, type: toastType.value, title: toastTitle.value, message: toastMessage.value })
+  logger.debug('🔔 Toast state updated:', { showToast: showToast.value, type: toastType.value, title: toastTitle.value, message: toastMessage.value })
 }
 
 const closeToast = () => {
-  console.log('🔔 closeToast called')
+  logger.debug('🔔 closeToast called')
   showToast.value = false
 }
 
@@ -3195,7 +3195,7 @@ const cancelAction = () => {
 
 // Test function for debugging
 const _testToast = () => {
-  console.log('🧪 Test Toast button clicked')
+  logger.debug('🧪 Test Toast button clicked')
   showSuccessToast('🧪 Test erfolgreich', 'Dies ist eine Test-Toast-Benachrichtigung!')
 }
 
@@ -3243,7 +3243,7 @@ const invoiceSelectedAppointments = async () => {
   if (selectedAppointments.value.length === 0) return
   
   try {
-    console.log('🔄 Creating invoice for selected appointments:', selectedAppointments.value.length)
+    logger.debug('🔄 Creating invoice for selected appointments:', selectedAppointments.value.length)
     
     // Setze Standardwerte für E-Mail-Felder
     useCustomBillingAddress.value = false
@@ -3271,7 +3271,7 @@ const sendToAccounto = async () => {
   isCreatingInvoice.value = true
   
   try {
-    console.log('🏦 Sending invoice to Accounto...')
+    logger.debug('🏦 Sending invoice to Accounto...')
     
     // Sammle alle ausgewählten Termine
     const selectedAppointmentData = selectedAppointments.value.map(appointmentId => {
@@ -3322,7 +3322,7 @@ const sendToAccounto = async () => {
       totalAmount: selectedAppointmentsTotal.value
     }
     
-    console.log('📋 Accounto invoice request prepared:', invoiceRequest)
+    logger.debug('📋 Accounto invoice request prepared:', invoiceRequest)
     
     // Accounto API aufrufen
     const { createInvoiceAndSend: accountoCreateInvoice } = useAccounto()
@@ -3368,7 +3368,7 @@ const sendDirectEmail = async () => {
   isCreatingInvoice.value = true
   
   try {
-    console.log('📧 Sending invoice via direct email...')
+    logger.debug('📧 Sending invoice via direct email...')
     
     // Sammle alle ausgewählten Termine
     const selectedAppointmentData = selectedAppointments.value.map(appointmentId => {
@@ -3425,7 +3425,7 @@ const sendDirectEmail = async () => {
       notes: `Termin: ${appointment.title}`
     }))
     
-    console.log('📋 Invoice data prepared for database:', { invoiceFormData, invoiceItems })
+    logger.debug('📋 Invoice data prepared for database:', { invoiceFormData, invoiceItems })
     
     // Rechnung in Datenbank erstellen
     const { createInvoice } = useInvoices()
@@ -3435,7 +3435,7 @@ const sendDirectEmail = async () => {
       throw new Error(result.error)
     }
     
-    console.log('✅ Invoice created in database:', result.invoice_number)
+    logger.debug('✅ Invoice created in database:', result.invoice_number)
     
     // Alle ausgewählten Termine auf "verrechnet" setzen und Settlement Email versenden
     if (result.data) {
@@ -3486,7 +3486,7 @@ const createInvoiceInDatabase = async () => {
   isCreatingInvoice.value = true
   
   try {
-    console.log('💾 Creating invoice in database and generating PDF...')
+    logger.debug('💾 Creating invoice in database and generating PDF...')
     
     // Sammle alle ausgewählten Termine
     const selectedAppointmentData = selectedAppointments.value.map(appointmentId => {
@@ -3543,7 +3543,7 @@ const createInvoiceInDatabase = async () => {
       notes: `Termin: ${appointment.title}`
     }))
     
-    console.log('📋 Invoice data prepared for database:', { invoiceFormData, invoiceItems })
+    logger.debug('📋 Invoice data prepared for database:', { invoiceFormData, invoiceItems })
     
     // Rechnung in Datenbank erstellen
     const { createInvoice } = useInvoices()
@@ -3553,7 +3553,7 @@ const createInvoiceInDatabase = async () => {
       throw new Error(result.error)
     }
     
-    console.log('✅ Invoice created in database:', result.invoice_number)
+    logger.debug('✅ Invoice created in database:', result.invoice_number)
     
     // Alle ausgewählten Termine auf "verrechnet" setzen
     if (result.data) {
@@ -3603,7 +3603,7 @@ const createInvoiceInDatabase = async () => {
 // Hilfsfunktion für PDF-Generierung
 const generateInvoicePDF = async (invoiceData: InvoiceData): Promise<PDFResult> => {
   try {
-    console.log('📄 Generating PDF for invoice:', invoiceData.id)
+    logger.debug('📄 Generating PDF for invoice:', invoiceData.id)
     
     // PDF-Generierung über API aufrufen
     const response = await $fetch('/api/invoices/download', {
@@ -3635,7 +3635,7 @@ const generateInvoicePDF = async (invoiceData: InvoiceData): Promise<PDFResult> 
 // Hilfsfunktion: Termine auf "verrechnet" setzen und Email versenden
 const updateAppointmentsToInvoiced = async (appointmentIds: string[], invoiceNumber?: string, companyBillingAddressId?: string) => {
   try {
-    console.log('🔄 Settling appointments and sending emails:', appointmentIds)
+    logger.debug('🔄 Settling appointments and sending emails:', appointmentIds)
     
     // Verwende neuen Endpoint der Emails versendet
     const result = await $fetch('/api/payments/settle-and-email', {
@@ -3647,7 +3647,7 @@ const updateAppointmentsToInvoiced = async (appointmentIds: string[], invoiceNum
       }
     })
     
-    console.log('✅ Appointments settled and emails sent:', result)
+    logger.debug('✅ Appointments settled and emails sent:', result)
     return result
     
   } catch (error: unknown) {
@@ -3663,7 +3663,7 @@ const prepareForPrint = async () => {
   isCreatingInvoice.value = true
   
   try {
-    console.log('🖨️ Preparing invoice for printing...')
+    logger.debug('🖨️ Preparing invoice for printing...')
     
     // Sammle alle ausgewählten Termine
     const selectedAppointmentData = selectedAppointments.value.map(appointmentId => {
@@ -3692,7 +3692,7 @@ const prepareForPrint = async () => {
       printDate: new Date().toLocaleDateString('de-CH')
     }
     
-    console.log('📋 Print invoice data prepared:', printData)
+    logger.debug('📋 Print invoice data prepared:', printData)
     
         // PDF mit jsPDF generieren
     const { jsPDF } = await import('jspdf')
@@ -3922,7 +3922,7 @@ const restoreAllSelectedAppointments = async () => {
   
   isUpdatingPayment.value = true
   try {
-    console.log('🔄 Restoring all selected deleted appointments:', selectedAppointments.value.length)
+    logger.debug('🔄 Restoring all selected deleted appointments:', selectedAppointments.value.length)
     
     for (const appointmentId of selectedAppointments.value) {
       const appointment = getAppointmentById(appointmentId)
@@ -3936,7 +3936,7 @@ const restoreAllSelectedAppointments = async () => {
       
       if (restoreError) throw restoreError
       
-      console.log('✅ Appointment restored:', appointmentId)
+      logger.debug('✅ Appointment restored:', appointmentId)
     }
     
     // Aktualisiere alle ausgewählten Termine lokal
@@ -3955,7 +3955,7 @@ const restoreAllSelectedAppointments = async () => {
       `${selectedAppointments.value.length} gelöschte Termine wurden erfolgreich wiederhergestellt.`
     )
     
-    console.log('✅ All selected appointments restored')
+    logger.debug('✅ All selected appointments restored')
     
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
@@ -3982,7 +3982,7 @@ const executeHardDeleteAllSelected = async () => {
   
   isUpdatingPayment.value = true
   try {
-    console.log('🗑️ Hard deleting all selected appointments:', selectedAppointments.value.length)
+    logger.debug('🗑️ Hard deleting all selected appointments:', selectedAppointments.value.length)
     
     for (const appointmentId of selectedAppointments.value) {
       const appointment = getAppointmentById(appointmentId)
@@ -4004,7 +4004,7 @@ const executeHardDeleteAllSelected = async () => {
       
       if (deleteAppointmentError) throw deleteAppointmentError
       
-      console.log('✅ Appointment hard deleted:', appointmentId)
+      logger.debug('✅ Appointment hard deleted:', appointmentId)
     }
     
     // Entferne alle gelöschten Termine aus der lokalen Liste
@@ -4018,7 +4018,7 @@ const executeHardDeleteAllSelected = async () => {
       `${selectedAppointments.value.length} Termine wurden endgültig gelöscht.`
     )
     
-    console.log('✅ All selected appointments hard deleted')
+    logger.debug('✅ All selected appointments hard deleted')
     
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
@@ -4036,7 +4036,7 @@ const markAllSelectedAsPaid = async () => {
   
   isUpdatingPayment.value = true
   try {
-    console.log('🔄 Marking all selected appointments as paid:', selectedAppointments.value.length)
+    logger.debug('🔄 Marking all selected appointments as paid:', selectedAppointments.value.length)
     
     for (const appointmentId of selectedAppointments.value) {
       const appointment = getAppointmentById(appointmentId)
@@ -4054,7 +4054,7 @@ const markAllSelectedAsPaid = async () => {
         
         if (updateError) throw updateError
         
-        console.log('✅ Payment updated to completed:', payment.id)
+        logger.debug('✅ Payment updated to completed:', payment.id)
       } else {
         // Erstelle eine neue Zahlung
         const { error: createError } = await supabase
@@ -4069,7 +4069,7 @@ const markAllSelectedAsPaid = async () => {
         
         if (createError) throw createError
         
-        console.log('✅ New payment created and marked as completed:', appointmentId)
+        logger.debug('✅ New payment created and marked as completed:', appointmentId)
       }
     }
     
@@ -4084,7 +4084,7 @@ const markAllSelectedAsPaid = async () => {
     // Auswahl aufheben
     selectedAppointments.value = []
     
-    console.log('✅ All selected appointments marked as paid')
+    logger.debug('✅ All selected appointments marked as paid')
     
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'

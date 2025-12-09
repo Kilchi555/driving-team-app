@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log(`📧 Sending ${type} deletion notification for appointment ${appointmentId}`)
+    logger.debug(`📧 Sending ${type} deletion notification for appointment ${appointmentId}`)
 
     const supabase = getSupabaseAdmin()
 
@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
         html: emailHtml
       })
 
-      console.log(`✅ Customer deletion email sent to ${user.email}`)
+      logger.debug(`✅ Customer deletion email sent to ${user.email}`)
 
       // Optional: Send SMS if phone available
       if (user.phone) {
@@ -146,7 +146,7 @@ export default defineEventHandler(async (event) => {
             message: smsText
           })
 
-          console.log(`✅ Customer deletion SMS sent to ${user.phone}`)
+          logger.debug(`✅ Customer deletion SMS sent to ${user.phone}`)
         } catch (smsError) {
           console.error('⚠️ Error sending SMS (non-critical):', smsError)
         }
@@ -202,7 +202,7 @@ export default defineEventHandler(async (event) => {
         html: emailHtml
       })
 
-      console.log(`✅ Staff deletion email sent to ${staff.email}`)
+      logger.debug(`✅ Staff deletion email sent to ${staff.email}`)
 
       return {
         success: true,

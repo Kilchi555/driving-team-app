@@ -360,7 +360,7 @@ export const usePricing = (options?: UsePricingOptions) => {
       }
     }
 
-    console.log('🧹 Cache cleaned:', {
+    logger.debug('🧹 Cache cleaned:', {
       priceCalculations: priceCalculationCache.value.size,
       appointmentCounts: appointmentCountCache.value.size
     })
@@ -370,7 +370,7 @@ export const usePricing = (options?: UsePricingOptions) => {
   setInterval(clearExpiredCache, 60 * 1000)
 
     const createFallbackPricingRules = async (): Promise<void> => {
-    console.log('🔄 Using complete fallback pricing rules for all categories...')
+    logger.debug('🔄 Using complete fallback pricing rules for all categories...')
     
     // Konvertiere zu PricingRule Format für das bestehende System
     const fallbackRules = COMPLETE_FALLBACK_RULES.map(rule => ({
@@ -388,17 +388,17 @@ export const usePricing = (options?: UsePricingOptions) => {
     
     pricingRules.value = fallbackRules
     lastLoaded.value = new Date()
-    console.log('✅ Complete fallback pricing rules loaded:', fallbackRules.length, 'categories')
+    logger.debug('✅ Complete fallback pricing rules loaded:', fallbackRules.length, 'categories')
   }
 
   // ✅ PRICING RULES MIT CACHE
   const loadPricingRules = async (forceReload = false): Promise<void> => {
-    console.log('🔄 Loading pricing rules from database...')
+    logger.debug('🔄 Loading pricing rules from database...')
     
     // Prüfe Cache für Pricing Rules
     if (!forceReload && lastLoaded.value && 
         isCacheValid(lastLoaded.value.getTime(), PRICING_RULES_CACHE_DURATION)) {
-      console.log('📦 Using cached pricing rules')
+      logger.debug('📦 Using cached pricing rules')
       return
     }
 
@@ -461,8 +461,8 @@ export const usePricing = (options?: UsePricingOptions) => {
       priceCalculationCache.value.clear()
       appointmentCountCache.value.clear()
 
-      console.log('✅ Pricing rules loaded:', combinedRules.length, 'categories')
-      console.log('🗑️ Price caches cleared due to new rules')
+      logger.debug('✅ Pricing rules loaded:', combinedRules.length, 'categories')
+      logger.debug('🗑️ Price caches cleared due to new rules')
 
     } catch (err: any) {
       console.error('❌ Error loading pricing rules:', err)
@@ -475,12 +475,12 @@ export const usePricing = (options?: UsePricingOptions) => {
 
   // ✅ APPOINTMENT COUNT MIT CACHE
   const getAppointmentCount = async (userId: string): Promise<number> => {
-    console.log('🔢 Getting appointment count for user:', userId)
+    logger.debug('🔢 Getting appointment count for user:', userId)
     
     // Prüfe Cache
     const cached = appointmentCountCache.value.get(userId)
     if (cached && isCacheValid(cached.timestamp, APPOINTMENT_COUNT_CACHE_DURATION)) {
-      console.log('📦 Using cached appointment count:', cached.count)
+      logger.debug('📦 Using cached appointment count:', cached.count)
       return cached.count
     }
 
@@ -506,7 +506,7 @@ export const usePricing = (options?: UsePricingOptions) => {
         timestamp: Date.now()
       })
       
-      console.log('✅ Appointment count cached:', appointmentNumber)
+      logger.debug('✅ Appointment count cached:', appointmentNumber)
       return appointmentNumber
 
     } catch (error) {
@@ -545,12 +545,12 @@ export const usePricing = (options?: UsePricingOptions) => {
     userId?: string
   ): Promise<CalculatedPrice> => {
     const cacheKey = generatePriceKey(categoryCode, durationMinutes, userId)
-    console.log('💰 Calculating price for:', cacheKey)
+    logger.debug('💰 Calculating price for:', cacheKey)
     
     // ✅ PRÜFE PRICE CALCULATION CACHE
     const cachedPrice = priceCalculationCache.value.get(cacheKey)
     if (cachedPrice && isCacheValid(cachedPrice.timestamp, PRICE_CALCULATION_CACHE_DURATION)) {
-      console.log('📦 Using cached price calculation:', cachedPrice.data.total_chf)
+      logger.debug('📦 Using cached price calculation:', cachedPrice.data.total_chf)
       return cachedPrice.data
     }
 
@@ -596,7 +596,7 @@ export const usePricing = (options?: UsePricingOptions) => {
       key: cacheKey
     })
     
-    console.log('✅ Price calculated and cached:', {
+    logger.debug('✅ Price calculated and cached:', {
       category: categoryCode,
       duration: durationMinutes,
       total: result.total_chf,
@@ -640,7 +640,7 @@ export const usePricing = (options?: UsePricingOptions) => {
       _hasAdminFee.value = result.admin_fee_rappen > 0;
       _totalPriceChf.value = result.total_chf;
 
-      console.log('✅ Pricing refreshed:', {
+      logger.debug('✅ Pricing refreshed:', {
         pricePerMin: _calculatedPricePerMinute.value,
         adminFee: _calculatedAdminFee.value,
         total: _totalPriceChf.value
@@ -665,22 +665,22 @@ export const usePricing = (options?: UsePricingOptions) => {
     switch (type) {
       case 'pricing':
         lastLoaded.value = null
-        console.log('🗑️ Pricing rules cache invalidated')
+        logger.debug('🗑️ Pricing rules cache invalidated')
         break
       case 'calculations':
         priceCalculationCache.value.clear()
-        console.log('🗑️ Price calculations cache cleared')
+        logger.debug('🗑️ Price calculations cache cleared')
         break
       case 'appointments':
         appointmentCountCache.value.clear()
-        console.log('🗑️ Appointment count cache cleared')
+        logger.debug('🗑️ Appointment count cache cleared')
         break
       case 'all':
       default:
         lastLoaded.value = null
         priceCalculationCache.value.clear()
         appointmentCountCache.value.clear()
-        console.log('🗑️ All pricing caches cleared')
+        logger.debug('🗑️ All pricing caches cleared')
         break
     }
   }

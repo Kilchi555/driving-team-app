@@ -104,7 +104,7 @@ const loadFailureDetails = async () => {
     const errorCode = route.query.error
     const errorMessage = route.query.error_description
     
-    console.log('❌ Payment failed:', { transactionId, errorCode, errorMessage })
+    logger.debug('❌ Payment failed:', { transactionId, errorCode, errorMessage })
 
     if (transactionId) {
       // Try to find the failed payment in database

@@ -416,7 +416,7 @@ const fetchUsersSummary = async () => {
   error.value = null
   
   try {
-    console.log('🔄 Loading users payment summary...')
+    logger.debug('🔄 Loading users payment summary...')
     
     // Get current user's tenant_id first
     const { data: currentUserData } = await supabase.auth.getUser()
@@ -432,7 +432,7 @@ const fetchUsersSummary = async () => {
       throw new Error('User has no tenant assigned')
     }
     
-    console.log('🔍 Loading users for tenant:', userProfile.tenant_id)
+    logger.debug('🔍 Loading users for tenant:', userProfile.tenant_id)
     
     // Lade nur Kunden/Schüler (keine Admins oder Staff) - FILTERED BY TENANT
     const { data: usersData, error: usersError } = await supabase
@@ -515,7 +515,7 @@ const fetchUsersSummary = async () => {
         (payment.payment_status === 'pending' || !payment.paid_at)
       )
       
-      console.log(`📊 User ${user.first_name} ${user.last_name}:`, {
+      logger.debug(`📊 User ${user.first_name} ${user.last_name}:`, {
         totalAppointments: userAppointments.length,
         totalUnpaidPayments: userUnpaidPayments.length,
         appointmentsSample: userAppointments.slice(0, 2).map(apt => ({
@@ -529,7 +529,7 @@ const fetchUsersSummary = async () => {
         return sum + ((payment.total_amount_rappen || 0) / 100)
       }, 0)
 
-      console.log(`💰 Total unpaid amount for ${user.first_name}: ${totalUnpaidAmount} CHF`)
+      logger.debug(`💰 Total unpaid amount for ${user.first_name}: ${totalUnpaidAmount} CHF`)
 
       // Prüfe Company Billing
       const hasCompanyBilling = billingData?.some(billing => billing.created_by === user.id) || 
@@ -551,7 +551,7 @@ const fetchUsersSummary = async () => {
     })
 
     users.value = processedUsers
-    console.log('✅ Users payment summary loaded:', users.value.length)
+    logger.debug('✅ Users payment summary loaded:', users.value.length)
 
   } catch (err: any) {
     console.error('❌ Error loading users payment summary:', err)
@@ -610,7 +610,7 @@ const getPaymentMethodClass = (method: string | null): string => {
 }
 
 const sendPaymentReminder = async (user: UserPaymentSummary) => {
-  console.log('Sending payment reminder to:', user.email)
+  logger.debug('Sending payment reminder to:', user.email)
   // TODO: Implement payment reminder logic
   alert(`Zahlungserinnerung an ${user.first_name} ${user.last_name} würde gesendet werden.`)
 }

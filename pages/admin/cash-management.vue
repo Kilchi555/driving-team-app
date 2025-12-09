@@ -569,7 +569,7 @@ const loadRegisterMovements = async (registerId) => {
       performer_name: `${movement.performer?.first_name || ''} ${movement.performer?.last_name || ''}`.trim() || movement.performer?.email || 'System'
     }))
     
-    console.log('✅ Register movements loaded:', registerMovements.value.length)
+    logger.debug('✅ Register movements loaded:', registerMovements.value.length)
   } catch (err) {
     console.error('❌ Error loading register movements:', err)
     registerMovements.value = []
@@ -594,7 +594,7 @@ const handleDeposit = async () => {
     
     if (error) throw error
     
-    console.log('✅ Deposit successful')
+    logger.debug('✅ Deposit successful')
     showDepositModal.value = false
     await refreshAllData()
     
@@ -624,7 +624,7 @@ const handleWithdraw = async () => {
     
     if (error) throw error
     
-    console.log('✅ Withdrawal successful')
+    logger.debug('✅ Withdrawal successful')
     showWithdrawModal.value = false
     await refreshAllData()
     
@@ -694,7 +694,7 @@ const loadManualCurrentUser = async () => {
       throw new Error('Nicht authentifiziert')
     }
     
-    console.log('🔍 Loading manual current user for:', user.email)
+    logger.debug('🔍 Loading manual current user for:', user.email)
     
     const { data: userProfile, error } = await supabase
       .from('users')
@@ -720,7 +720,7 @@ const loadManualCurrentUser = async () => {
       auth_user_id: user.id
     }
     
-    console.log('✅ Manual current user loaded:', manualCurrentUser.value)
+    logger.debug('✅ Manual current user loaded:', manualCurrentUser.value)
     
   } catch (err) {
     console.error('❌ Error loading manual current user:', err)
@@ -732,19 +732,19 @@ const loadManualCurrentUser = async () => {
 
 // Debug current user and tenant
 const debugCurrentState = async () => {
-  console.log('🔍 DEBUG: Current state check')
-  console.log('👤 Current user:', currentUser.value)
+  logger.debug('🔍 DEBUG: Current state check')
+  logger.debug('👤 Current user:', currentUser.value)
   
   if (currentUser.value) {
-    console.log('🏢 User tenant_id:', currentUser.value.tenant_id)
-    console.log('📧 User email:', currentUser.value.email)
-    console.log('🎭 User role:', currentUser.value.role)
+    logger.debug('🏢 User tenant_id:', currentUser.value.tenant_id)
+    logger.debug('📧 User email:', currentUser.value.email)
+    logger.debug('🎭 User role:', currentUser.value.role)
   }
   
   // Check what's in the database
   const supabase = getSupabase()
   const { data: { user } } = await supabase.auth.getUser()
-  console.log('🔑 Auth user:', user?.email)
+  logger.debug('🔑 Auth user:', user?.email)
   
   if (user) {
     const { data: userProfile, error } = await supabase
@@ -753,8 +753,8 @@ const debugCurrentState = async () => {
       .eq('auth_user_id', user.id)
       .single()
     
-    console.log('📊 DB user profile:', userProfile)
-    console.log('❌ DB error:', error)
+    logger.debug('📊 DB user profile:', userProfile)
+    logger.debug('❌ DB error:', error)
   }
 }
 
@@ -763,7 +763,7 @@ const authStore = useAuthStore()
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🔍 Cash management page mounted, checking auth...')
+  logger.debug('🔍 Cash management page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -772,7 +772,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -781,17 +781,17 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading cash management...')
+  logger.debug('✅ Auth check passed, loading cash management...')
   
   // Original onMounted logic
   await debugCurrentState()

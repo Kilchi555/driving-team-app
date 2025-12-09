@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
       tenant_id
     } = body
 
-    console.log('🔄 Reserving slot:', { staff_id, start_time })
+    logger.debug('🔄 Reserving slot:', { staff_id, start_time })
 
     // Validierung
     if (!staff_id || !start_time || !end_time || !tenant_id) {
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
     // Calculate expiration time (5 minutes from now)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
-    console.log('📅 Reservation times:', { startTime, endTime, expiresAt })
+    logger.debug('📅 Reservation times:', { startTime, endTime, expiresAt })
 
     // Reserviere den Slot in booking_reservations (nicht in appointments!)
     const { data: reservation, error: reservationError } = await supabase
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const reservationId = reservation.id
-    console.log('✅ Slot reserved in booking_reservations:', reservationId)
+    logger.debug('✅ Slot reserved in booking_reservations:', reservationId)
 
     return {
       success: true,

@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('📧 Sending first payment reminder:', { paymentId, userId, tenantId })
+    logger.debug('📧 Sending first payment reminder:', { paymentId, userId, tenantId })
 
     const supabase = getSupabaseAdmin()
     const now = new Date()
@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
 
     // 2. Check if user has email (Neukunden ohne Registrierung haben keine E-Mail)
     if (!user.email || user.email.trim() === '') {
-      console.log('⏭️ User has no email yet (pending onboarding), skipping first reminder')
+      logger.debug('⏭️ User has no email yet (pending onboarding), skipping first reminder')
       
       // Update payment to indicate reminder was skipped (will be sent after onboarding)
       await supabase
@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
 
     // 3. Check if user is still in onboarding
     if (user.onboarding_status === 'pending') {
-      console.log('⏭️ User is still in onboarding, skipping first reminder')
+      logger.debug('⏭️ User is still in onboarding, skipping first reminder')
       
       await supabase
         .from('payments')
@@ -212,7 +212,7 @@ export default defineEventHandler(async (event) => {
       })
       .eq('id', paymentId)
 
-    console.log('✅ First payment reminder sent successfully')
+    logger.debug('✅ First payment reminder sent successfully')
 
     return {
       success: true,

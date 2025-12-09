@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    console.log('Creating user_devices table...')
+    logger.debug('Creating user_devices table...')
 
     // Execute the SQL script
     const { data, error } = await supabase.rpc('exec_sql', {

@@ -20,10 +20,10 @@ interface PaymentStatusResponse {
 
 export default defineEventHandler(async (event): Promise<PaymentStatusResponse> => {
   try {
-    console.log('📊 Payment Status API called')
+    logger.debug('📊 Payment Status API called')
     
     const body = await readBody(event) as PaymentStatusRequest
-    console.log('📨 Status request:', JSON.stringify(body, null, 2))
+    logger.debug('📨 Status request:', JSON.stringify(body, null, 2))
     
     if (!body.paymentId) {
       throw createError({
@@ -63,7 +63,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       })
     }
 
-    console.log('✅ Payment found:', payment.id)
+    logger.debug('✅ Payment found:', payment.id)
 
     // 2. Status aktualisieren falls angegeben
     if (body.status) {
@@ -93,7 +93,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
 
       if (updateError) throw updateError
 
-      console.log('✅ Payment status updated to:', body.status)
+      logger.debug('✅ Payment status updated to:', body.status)
     }
 
     // 3. Appointment Status aktualisieren falls Payment completed
@@ -110,7 +110,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       if (appointmentError) {
         console.warn('⚠️ Could not update appointment:', appointmentError)
       } else {
-        console.log('✅ Appointment marked as paid')
+        logger.debug('✅ Appointment marked as paid')
       }
     }
 

@@ -166,7 +166,7 @@ const updatePassword = async () => {
       throw updateError
     }
     
-    console.log('Password updated successfully:', data)
+    logger.debug('Password updated successfully:', data)
     success.value = true
     
     // Auto-redirect nach 3 Sekunden
@@ -189,14 +189,14 @@ const goToLogin = () => {
 // Handle the reset session on mount
 onMounted(async () => {
   try {
-    console.log('=== PASSWORD RESET PAGE LOADED ===')
+    logger.debug('=== PASSWORD RESET PAGE LOADED ===')
     
     // Check URL for auth tokens
     const hashParams = new URLSearchParams(window.location.hash.substring(1))
     const accessToken = hashParams.get('access_token')
     const refreshToken = hashParams.get('refresh_token')
     
-    console.log('URL tokens found:', { 
+    logger.debug('URL tokens found:', { 
       hasAccessToken: !!accessToken, 
       hasRefreshToken: !!refreshToken 
     })
@@ -212,7 +212,7 @@ onMounted(async () => {
         throw setSessionError
       }
       
-      console.log('Session set successfully:', data.session?.user?.email)
+      logger.debug('Session set successfully:', data.session?.user?.email)
       isLoading.value = false
     } else {
       // Check if we already have a valid session
@@ -223,7 +223,7 @@ onMounted(async () => {
       }
       
       if (session) {
-        console.log('Existing session found:', session.user.email)
+        logger.debug('Existing session found:', session.user.email)
         isLoading.value = false
       } else {
         throw new Error('Kein gültiger Reset-Token gefunden. Bitte fordern Sie einen neuen Reset-Link an.')

@@ -15,6 +15,7 @@ import MoveAppointmentModal from './MoveAppointmentModal.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useStaffWorkingHours } from '~/composables/useStaffWorkingHours'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
+import { logger } from '~/utils/logger'
 
 // ✅ GLOBALE FEHLERBEHANDLUNG
 onErrorCaptured((error, instance, info) => {
@@ -270,7 +271,7 @@ const selectedStudentForProgress = ref<any>(null)
 const studentProgressActiveTab = ref<'details' | 'progress' | 'payments' | 'documents'>('progress')
 
 const handleAppointmentMoved = async (moveData: MoveData) => {
-  console.log('✅ Appointment moved:', moveData)
+  logger.debug('✅ Appointment moved:', moveData)
   
   try {
     // Kalender neu laden
@@ -363,7 +364,7 @@ const emit = defineEmits(['view-updated', 'appointment-changed'])
 // NEUE FUNKTION: Nicht-Arbeitszeiten aus DB laden und als wiederkehrende Events anzeigen
 const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
   try {
-    console.log('🔒 Loading non-working hours blocks from DB...')
+    logger.debug('🔒 Loading non-working hours blocks from DB...')
     
     // ALLE Working hours für diesen Staff laden (aktive UND inaktive)
     const { data: allWorkingHours, error } = await supabase
@@ -377,7 +378,7 @@ const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDa
       return []
     }
     
-    console.log('✅ Loaded all working hours:', allWorkingHours?.length || 0)
+    logger.debug('✅ Loaded all working hours:', allWorkingHours?.length || 0)
     
     const events: CalendarEvent[] = []
     
@@ -464,7 +465,7 @@ const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDa
       currentDate.setDate(currentDate.getDate() + 1)
     }
     
-    console.log('✅ Generated non-working hours events:', events.length)
+    logger.debug('✅ Generated non-working hours events:', events.length)
     return events
     
   } catch (error) {
@@ -478,7 +479,7 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
   const workingHoursEvents: CalendarEvent[] = []
   const activeHours = getActiveWorkingHours()
   
-  console.log('🔍 Generating working hours events:', {
+  logger.debug('🔍 Generating working hours events:', {
     staffId,
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
@@ -489,7 +490,7 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
   
   // WICHTIG: Auch wenn keine aktiven Stunden, trotzdem alle Tage grau machen
   if (!activeHours.length) {
-    console.log('⚠️ No active working hours - will gray out all days')
+    logger.debug('⚠️ No active working hours - will gray out all days')
     // Nicht returnen, sondern durchlaufen und alle Tage als inaktiv behandeln
   }
   
@@ -506,7 +507,7 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
     const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // Sonntag = 7
     const workingHour = workingHoursByDay.value[dayOfWeek]
     
-    console.log('🔍 Processing date:', currentDate.toDateString(), 'dayOfWeek:', dayOfWeek, 'workingHour:', workingHour)
+    logger.debug('🔍 Processing date:', currentDate.toDateString(), 'dayOfWeek:', dayOfWeek, 'workingHour:', workingHour)
     
     // Prüfe ob dieser Tag aktive Arbeitszeiten hat
     if (workingHour?.is_active) {
@@ -526,10 +527,10 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
       workEnd.setHours(utcEndDate.getHours(), utcEndDate.getMinutes(), 0, 0)
       
       // Block vor Arbeitsbeginn (00:00 bis Arbeitsbeginn) - DUNKELGRAU
-      console.log('🔍 Debug workStart:', workStart.getHours(), workStart.getMinutes(), 'for day', dayOfWeek)
+      logger.debug('🔍 Debug workStart:', workStart.getHours(), workStart.getMinutes(), 'for day', dayOfWeek)
       
       // IMMER Events erstellen für Debugging - entferne if-Bedingung
-      console.log('🔍 Creating before-work event for', currentDate.toDateString())
+      logger.debug('🔍 Creating before-work event for', currentDate.toDateString())
       const beforeEvent = {
         id: `working-hours-before-${dayOfWeek}-${currentDate.toISOString().split('T')[0]}`,
         title: '',
@@ -547,7 +548,7 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
         }
       }
       workingHoursEvents.push(beforeEvent)
-      console.log('🔍 Added before-work event:', beforeEvent.start, 'to', beforeEvent.end, 'for', currentDate.toDateString())
+      logger.debug('🔍 Added before-work event:', beforeEvent.start, 'to', beforeEvent.end, 'for', currentDate.toDateString())
       
       // KEIN weisser Event nötig - Kalender-Hintergrund ist bereits weiß
       // Nur graue Events für Nicht-Arbeitszeiten erstellen
@@ -574,7 +575,7 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
           }
         }
         workingHoursEvents.push(afterEvent)
-        console.log('🔍 Added after-work event:', afterEvent.start, 'to', afterEvent.end, 'for', currentDate.toDateString())
+        logger.debug('🔍 Added after-work event:', afterEvent.start, 'to', afterEvent.end, 'for', currentDate.toDateString())
       }
       
       // KEINE grauen Blöcke für die Arbeitszeit selbst (08:00-18:00 bleibt weiß)
@@ -598,18 +599,18 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
         }
       }
       workingHoursEvents.push(fullDayEvent)
-      console.log('🔍 Added full-day event (default 00:00-24:00):', fullDayEvent.start, 'to', fullDayEvent.end, 'for', currentDate.toDateString())
+      logger.debug('🔍 Added full-day event (default 00:00-24:00):', fullDayEvent.start, 'to', fullDayEvent.end, 'for', currentDate.toDateString())
     }
     
     currentDate.setDate(currentDate.getDate() + 1)
   }
   
-  console.log('✅ Generated working hours events:', workingHoursEvents.length)
+  logger.debug('✅ Generated working hours events:', workingHoursEvents.length)
   return workingHoursEvents
 }
 
 const loadStaffMeetings = async () => {
-  console.log('🔄 Loading staff meetings...')
+  logger.debug('🔄 Loading staff meetings...')
   try {
     const supabase = getSupabase()
     let query = supabase
@@ -624,7 +625,7 @@ const loadStaffMeetings = async () => {
 
     const { data: meetings, error } = await query
 
-    console.log('📊 Raw staff meetings from DB:', meetings?.length || 0)
+    logger.debug('📊 Raw staff meetings from DB:', meetings?.length || 0)
     if (error) throw error
 
     // Convert zu Calendar Events Format
@@ -659,7 +660,7 @@ const loadStaffMeetings = async () => {
       }
     })
 
-    console.log('✅ Staff meetings loaded:', convertedMeetings.length)
+    logger.debug('✅ Staff meetings loaded:', convertedMeetings.length)
     return convertedMeetings
 
   } catch (error) {
@@ -673,17 +674,17 @@ const loadStaffMeetings = async () => {
 // 1. Die verbesserte loadRegularAppointments Funktion:
 const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
   try {
-    console.log('📅 Loading external busy times...')
+    logger.debug('📅 Loading external busy times...')
     
     const { currentUser: composableCurrentUser } = useCurrentUser()
     const currentUserData = props.currentUser || composableCurrentUser.value
     
     if (!currentUserData?.id) {
-      console.log('⚠️ No user data for external busy times')
+      logger.debug('⚠️ No user data for external busy times')
       return []
     }
     
-    console.log('🔍 DEBUG: Loading external busy times for user:', { 
+    logger.debug('🔍 DEBUG: Loading external busy times for user:', { 
       userId: currentUserData.id, 
       tenantId: currentUserData.tenant_id 
     })
@@ -707,11 +708,11 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
     }
     
     if (!busyTimes || busyTimes.length === 0) {
-      console.log('📅 No external busy times found')
+      logger.debug('📅 No external busy times found')
       return []
     }
     
-    console.log('✅ Loaded external busy times:', busyTimes.length)
+    logger.debug('✅ Loaded external busy times:', busyTimes.length)
     
     // Convert UTC times to local time for display (same as appointments)
     const parseUTCTime = (utcTimeString: string) => {
@@ -774,17 +775,17 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
 }
 
 const loadRegularAppointments = async () => {
-  console.log('🔥 NEW loadRegularAppointments function is running!')
+  logger.debug('🔥 NEW loadRegularAppointments function is running!')
   isLoadingEvents.value = true
   try {
-    console.log('🔄 Loading appointments from Supabase...')
-    console.log('👤 Current user from props:', props.currentUser?.id)
+    logger.debug('🔄 Loading appointments from Supabase...')
+    logger.debug('👤 Current user from props:', props.currentUser?.id)
     
     // ✅ Fallback: useCurrentUser direkt verwenden falls props falsch sind
     const { currentUser: composableCurrentUser } = useCurrentUser()
     let actualUserId = props.currentUser?.id || composableCurrentUser.value?.id
     
-    console.log('👤 Actual user ID to use:', actualUserId)
+    logger.debug('👤 Actual user ID to use:', actualUserId)
     
     // Get user's tenant_id for filtering
     const { data: userData, error: userError } = await supabase
@@ -796,7 +797,7 @@ const loadRegularAppointments = async () => {
     if (userError) throw userError
     if (!userData?.tenant_id) throw new Error('User has no tenant assigned')
     
-    console.log('🏢 User tenant_id:', userData.tenant_id)
+    logger.debug('🏢 User tenant_id:', userData.tenant_id)
 
     // ✅ Optimierte Abfrage mit weniger JOINs für bessere Performance
     let query = supabase
@@ -827,36 +828,36 @@ const loadRegularAppointments = async () => {
     // ✅ Admin vs Staff Logic: Admins sehen alle Termine, Staff nur eigene
     const userRole = props.currentUser?.role || composableCurrentUser.value?.role
     if (userRole === 'admin') {
-      console.log('🔥 Admin detected - loading appointments for tenant:', userData.tenant_id)
+      logger.debug('🔥 Admin detected - loading appointments for tenant:', userData.tenant_id)
       // Admin Staff Filter: Wenn ein spezifischer Staff ausgewählt ist
       if (props.adminStaffFilter) {
-        console.log('🔥 Admin filtering by staff:', props.adminStaffFilter)
+        logger.debug('🔥 Admin filtering by staff:', props.adminStaffFilter)
         query = query.eq('staff_id', props.adminStaffFilter)
       } else {
-        console.log('🔥 Admin loading ALL appointments for tenant')
+        logger.debug('🔥 Admin loading ALL appointments for tenant')
         // Alle Termine des Tenants (kein zusätzlicher Filter)
       }
     } else {
-      console.log('🔥 Staff detected - loading own appointments only for tenant:', userData.tenant_id)
+      logger.debug('🔥 Staff detected - loading own appointments only for tenant:', userData.tenant_id)
       query = query.eq('staff_id', actualUserId) // Nur eigene Termine
     }
     
     const { data: appointments, error } = await query
-    console.log('📊 Raw appointments from DB:', appointments?.length || 0)
-    console.log('🔍 Query details:', {
+    logger.debug('📊 Raw appointments from DB:', appointments?.length || 0)
+    logger.debug('🔍 Query details:', {
       staff_id: actualUserId,
       tenant_id: userData.tenant_id,
       deleted_at: 'null',
       order: 'start_time'
     })
-    console.log('🔍 Full query:', query)
+    logger.debug('🔍 Full query:', query)
     if (error) {
       console.error('❌ Supabase query error:', error)
     }
 
     // ✅ DEBUG: Erste Appointment prüfen
     if (appointments && appointments.length > 0) {
-      console.log('🔍 First appointment data:', {
+      logger.debug('🔍 First appointment data:', {
         id: appointments[0].id,
         title: appointments[0].title,
         type: appointments[0].type,
@@ -866,8 +867,8 @@ const loadRegularAppointments = async () => {
         duration_minutes: appointments[0].duration_minutes
       })
     } else {
-      console.log('❌ NO APPOINTMENTS FOUND!')
-      console.log('🔍 Debug info:', {
+      logger.debug('❌ NO APPOINTMENTS FOUND!')
+      logger.debug('🔍 Debug info:', {
         actualUserId,
         tenant_id: userData.tenant_id,
         userRole: props.currentUser?.role || composableCurrentUser.value?.role
@@ -881,20 +882,20 @@ const loadRegularAppointments = async () => {
       if (userRole === 'admin') {
         if (props.adminStaffFilter) {
           const isSelectedStaff = apt.staff_id === props.adminStaffFilter
-          console.log('🔍 Admin staff filter check:', { aptStaffId: apt.staff_id, selectedStaff: props.adminStaffFilter, isSelectedStaff })
+          logger.debug('🔍 Admin staff filter check:', { aptStaffId: apt.staff_id, selectedStaff: props.adminStaffFilter, isSelectedStaff })
           return isSelectedStaff // Admin sieht nur Termine des ausgewählten Staff
         } else {
-          console.log('🔍 Admin filter: showing all appointments')
+          logger.debug('🔍 Admin filter: showing all appointments')
           return true // Admin sieht alle Termine
         }
       } else {
         const isOwnAppointment = apt.staff_id === actualUserId
-        console.log('🔍 Staff filter check:', { aptStaffId: apt.staff_id, actualUserId, isOwnAppointment })
+        logger.debug('🔍 Staff filter check:', { aptStaffId: apt.staff_id, actualUserId, isOwnAppointment })
         return isOwnAppointment // Staff nur eigene Termine
       }
     })
     
-    console.log('✅ Filtered appointments:', filteredAppointments.length)
+    logger.debug('✅ Filtered appointments:', filteredAppointments.length)
     
     // ✅ Location-Daten für ALLE Termine mit location_id laden (nicht nur für alte Termine)
     const locationIds = [...new Set(filteredAppointments
@@ -904,7 +905,7 @@ const loadRegularAppointments = async () => {
     
     let locationsMap: Record<string, {name: string, address: string}> = {}
     if (locationIds.length > 0) {
-      console.log('🔄 Loading location data for', locationIds.length, 'locations')
+      logger.debug('🔄 Loading location data for', locationIds.length, 'locations')
       const { data: locations, error: locError } = await supabase
         .from('locations')
         .select('id, name, address')
@@ -914,8 +915,8 @@ const loadRegularAppointments = async () => {
         locationsMap = Object.fromEntries(
           locations.map(loc => [loc.id, { name: loc.name, address: loc.address }])
         )
-        console.log('✅ Locations loaded:', Object.keys(locationsMap).length)
-        console.log('📍 Locations data:', locations)
+        logger.debug('✅ Locations loaded:', Object.keys(locationsMap).length)
+        logger.debug('📍 Locations data:', locations)
       }
     }
     
@@ -934,7 +935,7 @@ const loadRegularAppointments = async () => {
         const studentName = `${apt.user?.[0]?.first_name || ''} ${apt.user?.[0]?.last_name || ''}`.trim() || 'Fahrlektion'
         
         // ✅ Debug: Location-Daten loggen
-        console.log('🔍 Location debug for appointment:', apt.id, {
+        logger.debug('🔍 Location debug for appointment:', apt.id, {
           location_id: apt.location_id,
           location_name: (apt as any).location_name,
           location_address: (apt as any).location_address,
@@ -959,7 +960,7 @@ const loadRegularAppointments = async () => {
       const eventColor = getEventColor(eventType, apt.status, category)
       
       // ✅ DEBUG: Event-Transformation
-      console.log('🔄 Converting appointment to event:', {
+      logger.debug('🔄 Converting appointment to event:', {
         id: apt.id,
         type: apt.type,
         event_type_code: apt.event_type_code,
@@ -1059,26 +1060,26 @@ const CACHE_DURATION = 30000 // 30 Sekunden Cache
 // ✅ Cache-Invalidierung für bessere Performance
 const invalidateCache = () => {
   lastLoadTime.value = 0
-  console.log('🔄 Calendar cache invalidated')
+  logger.debug('🔄 Calendar cache invalidated')
 }
 
 const loadAppointments = async (forceReload = false) => {
   // ✅ Prüfen ob Komponente noch mounted ist
   if (!calendar.value) {
-    console.log('⚠️ Calendar not mounted, skipping load')
+    logger.debug('⚠️ Calendar not mounted, skipping load')
     return
   }
   
   // ✅ Zusätzliche Sicherheitsprüfung: Ist die Komponente noch aktiv?
   if (isUpdating.value) {
-    console.log('⚠️ Calendar update already in progress, skipping load')
+    logger.debug('⚠️ Calendar update already in progress, skipping load')
     return
   }
 
   // ✅ Cache-Check: Nur neu laden wenn nötig
   const now = Date.now()
   if (!forceReload && (now - lastLoadTime.value) < CACHE_DURATION) {
-    console.log('⚡ Using cached calendar data (last load:', Math.round((now - lastLoadTime.value) / 1000), 'seconds ago)')
+    logger.debug('⚡ Using cached calendar data (last load:', Math.round((now - lastLoadTime.value) / 1000), 'seconds ago)')
     return
   }
   
@@ -1086,17 +1087,17 @@ const loadAppointments = async (forceReload = false) => {
   isUpdating.value = true
   
   try {
-    console.log('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '(cached check)')
+    logger.debug('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '(cached check)')
     
     // ✅ Externe Kalender synchronisieren BEVOR Termine geladen werden
-    console.log('🔄 Syncing external calendars before loading appointments...')
+    logger.debug('🔄 Syncing external calendars before loading appointments...')
     try {
       const { autoSyncCalendars } = useExternalCalendarSync()
       const syncResult = await autoSyncCalendars(props.currentUser?.id)
       if (syncResult.success && !syncResult.skipped) {
-        console.log('✅ External calendars synced successfully')
+        logger.debug('✅ External calendars synced successfully')
       } else if (syncResult.skipped) {
-        console.log('⏭️ External calendar sync skipped (cooldown or already running)')
+        logger.debug('⏭️ External calendar sync skipped (cooldown or already running)')
       }
     } catch (syncError) {
       console.warn('⚠️ External calendar sync failed (non-fatal):', syncError)
@@ -1109,7 +1110,7 @@ const loadAppointments = async (forceReload = false) => {
     const viewStart = currentView?.activeStart || new Date()
     const viewEnd = currentView?.activeEnd || new Date()
     
-    console.log('📅 Loading events for view range:', viewStart, 'to', viewEnd)
+    logger.debug('📅 Loading events for view range:', viewStart, 'to', viewEnd)
     
     // Parallel laden (mit aktuellen View-Daten)
     const [appointments, externalBusyEvents, nonWorkingHoursEvents] = await Promise.all([
@@ -1120,18 +1121,18 @@ const loadAppointments = async (forceReload = false) => {
     
     // ✅ Sicherheitsprüfung: Ist die Komponente noch mounted?
     if (!calendar.value) {
-      console.log('⚠️ Calendar unmounted during load, aborting')
+      logger.debug('⚠️ Calendar unmounted during load, aborting')
       return
     }
     
-    console.log('🕐 Non-working hours blocks loaded:', nonWorkingHoursEvents.length)
+    logger.debug('🕐 Non-working hours blocks loaded:', nonWorkingHoursEvents.length)
     
     // Kombinieren
     const allEvents = [...appointments, ...nonWorkingHoursEvents, ...externalBusyEvents]
     calendarEvents.value = allEvents
     lastLoadTime.value = now // ✅ Cache-Zeit aktualisieren
     
-    console.log('✅ Final calendar summary:', {
+    logger.debug('✅ Final calendar summary:', {
       appointments: appointments.length,
       nonWorkingHours: nonWorkingHoursEvents.length,
       externalBusy: externalBusyEvents.length,
@@ -1140,9 +1141,9 @@ const loadAppointments = async (forceReload = false) => {
     })
     
     // ✅ DEBUG: Zeige alle Events
-    console.log('🔍 ALL EVENTS:', allEvents)
+    logger.debug('🔍 ALL EVENTS:', allEvents)
     if (appointments.length > 0) {
-      console.log('🔍 FIRST APPOINTMENT EVENT:', appointments[0])
+      logger.debug('🔍 FIRST APPOINTMENT EVENT:', appointments[0])
     }
     
     // ✅ Prüfen ob Komponente noch mounted ist bevor Calendar API aufrufen
@@ -1152,15 +1153,15 @@ const loadAppointments = async (forceReload = false) => {
         
         // ✅ Zusätzliche Sicherheitsprüfung: Ist der Calendar API noch gültig?
         if (!calendarApi || typeof calendarApi.getEvents !== 'function') {
-          console.log('⚠️ Calendar API not ready, skipping event update')
+          logger.debug('⚠️ Calendar API not ready, skipping event update')
           return
         }
         
         // ✅ Events immer neu laden (verschiedene Wochen haben gleiche Anzahl)
-        console.log('🔄 Updating calendar events...')
+        logger.debug('🔄 Updating calendar events...')
         calendarApi.removeAllEvents()
         calendarApi.addEventSource(calendarEvents.value)
-        console.log('✅ Calendar events updated successfully')
+        logger.debug('✅ Calendar events updated successfully')
       } catch (error) {
         console.error('❌ Error updating calendar events:', error)
         // ✅ Fehler nicht weiterwerfen, nur loggen
@@ -1238,14 +1239,14 @@ const handleMoveError = (error: string) => {
 }
 
 const editAppointment = (appointment: CalendarAppointment) => {
-  console.log('✏️ Edit appointment:', appointment.id)
+  logger.debug('✏️ Edit appointment:', appointment.id)
   // TODO: Implementiere Edit-Modal
   // emit('edit-appointment', appointment)
   showToast('Edit-Funktion noch nicht implementiert')
 }
 
 const handleSaveEvent = async (eventData: CalendarEvent) => {
-  console.log('💾 Event saved, refreshing calendar...')
+  logger.debug('💾 Event saved, refreshing calendar...')
   
   // View-Position speichern
   const currentDate = calendar.value?.getApi()?.getDate()
@@ -1256,7 +1257,7 @@ const handleSaveEvent = async (eventData: CalendarEvent) => {
   // View-Position wiederherstellen falls nötig
   if (currentDate && calendar.value?.getApi) {
     calendar.value.getApi().gotoDate(currentDate)
-    console.log('✅ View position preserved:', currentDate)
+    logger.debug('✅ View position preserved:', currentDate)
   }
   
   emit('appointment-changed', { type: 'saved', data: eventData })
@@ -1266,14 +1267,14 @@ const handleSaveEvent = async (eventData: CalendarEvent) => {
 // CalendarComponent.vue - Erweiterte handleEventDrop Funktion
 // Debug-Version um die richtigen Selektoren zu finden
 const updateModalFieldsIfOpen = (event: any) => {
-  console.log('🔍 Debugging modal inputs...')
+  logger.debug('🔍 Debugging modal inputs...')
   
   // Verschiedene Selektoren ausprobieren
   const dateInputs = document.querySelectorAll('input[type="date"]')
   const timeInputs = document.querySelectorAll('input[type="time"]')
   const allInputs = document.querySelectorAll('input')
   
-  console.log('📊 Found inputs:', {
+  logger.debug('📊 Found inputs:', {
     dateInputs: dateInputs.length,
     timeInputs: timeInputs.length,
     allInputs: allInputs.length
@@ -1281,7 +1282,7 @@ const updateModalFieldsIfOpen = (event: any) => {
   
   // Alle Input-Elemente loggen um die richtigen zu finden
   allInputs.forEach((input, index) => {
-    console.log(`Input ${index}:`, {
+    logger.debug(`Input ${index}:`, {
       type: input.type,
       id: input.id,
       name: input.name,
@@ -1308,13 +1309,13 @@ const openNewAppointmentModal = (arg: any) => {
   try {
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
     if (!calendar.value) {
-      console.log('⚠️ Calendar not mounted, skipping modal open')
+      logger.debug('⚠️ Calendar not mounted, skipping modal open')
       return
     }
     
     // ✅ Sicherheitsprüfung: Ist bereits ein Modal offen?
     if (isModalVisible.value) {
-      console.log('⚠️ Modal already visible, skipping new modal')
+      logger.debug('⚠️ Modal already visible, skipping new modal')
       return
     }
     
@@ -1322,7 +1323,7 @@ const openNewAppointmentModal = (arg: any) => {
     const clickedDate = arg.date
     const endDate = new Date(clickedDate.getTime() + 45 * 60000)
     
-    console.log('📅 CREATE MODE: Free slot clicked at', toLocalTimeString(clickedDate))
+    logger.debug('📅 CREATE MODE: Free slot clicked at', toLocalTimeString(clickedDate))
     
     isModalVisible.value = true
     modalMode.value = 'create'
@@ -1351,7 +1352,7 @@ const openNewAppointmentModal = (arg: any) => {
       }
     }
     
-    console.log('✅ FREE SLOT: Modal opened with clean data (no student preselection)')
+    logger.debug('✅ FREE SLOT: Modal opened with clean data (no student preselection)')
     
   } catch (error) {
     console.error('❌ Error opening new appointment modal:', error)
@@ -1390,7 +1391,7 @@ const handleEventDrop = async (dropInfo: any) => {
 
   const moveAction = async () => {
     try {
-      console.log('✅ User confirmed move, updating database...')
+      logger.debug('✅ User confirmed move, updating database...')
       
       const { error } = await supabase
         .from('appointments')
@@ -1402,11 +1403,11 @@ const handleEventDrop = async (dropInfo: any) => {
 
       if (error) throw error
 
-      console.log('✅ Appointment moved in database:', dropInfo.event.title)
+      logger.debug('✅ Appointment moved in database:', dropInfo.event.title)
       
       // ✅ WICHTIG: Nicht versuchen, extendedProps direkt zu mutieren (read-only!)
       // Stattdessen: Kalender neu laden um frische Daten zu bekommen
-      console.log('🔄 Invalidating cache and reloading appointments...')
+      logger.debug('🔄 Invalidating cache and reloading appointments...')
       invalidateCache()
       isUpdating.value = true
       await loadAppointments()
@@ -1421,11 +1422,11 @@ const handleEventDrop = async (dropInfo: any) => {
       const instructorName = dropInfo.event.extendedProps?.instructor || 'dein Fahrlehrer'
       const newTime = newStartTime
       
-      console.log('📅 Time details:', { oldStartTime, newTime })
+      logger.debug('📅 Time details:', { oldStartTime, newTime })
       
       // SMS versenden
       if (phoneNumber) {
-        console.log('📱 Sending SMS notification for rescheduled appointment...')
+        logger.debug('📱 Sending SMS notification for rescheduled appointment...')
         try {
           const result = await $fetch('/api/sms/send', {
             method: 'POST',
@@ -1434,17 +1435,17 @@ const handleEventDrop = async (dropInfo: any) => {
               message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} wurde verschoben:\n\n📅 ALT:\n${oldStartTime}\n\n📌 NEU:\n${newTime}\n\nBeste Grüsse\n${tenantName.value}`
             }
           })
-          console.log('✅ SMS sent successfully:', result)
+          logger.debug('✅ SMS sent successfully:', result)
         } catch (smsError: any) {
           console.error('❌ Failed to send SMS:', smsError)
         }
       } else {
-        console.log('⚠️ No phone number available for SMS')
+        logger.debug('⚠️ No phone number available for SMS')
       }
       
       // Email versenden
       if (studentEmail) {
-        console.log('📧 Sending Email notification for rescheduled appointment...')
+        logger.debug('📧 Sending Email notification for rescheduled appointment...')
         try {
           const result = await $fetch('/api/email/send-appointment-notification', {
             method: 'POST',
@@ -1458,17 +1459,17 @@ const handleEventDrop = async (dropInfo: any) => {
               tenantId: props.currentUser?.tenant_id
             }
           })
-          console.log('✅ Email sent successfully:', result)
+          logger.debug('✅ Email sent successfully:', result)
         } catch (emailError: any) {
           console.error('❌ Failed to send Email:', emailError)
         }
       } else {
-        console.log('⚠️ No email address available for email notification')
+        logger.debug('⚠️ No email address available for email notification')
       }
       
       // Modal aktualisieren falls offen
       if (isModalVisible.value && modalEventData.value?.id === dropInfo.event.id) {
-        console.log('📝 Updating modal data...')
+        logger.debug('📝 Updating modal data...')
         modalEventData.value = {
           ...modalEventData.value,
           start: dropInfo.event.startStr,
@@ -1476,7 +1477,7 @@ const handleEventDrop = async (dropInfo: any) => {
         }
       }
       
-      console.log(`✅ Termin "${dropInfo.event.title}" erfolgreich verschoben`)
+      logger.debug(`✅ Termin "${dropInfo.event.title}" erfolgreich verschoben`)
       
     } catch (err: any) {
       console.error('❌ Error moving appointment:', err)
@@ -1533,7 +1534,7 @@ const handleEventResize = async (resizeInfo: any) => {
 
   const resizeAction = async () => {
     try {
-      console.log('✅ User confirmed resize, updating database...')
+      logger.debug('✅ User confirmed resize, updating database...')
       
       const { error } = await supabase
         .from('appointments')
@@ -1545,7 +1546,7 @@ const handleEventResize = async (resizeInfo: any) => {
 
       if (error) throw error
       
-      console.log('✅ Appointment resized in database:', resizeInfo.event.title)
+      logger.debug('✅ Appointment resized in database:', resizeInfo.event.title)
       
       if (isModalVisible.value && modalEventData.value?.id === resizeInfo.event.id) {
         modalEventData.value = {
@@ -1647,10 +1648,10 @@ showConfirmDialog({
       
       if (isInitialLoad.value) {
         isInitialLoad.value = false
-        console.log('📅 Initial load, skipping datesSet reload')
+        logger.debug('📅 Initial load, skipping datesSet reload')
         return
       }
-      console.log('📅 Week changed, reloading events (auto-sync every 5min)')
+      logger.debug('📅 Week changed, reloading events (auto-sync every 5min)')
       invalidateCache()
       refreshCalendar()
     },
@@ -1661,11 +1662,11 @@ dateClick: (arg) => {
   try {
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
     if (!calendar.value) {
-      console.log('⚠️ Calendar not mounted, skipping date click')
+      logger.debug('⚠️ Calendar not mounted, skipping date click')
       return
     }
     
-    console.log('🔍 FREE SLOT CLICKED:', {
+    logger.debug('🔍 FREE SLOT CLICKED:', {
       clickedDate: arg.date,
       clickedISO: toLocalTimeString(arg.date),
       hasClipboard: !!clipboardAppointment.value,
@@ -1674,7 +1675,7 @@ dateClick: (arg) => {
     
     // ✅ Prüfen ob Zwischenablage gefüllt ist
     if (clipboardAppointment.value) {
-      console.log('📋 Clipboard detected, showing choice modal:', clipboardAppointment.value)
+      logger.debug('📋 Clipboard detected, showing choice modal:', clipboardAppointment.value)
       
       // Slot-Info für später speichern
       pendingSlotClick.value = {
@@ -1687,16 +1688,16 @@ dateClick: (arg) => {
         // ✅ Zusätzliche Sicherheitsprüfung vor dem Setzen des Modals
         if (calendar.value) {
           showClipboardChoice.value = true
-          console.log('✅ Choice modal set to visible with timeout:', showClipboardChoice.value)
+          logger.debug('✅ Choice modal set to visible with timeout:', showClipboardChoice.value)
         } else {
-          console.log('⚠️ Calendar unmounted during timeout, skipping modal show')
+          logger.debug('⚠️ Calendar unmounted during timeout, skipping modal show')
         }
       }, 10) // Kleine Verzögerung um Race Conditions zu vermeiden
       
       return
     }
     
-    console.log('➕ No clipboard, opening new appointment modal')
+    logger.debug('➕ No clipboard, opening new appointment modal')
     openNewAppointmentModal(arg)
     
   } catch (error) {
@@ -1740,7 +1741,7 @@ eventClick: (clickInfo) => {
   try {
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
     if (!calendar.value) {
-      console.log('⚠️ Calendar not mounted, skipping event click')
+      logger.debug('⚠️ Calendar not mounted, skipping event click')
       return
     }
     
@@ -1765,7 +1766,7 @@ eventClick: (clickInfo) => {
     modalMode.value = 'edit'
     modalEventData.value = appointmentData
     
-    console.log('✅ Event click handled successfully:', clickInfo.event.title)
+    logger.debug('✅ Event click handled successfully:', clickInfo.event.title)
   } catch (error) {
     console.error('❌ Error handling event click:', error)
     // ✅ Fehler nicht weiterwerfen, nur loggen
@@ -1777,7 +1778,7 @@ select: (arg) => {
   try {
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
     if (!calendar.value) {
-      console.log('⚠️ Calendar not mounted, skipping select')
+      logger.debug('⚠️ Calendar not mounted, skipping select')
       return
     }
     
@@ -1790,7 +1791,7 @@ select: (arg) => {
       allDay: arg.allDay
     }
     
-    console.log('✅ Time range selection handled successfully')
+    logger.debug('✅ Time range selection handled successfully')
   } catch (error) {
     console.error('❌ Error handling time range selection:', error)
     // ✅ Fehler nicht weiterwerfen, nur loggen
@@ -1808,24 +1809,24 @@ let calendarApi: any = null
 
 // 🔥 NEU: Refresh Function hinzufügen
 const refreshCalendar = async () => {
-  console.log('🔄 CalendarComponent - Refreshing calendar...')
+  logger.debug('🔄 CalendarComponent - Refreshing calendar...')
   
   try {
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
     if (!calendar.value) {
-      console.log('⚠️ Calendar not mounted, skipping refresh')
+      logger.debug('⚠️ Calendar not mounted, skipping refresh')
       return
     }
     
     // ✅ Sicherheitsprüfung: Ist bereits ein Update im Gange?
     if (isUpdating.value) {
-      console.log('⚠️ Calendar update already in progress, skipping refresh')
+      logger.debug('⚠️ Calendar update already in progress, skipping refresh')
       return
     }
     
     // 0. Cache invalidieren
     invalidateCache()
-    console.log('🔄 Cache invalidated for refresh')
+    logger.debug('🔄 Cache invalidated for refresh')
     
     // 1. Aktuelle View-Position speichern
     const currentDate = calendar.value?.getApi()?.getDate()
@@ -1837,7 +1838,7 @@ const refreshCalendar = async () => {
     
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted nach dem Laden?
     if (!calendar.value) {
-      console.log('⚠️ Calendar unmounted during refresh, aborting')
+      logger.debug('⚠️ Calendar unmounted during refresh, aborting')
       return
     }
     
@@ -1845,7 +1846,7 @@ const refreshCalendar = async () => {
     await nextTick()
     
     // 4. FullCalendar wird automatisch durch die watch(calendarEvents) aktualisiert
-    console.log('✅ Calendar data refreshed')
+    logger.debug('✅ Calendar data refreshed')
     
     // 5. View-Position wiederherstellen falls nötig
     if (currentDate && calendar.value?.getApi) {
@@ -1854,7 +1855,7 @@ const refreshCalendar = async () => {
         
         // ✅ Zusätzliche Sicherheitsprüfung: Ist der API noch gültig?
         if (!api || typeof api.getDate !== 'function') {
-          console.log('⚠️ Calendar API not ready, skipping position restore')
+          logger.debug('⚠️ Calendar API not ready, skipping position restore')
           return
         }
         
@@ -1863,7 +1864,7 @@ const refreshCalendar = async () => {
         // Nur wiederherstellen falls sich Position geändert hat
         if (Math.abs(currentDate.getTime() - currentViewDate.getTime()) > 24 * 60 * 60 * 1000) {
           api.gotoDate(currentDate)
-          console.log('✅ View position restored to:', currentDate)
+          logger.debug('✅ View position restored to:', currentDate)
         }
       } catch (error) {
         console.error('❌ Error restoring view position:', error)
@@ -1880,7 +1881,7 @@ const refreshCalendar = async () => {
 const isCalendarReady = ref(false)
 
 const handleDeleteEvent = async (eventData: CalendarEvent) => {
-  console.log('🗑 Event deleted, refreshing calendar...')
+  logger.debug('🗑 Event deleted, refreshing calendar...')
   await loadAppointments()
 
   refreshCalendar()
@@ -1892,24 +1893,24 @@ const handleDeleteEvent = async (eventData: CalendarEvent) => {
 }
 
 const handleEventDeleted = (id: string) => {
-  console.log('🗑️ Event deleted:', id)
+  logger.debug('🗑️ Event deleted:', id)
   loadAppointments() // Kalender neu laden
 }
 
 // ✅ NEUE FUNKTION: Direktes Speichern ohne Modal
 const pasteAppointmentDirectly = async () => {
-  console.log('🎯 pasteAppointmentDirectly CALLED - checking if clipboard has data')
+  logger.debug('🎯 pasteAppointmentDirectly CALLED - checking if clipboard has data')
   
   if (!clipboardAppointment.value || !pendingSlotClick.value) {
-    console.log('⚠️ Early return: clipboard empty?', { 
+    logger.debug('⚠️ Early return: clipboard empty?', { 
       clipboardEmpty: !clipboardAppointment.value,
       clickEmpty: !pendingSlotClick.value
     })
     return
   }
   
-  console.log('📋 Pasting appointment directly...')
-  console.log('🔍 FULL clipboardAppointment:', clipboardAppointment.value)
+  logger.debug('📋 Pasting appointment directly...')
+  logger.debug('🔍 FULL clipboardAppointment:', clipboardAppointment.value)
   
   try {
     // Kopierte Daten mit neuer Zeit vorbereiten
@@ -1918,11 +1919,11 @@ const pasteAppointmentDirectly = async () => {
     
     // ✅ EXPLIZITE KATEGORIE-ERMITTLUNG
     const rawCategory = clipboardAppointment.value.category || clipboardAppointment.value.type
-    console.log('🔍 Raw category from clipboard:', rawCategory)
+    logger.debug('🔍 Raw category from clipboard:', rawCategory)
     
     // Bei mehreren Kategorien nur die erste nehmen
     const category = rawCategory ? rawCategory.split(',')[0].trim() : 'B'
-    console.log('🔍 Final category:', category)
+    logger.debug('🔍 Final category:', category)
     
     // ✅ APPOINTMENTS-DATEN (alle Pflichtfelder basierend auf Schema)
     // ⚠️ WICHTIG: FullCalendar gibt lokale Zeit zurück (z.B. 09:00 GMT+0100)
@@ -1979,7 +1980,7 @@ const pasteAppointmentDirectly = async () => {
       
       const result = `${paddedYear}-${paddedMonth}-${paddedDay}T${paddedHours}:${paddedMinutes}:${paddedSeconds}`
       
-      console.log('🔄 convertToUTC:', {
+      logger.debug('🔄 convertToUTC:', {
         input: localDate.toString(),
         zurichOffset: zurichHour,
         hours: hours,
@@ -2016,7 +2017,7 @@ const pasteAppointmentDirectly = async () => {
     }
     
     // ✅ FINALE DEBUG-AUSGABE
-    console.log('💾 FINAL appointmentData before save:', appointmentData)
+    logger.debug('💾 FINAL appointmentData before save:', appointmentData)
     
     // Direkt in Datenbank speichern
     const { data: newAppointment, error } = await supabase
@@ -2027,12 +2028,12 @@ const pasteAppointmentDirectly = async () => {
     
     if (error) throw error
     
-    console.log('✅ Appointment pasted successfully:', newAppointment.id)
+    logger.debug('✅ Appointment pasted successfully:', newAppointment.id)
     
     // ✅ DEBUG: Zeige ganzen clipboard content
-    console.log('🔍 DEBUG clipboardAppointment.value:', clipboardAppointment.value)
-    console.log('🔍 DEBUG clipboardAppointment.value.email:', clipboardAppointment.value?.email)
-    console.log('🔍 DEBUG clipboardAppointment.value.student:', clipboardAppointment.value?.student)
+    logger.debug('🔍 DEBUG clipboardAppointment.value:', clipboardAppointment.value)
+    logger.debug('🔍 DEBUG clipboardAppointment.value.email:', clipboardAppointment.value?.email)
+    logger.debug('🔍 DEBUG clipboardAppointment.value.student:', clipboardAppointment.value?.student)
     
     // ✅ FIRST: Calculate payment amount BEFORE sending email
     const basePriceMapping: Record<string, number> = {
@@ -2057,7 +2058,7 @@ const pasteAppointmentDirectly = async () => {
         .neq('id', newAppointment.id) // Exclude the one we just created
       
       const appointmentCount = existingAppointments?.length || 0
-      console.log('📊 Existing appointments for user:', appointmentCount)
+      logger.debug('📊 Existing appointments for user:', appointmentCount)
       
       // Lade pricing rule für diese Kategorie
       const { data: pricingRules, error: rulesError } = await supabase
@@ -2078,9 +2079,9 @@ const pasteAppointmentDirectly = async () => {
         
         if (newAppointmentNumber === pricingRules.admin_fee_applies_from) {
           adminFeeRappen = pricingRules.admin_fee_rappen || 0
-          console.log('✅ Admin fee applies (appointment #' + newAppointmentNumber + '):', adminFeeRappen)
+          logger.debug('✅ Admin fee applies (appointment #' + newAppointmentNumber + '):', adminFeeRappen)
         } else {
-          console.log('ℹ️ Admin fee does not apply (appointment #' + newAppointmentNumber + ', only applies at #' + pricingRules.admin_fee_applies_from + ')')
+          logger.debug('ℹ️ Admin fee does not apply (appointment #' + newAppointmentNumber + ', only applies at #' + pricingRules.admin_fee_applies_from + ')')
         }
       }
     } catch (err) {
@@ -2142,7 +2143,7 @@ const pasteAppointmentDirectly = async () => {
     // ✅ NEU: Email "Bestätigung erforderlich" versenden (MIT Betrag)
     
     if (studentEmail) {
-      console.log('📧 Sending confirmation email for pasted appointment...')
+      logger.debug('📧 Sending confirmation email for pasted appointment...')
       try {
         const result = await $fetch('/api/email/send-appointment-notification', {
           method: 'POST',
@@ -2156,13 +2157,13 @@ const pasteAppointmentDirectly = async () => {
             tenantId: props.currentUser?.tenant_id
           }
         })
-        console.log('✅ Confirmation email sent successfully:', result)
+        logger.debug('✅ Confirmation email sent successfully:', result)
       } catch (emailError: any) {
         console.error('❌ Failed to send confirmation email:', emailError)
         // Nicht kritisch, Termin wurde trotzdem erstellt
       }
     } else {
-      console.log('⚠️ No email address available for confirmation email')
+      logger.debug('⚠️ No email address available for confirmation email')
     }
     
     // ✅ Payment erstellen
@@ -2193,7 +2194,7 @@ const pasteAppointmentDirectly = async () => {
       console.error('⚠️ Error creating payment for copied appointment:', paymentError)
       // Nicht kritisch, Termin wurde trotzdem erstellt
     } else {
-      console.log('✅ Payment created for copied appointment')
+      logger.debug('✅ Payment created for copied appointment')
     }
     
     // Cleanup
@@ -2204,7 +2205,7 @@ const pasteAppointmentDirectly = async () => {
     invalidateCache()
     
     // Kalender neu laden und direkt aktualisieren
-    console.log('🔄 Reloading calendar after paste...')
+    logger.debug('🔄 Reloading calendar after paste...')
     await loadAppointments(true) // Force reload
     
     // ✅ Erfolgs-Nachricht
@@ -2218,7 +2219,7 @@ const pasteAppointmentDirectly = async () => {
 const createNewAppointment = () => {
   if (!pendingSlotClick.value) return
   
-  console.log('➕ Creating completely new appointment')
+  logger.debug('➕ Creating completely new appointment')
   
   // ✅ WICHTIG: Völlig leeres Modal ohne vorausgewählte Daten
   const clickedDate = pendingSlotClick.value.date
@@ -2256,7 +2257,7 @@ const createNewAppointment = () => {
   // Modal öffnen
   isModalVisible.value = true
   
-  console.log('✅ New appointment modal opened with clean data')
+  logger.debug('✅ New appointment modal opened with clean data')
 }
 
 // ✅ NEUE FUNKTION: 5-Minuten-Timeout für Clipboard starten
@@ -2269,17 +2270,17 @@ const startClipboardTimeout = () => {
   
   // 5-Minuten-Timeout starten (5 * 60 * 1000 = 300000ms)
   clipboardTimeout.value = setTimeout(() => {
-    console.log('⏰ 5-Minuten-Timeout erreicht - Clipboard wird geleert')
+    logger.debug('⏰ 5-Minuten-Timeout erreicht - Clipboard wird geleert')
     clipboardAppointment.value = null
     clipboardTimeout.value = null
   }, 5 * 60 * 1000)
   
-  console.log('⏰ 5-Minuten-Timeout für Clipboard gestartet')
+  logger.debug('⏰ 5-Minuten-Timeout für Clipboard gestartet')
 }
 
 // Copy Handler anpassen:
 const handleOpenStudentProgress = async (student: any) => {
-  console.log('👤 Opening student progress for:', student)
+  logger.debug('👤 Opening student progress for:', student)
   
   // Schließe EventModal
   isModalVisible.value = false
@@ -2291,10 +2292,10 @@ const handleOpenStudentProgress = async (student: any) => {
 }
 
 const handleCopyAppointment = async (copyData: any) => {
-  console.log('📋 CALENDAR: Copy event received:', copyData)
+  logger.debug('📋 CALENDAR: Copy event received:', copyData)
   
   // ✅ DEBUG: Alle verfügbaren Kategorie-Felder anzeigen
-  console.log('🔍 DEBUG Category fields:', {
+  logger.debug('🔍 DEBUG Category fields:', {
     'copyData.eventData.type': copyData.eventData.type,
     'copyData.eventData.extendedProps?.type': copyData.eventData.extendedProps?.type,
     'copyData.eventData.extendedProps?.category': copyData.eventData.extendedProps?.category,
@@ -2308,7 +2309,7 @@ const handleCopyAppointment = async (copyData: any) => {
   
   // ✅ Fetch payment_method vom Payment-Record
   let paymentMethod = 'invoice' // Default
-  console.log('🔍 Fetching payment for appointment:', copyData.eventData.id)
+  logger.debug('🔍 Fetching payment for appointment:', copyData.eventData.id)
   try {
     const { data: payment, error } = await supabase
       .from('payments')
@@ -2318,11 +2319,11 @@ const handleCopyAppointment = async (copyData: any) => {
       .limit(1)
       .maybeSingle()
     
-    console.log('💳 Payment fetch result:', { payment, error })
+    logger.debug('💳 Payment fetch result:', { payment, error })
     
     if (!error && payment) {
       paymentMethod = payment.payment_method
-      console.log('✅ Payment method fetched from DB:', paymentMethod)
+      logger.debug('✅ Payment method fetched from DB:', paymentMethod)
     } else if (error) {
       console.warn('⚠️ Error fetching payment:', error)
     } else {
@@ -2333,9 +2334,9 @@ const handleCopyAppointment = async (copyData: any) => {
   }
   
   // In Zwischenablage speichern
-  console.log('🔍 DEBUG copyData.eventData.extendedProps:', copyData.eventData.extendedProps)
-  console.log('🔍 DEBUG copyData.eventData.extendedProps?.email:', copyData.eventData.extendedProps?.email)
-  console.log('🔍 DEBUG copyData.eventData.extendedProps?.student:', copyData.eventData.extendedProps?.student)
+  logger.debug('🔍 DEBUG copyData.eventData.extendedProps:', copyData.eventData.extendedProps)
+  logger.debug('🔍 DEBUG copyData.eventData.extendedProps?.email:', copyData.eventData.extendedProps?.email)
+  logger.debug('🔍 DEBUG copyData.eventData.extendedProps?.student:', copyData.eventData.extendedProps?.student)
   
   // ✅ NEU: Wenn email/student nicht in extendedProps sind, lade sie aus der DB
   let studentEmail = copyData.eventData.extendedProps?.email
@@ -2343,7 +2344,7 @@ const handleCopyAppointment = async (copyData: any) => {
   
   // Falls nicht vorhanden, lade vom User
   if (!studentEmail || !studentName) {
-    console.log('🔍 Email/Student not in extendedProps, loading from database...')
+    logger.debug('🔍 Email/Student not in extendedProps, loading from database...')
     try {
       const { data: userData } = await supabase
         .from('users')
@@ -2354,7 +2355,7 @@ const handleCopyAppointment = async (copyData: any) => {
       if (userData) {
         studentEmail = studentEmail || userData.email
         studentName = studentName || `${userData.first_name} ${userData.last_name}`.trim()
-        console.log('✅ Loaded from DB:', { studentEmail, studentName })
+        logger.debug('✅ Loaded from DB:', { studentEmail, studentName })
       }
     } catch (err) {
       console.warn('⚠️ Could not load user data:', err)
@@ -2379,14 +2380,14 @@ const handleCopyAppointment = async (copyData: any) => {
         event_type_code: copyData.eventData.event_type_code || 'lesson', // ✅ Event type code
   }
   
-  console.log('✅ Termin in Zwischenablage gespeichert:', clipboardAppointment.value)
+  logger.debug('✅ Termin in Zwischenablage gespeichert:', clipboardAppointment.value)
   
   // ✅ 5-Minuten-Timeout starten
   startClipboardTimeout()
 }
 
 const cancelClipboardChoice = () => {
-  console.log('❌ Cancelling clipboard choice')
+  logger.debug('❌ Cancelling clipboard choice')
   showClipboardChoice.value = false
   pendingSlotClick.value = null
 }
@@ -2396,21 +2397,21 @@ onUnmounted(() => {
   if (clipboardTimeout.value) {
     clearTimeout(clipboardTimeout.value)
     clipboardTimeout.value = null
-    console.log('🧹 Clipboard timeout cleared on unmount')
+    logger.debug('🧹 Clipboard timeout cleared on unmount')
   }
   
   // Clear sync interval
   if (syncInterval) {
     clearInterval(syncInterval)
     syncInterval = null
-    console.log('🧹 Sync interval cleared on unmount')
+    logger.debug('🧹 Sync interval cleared on unmount')
   }
   detachSwipe()
 })
 
 onMounted(async () => {
   try {
-    console.log('📅 CalendarComponent mounted')
+    logger.debug('📅 CalendarComponent mounted')
     isCalendarReady.value = true
     attachSwipe()
     
@@ -2426,7 +2427,7 @@ onMounted(async () => {
         
         if (tenantData?.name) {
           tenantName.value = tenantData.name
-          console.log('🏢 Tenant name loaded:', tenantName.value)
+          logger.debug('🏢 Tenant name loaded:', tenantName.value)
         }
       }
     } catch (error) {
@@ -2439,12 +2440,12 @@ onMounted(async () => {
     
     // ✅ Sicherheitsprüfung: Ist die Komponente noch mounted?
     if (!calendar.value) {
-      console.log('⚠️ Calendar ref not available during mount')
+      logger.debug('⚠️ Calendar ref not available during mount')
       return
     }
     
     calendarApi = calendar.value.getApi()
-    console.log('✅ Calendar API initialized')
+    logger.debug('✅ Calendar API initialized')
     
     // ✅ Sicherheitsprüfung: Ist der API gültig?
     if (calendarApi && typeof calendarApi.view?.currentStart !== 'undefined') {
@@ -2454,11 +2455,11 @@ onMounted(async () => {
     // ✅ Auto-Sync alle 5 Minuten starten (nur als Backup, da wir jetzt bei jedem loadAppointments syncen)
     const { autoSyncCalendars } = useExternalCalendarSync()
     syncInterval = setInterval(async () => {
-      console.log('⏰ Auto-sync interval triggered (every 5 min) - backup sync')
+      logger.debug('⏰ Auto-sync interval triggered (every 5 min) - backup sync')
       try {
         const result = await autoSyncCalendars(props.currentUser?.id)
         if (result.success && !result.skipped) {
-          console.log('✅ Auto-sync completed, reloading events')
+          logger.debug('✅ Auto-sync completed, reloading events')
           invalidateCache()
           await loadAppointments(true) // Force reload nach Sync
         }
@@ -2466,9 +2467,9 @@ onMounted(async () => {
         console.warn('Auto-sync interval failed (non-fatal):', err)
       }
     }, 5 * 60 * 1000) // 5 Minuten
-    console.log('✅ Auto-sync interval started (every 5 min) - backup sync')
+    logger.debug('✅ Auto-sync interval started (every 5 min) - backup sync')
     
-    console.log('🔄 Initial appointment loading...')
+    logger.debug('🔄 Initial appointment loading...')
     await loadAppointments()
     
     
@@ -2486,7 +2487,7 @@ onMounted(async () => {
 
 // Watch for admin staff filter changes
 watch(() => props.adminStaffFilter, async (newFilter) => {
-  console.log('🔄 Admin staff filter changed:', newFilter)
+  logger.debug('🔄 Admin staff filter changed:', newFilter)
   if (props.currentUser?.role === 'admin') {
     invalidateCache() // ✅ Cache invalidieren bei Filter-Änderungen
     await loadAppointments(true) // ✅ Force reload
@@ -2496,7 +2497,7 @@ watch(() => props.adminStaffFilter, async (newFilter) => {
 // ✅ Watch für User-Änderungen mit Cache-Invalidierung
 watch(() => props.currentUser, async (newUser, oldUser) => {
   if (newUser && newUser.id !== oldUser?.id) {
-    console.log('🔄 User changed, invalidating cache and reloading')
+    logger.debug('🔄 User changed, invalidating cache and reloading')
     invalidateCache()
     await loadAppointments(true)
   }
@@ -2504,11 +2505,11 @@ watch(() => props.currentUser, async (newUser, oldUser) => {
 
 watch(calendarEvents, (newEvents) => {
   try {
-    console.log('🔄 calendarEvents changed, updating FullCalendar:', newEvents.length)
+    logger.debug('🔄 calendarEvents changed, updating FullCalendar:', newEvents.length)
     
     // ✅ Prüfen ob Komponente noch mounted ist
     if (!calendar.value?.getApi) {
-      console.log('⚠️ Calendar not ready, skipping event update')
+      logger.debug('⚠️ Calendar not ready, skipping event update')
       return
     }
     
@@ -2517,18 +2518,18 @@ watch(calendarEvents, (newEvents) => {
       
       // ✅ Zusätzliche Sicherheitsprüfung: Ist der API noch gültig?
       if (!api || typeof api.getEvents !== 'function') {
-        console.log('⚠️ Calendar API not ready, skipping event update')
+        logger.debug('⚠️ Calendar API not ready, skipping event update')
         return
       }
       
       // ✅ FIX: Events nur aktualisieren wenn nötig
       const currentEvents = api.getEvents()
       if (currentEvents.length !== newEvents.length) {
-        console.log('🔄 Updating calendar events...')
+        logger.debug('🔄 Updating calendar events...')
         api.removeAllEvents()
         api.removeAllEventSources()
         newEvents.forEach(event => api.addEvent(event))
-        console.log('✅ Calendar events updated successfully')
+        logger.debug('✅ Calendar events updated successfully')
       }
     } catch (error) {
       console.error('❌ Error updating calendar events:', error)

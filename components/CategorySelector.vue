@@ -117,7 +117,7 @@ const getCorrectDuration = (category: Category): number => {
 const availableCategoriesForUser = computed(() => {
   let result: CategoryWithDurations[] = []
   
-  console.log('🔍 Computing availableCategoriesForUser:', {
+  logger.debug('🔍 Computing availableCategoriesForUser:', {
     role: props.currentUserRole,
     allCategoriesCount: allCategories.value.length,
     staffDurationsCount: 0 // ✅ ENTFERNT: staffCategoryDurations wird nicht mehr verwendet
@@ -125,7 +125,7 @@ const availableCategoriesForUser = computed(() => {
   
   // ✅ DEFENSIVE: Warte bis Categories geladen sind
   if (allCategories.value.length === 0) {
-    console.log('⏳ Categories not loaded yet, returning empty')
+    logger.debug('⏳ Categories not loaded yet, returning empty')
     return []
   }
   
@@ -137,18 +137,18 @@ const availableCategoriesForUser = computed(() => {
         ...cat,
       availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
       }))
-    console.log('👨‍💼 Admin: Showing all categories:', result.length)
+    logger.debug('👨‍💼 Admin: Showing all categories:', result.length)
   }
   // ✅ Staff sieht alle Kategorien aus der zentralen categories Tabelle
   else if (props.currentUserRole === 'staff') {
-    console.log('👨‍🏫 Staff: Using all categories from central table')
+    logger.debug('👨‍🏫 Staff: Using all categories from central table')
     result = allCategories.value
       .filter(cat => cat.is_active)
       .map(cat => ({
         ...cat,
         availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
       }))
-    console.log('👨‍🏫 Staff: Final categories:', result.length, result.map(r => r.code))
+    logger.debug('👨‍🏫 Staff: Final categories:', result.length, result.map(r => r.code))
   }
   // Client sieht alle aktiven Kategorien (für Terminbuchung)
   else {
@@ -158,7 +158,7 @@ const availableCategoriesForUser = computed(() => {
         ...cat,
         availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
       }))
-    console.log('👤 Client: Showing all categories:', result.length)
+    logger.debug('👤 Client: Showing all categories:', result.length)
   }
   
   // ✅ Sortieren nach Code und dann nach Name (display_order existiert nicht mehr)
@@ -169,7 +169,7 @@ const availableCategoriesForUser = computed(() => {
     return a.name.localeCompare(b.name)
   })
   
-  console.log('📋 Final sorted categories:', sortedResult.map(cat => ({
+  logger.debug('📋 Final sorted categories:', sortedResult.map(cat => ({
     code: cat.code,
     name: cat.name,
     durations: cat.availableDurations
@@ -185,7 +185,7 @@ const availableCategoriesForUser = computed(() => {
 // CategorySelector.vue - Korrigierte loadCategories Funktion (NUR CategorySelector Code)
 
 const loadCategories = async () => {
-  console.log('🔥 CategorySelector - loadCategories called')
+  logger.debug('🔥 CategorySelector - loadCategories called')
   
   isLoading.value = true
   isInitializing.value = true
@@ -207,7 +207,7 @@ const loadCategories = async () => {
     if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
-    console.log('🔍 Loading categories for tenant:', userProfile.tenant_id)
+    logger.debug('🔍 Loading categories for tenant:', userProfile.tenant_id)
 
     // Get tenant business_type
     const { data: tenantData, error: tenantError } = await supabase
@@ -220,7 +220,7 @@ const loadCategories = async () => {
     
     // Only load categories if business_type is driving_school
     if (tenantData?.business_type !== 'driving_school') {
-      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
       categories.value = []
       isLoading.value = false
       isInitializing.value = false
@@ -314,22 +314,22 @@ const loadCategories = async () => {
       }
     })
     
-    console.log('✅ All categories loaded from database:', result.data?.length)
-    console.log('✅ Categories with durations:', allCategories.value.map(c => ({ 
+    logger.debug('✅ All categories loaded from database:', result.data?.length)
+    logger.debug('✅ Categories with durations:', allCategories.value.map(c => ({ 
       code: c.code, 
       durations: c.lesson_duration_minutes 
     })))
 
     // ✅ Staff-spezifische Dauern werden nicht mehr benötigt
     // Alle Dauern werden direkt aus der categories Tabelle geladen
-    console.log('✅ Staff durations loading skipped - using central categories table')
+    logger.debug('✅ Staff durations loading skipped - using central categories table')
 
   } catch (err: any) {
     console.error('❌ Error loading categories (switching to offline mode):', err)
     error.value = err.message || 'Offline-Modus: Verwende lokale Kategorien'
     
     // ✅ SOFORTIGER OFFLINE-FALLBACK (CategorySelector hat kein dynamicPricing/formData!)
-    console.log('🔄 Using complete offline fallback categories')
+    logger.debug('🔄 Using complete offline fallback categories')
     allCategories.value = [
       { 
         id: 1, code: 'B', name: 'B - Auto', description: 'Autoprüfung Kategorie B',
@@ -421,11 +421,11 @@ const loadCategories = async () => {
     
     // ✅ GARANTIERTE DURATION-EMISSION IM OFFLINE-MODUS
     if (props.modelValue) {
-      console.log('🔄 Categories loaded (offline), checking current selection:', props.modelValue)
+      logger.debug('🔄 Categories loaded (offline), checking current selection:', props.modelValue)
       const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
       
       if (selected) {
-        console.log('✅ Re-emitting durations for loaded category (offline):', selected.availableDurations)
+        logger.debug('✅ Re-emitting durations for loaded category (offline):', selected.availableDurations)
         
         // ✅ Sofortige Emission im Offline-Modus
         setTimeout(() => {
@@ -439,7 +439,7 @@ const loadCategories = async () => {
     // Initialization Mode beenden
     setTimeout(() => {
       isInitializing.value = false
-      console.log('✅ CategorySelector initialization completed (offline mode)')
+      logger.debug('✅ CategorySelector initialization completed (offline mode)')
     }, 100)  // Kürzere Verzögerung im Offline-Modus
   }
 }
@@ -450,8 +450,8 @@ const loadCategories = async () => {
 // Da wir jetzt die categories Tabelle als zentrale Quelle verwenden,
 // werden alle Dauern direkt aus der categories Tabelle geladen
 const loadStaffCategoryDurations = async (staffId: string) => {
-  console.log('🔄 Staff category durations loading removed - using categories table instead')
-  console.log('✅ All durations are now loaded from the central categories table')
+  logger.debug('🔄 Staff category durations loading removed - using categories table instead')
+  logger.debug('✅ All durations are now loaded from the central categories table')
   
   // ✅ Keine Aktion erforderlich - Dauern werden bereits in loadCategories geladen
 }
@@ -460,11 +460,11 @@ const handleCategoryChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
   const newValue = target.value
   
-  console.log('🔄 CategorySelector - Manual category change:', newValue)
+  logger.debug('🔄 CategorySelector - Manual category change:', newValue)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
   if (props.isPastAppointment) {
-    console.log('🚫 Cannot change category for past appointment')
+    logger.debug('🚫 Cannot change category for past appointment')
     return
   }
   
@@ -474,8 +474,8 @@ const handleCategoryChange = (event: Event) => {
   emit('update:modelValue', newValue)
   
   const selected = availableCategoriesForUser.value.find(cat => cat.code === newValue) || null
-  console.log('🎯 CategorySelector - Selected category:', selected)
-  console.log('🎯 CategorySelector - Available durations:', selected?.availableDurations)
+  logger.debug('🎯 CategorySelector - Selected category:', selected)
+  logger.debug('🎯 CategorySelector - Available durations:', selected?.availableDurations)
   
   emit('category-selected', selected)
   
@@ -484,12 +484,12 @@ const handleCategoryChange = (event: Event) => {
     emit('price-changed', pricePerMinute)
     
     // ✅ FINAL: Dauern emittieren
-    console.log('⏱️ CategorySelector - FINAL Emitting durations-changed:', selected.availableDurations)
+    logger.debug('⏱️ CategorySelector - FINAL Emitting durations-changed:', selected.availableDurations)
     emit('durations-changed', selected.availableDurations)
     
-    console.log('💰 Price per minute:', pricePerMinute)
+    logger.debug('💰 Price per minute:', pricePerMinute)
   } else {
-    console.log('❌ No category selected, emitting empty durations')
+    logger.debug('❌ No category selected, emitting empty durations')
     emit('price-changed', 0)
     emit('durations-changed', [])
   }
@@ -497,7 +497,7 @@ const handleCategoryChange = (event: Event) => {
   // ✅ LÄNGERE Blockierung um andere Events zu verhindern
   setTimeout(() => {
     isAutoEmitting.value = false
-    console.log('✅ CategorySelector - User selection completed, auto-emit enabled')
+    logger.debug('✅ CategorySelector - User selection completed, auto-emit enabled')
   }, 1000) // 1 Sekunde statt 300ms
 }
 
@@ -508,23 +508,23 @@ const handleCategoryChange = (event: Event) => {
 watch(() => props.selectedUser, (newUser, oldUser) => {
   // ✅ Skip während Initialisierung
   if (isInitializing.value) {
-    console.log('🚫 Auto-category selection blocked - initializing')
+    logger.debug('🚫 Auto-category selection blocked - initializing')
     return
   }
   
   // ✅ Skip wenn bereits Kategorie gewählt (verhindert Überschreibung)
   if (props.modelValue) {
-    console.log('🚫 Auto-category selection blocked - category already selected')
+    logger.debug('🚫 Auto-category selection blocked - category already selected')
     return
   }
 
   // ✅ FIX: Bei freeslots (kein User) Standard-Kategorie 'B' laden
   if (!newUser) {
-    console.log('🎯 No user selected - loading default category: B')
+    logger.debug('🎯 No user selected - loading default category: B')
     const defaultCategory = availableCategoriesForUser.value.find(cat => cat.code === 'B')
     
     if (defaultCategory) {
-      console.log('🎯 Auto-selected default category:', defaultCategory)
+      logger.debug('🎯 Auto-selected default category:', defaultCategory)
       isAutoEmitting.value = true
       
       emit('update:modelValue', 'B')
@@ -543,11 +543,11 @@ watch(() => props.selectedUser, (newUser, oldUser) => {
 
  
  if (newUser?.category && newUser.category !== props.modelValue) {
-   console.log('👤 User category detected:', newUser.category)
+   logger.debug('👤 User category detected:', newUser.category)
    
    // ✅ FIX: Nur erste Kategorie nehmen wenn mehrere
    const primaryCategory = newUser.category.split(',')[0].trim()
-   console.log('🎯 Using primary category:', primaryCategory)
+   logger.debug('🎯 Using primary category:', primaryCategory)
    
    // ✅ Mark als Auto-Selection
    isAutoEmitting.value = true
@@ -558,14 +558,14 @@ watch(() => props.selectedUser, (newUser, oldUser) => {
    const selected = availableCategoriesForUser.value.find(cat => cat.code === primaryCategory)
    
    if (selected) {
-     console.log('🎯 Auto-selected category:', selected)
+     logger.debug('🎯 Auto-selected category:', selected)
      emit('category-selected', selected)
      
      const pricePerMinute = 2.11
      emit('price-changed', pricePerMinute)
      
      // ✅ RACE-SAFE Auto-Emit
-     console.log('⏱️ Auto-emitting durations-changed:', selected.availableDurations)
+     logger.debug('⏱️ Auto-emitting durations-changed:', selected.availableDurations)
      emit('durations-changed', selected.availableDurations)
      
      // ✅ Reset Auto-Emit Flag
@@ -580,8 +580,8 @@ watch(() => props.selectedUser, (newUser, oldUser) => {
 // Alle Kategorien werden direkt aus der categories Tabelle geladen
 watch(() => props.currentUser?.id, (newUserId) => {
   if (newUserId && props.currentUserRole === 'staff') {
-    console.log('✅ Staff user changed, but no need to reload categories')
-    console.log('✅ All categories are loaded from the central categories table')
+    logger.debug('✅ Staff user changed, but no need to reload categories')
+    logger.debug('✅ All categories are loaded from the central categories table')
   }
 }, { immediate: true })
 
@@ -589,22 +589,22 @@ watch(() => props.currentUser?.id, (newUserId) => {
 watch([() => allCategories.value.length, () => props.modelValue], ([categoriesCount, modelValue]) => {
  // ✅ Skip während Initialisierung
  if (isInitializing.value) {
-   console.log('🚫 Re-emit blocked - initializing')
+   logger.debug('🚫 Re-emit blocked - initializing')
    return
  }
  
  // ✅ Skip wenn Auto-Selection läuft
  if (isAutoEmitting.value) {
-   console.log('🚫 Re-emit blocked - auto-selection in progress')
+   logger.debug('🚫 Re-emit blocked - auto-selection in progress')
    return
  }
  
  if (categoriesCount > 0 && modelValue) {
-   console.log('🔄 Categories loaded, re-emitting for:', modelValue)
+   logger.debug('🔄 Categories loaded, re-emitting for:', modelValue)
    const selected = availableCategoriesForUser.value.find(cat => cat.code === modelValue)
    
    if (selected) {
-     console.log('✅ Re-emitting durations-changed:', selected.availableDurations)
+     logger.debug('✅ Re-emitting durations-changed:', selected.availableDurations)
      
      // ✅ RACE-SAFE Re-Emit mit Verzögerung
      setTimeout(() => {

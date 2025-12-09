@@ -1117,7 +1117,7 @@ const filteredUsers = computed(() => {
 // Methods
 const loadUsers = async () => {
   try {
-    console.log('🔄 Loading users...')
+    logger.debug('🔄 Loading users...')
     
     // Get current user's tenant_id
     const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -1127,7 +1127,7 @@ const loadUsers = async () => {
         .eq('auth_user_id', currentUser?.id)
       .single()
     const tenantId = userProfile?.tenant_id
-    console.log('🔍 Admin Users - Current tenant_id:', tenantId)
+    logger.debug('🔍 Admin Users - Current tenant_id:', tenantId)
     
     // Load current tenant info
     if (tenantId) {
@@ -1137,7 +1137,7 @@ const loadUsers = async () => {
         .eq('id', tenantId)
         .single()
       currentTenant.value = tenantData
-      console.log('🔍 Current tenant:', tenantData)
+      logger.debug('🔍 Current tenant:', tenantData)
     }
     
     // Load users with their appointment statistics (filtered by tenant_id)
@@ -1215,7 +1215,7 @@ const loadUsers = async () => {
     })
 
     users.value = processedUsers
-    console.log('✅ Users loaded:', users.value.length)
+    logger.debug('✅ Users loaded:', users.value.length)
 
     // Load pending staff invitations
     const { data: invitationsData, error: invitationsError } = await supabase
@@ -1228,7 +1228,7 @@ const loadUsers = async () => {
     if (invitationsError) {
       console.warn('Warning loading invitations:', invitationsError)
     } else if (invitationsData && invitationsData.length > 0) {
-      console.log('✅ Invitations loaded:', invitationsData.length)
+      logger.debug('✅ Invitations loaded:', invitationsData.length)
       
       // Convert invitations to User format
       const invitationUsers = invitationsData.map(invitation => ({
@@ -1252,7 +1252,7 @@ const loadUsers = async () => {
       
       // Add invitations to users list
       users.value = [...users.value, ...invitationUsers]
-      console.log('✅ Total users (including invitations):', users.value.length)
+      logger.debug('✅ Total users (including invitations):', users.value.length)
     }
 
   } catch (error: any) {
@@ -1287,7 +1287,7 @@ const loadCategories = async () => {
     
     // Only load categories if business_type is driving_school
     if (tenantData?.business_type !== 'driving_school') {
-      console.log('🚫 Categories not available for business_type:', tenantData?.business_type)
+      logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
       availableCategories.value = []
       isLoading.value = false
       return
@@ -1303,7 +1303,7 @@ const loadCategories = async () => {
     if (error) throw error
 
     availableCategories.value = categoriesData || []
-    console.log('✅ Categories loaded for staff assignment:', availableCategories.value.length)
+    logger.debug('✅ Categories loaded for staff assignment:', availableCategories.value.length)
 
   } catch (error) {
     console.error('❌ Error loading categories:', error)
@@ -1378,7 +1378,7 @@ const selectRole = (role: string) => {
   // Reset categories when role changes
   newUser.value.categories = []
   
-  console.log('🎯 Role selected:', role)
+  logger.debug('🎯 Role selected:', role)
 }
 
 const availableRolesForTab = computed(() => {
@@ -1418,7 +1418,7 @@ const handleLicenseFrontUpload = (event: Event) => {
   
   newUser.value.licenseFrontFile = file
   createUserError.value = '' // Clear any previous error
-  console.log('📄 License front file selected:', file.name, formatFileSize(file.size))
+  logger.debug('📄 License front file selected:', file.name, formatFileSize(file.size))
 }
 
 const handleLicenseBackUpload = (event: Event) => {
@@ -1435,7 +1435,7 @@ const handleLicenseBackUpload = (event: Event) => {
   
   newUser.value.licenseBackFile = file
   createUserError.value = '' // Clear any previous error
-  console.log('📄 License back file selected:', file.name, formatFileSize(file.size))
+  logger.debug('📄 License back file selected:', file.name, formatFileSize(file.size))
 }
 
 const removeLicenseFrontFile = () => {
@@ -1510,10 +1510,10 @@ const handleDrop = (event: DragEvent, type: 'front' | 'back') => {
   // Set file based on type
   if (type === 'front') {
     newUser.value.licenseFrontFile = file
-    console.log('📄 License front file dropped:', file.name, formatFileSize(file.size))
+    logger.debug('📄 License front file dropped:', file.name, formatFileSize(file.size))
   } else {
     newUser.value.licenseBackFile = file
-    console.log('📄 License back file dropped:', file.name, formatFileSize(file.size))
+    logger.debug('📄 License back file dropped:', file.name, formatFileSize(file.size))
   }
   
   createUserError.value = '' // Clear any previous error
@@ -1544,7 +1544,7 @@ const sendStaffInvitation = async () => {
   isInvitingStaff.value = true
 
   try {
-    console.log('📧 Sending staff invitation to:', inviteForm.value.email)
+    logger.debug('📧 Sending staff invitation to:', inviteForm.value.email)
 
     // Get auth token from Supabase session
     const { data: { session } } = await supabase.auth.getSession()
@@ -1573,7 +1573,7 @@ const sendStaffInvitation = async () => {
       throw new Error(data.error || 'Fehler beim Senden der Einladung')
     }
 
-    console.log('✅ Invitation sent successfully:', data)
+    logger.debug('✅ Invitation sent successfully:', data)
     
     // Show appropriate message based on result (UI panel for manual link)
     if (data.sentVia === 'email_failed' || data.sentVia === 'sms_failed') {
@@ -1620,14 +1620,14 @@ const sendStaffInvitation = async () => {
 // Create User Functions
 const createUser = async () => {
   const clientRequestId = Math.random().toString(36).substr(2, 9)
-  console.log(`🚀 [CLIENT-${clientRequestId}] Starting user creation for:`, newUser.value.email)
+  logger.debug(`🚀 [CLIENT-${clientRequestId}] Starting user creation for:`, newUser.value.email)
   
   isCreatingUser.value = true
   createUserError.value = ''
   createUserSuccess.value = ''
 
   try {
-    console.log(`👨‍🏫 [CLIENT-${clientRequestId}] Creating new user:`, newUser.value.email)
+    logger.debug(`👨‍🏫 [CLIENT-${clientRequestId}] Creating new user:`, newUser.value.email)
 
     // Get current user's tenant_id
     const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -1667,17 +1667,17 @@ const createUser = async () => {
     }
 
     // 3. Create user via server API (has service role key access)
-    console.log(`🔐 [CLIENT-${clientRequestId}] Creating user via server API...`)
+    logger.debug(`🔐 [CLIENT-${clientRequestId}] Creating user via server API...`)
     
     // TEMP DEBUG: Check if this is even called
-    console.log(`🧪 [CLIENT-${clientRequestId}] About to call server API with data:`, {
+    logger.debug(`🧪 [CLIENT-${clientRequestId}] About to call server API with data:`, {
       email: newUser.value.email,
       role: newUser.value.role,
       tenant_id: tenantId
     })
     
     // TEMP: Use direct fetch to bypass any caching issues
-    console.log(`🌐 [CLIENT-${clientRequestId}] Using direct fetch to bypass cache...`)
+    logger.debug(`🌐 [CLIENT-${clientRequestId}] Using direct fetch to bypass cache...`)
     
     const response = await fetch('/api/admin/create-user', {
       method: 'POST',
@@ -1704,8 +1704,8 @@ const createUser = async () => {
       })
     })
     
-    console.log(`📡 [CLIENT-${clientRequestId}] Response status:`, response.status)
-    console.log(`📡 [CLIENT-${clientRequestId}] Response ok:`, response.ok)
+    logger.debug(`📡 [CLIENT-${clientRequestId}] Response status:`, response.status)
+    logger.debug(`📡 [CLIENT-${clientRequestId}] Response ok:`, response.ok)
     
     if (!response.ok) {
       const errorText = await response.text()
@@ -1720,24 +1720,24 @@ const createUser = async () => {
     }
 
     const createdUserId = userApiResponse.user.id
-    console.log('✅ User created via server API:', createdUserId)
+    logger.debug('✅ User created via server API:', createdUserId)
 
     // 4. Upload license files if provided (nur für Staff)
     if (newUser.value.role === 'staff' && (newUser.value.licenseFrontFile || newUser.value.licenseBackFile)) {
       try {
-        console.log(`📄 [CLIENT-${clientRequestId}] Uploading license files for user:`, createdUserId)
+        logger.debug(`📄 [CLIENT-${clientRequestId}] Uploading license files for user:`, createdUserId)
 
         const formData = new FormData()
         formData.append('userId', createdUserId)
         
         if (newUser.value.licenseFrontFile) {
           formData.append('frontFile', newUser.value.licenseFrontFile)
-          console.log(`📎 [CLIENT-${clientRequestId}] Adding front file:`, newUser.value.licenseFrontFile.name)
+          logger.debug(`📎 [CLIENT-${clientRequestId}] Adding front file:`, newUser.value.licenseFrontFile.name)
         }
         
         if (newUser.value.licenseBackFile) {
           formData.append('backFile', newUser.value.licenseBackFile)
-          console.log(`📎 [CLIENT-${clientRequestId}] Adding back file:`, newUser.value.licenseBackFile.name)
+          logger.debug(`📎 [CLIENT-${clientRequestId}] Adding back file:`, newUser.value.licenseBackFile.name)
         }
 
         const uploadResponse = await $fetch<{success: boolean, uploads: any}>('/api/admin/upload-license', {
@@ -1746,7 +1746,7 @@ const createUser = async () => {
         })
 
         if (uploadResponse.success) {
-          console.log(`✅ [CLIENT-${clientRequestId}] License files uploaded successfully`)
+          logger.debug(`✅ [CLIENT-${clientRequestId}] License files uploaded successfully`)
         } else {
           console.warn(`⚠️ [CLIENT-${clientRequestId}] Upload response indicates failure:`, uploadResponse)
         }
@@ -1756,7 +1756,7 @@ const createUser = async () => {
         // Continue anyway, don't fail user creation
       }
     } else {
-      console.log(`ℹ️ [CLIENT-${clientRequestId}] No license files to upload (role: ${newUser.value.role})`)
+      logger.debug(`ℹ️ [CLIENT-${clientRequestId}] No license files to upload (role: ${newUser.value.role})`)
     }
 
     // 5. Success feedback
@@ -1836,7 +1836,7 @@ const closeRoleDropdown = (event: Event) => {
 
 // Auth-Prüfung
 onMounted(async () => {
-  console.log('🔍 Users page mounted, checking auth...')
+  logger.debug('🔍 Users page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -1845,7 +1845,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -1854,13 +1854,13 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   

@@ -18,7 +18,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     attempts++
   }
   
-  console.log('🔐 Admin Middleware - Auth State:', {
+  logger.debug('🔐 Admin Middleware - Auth State:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     hasProfile: authStore.hasProfile,
@@ -28,15 +28,15 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ Admin Middleware - Not logged in, redirecting to /')
+    logger.debug('❌ Admin Middleware - Not logged in, redirecting to /')
     return navigateTo('/')
   }
   
   // Prüfe Admin-Berechtigung
   if (!authStore.isAdmin) {
-    console.log('❌ Admin Middleware - Not admin, redirecting to /dashboard')
+    logger.debug('❌ Admin Middleware - Not admin, redirecting to /dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Admin Middleware - Access granted')
+  logger.debug('✅ Admin Middleware - Access granted')
 })

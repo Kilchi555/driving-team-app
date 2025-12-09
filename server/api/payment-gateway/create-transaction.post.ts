@@ -5,7 +5,7 @@ import { getPaymentProviderForTenant } from '~/server/payment-providers/factory'
 import type { CreateTransactionRequest } from '~/server/payment-providers/types'
 
 export default defineEventHandler(async (event) => {
-  console.log('🚀 Universal Payment Gateway - Create Transaction')
+  logger.debug('🚀 Universal Payment Gateway - Create Transaction')
 
   try {
     const body = await readBody(event)
@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('📋 Transaction request:', {
+    logger.debug('📋 Transaction request:', {
       orderId,
       amount,
       currency,
@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
 
     // Hole den richtigen Payment Provider für den Tenant
     const provider = await getPaymentProviderForTenant(tenantId)
-    console.log(`✅ Using payment provider: ${provider.name}`)
+    logger.debug(`✅ Using payment provider: ${provider.name}`)
 
     // Erstelle die Transaktion
     const request: CreateTransactionRequest = {
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log(`✅ Transaction created successfully with ${provider.name}:`, {
+    logger.debug(`✅ Transaction created successfully with ${provider.name}:`, {
       transactionId: result.transactionId
     })
 

@@ -4423,7 +4423,7 @@ const createCourse = async () => {
         .select()
         .single()
       
-      console.log('✅ Course updated:', editingCourse.value.id)
+      logger.debug('✅ Course updated:', editingCourse.value.id)
     } else {
       // Create new course
       courseResult = await getSupabase()
@@ -4432,7 +4432,7 @@ const createCourse = async () => {
         .select()
         .single()
       
-      console.log('✅ Course created:', courseResult.data?.id)
+      logger.debug('✅ Course created:', courseResult.data?.id)
     }
 
     if (courseResult.error) throw courseResult.error
@@ -4472,7 +4472,7 @@ const createCourse = async () => {
         throw new Error(`Sessions konnten nicht erstellt werden: ${sessionsError.message}`)
       }
 
-      console.log(`✅ ${editingCourse.value ? 'Updated' : 'Created'} ${sessionData.length} course sessions`)
+      logger.debug(`✅ ${editingCourse.value ? 'Updated' : 'Created'} ${sessionData.length} course sessions`)
     }
 
       success.value = editingCourse.value ? 'Kurs erfolgreich aktualisiert!' : 'Kurs erfolgreich erstellt!'
@@ -4526,7 +4526,7 @@ const onCategoryChange = () => {
       generateSessionsFromCategory()
     }
     
-    console.log('✅ Course data auto-filled from category:', {
+    logger.debug('✅ Course data auto-filled from category:', {
       category: selectedCategoryInfo.value?.name,
       maxParticipants: defaults.max_participants,
       price: defaults.price_rappen / 100,
@@ -4693,7 +4693,7 @@ const generateSessionsFromCategory = () => {
       })
   }
   
-  console.log(`✅ Generated ${sessionCount} sessions from category:`, courseSessions.value)
+  logger.debug(`✅ Generated ${sessionCount} sessions from category:`, courseSessions.value)
 }
 
 // Load existing course sessions for editing
@@ -4719,7 +4719,7 @@ const loadCourseSessions = async (courseId: string) => {
         external_instructor_phone: session.external_instructor_phone || null
       }))
 
-    console.log(`✅ Loaded ${courseSessions.value.length} sessions for course ${courseId}`)
+    logger.debug(`✅ Loaded ${courseSessions.value.length} sessions for course ${courseId}`)
   } catch (error) {
     console.error('Error loading course sessions:', error)
     courseSessions.value = []
@@ -4893,7 +4893,7 @@ const saveCategory = async () => {
 
   try {
     // Debug logging
-    console.log('💾 Saving category with user:', {
+    logger.debug('💾 Saving category with user:', {
       user: currentUser.value,
       categoryForm: categoryForm.value
     })
@@ -5237,23 +5237,23 @@ const deleteRoom = async (roomId: string) => {
 
 // Modal Management Functions
 const openCreateCourseModal = async () => {
-  console.log('🔄 Opening create course modal...')
+  logger.debug('🔄 Opening create course modal...')
   
   // Ensure categories are loaded before opening modal
   if (!activeCategories.value || activeCategories.value.length === 0) {
-    console.log('📥 Categories not loaded, loading now...')
+    logger.debug('📥 Categories not loaded, loading now...')
     if (currentUser.value?.tenant_id) {
       await loadCourseCategories(currentUser.value.tenant_id)
     }
   }
   
-  console.log('📋 Available categories:', activeCategories.value.length)
+  logger.debug('📋 Available categories:', activeCategories.value.length)
   showCreateCourseModal.value = true
 }
 
 // Edit Course Function
 const editCourse = (course: any) => {
-  console.log('Edit course:', course.id)
+  logger.debug('Edit course:', course.id)
   
   // Populate form with course data
   newCourse.value = {
@@ -5292,7 +5292,7 @@ const handleStatusChange = (event: Event, course: any) => {
   const target = event.target as HTMLSelectElement
   const newStatusValue = target.value
   
-  console.log('🔄 Status change triggered:', { 
+  logger.debug('🔄 Status change triggered:', { 
     oldStatus: course.status, 
     newStatus: newStatusValue,
     courseName: course.name 
@@ -5300,7 +5300,7 @@ const handleStatusChange = (event: Event, course: any) => {
   
   // If same status, do nothing
   if (newStatusValue === course.status) {
-    console.log('⚠️ Same status selected, ignoring')
+    logger.debug('⚠️ Same status selected, ignoring')
     return
   }
   
@@ -5312,7 +5312,7 @@ const handleStatusChange = (event: Event, course: any) => {
 }
 
 const updateCourseStatus = async (course: any, newStatusValue: string) => {
-  console.log('📋 Opening status change modal...')
+  logger.debug('📋 Opening status change modal...')
   
   // Open modal for confirmation and options
   statusChangeCourse.value = course
@@ -5329,7 +5329,7 @@ const updateCourseStatus = async (course: any, newStatusValue: string) => {
   
   showStatusChangeModal.value = true
   
-  console.log('✅ Modal state set:', {
+  logger.debug('✅ Modal state set:', {
     showStatusChangeModal: showStatusChangeModal.value,
     oldStatus: oldStatus.value,
     newStatus: newStatus.value
@@ -5414,7 +5414,7 @@ const loadCourseParticipants = async (courseId: string) => {
     if (error) throw error
 
     courseParticipants.value = registrations || []
-    console.log(`✅ Loaded ${courseParticipants.value.length} participants for cancellation`)
+    logger.debug(`✅ Loaded ${courseParticipants.value.length} participants for cancellation`)
   } catch (error) {
     console.error('Error loading course participants:', error)
     courseParticipants.value = []
@@ -5497,7 +5497,7 @@ const sendCancellationNotifications = async () => {
 
     if (error) throw error
 
-    console.log(`✅ Sent ${notifications.length} cancellation notifications`)
+    logger.debug(`✅ Sent ${notifications.length} cancellation notifications`)
   } catch (error) {
     console.error('Error sending notifications:', error)
     // Don't throw - course cancellation should succeed even if notifications fail
@@ -5535,7 +5535,7 @@ watch(
   () => currentUser.value?.tenant_id,
   async (tenantId) => {
     if (tenantId && activeCategories.value.length === 0) {
-      console.log('🔄 User tenant available, loading categories:', tenantId)
+      logger.debug('🔄 User tenant available, loading categories:', tenantId)
       await loadCourseCategories(tenantId)
     }
   },
@@ -5547,7 +5547,7 @@ const authStore = useAuthStore()
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🔍 Courses page mounted, checking auth...')
+  logger.debug('🔍 Courses page mounted, checking auth...')
   
   // Set loading state immediately for page load
   isLoading.value = true
@@ -5559,7 +5559,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -5568,22 +5568,22 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading courses...')
-  console.log('🔄 Courses page mounted, current user:', currentUser.value)
+  logger.debug('✅ Auth check passed, loading courses...')
+  logger.debug('🔄 Courses page mounted, current user:', currentUser.value)
   
   // Ensure current user is loaded first
   if (!currentUser.value?.tenant_id) {
-    console.log('⏳ Waiting for current user to load...')
+    logger.debug('⏳ Waiting for current user to load...')
     
     // Wait longer for currentUser to be populated
     let attempts = 0
@@ -5594,7 +5594,7 @@ onMounted(async () => {
     
     // If still not loaded, try to fetch it
     if (!currentUser.value?.tenant_id) {
-      console.log('🔄 Manually fetching current user...')
+      logger.debug('🔄 Manually fetching current user...')
       await fetchCurrentUser()
       
       // Wait a bit more after manual fetch
@@ -5602,7 +5602,7 @@ onMounted(async () => {
     }
   }
   
-  console.log('✅ Current user loaded:', currentUser.value)
+  logger.debug('✅ Current user loaded:', currentUser.value)
   
   // Load tenant business type
   if (currentUser.value?.tenant_id) {
@@ -5619,9 +5619,9 @@ onMounted(async () => {
   
   // Load categories first (depends on currentUser)
   if (currentUser.value?.tenant_id) {
-    console.log('🔄 Loading course categories for tenant:', currentUser.value.tenant_id)
+    logger.debug('🔄 Loading course categories for tenant:', currentUser.value.tenant_id)
     await loadCourseCategories(currentUser.value.tenant_id)
-    console.log('✅ Course categories loaded:', activeCategories.value.length)
+    logger.debug('✅ Course categories loaded:', activeCategories.value.length)
   } else {
     console.warn('⚠️ Cannot load categories: no tenant_id available')
   }
@@ -5658,10 +5658,10 @@ const enrollmentLink = computed(() => {
 
 // Test function to open modal without database calls
 const testOpenModal = () => {
-  console.log('🧪 Testing modal open...')
+  logger.debug('🧪 Testing modal open...')
   showEnrollmentModal.value = true
   selectedCourse.value = { id: 'test', name: 'Test Course' }
-  console.log('🧪 Modal should be open now')
+  logger.debug('🧪 Modal should be open now')
 }
 
 const manageEnrollments = (course: any) => {
@@ -5754,7 +5754,7 @@ const searchUsers = async () => {
 
 const selectExistingUser = async (user: any) => {
   try {
-    console.log('Enrolling existing user:', user.id)
+    logger.debug('Enrolling existing user:', user.id)
     isAddingParticipant.value = true
     
     // Check if user is already enrolled
@@ -5808,7 +5808,7 @@ const selectExistingUser = async (user: any) => {
 }
 
 const loadCourseEnrollments = async (courseId: string) => {
-  console.log('🔍 loadCourseEnrollments called with courseId:', courseId)
+  logger.debug('🔍 loadCourseEnrollments called with courseId:', courseId)
   try {
     const { data, error } = await getSupabase()
       .from('course_registrations')
@@ -5834,7 +5834,7 @@ const loadCourseEnrollments = async (courseId: string) => {
       console.error('❌ Error loading course enrollments:', error)
       throw error
     }
-    console.log('🔍 Course enrollments loaded:', data)
+    logger.debug('🔍 Course enrollments loaded:', data)
     currentEnrollments.value = data || []
   } catch (err) {
     console.error('❌ Error in loadCourseEnrollments:', err)
@@ -5842,7 +5842,7 @@ const loadCourseEnrollments = async (courseId: string) => {
 }
 
 const loadDeletedEnrollments = async (courseId: string) => {
-  console.log('🔍 loadDeletedEnrollments called with courseId:', courseId)
+  logger.debug('🔍 loadDeletedEnrollments called with courseId:', courseId)
   try {
     const { data, error } = await getSupabase()
       .from('course_registrations')
@@ -5868,7 +5868,7 @@ const loadDeletedEnrollments = async (courseId: string) => {
       console.error('❌ Error loading deleted enrollments:', error)
       throw error
     }
-    console.log('🔍 Deleted enrollments loaded:', data)
+    logger.debug('🔍 Deleted enrollments loaded:', data)
     deletedEnrollments.value = data || []
   } catch (err) {
     console.error('❌ Error in loadDeletedEnrollments:', err)
@@ -5879,7 +5879,7 @@ const loadDeletedEnrollments = async (courseId: string) => {
 
 const addParticipant = async () => {
   try {
-    console.log('addParticipant called with:', newParticipant.value)
+    logger.debug('addParticipant called with:', newParticipant.value)
     isAddingParticipant.value = true
     
     // Check if course is full
@@ -5901,10 +5901,10 @@ const addParticipant = async () => {
 
     if (existingUser) {
       userId = existingUser.id
-      console.log('User exists:', userId)
+      logger.debug('User exists:', userId)
     } else {
       // Try to create user
-      console.log('Creating new user...')
+      logger.debug('Creating new user...')
       const { data: newUser, error: userError } = await getSupabase()
         .from('users')
         .insert({
@@ -5931,11 +5931,11 @@ const addParticipant = async () => {
       }
 
       userId = newUser.id
-      console.log('User created:', userId)
+      logger.debug('User created:', userId)
     }
 
     // Create enrollment
-    console.log('Creating enrollment...')
+    logger.debug('Creating enrollment...')
     const { error: enrollmentError } = await supabase
       .from('course_registrations')
       .insert({
@@ -5956,7 +5956,7 @@ const addParticipant = async () => {
       throw new Error(`Anmeldung konnte nicht erstellt werden: ${enrollmentError.message}`)
     }
 
-    console.log('Enrollment created successfully')
+    logger.debug('Enrollment created successfully')
 
     // Reload enrollments
     await loadCourseEnrollments(selectedCourse.value.id)

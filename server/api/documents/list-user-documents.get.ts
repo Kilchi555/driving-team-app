@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('📂 Listing documents for user:', userId)
+    logger.debug('📂 Listing documents for user:', userId)
 
     const supabaseUrl = process.env.SUPABASE_URL!
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log(`✅ Found ${files?.length || 0} files for user ${userId}`)
+    logger.debug(`✅ Found ${files?.length || 0} files for user ${userId}`)
 
     if (!files || files.length === 0) {
       return {
@@ -119,7 +119,7 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    console.log(`📄 Parsed ${documents.length} documents:`, documents.map(d => ({
+    logger.debug(`📄 Parsed ${documents.length} documents:`, documents.map(d => ({
       type: d.documentType,
       category: d.category,
       side: d.side,

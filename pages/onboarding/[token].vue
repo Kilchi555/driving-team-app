@@ -616,7 +616,7 @@ onMounted(async () => {
   const isDevelopment = process.dev && token === 'dev'
   
   if (isDevelopment) {
-    console.log('🔧 DEV MODE: Using mock data for testing')
+    logger.debug('🔧 DEV MODE: Using mock data for testing')
     isLoading.value = false
     userData.value = {
       id: 'dev-user-id',
@@ -640,7 +640,7 @@ onMounted(async () => {
   // Redirect if we're on localhost to production domain
   if (process.client && window.location.hostname === 'localhost') {
     const redirectUrl = `https://simy.ch/onboarding/${token}`
-    console.log('🔄 Redirecting onboarding link from localhost to production:', redirectUrl)
+    logger.debug('🔄 Redirecting onboarding link from localhost to production:', redirectUrl)
     window.location.href = redirectUrl
     return
   }
@@ -767,7 +767,7 @@ const openRegulationModal = async (type: string) => {
     const activeTenantId = userData.value?.tenant_id
     
     const typeLabel = type === 'nutzungsbedingungen' ? 'Nutzungsbedingungen' : 'Datenschutzerklärung'
-    console.log('📋 Loading regulation:', type, 'for tenant:', activeTenantId)
+    logger.debug('📋 Loading regulation:', type, 'for tenant:', activeTenantId)
     
     if (!activeTenantId) {
       console.error('❌ No tenant_id available')
@@ -785,7 +785,7 @@ const openRegulationModal = async (type: string) => {
       .order('tenant_id', { ascending: false })
       .limit(1)
     
-    console.log('📋 Query result:', { regulations, error })
+    logger.debug('📋 Query result:', { regulations, error })
     
     if (error) {
       console.error('❌ Error loading reglement:', error)
@@ -796,7 +796,7 @@ const openRegulationModal = async (type: string) => {
     if (regulations && regulations.length > 0) {
       currentRegulation.value = regulations[0]
       showRegulationModal.value = true
-      console.log('✅ Opened reglement modal:', type, regulations[0].title)
+      logger.debug('✅ Opened reglement modal:', type, regulations[0].title)
     } else {
       console.warn('⚠️ Reglement not found:', type)
       showErrorMessage(`${typeLabel} sind noch nicht verfügbar. Bitte kontaktiere die Fahrschule.`)
@@ -898,14 +898,14 @@ const completeOnboarding = async () => {
       documentUrls
     }
     
-    console.log('📤 Sending onboarding completion request:', requestBody)
+    logger.debug('📤 Sending onboarding completion request:', requestBody)
     
     const { data, error: completeError } = await useFetch('/api/students/complete-onboarding', {
       method: 'POST',
       body: requestBody
     })
     
-    console.log('📥 Onboarding completion response:', { data: data.value, error: completeError.value })
+    logger.debug('📥 Onboarding completion response:', { data: data.value, error: completeError.value })
 
     if (completeError.value) {
       console.error('❌ Complete error details:', completeError.value)
@@ -936,14 +936,14 @@ const completeOnboarding = async () => {
       const tenantSlug = userData.value?.tenant_slug || data.value?.tenant_slug
       
       if (tenantSlug) {
-        console.log('✅ Redirecting to tenant login:', `/${tenantSlug}`)
+        logger.debug('✅ Redirecting to tenant login:', `/${tenantSlug}`)
         await navigateTo(`/${tenantSlug}`)
       } else if (userData.value?.tenant_id === '64259d68-195a-4c68-8875-f1b44d962830') {
         // Fallback: Known Driving Team tenant
-        console.log('✅ Redirecting to driving-team login')
+        logger.debug('✅ Redirecting to driving-team login')
         await navigateTo('/driving-team')
       } else {
-        console.log('✅ Redirecting to general login')
+        logger.debug('✅ Redirecting to general login')
         await navigateTo('/login')
       }
     }, 2000)

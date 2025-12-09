@@ -269,7 +269,7 @@ const loadStaff = async () => {
   error.value = null
   
   try {
-    console.log('👥 StaffSelector: Loading staff members...')
+    logger.debug('👥 StaffSelector: Loading staff members...')
     const supabase = getSupabase()
 
     // Get current user's tenant_id
@@ -285,7 +285,7 @@ const loadStaff = async () => {
       throw new Error('User has no tenant assigned')
     }
 
-    console.log('🔍 StaffSelector - Current tenant_id:', tenantId)
+    logger.debug('🔍 StaffSelector - Current tenant_id:', tenantId)
 
     let query = supabase
       .from('users')
@@ -314,7 +314,7 @@ const loadStaff = async () => {
     }))
     
     availableStaff.value = typedStaff
-    console.log('✅ Staff members loaded for tenant:', availableStaff.value.length)
+    logger.debug('✅ Staff members loaded for tenant:', availableStaff.value.length)
 
   } catch (err: any) {
     console.error('❌ StaffSelector: Error loading staff:', err)
@@ -327,11 +327,11 @@ const loadStaff = async () => {
 
 const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value
-  console.log('🔄 StaffSelector expanded:', isExpanded.value)
+  logger.debug('🔄 StaffSelector expanded:', isExpanded.value)
   
   // Auto-load when expanded for the first time
   if (isExpanded.value && props.autoLoad && availableStaff.value.length === 0) {
-    console.log('📚 Auto-loading staff on first expand')
+    logger.debug('📚 Auto-loading staff on first expand')
     loadStaff()
   }
 }
@@ -345,13 +345,13 @@ const toggleStaff = (staffId: string) => {
   if (index > -1) {
     // Entfernen
     currentIds.splice(index, 1)
-    console.log('➖ Staff removed from invite list:', staffId)
+    logger.debug('➖ Staff removed from invite list:', staffId)
     emit('staff-removed', staffId)
   } else {
     // Hinzufügen
     currentIds.push(staffId)
     const staff = availableStaff.value.find(s => s.id === staffId)
-    console.log('➕ Staff added to invite list:', staffId)
+    logger.debug('➕ Staff added to invite list:', staffId)
     if (staff) {
       emit('staff-selected', staff)
     }
@@ -370,7 +370,7 @@ const inviteAll = () => {
   const allIds = staffList.value.map(s => s.id)
   invitedStaffIds.value = allIds
   
-  console.log('👥 All staff invited:', allIds.length, 'staff members')
+  logger.debug('👥 All staff invited:', allIds.length, 'staff members')
   emit('selection-changed', allIds, staffList.value)
 }
 
@@ -378,7 +378,7 @@ const clearAll = () => {
   if (props.disabled) return
   
   invitedStaffIds.value = []
-  console.log('🗑️ All team invites cleared')
+  logger.debug('🗑️ All team invites cleared')
   emit('selection-changed', [], [])
 }
 
@@ -392,7 +392,7 @@ const resetSelection = () => {
   invitedStaffIds.value = []
   searchQuery.value = ''
   isExpanded.value = false
-  console.log('🔄 StaffSelector: Selection reset')
+  logger.debug('🔄 StaffSelector: Selection reset')
 }
 
 // Watchers
@@ -404,13 +404,13 @@ watch(() => props.currentUser, async (newUser) => {
 
 // Lifecycle
 onMounted(() => {
-  console.log('👥 StaffSelector mounted, autoLoad:', props.autoLoad)
+  logger.debug('👥 StaffSelector mounted, autoLoad:', props.autoLoad)
   
   if (props.autoLoad) {
-    console.log('🔄 Auto-loading staff on mount')
+    logger.debug('🔄 Auto-loading staff on mount')
     loadStaff()
   } else {
-    console.log('🚫 Auto-load disabled, waiting for user action')
+    logger.debug('🚫 Auto-load disabled, waiting for user action')
   }
 })
 

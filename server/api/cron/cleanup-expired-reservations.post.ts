@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     // Calculate the cutoff time: 5 minutes ago
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
     
-    console.log('🧹 Cleaning up expired reservations created before:', fiveMinutesAgo)
+    logger.debug('🧹 Cleaning up expired reservations created before:', fiveMinutesAgo)
     
     // Delete all 'reserved' appointments that were created more than 5 minutes ago
     const { data: deletedReservations, error: deleteError } = await supabase
@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
     }
     
     const deletedCount = deletedReservations?.length || 0
-    console.log(`✅ Cleaned up ${deletedCount} expired reservations`)
+    logger.debug(`✅ Cleaned up ${deletedCount} expired reservations`)
     
     return {
       success: true,

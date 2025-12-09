@@ -421,7 +421,7 @@ const isResendingSms = ref(false)
 
 // Computed
 const filteredStudents = computed(() => {
-  console.log('🔄 filteredStudents computed triggered:', {
+  logger.debug('🔄 filteredStudents computed triggered:', {
     studentsCount: students.value.length,
     showInactive: showInactive.value,
     showOnlyNoUpcoming: showOnlyNoUpcoming.value,
@@ -441,7 +441,7 @@ const filteredStudents = computed(() => {
       s.last_name?.toLowerCase().includes(query) ||
       s.email?.toLowerCase().includes(query)
     )
-    console.log('✅ Filtered by search query:', filtered.length, 'students')
+    logger.debug('✅ Filtered by search query:', filtered.length, 'students')
   }
 
   // Filter by upcoming appointments
@@ -471,10 +471,10 @@ const filteredStudents = computed(() => {
       return aLastAppointment.getTime() - bLastAppointment.getTime() // Älteste zuerst
     })
     
-    console.log(`✅ Showing students without upcoming appointments: ${beforeFilter} → ${filtered.length} students`)
+    logger.debug(`✅ Showing students without upcoming appointments: ${beforeFilter} → ${filtered.length} students`)
   }
 
-  console.log('🔄 Final filtered students:', filtered.length)
+  logger.debug('🔄 Final filtered students:', filtered.length)
   return filtered
 })
 
@@ -482,15 +482,15 @@ const filteredStudents = computed(() => {
 const filterStudents = () => {
   // This function is called when the "No Upcoming" toggle changes
   // The filteredStudents computed property will automatically update
-  console.log('🔄 Filtering students - showOnlyNoUpcoming:', showOnlyNoUpcoming.value)
+  logger.debug('🔄 Filtering students - showOnlyNoUpcoming:', showOnlyNoUpcoming.value)
 }
 
 const handleNoUpcomingToggle = async () => {
-  console.log('🔄 No upcoming toggle changed:', showOnlyNoUpcoming.value)
+  logger.debug('🔄 No upcoming toggle changed:', showOnlyNoUpcoming.value)
   
   if (showOnlyNoUpcoming.value) {
     // If switching to "No Upcoming", we need appointments data
-    console.log('📅 Loading appointments for "No Upcoming" filter...')
+    logger.debug('📅 Loading appointments for "No Upcoming" filter...')
     await loadStudents(true)
   }
   
@@ -503,7 +503,7 @@ const goBack = async () => {
   
   try {
     isNavigating.value = true
-    console.log('🔙 Navigating back to dashboard...')
+    logger.debug('🔙 Navigating back to dashboard...')
     
     // ✅ Optimierte Navigation mit Cache-Invalidierung
     try {
@@ -527,12 +527,12 @@ const goBack = async () => {
 }
 
 const addNewStudent = () => {
-  console.log('🚀 Opening add student modal')
+  logger.debug('🚀 Opening add student modal')
   showAddStudentModal.value = true
 }
 
 const handleStudentAdded = async (newStudent: any) => {
-  console.log('✅ New student added:', newStudent)
+  logger.debug('✅ New student added:', newStudent)
   showAddStudentModal.value = false
   // Reload students list
   await loadStudents()
@@ -572,12 +572,12 @@ const quickAction = (student: any) => {
 const editStudent = (student: any) => {
   selectedStudent.value = null
   // TODO: Implement edit modal
-  console.log('Edit student:', student)
+  logger.debug('Edit student:', student)
 }
 
 const viewLessons = (student: any) => {
   // TODO: Show lessons history for student
-  console.log('View lessons for:', student)
+  logger.debug('View lessons for:', student)
 }
 
 const callStudent = (student: any) => {
@@ -589,7 +589,7 @@ const callStudent = (student: any) => {
 const handleCreateAppointment = (student: any) => {
   selectedStudent.value = null
   // Verwende deine bestehende createAppointment Funktion oder navigiere direkt
-  console.log('Create appointment for:', student)
+  logger.debug('Create appointment for:', student)
   // navigateTo(`/appointments/create?student=${student.id}`)
   
   // Oder falls du die bestehende Funktion verwenden willst:
@@ -599,25 +599,25 @@ const handleCreateAppointment = (student: any) => {
 const handleEvaluateLesson = (lesson: any) => {
   selectedStudent.value = null
   // TODO: Öffne Bewertungsmodal für diese spezifische Lektion
-  console.log('Evaluate lesson:', lesson)
+  logger.debug('Evaluate lesson:', lesson)
   // showEvaluationModal.value = true
   // selectedAppointment.value = lesson
 }
 
 const handleStudentUpdated = (updateData: { id: string, [key: string]: any }) => {
-  console.log('📡 Received student update:', updateData)
+  logger.debug('📡 Received student update:', updateData)
   
   // Find and update the student in the local students array
   const studentIndex = students.value.findIndex(s => s.id === updateData.id)
   if (studentIndex !== -1) {
     // Update the student object with new data
     Object.assign(students.value[studentIndex], updateData)
-    console.log('✅ Updated local student data')
+    logger.debug('✅ Updated local student data')
     
     // Also update selectedStudent if it's the same student
     if (selectedStudent.value?.id === updateData.id) {
       Object.assign(selectedStudent.value, updateData)
-      console.log('✅ Updated selectedStudent data')
+      logger.debug('✅ Updated selectedStudent data')
     }
   }
 }
@@ -663,8 +663,8 @@ const loadStudents = async (loadAppointments = true) => {
   error.value = null
   
   try {
-    console.log('🔄 Loading students from database...', loadAppointments ? 'with appointments' : 'without appointments')
-    console.log('Current user role:', currentUser.value.role)
+    logger.debug('🔄 Loading students from database...', loadAppointments ? 'with appointments' : 'without appointments')
+    logger.debug('Current user role:', currentUser.value.role)
     
     // Get current user's tenant_id
     const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -679,7 +679,7 @@ const loadStudents = async (loadAppointments = true) => {
       throw new Error('User has no tenant assigned')
     }
 
-    console.log('🔍 Customers page - Current tenant_id:', tenantId)
+    logger.debug('🔍 Customers page - Current tenant_id:', tenantId)
     
     // Base query without appointments for faster loading
     let baseQuery = `
@@ -732,14 +732,14 @@ const loadStudents = async (loadAppointments = true) => {
     // Das ermöglicht es, auch inaktive Pending-Users zu sehen
     
     // DEBUG: Teste direkte Query
-    console.log('🔍 Testing direct query for all students in tenant...')
+    logger.debug('🔍 Testing direct query for all students in tenant...')
     const { data: testData } = await supabase
       .from('users')
       .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id, assigned_staff_ids')
       .eq('role', 'client')
       .eq('tenant_id', tenantId)
     
-    console.log('🔍 Direct query result:', testData)
+    logger.debug('🔍 Direct query result:', testData)
     
     // DEBUG: Teste mit Service Role (ohne RLS)
     const { data: testDataNoRLS } = await supabase
@@ -748,32 +748,32 @@ const loadStudents = async (loadAppointments = true) => {
       .eq('role', 'client')
       .eq('tenant_id', tenantId)
     
-    console.log('🔍 Direct query result (no RLS):', testDataNoRLS)
+    logger.debug('🔍 Direct query result (no RLS):', testDataNoRLS)
     
     // DEBUG: Teste spezifische Query für Max Mustermann
-    console.log('🔍 Searching for Max Mustermann by ID...')
+    logger.debug('🔍 Searching for Max Mustermann by ID...')
     const { data: maxQuery, error: maxError } = await supabase
       .from('users')
       .select('*')
       .eq('id', 'b09e0af1-3ded-44e0-a80e-b52b11e630e1')
     
-    console.log('🔍 Max Mustermann by ID result:', maxQuery)
-    console.log('🔍 Max Mustermann by ID error:', maxError)
+    logger.debug('🔍 Max Mustermann by ID result:', maxQuery)
+    logger.debug('🔍 Max Mustermann by ID error:', maxError)
     
     
 
     // ✅ Filterung basierend auf Benutzerrolle
     if (currentUser.value.role === 'staff' && !showAllStudents.value) {
       // Staff sieht alle Schüler des Tenants (nicht nur assigned_staff_id)
-      console.log('📚 Loading all students for staff (showing all students in tenant):', currentUser.value.id)
+      logger.debug('📚 Loading all students for staff (showing all students in tenant):', currentUser.value.id)
     } else if (currentUser.value.role === 'admin') {
       // Admin sieht alle Schüler
-      console.log('👑 Loading all students for admin')
+      logger.debug('👑 Loading all students for admin')
     }
 
     // ✅ FIX: Lade IMMER alle Studenten des Tenants (aktive und inaktive)
     // Das ermöglicht es, auch inaktive Pending-Users zu sehen
-    console.log('📚 Loading ALL students in tenant (active and inactive)')
+    logger.debug('📚 Loading ALL students in tenant (active and inactive)')
 
     // FIX: Verwende die normale users Tabelle, aber ohne appointments
     // Das umgeht Schema-Cache-Probleme
@@ -816,7 +816,7 @@ const loadStudents = async (loadAppointments = true) => {
 
     if (!data) {
       students.value = []
-      console.log('ℹ️ No students found')
+      logger.debug('ℹ️ No students found')
       return
     }
 
@@ -827,20 +827,20 @@ const loadStudents = async (loadAppointments = true) => {
       filteredData = data.filter((student: any) => {
         return student.is_active === false && student.auth_user_id !== null
       })
-      console.log(`📊 Client-side filtering (INACTIVE only): ${data.length} total → ${filteredData.length} inactive`)
+      logger.debug(`📊 Client-side filtering (INACTIVE only): ${data.length} total → ${filteredData.length} inactive`)
     } else {
       // Show ACTIVE students OR pending users (auth_user_id = null)
       filteredData = data.filter((student: any) => {
         return student.is_active === true || student.auth_user_id === null
       })
-      console.log(`📊 Client-side filtering (ACTIVE): ${data.length} total → ${filteredData.length} active/pending`)
+      logger.debug(`📊 Client-side filtering (ACTIVE): ${data.length} total → ${filteredData.length} active/pending`)
     }
 
     // ✅ NEU: Intelligente Filterung basierend auf showAllStudents
     let studentsToProcess = filteredData as any[]
     
     // ✅ DEBUG: Zeige alle geladenen Schüler
-    console.log('🔍 All loaded students:', studentsToProcess.map((s: any) => ({ 
+    logger.debug('🔍 All loaded students:', studentsToProcess.map((s: any) => ({ 
       id: s.id, 
       name: `${s.first_name} ${s.last_name}`, 
       is_active: s.is_active,
@@ -850,13 +850,13 @@ const loadStudents = async (loadAppointments = true) => {
     // ✅ DEBUG: Zeige is_active Status aller Schüler
     const activeCount = studentsToProcess.filter((s: any) => s.is_active).length
     const inactiveCount = studentsToProcess.filter((s: any) => !s.is_active).length
-    console.log(`📊 Students status: ${activeCount} active, ${inactiveCount} inactive`)
+    logger.debug(`📊 Students status: ${activeCount} active, ${inactiveCount} inactive`)
     
     
     if (!showAllStudents.value) {
       // "Meine" - Filter by assigned staff (check both assigned_staff_id and assigned_staff_ids array)
-      console.log('👤 Filter: Show only MY students (assigned to me)')
-      console.log('🔍 Current user details:', {
+      logger.debug('👤 Filter: Show only MY students (assigned to me)')
+      logger.debug('🔍 Current user details:', {
         id: currentUser.value.id,
         email: currentUser.value.email,
         role: currentUser.value.role,
@@ -869,16 +869,16 @@ const loadStudents = async (loadAppointments = true) => {
         const assignedIds = s.assigned_staff_ids || []
         return assignedIds.includes(currentUser.value.id)
       })
-      console.log(`✅ Filtered to ${studentsToProcess.length} students assigned to me`)
+      logger.debug(`✅ Filtered to ${studentsToProcess.length} students assigned to me`)
     } else {
       // "Alle" - Show all students in tenant
-      console.log('👑 Filter: Show ALL students in tenant')
+      logger.debug('👑 Filter: Show ALL students in tenant')
       // studentsToProcess already contains all filtered data (active/inactive)
-      console.log(`✅ Showing all ${studentsToProcess.length} students in tenant`)
+      logger.debug(`✅ Showing all ${studentsToProcess.length} students in tenant`)
     }
 
     // ✅ OPTIMIERT: Lade alle Fahrlehrer-Daten in EINER Abfrage
-    console.log('🚀 Loading all staff data in one query...')
+    logger.debug('🚀 Loading all staff data in one query...')
     
     // Alle Schüler-IDs sammeln
     const studentIds = studentsToProcess.map((s: any) => s.id)
@@ -898,7 +898,7 @@ const loadStudents = async (loadAppointments = true) => {
     let instructorData: any[] = []
     if (allLessonInstructors && allLessonInstructors.length > 0) {
       const uniqueInstructorIds = [...new Set(allLessonInstructors.map((l: any) => l.staff_id))]
-      console.log('🔍 Unique instructor IDs for all students:', uniqueInstructorIds)
+      logger.debug('🔍 Unique instructor IDs for all students:', uniqueInstructorIds)
       
       const { data: instructors, error: instructorError } = await supabase
         .from('users')
@@ -909,7 +909,7 @@ const loadStudents = async (loadAppointments = true) => {
         console.error('❌ Error loading instructor data:', instructorError)
       } else {
         instructorData = instructors || []
-        console.log('✅ Loaded instructor data for all students:', instructorData.length)
+        logger.debug('✅ Loaded instructor data for all students:', instructorData.length)
       }
     }
 
@@ -959,10 +959,10 @@ const loadStudents = async (loadAppointments = true) => {
           .filter((apt: any) => !apt.deleted_at)
           .sort((a: any, b: any) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0]
         
-        console.log(`🔍 Student ${(student as any).first_name} ${(student as any).last_name} - Appointments:`, studentAppointments.length)
+        logger.debug(`🔍 Student ${(student as any).first_name} ${(student as any).last_name} - Appointments:`, studentAppointments.length)
 
         // ✅ Alle Berechnungen verwenden jetzt bereits geladene Daten
-        console.log(`🔍 Student ${(student as any).first_name} ${(student as any).last_name} - Appointments loaded:`, studentAppointments.length)
+        logger.debug(`🔍 Student ${(student as any).first_name} ${(student as any).last_name} - Appointments loaded:`, studentAppointments.length)
 
         return {
           ...(student as any),
@@ -983,12 +983,12 @@ const loadStudents = async (loadAppointments = true) => {
       })
 
     students.value = enrichedStudents
-    console.log('✅ Students loaded successfully:', students.value.length)
-    console.log('📊 Sample student:', students.value[0])
-    console.log('🔍 Final students list:', students.value.map((s: any) => ({ name: `${s.first_name} ${s.last_name}`, instructor: s.assignedInstructor })))
+    logger.debug('✅ Students loaded successfully:', students.value.length)
+    logger.debug('📊 Sample student:', students.value[0])
+    logger.debug('🔍 Final students list:', students.value.map((s: any) => ({ name: `${s.first_name} ${s.last_name}`, instructor: s.assignedInstructor })))
 
     // Load billing addresses for students
-    console.log('📋 Loading billing addresses for tenantId:', tenantId)
+    logger.debug('📋 Loading billing addresses for tenantId:', tenantId)
     const { data: billingAddresses, error: billingError } = await supabase
       .from('company_billing_addresses')
       .select('id, contact_person, email, phone, street, street_number, zip, city, country')
@@ -996,21 +996,21 @@ const loadStudents = async (loadAppointments = true) => {
       .order('created_at', { ascending: false })
       .limit(1) // Get the most recent one
 
-    console.log('📋 Billing addresses result:', { billingAddresses, billingError })
+    logger.debug('📋 Billing addresses result:', { billingAddresses, billingError })
 
     // Load billing addresses for students
-    console.log('📋 Loading billing addresses')
+    logger.debug('📋 Loading billing addresses')
     const { data: companyBillingAddresses, error: billingAddressError } = await supabase
       .from('company_billing_addresses')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(1) // Get the most recent one
 
-    console.log('📋 Billing addresses result:', { companyBillingAddresses, billingAddressError })
+    logger.debug('📋 Billing addresses result:', { companyBillingAddresses, billingAddressError })
 
     if (!billingAddressError && companyBillingAddresses && companyBillingAddresses.length > 0) {
-      console.log('📋 Found', companyBillingAddresses.length, 'billing addresses')
-      console.log('📋 First address:', companyBillingAddresses[0])
+      logger.debug('📋 Found', companyBillingAddresses.length, 'billing addresses')
+      logger.debug('📋 First address:', companyBillingAddresses[0])
       
       // Add first billing address to each student as invoice_address - formatted nicely
       enrichedStudents.forEach((student: any) => {
@@ -1027,12 +1027,12 @@ const loadStudents = async (loadAppointments = true) => {
           
           student.invoice_address = addressLines.join('\n')
           
-          console.log('📋 Added invoice address to student:', student.id, '\n', student.invoice_address)
+          logger.debug('📋 Added invoice address to student:', student.id, '\n', student.invoice_address)
         }
       })
       students.value = enrichedStudents
     } else {
-      console.log('⚠️ No billing addresses found or error:', billingAddressError?.message)
+      logger.debug('⚠️ No billing addresses found or error:', billingAddressError?.message)
     }
 
 
@@ -1121,7 +1121,7 @@ const copyOnboardingLink = async () => {
       message: 'Der Onboarding-Link wurde in die Zwischenablage kopiert.'
     })
     
-    console.log('🔗 Onboarding-Link:', onboardingLink)
+    logger.debug('🔗 Onboarding-Link:', onboardingLink)
   } catch (err) {
     console.error('Error copying link:', err)
     uiStore.addNotification({

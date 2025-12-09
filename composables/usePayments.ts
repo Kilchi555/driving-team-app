@@ -478,7 +478,7 @@ export const usePayments = () => {
       let actualUserId: string | null = userId
       
       if (authUser) {
-        console.log('🔍 Auth user found:', authUser.id)
+        logger.debug('🔍 Auth user found:', authUser.id)
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, tenant_id')
@@ -490,7 +490,7 @@ export const usePayments = () => {
         } else if (userData) {
           tenantId = userData.tenant_id
           actualUserId = userData.id
-          console.log('✅ User data loaded:', { userId: userData.id, tenantId })
+          logger.debug('✅ User data loaded:', { userId: userData.id, tenantId })
         }
       }
       
@@ -504,7 +504,7 @@ export const usePayments = () => {
         tenantId = userData?.tenant_id || null
       }
       
-      console.log('💳 Creating payment with:', { userId: actualUserId, tenantId })
+      logger.debug('💳 Creating payment with:', { userId: actualUserId, tenantId })
       
       // Calculate total
       const subtotal = products.reduce((sum, product) => 
@@ -583,7 +583,7 @@ export const usePayments = () => {
         throw paymentError
       }
 
-      console.log('✅ Payment record created:', payment.id)
+      logger.debug('✅ Payment record created:', payment.id)
 
       // Create Wallee transaction
       const walleeResponse = await $fetch('/api/wallee/create-transaction', {

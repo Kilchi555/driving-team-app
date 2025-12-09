@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ User authenticated:', user.email, 'User ID:', user.id)
+    logger.debug('✅ User authenticated:', user.email, 'User ID:', user.id)
 
     // Create service role client to bypass RLS
     const { createClient } = await import('@supabase/supabase-js')
@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
       .eq('auth_user_id', user.id)
       .single()
 
-    console.log('👤 User profile query result:', { userProfile, profileError })
+    logger.debug('👤 User profile query result:', { userProfile, profileError })
 
     if (profileError || !userProfile?.tenant_id) {
       console.error('❌ Profile error:', profileError)
@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ User profile found:', userProfile)
+    logger.debug('✅ User profile found:', userProfile)
 
     // Check if user is admin
     if (userProfile.role !== 'admin') {
@@ -90,7 +90,7 @@ export default defineEventHandler(async (event) => {
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 7) // 7 days expiration
 
-    console.log('🎫 Creating invitation with token:', token.substring(0, 10) + '...')
+    logger.debug('🎫 Creating invitation with token:', token.substring(0, 10) + '...')
 
     // Create invitation in database using service role to bypass RLS
     const { data: invitation, error: inviteError } = await serviceSupabase
@@ -117,7 +117,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ Invitation created:', invitation.id)
+    logger.debug('✅ Invitation created:', invitation.id)
 
     // Generate invitation link
     // Priority: 1. Environment variable, 2. Production domain (simy.ch), 3. Request host
@@ -152,7 +152,7 @@ export default defineEventHandler(async (event) => {
     // Send invitation
     if (sendVia === 'email') {
       // Send email via existing Supabase Edge Function 'send-email' (same as reminders)
-      console.log(`📧 Sending email to ${email} with link: ${inviteLink}`)
+      logger.debug(`📧 Sending email to ${email} with link: ${inviteLink}`)
       
       try {
         const subject = `Einladung als Fahrlehrer - ${tenantName}`
@@ -287,7 +287,7 @@ ${tenantName}`
           throw emailError
         }
 
-        console.log('✅ Email sent via send-email:', emailResult)
+        logger.debug('✅ Email sent via send-email:', emailResult)
         
         return {
           success: true,
@@ -312,7 +312,7 @@ ${tenantName}`
       
     } else if (sendVia === 'sms' && phone) {
       // Send SMS via Twilio (using Edge Function)
-      console.log(`📱 Sending SMS to ${phone} with link: ${inviteLink}`)
+      logger.debug(`📱 Sending SMS to ${phone} with link: ${inviteLink}`)
       
       try {
         const smsMessage = `Hallo ${firstName}! Sie wurden als Fahrlehrer bei ${tenantName} eingeladen. Registrierung: ${inviteLink}`
@@ -330,7 +330,7 @@ ${tenantName}`
           throw smsError
         }
 
-        console.log('✅ SMS sent via Twilio:', smsResult)
+        logger.debug('✅ SMS sent via Twilio:', smsResult)
 
         // Log SMS using service role
         await serviceSupabase

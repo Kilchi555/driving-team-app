@@ -816,9 +816,9 @@ const goBack = () => {
 
 // File upload (legacy - keeping for backward compatibility)
 const handleFileUpload = (event: Event) => {
-  console.log('📤 File upload started')
+  logger.debug('📤 File upload started')
   const file = (event.target as HTMLInputElement).files?.[0]
-  console.log('📄 File selected:', file?.name, 'Size:', file?.size, 'Type:', file?.type)
+  logger.debug('📄 File selected:', file?.name, 'Size:', file?.size, 'Type:', file?.type)
   
   if (file) {
     // Check file size (5MB limit)
@@ -833,9 +833,9 @@ const handleFileUpload = (event: Event) => {
     
     const reader = new FileReader()
     reader.onload = (e) => {
-      console.log('✅ File read complete, setting uploadedImage')
+      logger.debug('✅ File read complete, setting uploadedImage')
       uploadedImage.value = e.target?.result as string
-      console.log('✅ uploadedImage.value set, length:', uploadedImage.value?.length)
+      logger.debug('✅ uploadedImage.value set, length:', uploadedImage.value?.length)
     }
     reader.readAsDataURL(file)
   }
@@ -853,9 +853,9 @@ const triggerCategoryUpload = (category: string) => {
 
 // Handle file upload for specific category
 const handleCategoryFileUpload = (event: Event, category: string) => {
-  console.log('📤 Category file upload started for:', category)
+  logger.debug('📤 Category file upload started for:', category)
   const file = (event.target as HTMLInputElement).files?.[0]
-  console.log('📄 File selected:', file?.name, 'Size:', file?.size, 'Type:', file?.type)
+  logger.debug('📄 File selected:', file?.name, 'Size:', file?.size, 'Type:', file?.type)
   
   if (file) {
     // Check file size (5MB limit)
@@ -867,13 +867,13 @@ const handleCategoryFileUpload = (event: Event, category: string) => {
     
     const reader = new FileReader()
     reader.onload = (e) => {
-      console.log('✅ File read complete for category:', category)
+      logger.debug('✅ File read complete for category:', category)
       uploadedDocuments.value[category] = {
         data: e.target?.result as string,
         type: file.type,
         fileName: file.name
       }
-      console.log('✅ uploadedDocuments updated:', Object.keys(uploadedDocuments.value))
+      logger.debug('✅ uploadedDocuments updated:', Object.keys(uploadedDocuments.value))
     }
     reader.readAsDataURL(file)
   }
@@ -904,19 +904,19 @@ const submitRegistration = async () => {
   try {
     // Debug: Check if hCaptcha element and script exist
     const hcaptchaElement = document.getElementById('hcaptcha')
-    console.log('🔍 hCaptcha element exists:', !!hcaptchaElement)
-    console.log('🔍 window.hcaptcha exists:', !!(window as any).hcaptcha)
-    console.log('🔍 window.hcaptcha object:', (window as any).hcaptcha)
+    logger.debug('🔍 hCaptcha element exists:', !!hcaptchaElement)
+    logger.debug('🔍 window.hcaptcha exists:', !!(window as any).hcaptcha)
+    logger.debug('🔍 window.hcaptcha object:', (window as any).hcaptcha)
     
     // Get hCaptcha token - wait for it to be available
     let captchaToken: string | null = null
     
     // Try to get token with retries
     const widgetId = hcaptchaWidgetId.value
-    console.log('🔍 Using hCaptcha widget ID:', widgetId)
+    logger.debug('🔍 Using hCaptcha widget ID:', widgetId)
     
     for (let attempt = 0; attempt < 10; attempt++) {
-      console.log(`🔄 Attempt ${attempt + 1}: checking for hcaptcha.getResponse`)
+      logger.debug(`🔄 Attempt ${attempt + 1}: checking for hcaptcha.getResponse`)
       
       if ((window as any).hcaptcha?.getResponse) {
         try {
@@ -928,23 +928,23 @@ const submitRegistration = async () => {
             // Fallback to container ID if widget ID not available
             response = (window as any).hcaptcha.getResponse('hcaptcha')
           }
-          console.log(`✅ Got captcha response on attempt ${attempt + 1}:`, !!response, 'First 20 chars:', response?.substring(0, 20))
+          logger.debug(`✅ Got captcha response on attempt ${attempt + 1}:`, !!response, 'First 20 chars:', response?.substring(0, 20))
           
           // If we got a token, use it
           if (response && typeof response === 'string' && response.length > 0) {
             captchaToken = response
             break
           } else if (attempt === 0) {
-            console.log('ℹ️ hCaptcha response is empty - user might not have completed the challenge yet')
+            logger.debug('ℹ️ hCaptcha response is empty - user might not have completed the challenge yet')
           }
         } catch (error: any) {
-          console.log(`⚠️ Error calling getResponse on attempt ${attempt + 1}:`, error?.message || error?.cause || error)
+          logger.debug(`⚠️ Error calling getResponse on attempt ${attempt + 1}:`, error?.message || error?.cause || error)
           if (attempt === 0) {
-            console.log('🔍 Full error object:', error)
+            logger.debug('🔍 Full error object:', error)
           }
         }
       } else {
-        console.log(`❌ hcaptcha.getResponse not available on attempt ${attempt + 1}`)
+        logger.debug(`❌ hcaptcha.getResponse not available on attempt ${attempt + 1}`)
       }
       
       // Wait 200ms before retrying
@@ -960,9 +960,9 @@ const submitRegistration = async () => {
       throw new Error('Bitte führen Sie die Captcha-Verifikation durch')
     }
     
-    console.log('✅ hCaptcha token received')
+    logger.debug('✅ hCaptcha token received')
     
-    console.log('🚀 Starting registration via backend API...')
+    logger.debug('🚀 Starting registration via backend API...')
     
     // Load tenant by slug
     await loadTenant(tenantSlug.value)
@@ -973,10 +973,10 @@ const submitRegistration = async () => {
       throw new Error('Fehler beim Laden der Mandanten-Daten. Bitte kontaktieren Sie den Support.')
     }
     
-    console.log('🏢 Registering user for tenant:', activeTenantId)
+    logger.debug('🏢 Registering user for tenant:', activeTenantId)
     
     // Call backend API to register client (creates auth user + profile via service role)
-    console.log('📡 Calling backend registration API...')
+    logger.debug('📡 Calling backend registration API...')
     const response = await fetch('/api/auth/register-client', {
       method: 'POST',
       headers: {
@@ -1007,11 +1007,11 @@ const submitRegistration = async () => {
       throw new Error(data.statusMessage || 'Fehler bei der Registrierung')
     }
     
-    console.log('✅ User registered successfully:', data.userId)
+    logger.debug('✅ User registered successfully:', data.userId)
     
     // Upload Lernfahrausweis documents to Supabase Storage (one per category)
     if (Object.keys(uploadedDocuments.value).length > 0 && data.userId) {
-      console.log('📸 Uploading documents for categories:', Object.keys(uploadedDocuments.value))
+      logger.debug('📸 Uploading documents for categories:', Object.keys(uploadedDocuments.value))
       
       for (const [category, docInfo] of Object.entries(uploadedDocuments.value)) {
         try {
@@ -1019,7 +1019,7 @@ const submitRegistration = async () => {
           const fileExt = docInfo.type.includes('pdf') ? 'pdf' : 'jpg'
           const fileName = `lernfahrausweis_${category}.${fileExt}`
           
-          console.log(`📤 Uploading document for category ${category}...`)
+          logger.debug(`📤 Uploading document for category ${category}...`)
           
           // Upload via backend API (uses service role to bypass RLS)
           const uploadResponse = await $fetch('/api/auth/upload-document', {
@@ -1035,7 +1035,7 @@ const submitRegistration = async () => {
             }
           }) as any
           
-          console.log(`✅ Document for category ${category} uploaded successfully:`, uploadResponse.path)
+          logger.debug(`✅ Document for category ${category} uploaded successfully:`, uploadResponse.path)
         } catch (imageError: any) {
           console.error(`❌ Document upload failed for category ${category}:`, imageError)
           // Don't fail registration for image upload error
@@ -1047,7 +1047,7 @@ const submitRegistration = async () => {
     registeredEmail.value = formData.value.email
     registeredTenantSlug.value = tenantSlug.value
     registrationComplete.value = true
-    console.log('✅ Registration complete, showing confirmation screen')
+    logger.debug('✅ Registration complete, showing confirmation screen')
     
     // No auto-redirect - user clicks button to proceed
     
@@ -1077,7 +1077,7 @@ const loadCategories = async () => {
   try {
     const activeTenantId = tenantId.value || currentTenant.value?.id
     
-    console.log('🏢 Loading categories for tenant:', activeTenantId || 'fallback')
+    logger.debug('🏢 Loading categories for tenant:', activeTenantId || 'fallback')
     
     let categories, categoriesError
     
@@ -1093,7 +1093,7 @@ const loadCategories = async () => {
       categories = tenantCategories
       categoriesError = tenantError
       
-      console.log('🏢 Loaded tenant-specific categories:', categories?.length || 0)
+      logger.debug('🏢 Loaded tenant-specific categories:', categories?.length || 0)
     } else {
       // Fallback: Load global categories (tenant_id = null)
       const { data: globalCategories, error: globalError } = await supabase
@@ -1106,7 +1106,7 @@ const loadCategories = async () => {
       categories = globalCategories
       categoriesError = globalError
       
-      console.log('🌐 Loaded global categories:', categories?.length || 0)
+      logger.debug('🌐 Loaded global categories:', categories?.length || 0)
     }
     
     // Use fallback only if DB loading failed
@@ -1115,12 +1115,12 @@ const loadCategories = async () => {
       console.warn('⚠️ Could not load categories from DB, using fallback:', categoriesError?.message || 'No categories found')
       finalCategories = availableCategories.value
     } else {
-      console.log('✅ Loaded categories from DB:', categories.length)
+      logger.debug('✅ Loaded categories from DB:', categories.length)
       
       // Load base_price and admin_fee pricing rules for categories
       let pricingRules = null
       let adminFeeRules = null
-      console.log('🔍 Loading pricing rules for tenant:', activeTenantId)
+      logger.debug('🔍 Loading pricing rules for tenant:', activeTenantId)
       
       // Load base_price rules
       const { data: rules, error: rulesError } = await supabase
@@ -1136,9 +1136,9 @@ const loadCategories = async () => {
       
       if (!rulesError && rules && rules.length > 0) {
         pricingRules = rules
-        console.log('✅ Loaded base_price rules:', rules.length, 'rules')
+        logger.debug('✅ Loaded base_price rules:', rules.length, 'rules')
       } else {
-        console.log('ℹ️ No base_price rules found for tenant', activeTenantId)
+        logger.debug('ℹ️ No base_price rules found for tenant', activeTenantId)
       }
       
       // Load admin_fee rules
@@ -1151,7 +1151,7 @@ const loadCategories = async () => {
       
       if (!adminFeeError && adminFees && adminFees.length > 0) {
         adminFeeRules = adminFees
-        console.log('✅ Loaded admin_fee rules:', adminFees.length, 'rules')
+        logger.debug('✅ Loaded admin_fee rules:', adminFees.length, 'rules')
       }
       
       // Map categories with their prices
@@ -1168,7 +1168,7 @@ const loadCategories = async () => {
             const pricePerMinuteChf = rule.price_per_minute_rappen / 100
             const baseDurationMinutes = 45 // ALWAYS 45 minutes for base price
             price = Math.round(pricePerMinuteChf * baseDurationMinutes)
-            console.log(`💰 Category ${cat.code}: ${price} CHF (from base_price rule)`)
+            logger.debug(`💰 Category ${cat.code}: ${price} CHF (from base_price rule)`)
           }
         }
         
@@ -1177,7 +1177,7 @@ const loadCategories = async () => {
           const adminFeeRule = adminFeeRules.find(r => r.category_code === cat.code)
           if (adminFeeRule && adminFeeRule.admin_fee_rappen) {
             adminFee = Math.round(adminFeeRule.admin_fee_rappen / 100)
-            console.log(`💳 Category ${cat.code}: Admin Fee ${adminFee} CHF (one-time)`)
+            logger.debug(`💳 Category ${cat.code}: Admin Fee ${adminFee} CHF (one-time)`)
           }
         }
         
@@ -1191,7 +1191,7 @@ const loadCategories = async () => {
     }
     
     availableCategories.value = finalCategories
-    console.log('✅ Final available categories:', availableCategories.value)
+    logger.debug('✅ Final available categories:', availableCategories.value)
   } catch (error) {
     console.error('Error loading categories:', error)
   }
@@ -1202,7 +1202,7 @@ const openRegulationModal = async (type: string) => {
   try {
     const activeTenantId = tenantId.value || currentTenant.value?.id
     
-    console.log('📋 Loading regulation:', type, 'for tenant:', activeTenantId)
+    logger.debug('📋 Loading regulation:', type, 'for tenant:', activeTenantId)
     
     // Try to load tenant-specific reglement first, then fall back to global
     const { data: regulations, error } = await supabase
@@ -1221,7 +1221,7 @@ const openRegulationModal = async (type: string) => {
     if (regulations && regulations.length > 0) {
       currentRegulation.value = regulations[0]
       showRegulationModal.value = true
-      console.log('✅ Opened reglement modal:', type, regulations[0].title)
+      logger.debug('✅ Opened reglement modal:', type, regulations[0].title)
     } else {
       console.warn('⚠️ Reglement not found:', type)
     }
@@ -1238,7 +1238,7 @@ onMounted(async () => {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData)
-        console.log('📦 Restoring form data from cache')
+        logger.debug('📦 Restoring form data from cache')
         Object.assign(formData.value, parsed)
         if (parsed.uploadedImage) {
           uploadedImage.value = parsed.uploadedImage
@@ -1259,7 +1259,7 @@ onMounted(async () => {
   
   // Load tenant if tenant slug is provided
   if (tenantSlug.value) {
-    console.log('🏢 Loading tenant from URL parameter:', tenantSlug.value)
+    logger.debug('🏢 Loading tenant from URL parameter:', tenantSlug.value)
     try {
       await loadTenant(tenantSlug.value)
     } catch (error) {
@@ -1283,7 +1283,7 @@ onMounted(async () => {
 // Watch for service type changes and reload categories
 watch(serviceType, (newValue, oldValue) => {
   if (oldValue !== undefined && newValue !== oldValue) {
-    console.log('🔄 Service type changed from', oldValue, 'to', newValue, '- reloading categories')
+    logger.debug('🔄 Service type changed from', oldValue, 'to', newValue, '- reloading categories')
     loadCategories()
   }
 })
@@ -1291,31 +1291,31 @@ watch(serviceType, (newValue, oldValue) => {
 // Watch for step changes and render hCaptcha when on last step
 watch(currentStep, async (newStep) => {
   if (newStep === maxSteps.value) {
-    console.log('📍 Reached final step, rendering hCaptcha...')
+    logger.debug('📍 Reached final step, rendering hCaptcha...')
     
     // Wait for DOM to update
     await new Promise(resolve => setTimeout(resolve, 300))
     
     if ((window as any).hcaptcha) {
       const hcaptchaContainer = document.getElementById('hcaptcha')
-      console.log('🔍 hCaptcha container found:', !!hcaptchaContainer)
+      logger.debug('🔍 hCaptcha container found:', !!hcaptchaContainer)
       
       if (hcaptchaContainer && hcaptchaContainer.children.length === 0) {
         try {
           const siteKey = hcaptchaSiteKey.value
           const keyPreview = typeof siteKey === 'string' ? siteKey.substring(0, 10) : siteKey
-          console.log('🎨 Rendering hCaptcha widget with sitekey:', keyPreview)
+          logger.debug('🎨 Rendering hCaptcha widget with sitekey:', keyPreview)
           const widgetId = (window as any).hcaptcha.render('hcaptcha', {
             sitekey: siteKey,
             theme: 'light'
           })
           hcaptchaWidgetId.value = widgetId
-          console.log('✅ hCaptcha rendered successfully on step change with widget ID:', widgetId)
+          logger.debug('✅ hCaptcha rendered successfully on step change with widget ID:', widgetId)
         } catch (error: any) {
           console.error('❌ Error rendering hCaptcha:', error?.message || error)
         }
       } else if (hcaptchaContainer) {
-        console.log('✅ hCaptcha already rendered')
+        logger.debug('✅ hCaptcha already rendered')
       }
     } else {
       console.warn('⚠️ window.hcaptcha not available')

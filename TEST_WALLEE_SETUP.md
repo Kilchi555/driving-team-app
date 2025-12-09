@@ -98,7 +98,7 @@ const testWallee = async () => {
   try {
     const response = await fetch('/api/wallee/test-connection')
     const data = await response.json()
-    console.log('✅ Wallee Connection Test:', data)
+    logger.debug('✅ Wallee Connection Test:', data)
     return data
   } catch (error) {
     console.error('❌ Connection failed:', error)
@@ -216,8 +216,8 @@ curl -X POST "http://localhost:3000/api/wallee/create-transaction" \
 **Solution:**
 ```javascript
 // 1. Verify credentials are correct
-console.log('Space ID:', process.env.WALLEE_SPACE_ID)
-console.log('User ID:', process.env.WALLEE_APPLICATION_USER_ID)
+logger.debug('Space ID:', process.env.WALLEE_SPACE_ID)
+logger.debug('User ID:', process.env.WALLEE_APPLICATION_USER_ID)
 
 // 2. Check in Wallee dashboard Settings → API Credentials
 // 3. Ensure credentials match exactly (copy/paste to avoid typos)
@@ -259,7 +259,7 @@ SELECT id, slug FROM tenants WHERE id = '<YOUR_TENANT_ID>';
 **Solution:**
 ```javascript
 // 1. Verify function loads config
-console.log('getWalleeConfigForTenant loaded')
+logger.debug('getWalleeConfigForTenant loaded')
 
 // 2. Check import in endpoint file
 // Should have:

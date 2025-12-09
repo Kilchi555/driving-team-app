@@ -187,7 +187,7 @@ const loadSale = async () => {
     }
     
     sale.value = saleData
-    console.log('✅ Verkauf geladen:', saleData)
+    logger.debug('✅ Verkauf geladen:', saleData)
     
   } catch (error: any) {
     console.error('❌ Fehler beim Laden des Verkaufs:', error)
@@ -209,7 +209,7 @@ const loadProducts = async () => {
     if (productsError) throw productsError
     
     availableProducts.value = products || []
-    console.log('✅ Produkte geladen:', availableProducts.value.length)
+    logger.debug('✅ Produkte geladen:', availableProducts.value.length)
     
   } catch (error: any) {
     console.error('❌ Fehler beim Laden der Produkte:', error)
@@ -290,7 +290,7 @@ const proceedToPayment = async () => {
     if (itemsError) throw itemsError
     
     // Erstelle Wallee-Transaktion
-    console.log('🔄 Erstelle Wallee-Transaktion...')
+    logger.debug('🔄 Erstelle Wallee-Transaktion...')
     
     const response = await fetch('/api/wallee/create-anonymous-transaction', {
       method: 'POST',
@@ -319,7 +319,7 @@ const proceedToPayment = async () => {
     
     if (transactionData.success && transactionData.payment_url) {
       // Weiterleitung zur Wallee-Zahlungsseite
-      console.log('✅ Wallee-Transaktion erstellt, leite weiter...')
+      logger.debug('✅ Wallee-Transaktion erstellt, leite weiter...')
       window.location.href = transactionData.payment_url
     } else {
       throw new Error('Keine Zahlungs-URL erhalten')

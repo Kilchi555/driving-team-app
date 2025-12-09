@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('🔔 Starting payment confirmation reminders cron job...')
+    logger.debug('🔔 Starting payment confirmation reminders cron job...')
     
     const supabase = getSupabaseAdmin()
     const now = new Date()
@@ -40,11 +40,11 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!tenantSettings || tenantSettings.length === 0) {
-      console.log('ℹ️ No tenants with reminder settings found')
+      logger.debug('ℹ️ No tenants with reminder settings found')
       return { success: true, message: 'No tenants to process' }
     }
 
-    console.log(`📋 Processing ${tenantSettings.length} tenants...`)
+    logger.debug(`📋 Processing ${tenantSettings.length} tenants...`)
 
     let totalEmailsSent = 0
     let totalSMSSent = 0
@@ -61,11 +61,11 @@ export default defineEventHandler(async (event) => {
 
         // Skip if no emails configured
         if (!settings.reminder_email_count || settings.reminder_email_count === 0) {
-          console.log(`ℹ️ Tenant ${tenantId}: No email reminders configured`)
+          logger.debug(`ℹ️ Tenant ${tenantId}: No email reminders configured`)
           continue
         }
 
-        console.log(`📧 Tenant ${tenantId}: Processing reminders...`, settings)
+        logger.debug(`📧 Tenant ${tenantId}: Processing reminders...`, settings)
 
         // 3. Get all pending payments with appointments
         const { data: payments, error: paymentsError } = await supabase
@@ -95,11 +95,11 @@ export default defineEventHandler(async (event) => {
         }
 
         if (!payments || payments.length === 0) {
-          console.log(`ℹ️ No pending payments for tenant ${tenantId}`)
+          logger.debug(`ℹ️ No pending payments for tenant ${tenantId}`)
           continue
         }
 
-        console.log(`💰 Found ${payments.length} pending payments for tenant ${tenantId}`)
+        logger.debug(`💰 Found ${payments.length} pending payments for tenant ${tenantId}`)
 
         // 4. Process each payment
         for (const payment of payments) {
@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
             if (!firstReminderSentAt) {
               // First reminder should have been sent at payment creation
               // Skip this payment
-              console.log(`⏭️ Payment ${payment.id}: No first reminder sent yet (should be sent at creation)`)
+              logger.debug(`⏭️ Payment ${payment.id}: No first reminder sent yet (should be sent at creation)`)
               continue
             }
 
@@ -139,7 +139,7 @@ export default defineEventHandler(async (event) => {
               
               if (daysSinceLastReminder >= settings.reminder_email_interval_days) {
                 shouldSendEmail = true
-                console.log(`📧 Payment ${payment.id}: Time for email reminder #${nextReminderNumber}`)
+                logger.debug(`📧 Payment ${payment.id}: Time for email reminder #${nextReminderNumber}`)
               }
             }
 
@@ -161,7 +161,7 @@ export default defineEventHandler(async (event) => {
                 
                 if (daysSinceLastReminder >= settings.reminder_email_interval_days) {
                   shouldSendSMS = true
-                  console.log(`📱 Payment ${payment.id}: Time for SMS reminder`)
+                  logger.debug(`📱 Payment ${payment.id}: Time for SMS reminder`)
                 }
               }
             }
@@ -276,7 +276,7 @@ export default defineEventHandler(async (event) => {
                   success: true
                 })
 
-                console.log(`✅ Email reminder #${nextReminderNumber} sent for payment ${payment.id}`)
+                logger.debug(`✅ Email reminder #${nextReminderNumber} sent for payment ${payment.id}`)
               } catch (emailError: any) {
                 console.error(`❌ Error sending email for payment ${payment.id}:`, emailError)
                 results.push({
@@ -375,7 +375,7 @@ export default defineEventHandler(async (event) => {
                   success: true
                 })
 
-                console.log(`✅ SMS reminder sent for payment ${payment.id}`)
+                logger.debug(`✅ SMS reminder sent for payment ${payment.id}`)
               } catch (smsError: any) {
                 console.error(`❌ Error sending SMS for payment ${payment.id}:`, smsError)
                 results.push({
@@ -395,7 +395,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    console.log(`✅ Cron job completed. Sent ${totalEmailsSent} emails and ${totalSMSSent} SMS.`)
+    logger.debug(`✅ Cron job completed. Sent ${totalEmailsSent} emails and ${totalSMSSent} SMS.`)
 
     return {
       success: true,

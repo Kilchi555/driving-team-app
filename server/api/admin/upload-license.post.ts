@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('📄 Server-side license upload for user:', userId)
+    logger.debug('📄 Server-side license upload for user:', userId)
 
     // Create admin Supabase client
     const supabaseAdmin = createClient(
@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    console.log('✅ Storage access confirmed, bucket found:', userDocsBucket.id)
+    logger.debug('✅ Storage access confirmed, bucket found:', userDocsBucket.id)
 
     const uploadResults = {
       frontPath: null as string | null,
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
       const frontFileName = `license_front_${Date.now()}.${frontExt}`
       const frontFilePath = `${userId}/${frontFileName}`
 
-      console.log('📄 Uploading front file:', frontFileName)
+      logger.debug('📄 Uploading front file:', frontFileName)
 
       // Try to create bucket if it doesn't exist or use fallback
       const { data: frontUploadData, error: frontUploadError } = await supabaseAdmin.storage
@@ -92,7 +92,7 @@ export default defineEventHandler(async (event) => {
         })
       } else {
         uploadResults.frontPath = frontUploadData.path
-        console.log('✅ Front file uploaded:', uploadResults.frontPath)
+        logger.debug('✅ Front file uploaded:', uploadResults.frontPath)
       }
     }
 
@@ -102,7 +102,7 @@ export default defineEventHandler(async (event) => {
       const backFileName = `license_back_${Date.now()}.${backExt}`
       const backFilePath = `${userId}/${backFileName}`
 
-      console.log('📄 Uploading back file:', backFileName)
+      logger.debug('📄 Uploading back file:', backFileName)
 
       const { data: backUploadData, error: backUploadError } = await supabaseAdmin.storage
         .from('user-documents')
@@ -116,7 +116,7 @@ export default defineEventHandler(async (event) => {
         console.error('❌ Back file upload error:', backUploadError)
       } else {
         uploadResults.backPath = backUploadData.path
-        console.log('✅ Back file uploaded:', uploadResults.backPath)
+        logger.debug('✅ Back file uploaded:', uploadResults.backPath)
       }
     }
 
@@ -182,7 +182,7 @@ export default defineEventHandler(async (event) => {
         })
       }
       
-      console.log('✅ Documents stored in user_documents table:', documentsToInsert.length)
+      logger.debug('✅ Documents stored in user_documents table:', documentsToInsert.length)
     }
 
     return {

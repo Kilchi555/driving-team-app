@@ -99,7 +99,7 @@
             
             <button
               type="button"
-              @click="() => { console.log('Button clicked'); showForgotPasswordModal = true; console.log('Modal set to:', showForgotPasswordModal.value); }"
+              @click="() => { logger.debug('Button clicked'); showForgotPasswordModal = true; logger.debug('Modal set to:', showForgotPasswordModal.value); }"
               class="text-sm text-blue-600 hover:underline hover:text-blue-800 cursor-pointer"
             >
               Passwort vergessen?
@@ -289,7 +289,7 @@ watch(
     const newTenant = (paramTenant as string) || (queryTenant as string)
     if (newTenant && newTenant !== tenantParam.value) {
       tenantParam.value = newTenant
-      console.log('🏢 Tenant updated from URL:', tenantParam.value)
+      logger.debug('🏢 Tenant updated from URL:', tenantParam.value)
       loadTenant(tenantParam.value)
     }
   },
@@ -334,9 +334,9 @@ const handleLogin = async () => {
   loginError.value = null
 
   try {
-    console.log('🔑 Starting login attempt for:', loginForm.value.email)
+    logger.debug('🔑 Starting login attempt for:', loginForm.value.email)
     if (loginForm.value.rememberMe) {
-      console.log('✅ "Angemeldet bleiben" aktiviert - Session wird 7 Tage gespeichert')
+      logger.debug('✅ "Angemeldet bleiben" aktiviert - Session wird 7 Tage gespeichert')
     }
     
     // Login mit Supabase
@@ -355,11 +355,11 @@ const handleLogin = async () => {
       return
     }
     
-    console.log('✅ Login successful')
+    logger.debug('✅ Login successful')
     
     // Wait for auth store to update with user profile
     const authStore = useAuthStore()
-    console.log('⏳ Waiting for user profile to load...')
+    logger.debug('⏳ Waiting for user profile to load...')
     let attempts = 0
     while (!authStore.userProfile && attempts < 20) {
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -375,13 +375,13 @@ const handleLogin = async () => {
       return
     }
     
-    console.log('✅ User profile loaded:', user.email)
+    logger.debug('✅ User profile loaded:', user.email)
 
     // Lade Tenant-Informationen
     let redirectPath = '/dashboard' // Fallback
     
     if (user.tenant_id) {
-      console.log('🏢 Loading tenant info for tenant_id:', user.tenant_id)
+      logger.debug('🏢 Loading tenant info for tenant_id:', user.tenant_id)
       
       const { data: tenant, error: tenantError } = await supabase
         .from('tenants')
@@ -392,7 +392,7 @@ const handleLogin = async () => {
       if (tenantError) {
         console.error('❌ Error loading tenant:', tenantError)
       } else if (tenant?.slug) {
-        console.log('✅ Found tenant slug:', tenant.slug)
+        logger.debug('✅ Found tenant slug:', tenant.slug)
         
         // Weiterleitung basierend auf Rolle
         if (user.role === 'admin' || user.role === 'tenant_admin') {
@@ -406,7 +406,7 @@ const handleLogin = async () => {
     }
     
     showSuccess('Erfolgreich angemeldet', 'Willkommen zurück!')
-    console.log('🔄 Redirecting to:', redirectPath)
+    logger.debug('🔄 Redirecting to:', redirectPath)
     router.push(redirectPath)
     
   } catch (error: any) {
@@ -438,7 +438,7 @@ const handlePasswordReset = async () => {
   resetIsLoading.value = true
 
   try {
-    console.log('🔐 Requesting password reset for:', contact)
+    logger.debug('🔐 Requesting password reset for:', contact)
     
     const response = await $fetch('/api/auth/password-reset-request', {
       method: 'POST',
@@ -449,7 +449,7 @@ const handlePasswordReset = async () => {
       }
     }) as any
 
-    console.log('📧 Password reset response:', response)
+    logger.debug('📧 Password reset response:', response)
 
     if (response?.success) {
       resetSuccess.value = resetContactMethod.value === 'email'
@@ -459,7 +459,7 @@ const handlePasswordReset = async () => {
       resetForm.value.email = ''
       resetForm.value.phone = ''
       
-      console.log('✅ Password reset email/SMS sent, closing modal in 3 seconds...')
+      logger.debug('✅ Password reset email/SMS sent, closing modal in 3 seconds...')
       
       // Schließe Modal nach 3 Sekunden
       setTimeout(() => {
@@ -498,7 +498,7 @@ onMounted(async () => {
   
   // Prüfe ob bereits angemeldet
   if (isAuthenticated.value && !isLoading.value) {
-    console.log('🔄 User already authenticated, checking profile...')
+    logger.debug('🔄 User already authenticated, checking profile...')
     const authStore = useAuthStore()
     
     // Warte kurz auf User-Profil
@@ -517,7 +517,7 @@ onMounted(async () => {
       return
     }
     
-    console.log('✅ User profile found, redirecting...')
+    logger.debug('✅ User profile found, redirecting...')
     if (user?.role === 'admin' || user?.role === 'tenant_admin') {
       router.push('/admin')
     } else if (user?.role === 'staff') {

@@ -202,7 +202,7 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    console.log('🚀 Creating new staff member:', form.value)
+    logger.debug('🚀 Creating new staff member:', form.value)
     
     // Call API to create staff with cash register
     const response = await $fetch('/api/admin/create-staff', {
@@ -213,7 +213,7 @@ const handleSubmit = async () => {
       }
     })
     
-    console.log('✅ Staff member created:', response)
+    logger.debug('✅ Staff member created:', response)
     
     // Reset form and emit success
     form.value = {

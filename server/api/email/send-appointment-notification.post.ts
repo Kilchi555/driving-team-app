@@ -205,7 +205,7 @@ export default defineEventHandler(async (event) => {
         
         if (tenant?.primary_color) {
           primaryColor = tenant.primary_color
-          console.log(`✅ Loaded tenant color: ${primaryColor}`)
+          logger.debug(`✅ Loaded tenant color: ${primaryColor}`)
         } else if (tenantError) {
           console.warn(`⚠️ Could not load tenant color:`, tenantError.message)
         }
@@ -215,7 +215,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    console.log(`📧 Sending ${type} appointment notification to ${email}`)
+    logger.debug(`📧 Sending ${type} appointment notification to ${email}`)
     
     const subject = template.subject
     const html = template.getHtml(body, primaryColor)
@@ -226,7 +226,7 @@ export default defineEventHandler(async (event) => {
       html
     })
     
-    console.log(`✅ ${type} email sent successfully to ${email}`)
+    logger.debug(`✅ ${type} email sent successfully to ${email}`)
     
     return {
       success: true,

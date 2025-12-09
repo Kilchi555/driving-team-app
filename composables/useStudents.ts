@@ -59,7 +59,7 @@ export const useStudents = () => {
         throw new Error('User has no tenant assigned')
       }
 
-      console.log('🔍 useStudents - Current tenant_id:', tenantId)
+      logger.debug('🔍 useStudents - Current tenant_id:', tenantId)
       
       let query = supabase
         .from('users')
@@ -80,7 +80,7 @@ export const useStudents = () => {
       if (fetchError) throw fetchError
 
       students.value = data || []
-      console.log('✅ Students loaded for tenant:', students.value.length)
+      logger.debug('✅ Students loaded for tenant:', students.value.length)
 
     } catch (err: any) {
       error.value = err.message
@@ -300,7 +300,7 @@ export const useStudents = () => {
         const smsResult = await sendSms(data.phone, message)
         
         if (smsResult.success) {
-          console.log('✅ Onboarding SMS sent to:', data.phone, 'SID:', smsResult.data?.sid)
+          logger.debug('✅ Onboarding SMS sent to:', data.phone, 'SID:', smsResult.data?.sid)
           smsSuccess = true
         } else {
           console.warn('⚠️ SMS sending failed:', smsResult.error)
@@ -308,7 +308,7 @@ export const useStudents = () => {
         }
         } else if (data.email && data.email.trim() !== '') {
           // ✅ E-Mail-Versand
-          console.log('📧 Sending onboarding email to:', data.email)
+          logger.debug('📧 Sending onboarding email to:', data.email)
           
           const emailResponse = await $fetch('/api/students/send-onboarding-email', {
             method: 'POST',
@@ -322,7 +322,7 @@ export const useStudents = () => {
           })
           
           if (emailResponse.success) {
-            console.log('✅ Onboarding email sent to:', data.email)
+            logger.debug('✅ Onboarding email sent to:', data.email)
             emailSuccess = true
           } else {
             console.warn('⚠️ Email sending failed')

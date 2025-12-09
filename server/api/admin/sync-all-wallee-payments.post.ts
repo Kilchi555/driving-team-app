@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    console.log(`🔄 Found ${payments.length} pending payments to sync`)
+    logger.debug(`🔄 Found ${payments.length} pending payments to sync`)
 
     // Wallee SDK Configuration
     const spaceId = parseInt(process.env.WALLEE_SPACE_ID || '82592')
@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
             console.error(`❌ Error updating payment ${payment.id}:`, updateError)
             errors.push(`Payment ${payment.id}: ${updateError.message}`)
           } else {
-            console.log(`✅ Updated payment ${payment.id}: ${payment.payment_status} → ${paymentStatus}`)
+            logger.debug(`✅ Updated payment ${payment.id}: ${payment.payment_status} → ${paymentStatus}`)
             updated++
 
             // Update appointment if payment completed
@@ -119,7 +119,7 @@ export default defineEventHandler(async (event) => {
             }
           }
         } else {
-          console.log(`ℹ️ Payment ${payment.id} status unchanged: ${paymentStatus}`)
+          logger.debug(`ℹ️ Payment ${payment.id} status unchanged: ${paymentStatus}`)
         }
 
         synced++

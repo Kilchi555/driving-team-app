@@ -207,7 +207,7 @@ const validateVoucher = async () => {
     }
 
     voucherDetails.value = voucher
-    console.log('✅ Voucher found:', voucher.code)
+    logger.debug('✅ Voucher found:', voucher.code)
 
   } catch (err: any) {
     console.error('❌ Error validating voucher:', err)
@@ -249,7 +249,7 @@ const redeemVoucher = async () => {
       voucherDetails.value.redeemed_for = props.appointmentId
       voucherDetails.value.redeemed_by = authStore.user?.id
 
-      console.log('✅ Voucher redeemed:', {
+      logger.debug('✅ Voucher redeemed:', {
         code: voucherDetails.value.code,
         amount: voucherDetails.value.amount_rappen / 100,
         appointmentId: props.appointmentId,

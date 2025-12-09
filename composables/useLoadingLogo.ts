@@ -33,14 +33,14 @@ export const useLoadingLogo = () => {
   // Get tenant logo from cache or database (synchronous when cached)
   const getTenantLogo = async (tenantId?: string): Promise<string | null> => {
     if (!tenantId) {
-      console.log('🖼️ No tenant ID provided, no logo available')
+      logger.debug('🖼️ No tenant ID provided, no logo available')
       return null
     }
     
     // Check cache first - return immediately if valid
     const cached = logoCache.value.get(tenantId)
     if (cached && isCacheValid(cached)) {
-      console.log('✅ Using cached logo for tenant:', tenantId)
+      logger.debug('✅ Using cached logo for tenant:', tenantId)
       return cached.url
     }
     
@@ -48,7 +48,7 @@ export const useLoadingLogo = () => {
       isLoadingLogo.value = true
       logoError.value = null
       
-      console.log('🔄 Loading tenant logo for:', tenantId)
+      logger.debug('🔄 Loading tenant logo for:', tenantId)
       
       // Load from database
       const { data, error } = await supabase
@@ -73,7 +73,7 @@ export const useLoadingLogo = () => {
         tenantId
       })
       
-      console.log('✅ Tenant logo loaded and cached:', data.name, logoUrl)
+      logger.debug('✅ Tenant logo loaded and cached:', data.name, logoUrl)
       
       // Preload the image to avoid flash
       if (process.client && logoUrl) {
@@ -94,7 +94,7 @@ export const useLoadingLogo = () => {
   // Get tenant logo by slug (with fallback to server API)
   const getTenantLogoBySlug = async (tenantSlug?: string): Promise<string | null> => {
     if (!tenantSlug) {
-      console.log('🖼️ No tenant slug provided, no logo available')
+      logger.debug('🖼️ No tenant slug provided, no logo available')
       return null
     }
     
@@ -102,7 +102,7 @@ export const useLoadingLogo = () => {
       isLoadingLogo.value = true
       logoError.value = null
       
-      console.log('🔄 Loading tenant logo by slug:', tenantSlug)
+      logger.debug('🔄 Loading tenant logo by slug:', tenantSlug)
       
       // Load from database
       const { data, error } = await supabase
@@ -129,7 +129,7 @@ export const useLoadingLogo = () => {
               })
             }
             
-            console.log('✅ Tenant logo loaded via server API:', serverResp.data.name, logoUrl)
+            logger.debug('✅ Tenant logo loaded via server API:', serverResp.data.name, logoUrl)
             return logoUrl
           }
         } catch (e) {
@@ -148,7 +148,7 @@ export const useLoadingLogo = () => {
         tenantId: data.id
       })
       
-      console.log('✅ Tenant logo loaded and cached:', data.name, logoUrl)
+      logger.debug('✅ Tenant logo loaded and cached:', data.name, logoUrl)
       
       // Preload the image to avoid flash
       if (process.client && logoUrl) {
@@ -172,7 +172,7 @@ export const useLoadingLogo = () => {
       // Get current user's tenant_id
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        console.log('🖼️ No authenticated user, no logo available')
+        logger.debug('🖼️ No authenticated user, no logo available')
         return null
       }
       
@@ -184,7 +184,7 @@ export const useLoadingLogo = () => {
         .single()
       
       if (!userProfile?.tenant_id) {
-        console.log('🖼️ No tenant_id found for user, no logo available')
+        logger.debug('🖼️ No tenant_id found for user, no logo available')
         return null
       }
       
@@ -204,7 +204,7 @@ export const useLoadingLogo = () => {
     
     const img = new Image()
     img.onload = () => {
-      console.log('✅ Logo preloaded:', logoUrl)
+      logger.debug('✅ Logo preloaded:', logoUrl)
     }
     img.onerror = () => {
       console.warn('⚠️ Failed to preload logo:', logoUrl)
@@ -215,7 +215,7 @@ export const useLoadingLogo = () => {
   // Clear cache (useful for testing or after logo updates)
   const clearLogoCache = () => {
     logoCache.value.clear()
-    console.log('🗑️ Logo cache cleared')
+    logger.debug('🗑️ Logo cache cleared')
   }
   
   // Clear expired cache entries
@@ -224,7 +224,7 @@ export const useLoadingLogo = () => {
     for (const [tenantId, cached] of logoCache.value.entries()) {
       if (!isCacheValid(cached)) {
         logoCache.value.delete(tenantId)
-        console.log('🗑️ Expired logo cache removed for tenant:', tenantId)
+        logger.debug('🗑️ Expired logo cache removed for tenant:', tenantId)
       }
     }
   }

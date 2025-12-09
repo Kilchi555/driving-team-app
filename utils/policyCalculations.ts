@@ -183,9 +183,8 @@ export const getPolicyDescription = (policy: PolicyWithRules): string => {
   const descriptions = sortedRules.map(rule => {
     const timeDesc = formatHoursBefore(rule.hours_before_appointment)
     const chargeDesc = rule.charge_percentage === 0 ? 'kostenlos' : `${rule.charge_percentage}% verrechnen`
-    const creditDesc = rule.credit_hours_to_instructor ? ', Stunden gutschreiben' : ''
     
-    return `${timeDesc}: ${chargeDesc}${creditDesc}`
+    return `${timeDesc}: ${chargeDesc}`
   })
 
   return descriptions.join('; ')
@@ -339,7 +338,7 @@ export const createCancellationFeeInvoice = async (
       console.warn('Could not create invoice item:', itemError)
     }
 
-    console.log('✅ Cancellation fee invoice created:', invoice.id)
+    logger.debug('✅ Cancellation fee invoice created:', invoice.id)
     return { success: true, invoiceId: invoice.id }
 
   } catch (error: any) {

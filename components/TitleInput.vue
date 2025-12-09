@@ -115,23 +115,23 @@ const suggestions = computed(() => {
       const customAddress = props.selectedLocation.custom_location_address
       if (customAddress.address && customAddress.address.includes(',')) {
         location = customAddress.address
-        console.log('📍 TitleInput - Using custom_location_address:', location)
+        logger.debug('📍 TitleInput - Using custom_location_address:', location)
       } else if (customAddress.name) {
         location = customAddress.name
-        console.log('📍 TitleInput - Using custom_location_address name:', location)
+        logger.debug('📍 TitleInput - Using custom_location_address name:', location)
       }
     }
     // ✅ PRIORITÄT 2: Fallback auf normale Location-Daten
     else if (props.selectedLocation?.name) {
       location = props.selectedLocation.name
-      console.log('📍 TitleInput - Using location name:', location)
+      logger.debug('📍 TitleInput - Using location name:', location)
     } else if (props.selectedLocation?.address) {
       location = props.selectedLocation.address
-      console.log('📍 TitleInput - Using location address:', location)
+      logger.debug('📍 TitleInput - Using location address:', location)
     }
     
     // ✅ DEBUG: Zeige was für die Location verwendet wird
-    console.log('📍 TitleInput - Location data:', {
+    logger.debug('📍 TitleInput - Location data:', {
       name: props.selectedLocation?.name,
       address: props.selectedLocation?.address,
       custom_location_address: props.selectedLocation?.custom_location_address,
@@ -146,7 +146,7 @@ const suggestions = computed(() => {
       // Versuche die Adresse zu verwenden, falls vorhanden
       if (props.selectedLocation?.address && props.selectedLocation.address.includes(',')) {
         location = props.selectedLocation.address
-        console.log('📍 TitleInput - Using full address instead of name:', location)
+        logger.debug('📍 TitleInput - Using full address instead of name:', location)
       }
     }
     
@@ -300,7 +300,7 @@ watch([
   if (props.autoGenerate && suggestions.value.length > 0) {
     const shouldUpdate = !props.title || shouldAutoUpdate()
     
-    console.log('🎯 TitleInput Auto-Generate Check:', {
+    logger.debug('🎯 TitleInput Auto-Generate Check:', {
       autoGenerate: props.autoGenerate,
       hasTitle: !!props.title,
       currentTitle: props.title,
@@ -311,11 +311,11 @@ watch([
     })
     
     if (shouldUpdate) {
-      console.log('✅ Auto-generating title:', suggestions.value[0])
+      logger.debug('✅ Auto-generating title:', suggestions.value[0])
       emit('update:title', suggestions.value[0])
       emit('title-generated', suggestions.value[0])
     } else {
-      console.log('❌ Auto-generate skipped - title exists and shouldAutoUpdate=false')
+      logger.debug('❌ Auto-generate skipped - title exists and shouldAutoUpdate=false')
     }
   }
 }, { deep: true, immediate: true })

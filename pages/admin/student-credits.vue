@@ -599,7 +599,7 @@ const loadStudents = async () => {
       throw new Error('User has no tenant assigned')
     }
     
-    console.log('🔍 Loading students for tenant:', tenantId)
+    logger.debug('🔍 Loading students for tenant:', tenantId)
     
     const { data, error: fetchError } = await supabase
       .from('users')
@@ -707,7 +707,7 @@ const loadPendingWithdrawals = async () => {
       user: credit.users
     })) || []
 
-    console.log('✅ Loaded pending withdrawals:', pendingWithdrawals.value.length)
+    logger.debug('✅ Loaded pending withdrawals:', pendingWithdrawals.value.length)
   } catch (err: any) {
     console.error('❌ Error loading pending withdrawals:', err)
   } finally {
@@ -719,7 +719,7 @@ const processWithdrawal = async (withdrawal: any) => {
   try {
     processingWithdrawalId.value = withdrawal.id
     
-    console.log('💳 Processing withdrawal:', {
+    logger.debug('💳 Processing withdrawal:', {
       userId: withdrawal.user_id,
       amount: (withdrawal.pending_withdrawal_rappen / 100).toFixed(2)
     })
@@ -732,7 +732,7 @@ const processWithdrawal = async (withdrawal: any) => {
     })
 
     if (response.success) {
-      console.log('✅ Withdrawal processed successfully:', response)
+      logger.debug('✅ Withdrawal processed successfully:', response)
       // Reload withdrawals list
       await loadPendingWithdrawals()
       // Show success notification
@@ -794,7 +794,7 @@ const authStore = useAuthStore()
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🔍 Student credits page mounted, checking auth...')
+  logger.debug('🔍 Student credits page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -803,7 +803,7 @@ onMounted(async () => {
     attempts++
   }
   
-  console.log('🔍 Auth state:', {
+  logger.debug('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -812,17 +812,17 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    console.log('❌ User not logged in, redirecting to dashboard')
+    logger.debug('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    console.log('❌ User not admin, redirecting to dashboard')
+    logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  console.log('✅ Auth check passed, loading student credits...')
+  logger.debug('✅ Auth check passed, loading student credits...')
   
   // Original onMounted logic
   await loadStudents()

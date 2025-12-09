@@ -2,7 +2,7 @@
 // Debug Environment Variables für Accounto
 
 export default defineEventHandler(async (event) => {
-  console.log('🔍 Debugging Accounto Environment Variables...')
+  logger.debug('🔍 Debugging Accounto Environment Variables...')
   
   try {
     // Alle relevanten Environment Variables sammeln
@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
       ACCOUNTO_API_KEY_ALT: process.env.ACCOUNTO_API_KEY_ALT
     }
     
-    console.log('🔧 Environment Variables gefunden:', allEnvVars)
+    logger.debug('🔧 Environment Variables gefunden:', allEnvVars)
     
     // API Key Analyse
     let apiKeyStatus = 'NOT_SET'
@@ -98,7 +98,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    console.log('✅ Environment Debug abgeschlossen:', config)
+    logger.debug('✅ Environment Debug abgeschlossen:', config)
     
     return {
       success: true,

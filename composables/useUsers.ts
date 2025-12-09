@@ -23,7 +23,7 @@ export const useUsers = () => {
         .eq('id', userId)
         
       if (error) throw error
-      console.log('User deaktiviert (Soft Delete)')
+      logger.debug('User deaktiviert (Soft Delete)')
       
       // Liste aktualisieren
       await getActiveUsers()
@@ -49,7 +49,7 @@ export const useUsers = () => {
         .eq('id', userId)
         
       if (error) throw error
-      console.log('User reaktiviert')
+      logger.debug('User reaktiviert')
       
       // Liste aktualisieren
       await getActiveUsers()
