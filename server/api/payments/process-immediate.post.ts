@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
     // ✅ WALLEE SDK KONFIGURATION
     const spaceId: number = parseInt(process.env.WALLEE_SPACE_ID || '82592')
     const userId: number = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
-    const apiSecret: string = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+    const apiSecret: string = process.env.WALLEE_SECRET_KEY || (() => { throw new Error('WALLEE_SECRET_KEY is required') })()
     
     const config = {
       space_id: spaceId,

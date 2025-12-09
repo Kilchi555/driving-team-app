@@ -96,7 +96,10 @@ export default defineEventHandler(async (event) => {
         const tenantIdForSettings = firstPaymentForSettings?.tenant_id
         let spaceId = body.spaceId || parseInt(process.env.WALLEE_SPACE_ID || '82592')
         let userId = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
-        let apiSecret = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+        let apiSecret = process.env.WALLEE_SECRET_KEY
+        if (!apiSecret) {
+          throw new Error('WALLEE_SECRET_KEY is not configured in environment variables')
+        }
         
         if (tenantIdForSettings) {
           const { data: walleeSettings } = await supabase
@@ -186,7 +189,10 @@ export default defineEventHandler(async (event) => {
         // Fetch transaction details from Wallee to get merchantReference
         const spaceId = body.spaceId || parseInt(process.env.WALLEE_SPACE_ID || '82592')
         const userId = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
-        const apiSecret = process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+        const apiSecret = process.env.WALLEE_SECRET_KEY
+        if (!apiSecret) {
+          throw new Error('WALLEE_SECRET_KEY is not configured in environment variables')
+        }
         const config = {
           space_id: spaceId,
           user_id: userId,

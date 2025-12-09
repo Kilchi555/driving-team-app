@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
       walleeConfig = {
         spaceId: parseInt(process.env.WALLEE_SPACE_ID || '82592'),
         userId: parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525'),
-        apiSecret: process.env.WALLEE_SECRET_KEY || 'ZtJAPWa4n1Gk86lrNaAZTXNfP3gpKrAKsSDPqEu8Re8='
+        apiSecret: process.env.WALLEE_SECRET_KEY || (() => { throw new Error('WALLEE_SECRET_KEY is required') })()
       }
     }
     const spaceId = walleeConfig.spaceId
