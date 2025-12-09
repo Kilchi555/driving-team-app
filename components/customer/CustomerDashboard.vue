@@ -582,7 +582,7 @@
                 </svg>
               </div>
               <div>
-                <h2 class="text-2xl font-bold text-gray-900">Terminbestätigung</h2>
+                <h2 class="text-xl font-bold text-gray-900">Terminbestätigung</h2>
               </div>
             </div>
             <button 

@@ -91,27 +91,40 @@ async function sendErrorToServer(logEntry: LogEntry) {
 export const logger = {
   /**
    * Debug logs - only in development
+   * Accepts flexible parameters like old console.log (component, message, ...args)
    */
-  debug: (component: string, message: string, data?: any) => {
+  debug: (component: string, message: string, ...args: any[]) => {
     if (!isDev()) {
       return
     }
 
-    console.log(`🔍 [${component}] ${message}`, data || '')
+    if (args.length > 0) {
+      console.log(`🔍 [${component}] ${message}`, ...args)
+    } else {
+      console.log(`🔍 [${component}] ${message}`)
+    }
   },
 
   /**
    * Info logs - always shown
    */
-  info: (component: string, message: string, data?: any) => {
-    console.log(`ℹ️ [${component}] ${message}`, data || '')
+  info: (component: string, message: string, ...args: any[]) => {
+    if (args.length > 0) {
+      console.log(`ℹ️ [${component}] ${message}`, ...args)
+    } else {
+      console.log(`ℹ️ [${component}] ${message}`)
+    }
   },
 
   /**
    * Warning logs - always shown
    */
-  warn: (component: string, message: string, data?: any) => {
-    console.warn(`⚠️ [${component}] ${message}`, data || '')
+  warn: (component: string, message: string, ...args: any[]) => {
+    if (args.length > 0) {
+      console.warn(`⚠️ [${component}] ${message}`, ...args)
+    } else {
+      console.warn(`⚠️ [${component}] ${message}`)
+    }
   },
 
   /**

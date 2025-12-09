@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// @ts-ignore - logger.debug/info/warn accept flexible parameters from old console.log calls
 import { ref, onMounted, onUnmounted, watch, nextTick, onErrorCaptured } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import timeGridPlugin from '@fullcalendar/timegrid'
