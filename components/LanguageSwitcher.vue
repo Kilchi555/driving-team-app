@@ -32,10 +32,23 @@ const currentLocale = computed(() => i18n.locale.value)
 const availableLocales = computed(() => i18n.availableLocales)
 const cookieValue = ref('')
 
-const switchLanguage = (locale: string) => {
+const switchLanguage = async (locale: string) => {
   console.log(`🌐 Switching language from ${i18n.locale.value} to ${locale}`)
-  i18n.setLocale(locale)
-  console.log(`🌐 New locale: ${i18n.locale.value}`)
+  
+  // Method 1: Try setLocale (official method)
+  try {
+    await i18n.setLocale(locale as any)
+    console.log(`✅ setLocale worked! New locale: ${i18n.locale.value}`)
+  } catch (e) {
+    // Method 2: Directly set the locale value (fallback)
+    console.warn(`⚠️ setLocale failed, trying direct assignment:`, e)
+    i18n.locale.value = locale
+    console.log(`✅ Direct assignment worked! New locale: ${i18n.locale.value}`)
+  }
+  
+  // Save to localStorage for persistence
+  localStorage.setItem('driving_team_language', locale)
+  console.log(`💾 Saved to localStorage: ${locale}`)
 }
 
 onMounted(() => {
