@@ -628,20 +628,20 @@
                 <!-- Details Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
 
-                  <!-- Fahrlehrer -->
-                  <div class="flex items-center text-gray-600">
-                    <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A4 4 0 018 17h8a4 4 0 012.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span class="font-medium">Mit {{ getInstructorName(appointment) }}</span>
-                  </div>
-
-                  <!-- Kategorie -->
-                  <div class="flex items-center text-gray-600">
-                    <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
-                    </svg>
-                    <span class="font-medium">{{ getCategoryLabel(appointment) }}</span>
+                  <!-- Fahrlehrer & Kategorie -->
+                  <div class="flex items-center justify-between text-gray-600">
+                    <div class="flex items-center">
+                      <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A4 4 0 018 17h8a4 4 0 012.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span class="font-medium">Mit {{ getInstructorName(appointment) }}</span>
+                    </div>
+                    <div class="flex items-center">
+                      <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
+                      </svg>
+                      <span class="font-medium">{{ getCategoryLabel(appointment) }}</span>
+                    </div>
                   </div>
                 </div>
 
