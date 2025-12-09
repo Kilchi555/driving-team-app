@@ -1,6 +1,11 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4" :style="{ background: `linear-gradient(to bottom right, ${(currentTenant?.primary_color || '#2563eb')}15, #64748b15)` }">
     
+    <!-- Language Switcher (Debug) -->
+    <div class="absolute top-4 right-4">
+      <LanguageSwitcher />
+    </div>
+    
     <!-- Login Form -->
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
       <!-- Header mit Tenant-Branding -->
