@@ -193,14 +193,44 @@ export async function validateTravelTimeBetweenAppointments(
 }
 
 /**
+ * Parse time_windows from database (handles both string and array formats)
+ */
+export function parseTimeWindows(timeWindows: any): Array<{ start: string; end: string; days: number[] }> {
+  if (!timeWindows) {
+    return []
+  }
+
+  // If already an array, return as-is
+  if (Array.isArray(timeWindows)) {
+    return timeWindows
+  }
+
+  // If it's a string, try to parse it
+  if (typeof timeWindows === 'string') {
+    try {
+      const parsed = JSON.parse(timeWindows)
+      return Array.isArray(parsed) ? parsed : []
+    } catch (e) {
+      console.warn('Failed to parse time_windows:', timeWindows, e)
+      return []
+    }
+  }
+
+  return []
+}
+
+/**
  * Prüft ob ein Slot innerhalb der definierten Zeitfenster liegt
  */
 export function isWithinTimeWindows(
   slotStart: Date,
-  timeWindows: Array<{ start: string; end: string; days: number[] }>
+  timeWindows: Array<{ start: string; end: string; days: number[] }> | string | any
 ): boolean {
+  // Parse time_windows if necessary
+  const parsedTimeWindows = parseTimeWindows(timeWindows)
+
   // Keine Zeitfenster definiert = immer verfügbar
-  if (!timeWindows || timeWindows.length === 0) {
+  if (!parsedTimeWindows || parsedTimeWindows.length === 0) {
     return true
   }
 
@@ -210,7 +240,13 @@ export function isWithinTimeWindows(
   const timeInMinutes = hour * 60 + minute
 
   // Prüfe jedes Zeitfenster
-  for (const window of timeWindows) {
+  for (const window of parsedTimeWindows) {
+    // Validate window structure
+    if (!window || typeof window.start !== 'string' || typeof window.end !== 'string' || !Array.isArray(window.days)) {
+      console.warn('Invalid time window format:', window)
+      continue
+    }
+
     // Prüfe ob Wochentag passt
     if (!window.days.includes(dayOfWeek)) {
       continue

@@ -424,6 +424,8 @@ class="text-xl sm:text-lg font-semibold"
 </template>
 
 <script setup>
+import { logger } from '~/utils/logger'
+
 import { ref, computed, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'

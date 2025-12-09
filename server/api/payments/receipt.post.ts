@@ -3,6 +3,7 @@
 import { setHeader, send, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import chromium from '@sparticuz/chromium'
+import { logger } from '~/utils/logger'
 
 let puppeteer: any
 async function getPuppeteer() {

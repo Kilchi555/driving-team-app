@@ -463,6 +463,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { navigateTo } from '#app'
 import { useInvoices } from '~/composables/useInvoices'

@@ -2,6 +2,7 @@
 // Confirm an appointment after successful payment
 
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 interface ConfirmAppointmentRequest {
   appointmentId: string
@@ -20,7 +21,7 @@ export default defineEventHandler(async (event) => {
     
     const supabase = getSupabaseAdmin()
     
-    logger.debug('📝 Confirming appointment:', body.appointmentId)
+    console.log('📝 Confirming appointment:', body.appointmentId)
     
     const { data, error } = await supabase
       .from('appointments')
@@ -40,7 +41,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    logger.debug('✅ Appointment confirmed:', data.id)
+    console.log('✅ Appointment confirmed:', data.id)
     
     return {
       success: true,

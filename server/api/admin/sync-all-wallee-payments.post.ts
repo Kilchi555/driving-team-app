@@ -2,6 +2,7 @@
 // Bulk sync all pending payments with Wallee transaction IDs
 
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

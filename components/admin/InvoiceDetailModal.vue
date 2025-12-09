@@ -461,6 +461,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { defineProps, defineEmits, ref, watch, computed } from 'vue'
 import InvoiceStatusBadge from './InvoiceStatusBadge.vue'
 import PaymentStatusBadge from './PaymentStatusBadge.vue'

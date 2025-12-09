@@ -3,6 +3,7 @@
 
 import { getSupabase } from '~/utils/supabase'
 import { generateVoucherEmailContent } from '~/utils/voucherGenerator'
+import { logger } from '~/utils/logger'
 
 interface SendEmailRequest {
   voucherId: string

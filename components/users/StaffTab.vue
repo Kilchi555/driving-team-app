@@ -606,12 +606,15 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useFeatures } from '~/composables/useFeatures'
 import { useRuntimeConfig } from '#app'
+import { parseTimeWindows } from '~/utils/travelTimeValidation'
 
 // Props
 const props = defineProps<{
@@ -836,7 +839,7 @@ const loadStaff = async () => {
           pickup_enabled: location.pickup_enabled || false,
           pickup_radius_minutes: location.pickup_radius_minutes || 10,
           category_pickup_settings: location.category_pickup_settings || {},
-          time_windows: location.time_windows || []
+          time_windows: parseTimeWindows(location.time_windows) // ✅ Parse time_windows if it's a string
         }))
       }
     })

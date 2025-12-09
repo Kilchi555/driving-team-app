@@ -133,6 +133,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getSupabase } from '~/utils/supabase'

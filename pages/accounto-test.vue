@@ -208,6 +208,8 @@ ACCOUNTO_BASE_URL=https://api.accounto.ch</pre>
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, computed } from 'vue'
 
 // State

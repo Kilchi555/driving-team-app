@@ -4,6 +4,8 @@
 </template>
 
 <script setup>
+import { logger } from '~/utils/logger'
+
 import { onMounted } from 'vue'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'

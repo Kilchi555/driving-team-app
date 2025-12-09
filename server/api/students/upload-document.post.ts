@@ -1,5 +1,6 @@
 // server/api/students/upload-document.post.ts
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

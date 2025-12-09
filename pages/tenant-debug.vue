@@ -116,6 +116,8 @@
 </template>
 
 <script setup>
+import { logger } from '~/utils/logger'
+
 definePageMeta({
   layout: 'minimal'
 })

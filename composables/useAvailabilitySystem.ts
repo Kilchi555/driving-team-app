@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-import { validateTravelTimeBetweenAppointments, isWithinTimeWindows, extractPLZFromAddress } from '~/utils/travelTimeValidation'
+import { validateTravelTimeBetweenAppointments, isWithinTimeWindows, extractPLZFromAddress, parseTimeWindows } from '~/utils/travelTimeValidation'
 
 // Types
 interface Staff {
@@ -219,14 +219,18 @@ export const useAvailabilitySystem = () => {
       })
       staffCategoriesCache.value = staffCategories
 
-      // Use staff_id from locations table directly
+      // Use staff_ids from locations table (it's an array)
       const staffLocations: StaffLocation[] = []
       locationsCache.value.forEach(location => {
-        if (location.staff_id) {
-          staffLocations.push({
-            staff_id: location.staff_id,
-            location_id: location.id,
-            is_active: location.is_active
+        const staffIds = location.staff_ids || []
+        if (Array.isArray(staffIds) && staffIds.length > 0) {
+          // Create a StaffLocation entry for each staff member assigned to this location
+          staffIds.forEach(staffId => {
+            staffLocations.push({
+              staff_id: staffId,
+              location_id: location.id,
+              is_active: location.is_active
+            })
           })
         }
       })

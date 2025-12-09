@@ -2,6 +2,7 @@
 // Manual endpoint to update payment status from Wallee webhook data
 
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

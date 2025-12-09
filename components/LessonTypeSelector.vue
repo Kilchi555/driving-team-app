@@ -30,6 +30,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, onMounted, watch, computed } from 'vue'
 import { useEventTypes } from '~/composables/useEventTypes'
 

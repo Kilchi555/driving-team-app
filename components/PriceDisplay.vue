@@ -505,6 +505,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, computed, onMounted } from 'vue'
 import { usePaymentMethods, useCompanyBilling } from '~/composables/usePaymentMethods'
 import { useEventModalForm } from '~/composables/useEventModalForm'

@@ -1,6 +1,7 @@
 // server/api/debug/check-credit-transaction.post.ts
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

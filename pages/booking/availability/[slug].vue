@@ -713,6 +713,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useAvailabilitySystem } from '~/composables/useAvailabilitySystem'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
@@ -723,6 +725,7 @@ import { useRoute, useRuntimeConfig } from '#app'
 import { useFeatures } from '~/composables/useFeatures'
 import { navigateTo } from '#app'
 import AppointmentPreferencesForm from '~/components/booking/AppointmentPreferencesForm.vue'
+import { parseTimeWindows } from '~/utils/travelTimeValidation'
 
 // Page Meta
 // @ts-ignore - definePageMeta is a Nuxt compiler macro
@@ -1631,7 +1634,7 @@ const selectCategory = async (category: any) => {
           name: location.name,
           address: location.address,
           category_pickup_settings: location.category_pickup_settings || {},
-          time_windows: location.time_windows || [],
+          time_windows: parseTimeWindows(location.time_windows), // ✅ Parse time_windows if it's a string
           available_staff: [staff]
         }))
       })

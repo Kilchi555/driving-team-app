@@ -40,6 +40,8 @@
 </template>
 
 <script setup>
+import { logger } from '~/utils/logger'
+
 import { useModal } from '~/composables/useModal'
 
 const modal = useModal()

@@ -154,6 +154,8 @@
 </template>
 
 <script setup>
+import { logger } from '~/utils/logger'
+
 import { ref, computed, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { formatDate, formatDateTime } from '~/utils/dateUtils'

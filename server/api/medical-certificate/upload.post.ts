@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

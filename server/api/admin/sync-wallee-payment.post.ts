@@ -3,6 +3,7 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { Wallee } from 'wallee'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

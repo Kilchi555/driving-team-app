@@ -2,6 +2,8 @@
 // Secure endpoint to fetch availability data without user authentication
 // Uses service role to bypass RLS and ensure tenant isolation via parameter
 
+import { logger } from '~/utils/logger'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)

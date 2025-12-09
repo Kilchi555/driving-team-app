@@ -163,6 +163,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, watch, onMounted, computed, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 
@@ -560,7 +562,6 @@ const savePickupLocation = async (locationData: any, studentId: string) => {
     const locationToSave = {
       location_type: 'pickup',
       user_id: studentId,
-      staff_id: null,
       tenant_id: userProfile.tenant_id,  // ✅ TENANT ID
       name: locationName,
       address: locationData.address,
@@ -780,7 +781,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
         const locationToSave = {
           location_type: 'standard',
           user_id: null,
-          staff_id: props.currentStaffId,
+          staff_ids: props.currentStaffId ? [props.currentStaffId] : [],  // ✅ STAFF_IDS als Array
           tenant_id: userProfile.tenant_id,  // ✅ TENANT ID
           name: locationData.name,
           address: locationData.address,

@@ -738,6 +738,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { definePageMeta } from '#imports'

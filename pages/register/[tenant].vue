@@ -590,6 +590,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, computed, onMounted, watch } from 'vue'
 import { navigateTo, useRoute, useRouter, useRuntimeConfig, useHead } from '#app'
 import { getSupabase } from '~/utils/supabase'

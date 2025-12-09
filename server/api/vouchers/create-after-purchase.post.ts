@@ -3,6 +3,7 @@
 
 import { getSupabase } from '~/utils/supabase'
 import { generateVoucherCode } from '~/utils/voucherGenerator'
+import { logger } from '~/utils/logger'
 
 interface CreateVouchersRequest {
   paymentId: string

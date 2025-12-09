@@ -607,6 +607,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { ref, computed, onMounted, reactive } from 'vue'
 import { navigateTo } from '#app/composables/router'
 import { getSupabase } from '~/utils/supabase'

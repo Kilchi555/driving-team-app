@@ -1,6 +1,7 @@
 // server/api/appointments/cancel-customer.post.ts
 import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

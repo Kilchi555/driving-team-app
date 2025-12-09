@@ -791,6 +791,8 @@
 </template>
 
 <script setup lang="ts">
+import { logger } from '~/utils/logger'
+
 import { definePageMeta, useHead } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { formatDateTime } from '~/utils/dateUtils'

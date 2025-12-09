@@ -1,6 +1,8 @@
 // server/api/accounto/create-invoice.post.ts
 // Accounto API Integration für Rechnungserstellung
 
+import { logger } from '~/utils/logger'
+
 export default defineEventHandler(async (event) => {
   logger.debug('🏦 Accounto Invoice Creation...')
   

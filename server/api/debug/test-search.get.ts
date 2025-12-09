@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)

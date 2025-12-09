@@ -2,6 +2,7 @@
 // Resets failed payment and sends confirmation email again
 
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {

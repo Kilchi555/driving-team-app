@@ -116,6 +116,8 @@
 </template>
 
 <script setup>
+import { logger } from '~/utils/logger'
+
 import { ref, onMounted, computed } from 'vue'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useAuthStore } from '~/stores/auth'

@@ -1,5 +1,6 @@
 // server/api/upgrade.post.ts
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   const requestId = Math.random().toString(36).substr(2, 9)

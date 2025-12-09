@@ -1,6 +1,8 @@
 // server/api/mock/create-transaction.post.ts
 // Ersetzt Wallee API temporär
 
+import { logger } from '~/utils/logger'
+
 export default defineEventHandler(async (event) => {
   try {
     logger.debug('🎭 Mock Payment API called')
