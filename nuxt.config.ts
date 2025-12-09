@@ -118,7 +118,7 @@ export default defineNuxtConfig({
       { code: 'it', iso: 'it-CH', file: 'it.json', name: 'Italiano' }
     ],
     lazy: true,
-    langDir: './locales',
+    langDir: 'locales',
     defaultLocale: 'de',
     strategy: 'no_prefix',
     detectBrowserLanguage: {
@@ -128,6 +128,10 @@ export default defineNuxtConfig({
       alwaysRedirect: false,
       fallbackLocale: 'en' // 🌐 Fallback to English if device language not supported
     },
-    vueI18n: './i18n.config.ts'
+    vueI18n: './i18n.config.ts',
+    compilation: {
+      strictMessage: false,
+      escapeHtml: false
+    }
   }
 })
