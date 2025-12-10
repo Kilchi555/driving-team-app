@@ -39,35 +39,37 @@
     </div>
 
     <!-- Login Form -->
-    <div v-else class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-      <!-- Header mit Tenant-Branding -->
-      <div 
-        class="text-white p-6 rounded-t-xl" 
-        :style="{ backgroundColor: primaryColor }"
-      >
-        <div class="text-center">
-          <!-- Logo -->
-          <div class="mb-4">
-            <img 
-              v-if="headerLogo" 
-              :src="headerLogo" 
-              class="h-12 w-auto mx-auto" 
-              :alt="`${brandName} Logo`"
-            >
-            <div 
-              v-else 
-              class="w-12 h-12 mx-auto bg-white bg-opacity-20 rounded-lg flex items-center justify-center"
-            >
-              <span class="text-2xl font-bold">{{ brandName.charAt(0).toUpperCase() }}</span>
-            </div>
-          </div>
-          
-          <h1 class="text-2xl font-bold">Willkommen</h1>
-          <p class="text-white text-opacity-90 mt-1">
-            Melden Sie sich in Ihrem {{ brandName }} Account an
-          </p>
+    <div v-else class="w-full max-w-md">
+      <!-- Logo außerhalb - oberhalb des farbigen Bereichs -->
+      <div class="text-center mb-6">
+        <img 
+          v-if="headerLogo" 
+          :src="headerLogo" 
+          class="h-20 w-auto mx-auto drop-shadow-lg" 
+          :alt="`${brandName} Logo`"
+        >
+        <div 
+          v-else 
+          class="w-20 h-20 mx-auto bg-white rounded-lg shadow-lg flex items-center justify-center"
+        >
+          <span class="text-3xl font-bold" :style="{ color: primaryColor }">{{ brandName.charAt(0).toUpperCase() }}</span>
         </div>
       </div>
+      
+      <!-- Card mit farbigem Header -->
+      <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
+        <!-- Header mit Tenant-Branding (ohne Logo) -->
+        <div 
+          class="text-white p-6" 
+          :style="{ backgroundColor: primaryColor }"
+        >
+          <div class="text-center">
+            <h1 class="text-2xl font-bold">Willkommen</h1>
+            <p class="text-white text-opacity-90 mt-1">
+              Melden Sie sich in Ihrem {{ brandName }} Account an
+            </p>
+          </div>
+        </div>
 
       <!-- Login Form -->
       <div class="p-6">
@@ -231,6 +233,8 @@
             </button>
           </div>
         </div>
+      </div>
+      <!-- Ende Card -->
       </div>
     </div>
 
