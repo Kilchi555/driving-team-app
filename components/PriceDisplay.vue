@@ -37,15 +37,26 @@
         </div>
 
         <!-- Student Credit Anzeige -->
-        <div v-if="getUsedCredit() > 0 || (props.studentCredit && props.studentCredit.balance_rappen > 0)" class="py-2 border-t border-blue-200">
+        <div v-if="getUsedCredit() > 0 || (props.studentCredit && props.studentCredit.balance_rappen !== 0)" class="py-2 border-t border-blue-200">
           <div class="space-y-2">
+            <!-- ✅ NEW: Negatives Guthaben (Schulden) -->
+            <div v-if="props.studentCredit && props.studentCredit.balance_rappen < 0 && !props.isEditMode" class="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm font-medium text-red-700">⚠️ Offener Betrag</span>
+                <span class="text-lg font-bold text-red-700">CHF {{ Math.abs(props.studentCredit.balance_rappen / 100).toFixed(2) }}</span>
+              </div>
+              <p class="text-xs text-red-600">
+                Dieser Betrag wird bei dieser Zahlung automatisch verrechnet
+              </p>
+            </div>
+            
             <!-- Im Edit-Modus: Zeige das damals verwendete Guthaben -->
             <div v-if="props.isEditMode && getUsedCredit() > 0" class="flex justify-between items-center">
               <span class="text-sm font-medium text-green-600">Guthaben verwendet (damals)</span>
               <span class="text-sm font-semibold text-green-600">- CHF {{ getUsedCredit().toFixed(2) }}</span>
             </div>
             
-            <!-- Im Create-Modus: Zeige aktuelles Guthaben -->
+            <!-- Im Create-Modus: Zeige aktuelles Guthaben (nur wenn positiv) -->
             <div v-else-if="!props.isEditMode && props.studentCredit && props.studentCredit.balance_rappen > 0" class="flex justify-between items-center">
               <span class="text-sm font-medium text-green-700">Verfügbares Guthaben</span>
               <span class="text-sm font-semibold text-green-700">CHF {{ (props.studentCredit.balance_rappen / 100).toFixed(2) }}</span>

@@ -13,10 +13,20 @@
       
       <!-- Aktuelles Guthaben -->
       <div class="text-right">
-        <div class="text-2xl font-bold text-green-600">
+        <div :class="[
+          'text-2xl font-bold',
+          (currentCredit?.balance_rappen || 0) < 0 ? 'text-red-600' : 'text-green-600'
+        ]">
           {{ formatCreditAmount(currentCredit?.balance_rappen || 0) }}
         </div>
-        <div class="text-sm text-gray-500">Verfügbares Guthaben</div>
+        <div class="text-sm text-gray-500">
+          {{ (currentCredit?.balance_rappen || 0) < 0 ? 'Offener Betrag' : 'Verfügbares Guthaben' }}
+        </div>
+        <div v-if="(currentCredit?.balance_rappen || 0) < 0" class="mt-1">
+          <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+            ⚠️ Schulden
+          </span>
+        </div>
       </div>
     </div>
 

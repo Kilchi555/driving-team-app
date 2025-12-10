@@ -434,13 +434,31 @@
         <!-- Payments Tab -->
         <div v-if="activeTab === 'payments'" class="p-4">
           <!-- Student Credit Balance Card -->
-          <div v-if="studentBalance !== undefined" class="mb-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 p-4">
+          <div v-if="studentBalance !== undefined" :class="[
+            'mb-4 rounded-lg border p-4',
+            studentBalance < 0 
+              ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200' 
+              : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
+          ]">
             <div class="flex items-center justify-between gap-4">
               <div>
-                <p class="text-xs text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
-                <p class="text-2xl font-bold text-green-600">CHF {{ (studentBalance / 100).toFixed(2) }}</p>
+                <p :class="[
+                  'text-xs font-medium mb-1',
+                  studentBalance < 0 ? 'text-red-700' : 'text-green-700'
+                ]">
+                  {{ studentBalance < 0 ? '⚠️ Offener Betrag' : 'Verfügbares Guthaben' }}
+                </p>
+                <p :class="[
+                  'text-2xl font-bold',
+                  studentBalance < 0 ? 'text-red-600' : 'text-green-600'
+                ]">
+                  CHF {{ (Math.abs(studentBalance) / 100).toFixed(2) }}
+                </p>
+                <p v-if="studentBalance < 0" class="text-xs text-red-600 mt-1">
+                  Wird bei nächster Zahlung verrechnet
+                </p>
               </div>
-              <svg class="w-8 h-8 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <svg class="w-8 h-8" :class="studentBalance < 0 ? 'text-red-500' : 'text-green-500'" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
               </svg>
             </div>

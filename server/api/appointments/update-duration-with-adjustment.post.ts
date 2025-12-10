@@ -5,6 +5,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { applyPriceAdjustment, type AdjustmentParams } from '~/server/utils/appointment-price-adjustment'
+import { sendAdjustmentNotificationEmail } from '~/server/utils/send-adjustment-notification'
 
 interface UpdateDurationRequest {
   appointmentId: string
@@ -134,14 +135,15 @@ export default defineEventHandler(async (event) => {
 
     // 4. If adjustment was applied, send notification email
     if (adjustmentResult && adjustmentResult.appliedToCredits) {
-      // Import email sending (will implement in next step)
       try {
-        await sendAdjustmentNotificationEmail(
-          appointment.user_id,
-          adjustmentResult,
+        await sendAdjustmentNotificationEmail({
+          userId: appointment.user_id,
+          appointmentId,
+          adjustment: adjustmentResult,
           oldDuration,
-          newDurationMinutes
-        )
+          newDuration: newDurationMinutes
+        })
+        logger.debug('AppointmentUpdate', 'Notification email sent successfully')
       } catch (emailError) {
         // Don't fail the whole operation if email fails
         logger.error('AppointmentUpdate', 'Failed to send notification email:', emailError)
@@ -174,17 +176,4 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
-/**
- * Send adjustment notification email (placeholder - will implement in next step)
- */
-async function sendAdjustmentNotificationEmail(
-  userId: string,
-  adjustment: any,
-  oldDuration: number,
-  newDuration: number
-): Promise<void> {
-  // This will be implemented in the email notification step
-  logger.debug('AppointmentUpdate', 'Email notification queued for user:', userId)
-}
 

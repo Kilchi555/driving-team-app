@@ -3,6 +3,7 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { clearDebtAfterPayment } from '~/server/utils/payment-with-negative-credits'
 
 interface WalleeWebhookPayload {
   listenerEntityId: number
@@ -583,6 +584,32 @@ export default defineEventHandler(async (event) => {
         })
       } catch (emailErr) {
         console.warn('⚠️ Could not send confirmation email:', emailErr)
+      }
+      
+      // ✅ NEW: Clear negative credits (debt) after successful payment
+      try {
+        for (const payment of payments) {
+          if (payment.user_id && payment.metadata?.debt_included) {
+            const debtAmount = payment.metadata.debt_amount_rappen || 0
+            if (debtAmount > 0) {
+              logger.debug('💳 Clearing debt after payment:', {
+                userId: payment.user_id,
+                debtAmount: (debtAmount / 100).toFixed(2)
+              })
+              
+              const result = await clearDebtAfterPayment(payment.user_id, debtAmount)
+              
+              if (result.success) {
+                logger.debug('✅ Debt cleared, new balance:', (result.newBalance / 100).toFixed(2))
+              } else {
+                logger.error('❌ Failed to clear debt for user:', payment.user_id)
+              }
+            }
+          }
+        }
+      } catch (debtError) {
+        console.error('❌ Error clearing debt:', debtError)
+        // Don't fail the webhook - payment was successful
       }
     }
     

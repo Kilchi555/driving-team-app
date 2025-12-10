@@ -5,6 +5,7 @@ import { Wallee } from 'wallee'
 import { buildMerchantReference } from '~/utils/merchantReference'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { logger } from '~/utils/logger'
+import { calculatePaymentWithDebt, formatPaymentDescriptionWithDebt } from '~/server/utils/payment-with-negative-credits'
 
 export default defineEventHandler(async (event) => {
   logger.debug('🚀 Wallee Transaction Creation (SDK)...')
@@ -39,6 +40,27 @@ export default defineEventHandler(async (event) => {
         statusCode: 400,
         statusMessage: 'Missing required fields: orderId, amount, customerEmail'
       })
+    }
+
+    // ✅ NEW: Check for negative credits (debt) and add to payment if applicable
+    let finalAmount = amount
+    let debtIncluded = false
+    let debtAmount = 0
+    
+    if (requestUserId) {
+      const paymentCalc = await calculatePaymentWithDebt(requestUserId, amount)
+      
+      if (paymentCalc.hasDebt) {
+        finalAmount = paymentCalc.totalAmount
+        debtIncluded = true
+        debtAmount = paymentCalc.debtAmount
+        
+        logger.debug('💳 Including debt in payment:', {
+          baseAmount: (amount / 100).toFixed(2),
+          debtAmount: (debtAmount / 100).toFixed(2),
+          totalAmount: (finalAmount / 100).toFixed(2)
+        })
+      }
     }
 
     // ✅ GET WALLEE CONFIG FOR TENANT (from database only - NEVER from frontend)
@@ -79,11 +101,19 @@ export default defineEventHandler(async (event) => {
     
     // ✅ LINE ITEM für echte Appointments
     const lineItem: Wallee.model.LineItemCreate = new Wallee.model.LineItemCreate()
-    lineItem.name = description || 'Driving Team Bestellung'
+    lineItem.name = debtIncluded 
+      ? formatPaymentDescriptionWithDebt(description || 'Driving Team Bestellung', { 
+          baseAmount: amount, 
+          debtAmount, 
+          totalAmount: finalAmount, 
+          hasDebt: true,
+          creditBalance: 0 
+        })
+      : description || 'Driving Team Bestellung'
     lineItem.uniqueId = shortUniqueId // Use short ID (under 200 chars)
     lineItem.sku = 'driving-lesson'
     lineItem.quantity = 1
-    lineItem.amountIncludingTax = amount // Keep as is for now to see actual value
+    lineItem.amountIncludingTax = finalAmount // Use final amount including debt
     lineItem.type = Wallee.model.LineItemType.PRODUCT
     
     // ✅ Generate consistent customer ID for Wallee tokenization (pseudonymous)
@@ -160,6 +190,17 @@ export default defineEventHandler(async (event) => {
         tokenizationPurpose: 'payment_method_storage'
       }
       logger.debug('🔑 Tokenization-only transaction flagged for auto-refund')
+    }
+    
+    // ✅ NEW: Store debt information in metadata for webhook processing
+    if (debtIncluded) {
+      transaction.metaData = {
+        ...(transaction.metaData || {}),
+        debt_included: 'true',
+        debt_amount_rappen: debtAmount.toString(),
+        base_amount_rappen: amount.toString()
+      }
+      logger.debug('💳 Debt info stored in transaction metadata')
     }
     
     // ✅ SETZE VERFÜGBARE ZAHLUNGSMETHODEN
