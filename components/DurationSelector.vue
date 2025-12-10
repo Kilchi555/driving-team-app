@@ -37,9 +37,14 @@
       <br>Bitte in den Profileinstellungen Dauern hinzufügen.
     </div>
     
-    <!-- Error State -->
-    <div v-if="error" class="mt-2 text-red-600 text-sm">
-      ❌ {{ error }}
+    <!-- Error/Info State -->
+    <div v-if="error" :class="[
+      'mt-2 text-sm p-3 rounded-lg border',
+      error.startsWith('ℹ️') 
+        ? 'bg-blue-50 border-blue-200 text-blue-700'
+        : 'bg-red-50 border-red-200 text-red-700'
+    ]">
+      {{ error }}
     </div>
   </div>
 </template>
@@ -254,27 +259,42 @@ const selectDuration = async (duration: number) => {
     return
   }
   
-  // ✅ NEU: Prüfe ob Dauer erhöht wird und Termin bereits bezahlt ist
-  if (props.mode === 'edit' && props.originalDuration) {
-    if (duration > props.originalDuration) {
-      const isPaid = await checkIfPaid()
-      
-      if (isPaid) {
+  // ✅ NEU: Prüfe ob Dauer geändert wird und Termin bereits bezahlt ist
+  if (props.mode === 'edit' && props.originalDuration && duration !== props.originalDuration) {
+    const isPaid = await checkIfPaid()
+    
+    if (isPaid) {
+      if (duration > props.originalDuration) {
+        // Dauer erhöht - nicht erlaubt
         logger.error('🚫 Cannot increase duration on paid appointment')
         error.value = 'Dieser Termin ist bereits bezahlt. Die Dauer kann nicht erhöht werden. Bitte erstellen Sie einen zusätzlichen Termin für die weitere Zeit.'
         
-        // Fehlermeldung nach 5 Sekunden ausblenden
+        // Fehlermeldung nach 8 Sekunden ausblenden
         setTimeout(() => {
           error.value = null
         }, 8000)
         
         return // Verhindere die Änderung
+      } else if (duration < props.originalDuration) {
+        // Dauer verringert - erlaubt, aber Info anzeigen
+        logger.info('ℹ️ Duration decreased on paid appointment - will credit difference')
+        const durationReduction = props.originalDuration - duration
+        error.value = `ℹ️ Dieser Termin ist bereits bezahlt. Die Differenz von ${durationReduction} Minuten wird Ihrem Guthaben gutgeschrieben.`
+        
+        // Info-Meldung nach 6 Sekunden ausblenden
+        setTimeout(() => {
+          error.value = null
+        }, 6000)
+        
+        // Erlaube die Änderung (kein return)
       }
     }
   }
   
-  // Clear any previous errors
-  error.value = null
+  // Clear any previous errors if duration matches original
+  if (props.mode === 'edit' && props.originalDuration && duration === props.originalDuration) {
+    error.value = null
+  }
   
   emit('update:modelValue', duration)
   emit('duration-changed', duration)
