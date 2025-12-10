@@ -295,6 +295,40 @@
           </div>
         </div>
 
+        <!-- ✅ NEW: Adjustment Notification -->
+        <div v-if="adjustmentNotification" class="border-t pt-3">
+          <div :class="[
+            'p-3 rounded-lg text-sm font-medium',
+            adjustmentNotification.type === 'credit' 
+              ? 'bg-green-100 text-green-800 border border-green-300'
+              : 'bg-blue-100 text-blue-800 border border-blue-300'
+          ]">
+            <div class="flex items-center gap-2">
+              <span>{{ adjustmentNotification.type === 'credit' ? '✅' : '💳' }}</span>
+              <div>
+                <div class="font-semibold">{{ adjustmentNotification.message }}</div>
+                <div class="text-xs opacity-75 mt-1">
+                  Betrag: CHF {{ adjustmentNotification.amount.toFixed(2) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- ✅ NEW: Additional Payments Display -->
+        <div v-if="showAdditionalPayments" class="border-t pt-3">
+          <div class="text-sm font-medium text-gray-700 mb-2">Zusätzliche Zahlungen</div>
+          <div class="space-y-2">
+            <div v-for="payment in additionalPayments" :key="payment.id" class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-blue-700">Zusätzliche Zahlung erforderlich</span>
+                <span class="font-semibold text-blue-800">CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}</span>
+              </div>
+              <div class="text-xs text-blue-600 mt-1">{{ payment.notes }}</div>
+            </div>
+          </div>
+        </div>
+        
         <!-- Zahlungsarten - nur für neue Termine oder wenn kein Payment existiert -->
         <div v-if="showPaymentSelection && !props.isPastAppointment" class="border-t pt-3">
           <div class="text-sm font-medium text-gray-700 mb-3">Zahlungsart</div>
@@ -605,6 +639,14 @@ const additionalPayments = ref<any[]>([])
 const showAdditionalPayments = computed(() => {
   return additionalPayments.value.length > 0
 })
+
+// ✅ NEW: State for showing adjustment notifications
+const adjustmentNotification = ref<{
+  type: 'credit' | 'payment'
+  amount: number
+  message: string
+  timestamp: number
+} | null>(null)
 const isLoadingStudentBilling = ref(false)
 const isEditingBillingAddress = ref(false)
 const useCustomBillingAddressInModal = ref(false)
@@ -941,30 +983,70 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
         
         // ✅ Call API endpoint to handle payment reconciliation (for completed/authorized payments)
         try {
-          logger.debug('📡 Calling adjust-duration endpoint...')
-          const result = await $fetch('/api/appointments/adjust-duration', {
+          logger.debug('📡 Calling update-duration-with-adjustment endpoint...')
+          const result = await $fetch('/api/appointments/update-duration-with-adjustment', {
             method: 'POST',
             body: {
               appointmentId: props.appointmentId,
-              oldDurationMinutes: oldDuration,
-              newDurationMinutes: newDuration,
-              pricePerMinute: props.pricePerMinute
+              newDurationMinutes: newDuration
             }
           })
           
           logger.debug('✅ Duration adjustment processed:', result)
           
-          // Show notification based on result
-          if ((result as any).action === 'additional_payment') {
-            logger.debug(`💳 Additional payment created: CHF ${(result as any).details.amount}`)
-            // Could show toast here if needed
-          } else if ((result as any).action === 'credit_applied') {
-            logger.debug(`💰 Credit applied to student: CHF ${(result as any).details.refundAmount}`)
-            // Could show toast here if needed
+          // ✅ NEW: Display adjustment results
+          if (result.adjustment) {
+            if (result.adjustment.type === 'duration_increase') {
+              logger.debug('💳 Second payment created:', {
+                paymentId: result.adjustment.secondPaymentId,
+                amount: `CHF ${result.adjustment.amount.toFixed(2)}`
+              })
+              
+              // Update UI to show second payment
+              if (result.adjustment.secondPaymentId) {
+                adjustmentNotification.value = {
+                  type: 'payment',
+                  amount: result.adjustment.amount,
+                  message: 'Zusätzliche Zahlung erstellt',
+                  timestamp: Date.now()
+                }
+                
+                // Auto-clear notification after 5 seconds
+                setTimeout(() => {
+                  adjustmentNotification.value = null
+                }, 5000)
+              }
+            } else if (result.adjustment.type === 'duration_decrease') {
+              logger.debug('💰 Credit applied to student:', {
+                amount: `CHF ${result.adjustment.amount.toFixed(2)}`,
+                transactionId: result.adjustment.transactionId
+              })
+              
+              // Update UI to show credit was applied
+              adjustmentNotification.value = {
+                type: 'credit',
+                amount: result.adjustment.amount,
+                message: 'Guthaben hinzugefügt',
+                timestamp: Date.now()
+              }
+              
+              // Auto-clear notification after 5 seconds
+              setTimeout(() => {
+                adjustmentNotification.value = null
+              }, 5000)
+              
+              // ✅ Update student credit display
+              if (props.studentCredit) {
+                props.studentCredit.balance_rappen += Math.round(result.adjustment.amount * 100)
+                logger.debug('💰 Updated student credit balance:', {
+                  newBalance: `CHF ${(props.studentCredit.balance_rappen / 100).toFixed(2)}`
+                })
+              }
+            }
           }
         } catch (error: any) {
-          console.error('❌ Error calling adjust-duration endpoint:', error)
-          // Show error notification
+          logger.error('PriceDisplay', 'Error calling update-duration-with-adjustment endpoint:', error)
+          // Show error notification but don't break the app
         }
       }
     }
