@@ -995,8 +995,12 @@ const getBasePrice = () => {
 
 // ✅ NEU: Discount Amount aus bestehender Payment oder Props
 const getDiscountAmount = () => {
-  // Im Edit-Modus: Verwende den gespeicherten Rabatt aus der Payment-Tabelle
+  // Im Edit-Modus: Verwende den aktuellen Rabatt aus Props ODER den gespeicherten
   if (props.isEditMode && existingPayment.value) {
+    // Priorität: Props.discount (wenn vom User gerade geändert), sonst gespeicherter Rabatt
+    if (props.discount && props.discount > 0) {
+      return props.discount
+    }
     return (existingPayment.value.discount_amount_rappen || 0) / 100
   }
   
