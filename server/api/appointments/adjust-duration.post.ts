@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     // 1. Fetch the appointment and its payment
     const { data: appointment, error: aptError } = await supabase
       .from('appointments')
-      .select('id, user_id, staff_id, start_time, duration_minutes, status, tenant_id, lesson_price_rappen')
+      .select('id, user_id, staff_id, start_time, duration_minutes, status, tenant_id')
       .eq('id', appointmentId)
       .single()
 
