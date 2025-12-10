@@ -876,12 +876,11 @@ watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
   }
 })
 
-// ✅ SIMPLE: Watcher für Duration-Änderung - nur Preis aktualisieren
-watch(() => props.durationMinutes, (newDuration: number, oldDuration: number) => {
-  if (newDuration !== oldDuration && props.isEditMode && existingPayment.value) {
-    // Berechne neuen Preis basierend auf neuer Duration
-    const newPrice = newDuration * props.pricePerMinute
-    const newLessonPriceRappen = Math.round(newPrice * 100)
+// ✅ SIMPLE: Watcher für Duration- ODER PricePerMinute-Änderung - nur Preis aktualisieren
+watch(() => ({ duration: props.durationMinutes, price: props.pricePerMinute }), ({ duration: newDuration, price: newPrice }, { duration: oldDuration, price: oldPrice }) => {
+  if ((newDuration !== oldDuration || newPrice !== oldPrice) && props.isEditMode && existingPayment.value) {
+    // Berechne neuen Preis basierend auf neuer Duration UND pricePerMinute
+    const newLessonPriceRappen = Math.round(newDuration * newPrice * 100)
     
     // Update existingPayment local state (UI wird automatisch aktualisiert)
     const productsPrice = existingPayment.value.products_price_rappen || 0
@@ -891,11 +890,14 @@ watch(() => props.durationMinutes, (newDuration: number, oldDuration: number) =>
     existingPayment.value.lesson_price_rappen = newLessonPriceRappen
     existingPayment.value.total_amount_rappen = Math.max(0, newLessonPriceRappen + productsPrice + adminFee - discount)
     
-    logger.debug('⏱️ Price updated for duration change:', {
+    logger.debug('⏱️ Price updated for duration/pricePerMinute change:', {
       oldDuration,
       newDuration,
-      oldPrice: (existingPayment.value.lesson_price_rappen / 100).toFixed(2),
-      newPrice: (newLessonPriceRappen / 100).toFixed(2)
+      oldPrice: (oldPrice * 100).toFixed(2),
+      newPrice: (newPrice * 100).toFixed(2),
+      oldPriceRappen: existingPayment.value.lesson_price_rappen,
+      newPriceRappen: newLessonPriceRappen,
+      calculatedTotal: (newLessonPriceRappen / 100).toFixed(2)
     })
   }
 }, { immediate: false })
