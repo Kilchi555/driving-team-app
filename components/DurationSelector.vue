@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 
-import { computed, watch, onMounted } from 'vue'
+import { computed, watch, onMounted, ref } from 'vue'
 import { useDurationManager } from '~/composables/useDurationManager'
 import { getSupabase } from '~/utils/supabase' 
 
@@ -61,6 +61,8 @@ interface Props {
   isPastAppointment?: boolean
   mode?: 'create' | 'edit' | 'view' // ✅ NEU: mode prop hinzugefügt
   selectedStudent?: any // ✅ NEU: Für letzte Dauer-Abfrage
+  appointmentId?: string // ✅ NEU: Für Payment-Status-Prüfung
+  originalDuration?: number // ✅ NEU: Original-Dauer für Vergleich
 }
 
 interface Emits {
@@ -73,14 +75,18 @@ const props = withDefaults(defineProps<Props>(), {
   adminFee: 0,
   availableDurations: () => [],
   showDebugInfo: false,
-  isPastAppointment: false
+  isPastAppointment: false,
+  appointmentId: undefined,
+  originalDuration: undefined
 })
 
 const emit = defineEmits<Emits>()
 
+// ✅ Lokale error ref für DurationSelector-spezifische Fehler
+const error = ref<string | null>(null)
+
 const {
   isLoading,
-  error,
   loadStaffDurations,  
   getDefaultDuration
 } = useDurationManager()
@@ -208,8 +214,38 @@ const formattedDurations = computed(() => {
   return result
 })
 
+// ✅ NEU: Prüfe ob Termin bezahlt ist
+const checkIfPaid = async (): Promise<boolean> => {
+  if (!props.appointmentId || props.mode !== 'edit') {
+    return false // Im Create-Modus ist nichts bezahlt
+  }
+  
+  try {
+    const supabase = getSupabase()
+    const { data: payment, error } = await supabase
+      .from('payments')
+      .select('payment_status')
+      .eq('appointment_id', props.appointmentId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('❌ Error checking payment status:', error)
+      return false
+    }
+    
+    const isPaid = payment && (payment.payment_status === 'completed' || payment.payment_status === 'authorized')
+    logger.debug('💳 Payment status check:', { isPaid, payment_status: payment?.payment_status })
+    return isPaid || false
+  } catch (err) {
+    console.error('❌ Error in checkIfPaid:', err)
+    return false
+  }
+}
+
 // Methods
-const selectDuration = (duration: number) => {
+const selectDuration = async (duration: number) => {
   logger.debug('🔄 Duration selected:', duration)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
@@ -217,6 +253,28 @@ const selectDuration = (duration: number) => {
     logger.debug('🚫 Cannot change duration for past appointment')
     return
   }
+  
+  // ✅ NEU: Prüfe ob Dauer erhöht wird und Termin bereits bezahlt ist
+  if (props.mode === 'edit' && props.originalDuration) {
+    if (duration > props.originalDuration) {
+      const isPaid = await checkIfPaid()
+      
+      if (isPaid) {
+        logger.error('🚫 Cannot increase duration on paid appointment')
+        error.value = 'Dieser Termin ist bereits bezahlt. Die Dauer kann nicht erhöht werden. Bitte erstellen Sie einen zusätzlichen Termin für die weitere Zeit.'
+        
+        // Fehlermeldung nach 5 Sekunden ausblenden
+        setTimeout(() => {
+          error.value = null
+        }, 8000)
+        
+        return // Verhindere die Änderung
+      }
+    }
+  }
+  
+  // Clear any previous errors
+  error.value = null
   
   emit('update:modelValue', duration)
   emit('duration-changed', duration)

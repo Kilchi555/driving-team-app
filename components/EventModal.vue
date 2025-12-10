@@ -170,6 +170,8 @@
               :is-past-appointment="props.mode === 'edit' && isPastAppointment"
               :mode="props.mode"
               :selected-student="selectedStudent"
+              :appointment-id="props.eventData?.id"
+              :original-duration="props.eventData?.duration_minutes"
               @duration-changed="handleDurationChanged"
             />
             
