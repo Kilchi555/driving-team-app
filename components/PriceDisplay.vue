@@ -595,8 +595,13 @@ const isLoadingDiscounts = ref(false) // ✅ NEU: Loading state für Gutscheine
 // ✅ NEU: Payment State für Edit-Modus
 const existingPayment = ref<any>(null)
 const isLoadingPayment = ref(false)
-// ✅ NEU: State für Student Billing Address Management
-const studentBillingAddress = ref<any>(null)
+// ✅ NEU: State für mehrfache Payments bei Duration-Änderung
+const additionalPayments = ref<any[]>([])
+
+// ✅ Computed: Zeige zusätzliche Payments an wenn Duration erhöht wurde
+const showAdditionalPayments = computed(() => {
+  return additionalPayments.value.length > 0
+})
 const isLoadingStudentBilling = ref(false)
 const isEditingBillingAddress = ref(false)
 const useCustomBillingAddressInModal = ref(false)

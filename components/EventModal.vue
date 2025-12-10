@@ -1081,13 +1081,27 @@ const handleSaveAppointment = async () => {
         
         logger.debug('✅ Adjustment completed:', adjustmentResult)
         
+        // ✅ NEW: If second payment was created, show notification
+        if (adjustmentResult.adjustment?.secondPaymentId) {
+          logger.debug('💳 Second payment created:', adjustmentResult.adjustment.secondPaymentId)
+          
+          const amount = (adjustmentResult.adjustment.amount / 100).toFixed(2)
+          const message = `Terminverlängerung gespeichert!\n\nZusätzliche Zahlung erforderlich:\nCHF ${amount}\n\nBitte führen Sie die Zahlung durch.`
+          
+          showSuccess('Zusätzliche Zahlung erforderlich', message)
+        } else if (adjustmentResult.adjustment?.appliedToCredits) {
+          // Duration decreased - credit was applied
+          const amount = (Math.abs(adjustmentResult.adjustment.amount) / 100).toFixed(2)
+          showSuccess('Gutschrift erhalten', `CHF ${amount} wurde Ihrem Konto gutgeschrieben.`)
+        }
+        
         // Clear the flags
         needsAdjustmentEndpoint.value = null
         showAdjustmentWarning.value = false
         
         // Emit refresh and close
         emit('refresh-calendar')
-        emit('close')
+        setTimeout(() => emit('close'), 2000) // Close after showing success
         return
       } catch (error: any) {
         logger.error('EventModal', 'Error calling adjustment endpoint:', error)
