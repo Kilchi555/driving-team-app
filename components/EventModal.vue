@@ -3029,12 +3029,17 @@ const handleDiscountChanged = (discount: number, discountType: "fixed" | "percen
   })
 }
 
-const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => {
-  // ✅ Payment status wird in payments Tabelle gespeichert, nicht in appointments
-  logger.debug('💳 Payment status changed:', { isPaid, paymentMethod })
-  
-  // Hier können Sie zusätzliche Logik für das Speichern hinzufügen
-  // z.B. sofort in der payments Tabelle aktualisieren
+// ✅ Simple Toast Functions for user feedback
+const showSuccess = (title: string, message: string = '') => {
+  logger.info('Success', title, message)
+  // For now, use alert as fallback. Can be replaced with Toast component later
+  alert(`✅ ${title}\n${message}`)
+}
+
+const showError = (title: string, message: string = '') => {
+  logger.error('Error', title, message)
+  // For now, use alert as fallback. Can be replaced with Toast component later
+  alert(`❌ ${title}\n${message}`)
 }
 
 const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, appointmentNum: number = 1) => {
