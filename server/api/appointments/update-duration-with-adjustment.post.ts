@@ -14,6 +14,14 @@ interface UpdateDurationRequest {
   reason?: string
 }
 
+// ✅ Runde auf nächsten 50 Rappen auf (wie bei anderen Payments)
+function roundToNearestFiftyRappen(rappen: number): number {
+  const remainder = rappen % 100
+  if (remainder === 0) return rappen
+  if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
+  else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody<UpdateDurationRequest>(event)
@@ -101,7 +109,10 @@ export default defineEventHandler(async (event) => {
     // Calculate OLD price using the same price per minute
     const oldPriceRappen = oldDuration * pricePerMinuteRappen
     const newPriceRappen = payment.lesson_price_rappen
-    const priceDifferenceRappen = Math.round(newPriceRappen - oldPriceRappen)
+    const priceDifferenceRappen = newPriceRappen - oldPriceRappen
+    
+    // ✅ Runde den Preisunterschied auf 50 Rappen (wie bei anderen Payments)
+    const roundedPriceDifferenceRappen = roundToNearestFiftyRappen(priceDifferenceRappen)
 
     logger.debug('AppointmentUpdate', 'Price calculation:', {
       oldDuration,
@@ -109,22 +120,23 @@ export default defineEventHandler(async (event) => {
       pricePerMinute: (pricePerMinuteRappen / 100).toFixed(4),
       oldPrice: (oldPriceRappen / 100).toFixed(2),
       newPrice: (newPriceRappen / 100).toFixed(2),
-      difference: (priceDifferenceRappen / 100).toFixed(2)
+      difference: (priceDifferenceRappen / 100).toFixed(2),
+      differenceRounded: (roundedPriceDifferenceRappen / 100).toFixed(2)
     })
 
     let adjustmentResult = null
 
-    if (priceDifferenceRappen > 0) {
+    if (roundedPriceDifferenceRappen > 0) {
       // Duration increased - create second payment
       logger.debug('AppointmentUpdate', 'Duration increased - creating second payment', {
-        priceDifferenceRappen,
-        priceDifferenceCHF: (priceDifferenceRappen / 100).toFixed(2)
+        priceDifferenceRappen: roundedPriceDifferenceRappen,
+        priceDifferenceCHF: (roundedPriceDifferenceRappen / 100).toFixed(2)
       })
-      adjustmentResult = await handlePriceIncrease(supabase, appointmentId, payment, priceDifferenceRappen, newDurationMinutes, oldDuration)
-    } else if (priceDifferenceRappen < 0) {
+      adjustmentResult = await handlePriceIncrease(supabase, appointmentId, payment, roundedPriceDifferenceRappen, newDurationMinutes, oldDuration)
+    } else if (roundedPriceDifferenceRappen < 0) {
       // Duration decreased - apply credit
       logger.debug('AppointmentUpdate', 'Duration decreased - applying credit')
-      adjustmentResult = await handlePriceDecrease(supabase, appointmentId, appointment, Math.abs(priceDifferenceRappen), newDurationMinutes, oldDuration)
+      adjustmentResult = await handlePriceDecrease(supabase, appointmentId, appointment, Math.abs(roundedPriceDifferenceRappen), newDurationMinutes, oldDuration)
     } else {
       logger.debug('AppointmentUpdate', 'No price difference')
     }
