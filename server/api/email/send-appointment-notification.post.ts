@@ -17,6 +17,7 @@ interface AppointmentNotificationBody {
   location?: string
   tenantName?: string
   tenantId?: string
+  tenantSlug?: string
   amount?: string
 }
 
@@ -27,6 +28,10 @@ const TEMPLATES = {
     subject: 'Terminbestätigung erforderlich',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
+      const dashboardUrl = data.tenantSlug 
+        ? `https://www.simy.ch/customer/${data.tenantSlug}` 
+        : 'https://www.simy.ch/customer-dashboard'
+      
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
@@ -54,8 +59,8 @@ const TEMPLATES = {
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte bestätige deinen Termin und bezahle die offene Rechnung in deinem Kundenkonto.</p>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://simy.ch/customer-dashboard" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-                  Jetzt bestätigen und bezahlen
+                <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+                  Zum Kundenkonto
                 </a>
               </div>
               
@@ -80,6 +85,10 @@ const TEMPLATES = {
     subject: 'Termin storniert',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
+      const dashboardUrl = data.tenantSlug 
+        ? `https://www.simy.ch/customer/${data.tenantSlug}` 
+        : 'https://www.simy.ch/customer-dashboard'
+      
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
@@ -102,7 +111,13 @@ const TEMPLATES = {
                 ${data.cancellationReason ? `<p style="margin: 5px 0; color: #374151;"><strong>Grund:</strong> ${data.cancellationReason}</p>` : ''}
               </div>
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Falls du Fragen hast, kontaktiere uns bitte per E-Mail oder Telefon.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Falls du Fragen hast oder einen neuen Termin buchen möchtest, besuche einfach dein Kundenkonto.</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+                  Zum Kundenkonto
+                </a>
+              </div>
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Beste Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
             </td>
@@ -125,6 +140,10 @@ const TEMPLATES = {
     subject: 'Termin verschoben - Neue Zeit',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
+      const dashboardUrl = data.tenantSlug 
+        ? `https://www.simy.ch/customer/${data.tenantSlug}` 
+        : 'https://www.simy.ch/customer-dashboard'
+      
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
@@ -150,6 +169,12 @@ const TEMPLATES = {
               </div>
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Du findest den neuen Termin in deinem Kundenkonto. Falls du Fragen hast, kontaktiere uns bitte.</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+                  Zum Kundenkonto
+                </a>
+              </div>
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
             </td>
@@ -193,25 +218,33 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Load tenant primary color if tenantId is provided
+    // Load tenant primary color and slug if tenantId is provided
     let primaryColor = '#2563eb' // Default blue
+    let tenantSlug: string | null = null
+    
     if (tenantId) {
       try {
         const supabase = getSupabaseAdmin()
         const { data: tenant, error: tenantError } = await supabase
           .from('tenants')
-          .select('primary_color')
+          .select('primary_color, slug')
           .eq('id', tenantId)
           .single()
         
-        if (tenant?.primary_color) {
-          primaryColor = tenant.primary_color
-          logger.debug(`✅ Loaded tenant color: ${primaryColor}`)
+        if (tenant) {
+          if (tenant.primary_color) {
+            primaryColor = tenant.primary_color
+            logger.debug(`✅ Loaded tenant color: ${primaryColor}`)
+          }
+          if (tenant.slug) {
+            tenantSlug = tenant.slug
+            logger.debug(`✅ Loaded tenant slug: ${tenantSlug}`)
+          }
         } else if (tenantError) {
-          console.warn(`⚠️ Could not load tenant color:`, tenantError.message)
+          console.warn(`⚠️ Could not load tenant data:`, tenantError.message)
         }
       } catch (err: any) {
-        console.warn(`⚠️ Error loading tenant color:`, err.message)
+        console.warn(`⚠️ Error loading tenant data:`, err.message)
         // Continue with default color
       }
     }
@@ -219,7 +252,7 @@ export default defineEventHandler(async (event) => {
     logger.debug(`📧 Sending ${type} appointment notification to ${email}`)
     
     const subject = template.subject
-    const html = template.getHtml(body, primaryColor)
+    const html = template.getHtml({ ...body, tenantSlug }, primaryColor)
     
     await sendEmail({
       to: email,
