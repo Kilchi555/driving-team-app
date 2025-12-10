@@ -1010,11 +1010,8 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
                   message: 'Zusätzliche Zahlung erstellt',
                   timestamp: Date.now()
                 }
-                
-                // Auto-clear notification after 5 seconds
-                setTimeout(() => {
-                  adjustmentNotification.value = null
-                }, 5000)
+                // ✅ REMOVED: Don't auto-clear - let user see it until they save
+                // Auto-clear will happen when modal closes
               }
             } else if (result.adjustment.type === 'duration_decrease') {
               logger.debug('💰 Credit applied to student:', {
@@ -1029,11 +1026,8 @@ watch(() => props.durationMinutes, async (newDuration: number, oldDuration: numb
                 message: 'Guthaben hinzugefügt',
                 timestamp: Date.now()
               }
-              
-              // Auto-clear notification after 5 seconds
-              setTimeout(() => {
-                adjustmentNotification.value = null
-              }, 5000)
+              // ✅ REMOVED: Don't auto-clear - let user see it until they save
+              // Auto-clear will happen when modal closes
               
               // ✅ Update student credit display
               if (props.studentCredit) {
