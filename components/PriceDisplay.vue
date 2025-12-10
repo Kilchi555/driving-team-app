@@ -295,40 +295,6 @@
           </div>
         </div>
 
-        <!-- ✅ NEW: Adjustment Notification -->
-        <div v-if="adjustmentNotification" class="border-t pt-3">
-          <div :class="[
-            'p-3 rounded-lg text-sm font-medium',
-            adjustmentNotification.type === 'credit' 
-              ? 'bg-green-100 text-green-800 border border-green-300'
-              : 'bg-blue-100 text-blue-800 border border-blue-300'
-          ]">
-            <div class="flex items-center gap-2">
-              <span>{{ adjustmentNotification.type === 'credit' ? '✅' : '💳' }}</span>
-              <div>
-                <div class="font-semibold">{{ adjustmentNotification.message }}</div>
-                <div class="text-xs opacity-75 mt-1">
-                  Betrag: CHF {{ adjustmentNotification.amount.toFixed(2) }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- ✅ NEW: Additional Payments Display -->
-        <div v-if="showAdditionalPayments" class="border-t pt-3">
-          <div class="text-sm font-medium text-gray-700 mb-2">Zusätzliche Zahlungen</div>
-          <div class="space-y-2">
-            <div v-for="payment in additionalPayments" :key="payment.id" class="bg-blue-50 p-3 rounded-lg border border-blue-200">
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-blue-700">Zusätzliche Zahlung erforderlich</span>
-                <span class="font-semibold text-blue-800">CHF {{ (payment.total_amount_rappen / 100).toFixed(2) }}</span>
-              </div>
-              <div class="text-xs text-blue-600 mt-1">{{ payment.notes }}</div>
-            </div>
-          </div>
-        </div>
-        
         <!-- Zahlungsarten - nur für neue Termine oder wenn kein Payment existiert -->
         <div v-if="showPaymentSelection && !props.isPastAppointment" class="border-t pt-3">
           <div class="text-sm font-medium text-gray-700 mb-3">Zahlungsart</div>
@@ -632,21 +598,10 @@ const isLoadingPayment = ref(false)
 
 // ✅ NEU: State für Student Billing Address Management (MUST BE EARLY)
 const studentBillingAddress = ref<any>(null)
-// ✅ NEU: State für mehrfache Payments bei Duration-Änderung
-const additionalPayments = ref<any[]>([])
 
 // ✅ Computed: Zeige zusätzliche Payments an wenn Duration erhöht wurde
-const showAdditionalPayments = computed(() => {
-  return additionalPayments.value.length > 0
-})
-
 // ✅ NEW: State for showing adjustment notifications
-const adjustmentNotification = ref<{
-  type: 'credit' | 'payment'
-  amount: number
-  message: string
-  timestamp: number
-} | null>(null)
+const adjustmentNotification = ref<any>(null)
 const isLoadingStudentBilling = ref(false)
 const isEditingBillingAddress = ref(false)
 const useCustomBillingAddressInModal = ref(false)
@@ -921,132 +876,27 @@ watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
   }
 })
 
-// ✅ NEU: Watcher für Duration-Änderung im Edit-Modus - recalculate price
-watch(() => props.durationMinutes, async (newDuration: number, oldDuration: number) => {
-  try {
-    if (newDuration !== oldDuration && props.isEditMode && props.appointmentId) {
-      logger.debug('⏱️ Duration changed in edit mode:', `${oldDuration}min -> ${newDuration}min`)
-      logger.debug('💰 Old stored price:', (existingPayment.value?.lesson_price_rappen || 0) / 100)
-      
-      // Calculate new price based on new duration
-      const newPrice = newDuration * props.pricePerMinute
-      logger.debug('💰 New calculated price:', newPrice)
-      
-      // Update the stored payment with new lesson price locally first
-      if (existingPayment.value) {
-        const oldTotalRappen = existingPayment.value.total_amount_rappen || 0
-        const oldLessonPrice = existingPayment.value.lesson_price_rappen || 0
-        const productsPrice = (existingPayment.value as any).products_price_rappen || 0
-        const adminFee = existingPayment.value.admin_fee_rappen || 0
-        const discount = existingPayment.value.discount_amount_rappen || 0
-        
-        // Neuer Gesamtbetrag: neue Lektionspreis + Produkte + Admin-Fee - Rabatt
-        const newLessonPriceRappen = Math.round(newPrice * 100)
-        const newTotalRappen = newLessonPriceRappen + productsPrice + adminFee - discount
-        
-        existingPayment.value.lesson_price_rappen = newLessonPriceRappen
-        existingPayment.value.total_amount_rappen = Math.max(0, newTotalRappen)
-        
-        logger.debug('✅ PriceDisplay: Updated payment price for duration change:', {
-          oldLessonPrice: (oldLessonPrice / 100).toFixed(2),
-          newLessonPrice: (newLessonPriceRappen / 100).toFixed(2),
-          oldTotal: (oldTotalRappen / 100).toFixed(2),
-          newTotal: (newTotalRappen / 100).toFixed(2),
-          productsPrice: (productsPrice / 100).toFixed(2),
-          adminFee: (adminFee / 100).toFixed(2),
-          discount: (discount / 100).toFixed(2)
-        })
-        
-        // ✅ NEU: Update payment in database directly
-        try {
-          logger.debug('💾 Saving updated payment to database...')
-          const supabase = getSupabase()
-          
-          const { error: updateError } = await supabase
-            .from('payments')
-            .update({
-              lesson_price_rappen: newLessonPriceRappen,
-              total_amount_rappen: Math.max(0, newTotalRappen),
-              updated_at: new Date().toISOString(),
-              notes: `Dauer angepasst: ${oldDuration}min → ${newDuration}min (Preis: CHF ${(oldLessonPrice / 100).toFixed(2)} → CHF ${(newLessonPriceRappen / 100).toFixed(2)})`
-            })
-            .eq('id', existingPayment.value.id)
-          
-          if (updateError) {
-            console.error('❌ Failed to save payment to database:', updateError)
-          } else {
-            logger.debug('✅ Payment saved to database')
-          }
-        } catch (error: any) {
-          console.error('❌ Error saving payment:', error)
-        }
-        
-        // ✅ Call API endpoint to handle payment reconciliation (for completed/authorized payments)
-        try {
-          logger.debug('📡 Calling update-duration-with-adjustment endpoint...')
-          const result = await $fetch('/api/appointments/update-duration-with-adjustment', {
-            method: 'POST',
-            body: {
-              appointmentId: props.appointmentId,
-              newDurationMinutes: newDuration
-            }
-          })
-          
-          logger.debug('✅ Duration adjustment processed:', result)
-          
-          // ✅ NEW: Display adjustment results
-          if (result.adjustment) {
-            if (result.adjustment.type === 'duration_increase') {
-              logger.debug('💳 Second payment created:', {
-                paymentId: result.adjustment.secondPaymentId,
-                amount: `CHF ${result.adjustment.amount.toFixed(2)}`
-              })
-              
-              // Update UI to show second payment
-              if (result.adjustment.secondPaymentId) {
-                adjustmentNotification.value = {
-                  type: 'payment',
-                  amount: result.adjustment.amount,
-                  message: 'Zusätzliche Zahlung erstellt',
-                  timestamp: Date.now()
-                }
-                // ✅ REMOVED: Don't auto-clear - let user see it until they save
-                // Auto-clear will happen when modal closes
-              }
-            } else if (result.adjustment.type === 'duration_decrease') {
-              logger.debug('💰 Credit applied to student:', {
-                amount: `CHF ${result.adjustment.amount.toFixed(2)}`,
-                transactionId: result.adjustment.transactionId
-              })
-              
-              // Update UI to show credit was applied
-              adjustmentNotification.value = {
-                type: 'credit',
-                amount: result.adjustment.amount,
-                message: 'Guthaben hinzugefügt',
-                timestamp: Date.now()
-              }
-              // ✅ REMOVED: Don't auto-clear - let user see it until they save
-              // Auto-clear will happen when modal closes
-              
-              // ✅ Update student credit display
-              if (props.studentCredit) {
-                props.studentCredit.balance_rappen += Math.round(result.adjustment.amount * 100)
-                logger.debug('💰 Updated student credit balance:', {
-                  newBalance: `CHF ${(props.studentCredit.balance_rappen / 100).toFixed(2)}`
-                })
-              }
-            }
-          }
-        } catch (error: any) {
-          logger.error('PriceDisplay', 'Error calling update-duration-with-adjustment endpoint:', error)
-          // Show error notification but don't break the app
-        }
-      }
-    }
-  } catch (watchError: any) {
-    console.error('❌ Error in duration watcher:', watchError.message)
-    // Don't break the app if watcher fails
+// ✅ SIMPLE: Watcher für Duration-Änderung - nur Preis aktualisieren
+watch(() => props.durationMinutes, (newDuration: number, oldDuration: number) => {
+  if (newDuration !== oldDuration && props.isEditMode && existingPayment.value) {
+    // Berechne neuen Preis basierend auf neuer Duration
+    const newPrice = newDuration * props.pricePerMinute
+    const newLessonPriceRappen = Math.round(newPrice * 100)
+    
+    // Update existingPayment local state (UI wird automatisch aktualisiert)
+    const productsPrice = existingPayment.value.products_price_rappen || 0
+    const adminFee = existingPayment.value.admin_fee_rappen || 0
+    const discount = existingPayment.value.discount_amount_rappen || 0
+    
+    existingPayment.value.lesson_price_rappen = newLessonPriceRappen
+    existingPayment.value.total_amount_rappen = Math.max(0, newLessonPriceRappen + productsPrice + adminFee - discount)
+    
+    logger.debug('⏱️ Price updated for duration change:', {
+      oldDuration,
+      newDuration,
+      oldPrice: (existingPayment.value.lesson_price_rappen / 100).toFixed(2),
+      newPrice: (newLessonPriceRappen / 100).toFixed(2)
+    })
   }
 }, { immediate: false })
 
