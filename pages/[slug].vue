@@ -45,14 +45,14 @@
         <img 
           v-if="headerLogo" 
           :src="headerLogo" 
-          class="h-20 w-auto mx-auto drop-shadow-lg" 
+          class="h-10 w-auto mx-auto drop-shadow-lg" 
           :alt="`${brandName} Logo`"
         >
         <div 
           v-else 
-          class="w-20 h-20 mx-auto bg-white rounded-lg shadow-lg flex items-center justify-center"
+          class="w-10 h-10 mx-auto bg-white rounded-lg shadow-lg flex items-center justify-center"
         >
-          <span class="text-3xl font-bold" :style="{ color: primaryColor }">{{ brandName.charAt(0).toUpperCase() }}</span>
+          <span class="text-xl font-bold" :style="{ color: primaryColor }">{{ brandName.charAt(0).toUpperCase() }}</span>
         </div>
       </div>
       
