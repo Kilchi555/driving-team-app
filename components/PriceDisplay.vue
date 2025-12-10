@@ -595,6 +595,9 @@ const isLoadingDiscounts = ref(false) // ✅ NEU: Loading state für Gutscheine
 // ✅ NEU: Payment State für Edit-Modus
 const existingPayment = ref<any>(null)
 const isLoadingPayment = ref(false)
+
+// ✅ NEU: State für Student Billing Address Management (MUST BE EARLY)
+const studentBillingAddress = ref<any>(null)
 // ✅ NEU: State für mehrfache Payments bei Duration-Änderung
 const additionalPayments = ref<any[]>([])
 
@@ -720,224 +723,254 @@ const invoiceSaveMessage = ref<{ type: 'success' | 'error', text: string } | nul
 
 // Lifecycle
 onMounted(async () => {
-  logger.debug('🚀 PriceDisplay mounted, starting to load data...')
-  
-  await Promise.all([
-    loadPaymentMethods(),
-    loadAvailableDiscounts(), // ✅ Lade verfügbare Gutscheine
-    loadExistingPayment() // ✅ NEU: Payment-Daten laden
-  ])
-  
-  // ✅ NEU: Student Billing Address laden (falls Student bereits ausgewählt)
-  if (props.selectedStudent?.id) {
-    logger.debug('🏢 PriceDisplay onMounted: Loading billing address for student:', props.selectedStudent.id)
-    await loadStudentBillingAddressData(props.selectedStudent.id)
+  try {
+    logger.debug('🚀 PriceDisplay mounted, starting to load data...')
     
-    // ✅ ZUSÄTZLICH: Falls kein Student Billing gefunden, versuche über bestehende Payments zu laden
-    if (!studentBillingAddress.value) {
-      await loadBillingAddressFromExistingPayments(props.selectedStudent.id)
+    await Promise.all([
+      loadPaymentMethods(),
+      loadAvailableDiscounts(), // ✅ Lade verfügbare Gutscheine
+      loadExistingPayment() // ✅ NEU: Payment-Daten laden
+    ])
+    
+    // ✅ NEU: Student Billing Address laden (falls Student bereits ausgewählt)
+    if (props.selectedStudent?.id) {
+      logger.debug('🏢 PriceDisplay onMounted: Loading billing address for student:', props.selectedStudent.id)
+      await loadStudentBillingAddressData(props.selectedStudent.id)
+      
+      // ✅ ZUSÄTZLICH: Falls kein Student Billing gefunden, versuche über bestehende Payments zu laden
+      if (!studentBillingAddress.value) {
+        await loadBillingAddressFromExistingPayments(props.selectedStudent.id)
+      }
+    } else {
+      logger.debug('💡 PriceDisplay onMounted: No student selected yet')
     }
-  } else {
-    logger.debug('💡 PriceDisplay onMounted: No student selected yet')
+    
+    logger.debug('✅ PriceDisplay initialization complete')
+  } catch (mountError: any) {
+    console.error('❌ Error during PriceDisplay mount:', mountError.message)
+    // Don't break the entire component if initialization fails
   }
-  
-  logger.debug('✅ PriceDisplay initialization complete')
 })
 
 // ✅ NEU: Watcher für Student-Änderung - lädt automatisch Billing Address
 watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId: string) => {
-  if (newStudentId && newStudentId !== oldStudentId) {
-    logger.debug('👤 Student changed, loading billing address for:', newStudentId)
-    
-    // Reset Toggle und Custom Data
-    useCustomBillingAddressInModal.value = false
-    customBillingDataModal.value = {
-      company_name: '',
-      contact_person: '',
-      email: ''
+  try {
+    if (newStudentId && newStudentId !== oldStudentId) {
+      logger.debug('👤 Student changed, loading billing address for:', newStudentId)
+      
+      // Reset Toggle und Custom Data
+      useCustomBillingAddressInModal.value = false
+      customBillingDataModal.value = {
+        company_name: '',
+        contact_person: '',
+        email: ''
+      }
+      
+      await loadStudentBillingAddressData(newStudentId)
+      
+      // ✅ Fallback: Falls keine direkte Student Billing Address gefunden
+      if (!studentBillingAddress.value) {
+        await loadBillingAddressFromExistingPayments(newStudentId)
+      }
     }
-    
-    await loadStudentBillingAddressData(newStudentId)
-    
-    // ✅ Fallback: Falls keine direkte Student Billing Address gefunden
-    if (!studentBillingAddress.value) {
-      await loadBillingAddressFromExistingPayments(newStudentId)
-    }
+  } catch (watchError: any) {
+    console.warn('⚠️ Error in student change watcher:', watchError.message)
+    // Don't break the app if watcher fails
   }
 }, { immediate: false })
 
 // ✅ NEU: Watcher für studentBillingAddress - automatisch Form füllen wenn Invoice ausgewählt
 watch(() => studentBillingAddress.value, (newAddress: any) => {
-  if (newAddress && selectedPaymentMethod.value === 'invoice' && !isEditingBillingAddress.value) {
-    logger.debug('✅ Watcher: Auto-filling invoice form with loaded billing address')
-    invoiceData.value = {
-      company_name: newAddress.company_name || '',
-      contact_person: newAddress.contact_person || '',
-      email: newAddress.email || '',
-      phone: newAddress.phone || '',
-      street: newAddress.street || '',
-      street_number: newAddress.street_number || '',
-      zip: newAddress.zip || '',
-      city: newAddress.city || '',
-      country: newAddress.country || 'Schweiz',
-      vat_number: newAddress.vat_number || '',
-      company_register_number: newAddress.company_register_number || '',
-      notes: newAddress.notes || ''
+  try {
+    if (newAddress && selectedPaymentMethod.value === 'invoice' && !isEditingBillingAddress.value) {
+      logger.debug('✅ Watcher: Auto-filling invoice form with loaded billing address')
+      invoiceData.value = {
+        company_name: newAddress.company_name || '',
+        contact_person: newAddress.contact_person || '',
+        email: newAddress.email || '',
+        phone: newAddress.phone || '',
+        street: newAddress.street || '',
+        street_number: newAddress.street_number || '',
+        zip: newAddress.zip || '',
+        city: newAddress.city || '',
+        country: newAddress.country || 'Schweiz',
+        vat_number: newAddress.vat_number || '',
+        company_register_number: newAddress.company_register_number || '',
+        notes: newAddress.notes || ''
+      }
     }
+  } catch (watchError: any) {
+    console.warn('⚠️ Error in billing address watcher:', watchError.message)
+    // Don't break the app if watcher fails
   }
 }, { immediate: false })
 
 // ✅ NEU: Auto-save Watcher - speichere Rechnungsadresse bei Änderungen
 let autoSaveTimeout: NodeJS.Timeout | null = null
 watch(() => invoiceData.value, (newData: any) => {
-  // Skip if form is invalid or already saving
-  if (!isInvoiceFormValid.value || isSavingInvoice.value) {
-    return
+  try {
+    // Skip if form is invalid or already saving
+    if (!isInvoiceFormValid.value || isSavingInvoice.value) {
+      return
+    }
+    
+    // Skip initial load
+    if (!newData.contact_person) {
+      return
+    }
+    
+    // Clear existing timeout
+    if (autoSaveTimeout) {
+      clearTimeout(autoSaveTimeout)
+    }
+    
+    // Auto-save nach 2 Sekunden Inaktivität
+    autoSaveTimeout = setTimeout(() => {
+      logger.debug('⏱️ Auto-saving invoice address after inactivity...')
+      saveInvoiceAddress()
+    }, 2000)
+  } catch (watchError: any) {
+    console.warn('⚠️ Error in invoice data watcher:', watchError.message)
+    // Don't break the app if watcher fails
   }
-  
-  // Skip initial load
-  if (!newData.contact_person) {
-    return
-  }
-  
-  // Clear existing timeout
-  if (autoSaveTimeout) {
-    clearTimeout(autoSaveTimeout)
-  }
-  
-  // Auto-save nach 2 Sekunden Inaktivität
-  autoSaveTimeout = setTimeout(() => {
-    logger.debug('⏱️ Auto-saving invoice address after inactivity...')
-    saveInvoiceAddress()
-  }, 2000)
 }, { deep: true })
 
 // ✅ NEU: Watcher für Toggle - füllt Formular mit Kundendaten wenn ON
 watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
-  logger.debug('🔄 Toggle watcher triggered, isOn:', isOn)
-  
-  if (isOn && studentBillingAddress.value) {
-    logger.debug('✅ Toggle ON - filling form with customer billing address')
-    invoiceData.value = {
-      company_name: studentBillingAddress.value.company_name || '',
-      contact_person: studentBillingAddress.value.contact_person || '',
-      email: studentBillingAddress.value.email || '',
-      phone: studentBillingAddress.value.phone || '',
-      street: studentBillingAddress.value.street || '',
-      street_number: studentBillingAddress.value.street_number || '',
-      zip: studentBillingAddress.value.zip || '',
-      city: studentBillingAddress.value.city || '',
-      country: studentBillingAddress.value.country || 'Schweiz',
-      vat_number: studentBillingAddress.value.vat_number || '',
-      company_register_number: studentBillingAddress.value.company_register_number || '',
-      notes: studentBillingAddress.value.notes || ''
+  try {
+    logger.debug('🔄 Toggle watcher triggered, isOn:', isOn)
+    
+    if (isOn && studentBillingAddress.value) {
+      logger.debug('✅ Toggle ON - filling form with customer billing address')
+      invoiceData.value = {
+        company_name: studentBillingAddress.value.company_name || '',
+        contact_person: studentBillingAddress.value.contact_person || '',
+        email: studentBillingAddress.value.email || '',
+        phone: studentBillingAddress.value.phone || '',
+        street: studentBillingAddress.value.street || '',
+        street_number: studentBillingAddress.value.street_number || '',
+        zip: studentBillingAddress.value.zip || '',
+        city: studentBillingAddress.value.city || '',
+        country: studentBillingAddress.value.country || 'Schweiz',
+        vat_number: studentBillingAddress.value.vat_number || '',
+        company_register_number: studentBillingAddress.value.company_register_number || '',
+        notes: studentBillingAddress.value.notes || ''
+      }
+    } else if (!isOn) {
+      logger.debug('✅ Toggle OFF - clearing form')
+      invoiceData.value = {
+        company_name: '',
+        contact_person: '',
+        email: '',
+        phone: '',
+        street: '',
+        street_number: '',
+        zip: '',
+        city: '',
+        country: 'Schweiz',
+        vat_number: '',
+        company_register_number: '',
+        notes: ''
+      }
     }
-  } else if (!isOn) {
-    logger.debug('✅ Toggle OFF - clearing form')
-    invoiceData.value = {
-      company_name: '',
-      contact_person: '',
-      email: '',
-      phone: '',
-      street: '',
-      street_number: '',
-      zip: '',
-      city: '',
-      country: 'Schweiz',
-      vat_number: '',
-      company_register_number: '',
-      notes: ''
-    }
+  } catch (watchError: any) {
+    console.warn('⚠️ Error in toggle watcher:', watchError.message)
+    // Don't break the app if watcher fails
   }
 })
 
 // ✅ NEU: Watcher für Duration-Änderung im Edit-Modus - recalculate price
 watch(() => props.durationMinutes, async (newDuration: number, oldDuration: number) => {
-  if (newDuration !== oldDuration && props.isEditMode && props.appointmentId) {
-    logger.debug('⏱️ Duration changed in edit mode:', `${oldDuration}min -> ${newDuration}min`)
-    logger.debug('💰 Old stored price:', (existingPayment.value?.lesson_price_rappen || 0) / 100)
-    
-    // Calculate new price based on new duration
-    const newPrice = newDuration * props.pricePerMinute
-    logger.debug('💰 New calculated price:', newPrice)
-    
-    // Update the stored payment with new lesson price locally first
-    if (existingPayment.value) {
-      const oldTotalRappen = existingPayment.value.total_amount_rappen || 0
-      const oldLessonPrice = existingPayment.value.lesson_price_rappen || 0
-      const productsPrice = (existingPayment.value as any).products_price_rappen || 0
-      const adminFee = existingPayment.value.admin_fee_rappen || 0
-      const discount = existingPayment.value.discount_amount_rappen || 0
+  try {
+    if (newDuration !== oldDuration && props.isEditMode && props.appointmentId) {
+      logger.debug('⏱️ Duration changed in edit mode:', `${oldDuration}min -> ${newDuration}min`)
+      logger.debug('💰 Old stored price:', (existingPayment.value?.lesson_price_rappen || 0) / 100)
       
-      // Neuer Gesamtbetrag: neue Lektionspreis + Produkte + Admin-Fee - Rabatt
-      const newLessonPriceRappen = Math.round(newPrice * 100)
-      const newTotalRappen = newLessonPriceRappen + productsPrice + adminFee - discount
+      // Calculate new price based on new duration
+      const newPrice = newDuration * props.pricePerMinute
+      logger.debug('💰 New calculated price:', newPrice)
       
-      existingPayment.value.lesson_price_rappen = newLessonPriceRappen
-      existingPayment.value.total_amount_rappen = Math.max(0, newTotalRappen)
-      
-      logger.debug('✅ PriceDisplay: Updated payment price for duration change:', {
-        oldLessonPrice: (oldLessonPrice / 100).toFixed(2),
-        newLessonPrice: (newLessonPriceRappen / 100).toFixed(2),
-        oldTotal: (oldTotalRappen / 100).toFixed(2),
-        newTotal: (newTotalRappen / 100).toFixed(2),
-        productsPrice: (productsPrice / 100).toFixed(2),
-        adminFee: (adminFee / 100).toFixed(2),
-        discount: (discount / 100).toFixed(2)
-      })
-      
-      // ✅ NEU: Update payment in database directly
-      try {
-        logger.debug('💾 Saving updated payment to database...')
-        const supabase = getSupabase()
+      // Update the stored payment with new lesson price locally first
+      if (existingPayment.value) {
+        const oldTotalRappen = existingPayment.value.total_amount_rappen || 0
+        const oldLessonPrice = existingPayment.value.lesson_price_rappen || 0
+        const productsPrice = (existingPayment.value as any).products_price_rappen || 0
+        const adminFee = existingPayment.value.admin_fee_rappen || 0
+        const discount = existingPayment.value.discount_amount_rappen || 0
         
-        const { error: updateError } = await supabase
-          .from('payments')
-          .update({
-            lesson_price_rappen: newLessonPriceRappen,
-            total_amount_rappen: Math.max(0, newTotalRappen),
-            updated_at: new Date().toISOString(),
-            notes: `Dauer angepasst: ${oldDuration}min → ${newDuration}min (Preis: CHF ${(oldLessonPrice / 100).toFixed(2)} → CHF ${(newLessonPriceRappen / 100).toFixed(2)})`
-          })
-          .eq('id', existingPayment.value.id)
+        // Neuer Gesamtbetrag: neue Lektionspreis + Produkte + Admin-Fee - Rabatt
+        const newLessonPriceRappen = Math.round(newPrice * 100)
+        const newTotalRappen = newLessonPriceRappen + productsPrice + adminFee - discount
         
-        if (updateError) {
-          console.error('❌ Failed to save payment to database:', updateError)
-        } else {
-          logger.debug('✅ Payment saved to database')
-        }
-      } catch (error: any) {
-        console.error('❌ Error saving payment:', error)
-      }
-      
-      // ✅ Call API endpoint to handle payment reconciliation (for completed/authorized payments)
-      try {
-        logger.debug('📡 Calling adjust-duration endpoint...')
-        const result = await $fetch('/api/appointments/adjust-duration', {
-          method: 'POST',
-          body: {
-            appointmentId: props.appointmentId,
-            oldDurationMinutes: oldDuration,
-            newDurationMinutes: newDuration,
-            pricePerMinute: props.pricePerMinute
-          }
+        existingPayment.value.lesson_price_rappen = newLessonPriceRappen
+        existingPayment.value.total_amount_rappen = Math.max(0, newTotalRappen)
+        
+        logger.debug('✅ PriceDisplay: Updated payment price for duration change:', {
+          oldLessonPrice: (oldLessonPrice / 100).toFixed(2),
+          newLessonPrice: (newLessonPriceRappen / 100).toFixed(2),
+          oldTotal: (oldTotalRappen / 100).toFixed(2),
+          newTotal: (newTotalRappen / 100).toFixed(2),
+          productsPrice: (productsPrice / 100).toFixed(2),
+          adminFee: (adminFee / 100).toFixed(2),
+          discount: (discount / 100).toFixed(2)
         })
         
-        logger.debug('✅ Duration adjustment processed:', result)
-        
-        // Show notification based on result
-        if ((result as any).action === 'additional_payment') {
-          logger.debug(`💳 Additional payment created: CHF ${(result as any).details.amount}`)
-          // Could show toast here if needed
-        } else if ((result as any).action === 'credit_applied') {
-          logger.debug(`💰 Credit applied to student: CHF ${(result as any).details.refundAmount}`)
-          // Could show toast here if needed
+        // ✅ NEU: Update payment in database directly
+        try {
+          logger.debug('💾 Saving updated payment to database...')
+          const supabase = getSupabase()
+          
+          const { error: updateError } = await supabase
+            .from('payments')
+            .update({
+              lesson_price_rappen: newLessonPriceRappen,
+              total_amount_rappen: Math.max(0, newTotalRappen),
+              updated_at: new Date().toISOString(),
+              notes: `Dauer angepasst: ${oldDuration}min → ${newDuration}min (Preis: CHF ${(oldLessonPrice / 100).toFixed(2)} → CHF ${(newLessonPriceRappen / 100).toFixed(2)})`
+            })
+            .eq('id', existingPayment.value.id)
+          
+          if (updateError) {
+            console.error('❌ Failed to save payment to database:', updateError)
+          } else {
+            logger.debug('✅ Payment saved to database')
+          }
+        } catch (error: any) {
+          console.error('❌ Error saving payment:', error)
         }
-      } catch (error: any) {
-        console.error('❌ Error calling adjust-duration endpoint:', error)
-        // Show error notification
+        
+        // ✅ Call API endpoint to handle payment reconciliation (for completed/authorized payments)
+        try {
+          logger.debug('📡 Calling adjust-duration endpoint...')
+          const result = await $fetch('/api/appointments/adjust-duration', {
+            method: 'POST',
+            body: {
+              appointmentId: props.appointmentId,
+              oldDurationMinutes: oldDuration,
+              newDurationMinutes: newDuration,
+              pricePerMinute: props.pricePerMinute
+            }
+          })
+          
+          logger.debug('✅ Duration adjustment processed:', result)
+          
+          // Show notification based on result
+          if ((result as any).action === 'additional_payment') {
+            logger.debug(`💳 Additional payment created: CHF ${(result as any).details.amount}`)
+            // Could show toast here if needed
+          } else if ((result as any).action === 'credit_applied') {
+            logger.debug(`💰 Credit applied to student: CHF ${(result as any).details.refundAmount}`)
+            // Could show toast here if needed
+          }
+        } catch (error: any) {
+          console.error('❌ Error calling adjust-duration endpoint:', error)
+          // Show error notification
+        }
       }
     }
+  } catch (watchError: any) {
+    console.error('❌ Error in duration watcher:', watchError.message)
+    // Don't break the app if watcher fails
   }
 }, { immediate: false })
 
