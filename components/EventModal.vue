@@ -1067,83 +1067,95 @@ const handleSaveAppointment = async () => {
     // Call the saveAppointment function from the composable
     // ✅ NEW: If duration decreased on paid appointment, credit the difference to student
     if (props.mode === 'edit' && props.eventData?.id) {
-      const supabase = getSupabase()
-      
-      // Load original appointment to compare duration
-      const { data: originalAppointment } = await supabase
-        .from('appointments')
-        .select('duration_minutes')
-        .eq('id', props.eventData.id)
-        .single()
-      
-      if (originalAppointment && formData.value.duration_minutes < originalAppointment.duration_minutes) {
-        // Duration was decreased - credit the difference
-        const durationReduction = originalAppointment.duration_minutes - formData.value.duration_minutes
+      try {
+        const supabase = getSupabase()
         
-        logger.debug('📉 Duration decreased, crediting student:', {
-          original: originalAppointment.duration_minutes,
-          new: formData.value.duration_minutes,
-          reduction: durationReduction
-        })
+        // Load original appointment to compare duration
+        const { data: originalAppointment } = await supabase
+          .from('appointments')
+          .select('duration_minutes, user_id, tenant_id')
+          .eq('id', props.eventData.id)
+          .single()
         
-        // Load existing payment to calculate credit amount
-        const { data: payment } = await supabase
-          .from('payments')
-          .select('lesson_price_rappen')
-          .eq('appointment_id', props.eventData.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        
-        if (payment && payment.lesson_price_rappen > 0) {
-          // Calculate price per minute
-          const pricePerMinute = payment.lesson_price_rappen / originalAppointment.duration_minutes
-          const creditAmountRappen = Math.round(durationReduction * pricePerMinute)
+        if (originalAppointment && formData.value.duration_minutes < originalAppointment.duration_minutes) {
+          // Duration was decreased - credit the difference
+          const durationReduction = originalAppointment.duration_minutes - formData.value.duration_minutes
           
-          logger.debug('💰 Credit calculation:', {
-            pricePerMinute: (pricePerMinute / 100).toFixed(4),
-            creditAmountRappen,
-            creditAmountCHF: (creditAmountRappen / 100).toFixed(2)
+          logger.debug('📉 Duration decreased, crediting student:', {
+            original: originalAppointment.duration_minutes,
+            new: formData.value.duration_minutes,
+            reduction: durationReduction
           })
           
-          // Add credit to student's balance
-          const { data: studentCredit } = await supabase
-            .from('student_credits')
-            .select('id, balance_rappen')
-            .eq('user_id', formData.value.user_id)
-            .eq('tenant_id', currentUser?.tenant_id)
+          // Load existing payment to calculate credit amount
+          const { data: payment } = await supabase
+            .from('payments')
+            .select('lesson_price_rappen')
+            .eq('appointment_id', props.eventData.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
             .maybeSingle()
           
-          if (studentCredit) {
-            const newBalance = (studentCredit.balance_rappen || 0) + creditAmountRappen
-            await supabase
-              .from('student_credits')
-              .update({ balance_rappen: newBalance })
-              .eq('id', studentCredit.id)
+          if (payment && payment.lesson_price_rappen > 0) {
+            // Calculate price per minute
+            const pricePerMinute = payment.lesson_price_rappen / originalAppointment.duration_minutes
+            const creditAmountRappen = Math.round(durationReduction * pricePerMinute)
             
-            logger.debug('✅ Student credit updated:', {
-              studentId: formData.value.user_id,
-              oldBalance: ((studentCredit.balance_rappen || 0) / 100).toFixed(2),
-              newBalance: (newBalance / 100).toFixed(2)
+            logger.debug('💰 Credit calculation:', {
+              pricePerMinute: (pricePerMinute / 100).toFixed(4),
+              creditAmountRappen,
+              creditAmountCHF: (creditAmountRappen / 100).toFixed(2)
             })
-          } else {
-            // Create new credit record
-            await supabase
-              .from('student_credits')
-              .insert({
-                user_id: formData.value.user_id,
-                tenant_id: currentUser?.tenant_id,
-                balance_rappen: creditAmountRappen
-              })
             
-            logger.debug('✅ New student credit created:', {
-              studentId: formData.value.user_id,
-              balance: (creditAmountRappen / 100).toFixed(2)
-            })
+            // Add credit to student's balance (WITHOUT tenant_id filter for RLS)
+            const { data: studentCredit } = await supabase
+              .from('student_credits')
+              .select('id, balance_rappen')
+              .eq('user_id', originalAppointment.user_id)
+              .maybeSingle()
+            
+            if (studentCredit) {
+              const newBalance = (studentCredit.balance_rappen || 0) + creditAmountRappen
+              const { error: updateError } = await supabase
+                .from('student_credits')
+                .update({ balance_rappen: newBalance })
+                .eq('id', studentCredit.id)
+              
+              if (updateError) {
+                logger.error('StudentCredit', 'Failed to update balance:', updateError)
+              } else {
+                logger.debug('✅ Student credit updated:', {
+                  studentId: originalAppointment.user_id,
+                  oldBalance: ((studentCredit.balance_rappen || 0) / 100).toFixed(2),
+                  newBalance: (newBalance / 100).toFixed(2)
+                })
+              }
+            } else {
+              // Create new credit record
+              const { error: createError } = await supabase
+                .from('student_credits')
+                .insert({
+                  user_id: originalAppointment.user_id,
+                  tenant_id: originalAppointment.tenant_id,
+                  balance_rappen: creditAmountRappen
+                })
+              
+              if (createError) {
+                logger.error('StudentCredit', 'Failed to create credit:', createError)
+              } else {
+                logger.debug('✅ New student credit created:', {
+                  studentId: originalAppointment.user_id,
+                  balance: (creditAmountRappen / 100).toFixed(2)
+                })
+              }
+            }
+            
+            showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
           }
-          
-          showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
         }
+      } catch (creditError: any) {
+        logger.error('EventModal', 'Error processing duration reduction credit:', creditError)
+        // Don't block appointment save if credit fails
       }
     }
     
