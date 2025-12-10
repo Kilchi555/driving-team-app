@@ -29,8 +29,8 @@ const TEMPLATES = {
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       const dashboardUrl = data.tenantSlug 
-        ? `https://www.simy.ch/customer/${data.tenantSlug}` 
-        : 'https://www.simy.ch/customer-dashboard'
+        ? `https://www.simy.ch/${data.tenantSlug}` 
+        : 'https://www.simy.ch/login'
       
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
@@ -86,8 +86,8 @@ const TEMPLATES = {
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       const dashboardUrl = data.tenantSlug 
-        ? `https://www.simy.ch/customer/${data.tenantSlug}` 
-        : 'https://www.simy.ch/customer-dashboard'
+        ? `https://www.simy.ch/${data.tenantSlug}` 
+        : 'https://www.simy.ch/login'
       
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
@@ -141,8 +141,8 @@ const TEMPLATES = {
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       const dashboardUrl = data.tenantSlug 
-        ? `https://www.simy.ch/customer/${data.tenantSlug}` 
-        : 'https://www.simy.ch/customer-dashboard'
+        ? `https://www.simy.ch/${data.tenantSlug}` 
+        : 'https://www.simy.ch/login'
       
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
