@@ -104,7 +104,10 @@ export default defineEventHandler(async (event) => {
 
     if (priceDifferenceRappen > 0) {
       // Duration increased - create second payment
-      logger.debug('AppointmentUpdate', 'Duration increased - creating second payment')
+      logger.debug('AppointmentUpdate', 'Duration increased - creating second payment', {
+        priceDifferenceRappen,
+        priceDifferenceCHF: (priceDifferenceRappen / 100).toFixed(2)
+      })
       adjustmentResult = await handlePriceIncrease(supabase, appointmentId, payment, priceDifferenceRappen, newDurationMinutes, oldDuration)
     } else if (priceDifferenceRappen < 0) {
       // Duration decreased - apply credit
@@ -164,7 +167,12 @@ async function handlePriceIncrease(
   oldDuration: number
 ) {
   try {
-    logger.debug('AppointmentUpdate', 'Creating second payment for price increase')
+    logger.debug('AppointmentUpdate', 'Creating second payment for price increase', {
+      differencerappen,
+      differenceCHF: (differencerappen / 100).toFixed(2),
+      newDuration,
+      oldDuration
+    })
 
     const { data: secondPayment, error: createError } = await supabase
       .from('payments')
@@ -179,6 +187,8 @@ async function handlePriceIncrease(
         products_price_rappen: 0,
         discount_amount_rappen: 0,
         total_amount_rappen: differencerappen,
+        currency: 'CHF',
+        description: `Zusätzliche Zahlung für Dauer-Erhöhung: ${oldDuration}min → ${newDuration}min`,
         notes: `Zusätzliche Zahlung für Dauer-Erhöhung: ${oldDuration}min → ${newDuration}min (CHF ${(differencerappen / 100).toFixed(2)})`
       })
       .select()
@@ -189,7 +199,10 @@ async function handlePriceIncrease(
       throw createError
     }
 
-    logger.debug('AppointmentUpdate', 'Second payment created:', secondPayment.id)
+    logger.debug('AppointmentUpdate', 'Second payment created successfully:', {
+      paymentId: secondPayment.id,
+      amount: (secondPayment.total_amount_rappen / 100).toFixed(2)
+    })
 
     return {
       type: 'duration_increase',
