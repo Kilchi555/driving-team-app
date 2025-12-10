@@ -986,18 +986,8 @@ const removeProduct = (productId: string) => {
 
 // ✅ NEU: Base Price aus bestehender Payment oder berechnet
 const getBasePrice = () => {
-  // Im Edit-Modus: Verwende den Wert aus existingPayment (wird durch den Watch aktualisiert)
-  if (props.isEditMode && existingPayment.value) {
-    const storedPrice = (existingPayment.value.lesson_price_rappen || 0) / 100
-    logger.debug('📊 getBasePrice (edit mode):', {
-      storedPrice,
-      durationMinutes: props.durationMinutes,
-      pricePerMinute: props.pricePerMinute
-    })
-    return storedPrice
-  }
-  
-  // Im Create-Modus: Berechne den Preis neu
+  // ✅ VEREINFACHT: Immer basierend auf aktueller Duration und pricePerMinute berechnen
+  // Im Edit-Mode wird der Preis durch den Watcher in existingPayment aktualisiert
   return props.durationMinutes * props.pricePerMinute
 }
 

@@ -3041,6 +3041,11 @@ const handleDiscountChanged = (discount: number, discountType: "fixed" | "percen
   })
 }
 
+const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => {
+  // ✅ Payment status wird in payments Tabelle gespeichert, nicht in appointments
+  logger.debug('💳 Payment status changed:', { isPaid, paymentMethod })
+}
+
 // ✅ Simple Toast Functions for user feedback
 const showSuccess = (title: string, message: string = '') => {
   logger.info('Success', title, message)
