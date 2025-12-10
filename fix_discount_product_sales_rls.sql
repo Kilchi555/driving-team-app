@@ -96,11 +96,12 @@ CREATE POLICY "product_sales_select" ON product_sales
       AND users.role IN ('admin', 'tenant_admin', 'staff')
     )
     OR
-    -- Clients can see product sales for their own appointments
+    -- Clients can see product sales linked to their discount sales (which are linked to their appointments)
     EXISTS (
-      SELECT 1 FROM appointments
-      WHERE appointments.id = product_sales.appointment_id
-      AND appointments.user_id = auth.uid()
+      SELECT 1 FROM discount_sales ds
+      JOIN appointments a ON a.id = ds.appointment_id
+      WHERE ds.id = product_sales.product_sale_id
+      AND a.user_id = auth.uid()
     )
   );
 
