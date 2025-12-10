@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
                       event.node.req.socket.remoteAddress || 
                       'unknown'
     
-    logger.debug('🔍 Registration attempt from IP:', ipAddress)
+    logger.debug('Register', '🔍 Registration attempt from IP:', ipAddress)
     
     // Check rate limit
     const rateLimit = checkRateLimit(ipAddress)
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Zu viele Registrierungsversuche. Bitte versuchen Sie es in einer Minute erneut.'
       })
     }
-    logger.debug('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
+    logger.debug('Register', '✅ Rate limit check passed. Remaining:', rateLimit.remaining)
 
     const body = await readBody(event)
     const {
@@ -53,10 +53,10 @@ export default defineEventHandler(async (event) => {
     }
     
     // Debug: Log categories to verify they're being sent correctly
-    logger.debug('📋 Categories received:', categories, 'Type:', typeof categories, 'Is Array:', Array.isArray(categories))
+    logger.debug('Register', '📋 Categories received:', categories, 'Type:', typeof categories, 'Is Array:', Array.isArray(categories))
 
     // Validate email format and check for disposable/spam emails
-    logger.debug('📧 Validating email:', email)
+    logger.debug('Register', '📧 Validating email:', email)
     const emailValidation = validateRegistrationEmail(email)
     if (!emailValidation.valid) {
       console.warn('⚠️ Email validation failed:', emailValidation.reason)
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: emailValidation.reason || 'Ungültige E-Mail-Adresse'
       })
     }
-    logger.debug('✅ Email validation passed')
+    logger.debug('Register', '✅ Email validation passed')
 
     // Verify hCaptcha token
     if (!captchaToken) {
@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.debug('🔐 Verifying hCaptcha token...')
+    logger.debug('Register', '🔐 Verifying hCaptcha token...')
     const hcaptchaSecret = process.env.HCAPTCHA_SECRET_KEY
     if (!hcaptchaSecret) {
       console.error('❌ HCAPTCHA_SECRET_KEY not configured')
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Captcha-Verifikation fehlgeschlagen. Bitte versuchen Sie es erneut.'
       })
     }
-    logger.debug('✅ hCaptcha verified successfully')
+    logger.debug('Register', '✅ hCaptcha verified successfully')
 
     // Create service role client to bypass RLS
     const { createClient } = await import('@supabase/supabase-js')
@@ -123,7 +123,7 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabase()
 
     // 1. Create auth user
-    logger.debug('🔐 Creating auth user for:', email)
+    logger.debug('Register', '🔐 Creating auth user for:', email)
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
       email: email.toLowerCase().trim(),
       password: password,
@@ -142,10 +142,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.debug('✅ Auth user created:', authData.user.id)
+    logger.debug('Register', '✅ Auth user created:', authData.user.id)
 
     // 2. Check if user already exists (from invitation)
-    logger.debug('👤 Checking for existing user with email:', email)
+    logger.debug('Register', '👤 Checking for existing user with email:', email)
     const { data: existingUser, error: existingUserError } = await serviceSupabase
       .from('users')
       .select('id, email')
@@ -156,11 +156,11 @@ export default defineEventHandler(async (event) => {
     let userProfile
     const userRole = isAdmin ? 'tenant_admin' : 'client'
     const categoryArray = Array.isArray(categories) ? categories : (categories ? [categories] : [])
-    logger.debug('📋 Category array for DB:', categoryArray)
+    logger.debug('Register', '📋 Category array for DB:', categoryArray)
 
     if (existingUser && existingUser.id) {
       // UPDATE existing user (from invitation)
-      logger.debug('🔄 Updating existing user profile from invitation:', existingUser.id)
+      logger.debug('Register', '🔄 Updating existing user profile from invitation:', existingUser.id)
       
       const { data: updatedUser, error: updateError } = await serviceSupabase
         .from('users')
@@ -193,10 +193,10 @@ export default defineEventHandler(async (event) => {
       }
 
       userProfile = updatedUser
-      logger.debug('✅ User profile updated:', userProfile.id)
+      logger.debug('Register', '✅ User profile updated:', userProfile.id)
     } else {
       // CREATE new user profile
-      logger.debug('➕ Creating new user profile in users table...')
+      logger.debug('Register', '➕ Creating new user profile in users table...')
       
       const { data: newUser, error: userError } = await serviceSupabase
         .from('users')
@@ -239,12 +239,12 @@ export default defineEventHandler(async (event) => {
       }
 
       userProfile = newUser
-      logger.debug('✅ User profile created:', userProfile.id)
+      logger.debug('Register', '✅ User profile created:', userProfile.id)
     }
 
     // 3. Create student_credits record for new client
     if (userRole === 'client') {
-      logger.debug('💰 Creating student_credits record...')
+      logger.debug('Register', '💰 Creating student_credits record...')
       const { data: studentCredit, error: creditError } = await serviceSupabase
         .from('student_credits')
         .insert({
@@ -260,16 +260,16 @@ export default defineEventHandler(async (event) => {
         console.warn('⚠️ Error creating student_credits (non-critical):', creditError)
         // Don't fail the whole registration if this fails
       } else {
-        logger.debug('✅ student_credits record created:', studentCredit.id)
+        logger.debug('Register', '✅ student_credits record created:', studentCredit.id)
       }
     }
 
     // 4. Send verification email via Supabase (confirmation email automatically sent)
-    logger.debug('📧 Sending verification email...')
+    logger.debug('Register', '📧 Sending verification email...')
     try {
       // Supabase automatically sends a confirmation email after user creation
       // No need to manually resend - just log it
-      logger.debug('✅ Verification email will be sent by Supabase automatically')
+      logger.debug('Register', '✅ Verification email will be sent by Supabase automatically')
     } catch (emailErr: any) {
       console.warn('⚠️ Email send error:', emailErr.message)
     }
