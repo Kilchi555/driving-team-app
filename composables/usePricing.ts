@@ -645,44 +645,9 @@ const roundToNearestFranken = (rappen: number): number => {
     
     // ✅ NEU: Bei vergangenen Terminen (Edit-Mode) direkt aus der Datenbank laden
     if (isEditMode && appointmentId) {
-      logger.debug(`📝 Edit-Mode: Loading existing pricing from database for appointment: ${appointmentId}`)
-      try {
-        const supabase = getSupabase()
-        // ✅ Nur die essentiellen Spalten abfragen (credit Spalten optional)
-        const { data: payment, error } = await supabase
-          .from('payments')
-          .select('lesson_price_rappen, admin_fee_rappen, total_amount_rappen')
-          .eq('appointment_id', appointmentId)
-          .maybeSingle() // ✅ WICHTIG: maybeSingle statt single (kein Fehler wenn nicht gefunden)
-        
-        if (error) {
-          console.warn('⚠️ Error loading existing pricing from payments:', error)
-          // Fallback zur normalen Berechnung
-        } else if (payment) {
-          logger.debug('✅ Existing pricing loaded from database:', {
-            lesson_price: (payment.lesson_price_rappen / 100).toFixed(2),
-            admin_fee: (payment.admin_fee_rappen / 100).toFixed(2),
-            total: (payment.total_amount_rappen / 100).toFixed(2)
-          })
-          
-          return {
-            base_price_rappen: payment.lesson_price_rappen || 0,
-            admin_fee_rappen: payment.admin_fee_rappen || 0,
-            total_rappen: payment.total_amount_rappen || 0,
-            base_price_chf: ((payment.lesson_price_rappen || 0) / 100).toFixed(2),
-            admin_fee_chf: ((payment.admin_fee_rappen || 0) / 100).toFixed(2),
-            total_chf: ((payment.total_amount_rappen || 0) / 100).toFixed(2),
-            category_code: categoryCode, // Verwende den übergebenen categoryCode
-            duration_minutes: durationMinutes, // Verwende die übergebene durationMinutes
-            appointment_number: 1 // Nicht relevant für Edit-Mode
-          }
-        } else {
-          logger.debug('ℹ️ No existing payment found, will calculate new price')
-        }
-      } catch (err: any) {
-        console.error('❌ Error loading existing pricing from database:', err)
-        // Fallback zur normalen Berechnung
-      }
+    // ✅ WICHTIG: Im Edit-Mode NICHT den alten Preis laden wenn sich Duration/Kategorie gerade geändert hat!
+    // Immer neu berechnen wenn calculatePrice aufgerufen wird
+    logger.debug(`📝 Edit-Mode: Skipping old pricing load - will recalculate based on current data`)
     }
       
   // ✅ NEUE VALIDIERUNG: Theorielektionen und Fahrkategorien behandeln
