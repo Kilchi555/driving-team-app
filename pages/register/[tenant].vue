@@ -498,10 +498,14 @@
             </div>
 
             <!-- hCaptcha -->
-            <div class="flex justify-center">
+            <div class="flex flex-col items-center">
               <div
                 id="hcaptcha"
+                :class="{ 'ring-2 ring-red-500 rounded': captchaError }"
               ></div>
+              <p v-if="captchaError" class="text-sm text-red-600 mt-2 text-center">
+                Bitte bestätigen Sie, dass Sie kein Roboter sind
+              </p>
             </div>
           </form>
         </div>
@@ -642,6 +646,7 @@ const prefilledData = ref({
 // State
 const currentStep = ref(1)
 const isSubmitting = ref(false)
+const captchaError = ref(false) // Track captcha errors
 const uploadedImage = ref<string | null>(null)
 const uploadedFileType = ref<string | null>(null)
 // Camera toggle state
@@ -916,6 +921,7 @@ const submitRegistration = async () => {
   if (!canSubmit.value) return
   
   isSubmitting.value = true
+  captchaError.value = false // Reset captcha error
   
   try {
     // Debug: Check if hCaptcha element and script exist
@@ -1088,6 +1094,7 @@ const submitRegistration = async () => {
     console.error('❌ Registration failed:', error)
     
     let errorMessage = error.message || 'Unbekannter Fehler bei der Registrierung'
+    let errorTitle = 'Registrierung fehlgeschlagen'
     
     // Spezifische Fehlermeldungen
     if (errorMessage.includes('duplicate key') || errorMessage.includes('already registered') || errorMessage.includes('already exists')) {
@@ -1096,9 +1103,28 @@ const submitRegistration = async () => {
       errorMessage = 'Ungültige E-Mail-Adresse. Bitte prüfen Sie Ihre Eingabe.'
     } else if (errorMessage.includes('Password') || errorMessage.includes('weak password')) {
       errorMessage = 'Passwort zu schwach. Mindestens 8 Zeichen, 1 Großbuchstabe und 1 Zahl erforderlich.'
+    } else if (errorMessage.includes('Captcha') || errorMessage.includes('captcha') || errorMessage.includes('hCaptcha')) {
+      errorTitle = 'Captcha-Verifizierung fehlgeschlagen'
+      errorMessage = 'Die Captcha-Verifizierung ist fehlgeschlagen. Bitte versuchen Sie es erneut und stellen Sie sicher, dass Sie das Captcha korrekt ausgefüllt haben.'
+      captchaError.value = true // Highlight captcha field
+    } else if (errorMessage.includes('Dokument-Upload')) {
+      errorTitle = 'Dokument-Upload fehlgeschlagen'
+      // errorMessage bleibt wie es ist (enthält bereits Details)
+    } else if (errorMessage.includes('exceeded the maximum allowed size')) {
+      errorTitle = 'Datei zu groß'
+      errorMessage = 'Die hochgeladene Datei überschreitet die maximale Größe von 5 MB. Bitte komprimieren Sie das Bild oder wählen Sie eine kleinere Datei.'
+    } else if (errorMessage.includes('logger is not defined') || errorMessage.includes('ReferenceError')) {
+      errorTitle = 'Technischer Fehler'
+      errorMessage = 'Ein technischer Fehler ist aufgetreten. Bitte versuchen Sie es in wenigen Minuten erneut oder kontaktieren Sie den Support.'
+    } else if (error.statusCode === 429) {
+      errorTitle = 'Zu viele Versuche'
+      errorMessage = 'Sie haben zu viele Registrierungsversuche unternommen. Bitte warten Sie einige Minuten und versuchen Sie es erneut.'
+    } else if (error.statusCode === 500) {
+      errorTitle = 'Server-Fehler'
+      errorMessage = 'Ein Server-Fehler ist aufgetreten. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.'
     }
     
-    showError('Registrierung fehlgeschlagen', `${errorMessage}\n\nBitte korrigieren Sie die Eingaben und versuchen Sie es erneut.`)
+    showError(errorTitle, errorMessage)
     
   } finally {
     isSubmitting.value = false
