@@ -1159,9 +1159,22 @@ const handleSaveAppointment = async () => {
       }
     }
     
-    const savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
-    
-    logger.debug('✅ Appointment saved successfully:', savedAppointment)
+    try {
+      const savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
+      
+      logger.debug('✅ Appointment saved successfully:', savedAppointment)
+    } catch (saveError: any) {
+      logger.error('EventModal', 'Error saving appointment:', saveError)
+      
+      // Check if it's the duration increase error
+      if (saveError.message && saveError.message.includes('bereits bezahlten Termins')) {
+        showError('Dauer-Erhöhung nicht möglich', saveError.message)
+      } else {
+        showError('Fehler', `Termin konnte nicht gespeichert werden: ${saveError.message}`)
+      }
+      
+      return // Stop here, don't close modal
+    }
     
     // ✅ NEU: Automatische Guthaben-Verwendung nach dem Speichern
     if (props.mode === 'create' && selectedStudent.value && studentCredit.value && studentCredit.value.balance_rappen > 0) {

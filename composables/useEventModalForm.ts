@@ -1467,6 +1467,28 @@ const useEventModalForm = (currentUser?: any, refs?: {
         return await createPaymentEntry(appointmentId, discountSaleId)
       }
 
+      // ✅ CHECK: Verhindere Änderungen an bezahlten Terminen, wenn Dauer erhöht wird
+      const isPaid = existingPayment.payment_status === 'completed' || existingPayment.payment_status === 'authorized'
+      
+      if (isPaid) {
+        // Load original appointment to check if duration changed
+        const { data: originalAppointment } = await supabase
+          .from('appointments')
+          .select('duration_minutes')
+          .eq('id', appointmentId)
+          .single()
+        
+        const newDuration = formData.value.duration_minutes || 45
+        const oldDuration = originalAppointment?.duration_minutes || 45
+        
+        if (newDuration > oldDuration) {
+          logger.error('🚫 Cannot increase duration on paid appointment')
+          throw new Error('Die Dauer eines bereits bezahlten Termins kann nicht erhöht werden. Bitte erstellen Sie einen neuen Termin für die zusätzliche Zeit.')
+        }
+        
+        logger.debug('✅ Duration decreased or unchanged on paid appointment - allowing update')
+      }
+
       logger.debug('🔄 Updating existing payment:', existingPayment.id)
       
       // ✅ WICHTIG: Nutze die aktuell in PriceDisplay gespeicherte Price aus der DB

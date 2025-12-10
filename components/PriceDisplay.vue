@@ -7,7 +7,7 @@
       <div class="space-y-2">
         <div class="flex justify-between">
           <span class="text-gray-700">{{ lessonType || 'Grundpreis' }} ({{ durationMinutes }} min)</span>
-          <span class="font-semibold text-gray-700">CHF {{ getBasePrice().toFixed(2) }}</span>
+          <span class="font-semibold text-gray-700">CHF {{ (roundToNearestFranken(Math.round(getBasePrice() * 100)) / 100).toFixed(2) }}</span>
         </div>
         
         <!-- Rabatt Anzeige - direkt im blauen Bereich -->
@@ -17,7 +17,7 @@
             <span v-if="getDiscountReason()" class="text-xs text-green-600 ml-2">({{ getDiscountReason() }})</span>
           </div>
           <div class="flex items-center space-x-2">
-            <span class="text-sm font-bold text-green-700">- CHF {{ getDiscountAmount().toFixed(2) }}</span>
+            <span class="text-sm font-bold text-green-700">- CHF {{ (roundToNearestFranken(Math.round(getDiscountAmount() * 100)) / 100).toFixed(2) }}</span>
             <button 
               v-if="props.allowDiscountEdit"
               @click="removeDiscount"
@@ -32,7 +32,7 @@
         <div v-if="getAdminFee() > 0" class="py-2 border-t border-blue-200">
           <div class="flex justify-between items-center">
             <span class="text-sm font-medium text-orange-700">Administrationsgebühr</span>
-            <span class="text-sm font-semibold text-orange-700">CHF {{ getAdminFee().toFixed(2) }}</span>
+            <span class="text-sm font-semibold text-orange-700">CHF {{ (roundToNearestFranken(Math.round(getAdminFee() * 100)) / 100).toFixed(2) }}</span>
           </div>
         </div>
 
@@ -43,7 +43,7 @@
             <div v-if="props.studentCredit && props.studentCredit.balance_rappen < 0 && !props.isEditMode" class="bg-red-50 border border-red-200 rounded-lg p-3">
               <div class="flex justify-between items-center mb-1">
                 <span class="text-sm font-medium text-red-700">⚠️ Offener Betrag</span>
-                <span class="text-lg font-bold text-red-700">CHF {{ Math.abs(props.studentCredit.balance_rappen / 100).toFixed(2) }}</span>
+                <span class="text-lg font-bold text-red-700">CHF {{ (roundToNearestFranken(Math.abs(props.studentCredit.balance_rappen)) / 100).toFixed(2) }}</span>
               </div>
               <p class="text-xs text-red-600">
                 Dieser Betrag wird bei dieser Zahlung automatisch verrechnet
@@ -59,19 +59,19 @@
             <!-- Im Create-Modus: Zeige aktuelles Guthaben (nur wenn positiv) -->
             <div v-else-if="!props.isEditMode && props.studentCredit && props.studentCredit.balance_rappen > 0" class="flex justify-between items-center">
               <span class="text-sm font-medium text-green-700">Verfügbares Guthaben</span>
-              <span class="text-sm font-semibold text-green-700">CHF {{ (props.studentCredit.balance_rappen / 100).toFixed(2) }}</span>
+              <span class="text-sm font-semibold text-green-700">CHF {{ (roundToNearestFranken(props.studentCredit.balance_rappen) / 100).toFixed(2) }}</span>
             </div>
             
             <!-- Im Create-Modus: Zeige verwendetes Guthaben -->
             <div v-if="!props.isEditMode && getUsedCredit() > 0" class="flex justify-between items-center">
               <span class="text-sm text-green-600">Guthaben wird verwendet</span>
-              <span class="text-sm font-semibold text-green-600">- CHF {{ getUsedCredit().toFixed(2) }}</span>
+              <span class="text-sm font-semibold text-green-600">- CHF {{ (roundToNearestFranken(Math.round(getUsedCredit() * 100)) / 100).toFixed(2) }}</span>
             </div>
             
             <!-- Im Create-Modus: Zeige verbleibendes Guthaben -->
             <div v-if="!props.isEditMode && props.studentCredit && props.studentCredit.balance_rappen / 100 > getUsedCredit()" class="flex justify-between items-center">
               <span class="text-sm text-green-600">Restguthaben</span>
-              <span class="text-sm font-semibold text-green-600">CHF {{ ((props.studentCredit.balance_rappen / 100) - getUsedCredit()).toFixed(2) }}</span>
+              <span class="text-sm font-semibold text-green-600">CHF {{ (roundToNearestFranken(Math.round(((props.studentCredit.balance_rappen / 100) - getUsedCredit()) * 100)) / 100).toFixed(2) }}</span>
             </div>
           </div>
         </div>
@@ -130,13 +130,13 @@
           <!-- Preis vor Guthaben (nur anzeigen wenn Guthaben vorhanden) -->
           <div v-if="props.studentCredit && props.studentCredit.balance_rappen > 0" class="flex justify-between text-sm text-gray-500 mb-1">
             <span>Preis vor Guthaben</span>
-            <span>CHF {{ calculatePriceBeforeCredit().toFixed(2) }}</span>
+            <span>CHF {{ (roundToNearestFranken(Math.round(calculatePriceBeforeCredit() * 100)) / 100).toFixed(2) }}</span>
           </div>
           
           <!-- Gesamtpreis (nach Guthaben) -->
           <div class="flex justify-between text-lg font-bold">
             <span class="text-gray-700">Zu bezahlen</span>
-            <span class="text-blue-600">CHF {{ calculateTotalPrice().toFixed(2) }}</span>
+            <span class="text-blue-600">CHF {{ (roundToNearestFranken(Math.round(calculateTotalPrice() * 100)) / 100).toFixed(2) }}</span>
           </div>
           
           <!-- Gratis Info wenn vollständig durch Guthaben gedeckt -->
@@ -522,6 +522,14 @@ import { usePaymentMethods, useCompanyBilling } from '~/composables/usePaymentMe
 import { useEventModalForm } from '~/composables/useEventModalForm'
 import { getSupabase } from '~/utils/supabase'
 import { watch } from 'vue'
+
+// ✅ Rundungsfunktion: Preise auf nächsten Franken runden
+const roundToNearestFranken = (rappen: number): number => {
+  const remainder = rappen % 100
+  if (remainder === 0) return rappen
+  if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
+  else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
+}
 
 // Erweiterte Props
 interface Props {
