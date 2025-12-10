@@ -1,11 +1,29 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4" :style="{ background: `linear-gradient(to bottom right, ${(primaryColor || '#2563eb')}15, #64748b15)` }">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-      <!-- Header -->
-      <div class="text-white p-6 rounded-t-xl text-center" :style="{ background: primaryColor || '#2563eb' }">
-        <h1 class="text-2xl font-bold">Passwort zurücksetzen</h1>
-        <p class="text-white text-opacity-90 mt-1">Bitte geben Sie Ihr neues Passwort ein</p>
+    <div class="w-full max-w-md">
+      <!-- Logo außerhalb - oberhalb der Card -->
+      <div class="text-center mb-6">
+        <img 
+          v-if="getLogo('header')" 
+          :src="getLogo('header')" 
+          class="h-10 w-auto mx-auto drop-shadow-lg" 
+          :alt="`${brandName || 'Simy'} Logo`"
+        >
+        <div 
+          v-else 
+          class="w-10 h-10 mx-auto bg-white rounded-lg shadow-lg flex items-center justify-center"
+        >
+          <span class="text-xl font-bold" :style="{ color: primaryColor || '#2563eb' }">{{ (brandName || 'S').charAt(0).toUpperCase() }}</span>
+        </div>
       </div>
+
+      <!-- Card -->
+      <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="text-white p-6 text-center" :style="{ background: primaryColor || '#2563eb' }">
+          <h1 class="text-2xl font-bold">Passwort zurücksetzen</h1>
+          <p class="text-white text-opacity-90 mt-1">Bitte geben Sie Ihr neues Passwort ein</p>
+        </div>
 
       <!-- Content -->
       <div class="p-6">
@@ -140,15 +158,34 @@
         </form>
 
       </div>
+      <!-- Ende Card -->
+      </div>
     </div>
 
     <!-- Success Modal -->
     <div v-if="isSuccess" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <!-- Header -->
-        <div class="text-white p-6 rounded-t-xl text-center" :style="{ background: primaryColor || '#2563eb' }">
-          <h2 class="text-2xl font-bold">Passwort zurückgesetzt!</h2>
+      <div class="w-full max-w-md">
+        <!-- Logo -->
+        <div class="text-center mb-6">
+          <img 
+            v-if="getLogo('header')" 
+            :src="getLogo('header')" 
+            class="h-10 w-auto mx-auto drop-shadow-lg" 
+            :alt="`${brandName || 'Simy'} Logo`"
+          >
+          <div 
+            v-else 
+            class="w-10 h-10 mx-auto bg-white rounded-lg shadow-lg flex items-center justify-center"
+          >
+            <span class="text-xl font-bold" :style="{ color: primaryColor || '#2563eb' }">{{ (brandName || 'S').charAt(0).toUpperCase() }}</span>
+          </div>
         </div>
+
+        <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
+          <!-- Header -->
+          <div class="text-white p-6 text-center" :style="{ background: primaryColor || '#2563eb' }">
+            <h2 class="text-2xl font-bold">Passwort zurückgesetzt!</h2>
+          </div>
 
         <!-- Content -->
         <div class="p-6 space-y-4 text-center">

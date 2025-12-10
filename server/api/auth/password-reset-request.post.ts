@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
     if (method === 'email') {
       userQuery = serviceSupabase
         .from('users')
-        .select('id, auth_user_id, email, phone')
+        .select('id, auth_user_id, email, phone, tenant_id')
         .eq('email', contact.toLowerCase().trim())
         .single()
     } else {
@@ -79,27 +79,12 @@ export default defineEventHandler(async (event) => {
       // First try exact match
       userQuery = serviceSupabase
         .from('users')
-        .select('id, auth_user_id, email, phone')
+        .select('id, auth_user_id, email, phone, tenant_id')
         .eq('phone', contact)
         .single()
     }
 
     let { data: user, error: userError } = await userQuery
-    
-    // Also get tenant slug if user found
-    let tenantSlug: string | null = null
-    if (user && user.tenant_id) {
-      const { data: tenant, error: tenantError } = await serviceSupabase
-        .from('tenants')
-        .select('slug')
-        .eq('id', user.tenant_id)
-        .single()
-      
-      if (!tenantError && tenant) {
-        tenantSlug = tenant.slug
-        logger.debug('🏢 Found tenant slug:', tenantSlug)
-      }
-    }
 
     // If phone number not found, try with different formatting
     if ((userError || !user) && method === 'sms') {
@@ -111,7 +96,7 @@ export default defineEventHandler(async (event) => {
       
       const { data: phoneUser, error: phoneError } = await serviceSupabase
         .from('users')
-        .select('id, auth_user_id, email, phone')
+        .select('id, auth_user_id, email, phone, tenant_id')
         .or(`phone.eq.${normalizedPhone},phone.ilike.%${normalizedPhone}%`)
         .single()
       
@@ -131,6 +116,21 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ User found:', user.id)
+    
+    // Load tenant slug if user has tenant_id
+    let tenantSlug: string | null = null
+    if (user.tenant_id) {
+      const { data: tenant, error: tenantError } = await serviceSupabase
+        .from('tenants')
+        .select('slug')
+        .eq('id', user.tenant_id)
+        .single()
+      
+      if (!tenantError && tenant?.slug) {
+        tenantSlug = tenant.slug
+        logger.debug('🏢 Found tenant slug:', tenantSlug)
+      }
+    }
 
     // Generate secure random token
     const token = Array.from(crypto.getRandomValues(new Uint8Array(32)))
