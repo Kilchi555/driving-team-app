@@ -1161,8 +1161,11 @@ const handleSaveAppointment = async () => {
       }
     }
     
+    // ✅ Declare savedAppointment outside try-catch so it's accessible later
+    let savedAppointment: any = null
+    
     try {
-      const savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
+      savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
       
       logger.debug('✅ Appointment saved successfully:', savedAppointment)
     } catch (saveError: any) {
@@ -1176,6 +1179,13 @@ const handleSaveAppointment = async () => {
       }
       
       return // Stop here, don't close modal
+    }
+    
+    // ✅ Check if appointment was saved successfully
+    if (!savedAppointment) {
+      logger.error('EventModal', 'Appointment was not saved')
+      showError('Fehler', 'Termin konnte nicht gespeichert werden.')
+      return
     }
     
     // ✅ NEU: Automatische Guthaben-Verwendung nach dem Speichern
