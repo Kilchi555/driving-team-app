@@ -646,17 +646,22 @@ const handlePasswordReset = async () => {
     logger.debug('📧 Password reset response:', response)
 
     if (response?.success) {
-      resetSuccess.value = resetContactMethod.value === 'email'
-        ? `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihren Posteingang.`
-        : `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihre SMS.`
-      
-      resetForm.value.email = ''
-      resetForm.value.phone = ''
-      
-      setTimeout(() => {
-        showForgotPasswordModal.value = false
-        resetSuccess.value = null
-      }, 3000)
+      // Check if there was a warning (sending failed)
+      if (response?.warning) {
+        resetError.value = response.message
+      } else {
+        resetSuccess.value = resetContactMethod.value === 'email'
+          ? `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihren Posteingang.`
+          : `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihre SMS.`
+        
+        resetForm.value.email = ''
+        resetForm.value.phone = ''
+        
+        setTimeout(() => {
+          showForgotPasswordModal.value = false
+          resetSuccess.value = null
+        }, 3000)
+      }
     } else {
       resetError.value = response?.message || 'Fehler beim Senden des Magic Links. Bitte versuchen Sie es später erneut.'
     }

@@ -177,6 +177,10 @@ export default defineEventHandler(async (event) => {
     const tenantParam = tenantSlug ? `&tenant=${tenantSlug}` : ''
     const resetLink = `${protocol}://${host}/password-reset?token=${token}${tenantParam}`
 
+    // Track if sending failed
+    let sendingFailed = false
+    let failureReason = ''
+
     // Send magic link via email or SMS
     if (normalizedMethod === 'email') {
       logger.debug('📧 Sending password reset email to:', user.email)
@@ -225,6 +229,8 @@ export default defineEventHandler(async (event) => {
         })
         // Don't fail the whole process - token is created, email just failed
         logger.debug('⚠️ Continuing despite email error - token still valid')
+        sendingFailed = true
+        failureReason = 'email_send_failed'
       }
     } else if (normalizedMethod === 'sms') {
       logger.debug('📱 Sending password reset SMS to:', user.phone)
@@ -261,17 +267,30 @@ export default defineEventHandler(async (event) => {
         })
         // Don't fail the whole process - token is created, SMS just failed
         logger.debug('⚠️ Continuing despite SMS error - token still valid')
+        sendingFailed = true
+        failureReason = 'sms_send_failed'
       }
     }
 
     logger.debug('✅ Password reset link sent successfully')
 
-    return {
+    // Return success but include warning if sending failed
+    const response: any = {
       success: true,
       message: method === 'email' 
         ? 'Ein Magic Link wurde an Ihre E-Mail-Adresse gesendet.'
         : 'Ein Magic Link wurde an Ihre Telefonnummer gesendet.'
     }
+
+    if (sendingFailed) {
+      response.warning = true
+      response.message = method === 'email'
+        ? 'Der Reset-Link wurde erstellt, aber die E-Mail konnte nicht gesendet werden. Bitte kontaktieren Sie den Support oder versuchen Sie es mit einer anderen Methode.'
+        : 'Der Reset-Link wurde erstellt, aber die SMS konnte nicht gesendet werden. Bitte versuchen Sie es mit E-Mail oder kontaktieren Sie den Support.'
+      logger.debug('⚠️ Returning success with warning due to:', failureReason)
+    }
+
+    return response
 
   } catch (error: any) {
     console.error('❌ Password reset request error:', error)
