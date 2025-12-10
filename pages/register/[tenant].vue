@@ -824,8 +824,15 @@ const handleFileUpload = (event: Event) => {
   if (file) {
     // Check file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      console.error('❌ File too large')
-      showError('Datei zu groß', 'Maximale Größe: 5MB')
+      console.error('❌ File too large:', file.size, 'bytes')
+      showError(
+        'Datei zu groß', 
+        `Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 5 MB. Bitte komprimieren Sie das Bild oder wählen Sie eine kleinere Datei.`
+      )
+      // Clear the file input to prevent accidental submission
+      if (fileInput.value) {
+        fileInput.value.value = ''
+      }
       return
     }
     
@@ -861,8 +868,16 @@ const handleCategoryFileUpload = (event: Event, category: string) => {
   if (file) {
     // Check file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      console.error('❌ File too large')
-      showError('Datei zu groß', 'Maximale Größe: 5MB')
+      console.error('❌ File too large:', file.size, 'bytes')
+      showError(
+        'Datei zu groß', 
+        `Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 5 MB. Bitte komprimieren Sie das Bild oder wählen Sie eine kleinere Datei.`
+      )
+      // Clear the file input to prevent accidental submission
+      const input = categoryFileInputs.value[category]
+      if (input) {
+        input.value = ''
+      }
       return
     }
     
@@ -1014,6 +1029,8 @@ const submitRegistration = async () => {
     if (Object.keys(uploadedDocuments.value).length > 0 && data.userId) {
       logger.debug('📸 Uploading documents for categories:', Object.keys(uploadedDocuments.value))
       
+      const uploadErrors: string[] = []
+      
       for (const [category, docInfo] of Object.entries(uploadedDocuments.value)) {
         try {
           // Determine file extension based on type
@@ -1039,8 +1056,23 @@ const submitRegistration = async () => {
           logger.debug(`✅ Document for category ${category} uploaded successfully:`, uploadResponse.path)
         } catch (imageError: any) {
           console.error(`❌ Document upload failed for category ${category}:`, imageError)
-          // Don't fail registration for image upload error
+          
+          // Extract meaningful error message
+          let errorMsg = `Kategorie ${category}: `
+          if (imageError.data?.statusMessage?.includes('exceeded the maximum allowed size')) {
+            errorMsg += 'Datei zu groß (max. 5MB)'
+          } else if (imageError.statusMessage) {
+            errorMsg += imageError.statusMessage
+          } else {
+            errorMsg += 'Upload fehlgeschlagen'
+          }
+          uploadErrors.push(errorMsg)
         }
+      }
+      
+      // If any uploads failed, show error and stop registration
+      if (uploadErrors.length > 0) {
+        throw new Error('Dokument-Upload fehlgeschlagen:\n' + uploadErrors.join('\n'))
       }
     }
     
