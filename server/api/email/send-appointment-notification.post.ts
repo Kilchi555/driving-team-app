@@ -161,14 +161,30 @@ const TEMPLATES = {
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">dein Termin wurde auf einen neuen Zeitpunkt verschoben:</p>
               
-              <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                ${data.oldTime ? `<p style="margin: 5px 0; color: #374151;"><strong>📅 ALT:</strong> ${data.oldTime}</p>` : ''}
-                ${data.newTime ? `<p style="margin: 5px 0; color: #374151;"><strong>📌 NEU:</strong> ${data.newTime}</p>` : ''}
-                ${data.staffName ? `<p style="margin: 5px 0; color: #374151;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
-                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}</p>` : ''}
+              <!-- Alter Termin - durchgestrichen -->
+              ${data.oldTime ? `
+              <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0 10px 0; border-radius: 4px;">
+                <p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>❌ Alter Termin:</strong> ${data.oldTime}</p>
+                ${data.staffName ? `<p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>Ort:</strong> ${data.location}</p>` : ''}
+              </div>
+              ` : ''}
+              
+              <!-- Pfeil nach unten -->
+              <div style="text-align: center; margin: 10px 0;">
+                <p style="font-size: 32px; margin: 0; color: #16a34a;">⬇️</p>
               </div>
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Du findest den neuen Termin in deinem Kundenkonto. Falls du Fragen hast, kontaktiere uns bitte.</p>
+              <!-- Neuer Termin - hervorgehoben -->
+              ${data.newTime ? `
+              <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 10px 0 20px 0; border-radius: 4px;">
+                <p style="margin: 5px 0; color: #065f46; font-size: 18px;"><strong>✅ Neuer Termin:</strong> ${data.newTime}</p>
+                ${data.staffName ? `<p style="margin: 5px 0; color: #065f46;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #065f46;"><strong>Ort:</strong> ${data.location}</p>` : ''}
+              </div>
+              ` : ''}
+              
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte merke dir den neuen Termin. Du findest ihn auch in deinem Kundenkonto. Falls du Fragen hast, kontaktiere uns bitte.</p>
               
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
