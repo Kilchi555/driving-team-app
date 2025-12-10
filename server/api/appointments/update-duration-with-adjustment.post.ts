@@ -86,17 +86,29 @@ export default defineEventHandler(async (event) => {
     })
 
     // 3. Calculate price difference
-    const pricePerMinute = payment.lesson_price_rappen / oldDuration // CHF per minute in rappen
-    const oldPrice = oldDuration * pricePerMinute // Total old price in rappen
-    const newPrice = newDurationMinutes * pricePerMinute // Total new price in rappen
-    const priceDifferenceRappen = Math.round(newPrice - oldPrice)
+    // The payment.lesson_price_rappen is NOW the new price (updated by PriceDisplay)
+    // But it was calculated for newDuration minutes
+    // We need the price per minute from the pricing rules
+    
+    const pricePerMinuteRappen = Math.round(payment.lesson_price_rappen / newDurationMinutes)
+    
+    logger.debug('AppointmentUpdate', 'Price per minute from current payment:', {
+      pricePerMinuteRappen,
+      pricePerMinuteCHF: (pricePerMinuteRappen / 100).toFixed(4),
+      calculatedFrom: `${payment.lesson_price_rappen} / ${newDurationMinutes} = ${pricePerMinuteRappen}`
+    })
+    
+    // Calculate OLD price using the same price per minute
+    const oldPriceRappen = oldDuration * pricePerMinuteRappen
+    const newPriceRappen = payment.lesson_price_rappen
+    const priceDifferenceRappen = Math.round(newPriceRappen - oldPriceRappen)
 
     logger.debug('AppointmentUpdate', 'Price calculation:', {
-      pricePerMinute: (pricePerMinute / 100).toFixed(4),
       oldDuration,
       newDuration: newDurationMinutes,
-      oldPrice: (oldPrice / 100).toFixed(2),
-      newPrice: (newPrice / 100).toFixed(2),
+      pricePerMinute: (pricePerMinuteRappen / 100).toFixed(4),
+      oldPrice: (oldPriceRappen / 100).toFixed(2),
+      newPrice: (newPriceRappen / 100).toFixed(2),
       difference: (priceDifferenceRappen / 100).toFixed(2)
     })
 
