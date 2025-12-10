@@ -1,5 +1,6 @@
 // utils/supabase.ts
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { logger } from '~/utils/logger'
 
 let supabaseInstance: SupabaseClient | null = null
 let supabaseAdminInstance: SupabaseClient | null = null
@@ -87,7 +88,7 @@ export const getSupabase = (): SupabaseClient => {
       throw new Error('Missing Supabase configuration')
     }
 
-    logger.debug('🔗 Initializing Supabase client with URL:', supabaseUrl)
+    logger.debug('Supabase', '🔗 Initializing Supabase client with URL:', supabaseUrl)
     
     // Use normal localStorage for session persistence across browser windows
     const storage = process.client ? getNormalStorage() : undefined
@@ -145,25 +146,25 @@ export const getSupabaseServerWithSession = (event: any): SupabaseClient => {
   const authHeader = event.node.req.headers.authorization || ''
   let accessToken: string | null = null
 
-  logger.debug('🔐 DEBUG: Incoming headers:', {
+  logger.debug('Supabase', '🔐 DEBUG: Incoming headers:', {
     authHeader: authHeader ? '✓ Present' : '✗ Missing',
     authHeaderFirst50: authHeader.substring(0, 50)
   })
 
   if (authHeader.startsWith('Bearer ')) {
     accessToken = authHeader.substring(7)
-    logger.debug('🔐 DEBUG: Extracted token from Authorization header:', accessToken ? `✓ (${accessToken.length} chars)` : '✗')
+    logger.debug('Supabase', '🔐 DEBUG: Extracted token from Authorization header:', accessToken ? `✓ (${accessToken.length} chars)` : '✗')
   }
 
-  logger.debug('🔐 DEBUG: Final accessToken:', accessToken ? `✓ Found (${accessToken.length} chars)` : '✗ Not found')
+  logger.debug('Supabase', '🔐 DEBUG: Final accessToken:', accessToken ? `✓ Found (${accessToken.length} chars)` : '✗ Not found')
 
   // Create Supabase client with the access token if available
   let headers: Record<string, string> = {}
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`
-    logger.debug('🔐 DEBUG: Using Bearer token auth')
+    logger.debug('Supabase', '🔐 DEBUG: Using Bearer token auth')
   } else {
-    logger.debug('🔐 DEBUG: Using anon key auth (no token found)')
+    logger.debug('Supabase', '🔐 DEBUG: Using anon key auth (no token found)')
   }
 
   return createClient(supabaseUrl, supabaseKey, {
