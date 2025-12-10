@@ -609,13 +609,24 @@ const handlePasswordReset = async () => {
   resetError.value = null
   resetSuccess.value = null
 
-  const contact = resetContactMethod.value === 'email' ? resetForm.value.email : resetForm.value.phone
+  let contact = resetContactMethod.value === 'email' ? resetForm.value.email : resetForm.value.phone
 
   if (!contact) {
     resetError.value = resetContactMethod.value === 'email' 
       ? 'Bitte geben Sie eine E-Mail-Adresse ein.' 
       : 'Bitte geben Sie eine Telefonnummer ein.'
     return
+  }
+
+  // Format phone number: add +41 if starts with 0
+  if (resetContactMethod.value === 'phone') {
+    contact = contact.replace(/\s/g, '') // Remove spaces
+    if (contact.startsWith('0')) {
+      contact = '+41' + contact.substring(1)
+    } else if (!contact.startsWith('+')) {
+      contact = '+41' + contact
+    }
+    logger.debug('📱 Formatted phone number:', contact)
   }
 
   resetIsLoading.value = true
@@ -651,7 +662,22 @@ const handlePasswordReset = async () => {
     }
   } catch (error: any) {
     console.error('❌ Password reset error:', error)
-    resetError.value = error?.data?.statusMessage || error?.message || 'Fehler beim Senden des Magic Links. Bitte versuchen Sie es später erneut.'
+    console.error('❌ Full error details:', {
+      message: error?.message,
+      data: error?.data,
+      statusMessage: error?.data?.statusMessage,
+      statusCode: error?.statusCode
+    })
+    
+    // Show more specific error messages
+    const errorMsg = error?.data?.statusMessage || error?.message || 'Fehler beim Senden des Magic Links.'
+    if (errorMsg.includes('SMS') || errorMsg.includes('Twilio')) {
+      resetError.value = 'SMS konnte nicht gesendet werden. Bitte überprüfen Sie Ihre Telefonnummer oder versuchen Sie es mit E-Mail.'
+    } else if (errorMsg.includes('email') || errorMsg.includes('Email')) {
+      resetError.value = 'E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.'
+    } else {
+      resetError.value = errorMsg
+    }
   } finally {
     resetIsLoading.value = false
   }
