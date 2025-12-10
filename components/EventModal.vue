@@ -1099,6 +1099,7 @@ const handleSaveAppointment = async () => {
         needsAdjustmentEndpoint.value = null
         showAdjustmentWarning.value = false
         
+        // ✅ Appointment duration will be updated by the adjustment endpoint, no need for saveAppointment
         // Emit refresh and close
         emit('refresh-calendar')
         setTimeout(() => emit('close'), 2000) // Close after showing success
