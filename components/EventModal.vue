@@ -1092,7 +1092,7 @@ const handleSaveAppointment = async () => {
           // Load existing payment to calculate credit amount
           const { data: payment } = await supabase
             .from('payments')
-            .select('lesson_price_rappen')
+            .select('id, lesson_price_rappen, notes')
             .eq('appointment_id', props.eventData.id)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -1108,6 +1108,25 @@ const handleSaveAppointment = async () => {
               creditAmountRappen,
               creditAmountCHF: (creditAmountRappen / 100).toFixed(2)
             })
+            
+            // ✅ Update payment with credit note
+            const creditNote = `Gutschrift CHF ${(creditAmountRappen / 100).toFixed(2)} aufgrund Dauer-Reduktion: ${originalAppointment.duration_minutes}min → ${formData.value.duration_minutes}min`
+            const existingNotes = payment.notes || ''
+            const updatedNotes = existingNotes ? `${existingNotes}\n${creditNote}` : creditNote
+            
+            const { error: paymentUpdateError } = await supabase
+              .from('payments')
+              .update({ 
+                notes: updatedNotes,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', payment.id)
+            
+            if (paymentUpdateError) {
+              logger.error('Payment', 'Failed to update payment notes:', paymentUpdateError)
+            } else {
+              logger.debug('✅ Payment notes updated with credit info')
+            }
             
             // Add credit to student's balance (WITHOUT tenant_id filter for RLS)
             const { data: studentCredit } = await supabase
