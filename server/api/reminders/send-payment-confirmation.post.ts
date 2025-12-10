@@ -167,35 +167,51 @@ export default defineEventHandler(async (event) => {
     // 9. Send email using centralized appointment notification endpoint
     logger.debug('📧 Calling send-appointment-notification endpoint...')
     
-    const emailResponse = await $fetch('/api/email/send-appointment-notification', {
-      method: 'POST',
-      body: {
-        email: user.email,
-        studentName: `${user.first_name} ${user.last_name}`,
-        appointmentTime: appointmentDateTime,
-        type: 'pending_payment',
-        staffName,
-        location: location?.name,
-        tenantName: tenant.name,
-        tenantId,
-        tenantSlug: tenant.slug,
-        amount
-      }
-    })
+    try {
+      const emailResponse = await $fetch('/api/email/send-appointment-notification', {
+        method: 'POST',
+        body: {
+          email: user.email,
+          studentName: `${user.first_name} ${user.last_name}`,
+          appointmentTime: appointmentDateTime,
+          type: 'pending_payment',
+          staffName,
+          location: location?.name,
+          tenantName: tenant.name,
+          tenantId,
+          tenantSlug: tenant.slug,
+          amount
+        }
+      })
 
-    logger.debug('✅ Email sent via appointment notification endpoint:', emailResponse)
+      logger.debug('✅ Email sent via appointment notification endpoint:', emailResponse)
+    } catch (emailError: any) {
+      logger.error('EmailNotification', 'Failed to send appointment notification email:', emailError)
+      // Don't fail the whole endpoint if email fails - log and continue
+      // The payment reminder itself is still important
+    }
 
     // 10. Update payment with reminder info
-    await supabase
-      .from('payments')
-      .update({
-        first_reminder_sent_at: now.toISOString(),
-        last_reminder_sent_at: now.toISOString(),
-        reminder_count: 1
-      })
-      .eq('id', paymentId)
+    try {
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update({
+          first_reminder_sent_at: now.toISOString(),
+          last_reminder_sent_at: now.toISOString(),
+          reminder_count: 1
+        })
+        .eq('id', paymentId)
 
-    logger.debug('✅ First payment reminder sent successfully')
+      if (updateError) {
+        logger.error('PaymentUpdate', 'Failed to update payment reminder info:', updateError)
+        // Don't fail - email was already sent
+      }
+    } catch (updateErr: any) {
+      logger.error('PaymentUpdate', 'Error updating payment:', updateErr)
+      // Don't fail - email was already sent
+    }
+
+    logger.debug('✅ First payment reminder processed successfully')
 
     return {
       success: true,
@@ -203,10 +219,14 @@ export default defineEventHandler(async (event) => {
       message: 'First reminder sent successfully'
     }
   } catch (error: any) {
-    console.error('❌ Error sending first reminder:', error)
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Failed to send first reminder: ${error.message}`
-    })
+    console.error('❌ Error in first reminder endpoint:', error)
+    // Log the error but don't throw - this is a non-critical operation
+    logger.error('FirstReminder', 'Unexpected error in reminder endpoint:', error)
+    
+    return {
+      success: false,
+      error: error.message,
+      message: 'Failed to send first reminder (non-critical)'
+    }
   }
 })
