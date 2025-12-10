@@ -828,7 +828,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
   }
   
-  const saveAppointment = async (mode: 'create' | 'edit', eventId?: string, skipPaymentUpdate: boolean = false) => {
+  const saveAppointment = async (mode: 'create' | 'edit', eventId?: string) => {
     isLoading.value = true
     error.value = null
     
@@ -1072,7 +1072,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ Create or update payment entry nur für Lektionen (lesson, exam, theory)
       const appointmentType = formData.value.appointment_type || 'lesson' // Fallback zu 'lesson' wenn undefined
       const isLessonType = ['lesson', 'exam', 'theory'].includes(appointmentType)
-      if (isLessonType && !skipPaymentUpdate) {
+      if (isLessonType) {
         if (mode === 'create') {
           logger.debug('🚀 Creating new payment entry for lesson type (pending_confirmation flow):', appointmentType)
           const paymentResult = await createPaymentEntry(result.id, discountSale?.id)
@@ -1082,8 +1082,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
           const paymentResult = await updatePaymentEntry(result.id, discountSale?.id)
           logger.debug('📊 Payment update result:', paymentResult)
         }
-      } else if (skipPaymentUpdate) {
-        logger.debug('⏭️ Skipping payment update - already handled by adjustment endpoint')
       } else {
         logger.debug('ℹ️ Skipping payment creation for other event type:', appointmentType)
       }

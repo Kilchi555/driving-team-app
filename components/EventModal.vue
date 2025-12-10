@@ -1065,48 +1065,85 @@ const handleSaveAppointment = async () => {
     }
     
     // Call the saveAppointment function from the composable
-    // ✅ NEW: If duration changed on paid appointment, use adjustment endpoint
-    if (props.mode === 'edit' && needsAdjustmentEndpoint.value) {
-      try {
-        logger.debug('📞 Calling update-duration-with-adjustment endpoint...')
+    // ✅ NEW: If duration decreased on paid appointment, credit the difference to student
+    if (props.mode === 'edit' && props.eventData?.id) {
+      const supabase = getSupabase()
+      
+      // Load original appointment to compare duration
+      const { data: originalAppointment } = await supabase
+        .from('appointments')
+        .select('duration_minutes')
+        .eq('id', props.eventData.id)
+        .single()
+      
+      if (originalAppointment && formData.value.duration_minutes < originalAppointment.duration_minutes) {
+        // Duration was decreased - credit the difference
+        const durationReduction = originalAppointment.duration_minutes - formData.value.duration_minutes
         
-        const adjustmentResult = await $fetch('/api/appointments/update-duration-with-adjustment', {
-          method: 'POST',
-          body: {
-            appointmentId: needsAdjustmentEndpoint.value.appointmentId,
-            newDurationMinutes: needsAdjustmentEndpoint.value.newDuration,
-            reason: 'Duration adjusted in EventModal'
-          }
+        logger.debug('📉 Duration decreased, crediting student:', {
+          original: originalAppointment.duration_minutes,
+          new: formData.value.duration_minutes,
+          reduction: durationReduction
         })
         
-        logger.debug('✅ Adjustment completed:', adjustmentResult)
+        // Load existing payment to calculate credit amount
+        const { data: payment } = await supabase
+          .from('payments')
+          .select('lesson_price_rappen')
+          .eq('appointment_id', props.eventData.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
         
-        // ✅ NEW: If second payment was created, show notification
-        if (adjustmentResult.adjustment?.secondPaymentId) {
-          logger.debug('💳 Second payment created:', adjustmentResult.adjustment.secondPaymentId)
+        if (payment && payment.lesson_price_rappen > 0) {
+          // Calculate price per minute
+          const pricePerMinute = payment.lesson_price_rappen / originalAppointment.duration_minutes
+          const creditAmountRappen = Math.round(durationReduction * pricePerMinute)
           
-          const amount = (adjustmentResult.adjustment.amount / 100).toFixed(2)
-          const message = `Terminverlängerung gespeichert!\n\nZusätzliche Zahlung erforderlich:\nCHF ${amount}\n\nBitte führen Sie die Zahlung durch.`
+          logger.debug('💰 Credit calculation:', {
+            pricePerMinute: (pricePerMinute / 100).toFixed(4),
+            creditAmountRappen,
+            creditAmountCHF: (creditAmountRappen / 100).toFixed(2)
+          })
           
-          showSuccess('Zusätzliche Zahlung erforderlich', message)
-        } else if (adjustmentResult.adjustment?.appliedToCredits) {
-          // Duration decreased - credit was applied
-          const amount = (Math.abs(adjustmentResult.adjustment.amount) / 100).toFixed(2)
-          showSuccess('Gutschrift erhalten', `CHF ${amount} wurde Ihrem Konto gutgeschrieben.`)
+          // Add credit to student's balance
+          const { data: studentCredit } = await supabase
+            .from('student_credits')
+            .select('id, balance_rappen')
+            .eq('user_id', formData.value.user_id)
+            .eq('tenant_id', currentUser?.tenant_id)
+            .maybeSingle()
+          
+          if (studentCredit) {
+            const newBalance = (studentCredit.balance_rappen || 0) + creditAmountRappen
+            await supabase
+              .from('student_credits')
+              .update({ balance_rappen: newBalance })
+              .eq('id', studentCredit.id)
+            
+            logger.debug('✅ Student credit updated:', {
+              studentId: formData.value.user_id,
+              oldBalance: ((studentCredit.balance_rappen || 0) / 100).toFixed(2),
+              newBalance: (newBalance / 100).toFixed(2)
+            })
+          } else {
+            // Create new credit record
+            await supabase
+              .from('student_credits')
+              .insert({
+                user_id: formData.value.user_id,
+                tenant_id: currentUser?.tenant_id,
+                balance_rappen: creditAmountRappen
+              })
+            
+            logger.debug('✅ New student credit created:', {
+              studentId: formData.value.user_id,
+              balance: (creditAmountRappen / 100).toFixed(2)
+            })
+          }
+          
+          showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
         }
-        
-        // Clear the flags
-        needsAdjustmentEndpoint.value = null
-        showAdjustmentWarning.value = false
-        
-        // ✅ Appointment duration will be updated by the adjustment endpoint, no need for saveAppointment
-        // Emit refresh and close
-        emit('refresh-calendar')
-        setTimeout(() => emit('close'), 2000) // Close after showing success
-        return
-      } catch (error: any) {
-        logger.error('EventModal', 'Error calling adjustment endpoint:', error)
-        // Fall through to normal save if adjustment fails
       }
     }
     
@@ -1210,15 +1247,7 @@ const selectedInvoiceAddress = ref<any>(null)
 const calculatedAdminFee = ref<number>(0)
 const isLoadingAdminFee = ref<boolean>(false)
 
-// ✅ NEW: State for paid appointment duration adjustments
-const needsAdjustmentEndpoint = ref<{
-  appointmentId: string
-  oldDuration: number
-  newDuration: number
-} | null>(null)
-const showAdjustmentWarning = ref<boolean>(false)
-
-// Staff management
+// ✅ Staff management
 const availableStaff = ref<StaffAvailability[]>([])
 const { loadStaffWithAvailability, isLoading: isLoadingStaff } = useStaffAvailability()
 const isEditingStaff = ref(false)
@@ -2946,14 +2975,44 @@ const handleDurationChanged = async (newDuration: number) => {
   
   const oldDuration = formData.value.duration_minutes
   
+  // ✅ NEW: If this is edit mode with paid payment, check if duration increase is attempted
+  if (props.mode === 'edit' && props.eventData?.id && oldDuration !== newDuration) {
+    const supabase = getSupabase()
+    
+    // Get payment status
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('id, payment_status')
+      .eq('appointment_id', props.eventData.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    
+    // If paid and trying to INCREASE duration, show error and reset
+    if (payment && (payment.payment_status === 'completed' || payment.payment_status === 'authorized')) {
+      if (newDuration > oldDuration) {
+        logger.warn('🚫 Cannot increase duration on paid appointment')
+        showError(
+          'Dauer-Erhöhung nicht möglich',
+          'Da dieser Termin bereits bezahlt ist, können Sie die Dauer nicht erhöhen. Bitte erstellen Sie einen neuen Termin für die zusätzliche Zeit.'
+        )
+        // Reset to original duration
+        formData.value.duration_minutes = oldDuration
+        calculateEndTime()
+        return
+      } else if (newDuration < oldDuration) {
+        // Duration decreased - will be credited on save
+        logger.debug('✅ Duration decreased - difference will be credited to student', {
+          old: oldDuration,
+          new: newDuration
+        })
+      }
+    }
+  }
+  
   // Update form UI
   formData.value.duration_minutes = newDuration
   calculateEndTime()
-  
-  // ✅ NEW: If this is edit mode with paid payment, handle adjustments
-  if (props.mode === 'edit' && props.eventData?.id && oldDuration !== newDuration) {
-    await checkAndPrepareForAdjustment(oldDuration, newDuration, props.eventData.id)
-  }
 }
 
 const handleDiscountChanged = (discount: number, discountType: "fixed" | "percentage", reason: string) => {
@@ -2976,35 +3035,6 @@ const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => 
   
   // Hier können Sie zusätzliche Logik für das Speichern hinzufügen
   // z.B. sofort in der payments Tabelle aktualisieren
-}
-
-// ✅ NEW: Check if payment exists and is paid, prepare for adjustment
-const checkAndPrepareForAdjustment = async (oldDuration: number, newDuration: number, appointmentId: string) => {
-  try {
-    const supabase = getSupabase()
-    
-    // Get payment status
-    const { data: payment } = await supabase
-      .from('payments')
-      .select('id, payment_status, total_amount_rappen')
-      .eq('appointment_id', appointmentId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    
-    if (payment && (payment.payment_status === 'completed' || payment.payment_status === 'authorized')) {
-      logger.debug('⚠️ Payment is paid - will use adjustment endpoint')
-      showAdjustmentWarning.value = true
-      
-      needsAdjustmentEndpoint.value = {
-        appointmentId,
-        oldDuration,
-        newDuration
-      }
-    }
-  } catch (error: any) {
-    logger.error('EventModal', 'Error checking payment status:', error)
-  }
 }
 
 const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, appointmentNum: number = 1) => {
