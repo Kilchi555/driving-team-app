@@ -1065,6 +1065,36 @@ const handleSaveAppointment = async () => {
     }
     
     // Call the saveAppointment function from the composable
+    // ✅ NEW: If duration changed on paid appointment, use adjustment endpoint
+    if (props.mode === 'edit' && needsAdjustmentEndpoint.value) {
+      try {
+        logger.debug('📞 Calling update-duration-with-adjustment endpoint...')
+        
+        const adjustmentResult = await $fetch('/api/appointments/update-duration-with-adjustment', {
+          method: 'POST',
+          body: {
+            appointmentId: needsAdjustmentEndpoint.value.appointmentId,
+            newDurationMinutes: needsAdjustmentEndpoint.value.newDuration,
+            reason: 'Duration adjusted in EventModal'
+          }
+        })
+        
+        logger.debug('✅ Adjustment completed:', adjustmentResult)
+        
+        // Clear the flags
+        needsAdjustmentEndpoint.value = null
+        showAdjustmentWarning.value = false
+        
+        // Emit refresh and close
+        emit('refresh-calendar')
+        emit('close')
+        return
+      } catch (error: any) {
+        logger.error('EventModal', 'Error calling adjustment endpoint:', error)
+        // Fall through to normal save if adjustment fails
+      }
+    }
+    
     const savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
     
     logger.debug('✅ Appointment saved successfully:', savedAppointment)
@@ -1164,6 +1194,14 @@ const selectedInvoiceAddress = ref<any>(null)
 // ✅ Admin-Fee State
 const calculatedAdminFee = ref<number>(0)
 const isLoadingAdminFee = ref<boolean>(false)
+
+// ✅ NEW: State for paid appointment duration adjustments
+const needsAdjustmentEndpoint = ref<{
+  appointmentId: string
+  oldDuration: number
+  newDuration: number
+} | null>(null)
+const showAdjustmentWarning = ref<boolean>(false)
 
 // Staff management
 const availableStaff = ref<StaffAvailability[]>([])
@@ -2882,7 +2920,7 @@ const handlePriceChanged = (price: number) => {
   logger.debug('💰 Price changed in EventModal:', price)
 }
 
-const handleDurationChanged = (newDuration: number) => {
+const handleDurationChanged = async (newDuration: number) => {
   logger.debug('⏱️ Duration changed to:', newDuration)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
@@ -2891,8 +2929,16 @@ const handleDurationChanged = (newDuration: number) => {
     return
   }
   
+  const oldDuration = formData.value.duration_minutes
+  
+  // Update form UI
   formData.value.duration_minutes = newDuration
   calculateEndTime()
+  
+  // ✅ NEW: If this is edit mode with paid payment, handle adjustments
+  if (props.mode === 'edit' && props.eventData?.id && oldDuration !== newDuration) {
+    await checkAndPrepareForAdjustment(oldDuration, newDuration, props.eventData.id)
+  }
 }
 
 const handleDiscountChanged = (discount: number, discountType: "fixed" | "percentage", reason: string) => {
@@ -2915,6 +2961,35 @@ const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => 
   
   // Hier können Sie zusätzliche Logik für das Speichern hinzufügen
   // z.B. sofort in der payments Tabelle aktualisieren
+}
+
+// ✅ NEW: Check if payment exists and is paid, prepare for adjustment
+const checkAndPrepareForAdjustment = async (oldDuration: number, newDuration: number, appointmentId: string) => {
+  try {
+    const supabase = getSupabase()
+    
+    // Get payment status
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('id, payment_status, total_amount_rappen')
+      .eq('appointment_id', appointmentId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    
+    if (payment && (payment.payment_status === 'completed' || payment.payment_status === 'authorized')) {
+      logger.debug('⚠️ Payment is paid - will use adjustment endpoint')
+      showAdjustmentWarning.value = true
+      
+      needsAdjustmentEndpoint.value = {
+        appointmentId,
+        oldDuration,
+        newDuration
+      }
+    }
+  } catch (error: any) {
+    logger.error('EventModal', 'Error checking payment status:', error)
+  }
 }
 
 const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, appointmentNum: number = 1) => {
