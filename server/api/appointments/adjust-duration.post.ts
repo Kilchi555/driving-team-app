@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     // 1. Fetch the appointment and its payment
     const { data: appointment, error: aptError } = await supabase
       .from('appointments')
-      .select('*')
+      .select('id, user_id, staff_id, start_time, duration_minutes, status, tenant_id, lesson_price_rappen')
       .eq('id', appointmentId)
       .single()
 
@@ -195,9 +195,79 @@ async function handlePriceDecrease(
       .from('student_credits')
       .select('id, balance_rappen')
       .eq('user_id', payment.user_id)
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    if (creditError) throw new Error(`Failed to load student credit: ${creditError.message}`)
+    if (creditError && creditError.code !== 'PGRST116') {
+      throw new Error(`Failed to load student credit: ${creditError.message}`)
+    }
+    
+    // If no student credit exists, create one
+    if (!studentCredit) {
+      const { data: newCredit, error: createError } = await supabase
+        .from('student_credits')
+        .insert([{
+          user_id: payment.user_id,
+          balance_rappen: 0,
+          tenant_id: payment.tenant_id
+        }])
+        .select('id, balance_rappen')
+        .single()
+      
+      if (createError) throw new Error(`Failed to create student credit: ${createError.message}`)
+      
+      logger.debug('✅ Created new student credit record:', newCredit.id)
+      
+      // Use the newly created record
+      const oldBalance = 0
+      const newBalance = refundRappen
+      
+      // Update it immediately with the refund
+      const { error: updateError } = await supabase
+        .from('student_credits')
+        .update({
+          balance_rappen: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', newCredit.id)
+      
+      if (updateError) throw new Error(`Failed to update new student credit: ${updateError.message}`)
+      
+      // Create transaction and return
+      const { data: transaction, error: transError } = await supabase
+        .from('credit_transactions')
+        .insert([{
+          user_id: payment.user_id,
+          transaction_type: 'refund',
+          amount_rappen: refundRappen,
+          balance_before_rappen: oldBalance,
+          balance_after_rappen: newBalance,
+          payment_method: 'refund',
+          reference_id: appointmentId,
+          reference_type: 'appointment',
+          created_by: currentUser.id,
+          notes: `Guthaben für Dauer-Reduktion: ${oldDuration}min → ${newDuration}min (CHF ${(refundRappen / 100).toFixed(2)})`
+        }])
+        .select()
+        .single()
+      
+      if (transError) throw new Error(`Failed to create credit transaction: ${transError.message}`)
+      
+      return {
+        success: true,
+        message: 'Price decreased - credit applied to student balance',
+        priceDifference: -(refundRappen / 100),
+        action: 'credit_applied',
+        transactionId: transaction.id,
+        details: {
+          refundAmount: (refundRappen / 100).toFixed(2),
+          durationChange: `${oldDuration}min → ${newDuration}min`,
+          oldBalance: (oldBalance / 100).toFixed(2),
+          newBalance: (newBalance / 100).toFixed(2)
+        }
+      }
+    }
 
     const oldBalance = studentCredit.balance_rappen || 0
     const newBalance = oldBalance + refundRappen
