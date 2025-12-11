@@ -1271,34 +1271,22 @@ const isExam = (lesson: any) => {
 const getCancellationPolicy = (appointment: any) => {
   if (!appointment || appointment.status !== 'cancelled') return null
   
-  // For cancelled appointments, use deleted_at (when it was cancelled) not current time
-  const appointmentTime = new Date(appointment.start_time)
-  const cancellationTime = appointment.deleted_at ? new Date(appointment.deleted_at) : new Date()
+  // Use the stored cancellation_charge_percentage directly
+  const chargePercentage = appointment.cancellation_charge_percentage ?? 100
+  const refundPercentage = 100 - chargePercentage
   
-  // Convert to Zurich time for accurate hour difference calculation
-  const appointmentZurich = new Date(appointmentTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
-  const cancellationZurich = new Date(cancellationTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
-  
-  const hoursDifference = (appointmentZurich.getTime() - cancellationZurich.getTime()) / (1000 * 60 * 60)
-  
-  logger.debug('🕐 Cancellation policy check:', {
-    appointmentTime: appointment.start_time,
-    cancelledAt: appointment.deleted_at,
-    hoursDifference: hoursDifference.toFixed(2),
-    policies: cancellationPolicies.value.map(p => ({ hours: p.hours_before_appointment, refund: p.refund_percentage }))
+  logger.debug('💰 Cancellation charge for appointment:', {
+    appointmentId: appointment.id,
+    chargePercentage,
+    refundPercentage
   })
   
-  // Finde die passende Policy basierend auf der Zeit vor dem Termin
-  for (const policy of cancellationPolicies.value) {
-    if (hoursDifference >= policy.hours_before_appointment) {
-      logger.debug('✅ Policy found:', { hours: policy.hours_before_appointment, refund: policy.refund_percentage })
-      return policy
-    }
+  // Return a simple policy object with the actual charge
+  return {
+    charge_percentage: chargePercentage,
+    refund_percentage: refundPercentage,
+    hours_before_appointment: chargePercentage === 0 ? 24 : 0 // For display purposes
   }
-  
-  // Fallback: Letzte Policy (meist 100% Stornierung)
-  logger.debug('⚠️ No matching policy, using fallback')
-  return cancellationPolicies.value[cancellationPolicies.value.length - 1] || null
 }
 
 // Hilfsfunktion: Berechnet die finale Abrechnung für abgesagte Termine
