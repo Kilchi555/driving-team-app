@@ -43,9 +43,15 @@ export default defineEventHandler(async (event) => {
     }
 
     // Upload file to storage in user-specific folder with timestamp
-    const timestampedFileName = `${path.split('/')[0]}_${Date.now()}.${fileName.split('.').pop()}`
+    // Format: lernfahrausweis_B_1234567890.jpg (matches parser in list-user-documents)
+    const category = path.split('/')[0] // Extract category code
+    const fileExtension = fileName.split('.').pop()
+    const timestampedFileName = `lernfahrausweis_${category}_${Date.now()}.${fileExtension}`
     const storagePath = `${userId}/${timestampedFileName}`
-    logger.debug(`📤 Uploading file to ${bucket}/${storagePath}`)
+    logger.debug(`📤 Uploading file to ${bucket}/${storagePath}`, {
+      category,
+      fileName: timestampedFileName
+    })
     const { data, error: uploadError } = await serviceSupabase.storage
       .from(bucket)
       .upload(storagePath, fileBuffer, {
