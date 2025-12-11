@@ -89,7 +89,8 @@
           </div>
 
           <!-- Typ ändern Button für other event types (nur bei edit mode und zukünftigen Terminen) -->
-          <div v-if="props.mode !== 'create' && !isLessonType(formData.eventType) && formData.eventType !== 'other' && !isPastAppointment" class="py-2">
+          <!-- DISABLED: Temporarily hidden for first phase testing -->
+          <div v-if="false && props.mode !== 'create' && !isLessonType(formData.eventType) && formData.eventType !== 'other' && !isPastAppointment" class="py-2">
             <button
               @click="changeEventType"
               class="w-full px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded text-sm transition-colors"
