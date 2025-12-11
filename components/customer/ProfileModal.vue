@@ -554,6 +554,10 @@ const saveProfile = async () => {
       successMessage.value = 'Profil erfolgreich gespeichert'
       showSuccess('Erfolg', 'Profil gespeichert')
       logger.debug('✅ Profile saved successfully')
+      
+      // Switch back to view mode after successful save
+      isEditMode.value = false
+      
       setTimeout(() => { successMessage.value = '' }, 3000)
     } else {
       error.value = response?.message || 'Fehler beim Speichern'
