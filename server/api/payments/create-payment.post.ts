@@ -1,6 +1,6 @@
 // server/api/payments/create-payment.post.ts
 import { defineEventHandler, readBody } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
