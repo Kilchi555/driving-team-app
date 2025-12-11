@@ -73,80 +73,35 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Parse file names to extract metadata
-    // Supported formats:
-    //   1. lernfahrausweis_B_1234567890.jpg (Registrierung, ohne side)
-    //   2. lernfahrausweis_B_front_1234567890.jpg (EnhancedStudentModal, mit side)
-    //   3. license_front_1234567890.jpg (Führerschein)
+    // Simple parsing - just return all files with basic metadata
+    // No category parsing needed
     const documents: DocumentFile[] = files.map(file => {
-      const parts = file.name.split('_')
-      const name = parts.slice(0, -1).join('_') // Remove timestamp
-      const fileType = file.metadata?.mimetype || 'unknown'
-      const fileSize = file.metadata?.size || 0
-
-      // Parse document type and category from filename
-      let documentType = 'unknown'
-      let category: string | undefined
-      let side: string | undefined
-
-      if (file.name.startsWith('lernfahrausweis_')) {
-        documentType = 'lernfahrausweis'
-        // Format 1: lernfahrausweis_B_1234567890.jpg
-        // Format 2: lernfahrausweis_B_front_1234567890.jpg
-        
-        // Try format with side first
-        const catSideMatch = file.name.match(/lernfahrausweis_([A-Z]+)_(front|back)_/)
-        if (catSideMatch) {
-          category = catSideMatch[1]
-          side = catSideMatch[2] as 'front' | 'back'
-        } else {
-          // Fallback: without side
-          const catMatch = file.name.match(/lernfahrausweis_([A-Z]+)_/)
-          if (catMatch) {
-            category = catMatch[1]
-            side = 'front' // Default to front for backward compatibility
-          }
-        }
-      } else if (file.name.startsWith('license_') || file.name.startsWith('fuehrerschein_')) {
-        documentType = 'fuehrerschein'
-        // license_front_1234567890.jpg → side = 'front'
-        // license_B_front_1234567890.jpg → category = 'B', side = 'front'
-        const sideMatch = file.name.match(/_(front|back)_/)
-        if (sideMatch) {
-          side = sideMatch[1] as 'front' | 'back'
-        }
-        
-        // Try to extract category if present
-        const catMatch = file.name.match(/_([A-Z]+)_(front|back)_/)
-        if (catMatch) {
-          category = catMatch[1]
-        }
-      }
-
       const storagePath = `${userId}/${file.name}`
       const publicUrl = `${supabaseUrl}/storage/v1/object/public/user-documents/${storagePath}`
 
       return {
-        id: `${userId}-${file.name}`, // Unique ID based on path
+        id: `${userId}-${file.name}`,
         name: file.name,
         fileName: file.name,
-        fileType: fileType,
-        fileSize: fileSize,
+        fileType: file.metadata?.mimetype || 'unknown',
+        fileSize: file.metadata?.size || 0,
         createdAt: file.created_at || new Date().toISOString(),
-        documentType: documentType,
-        category: category,
-        side: side,
+        documentType: 'document', // Generic type
+        category: undefined,
+        side: undefined,
         storagePath: storagePath,
         publicUrl: publicUrl
       }
     })
 
-    logger.debug(`📄 Parsed ${documents.length} documents:`, documents.map(d => ({
-      type: d.documentType,
-      category: d.category,
-      side: d.side,
-      name: d.name
-    })))
+    // Sort by created_at (newest first)
+    documents.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime()
+      const dateB = new Date(b.createdAt).getTime()
+      return dateB - dateA
+    })
+
+    logger.debug(`📄 Returning ${documents.length} documents (newest first)`)
 
     return {
       success: true,

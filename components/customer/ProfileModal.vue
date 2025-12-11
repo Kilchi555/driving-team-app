@@ -480,35 +480,38 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
       throw new Error('Kein Benutzer angemeldet')
     }
 
-    logger.debug('📤 Uploading document for category:', categoryCode, 'File:', file.name)
+    logger.debug('📤 Uploading document for user:', currentUser.id, 'File:', file.name)
     
-    // Check file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      throw new Error(`Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 5 MB.`)
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error(`Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 10 MB.`)
     }
     
-    // Upload file directly to storage (no DB table entry)
-    // The file will be read from storage by list-user-documents API
-    const storagePath = await uploadFile(
-      file,
-      currentUser.id,
-      'lernfahrausweis',  // document_type
-      categoryCode,        // category_code (z.B. 'B')
-      'front'             // side (default to front)
-    )
+    // Upload file directly to storage with simple naming
+    // Format: ausweis_{timestamp}.{ext}
+    const timestamp = Date.now()
+    const fileExtension = file.name.split('.').pop()
+    const fileName = `ausweis_${timestamp}.${fileExtension}`
+    
+    const supabase = getSupabase()
+    const storagePath = `${currentUser.id}/${fileName}`
+    
+    logger.debug('📤 Uploading file to storage:', storagePath)
+    
+    const { data, error: uploadError } = await supabase.storage
+      .from('user-documents')
+      .upload(storagePath, file)
 
-    if (!storagePath) {
-      throw new Error('Upload fehlgeschlagen')
+    if (uploadError) {
+      throw new Error(`Upload fehlgeschlagen: ${uploadError.message}`)
     }
 
     logger.debug('✅ File uploaded to storage:', storagePath)
-    logger.debug('✅ Document will be read from storage by list-user-documents API')
     
-    successMessage.value = `${categoryName} erfolgreich hochgeladen`
-    showSuccess('Erfolg', `${categoryName} erfolgreich hochgeladen`)
+    successMessage.value = `${file.name} erfolgreich hochgeladen`
+    showSuccess('Erfolg', `${file.name} erfolgreich hochgeladen`)
     
     // Reload documents by emitting event to parent (CustomerDashboard)
-    // This will trigger a refresh of the documents list without reloading the page
     emit('document-uploaded')
     
     setTimeout(() => { successMessage.value = '' }, 3000)

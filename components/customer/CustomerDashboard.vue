@@ -944,9 +944,8 @@ const activeClickDiv = ref<string | null>(null) // Track which div is being clic
 
 // Load user documents
 const loadUserDocuments = async () => {
-  logger.debug('🔥 loadUserDocuments called [NEW VERSION 2025-12-08]')
+  logger.debug('🔥 loadUserDocuments called - Simple version')
   logger.debug('   userData.value?.id:', userData.value?.id)
-  logger.debug('   userData.value?.tenant_id:', userData.value?.tenant_id)
   
   if (!userData.value?.id) {
     logger.debug('⚠️ User data not available for loading documents')
@@ -954,56 +953,36 @@ const loadUserDocuments = async () => {
   }
 
   try {
-    logger.debug('📄 [NEW] Loading documents from Storage API for user:', userData.value.id)
+    logger.debug('📄 Loading all documents from Storage for user:', userData.value.id)
     
-    // Call new endpoint that lists documents directly from Storage
-    logger.debug('🌐 Calling /api/documents/list-user-documents with userId:', userData.value.id)
+    // Call endpoint that lists all documents from user's Storage folder
     const response = await $fetch('/api/documents/list-user-documents', {
       query: {
         userId: userData.value.id
       }
     }) as any
 
-    // The API returns {success: true, documents: [...], count: N}
-    // Extract the documents array
-    const documents = response?.documents || response || []
+    // Extract documents array
+    let documents = response?.documents || response || []
     
-    logger.debug('✅ Loaded documents from Storage:', documents?.length || 0, 'docs:', documents)
-
-    // Load document categories for this tenant
-    const supabase = getSupabase()
-    const { data: categories, error: catError } = await supabase
-      .from('document_categories')
-      .select('*')
-      .eq('tenant_id', userData.value.tenant_id)
-      .order('display_order', { ascending: true })
-
-    if (catError) {
-      console.error('❌ Error loading categories:', catError)
-      return
-    }
-
-    logger.debug('✅ Loaded categories:', categories?.length || 0)
-
-    // Map categories with their documents
-    userDocumentCategories.value = (categories || []).map((cat: any) => {
-      logger.debug('🔍 Processing category:', cat.code, 'with', documents?.length || 0, 'documents')
-      // All uploaded documents go to the first category (Ausweise)
-      // Don't filter - just assign all documents to the category
-      const categoryDocs = documents || []
-      logger.debug('   Assigning', categoryDocs.length, 'docs to category', cat.code)
-      return {
-        code: cat.code,
-        name: cat.name,
-        description: cat.description,
-        documents: categoryDocs
-      }
+    // Sort by created_at (newest first)
+    documents = documents.sort((a: any, b: any) => {
+      const dateA = new Date(a.created_at || a.createdAt || 0).getTime()
+      const dateB = new Date(b.created_at || b.createdAt || 0).getTime()
+      return dateB - dateA // Newest first
     })
+    
+    logger.debug('✅ Loaded and sorted documents:', documents?.length || 0)
 
-    logger.debug('✅ Documents grouped, categories:', userDocumentCategories.value.length)
-    if (userDocumentCategories.value.length > 0) {
-      logger.debug('📂 First category:', userDocumentCategories.value[0])
-    }
+    // Create a single "Ausweise" category with all documents
+    userDocumentCategories.value = [{
+      code: 'ausweise',
+      name: 'Ausweise',
+      description: 'Alle hochgeladenen Dokumente',
+      documents: documents
+    }]
+
+    logger.debug('✅ Documents ready for display')
   } catch (err: any) {
     console.error('❌ Error loading documents:', err)
   }
