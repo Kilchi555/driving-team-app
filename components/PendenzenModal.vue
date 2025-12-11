@@ -991,7 +991,11 @@ const refreshData = async () => {
   // Lade Pendenzen für diesen User
   // Nutze tenant_id vom currentUser
   if (props.currentUser.tenant_id) {
+    console.log('🔧 PendenzenModal.refreshData - calling loadPendencies with tenantId:', props.currentUser.tenant_id)
     await loadPendencies(props.currentUser.tenant_id)
+    console.log('🔧 PendenzenModal.refreshData - loadPendencies completed, pendencies.value:', pendencies.value)
+  } else {
+    console.warn('⚠️ PendenzenModal.refreshData - no tenant_id available!')
   }
   
   logger.debug('✅ PendenzenModal - data refreshed, count:', pendingCount.value)

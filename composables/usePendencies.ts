@@ -61,9 +61,19 @@ export const usePendencies = () => {
 
   // Load pendencies
   const loadPendencies = async (tenantId: string) => {
+    console.log('📋 [usePendencies] loadPendencies called with tenantId:', tenantId)
     isLoading.value = true
     error.value = null
     try {
+      // First, check if ANY pendencies exist in this tenant (debugging RLS)
+      console.log('📋 [usePendencies] Attempting to load ALL pendencies (no filters) first for debugging...')
+      const { data: allData, error: allError } = await supabase
+        .from('pendencies')
+        .select('*')
+        .limit(1000)
+      console.log('📋 [usePendencies] All pendencies query result:', { allData, error: allError })
+
+      // Now try the filtered query
       const { data, error: err } = await supabase
         .from('pendencies')
         .select('*')
@@ -71,8 +81,23 @@ export const usePendencies = () => {
         .is('deleted_at', null)
         .order('due_date', { ascending: true })
 
-      if (err) throw err
+      console.log('📋 [usePendencies] Filtered query result:', { data, error: err })
+
+      if (err) {
+        console.error('❌ [usePendencies] Query error details:', {
+          code: err.code,
+          message: err.message,
+          details: err.details,
+          hint: err.hint
+        })
+        throw err
+      }
+      
       pendencies.value = data || []
+      console.log('📋 [usePendencies] Loaded', pendencies.value.length, 'pendencies for tenant:', tenantId)
+      if (pendencies.value.length > 0) {
+        console.log('📋 [usePendencies] Sample pendency:', pendencies.value[0])
+      }
     } catch (err: any) {
       error.value = err.message
       console.error('❌ Error loading pendencies:', err)
