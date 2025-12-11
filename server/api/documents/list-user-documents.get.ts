@@ -74,11 +74,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // Parse file names to extract metadata
-    // File format: {documentType}_{category}_{timestamp}.{ext}
-    // Examples:
-    //   lernfahrausweis_B_1234567890.jpg
-    //   license_front_1234567890.jpg
-    //   license_back_1234567890.jpg
+    // Supported formats:
+    //   1. lernfahrausweis_B_1234567890.jpg (Registrierung, ohne side)
+    //   2. lernfahrausweis_B_front_1234567890.jpg (EnhancedStudentModal, mit side)
+    //   3. license_front_1234567890.jpg (Führerschein)
     const documents: DocumentFile[] = files.map(file => {
       const parts = file.name.split('_')
       const name = parts.slice(0, -1).join('_') // Remove timestamp
@@ -92,14 +91,36 @@ export default defineEventHandler(async (event) => {
 
       if (file.name.startsWith('lernfahrausweis_')) {
         documentType = 'lernfahrausweis'
-        // lernfahrausweis_B_1234567890.jpg → category = 'B'
-        const catMatch = file.name.match(/lernfahrausweis_([A-Z]+)_/)
-        if (catMatch) category = catMatch[1]
-        side = 'front' // Lernfahrausweis are typically front-side
-      } else if (file.name.startsWith('license_')) {
+        // Format 1: lernfahrausweis_B_1234567890.jpg
+        // Format 2: lernfahrausweis_B_front_1234567890.jpg
+        
+        // Try format with side first
+        const catSideMatch = file.name.match(/lernfahrausweis_([A-Z]+)_(front|back)_/)
+        if (catSideMatch) {
+          category = catSideMatch[1]
+          side = catSideMatch[2] as 'front' | 'back'
+        } else {
+          // Fallback: without side
+          const catMatch = file.name.match(/lernfahrausweis_([A-Z]+)_/)
+          if (catMatch) {
+            category = catMatch[1]
+            side = 'front' // Default to front for backward compatibility
+          }
+        }
+      } else if (file.name.startsWith('license_') || file.name.startsWith('fuehrerschein_')) {
         documentType = 'fuehrerschein'
         // license_front_1234567890.jpg → side = 'front'
-        side = file.name.includes('_front_') ? 'front' : file.name.includes('_back_') ? 'back' : 'front'
+        // license_B_front_1234567890.jpg → category = 'B', side = 'front'
+        const sideMatch = file.name.match(/_(front|back)_/)
+        if (sideMatch) {
+          side = sideMatch[1] as 'front' | 'back'
+        }
+        
+        // Try to extract category if present
+        const catMatch = file.name.match(/_([A-Z]+)_(front|back)_/)
+        if (catMatch) {
+          category = catMatch[1]
+        }
       }
 
       const storagePath = `${userId}/${file.name}`

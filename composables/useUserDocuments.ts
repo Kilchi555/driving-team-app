@@ -260,6 +260,7 @@ export const useUserDocuments = () => {
 
   /**
    * Upload-Funktion für Dateien
+   * Verwendet dasselbe Format wie die Registrierung für Konsistenz
    */
   const uploadFile = async (
     file: File, 
@@ -269,18 +270,40 @@ export const useUserDocuments = () => {
     side: 'front' | 'back' = 'front'
   ): Promise<string | null> => {
     try {
-      // Generiere eindeutigen Dateinamen
+      // Generiere eindeutigen Dateinamen im gleichen Format wie bei Registrierung
+      // Format: {documentType}_{categoryCode}_{side}_{timestamp}.{ext}
+      // Beispiel: lernfahrausweis_B_front_1733849420123.jpg
       const timestamp = Date.now()
       const fileExtension = file.name.split('.').pop()
-      const fileName = `${userId}_${documentType}${categoryCode ? `_${categoryCode}` : ''}_${side}_${timestamp}.${fileExtension}`
       
-      // Upload zu Supabase Storage
+      let fileName: string
+      if (categoryCode) {
+        // Mit Kategorie: lernfahrausweis_B_front_1733849420123.jpg
+        fileName = `${documentType}_${categoryCode}_${side}_${timestamp}.${fileExtension}`
+      } else {
+        // Ohne Kategorie: license_front_1733849420123.jpg
+        fileName = `${documentType}_${side}_${timestamp}.${fileExtension}`
+      }
+      
+      // Upload zu Supabase Storage im {userId}/ Ordner (wie bei Registrierung)
+      const storagePath = `${userId}/${fileName}`
+      
+      logger.debug('📤 Uploading file to storage:', {
+        bucket: 'user-documents',
+        path: storagePath,
+        fileName,
+        documentType,
+        categoryCode,
+        side
+      })
+      
       const { data, error: uploadError } = await supabase.storage
         .from('user-documents')
-        .upload(`documents/${fileName}`, file)
+        .upload(storagePath, file)
 
       if (uploadError) throw uploadError
 
+      logger.debug('✅ File uploaded successfully:', data.path)
       return data.path
     } catch (err: any) {
       console.error('Error uploading file:', err)
