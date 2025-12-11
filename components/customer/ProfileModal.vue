@@ -118,8 +118,8 @@
                       >
                         <iframe 
                           :src="getDocumentUrl(doc)" 
-                          class="w-full h-full pointer-events-none border-0"
-                          style="border: none;"
+                          class="w-full h-full pointer-events-none"
+                          style="border: none; outline: none; box-shadow: none;"
                         ></iframe>
                       </div>
                       <!-- Other file types -->
@@ -318,8 +318,8 @@
                     >
                       <iframe 
                         :src="getDocumentUrl(doc)" 
-                        class="w-full h-full border-0"
-                        style="border: none;"
+                        class="w-full h-full"
+                        style="border: none; outline: none; box-shadow: none;"
                       ></iframe>
                     </div>
                     <!-- Other file types -->
