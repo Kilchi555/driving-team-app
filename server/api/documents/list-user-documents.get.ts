@@ -47,6 +47,8 @@ export default defineEventHandler(async (event) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
     // List all files in user-documents/{userId}/ folder
+    logger.debug(`📂 Listing files in bucket 'user-documents' folder '${userId}/'`)
+    
     const { data: files, error: listError } = await supabase.storage
       .from('user-documents')
       .list(userId, {
@@ -57,13 +59,23 @@ export default defineEventHandler(async (event) => {
 
     if (listError) {
       console.error('❌ Storage list error:', listError)
+      logger.debug('❌ Storage list error details:', {
+        message: listError.message,
+        name: listError.name,
+        cause: listError.cause
+      })
       throw createError({
         statusCode: 500,
         statusMessage: `Failed to list documents: ${listError.message}`
       })
     }
 
-    logger.debug(`✅ Found ${files?.length || 0} files for user ${userId}`)
+    logger.debug(`✅ Storage API returned: ${files?.length || 0} files`)
+    if (files && files.length > 0) {
+      logger.debug('📋 Files found:', files.map(f => ({ name: f.name, created_at: f.created_at })))
+    } else {
+      logger.debug('⚠️ No files found in folder - bucket might be empty or path incorrect')
+    }
 
     if (!files || files.length === 0) {
       return {
