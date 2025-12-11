@@ -6,20 +6,25 @@
         <div class="flex justify-between items-center">
           <h2 class="text-2xl font-bold text-gray-900">Mein Profil</h2>
           <div class="flex items-center gap-3">
-            <!-- Edit/Cancel Button -->
+            <!-- Edit/Save Button -->
             <button
               v-if="!isEditMode"
               @click="isEditMode = true"
-              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+              class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              title="Bearbeiten"
             >
-              Bearbeiten
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+              </svg>
             </button>
             <button
               v-else
-              @click="isEditMode = false"
-              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
+              @click="saveProfile"
+              :disabled="isSaving"
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
             >
-              Speichern
+              <span v-if="isSaving">Speichern...</span>
+              <span v-else>Speichern</span>
             </button>
             
             <!-- Close Button -->
@@ -84,7 +89,7 @@
             <div class="space-y-4">
               <div v-for="category in categories" :key="category.code" class="text-sm">
                 <p class="text-gray-600 font-medium mb-2">{{ category.name }}</p>
-                <div v-if="category.documents && category.documents.length > 0" class="flex gap-3 flex-wrap">
+                <div v-if="category.documents && category.documents.length > 0" class="flex gap-3 flex-wrap mb-2">
                   <div 
                     v-for="doc in category.documents" 
                     :key="doc.id"
@@ -112,7 +117,25 @@
                     </a>
                   </div>
                 </div>
-                <p v-else class="text-gray-400 text-xs mt-1">Kein Dokument hochgeladen</p>
+                <p v-else class="text-gray-400 text-xs mt-1 mb-2">Kein Dokument hochgeladen</p>
+                
+                <!-- Upload button (always visible) -->
+                <div class="flex gap-2 mt-2">
+                  <input
+                    :ref="el => { if (el) fileInputRefs[category.code] = el as HTMLInputElement }"
+                    type="file"
+                    accept="image/*,application/pdf"
+                    class="hidden"
+                    @change="(e) => uploadDocument(e, category.code, category.name)"
+                  />
+                  <button
+                    @click="triggerFileInput(category.code)"
+                    :disabled="isUploading"
+                    class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium py-1.5 px-3 rounded transition-colors disabled:opacity-50"
+                  >
+                    {{ (category.documents && category.documents.length > 0) ? 'Austauschen' : 'Hochladen' }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
