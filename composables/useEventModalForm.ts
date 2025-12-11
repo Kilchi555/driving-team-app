@@ -1404,7 +1404,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
         finalPaymentStatus: creditUsedRappen >= Math.max(0, totalAmountRappen) ? 'completed' : 'pending'
       })
       
-      const { data: payment, error } = await supabase
+      // ✅ Use getSupabaseAdmin() to bypass RLS for payment creation
+      // This allows creating payments with null company_billing_address_id
+      const adminSupabase = getSupabaseAdmin()
+      const { data: payment, error } = await adminSupabase
         .from('payments')
         .insert(paymentData)
         .select()
@@ -1412,6 +1415,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       if (error) {
         console.error('❌ Error creating payment:', error)
+        logger.debug('❌ Payment creation error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          company_billing_address_id: paymentData.company_billing_address_id
+        })
         // Don't throw - payment creation shouldn't fail the entire appointment save
         return null
       }
