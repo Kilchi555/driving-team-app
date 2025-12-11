@@ -65,6 +65,55 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Payment created successfully:', payment.id)
 
+    // ✅ If no company_billing_address_id, create a pending task (Pendenz)
+    const hasBillingAddress = !!cleanPaymentData.company_billing_address_id
+    
+    if (!hasBillingAddress && paymentData.appointment_id) {
+      try {
+        logger.debug('📝 Creating pending task for missing billing address')
+        
+        // Get appointment details for the pending task
+        const { data: appointmentData } = await supabase
+          .from('appointments')
+          .select('title, user_id, staff_id, tenant_id')
+          .eq('id', paymentData.appointment_id)
+          .single()
+        
+        if (appointmentData) {
+          const pendencyData = {
+            title: `Rechnungsadresse erforderlich: ${appointmentData.title}`,
+            description: `Der Termin "${appointmentData.title}" wurde erstellt, aber es wurde keine Rechnungsadresse gespeichert. Bitte fügen Sie die Adresse hinzu.`,
+            category: 'billing',
+            priority: 'mittel',
+            status: 'pendent',
+            assigned_to: appointmentData.staff_id,
+            created_by: appointmentData.staff_id,
+            tenant_id: appointmentData.tenant_id,
+            due_date: new Date().toISOString(), // Due immediately
+            metadata: {
+              appointment_id: paymentData.appointment_id,
+              payment_id: payment.id,
+              type: 'missing_billing_address'
+            }
+          }
+          
+          const { error: pendencyError } = await supabase
+            .from('pendencies')
+            .insert([pendencyData])
+          
+          if (pendencyError) {
+            logger.warn('⚠️ Failed to create pending task:', pendencyError.message)
+            // Don't throw - payment was successful, pending task creation is secondary
+          } else {
+            logger.debug('✅ Pending task created for missing billing address')
+          }
+        }
+      } catch (pendencyErr: any) {
+        logger.warn('⚠️ Error creating pending task (non-critical):', pendencyErr.message)
+        // Don't throw - payment was successful
+      }
+    }
+
     return {
       success: true,
       payment
