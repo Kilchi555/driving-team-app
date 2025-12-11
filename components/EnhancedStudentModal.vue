@@ -1272,16 +1272,19 @@ const getCancellationPolicy = (appointment: any) => {
   if (!appointment || appointment.status !== 'cancelled') return null
   
   // Use the stored cancellation_charge_percentage directly
+  // cancellation_charge_percentage = 0 means FREE cancellation (100% refund)
+  // cancellation_charge_percentage = 100 means FULL CHARGE (0% refund)
   const chargePercentage = appointment.cancellation_charge_percentage ?? 100
   const refundPercentage = 100 - chargePercentage
   
   logger.debug('💰 Cancellation charge for appointment:', {
     appointmentId: appointment.id,
     chargePercentage,
-    refundPercentage
+    refundPercentage,
+    wasFreeCancellation: chargePercentage === 0
   })
   
-  // Return a simple policy object with the actual charge
+  // Return a simple policy object with the actual charge that was applied
   return {
     charge_percentage: chargePercentage,
     refund_percentage: refundPercentage,
@@ -1295,8 +1298,9 @@ const calculateCancelledPayment = (payment: any) => {
     return null
   }
   
-  const policy = getCancellationPolicy(payment.appointments)
-  if (!policy) return null
+  // Use the stored cancellation_charge_percentage directly
+  const chargePercentage = payment.appointments.cancellation_charge_percentage ?? 100
+  const refundPercentage = 100 - chargePercentage
   
   // Admin-Fee (wird IMMER verrechnet)
   const adminFee = payment.admin_fee_rappen || 0
@@ -1313,14 +1317,20 @@ const calculateCancelledPayment = (payment: any) => {
   const discountValue = payment.discount_sale?.discount_amount_rappen || 0
   
   // Berechnung
-  const appointmentRefund = Math.round(appointmentCost * (policy.refund_percentage / 100))
+  const appointmentRefund = Math.round(appointmentCost * (refundPercentage / 100))
   const finalAppointmentCost = appointmentCost - appointmentRefund
   
   // Discount wird nur zurückgegeben wenn 100% Rückerstattung
-  const discountRefund = policy.refund_percentage === 100 ? discountValue : 0
+  const discountRefund = refundPercentage === 100 ? discountValue : 0
   const finalDiscountValue = discountValue - discountRefund
   
   const totalCost = finalAppointmentCost + productCost + adminFee - finalDiscountValue
+  
+  const policy = {
+    charge_percentage: chargePercentage,
+    refund_percentage: refundPercentage,
+    hours_before_appointment: chargePercentage === 0 ? 24 : 0
+  }
   
   return {
     appointmentCost,
