@@ -113,13 +113,13 @@
                       <!-- PDF preview with iframe -->
                       <div 
                         v-else-if="doc.fileType === 'application/pdf'"
-                        class="w-full bg-white rounded border border-red-200 hover:border-red-400 transition-colors overflow-hidden"
+                        class="w-full bg-white rounded border border-gray-200 hover:border-gray-400 transition-colors overflow-hidden"
                         style="aspect-ratio: 210 / 297;"
                       >
                         <iframe 
                           :src="getDocumentUrl(doc)" 
-                          class="w-full h-full pointer-events-none"
-                          frameborder="0"
+                          class="w-full h-full pointer-events-none border-0"
+                          style="border: none;"
                         ></iframe>
                       </div>
                       <!-- Other file types -->
@@ -157,7 +157,7 @@
                     :style="{ backgroundColor: primaryColor || '#3B82F6' }"
                     class="text-xs text-white font-medium py-1.5 px-3 rounded transition-all hover:opacity-90 disabled:opacity-50"
                   >
-                    {{ (category.documents && category.documents.length > 0) ? 'Austauschen' : 'Hochladen' }}
+                    Hochladen
                   </button>
                 </div>
               </div>
@@ -318,8 +318,8 @@
                     >
                       <iframe 
                         :src="getDocumentUrl(doc)" 
-                        class="w-full h-full"
-                        frameborder="0"
+                        class="w-full h-full border-0"
+                        style="border: none;"
                       ></iframe>
                     </div>
                     <!-- Other file types -->
@@ -366,7 +366,7 @@
                   :style="{ backgroundColor: primaryColor || '#3B82F6' }"
                   class="flex-1 text-white font-medium py-2 px-4 rounded-lg transition-all hover:opacity-90 disabled:opacity-50"
                 >
-                  {{ (category.documents && category.documents.length > 0) ? 'Austausch' : 'Hochladen' }}
+                  Hochladen
                 </button>
               </div>
             </div>
