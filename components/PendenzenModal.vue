@@ -146,16 +146,32 @@
                 <div class="text-xs text-gray-500">
                   <span>📅 {{ new Date(pendency.due_date).toLocaleDateString('de-CH') }}</span>
                 </div>
-                <select 
-                  :value="pendency.status"
-                  @change="(e) => changeStatus(pendency.id, (e.target as any).value)"
-                  class="px-3 py-2 text-sm border rounded bg-white hover:bg-gray-50 font-medium flex-shrink-0"
-                  style="width: auto; min-width: 140px;"
-                >
-                  <option value="pendent">Pendent</option>
-                  <option value="in_bearbeitung">In Bearbeitung</option>
-                  <option value="abgeschlossen">Abgeschlossen</option>
-                </select>
+                <div class="relative">
+                  <select 
+                    :value="pendency.status"
+                    @change="(e) => changeStatus(pendency.id, (e.target as any).value)"
+                    :class="[
+                      'px-3 py-1.5 text-sm border rounded font-medium flex-shrink-0 appearance-none pr-8 cursor-pointer transition-colors',
+                      pendency.status === 'abgeschlossen' ? 'bg-green-50 border-green-300 text-green-800 hover:bg-green-100' :
+                      pendency.status === 'überfällig' ? 'bg-red-50 border-red-300 text-red-800 hover:bg-red-100' :
+                      pendency.status === 'in_bearbeitung' ? 'bg-yellow-50 border-yellow-300 text-yellow-800 hover:bg-yellow-100' :
+                      'bg-blue-50 border-blue-300 text-blue-800 hover:bg-blue-100'
+                    ]"
+                    style="width: auto; min-width: 130px;"
+                  >
+                    <option value="pendent">Pendent</option>
+                    <option value="in_bearbeitung">In Bearbeitung</option>
+                    <option value="abgeschlossen">Abgeschlossen</option>
+                  </select>
+                  <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" :class="[
+                    pendency.status === 'abgeschlossen' ? 'text-green-800' :
+                    pendency.status === 'überfällig' ? 'text-red-800' :
+                    pendency.status === 'in_bearbeitung' ? 'text-yellow-800' :
+                    'text-blue-800'
+                  ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
