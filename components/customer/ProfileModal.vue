@@ -2,15 +2,15 @@
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl my-8">
       <!-- Header -->
-      <div class="bg-gray-100 border-b border-gray-200 p-6 rounded-t-xl">
+      <div :style="headerStyle" class="border-b border-opacity-20 border-white p-6 rounded-t-xl">
         <div class="flex justify-between items-center">
-          <h2 class="text-2xl font-bold text-gray-900">Mein Profil</h2>
+          <h2 class="text-2xl font-bold text-white">Mein Profil</h2>
           <div class="flex items-center gap-3">
             <!-- Edit/Save Button -->
             <button
               v-if="!isEditMode"
               @click="isEditMode = true"
-              class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              class="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-colors"
               title="Bearbeiten"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -21,7 +21,7 @@
               v-else
               @click="saveProfile"
               :disabled="isSaving"
-              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+              class="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
             >
               <span v-if="isSaving">Speichern...</span>
               <span v-else>Speichern</span>
@@ -30,7 +30,7 @@
             <!-- Close Button -->
             <button
               @click="$emit('close')"
-              class="text-gray-600 hover:text-gray-900 transition-colors p-2"
+              class="text-white hover:bg-white hover:bg-opacity-20 transition-colors p-2 rounded-lg"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -348,11 +348,12 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { useUserDocuments } from '~/composables/useUserDocuments'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 interface Category {
   code: string
@@ -379,6 +380,12 @@ defineEmits<{
 const { showSuccess, showError } = useUIStore()
 const authStore = useAuthStore()
 const { uploadFile } = useUserDocuments()
+const { primaryColor } = useTenantBranding()
+
+// Computed style for header background
+const headerStyle = computed(() => ({
+  backgroundColor: primaryColor.value || '#3B82F6'
+}))
 
 const isEditMode = ref(false)
 
