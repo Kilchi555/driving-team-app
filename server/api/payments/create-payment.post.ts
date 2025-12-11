@@ -92,6 +92,24 @@ export default defineEventHandler(async (event) => {
         })
         
         if (appointmentData) {
+          // We need to resolve staff_id (which is auth_user_id) to the actual users.id
+          let assignedUserId = null
+          
+          // Try to find the user by auth_user_id
+          const { data: staffUser, error: staffError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_user_id', appointmentData.staff_id)
+            .single()
+          
+          if (staffUser && staffUser.id) {
+            assignedUserId = staffUser.id
+            console.log('📝 [PENDENCY] Found users.id for staff_id:', assignedUserId)
+          } else {
+            console.warn('⚠️ [PENDENCY] Could not find users.id for staff_id:', appointmentData.staff_id, staffError?.message)
+            // Don't set assigned_to if we can't find the user - avoid FK constraint error
+          }
+          
           // Set due_date to tomorrow to satisfy check constraint
           const tomorrow = new Date()
           tomorrow.setDate(tomorrow.getDate() + 1)
@@ -101,8 +119,8 @@ export default defineEventHandler(async (event) => {
             description: `Der Termin "${appointmentData.title}" wurde erstellt, aber es wurde keine Rechnungsadresse gespeichert. Bitte fügen Sie die Adresse hinzu.`,
             priority: 'hoch',
             status: 'pendent',
-            assigned_to: appointmentData.staff_id || null, // Assign to staff who created the appointment
-            created_by: appointmentData.staff_id || null,  // Also created by the staff
+            assigned_to: assignedUserId || null, // Use resolved users.id or null
+            created_by: assignedUserId || null,  // Use resolved users.id or null
             tenant_id: appointmentData.tenant_id,
             due_date: tomorrow.toISOString(),
             tags: ['billing', 'invoice', 'missing-address'],
