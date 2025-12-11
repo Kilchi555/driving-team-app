@@ -113,7 +113,8 @@
                       <!-- PDF preview with iframe -->
                       <div 
                         v-else-if="doc.fileType === 'application/pdf'"
-                        class="w-full h-32 bg-white rounded border border-red-200 hover:border-red-400 transition-colors overflow-hidden"
+                        class="w-full bg-white rounded border border-red-200 hover:border-red-400 transition-colors overflow-hidden"
+                        style="aspect-ratio: 210 / 297;"
                       >
                         <iframe 
                           :src="getDocumentUrl(doc)" 
@@ -313,7 +314,7 @@
                     <div 
                       v-else-if="doc.fileType === 'application/pdf' || doc.file_type === 'application/pdf'"
                       class="w-full bg-white rounded overflow-hidden"
-                      style="height: 500px;"
+                      style="aspect-ratio: 210 / 297;"
                     >
                       <iframe 
                         :src="getDocumentUrl(doc)" 
