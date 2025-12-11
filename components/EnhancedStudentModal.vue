@@ -544,7 +544,7 @@
                   :class="['text-sm font-medium transition-colors']"
                   :style="{ color: paymentsFilterMode === 'ausstehend' ? primaryColor : '#6B7280' }"
                 >
-                  Ausstehend
+                  Unbezahlt
                 </span>
               </div>
               
@@ -626,7 +626,7 @@
                         ]">
                           <span>
                             {{ payment.payment_status === 'completed' ? 'Bezahlt' :
-                               payment.payment_status === 'pending' ? 'Ausstehend' :
+                               payment.payment_status === 'pending' ? 'Unbezahlt' :
                                payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
                                payment.payment_status }}
                           </span>
@@ -1301,6 +1301,13 @@ const calculateCancelledPayment = (payment: any) => {
   // Use the stored cancellation_charge_percentage directly
   const chargePercentage = payment.appointments.cancellation_charge_percentage ?? 100
   const refundPercentage = 100 - chargePercentage
+  
+  logger.debug('💰 calculateCancelledPayment:', {
+    appointmentId: payment.appointments.id,
+    chargePercentage,
+    refundPercentage,
+    storedCharge: payment.appointments.cancellation_charge_percentage
+  })
   
   // Admin-Fee (wird IMMER verrechnet)
   const adminFee = payment.admin_fee_rappen || 0
