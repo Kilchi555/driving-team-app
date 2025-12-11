@@ -149,15 +149,6 @@
 
               <!-- Status Badge und Dropdown übereinander -->
               <div class="flex flex-col gap-2">
-                <span :class="[
-                  'text-xs px-2 py-0.5 rounded-full font-semibold w-fit',
-                  pendency.status === 'abgeschlossen' ? 'bg-green-200 text-green-800' :
-                  pendency.status === 'überfällig' ? 'bg-red-200 text-red-800' :
-                  pendency.status === 'in_bearbeitung' ? 'bg-yellow-200 text-yellow-800' :
-                  'bg-blue-200 text-blue-800'
-                ]">
-                  {{ pendency.status }}
-                </span>
                 <select 
                   :value="pendency.status"
                   @change="(e) => changeStatus(pendency.id, (e.target as any).value)"
