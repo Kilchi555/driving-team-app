@@ -12,11 +12,11 @@ ADD CONSTRAINT "payments_company_billing_address_id_fkey"
 FOREIGN KEY (company_billing_address_id)
 REFERENCES company_billing_addresses(id)
 ON DELETE SET NULL
-ON UPDATE CASCADE
-MATCH SIMPLE;
+ON UPDATE CASCADE;
 
 -- Verify the constraint was created
 -- SELECT constraint_name, table_name, column_name
 -- FROM information_schema.key_column_usage
 -- WHERE table_name = 'payments' AND column_name = 'company_billing_address_id';
+
 
