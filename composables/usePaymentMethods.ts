@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 
 export interface PaymentMethod {
   id: string
@@ -140,19 +141,28 @@ export const useCompanyBilling = () => {
 
   const createBillingAddress = async (addressData: Omit<CompanyBillingAddress, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const supabase = getSupabase()
-      const { data, error: createError } = await supabase
-        .from('company_billing_addresses')
-        .insert([addressData])
-        .select()
-        .single()
+      logger.debug('📋 Creating billing address via API:', {
+        user_id: addressData.user_id,
+        tenant_id: addressData.tenant_id,
+        company_name: addressData.company_name
+      })
 
-      if (createError) throw createError
+      // ✅ Use server-side API to bypass RLS with admin client
+      const response = await $fetch('/api/billing-address/create', {
+        method: 'POST',
+        body: { addressData }
+      })
+
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.error || 'Failed to create billing address')
+      }
+
+      const data = response.data
 
       // Aktualisiere die lokale Liste
       await loadBillingAddresses()
       
-      logger.debug('✅ Billing address created:', data)
+      logger.debug('✅ Billing address created:', data.id)
       return { success: true, data }
     } catch (err: any) {
       console.error('❌ Error creating billing address:', err)
