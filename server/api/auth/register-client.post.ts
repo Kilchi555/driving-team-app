@@ -276,7 +276,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      userId: authData.user.id,
+      userId: userProfile.id,
       message: 'Registrierung erfolgreich. Bitte überprüfen Sie Ihre E-Mail.'
     }
 
