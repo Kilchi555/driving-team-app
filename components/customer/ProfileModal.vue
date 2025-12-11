@@ -546,7 +546,7 @@ const saveProfile = async () => {
         lastName: formData.value.lastName,
         email: formData.value.email,
         phone: formData.value.phone,
-        birthDate: formData.value.birthdate,
+        birthdate: formData.value.birthdate,  // Fixed: lowercase to match backend
         street: formData.value.street,
         streetNr: formData.value.streetNr,
         zip: formData.value.zip,
