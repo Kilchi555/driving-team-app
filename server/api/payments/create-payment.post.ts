@@ -91,6 +91,10 @@ export default defineEventHandler(async (event) => {
         })
         
         if (appointmentData) {
+          // Set due_date to tomorrow to satisfy check constraint
+          const tomorrow = new Date()
+          tomorrow.setDate(tomorrow.getDate() + 1)
+          
           const pendencyData = {
             title: `Rechnungsadresse erforderlich: ${appointmentData.title}`,
             description: `Der Termin "${appointmentData.title}" wurde erstellt, aber es wurde keine Rechnungsadresse gespeichert. Bitte fügen Sie die Adresse hinzu.`,
@@ -99,7 +103,7 @@ export default defineEventHandler(async (event) => {
             assigned_to: appointmentData.staff_id,
             created_by: appointmentData.staff_id,
             tenant_id: appointmentData.tenant_id,
-            due_date: new Date().toISOString(),
+            due_date: tomorrow.toISOString(),
             tags: ['billing', 'invoice', 'missing-address'],
             notes: `Appointment ID: ${paymentData.appointment_id}\nPayment ID: ${payment.id}`
           }
