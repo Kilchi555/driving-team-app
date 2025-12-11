@@ -2206,6 +2206,7 @@ const loadPayments = async () => {
           type,
           deleted_at,
           deletion_reason,
+          duration_minutes,
           event_types(name)
         )
       `)
