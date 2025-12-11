@@ -101,15 +101,15 @@ export default defineEventHandler(async (event) => {
             description: `Der Termin "${appointmentData.title}" wurde erstellt, aber es wurde keine Rechnungsadresse gespeichert. Bitte fügen Sie die Adresse hinzu.`,
             priority: 'hoch',
             status: 'pendent',
-            assigned_to: null, // Don't try to assign - RLS issues with user lookup
-            created_by: null,  // Keep null to avoid FK constraint issues
+            assigned_to: null,
+            created_by: appointmentData.staff_id || null, // Set to staff who created the appointment
             tenant_id: appointmentData.tenant_id,
             due_date: tomorrow.toISOString(),
             tags: ['billing', 'invoice', 'missing-address'],
-            notes: `Appointment ID: ${paymentData.appointment_id}\nPayment ID: ${payment.id}\nStaff ID: ${appointmentData.staff_id}`
+            notes: `Appointment ID: ${paymentData.appointment_id}\nPayment ID: ${payment.id}`
           }
           
-          console.log('📝 [PENDENCY] Inserting pendency:', { title: pendencyData.title, assigned_to: pendencyData.assigned_to })
+          console.log('📝 [PENDENCY] Inserting pendency:', { title: pendencyData.title, created_by: pendencyData.created_by })
           
           const { data: createdPendency, error: pendencyError } = await supabase
             .from('pendencies')
