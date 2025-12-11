@@ -323,6 +323,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
+import { useUserDocuments } from '~/composables/useUserDocuments'
 
 interface Category {
   code: string
@@ -348,6 +349,7 @@ defineEmits<{
 
 const { showSuccess, showError } = useUIStore()
 const authStore = useAuthStore()
+const { uploadFile, saveDocument, getPublicUrl } = useUserDocuments()
 
 const isEditMode = ref(false)
 
@@ -433,42 +435,66 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
 
     logger.debug('📤 Uploading document for category:', categoryCode, 'File:', file.name)
     
-    // Create FormData
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('userId', currentUser.id)
-    formData.append('type', 'student-document') // Document type
-    
-    logger.debug('📝 FormData prepared with keys:', Array.from(formData.keys()))
-    
-    // Upload via API
-    logger.debug('🌐 Sending request to /api/students/upload-document')
-    const response = await $fetch('/api/students/upload-document', {
-      method: 'POST',
-      body: formData
-    }) as any
-    
-    logger.debug('✅ Upload response received:', response)
-    
-    if (response?.success) {
-      logger.debug('✅ Document uploaded successfully to Storage:', response.url)
-      successMessage.value = `${categoryName} erfolgreich hochgeladen`
-      showSuccess('Erfolg', `${categoryName} erfolgreich hochgeladen`)
-      setTimeout(() => { successMessage.value = '' }, 3000)
-      
-      // Reload page to refresh documents
-      setTimeout(() => {
-        location.reload()
-      }, 1000)
-    } else {
-      console.error('❌ Upload failed - no success flag:', response)
-      error.value = response?.message || 'Unbekannter Fehler beim Upload'
-      showError('Fehler', error.value)
+    // Check file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error(`Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 5 MB.`)
     }
+    
+    // Upload file using the unified system (like EnhancedStudentModal)
+    const storagePath = await uploadFile(
+      file,
+      currentUser.id,
+      'lernfahrausweis',  // document_type
+      categoryCode,        // category_code (z.B. 'B')
+      'front'             // side (default to front)
+    )
+
+    if (!storagePath) {
+      throw new Error('Upload fehlgeschlagen')
+    }
+
+    logger.debug('✅ File uploaded to storage:', storagePath)
+
+    // Get tenant_id from userData
+    const tenantId = props.userData?.tenant_id || currentUser.tenant_id
+    
+    if (!tenantId) {
+      throw new Error('Tenant-ID nicht gefunden')
+    }
+
+    // Save document record to user_documents table
+    const documentData = {
+      user_id: currentUser.id,
+      tenant_id: tenantId,
+      document_type: 'lernfahrausweis',
+      category_code: categoryCode,
+      side: 'front' as 'front' | 'back',
+      file_name: file.name,
+      file_size: file.size,
+      file_type: file.type,
+      storage_path: storagePath,
+      title: `${categoryName} (Vorderseite)`
+    }
+
+    const savedDocument = await saveDocument(documentData)
+
+    if (!savedDocument) {
+      throw new Error('Dokument konnte nicht gespeichert werden')
+    }
+
+    logger.debug('✅ Document saved to database:', savedDocument)
+    
+    successMessage.value = `${categoryName} erfolgreich hochgeladen`
+    showSuccess('Erfolg', `${categoryName} erfolgreich hochgeladen`)
+    setTimeout(() => { successMessage.value = '' }, 3000)
+    
+    // Reload page to refresh documents
+    setTimeout(() => {
+      location.reload()
+    }, 1000)
   } catch (err: any) {
     console.error('❌ Error uploading document:', err)
-    console.error('   Error details:', { message: err.message, status: err.status, data: err.data })
-    error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Hochladen'
+    error.value = err?.message || 'Fehler beim Hochladen'
     showError('Fehler', error.value)
   } finally {
     isUploading.value = false
