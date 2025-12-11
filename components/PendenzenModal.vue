@@ -521,18 +521,67 @@ const reminderHistory = ref<any[]>([])
 const isLoadingReminders = ref(false)
 const isSendingReminder = ref(false)
 
-// Computed: Pendenzen die dem User zugewiesen sind oder von ihm erstellt wurden
-const userPendencies = computed(() => {
-  if (!currentUser.value?.id) return []
-  return pendencies.value.filter((p: any) => 
-    (p.assigned_to === currentUser.value?.id || p.created_by === currentUser.value?.id) &&
-    p.status !== 'gelöscht'
-  )
-})
+// Ref für gefilterte Pendenzen (wird von watch aktualisiert)
+const userPendencies = ref<any[]>([])
 
+// Watch: Update userPendencies whenever pendencies or currentUser changes
+watch(
+  () => [pendencies.value, props.currentUser?.id] as const,
+  ([newPendencies, userId]) => {
+    console.log('🔧 userPendencies watch triggered:', {
+      currentUserId: userId,
+      totalPendencies: newPendencies?.length,
+      propsCurrentUserId: props.currentUser?.id
+    })
+    
+    if (!userId) {
+      userPendencies.value = []
+      console.log('🔧 No userId, skipping filter')
+      return
+    }
+    
+    const filtered = (newPendencies || []).filter((p: any) => {
+      const isAssignedToMe = p.assigned_to === userId
+      const isCreatedByMe = p.created_by === userId
+      const passes = (isAssignedToMe || isCreatedByMe) && p.status !== 'gelöscht'
+      
+      if (p.title.includes('Rechnungsadresse')) {
+        console.log('🔧 Pendency filter debug:', {
+          pendencyId: p.id,
+          pendencyTitle: p.title,
+          assigned_to: p.assigned_to,
+          created_by: p.created_by,
+          currentUserId: userId,
+          isAssignedToMe,
+          isCreatedByMe,
+          passes
+        })
+      }
+      
+      return passes
+    })
+    
+    console.log('🔧 userPendencies updated:', {
+      totalPendencies: newPendencies?.length,
+      currentUserId: userId,
+      filteredCount: filtered.length,
+      filtered: filtered.map(p => ({ id: p.id, title: p.title }))
+    })
+    
+    userPendencies.value = filtered
+  },
+  { deep: true, immediate: true }
+)
+
+// Ref für Anzahl aktiver Pendenzen
 const pendenciesCount = computed(() => {
   return userPendencies.value.filter((p: any) => p.status !== 'abgeschlossen').length
 })
+
+// Debug log für pendenciesCount
+watch(pendenciesCount, (newCount) => {
+  console.log('🔧 pendenciesCount changed:', newCount)
+}, { immediate: true })
 
 // Computed: Nur Bewertungen (ohne pending_confirmation)
 const evaluationAppointments = computed(() => {
@@ -1218,15 +1267,21 @@ watch(() => props.isOpen, async (newIsOpen) => {
     } else {
       logger.debug('🔄 Starting tab selection logic...')
       try {
+        // Debug: Direct access to pendencies.value
+        console.log('🔧 Tab selection debug - pendencies.value:', pendencies.value)
+        console.log('🔧 Tab selection debug - userPendencies.value:', userPendencies.value)
+        console.log('🔧 Tab selection debug - currentUser.value?.id:', currentUser.value?.id)
+        
         // Priorisiere den Tab mit den meisten Pendenzen
         const bewertungenCount = pendingCount.value || 0
         const unbestätigtCount = unconfirmedNext24hCount.value || 0
-        const pendenzenCount = pendenciesCount.value || 0
+        const pendenzenCount = userPendencies.value?.length || 0
         
-        logger.debug('📊 Tab selection - Direct counts:', { 
+        logger.debug('📊 Tab selection - Final counts:', { 
           bewertungenCount, 
           unbestätigtCount,
-          pendenzenCount
+          pendenzenCount,
+          pendenciesValueLength: pendencies.value?.length
         })
         
         // Wähle den Tab mit den meisten Items
@@ -1256,6 +1311,22 @@ watch(() => props.isOpen, async (newIsOpen) => {
 watch(pendingCount, (newCount, oldCount) => {
   logger.debug(`🔄 PendenzenModal - pending count changed: ${oldCount} → ${newCount}`)
 }, { immediate: true })
+
+// Debug: Watch pendencies and userPendencies
+watch(() => pendencies.value, (newVal) => {
+  console.log('🔧 pendencies.value changed:', {
+    length: newVal?.length,
+    items: newVal?.map(p => ({ id: p.id, assigned_to: p.assigned_to, created_by: p.created_by }))
+  })
+}, { deep: true })
+
+watch(() => userPendencies.value, (newVal) => {
+  console.log('🔧 userPendencies.value changed:', {
+    length: newVal?.length,
+    currentUserId: currentUser.value?.id,
+    items: newVal?.map(p => ({ id: p.id, title: p.title, assigned_to: p.assigned_to }))
+  })
+}, { deep: true })
 
 // Initial load wenn Component gemounted wird UND Modal bereits offen ist
 onMounted(() => {
