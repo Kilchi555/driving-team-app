@@ -101,17 +101,38 @@
                       class="relative group block"
                       title="Klicke zum Öffnen"
                     >
-                      <!-- Larger preview image -->
+                      <!-- Image preview -->
                       <img 
+                        v-if="doc.fileType?.startsWith('image/')"
                         :src="getDocumentUrl(doc)" 
-                        :alt="doc.file_name"
+                        :alt="doc.fileName"
                         class="w-full h-32 object-contain rounded border border-blue-200 hover:border-blue-400 transition-colors bg-white"
                         @load="handleImageLoad(doc)"
                         @error="handleImageError"
                       />
+                      <!-- PDF preview -->
+                      <div 
+                        v-else-if="doc.fileType === 'application/pdf'"
+                        class="w-full h-32 bg-red-50 rounded border border-red-200 hover:border-red-400 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <svg class="w-12 h-12 text-red-600 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="text-xs text-red-700 font-medium">PDF</span>
+                      </div>
+                      <!-- Other file types -->
+                      <div 
+                        v-else
+                        class="w-full h-32 bg-gray-50 rounded border border-gray-200 hover:border-gray-400 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <svg class="w-12 h-12 text-gray-600 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="text-xs text-gray-600 font-medium">Dokument</span>
+                      </div>
                       <div class="absolute left-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                         <div class="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                          {{ doc.file_name }}
+                          {{ doc.fileName }}
                         </div>
                       </div>
                     </a>
@@ -279,19 +300,34 @@
                 <div v-for="doc in category.documents" :key="doc.id" class="w-full">
                   <!-- Large Preview -->
                   <div class="w-full bg-gray-50 rounded-lg border border-gray-200 p-2 overflow-auto">
+                    <!-- Image preview -->
                     <img 
-                      v-if="doc.file_type && doc.file_type.startsWith('image/')"
+                      v-if="doc.fileType?.startsWith('image/') || doc.file_type?.startsWith('image/')"
                       :src="getDocumentUrl(doc)" 
-                      :alt="doc.file_name"
+                      :alt="doc.fileName || doc.file_name"
                       class="w-full h-auto object-contain rounded"
                       @error="handleImageError"
                       @load="() => handleImageLoad(doc)"
                     >
-                    <div v-else class="w-full h-64 bg-red-50 rounded flex flex-col items-center justify-center">
+                    <!-- PDF preview -->
+                    <div 
+                      v-else-if="doc.fileType === 'application/pdf' || doc.file_type === 'application/pdf'"
+                      class="w-full h-64 bg-red-50 rounded flex flex-col items-center justify-center"
+                    >
                       <svg class="w-16 h-16 text-red-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                       </svg>
                       <span class="text-sm text-red-600 font-medium">PDF</span>
+                    </div>
+                    <!-- Other file types -->
+                    <div 
+                      v-else
+                      class="w-full h-64 bg-gray-50 rounded flex flex-col items-center justify-center"
+                    >
+                      <svg class="w-16 h-16 text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      <span class="text-sm text-gray-600 font-medium">Dokument</span>
                     </div>
                   </div>
                   
