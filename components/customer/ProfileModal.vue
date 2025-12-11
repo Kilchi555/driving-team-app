@@ -291,8 +291,8 @@
               <!-- Upload -->
               <div class="flex gap-2">
                 <input
+                  :ref="el => { if (el) fileInputRefs[category.code] = el as HTMLInputElement }"
                   type="file"
-                  :ref="`fileInput_${category.code}`"
                   accept="image/*,application/pdf"
                   class="hidden"
                   @change="(e) => uploadDocument(e, category.code, category.name)"
@@ -405,6 +405,7 @@ const isUploading = ref(false)
 const error = ref('')
 const successMessage = ref('')
 const categories = ref<any[]>([])
+const fileInputRefs = ref<Record<string, HTMLInputElement>>({})
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 const scheduleAutoSave = () => {
@@ -420,8 +421,15 @@ const scheduleAutoSave = () => {
 }
 
 const triggerFileInput = (categoryCode: string) => {
-  const input = document.querySelector(`input[ref*="${categoryCode}"]`) as HTMLInputElement
-  input?.click()
+  logger.debug('🔍 triggerFileInput called for category:', categoryCode)
+  const input = fileInputRefs.value[categoryCode]
+  if (input) {
+    logger.debug('✅ Found file input, triggering click')
+    input.click()
+  } else {
+    console.warn('⚠️ File input not found for category:', categoryCode)
+    console.warn('   Available refs:', Object.keys(fileInputRefs.value))
+  }
 }
 
 const uploadDocument = async (event: Event, categoryCode: string, categoryName: string) => {
