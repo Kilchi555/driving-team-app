@@ -93,8 +93,7 @@ export default defineEventHandler(async (event) => {
       street: street?.trim() || null,
       street_nr: streetNr?.trim() || null,
       zip: zip?.trim() || null,
-      city: city?.trim() || null,
-      updated_at: new Date().toISOString()
+      city: city?.trim() || null
     }
 
     // Add email if it changed
