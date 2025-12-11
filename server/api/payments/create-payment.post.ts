@@ -92,22 +92,34 @@ export default defineEventHandler(async (event) => {
         })
         
         if (appointmentData) {
-          // We need to resolve staff_id (which is auth_user_id) to the actual users.id
+          // We need to resolve staff_id to the actual users.id
           let assignedUserId = null
           
-          // Try to find the user by auth_user_id
-          const { data: staffUser, error: staffError } = await supabase
+          // Try multiple ways to find the user:
+          // 1. First check if staff_id is directly a users.id
+          const { data: userById, error: userByIdError } = await supabase
             .from('users')
             .select('id')
-            .eq('auth_user_id', appointmentData.staff_id)
+            .eq('id', appointmentData.staff_id)
             .single()
           
-          if (staffUser && staffUser.id) {
-            assignedUserId = staffUser.id
-            console.log('📝 [PENDENCY] Found users.id for staff_id:', assignedUserId)
+          if (userById && userById.id) {
+            assignedUserId = userById.id
+            console.log('📝 [PENDENCY] Found users.id directly:', assignedUserId)
           } else {
-            console.warn('⚠️ [PENDENCY] Could not find users.id for staff_id:', appointmentData.staff_id, staffError?.message)
-            // Don't set assigned_to if we can't find the user - avoid FK constraint error
+            // 2. If not found, try to find by auth_user_id
+            const { data: staffUser, error: staffError } = await supabase
+              .from('users')
+              .select('id')
+              .eq('auth_user_id', appointmentData.staff_id)
+              .single()
+            
+            if (staffUser && staffUser.id) {
+              assignedUserId = staffUser.id
+              console.log('📝 [PENDENCY] Found users.id by auth_user_id:', assignedUserId)
+            } else {
+              console.warn('⚠️ [PENDENCY] Could not find users.id for staff_id:', appointmentData.staff_id, staffError?.message)
+            }
           }
           
           // Set due_date to tomorrow to satisfy check constraint
