@@ -87,10 +87,44 @@ export default defineEventHandler(async (event) => {
         
         console.log('📝 [PENDENCY] Appointment data fetched:', {
           hasAppointmentData: !!appointmentData,
-          appointmentError: appointmentError?.message
+          appointmentError: appointmentError?.message,
+          staff_id: appointmentData?.staff_id
         })
         
         if (appointmentData) {
+          // Get the users.id for the staff_id (which might be auth_user_id)
+          // We need to find the correct users.id to use for assigned_to
+          let assignedToUserId = null
+          
+          // First, try to use staff_id directly if it's a valid users.id
+          const { data: staffUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', appointmentData.staff_id)
+            .single()
+          
+          if (staffUser) {
+            assignedToUserId = staffUser.id
+            console.log('📝 [PENDENCY] Found staff user by direct ID')
+          } else {
+            // If not found, try looking up by auth_user_id
+            const { data: staffUserByAuth } = await supabase
+              .from('users')
+              .select('id')
+              .eq('auth_user_id', appointmentData.staff_id)
+              .single()
+            
+            if (staffUserByAuth) {
+              assignedToUserId = staffUserByAuth.id
+              console.log('📝 [PENDENCY] Found staff user by auth_user_id')
+            }
+          }
+          
+          if (!assignedToUserId) {
+            console.warn('⚠️ [PENDENCY] Could not find user ID for staff_id:', appointmentData.staff_id)
+            assignedToUserId = paymentData.created_by // Fallback to payment creator
+          }
+          
           // Set due_date to tomorrow to satisfy check constraint
           const tomorrow = new Date()
           tomorrow.setDate(tomorrow.getDate() + 1)
@@ -100,15 +134,15 @@ export default defineEventHandler(async (event) => {
             description: `Der Termin "${appointmentData.title}" wurde erstellt, aber es wurde keine Rechnungsadresse gespeichert. Bitte fügen Sie die Adresse hinzu.`,
             priority: 'hoch',
             status: 'pendent',
-            assigned_to: appointmentData.staff_id,
-            created_by: appointmentData.staff_id,
+            assigned_to: assignedToUserId,
+            created_by: assignedToUserId,
             tenant_id: appointmentData.tenant_id,
             due_date: tomorrow.toISOString(),
             tags: ['billing', 'invoice', 'missing-address'],
             notes: `Appointment ID: ${paymentData.appointment_id}\nPayment ID: ${payment.id}`
           }
           
-          console.log('📝 [PENDENCY] Inserting pendency:', { title: pendencyData.title })
+          console.log('📝 [PENDENCY] Inserting pendency:', { title: pendencyData.title, assigned_to: pendencyData.assigned_to })
           
           const { data: createdPendency, error: pendencyError } = await supabase
             .from('pendencies')
