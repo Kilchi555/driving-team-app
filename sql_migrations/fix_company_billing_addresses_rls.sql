@@ -135,3 +135,14 @@ USING (
   ) IN ('admin', 'staff')
 );
 
+-- ✅ WICHTIG: Payments mit null company_billing_address_id
+-- Die payments table sollte mit getSupabaseAdmin() erstellt werden (RLS bypass)
+-- DAMIT: Payments können trotz fehlender Rechnungsadresse erstellt werden
+-- UND: Die Rechnungsadresse kann später vom Staff nachträglich hinzugefügt werden
+-- 
+-- Workflow:
+-- 1. Payment erstellen mit company_billing_address_id = null
+-- 2. Zeige "Fehlendes Payment" Pendenz im Modal
+-- 3. Staff klickt auf "Adresse hinzufügen"
+-- 4. Staff trägt Rechnungsadresse ein
+-- 5. Payment wird aktualisiert mit company_billing_address_id
