@@ -25,17 +25,22 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // ✅ CRITICAL: Ensure company_billing_address_id is truly null
-    const cleanPaymentData = {
+    // ✅ CRITICAL: Do NOT include company_billing_address_id if invalid
+    // This prevents FK constraint issues with non-existent addresses
+    const cleanPaymentData: any = {
       ...paymentData
     }
+    
+    // Remove the key entirely if it's not a valid value
     if (!cleanPaymentData.company_billing_address_id || 
+        cleanPaymentData.company_billing_address_id === 'null' ||
         (typeof cleanPaymentData.company_billing_address_id === 'string' && 
          cleanPaymentData.company_billing_address_id.trim() === '')) {
-      cleanPaymentData.company_billing_address_id = null
+      delete cleanPaymentData.company_billing_address_id
     }
 
     logger.debug('💳 Server: Cleaned payment data:', {
+      has_company_billing_address_id: 'company_billing_address_id' in cleanPaymentData,
       company_billing_address_id: cleanPaymentData.company_billing_address_id,
       company_billing_address_id_type: typeof cleanPaymentData.company_billing_address_id
     })

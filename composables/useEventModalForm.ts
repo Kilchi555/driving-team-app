@@ -1377,7 +1377,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ NOTE: Credit transaction handling is now done by useStudentCredits
       // when the payment is confirmed, not during creation
 
-      const paymentData = {
+      const paymentData: any = {
         appointment_id: appointmentId,
         user_id: formData.value.user_id || null,
         staff_id: formData.value.staff_id,
@@ -1394,7 +1394,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
         description: `Payment for appointment: ${formData.value.title}`,
         created_by: formData.value.staff_id || null,
         notes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
-        company_billing_address_id: companyBillingAddressId || null,
         invoice_address: invoiceAddress,
         tenant_id: userData?.tenant_id || null,
         credit_used_rappen: creditUsedRappen,
@@ -1402,6 +1401,13 @@ const useEventModalForm = (currentUser?: any, refs?: {
         // ✅ If credit covers everything, mark as paid
         paid_at: creditUsedRappen >= Math.max(0, totalAmountRappen) ? new Date().toISOString() : null
       }
+      
+      // ✅ CRITICAL: Only include company_billing_address_id if it's a valid value
+      // Do NOT include it at all if null - this prevents FK constraint issues
+      if (companyBillingAddressId && companyBillingAddressId !== 'null' && companyBillingAddressId.trim && companyBillingAddressId.trim() !== '') {
+        paymentData.company_billing_address_id = companyBillingAddressId
+      }
+      // Otherwise, don't include the key at all - Supabase will set it to null automatically
       
       logger.debug('💳 Creating payment entry:', {
         paymentData,
