@@ -117,7 +117,7 @@
                         style="aspect-ratio: 210 / 297;"
                       >
                         <iframe 
-                          :src="getDocumentUrl(doc)" 
+                          :src="getDocumentUrl(doc) + '#toolbar=0&navpanes=0&scrollbar=0'"
                           class="w-full h-full pointer-events-none"
                           style="border: none; outline: none; box-shadow: none;"
                         ></iframe>
@@ -317,7 +317,7 @@
                       style="aspect-ratio: 210 / 297;"
                     >
                       <iframe 
-                        :src="getDocumentUrl(doc)" 
+                        :src="getDocumentUrl(doc) + '#toolbar=0&navpanes=0&scrollbar=0'"
                         class="w-full h-full"
                         style="border: none; outline: none; box-shadow: none;"
                       ></iframe>
