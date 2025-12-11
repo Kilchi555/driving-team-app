@@ -493,9 +493,79 @@ const payAllUnpaid = async () => {
   isProcessingPayment.value = true
   
   try {
-    // Redirect to payment processing with all unpaid payment IDs
-    const paymentIds = unpaidPayments.value.map(p => p.id).join(',')
-    await navigateTo(`/customer/payment-process?payments=${paymentIds}`)
+    logger.debug('💳 Processing direct Wallee payment for all unpaid:', unpaidPayments.value.length)
+    
+    // Get current user
+    const supabase = getSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('User not authenticated')
+    
+    // Get user data from users table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+    
+    if (userError || !userData) throw new Error('User data not found')
+    
+    // Calculate total amount
+    const totalAmount = unpaidPayments.value.reduce((sum, p) => sum + (p.total_amount_rappen / 100), 0)
+    
+    // Create Wallee transaction
+    interface WalleeResponse {
+      success: boolean
+      paymentUrl?: string
+      transactionId?: number | string
+      error?: string
+    }
+    
+    const walleeResponse = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
+      method: 'POST',
+      body: {
+        orderId: `payment-batch-${unpaidPayments.value.map(p => p.id).join('-')}-${Date.now()}`,
+        amount: totalAmount,
+        currency: 'CHF',
+        customerEmail: userData.email,
+        customerName: `${userData.first_name} ${userData.last_name}`,
+        description: `Zahlung für ${unpaidPayments.value.length} Termin(e)`,
+        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
+        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`,
+        userId: userData.id,
+        tenantId: userData.tenant_id
+      }
+    })
+    
+    if (walleeResponse.success && walleeResponse.paymentUrl && walleeResponse.transactionId) {
+      // Update all payments with Wallee transaction ID
+      logger.debug('💾 Saving Wallee transaction ID to payments:', walleeResponse.transactionId)
+      
+      for (const paymentId of unpaidPayments.value.map(p => p.id)) {
+        const payment = unpaidPayments.value.find(p => p.id === paymentId)
+        const { error: updateError } = await supabase
+          .from('payments')
+          .update({
+            wallee_transaction_id: walleeResponse.transactionId.toString(),
+            metadata: {
+              ...payment?.metadata,
+              wallee_transaction_id: walleeResponse.transactionId
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', paymentId)
+        
+        if (updateError) {
+          console.error('❌ Error updating payment with transaction ID:', updateError)
+        }
+      }
+      
+      logger.debug('✅ All payments updated with transaction ID')
+      
+      // Redirect directly to Wallee payment page
+      window.location.href = walleeResponse.paymentUrl
+    } else {
+      throw new Error(walleeResponse.error || 'Wallee transaction failed')
+    }
     
   } catch (err: any) {
     console.error('❌ Error initiating bulk payment:', err)
@@ -508,10 +578,11 @@ const payAllUnpaid = async () => {
 const payIndividual = async (payment: any) => {
   if (!payment || !payment.id) return
   
-  // If payment is not already wallee, convert it first
-  if (payment.payment_method !== 'wallee') {
-    isConvertingToOnline.value = true
-    try {
+  isProcessingPayment.value = true
+  
+  try {
+    // If payment is not already wallee, convert it first
+    if (payment.payment_method !== 'wallee') {
       logger.debug('🔄 Converting payment to online first:', payment.id)
       
       const result = await $fetch('/api/payments/convert-to-online', {
@@ -532,21 +603,76 @@ const payIndividual = async (payment: any) => {
       if (updatedPayment) {
         payment = updatedPayment
       }
-    } catch (err: any) {
-      console.error('❌ Error converting payment to online:', err)
-      alert('Fehler beim Konvertieren der Zahlung: ' + (err.data?.statusMessage || err.message))
-      isConvertingToOnline.value = false
-      return
-    } finally {
-      isConvertingToOnline.value = false
     }
-  }
-  
-  // Now proceed with normal payment
-  isProcessingPayment.value = true
-  
-  try {
-    await navigateTo(`/customer/payment-process?payments=${payment.id}`)
+    
+    // 🚀 Direct Wallee redirect - no intermediate page
+    logger.debug('💳 Processing direct Wallee payment for:', payment.id)
+    
+    // Get current user
+    const supabase = getSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('User not authenticated')
+    
+    // Get user data from users table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+    
+    if (userError || !userData) throw new Error('User data not found')
+    
+    // Create Wallee transaction
+    interface WalleeResponse {
+      success: boolean
+      paymentUrl?: string
+      transactionId?: number | string
+      error?: string
+    }
+    
+    const walleeResponse = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
+      method: 'POST',
+      body: {
+        orderId: `payment-${payment.id}-${Date.now()}`,
+        amount: payment.total_amount_rappen / 100,
+        currency: 'CHF',
+        customerEmail: userData.email,
+        customerName: `${userData.first_name} ${userData.last_name}`,
+        description: `Zahlung für Appointment`,
+        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
+        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`,
+        userId: userData.id,
+        tenantId: userData.tenant_id
+      }
+    })
+    
+    if (walleeResponse.success && walleeResponse.paymentUrl && walleeResponse.transactionId) {
+      // Update payment with Wallee transaction ID
+      logger.debug('💾 Saving Wallee transaction ID to payment:', walleeResponse.transactionId)
+      
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update({
+          wallee_transaction_id: walleeResponse.transactionId.toString(),
+          metadata: {
+            ...payment.metadata,
+            wallee_transaction_id: walleeResponse.transactionId
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payment.id)
+      
+      if (updateError) {
+        console.error('❌ Error updating payment with transaction ID:', updateError)
+      }
+      
+      logger.debug('✅ Payment updated with transaction ID')
+      
+      // Redirect directly to Wallee payment page
+      window.location.href = walleeResponse.paymentUrl
+    } else {
+      throw new Error(walleeResponse.error || 'Wallee transaction failed')
+    }
     
   } catch (err: any) {
     console.error('❌ Error initiating individual payment:', err)
