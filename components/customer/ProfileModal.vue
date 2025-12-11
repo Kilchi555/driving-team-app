@@ -110,15 +110,16 @@
                         @load="handleImageLoad(doc)"
                         @error="handleImageError"
                       />
-                      <!-- PDF preview -->
+                      <!-- PDF preview with iframe -->
                       <div 
                         v-else-if="doc.fileType === 'application/pdf'"
-                        class="w-full h-32 bg-red-50 rounded border border-red-200 hover:border-red-400 transition-colors flex flex-col items-center justify-center"
+                        class="w-full h-32 bg-white rounded border border-red-200 hover:border-red-400 transition-colors overflow-hidden"
                       >
-                        <svg class="w-12 h-12 text-red-600 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                        </svg>
-                        <span class="text-xs text-red-700 font-medium">PDF</span>
+                        <iframe 
+                          :src="getDocumentUrl(doc)" 
+                          class="w-full h-full pointer-events-none"
+                          frameborder="0"
+                        ></iframe>
                       </div>
                       <!-- Other file types -->
                       <div 
@@ -281,7 +282,6 @@
 
           <!-- Documents Section -->
           <div class="space-y-4 border-t pt-6">
-            <h3 class="text-lg font-semibold text-gray-900">Ausweise</h3>
             
             <div v-if="categories.length === 0" class="text-center text-gray-500 py-8">
               <p>Keine Kategorien verfügbar</p>
@@ -309,15 +309,17 @@
                       @error="handleImageError"
                       @load="() => handleImageLoad(doc)"
                     >
-                    <!-- PDF preview -->
+                    <!-- PDF preview with iframe -->
                     <div 
                       v-else-if="doc.fileType === 'application/pdf' || doc.file_type === 'application/pdf'"
-                      class="w-full h-64 bg-red-50 rounded flex flex-col items-center justify-center"
+                      class="w-full bg-white rounded overflow-hidden"
+                      style="height: 500px;"
                     >
-                      <svg class="w-16 h-16 text-red-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                      </svg>
-                      <span class="text-sm text-red-600 font-medium">PDF</span>
+                      <iframe 
+                        :src="getDocumentUrl(doc)" 
+                        class="w-full h-full"
+                        frameborder="0"
+                      ></iframe>
                     </div>
                     <!-- Other file types -->
                     <div 
