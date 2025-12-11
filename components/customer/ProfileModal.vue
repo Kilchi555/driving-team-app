@@ -6,6 +6,23 @@
         <div class="flex justify-between items-center">
           <h2 class="text-2xl font-bold text-gray-900">Mein Profil</h2>
           <div class="flex items-center gap-3">
+            <!-- Edit/Cancel Button -->
+            <button
+              v-if="!isEditMode"
+              @click="isEditMode = true"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+            >
+              Bearbeiten
+            </button>
+            <button
+              v-else
+              @click="isEditMode = false"
+              class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm font-medium"
+            >
+              Ansicht
+            </button>
+            
+            <!-- Close Button -->
             <button
               @click="$emit('close')"
               class="text-gray-600 hover:text-gray-900 transition-colors p-2"
