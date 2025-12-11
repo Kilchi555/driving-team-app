@@ -247,8 +247,8 @@
             </div>
             
             <!-- Action Buttons -->
-            <!-- Hide "Jetzt bezahlen" button if payment is not pending or if appointment is cancelled -->
-            <div v-if="payment.payment_status === 'pending' && !isAppointmentCancelled(payment)" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+            <!-- Hide "Jetzt bezahlen" button only if appointment is cancelled with 0% charge (free cancellation) -->
+            <div v-if="payment.payment_status === 'pending' && (!isAppointmentCancelled(payment) || (isAppointmentCancelled(payment) && getCancellationChargePercentage(payment) > 0))" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <!-- Jetzt bezahlen Button -->
               <button @click="payIndividual(payment)"
                       :disabled="isProcessingPayment || isConvertingToOnline"
@@ -947,9 +947,15 @@ const isAppointmentCancelled = (payment: any): boolean => {
   return appointment?.status === 'cancelled'
 }
 
+const getCancellationChargePercentage = (payment: any): number => {
+  const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+  if (!appointment || appointment.status !== 'cancelled') return 0
+  return appointment.cancellation_charge_percentage ?? 100
+}
+
 const getCancellationMessage = (payment: any): string => {
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
-  if (!appointment) return 'Termin storniert'
+  if (!appointment) return 'Termin unbezahlt storniert'
   
   const chargePercentage = appointment.cancellation_charge_percentage ?? 100
   const medicalCertStatus = appointment.medical_certificate_status
@@ -999,7 +1005,7 @@ const getCancellationMessage = (payment: any): string => {
     return `${chargePercentage}% Stornogebühr (zu spät storniert)`
   }
   
-  return 'Termin storniert'
+  return 'Termin unbezahlt storniert'
 }
 
 const getCancellationMessageClass = (payment: any): string => {
