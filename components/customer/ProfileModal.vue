@@ -480,7 +480,10 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
       throw new Error('Kein Benutzer angemeldet')
     }
 
-    logger.debug('📤 Uploading document for user:', currentUser.id, 'File:', file.name)
+    // Use userData.id (from users table) for consistent folder structure
+    const userId = props.userData?.id || currentUser.id
+    
+    logger.debug('📤 Uploading document for user:', userId, 'File:', file.name)
     
     // Check file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
@@ -494,9 +497,9 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
     const fileName = `ausweis_${timestamp}.${fileExtension}`
     
     const supabase = getSupabase()
-    const storagePath = `${currentUser.id}/${fileName}`
+    const storagePath = `${userId}/${fileName}`
     
-    logger.debug('📤 Uploading file to storage:', storagePath)
+    logger.debug('📤 Uploading file to storage path:', storagePath)
     
     const { data, error: uploadError } = await supabase.storage
       .from('user-documents')
