@@ -32,7 +32,7 @@
       </div>
 
       <!-- Tabs -->
-      <div class="bg-gray-50 border-b px-4 overflow-x-auto sticky top-0 z-10">
+      <div class="bg-gray-50 border-b px-4 overflow-x-auto flex-shrink-0">
         <div class="flex space-x-4 min-w-min">
           <button
             :class="[
