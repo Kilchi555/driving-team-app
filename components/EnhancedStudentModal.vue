@@ -2202,6 +2202,7 @@ const loadPayments = async () => {
         appointment_id,
         invoice_address,
         appointments!inner(
+          id,
           user_id, 
           start_time, 
           title, 
@@ -2212,6 +2213,7 @@ const loadPayments = async () => {
           deleted_at,
           deletion_reason,
           duration_minutes,
+          cancellation_charge_percentage,
           event_types(name)
         )
       `)
