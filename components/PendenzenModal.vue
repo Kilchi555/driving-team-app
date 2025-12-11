@@ -117,16 +117,16 @@
               v-for="pendency in userPendencies"
               :key="pendency.id"
               :class="[
-                'rounded-lg border p-4 hover:shadow-md transition-all cursor-pointer',
+                'rounded-lg border p-4 hover:shadow-md transition-all',
                 pendency.status === 'abgeschlossen' ? 'border-green-300 bg-green-50' :
                 pendency.status === 'überfällig' ? 'border-red-300 bg-red-50' :
                 pendency.status === 'in_bearbeitung' ? 'border-yellow-300 bg-yellow-50' :
                 'border-blue-300 bg-blue-50'
               ]"
             >
-              <div class="flex justify-between items-start">
+              <div class="flex justify-between items-start gap-4">
                 <div class="flex-1">
-                  <div class="flex items-center space-x-2 mb-1">
+                  <div class="flex items-center space-x-2 mb-2">
                     <h4 class="font-semibold text-gray-900">{{ pendency.title }}</h4>
                     <span :class="[
                       'text-xs px-2 py-0.5 rounded-full font-semibold',
@@ -137,31 +137,33 @@
                     ]">
                       {{ pendency.priority }}
                     </span>
-                    <span :class="[
-                      'text-xs px-2 py-0.5 rounded-full font-semibold',
-                      pendency.status === 'abgeschlossen' ? 'bg-green-200 text-green-800' :
-                      pendency.status === 'überfällig' ? 'bg-red-200 text-red-800' :
-                      pendency.status === 'in_bearbeitung' ? 'bg-yellow-200 text-yellow-800' :
-                      'bg-blue-200 text-blue-800'
-                    ]">
-                      {{ pendency.status }}
-                    </span>
                   </div>
-                  <p v-if="pendency.description" class="text-sm text-gray-600 mb-2">{{ pendency.description }}</p>
+                  <p v-if="pendency.description" class="text-sm text-gray-600 mb-3">{{ pendency.description }}</p>
                   <div class="text-xs text-gray-500 flex items-center space-x-2">
                     <span>📅 {{ new Date(pendency.due_date).toLocaleDateString('de-CH') }}</span>
                     <span v-if="pendency.category">• {{ pendency.category }}</span>
                   </div>
                 </div>
-                <select 
-                  :value="pendency.status"
-                  @change="(e) => changeStatus(pendency.id, (e.target as any).value)"
-                  class="ml-2 px-2 py-1 text-sm border rounded bg-white hover:bg-gray-50"
-                >
-                  <option value="pendent">Pendent</option>
-                  <option value="in_bearbeitung">In Bearbeitung</option>
-                  <option value="abgeschlossen">Abgeschlossen</option>
-                </select>
+                <div class="flex flex-col items-end gap-2">
+                  <select 
+                    :value="pendency.status"
+                    @change="(e) => changeStatus(pendency.id, (e.target as any).value)"
+                    class="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-50 whitespace-nowrap font-medium"
+                  >
+                    <option value="pendent">Pendent</option>
+                    <option value="in_bearbeitung">In Bearbeitung</option>
+                    <option value="abgeschlossen">Abgeschlossen</option>
+                  </select>
+                  <span :class="[
+                    'text-xs px-2 py-0.5 rounded-full font-semibold',
+                    pendency.status === 'abgeschlossen' ? 'bg-green-200 text-green-800' :
+                    pendency.status === 'überfällig' ? 'bg-red-200 text-red-800' :
+                    pendency.status === 'in_bearbeitung' ? 'bg-yellow-200 text-yellow-800' :
+                    'bg-blue-200 text-blue-800'
+                  ]">
+                    {{ pendency.status }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

@@ -81,14 +81,15 @@ export default defineEventHandler(async (event) => {
         // Get appointment details for the pending task
         const { data: appointmentData, error: appointmentError } = await supabase
           .from('appointments')
-          .select('title, user_id, staff_id, tenant_id')
+          .select('title, user_id, staff_id, tenant_id, created_at, users!appointments_user_id_fkey(first_name, last_name)')
           .eq('id', paymentData.appointment_id)
           .single()
         
         console.log('📝 [PENDENCY] Appointment data fetched:', {
           hasAppointmentData: !!appointmentData,
           appointmentError: appointmentError?.message,
-          staff_id: appointmentData?.staff_id
+          staff_id: appointmentData?.staff_id,
+          customerName: appointmentData?.users ? `${appointmentData.users.first_name} ${appointmentData.users.last_name}` : 'Unknown'
         })
         
         if (appointmentData) {
@@ -122,21 +123,25 @@ export default defineEventHandler(async (event) => {
             }
           }
           
-          // Set due_date to tomorrow to satisfy check constraint
-          const tomorrow = new Date()
-          tomorrow.setDate(tomorrow.getDate() + 1)
+          // Get customer name
+          const customerName = appointmentData.users 
+            ? `${appointmentData.users.first_name} ${appointmentData.users.last_name}`.trim()
+            : 'Kunde'
+          
+          // Use created_at for due_date
+          const createdAtDate = new Date(appointmentData.created_at)
           
           const pendencyData = {
-            title: `Rechnungsadresse erforderlich: ${appointmentData.title}`,
-            description: `Der Termin "${appointmentData.title}" wurde erstellt, aber es wurde keine Rechnungsadresse gespeichert. Bitte fügen Sie die Adresse hinzu.`,
+            title: 'Rechnungsadresse erforderlich',
+            description: `${customerName} benötigt eine Rechnungsadresse`,
             priority: 'hoch',
             status: 'pendent',
             assigned_to: assignedUserId || null, // Use resolved users.id or null
             created_by: assignedUserId || null,  // Use resolved users.id or null
             tenant_id: appointmentData.tenant_id,
-            due_date: tomorrow.toISOString(),
+            due_date: createdAtDate.toISOString(),
             tags: ['billing', 'invoice', 'missing-address'],
-            notes: `Appointment ID: ${paymentData.appointment_id}\nPayment ID: ${payment.id}`
+            notes: `Appointment ID: ${paymentData.appointment_id}\nPayment ID: ${payment.id}\nCustomer: ${customerName}`
           }
           
           console.log('📝 [PENDENCY] Inserting pendency:', { title: pendencyData.title, assigned_to: pendencyData.assigned_to, created_by: pendencyData.created_by })
