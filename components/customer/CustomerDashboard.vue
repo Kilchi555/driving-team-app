@@ -23,11 +23,8 @@
               </div>
             </div>
             
-            <!-- Right Side: Language Switcher + Refresh Button -->
+            <!-- Right Side: Refresh Button -->
             <div class="flex items-center space-x-3">
-              <!-- Language Switcher (Debug) -->
-              <LanguageSwitcher />
-              
               <!-- Refresh Button -->
               <button
                 @click="refreshData"
