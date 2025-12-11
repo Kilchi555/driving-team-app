@@ -521,11 +521,13 @@ const reminderHistory = ref<any[]>([])
 const isLoadingReminders = ref(false)
 const isSendingReminder = ref(false)
 
-// Computed: Pendenzen die dem User zugewiesen sind oder von ihm erstellt wurden
+// Computed: Pendenzen die dem User zugewiesen sind, von ihm erstellt wurden, oder für seinen Tenant sind
 const userPendencies = computed(() => {
-  if (!currentUser.value?.id) return []
+  if (!currentUser.value?.id || !currentUser.value?.tenant_id) return []
   return pendencies.value.filter((p: any) => 
-    (p.assigned_to === currentUser.value?.id || p.created_by === currentUser.value?.id) &&
+    (p.assigned_to === currentUser.value?.id || 
+     p.created_by === currentUser.value?.id ||
+     (p.tenant_id === currentUser.value?.tenant_id && (p.assigned_to === null || p.created_by === null))) && // Show unassigned tenant pendencies for staff
     p.status !== 'gelöscht'
   )
 })
