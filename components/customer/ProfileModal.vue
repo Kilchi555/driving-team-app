@@ -355,7 +355,7 @@ defineEmits<{
 
 const { showSuccess, showError } = useUIStore()
 const authStore = useAuthStore()
-const { uploadFile, saveDocument, getPublicUrl } = useUserDocuments()
+const { uploadFile } = useUserDocuments()
 
 const isEditMode = ref(false)
 
@@ -454,7 +454,8 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
       throw new Error(`Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 5 MB.`)
     }
     
-    // Upload file using the unified system (like EnhancedStudentModal)
+    // Upload file directly to storage (no DB table entry)
+    // The file will be read from storage by list-user-documents API
     const storagePath = await uploadFile(
       file,
       currentUser.id,
@@ -468,35 +469,7 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
     }
 
     logger.debug('✅ File uploaded to storage:', storagePath)
-
-    // Get tenant_id from userData
-    const tenantId = props.userData?.tenant_id || currentUser.tenant_id
-    
-    if (!tenantId) {
-      throw new Error('Tenant-ID nicht gefunden')
-    }
-
-    // Save document record to user_documents table
-    const documentData = {
-      user_id: currentUser.id,
-      tenant_id: tenantId,
-      document_type: 'lernfahrausweis',
-      category_code: categoryCode,
-      side: 'front' as 'front' | 'back',
-      file_name: file.name,
-      file_size: file.size,
-      file_type: file.type,
-      storage_path: storagePath,
-      title: `${categoryName} (Vorderseite)`
-    }
-
-    const savedDocument = await saveDocument(documentData)
-
-    if (!savedDocument) {
-      throw new Error('Dokument konnte nicht gespeichert werden')
-    }
-
-    logger.debug('✅ Document saved to database:', savedDocument)
+    logger.debug('✅ Document will be read from storage by list-user-documents API')
     
     successMessage.value = `${categoryName} erfolgreich hochgeladen`
     showSuccess('Erfolg', `${categoryName} erfolgreich hochgeladen`)
