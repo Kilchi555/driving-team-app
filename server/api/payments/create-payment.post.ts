@@ -95,17 +95,14 @@ export default defineEventHandler(async (event) => {
             title: `Rechnungsadresse erforderlich: ${appointmentData.title}`,
             description: `Der Termin "${appointmentData.title}" wurde erstellt, aber es wurde keine Rechnungsadresse gespeichert. Bitte fügen Sie die Adresse hinzu.`,
             category: 'billing',
-            priority: 'mittel',
+            priority: 'hoch',
             status: 'pendent',
             assigned_to: appointmentData.staff_id,
             created_by: appointmentData.staff_id,
             tenant_id: appointmentData.tenant_id,
             due_date: new Date().toISOString(),
-            metadata: {
-              appointment_id: paymentData.appointment_id,
-              payment_id: payment.id,
-              type: 'missing_billing_address'
-            }
+            tags: ['billing', 'invoice', 'missing-address'],
+            notes: `Appointment ID: ${paymentData.appointment_id}\nPayment ID: ${payment.id}`
           }
           
           console.log('📝 [PENDENCY] Inserting pendency:', { title: pendencyData.title })
