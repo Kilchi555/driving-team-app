@@ -503,14 +503,7 @@
                   :style="{ backgroundColor: secondaryColor || '#22C55E' }"
                   @click="handleBulkPayment('cash')"
                 >
-                  Bar
-                </button>
-                <button 
-                  class="flex-1 px-4 py-2.5 rounded-lg font-semibold text-white transition-all hover:shadow-md"
-                  :style="{ backgroundColor: primaryColor }"
-                  @click="handleBulkPayment('online')"
-                >
-                  Online
+                  Bar bezahlen
                 </button>
               </div>
             </div>
@@ -982,6 +975,7 @@
 <script setup lang="ts">
 
 import { ref, computed, toRefs, watch } from 'vue'
+import { logger } from '~/utils/logger'
 import { getSupabase } from '~/utils/supabase'
 import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
 import { useTenantBranding } from '~/composables/useTenantBranding'
