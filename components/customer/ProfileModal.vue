@@ -10,7 +10,7 @@
             <button
               v-if="!isEditMode"
               @click="isEditMode = true"
-              class="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-colors"
+              class="text-white hover:bg-white hover:bg-opacity-20 transition-colors p-2 rounded-lg"
               title="Bearbeiten"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
