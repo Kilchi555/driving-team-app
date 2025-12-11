@@ -289,6 +289,8 @@
         </div>
 
         <!-- ✅ NEW: Shop / Abos Karte -->
+        <!-- Vorläufig auskommentiert - wird später aktiviert -->
+        <!--
         <div 
           @click="handleClickWithDelay('shop', navigateToShop)"
           class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
@@ -303,19 +305,20 @@
                 </svg>
               </div>
               <h3 class="text-lg font-semibold text-gray-900">
-                Shop / Abos kaufen
+                Shop
               </h3>
             </div>
             
             <div class="flex-1 flex items-center justify-center">
               <div class="text-center">
                 <p class="text-gray-600 text-sm">
-                  5er/10er Abos und mehr
+                  Finde hier unsere Produkte
                 </p>
               </div>
             </div>
           </div>
         </div>
+        -->
 
         <!-- Lernbereich - Uses Accent Color -->
         <div 
@@ -745,7 +748,7 @@
         <div class="p-6">
           <!-- Header -->
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl font-bold text-gray-900"></h2>
+            <h2 class="text-2xl font-bold text-gray-900">Kontakt</h2>
             <button 
               @click="showInstructorModal = false"
               class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -766,11 +769,7 @@
           <div v-if="!isLoading && currentTenant" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h3 class="font-semibold text-blue-900 mb-3">Meine Fahrschule</h3>
             <div class="space-y-2">
-              <div class="flex items-start gap-2">
-                <svg class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-                </svg>
-              </div>
+           
               <div v-if="currentTenant.contact_email" class="flex items-center gap-2 text-sm text-blue-800">
                 <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -976,8 +975,7 @@ const loadUserDocuments = async () => {
 
     // Create a single "Ausweise" category with all documents
     userDocumentCategories.value = [{
-      code: 'ausweise',
-      name: 'Ausweise',
+     
       description: 'Alle hochgeladenen Dokumente',
       documents: documents
     }]
