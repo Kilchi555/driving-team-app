@@ -1286,23 +1286,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let companyBillingAddressId = null
       let invoiceAddress = null
       
+      // ✅ IMPORTANT: We no longer use globalThis for the billing address ID
+      // globalThis is unreliable and causes phantom ID references
+      // Instead, we simply don't include company_billing_address_id in the payment
+      // This triggers automatic creation of a Pendenz for missing billing address
+      
       if (paymentMethod === 'invoice' && refs?.priceDisplayRef?.value) {
         const priceDisplay = refs.priceDisplayRef.value
         
-        // Check if there's a saved company billing address ID from EventModal
-        // This should be set when the invoice address is saved
-        const eventModalScope = (globalThis as any).savedCompanyBillingAddressId
-        if (eventModalScope && eventModalScope.trim && eventModalScope.trim() !== '') {
-          companyBillingAddressId = eventModalScope
-          logger.debug('📋 Using company billing address ID from EventModal scope:', companyBillingAddressId)
-        }
-        // Fallback: Check PriceDisplay component directly
-        else if (priceDisplay && priceDisplay.savedCompanyBillingAddressId && priceDisplay.savedCompanyBillingAddressId.trim && priceDisplay.savedCompanyBillingAddressId.trim() !== '') {
-          companyBillingAddressId = priceDisplay.savedCompanyBillingAddressId
-          logger.debug('📋 Using company billing address ID from PriceDisplay:', companyBillingAddressId)
-        }
-        // Fallback: Copy invoice data as JSONB if no company billing address was saved
-        else if (priceDisplay && priceDisplay.invoiceData) {
+        // Copy invoice data as JSONB if available
+        if (priceDisplay && priceDisplay.invoiceData) {
           invoiceAddress = {
             company_name: priceDisplay.invoiceData.company_name || '',
             contact_person: priceDisplay.invoiceData.contact_person || '',
@@ -1316,16 +1309,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
             vat_number: priceDisplay.invoiceData.vat_number || '',
             notes: priceDisplay.invoiceData.notes || ''
           }
-          logger.debug('📋 Using fallback invoice address as JSONB:', invoiceAddress)
-          companyBillingAddressId = null // IMPORTANT: Force null if we're using JSONB
+          logger.debug('📋 Using invoice address as JSONB for display')
         }
-        else {
-          companyBillingAddressId = null // IMPORTANT: Force null if nothing found
-        }
-      }
-      
-      // ✅ CRITICAL: Ensure companyBillingAddressId is truly null, not undefined or empty string
-      if (!companyBillingAddressId || (typeof companyBillingAddressId === 'string' && companyBillingAddressId.trim() === '')) {
+        
+        // company_billing_address_id will NOT be set (remains null)
+        // This allows the payment to be created and triggers a Pendenz
         companyBillingAddressId = null
       }
 
