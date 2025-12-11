@@ -1219,16 +1219,21 @@ watch(() => props.isOpen, async (newIsOpen) => {
       logger.debug('🔄 Starting tab selection logic...')
       try {
         // Priorisiere den Tab mit den meisten Pendenzen
-        // Direkt vom usePendingTasks composable abfragen, nicht vom computed
-        const { unconfirmedNext24h: unconfirmedList, pendingAppointments: pendingList } = usePendingTasks()
-        const bewertungenCount = pendingList.value?.length || 0
-        const unbestätigtCount = unconfirmedList.value?.length || 0
+        const bewertungenCount = pendingCount.value || 0
+        const unbestätigtCount = unconfirmedNext24hCount.value || 0
+        const pendenzenCount = pendenciesCount.value || 0
         
-        logger.debug('📊 Tab selection - Direct counts:', { bewertungenCount, unbestätigtCount })
-        logger.debug('🔍 unconfirmedList.value:', unconfirmedList.value)
-        logger.debug('🔍 pendingList.value:', pendingList.value)
+        logger.debug('📊 Tab selection - Direct counts:', { 
+          bewertungenCount, 
+          unbestätigtCount,
+          pendenzenCount
+        })
         
-        if (unbestätigtCount > 0 && unbestätigtCount > bewertungenCount) {
+        // Wähle den Tab mit den meisten Items
+        if (pendenzenCount > 0 && pendenzenCount >= bewertungenCount && pendenzenCount >= unbestätigtCount) {
+          activeTab.value = 'pendenzen'
+          logger.debug('📌 Switching to Pendenzen tab (most pending)')
+        } else if (unbestätigtCount > 0 && unbestätigtCount > bewertungenCount) {
           activeTab.value = 'unconfirmed'
           logger.debug('📌 Switching to Unbestätigt tab (more pending)')
         } else {
@@ -1237,7 +1242,7 @@ watch(() => props.isOpen, async (newIsOpen) => {
         }
       } catch (error) {
         console.error('❌ Error in tab selection:', error)
-        activeTab.value = 'bewertungen'
+        activeTab.value = 'pendenzen'  // Default to pendenzen now
       }
     }
   } else if (!newIsOpen) {
