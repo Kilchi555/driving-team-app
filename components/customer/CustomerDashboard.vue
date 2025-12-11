@@ -228,7 +228,7 @@
       </div>
 
       <!-- Booking Sections -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         
         <!-- Fahrstunden buchen -->
         <div 
@@ -350,88 +350,92 @@
         </div>
       </div>
 
-      <!-- Mein Profil Card -->
-      <div 
-        @click="handleClickWithDelay('profile', () => { showProfileModal = true })"
-        class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all mb-4 cursor-pointer transform" 
-        :class="{ 'scale-95 opacity-80': activeClickDiv === 'profile' }"
-        :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
-      >
-        <div class="p-6 h-full flex flex-col">
-          <div class="flex items-center mb-4">
-            <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+      <!-- Weitere Sektionen in Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        
+        <!-- Mein Profil Card -->
+        <div 
+          @click="handleClickWithDelay('profile', () => { showProfileModal = true })"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'profile' }"
+          :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
+        >
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900">
+                Mein Profil
+              </h3>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900">
-              Mein Profil
-            </h3>
-          </div>
-          
-          <div class="flex-1 flex items-center justify-center">
-            <div class="text-center">
-              <p class="text-gray-600 text-sm">
-                Verwalte deine persönlichen Daten
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Fahrlehrer Card - Uses Secondary Color -->
-      <div 
-        @click="handleClickWithDelay('instructors', () => { showInstructorModal = true })"
-        class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all mb-4 cursor-pointer transform" 
-        :class="{ 'scale-95 opacity-80': activeClickDiv === 'instructors' }"
-        :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '4.5px' }"
-      >
-        <div class="p-6 h-full flex flex-col">
-          <div class="flex items-center mb-4">
-            <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: secondaryButtonColor }">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <h3 class="text-lg font-semibold text-gray-900">
-              Kontakt
-            </h3>
-          </div>
-          
-          <div class="flex-1 flex items-center justify-center">
-            <div class="text-center">
-              <p class="text-gray-600 text-sm">
-                Finde unsere Kontakt-Angaben              
-              </p>
+            
+            <div class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <p class="text-gray-600 text-sm">
+                  Verwalte deine persönlichen Daten
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Reglemente Card - Uses Accent Color -->
-      <div 
-        @click="handleClickWithDelay('regulations', () => { showReglementeModal = true })"
-        class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all mb-4 cursor-pointer transform" 
-        :class="{ 'scale-95 opacity-80': activeClickDiv === 'regulations' }"
-        :style="{ borderColor: accentButtonBorderColor, borderWidth: '4.5px' }"
-      >
-        <div class="p-6 h-full flex flex-col">
-          <div class="flex items-center mb-4">
-            <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: accentButtonColorLight }">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: accentButtonColor }">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+        <!-- Fahrlehrer Card - Uses Secondary Color -->
+        <div 
+          @click="handleClickWithDelay('instructors', () => { showInstructorModal = true })"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'instructors' }"
+          :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '4.5px' }"
+        >
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: secondaryButtonColor }">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900">
+                Kontakt
+              </h3>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900">
-              Reglemente
-            </h3>
+            
+            <div class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <p class="text-gray-600 text-sm">
+                  Finde unsere Kontakt-Angaben              
+                </p>
+              </div>
+            </div>
           </div>
-          
-          <div class="flex-1 flex items-center justify-center">
-            <div class="text-center">
-              <p class="text-gray-600 text-sm">
-                Wichtige Dokumente und Richtlinien
-              </p>
+        </div>
+
+        <!-- Reglemente Card - Uses Accent Color -->
+        <div 
+          @click="handleClickWithDelay('regulations', () => { showReglementeModal = true })"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'regulations' }"
+          :style="{ borderColor: accentButtonBorderColor, borderWidth: '4.5px' }"
+        >
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: accentButtonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: accentButtonColor }">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900">
+                Reglemente
+              </h3>
+            </div>
+            
+            <div class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <p class="text-gray-600 text-sm">
+                  Wichtige Dokumente und Richtlinien
+                </p>
+              </div>
             </div>
           </div>
         </div>
