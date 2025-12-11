@@ -1404,23 +1404,24 @@ const useEventModalForm = (currentUser?: any, refs?: {
         finalPaymentStatus: creditUsedRappen >= Math.max(0, totalAmountRappen) ? 'completed' : 'pending'
       })
       
-      // ✅ Use getSupabaseAdmin() to bypass RLS for payment creation
+      // ✅ Use server API endpoint to create payment (bypasses RLS with admin client)
       // This allows creating payments with null company_billing_address_id
-      const adminSupabase = getSupabaseAdmin()
-      const { data: payment, error } = await adminSupabase
-        .from('payments')
-        .insert(paymentData)
-        .select()
-        .single()
+      const response = await $fetch('/api/payments/create-payment', {
+        method: 'POST',
+        body: { paymentData }
+      })
       
-      if (error) {
-        console.error('❌ Error creating payment:', error)
-        logger.debug('❌ Payment creation error details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          company_billing_address_id: paymentData.company_billing_address_id
-        })
+      if (!response.success || !response.payment) {
+        console.error('❌ Error creating payment: Server returned no payment')
+        logger.debug('❌ Payment creation response:', response)
+        // Don't throw - payment creation shouldn't fail the entire appointment save
+        return null
+      }
+      
+      const payment = response.payment
+      
+      if (!payment) {
+        console.error('❌ Error creating payment: No payment returned')
         // Don't throw - payment creation shouldn't fail the entire appointment save
         return null
       }
