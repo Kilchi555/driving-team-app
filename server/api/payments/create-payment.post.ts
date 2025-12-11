@@ -96,33 +96,49 @@ export default defineEventHandler(async (event) => {
           // We need to find the correct users.id to use for assigned_to
           let assignedToUserId = null
           
+          console.log('📝 [PENDENCY] Looking up user for staff_id:', appointmentData.staff_id)
+          
           // First, try to use staff_id directly if it's a valid users.id
-          const { data: staffUser } = await supabase
+          const { data: staffUser, error: staffUserError } = await supabase
             .from('users')
             .select('id')
             .eq('id', appointmentData.staff_id)
             .single()
           
-          if (staffUser) {
+          console.log('📝 [PENDENCY] Direct ID lookup:', { 
+            found: !!staffUser, 
+            staffUser: staffUser ? staffUser.id : 'none',
+            error: staffUserError?.message 
+          })
+          
+          if (staffUser && staffUser.id) {
             assignedToUserId = staffUser.id
-            console.log('📝 [PENDENCY] Found staff user by direct ID')
+            console.log('📝 [PENDENCY] Found staff user by direct ID:', assignedToUserId)
           } else {
             // If not found, try looking up by auth_user_id
-            const { data: staffUserByAuth } = await supabase
+            console.log('📝 [PENDENCY] Trying auth_user_id lookup for:', appointmentData.staff_id)
+            
+            const { data: staffUserByAuth, error: authError } = await supabase
               .from('users')
               .select('id')
               .eq('auth_user_id', appointmentData.staff_id)
               .single()
             
-            if (staffUserByAuth) {
+            console.log('📝 [PENDENCY] Auth ID lookup:', { 
+              found: !!staffUserByAuth, 
+              staffUser: staffUserByAuth ? staffUserByAuth.id : 'none',
+              error: authError?.message 
+            })
+            
+            if (staffUserByAuth && staffUserByAuth.id) {
               assignedToUserId = staffUserByAuth.id
-              console.log('📝 [PENDENCY] Found staff user by auth_user_id')
+              console.log('📝 [PENDENCY] Found staff user by auth_user_id:', assignedToUserId)
             }
           }
           
           if (!assignedToUserId) {
-            console.warn('⚠️ [PENDENCY] Could not find user ID for staff_id:', appointmentData.staff_id)
-            assignedToUserId = paymentData.created_by // Fallback to payment creator
+            console.warn('⚠️ [PENDENCY] Could not find user ID for staff_id:', appointmentData.staff_id, '- setting to null')
+            // assignedToUserId stays null
           }
           
           // Set due_date to tomorrow to satisfy check constraint
