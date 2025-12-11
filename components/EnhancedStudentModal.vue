@@ -642,6 +642,8 @@
                       <span class="font-medium">{{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}</span>
                       <span class="mx-1">•</span>
                       <span>{{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }} Uhr</span>
+                      <span v-if="payment.appointments?.duration_minutes" class="mx-1">•</span>
+                      <span v-if="payment.appointments?.duration_minutes" class="font-medium">{{ payment.appointments.duration_minutes }} min</span>
                     </div>
                     
                     <!-- Service Description (on new line) -->
