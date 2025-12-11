@@ -103,18 +103,33 @@ export default defineEventHandler(async (event) => {
       updateData.email = email.toLowerCase().trim()
     }
 
-    const { error: updateError } = await serviceSupabase
+    logger.debug('🔄 Updating users table with data:', updateData)
+    logger.debug('🔍 Querying for auth_user_id:', user.id)
+
+    const { data: updatedUser, error: updateError } = await serviceSupabase
       .from('users')
       .update(updateData)
       .eq('auth_user_id', user.id)
+      .select()
+      .single()
 
     if (updateError) {
-      console.error('❌ Profile update error:', updateError)
+      console.error('❌ Profile update error:', {
+        message: updateError.message,
+        code: (updateError as any).code,
+        details: (updateError as any).details,
+        hint: (updateError as any).hint
+      })
+      logger.debug('🔍 Query was for auth_user_id:', user.id)
+      logger.debug('🔍 Update data was:', updateData)
+      
       throw createError({
         statusCode: 400,
-        statusMessage: 'Fehler beim Aktualisieren des Profils'
+        statusMessage: `Fehler beim Aktualisieren des Profils: ${updateError.message}`
       })
     }
+    
+    logger.debug('✅ User updated successfully:', updatedUser)
 
     // If email changed, also update in auth
     if (email && email !== user.email) {
