@@ -1642,10 +1642,18 @@ const saveInvoiceAddress = async () => {
       const addressData = {
         ...invoiceData.value,
         user_id: props.selectedStudent?.id, // ✅ Link to student
+        tenant_id: props.currentUser?.tenant_id, // ✅ CRITICAL: Set tenant_id for RLS
         created_by: currentUserId, // ✅ Business User ID aus users Tabelle
         is_active: true,
         is_verified: false
       }
+      
+      logger.debug('📋 Billing address data before save:', {
+        user_id: addressData.user_id,
+        tenant_id: addressData.tenant_id,
+        created_by: addressData.created_by,
+        company_name: addressData.company_name
+      })
       
       result = await createBillingAddress(addressData)
     }
