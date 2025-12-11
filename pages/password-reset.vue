@@ -5,7 +5,7 @@
       <div class="text-center mb-6">
         <img 
           v-if="getLogo('header')" 
-          :src="getLogo('header')" 
+          :src="getLogo('header') || ''" 
           class="h-10 w-auto mx-auto drop-shadow-lg" 
           :alt="`${brandName || 'Simy'} Logo`"
         >
@@ -169,7 +169,7 @@
         <div class="text-center mb-6">
           <img 
             v-if="getLogo('header')" 
-            :src="getLogo('header')" 
+            :src="getLogo('header') || ''" 
             class="h-10 w-auto mx-auto drop-shadow-lg" 
             :alt="`${brandName || 'Simy'} Logo`"
           >
@@ -216,6 +216,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
+import { logger } from '~/utils/logger'
 import { useRoute, definePageMeta, navigateTo } from '#imports'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useUIStore } from '~/stores/ui'

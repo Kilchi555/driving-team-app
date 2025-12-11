@@ -609,6 +609,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, reactive } from 'vue'
+import { logger } from '~/utils/logger'
 import { navigateTo } from '#app/composables/router'
 import { getSupabase } from '~/utils/supabase'
 import Toast from '~/components/Toast.vue'

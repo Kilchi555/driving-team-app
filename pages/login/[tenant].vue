@@ -4,6 +4,9 @@
 
 <script setup lang="ts">
 
+import { useRoute, useRouter } from 'vue-router'
+import { logger } from '~/utils/logger'
+
 /**
  * Redirect /login/[tenant] to /[tenant] (which uses [slug].vue with proper branding)
  * The [slug].vue page handles all the tenant branding loading and login form

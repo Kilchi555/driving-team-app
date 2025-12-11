@@ -715,6 +715,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { logger } from '~/utils/logger'
 import { useAvailabilitySystem } from '~/composables/useAvailabilitySystem'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 import { getSupabase } from '~/utils/supabase'

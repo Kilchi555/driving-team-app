@@ -390,6 +390,7 @@
 <script setup lang="ts">
 
 import { ref, onMounted, watch, computed } from 'vue'
+import { logger } from '~/utils/logger'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'

@@ -350,6 +350,7 @@
 logger.debug('📄 [slug].vue script setup initializing...')
 
 import { ref, computed, onMounted } from 'vue'
+import { logger } from '~/utils/logger'
 import { useRoute, useRouter, definePageMeta, useHead } from '#imports'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useTenant } from '~/composables/useTenant'

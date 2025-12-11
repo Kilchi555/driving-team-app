@@ -245,6 +245,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch } from 'vue'
+import { logger } from '~/utils/logger'
 import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'

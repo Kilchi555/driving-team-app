@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
+import { logger } from '~/utils/logger'
 import { useRoute } from 'vue-router'
 import CalendarComponent from '../components/CalendarComponent.vue'
 import StaffSettings from '~/components/StaffSettings.vue'

@@ -747,6 +747,7 @@
 <script setup lang="ts">
 
 import { ref, onMounted } from 'vue'
+import { logger } from '~/utils/logger'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'

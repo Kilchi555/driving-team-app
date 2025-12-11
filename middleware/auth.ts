@@ -1,5 +1,6 @@
 // middleware/auth.ts
 import { defineNuxtRouteMiddleware, navigateTo } from '#app'
+import { logger } from '~/utils/logger'
 import { useAuthStore } from '~/stores/auth'
 
 export default defineNuxtRouteMiddleware(async (to, from) => {

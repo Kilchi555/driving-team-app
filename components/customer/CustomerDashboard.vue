@@ -884,6 +884,8 @@
 
 <script setup lang="ts">
 
+import { logger } from '~/utils/logger'
+
 // In CustomerDashboard.vue - ganz oben im script setup:
 logger.debug('🔍 CustomerDashboard Script loaded')
 logger.debug('🔍 Process client:', process.client)
