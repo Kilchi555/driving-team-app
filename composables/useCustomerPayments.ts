@@ -14,7 +14,7 @@ export const useCustomerPayments = () => {
   const error = ref<string | null>(null)
 
   // Computed
-  // ✅ Exclude payments for pending_confirmation appointments (these are handled separately)
+  // ✅ Exclude payments for pending_confirmation and cancelled appointments (these are handled separately)
   const pendingPayments = computed(() => {
     return payments.value.filter(p => {
       // Nur Payments mit status 'pending' berücksichtigen
@@ -24,6 +24,12 @@ export const useCustomerPayments = () => {
       // Diese werden im Bestätigungs-Banner angezeigt, nicht als "offene Zahlung"
       const appointment = Array.isArray(p.appointments) ? p.appointments[0] : p.appointments
       if (appointment && appointment.status === 'pending_confirmation') {
+        return false // Nicht als "offene Zahlung" anzeigen
+      }
+      
+      // ✅ WICHTIG: Exclude payments für cancelled Appointments
+      // Diese sollten nicht als "offene Zahlung" angezeigt werden
+      if (appointment && appointment.status === 'cancelled') {
         return false // Nicht als "offene Zahlung" anzeigen
       }
       
