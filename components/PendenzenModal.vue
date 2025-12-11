@@ -141,18 +141,16 @@
               <!-- Beschreibung -->
               <p v-if="pendency.description" class="text-sm text-gray-600 mb-3">{{ pendency.description }}</p>
 
-              <!-- Datum -->
-              <div class="text-xs text-gray-500 mb-4">
-                <span>📅 {{ new Date(pendency.due_date).toLocaleDateString('de-CH') }}</span>
-                <span v-if="pendency.category">• {{ pendency.category }}</span>
-              </div>
-
-              <!-- Status Badge und Dropdown übereinander -->
-              <div class="flex flex-col gap-2">
+              <!-- Datum und Dropdown auf gleicher Zeile -->
+              <div class="flex items-center gap-3">
+                <div class="text-xs text-gray-500">
+                  <span>📅 {{ new Date(pendency.due_date).toLocaleDateString('de-CH') }}</span>
+                </div>
                 <select 
                   :value="pendency.status"
                   @change="(e) => changeStatus(pendency.id, (e.target as any).value)"
-                  class="px-3 py-2 text-sm border rounded bg-white hover:bg-gray-50 font-medium"
+                  class="px-3 py-2 text-sm border rounded bg-white hover:bg-gray-50 font-medium flex-shrink-0"
+                  style="width: auto; min-width: 140px;"
                 >
                   <option value="pendent">Pendent</option>
                   <option value="in_bearbeitung">In Bearbeitung</option>
