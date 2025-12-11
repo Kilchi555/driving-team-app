@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
     // ✅ If no company_billing_address_id, create a pending task (Pendenz)
     const hasBillingAddress = !!cleanPaymentData.company_billing_address_id
     
-    logger.debug('📝 Checking if pendency should be created:', {
+    console.log('📝 [PENDENCY] Checking if pendency should be created:', {
       hasBillingAddress,
       hasAppointmentId: !!paymentData.appointment_id,
       company_billing_address_id: cleanPaymentData.company_billing_address_id
@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
     
     if (!hasBillingAddress && paymentData.appointment_id) {
       try {
-        logger.debug('📝 Creating pending task for missing billing address')
+        console.log('📝 [PENDENCY] Creating pending task for missing billing address')
         
         // Get appointment details for the pending task
         const { data: appointmentData, error: appointmentError } = await supabase
@@ -85,9 +85,9 @@ export default defineEventHandler(async (event) => {
           .eq('id', paymentData.appointment_id)
           .single()
         
-        logger.debug('📝 Appointment data fetched:', {
-          appointmentData,
-          appointmentError
+        console.log('📝 [PENDENCY] Appointment data fetched:', {
+          hasAppointmentData: !!appointmentData,
+          appointmentError: appointmentError?.message
         })
         
         if (appointmentData) {
@@ -108,39 +108,38 @@ export default defineEventHandler(async (event) => {
             }
           }
           
-          logger.debug('📝 Creating pendency with data:', pendencyData)
+          console.log('📝 [PENDENCY] Inserting pendency:', { title: pendencyData.title })
           
           const { data: createdPendency, error: pendencyError } = await supabase
             .from('pendencies')
             .insert([pendencyData])
             .select()
           
-          logger.debug('📝 Pendency creation result:', {
-            createdPendency,
-            pendencyError
+          console.log('📝 [PENDENCY] Pendency creation result:', {
+            success: !pendencyError,
+            error: pendencyError?.message,
+            pendencyId: createdPendency?.[0]?.id
           })
           
           if (pendencyError) {
-            logger.warn('⚠️ Failed to create pending task:', {
+            console.error('❌ [PENDENCY] Failed to create pending task:', {
               message: pendencyError.message,
               code: pendencyError.code,
-              details: pendencyError.details,
-              hint: pendencyError.hint
+              details: pendencyError.details
             })
           } else {
-            logger.debug('✅ Pending task created successfully for missing billing address')
+            console.log('✅ [PENDENCY] Pending task created successfully')
           }
         } else {
-          logger.warn('⚠️ Could not fetch appointment data:', appointmentError)
+          console.error('❌ [PENDENCY] Could not fetch appointment data:', appointmentError?.message)
         }
       } catch (pendencyErr: any) {
-        logger.warn('⚠️ Error creating pending task (non-critical):', {
-          message: pendencyErr.message,
-          stack: pendencyErr.stack
+        console.error('❌ [PENDENCY] Error creating pending task:', {
+          message: pendencyErr.message
         })
       }
     } else {
-      logger.debug('ℹ️ No pendency created: hasBillingAddress=' + hasBillingAddress + ', hasAppointmentId=' + !!paymentData.appointment_id)
+      console.log('ℹ️ [PENDENCY] Skipped: hasBillingAddress=' + hasBillingAddress + ', hasAppointmentId=' + !!paymentData.appointment_id)
     }
 
     return {
