@@ -134,8 +134,8 @@ export default defineEventHandler(async (event) => {
             description: `Der Termin "${appointmentData.title}" wurde erstellt, aber es wurde keine Rechnungsadresse gespeichert. Bitte fügen Sie die Adresse hinzu.`,
             priority: 'hoch',
             status: 'pendent',
-            assigned_to: assignedToUserId,
-            created_by: assignedToUserId,
+            assigned_to: assignedToUserId || null, // Can be null - assigned_to is optional
+            created_by: assignedToUserId || null,  // Can be null - created_by is optional
             tenant_id: appointmentData.tenant_id,
             due_date: tomorrow.toISOString(),
             tags: ['billing', 'invoice', 'missing-address'],
