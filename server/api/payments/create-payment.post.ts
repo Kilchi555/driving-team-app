@@ -94,7 +94,6 @@ export default defineEventHandler(async (event) => {
           const pendencyData = {
             title: `Rechnungsadresse erforderlich: ${appointmentData.title}`,
             description: `Der Termin "${appointmentData.title}" wurde erstellt, aber es wurde keine Rechnungsadresse gespeichert. Bitte fügen Sie die Adresse hinzu.`,
-            category: 'billing',
             priority: 'hoch',
             status: 'pendent',
             assigned_to: appointmentData.staff_id,
