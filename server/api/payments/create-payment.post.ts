@@ -92,55 +92,6 @@ export default defineEventHandler(async (event) => {
         })
         
         if (appointmentData) {
-          // Get the users.id for the staff_id (which might be auth_user_id)
-          // We need to find the correct users.id to use for assigned_to
-          let assignedToUserId = null
-          
-          console.log('📝 [PENDENCY] Looking up user for staff_id:', appointmentData.staff_id)
-          
-          // First, try to use staff_id directly if it's a valid users.id
-          const { data: staffUser, error: staffUserError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('id', appointmentData.staff_id)
-            .single()
-          
-          console.log('📝 [PENDENCY] Direct ID lookup:', { 
-            found: !!staffUser, 
-            staffUser: staffUser ? staffUser.id : 'none',
-            error: staffUserError?.message 
-          })
-          
-          if (staffUser && staffUser.id) {
-            assignedToUserId = staffUser.id
-            console.log('📝 [PENDENCY] Found staff user by direct ID:', assignedToUserId)
-          } else {
-            // If not found, try looking up by auth_user_id
-            console.log('📝 [PENDENCY] Trying auth_user_id lookup for:', appointmentData.staff_id)
-            
-            const { data: staffUserByAuth, error: authError } = await supabase
-              .from('users')
-              .select('id')
-              .eq('auth_user_id', appointmentData.staff_id)
-              .single()
-            
-            console.log('📝 [PENDENCY] Auth ID lookup:', { 
-              found: !!staffUserByAuth, 
-              staffUser: staffUserByAuth ? staffUserByAuth.id : 'none',
-              error: authError?.message 
-            })
-            
-            if (staffUserByAuth && staffUserByAuth.id) {
-              assignedToUserId = staffUserByAuth.id
-              console.log('📝 [PENDENCY] Found staff user by auth_user_id:', assignedToUserId)
-            }
-          }
-          
-          if (!assignedToUserId) {
-            console.warn('⚠️ [PENDENCY] Could not find user ID for staff_id:', appointmentData.staff_id, '- setting to null')
-            // assignedToUserId stays null
-          }
-          
           // Set due_date to tomorrow to satisfy check constraint
           const tomorrow = new Date()
           tomorrow.setDate(tomorrow.getDate() + 1)
@@ -150,12 +101,12 @@ export default defineEventHandler(async (event) => {
             description: `Der Termin "${appointmentData.title}" wurde erstellt, aber es wurde keine Rechnungsadresse gespeichert. Bitte fügen Sie die Adresse hinzu.`,
             priority: 'hoch',
             status: 'pendent',
-            assigned_to: assignedToUserId || null, // Can be null - assigned_to is optional
-            created_by: assignedToUserId || null,  // Can be null - created_by is optional
+            assigned_to: null, // Don't try to assign - RLS issues with user lookup
+            created_by: null,  // Keep null to avoid FK constraint issues
             tenant_id: appointmentData.tenant_id,
             due_date: tomorrow.toISOString(),
             tags: ['billing', 'invoice', 'missing-address'],
-            notes: `Appointment ID: ${paymentData.appointment_id}\nPayment ID: ${payment.id}`
+            notes: `Appointment ID: ${paymentData.appointment_id}\nPayment ID: ${payment.id}\nStaff ID: ${appointmentData.staff_id}`
           }
           
           console.log('📝 [PENDENCY] Inserting pendency:', { title: pendencyData.title, assigned_to: pendencyData.assigned_to })
