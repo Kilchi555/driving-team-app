@@ -55,6 +55,7 @@ export type DueStatus = 'overdue_past' | 'overdue_24h' | 'due' | 'upcoming'
 const globalState = reactive({
   pendingAppointments: [] as PendingAppointment[],
   unconfirmedNext24h: [] as PendingAppointment[],
+  appointmentsWithoutPayment: [] as PendingAppointment[],
   isLoading: false,
   error: null as string | null
 })
@@ -62,15 +63,16 @@ const globalState = reactive({
 // Computed values basierend auf globalem State
 const pendingCount = computed(() => globalState.pendingAppointments.length)
 const unconfirmedNext24hCount = computed(() => globalState.unconfirmedNext24h.length)
+const appointmentsWithoutPaymentCount = computed(() => globalState.appointmentsWithoutPayment.length)
 
 const buttonClasses = computed(() => {
-  const totalPending = pendingCount.value + unconfirmedNext24hCount.value
+  const totalPending = pendingCount.value + unconfirmedNext24hCount.value + appointmentsWithoutPaymentCount.value
   return `text-white font-bold px-4 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200
   ${totalPending > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-green-500 hover:bg-green-600'}`
 })
 
 const buttonText = computed(() => {
-  const total = pendingCount.value + unconfirmedNext24hCount.value
+  const total = pendingCount.value + unconfirmedNext24hCount.value + appointmentsWithoutPaymentCount.value
   return total > 0 ? `Pendenzen (${total})` : 'Pendenzen (0)'
 })
 
@@ -459,6 +461,95 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     logger.debug('🔥 Unconfirmed next 24h data:', globalState.unconfirmedNext24h)
     logger.debug('🔥 Global pending state updated, count:', pendingCount.value)
     
+    // ✅ Query 3: Appointments mit Payment-Methode "on_bill" aber ohne erfolgreichen Payment
+    // Diese Appointments brauchen eine Rechnungsadresse aber haben keine
+    let appointmentsWithoutPaymentData: PendingAppointment[] = []
+    try {
+      if (userRole === 'staff' || userRole === 'admin') {
+        let billableQuery = supabase
+          .from('appointments')
+          .select(`
+            id,
+            title,
+            start_time,
+            end_time,
+            user_id,
+            status,
+            event_type_code,
+            type,
+            created_by,
+            tenant_id,
+            users!appointments_user_id_fkey (
+              first_name,
+              last_name,
+              category
+            ),
+            created_by_user:created_by (
+              first_name,
+              last_name
+            ),
+            payments (
+              id,
+              payment_method,
+              payment_status,
+              total_amount_rappen,
+              company_billing_address_id
+            )
+          `)
+          .eq('tenant_id', userData.tenant_id)
+          .not('deleted_at', 'is', null)
+          .is('deleted_at', null)
+          .in('event_type_code', ['lesson', 'exam', 'theory'])
+        
+        if (userRole === 'staff') {
+          billableQuery = billableQuery.eq('staff_id', userId)
+        }
+        
+        const { data: billableAppointments, error: billableError } = await billableQuery
+        
+        if (billableError) {
+          console.warn('⚠️ Error loading billable appointments:', billableError)
+        } else if (billableAppointments) {
+          // Filter: Appointments die kein Payment oder nur pending Payment mit on_bill haben
+          appointmentsWithoutPaymentData = billableAppointments
+            .filter((apt: any) => {
+              const hasOnBillPayment = apt.payments?.some((p: any) => p.payment_method === 'on_bill')
+              const hasPendingOnBillPayment = apt.payments?.some((p: any) => 
+                p.payment_method === 'on_bill' && p.payment_status === 'pending'
+              )
+              const noCompletedPayment = !apt.payments?.some((p: any) => 
+                p.payment_status === 'completed' || p.payment_status === 'authorized'
+              )
+              
+              // Zeige Warnung wenn: on_bill payment pending aber keine billing address
+              return hasPendingOnBillPayment && noCompletedPayment && !apt.payments?.[0]?.company_billing_address_id
+            })
+            .map((apt: any): PendingAppointment => ({
+              id: apt.id,
+              title: apt.title,
+              start_time: apt.start_time,
+              end_time: apt.end_time,
+              user_id: apt.user_id,
+              status: apt.status,
+              type: apt.type,
+              event_type_code: apt.event_type_code || apt.type || 'lesson',
+              created_by: apt.created_by,
+              users: apt.users,
+              created_by_user: apt.created_by_user,
+              notes: [],
+              payments: apt.payments || []
+            }))
+          
+          logger.debug(`📋 Found ${appointmentsWithoutPaymentData.length} appointments without billing address`)
+        }
+      }
+    } catch (err: any) {
+      console.warn('⚠️ Error in billable appointments query:', err)
+    }
+    
+    globalState.appointmentsWithoutPayment = appointmentsWithoutPaymentData
+    
+
   } catch (err: any) {
     globalState.error = err?.message || 'Fehler beim Laden der Pendenzen'
     console.error('❌ Fehler beim Laden der Pendenzen:', err)
@@ -569,6 +660,8 @@ export const usePendingTasks = () => {
     pendingCount,
     unconfirmedNext24h: computed(() => globalState.unconfirmedNext24h),
     unconfirmedNext24hCount,
+    appointmentsWithoutPayment: computed(() => globalState.appointmentsWithoutPayment),
+    appointmentsWithoutPaymentCount,
     unconfirmedWithStatus, // ✅ NEU: Mit Fälligkeits-Status
     buttonClasses,
     buttonText,
