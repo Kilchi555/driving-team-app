@@ -1452,7 +1452,7 @@ const handleEventDrop = async (dropInfo: any) => {
             body: {
               email: studentEmail,
               studentName: firstName,
-              appointmentTime: oldStartTime,
+              oldTime: oldStartTime,
               newTime: newTime,
               staffName: instructorName,
               type: 'rescheduled',
