@@ -247,8 +247,8 @@
             </div>
             
             <!-- Action Buttons -->
-            <!-- Hide "Jetzt bezahlen" button if payment is not pending -->
-            <div v-if="payment.payment_status === 'pending'" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+            <!-- Hide "Jetzt bezahlen" button if payment is not pending or if appointment is cancelled -->
+            <div v-if="payment.payment_status === 'pending' && !isAppointmentCancelled(payment)" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <!-- Jetzt bezahlen Button -->
               <button @click="payIndividual(payment)"
                       :disabled="isProcessingPayment || isConvertingToOnline"
