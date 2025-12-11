@@ -713,14 +713,14 @@
                 
                 <!-- Stornierungs-Policy Info (nur bei expanded) -->
                 <div v-if="payment.appointments?.status === 'cancelled' && expandedCancelledPayments.has(payment.id)" class="px-4 py-3 bg-gray-50 border-t border-gray-200">
-                  <div v-if="getCancellationPolicy(payment.appointments)" class="text-sm space-y-2">
+                  <div v-if="calculateCancelledPayment(payment)" class="text-sm space-y-2">
                     <div>
                       <span class="text-gray-600">Stornierungs-Policy:</span>
                       <span class="ml-2 font-medium text-gray-700">
-                        {{ getCancellationPolicy(payment.appointments).refund_percentage }}% Rückerstattung
+                        {{ calculateCancelledPayment(payment)!.policy.refund_percentage }}% Rückerstattung
                       </span>
                       <span class="ml-2 text-xs text-gray-500">
-                        ({{ getCancellationPolicy(payment.appointments).hours_before_appointment }}h vor Termin)
+                        ({{ calculateCancelledPayment(payment)!.policy.charge_percentage }}% Gebühr)
                       </span>
                     </div>
                     
