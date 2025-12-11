@@ -740,8 +740,10 @@
                           <span>{{ (calculateCancelledPayment(payment)!.productCost / 100).toFixed(2) }} CHF</span>
                         </div>
                         <div v-if="calculateCancelledPayment(payment)!.adminFee > 0" class="flex justify-between">
-                          <span>Adminpauschale (immer verrechnet):</span>
-                          <span>{{ (calculateCancelledPayment(payment)!.adminFee / 100).toFixed(2) }} CHF</span>
+                          <span>Adminpauschale{{ calculateCancelledPayment(payment)!.adminFeeRefund > 0 ? ' (rückerstellt)' : ' (verrechnet)' }}:</span>
+                          <span :class="calculateCancelledPayment(payment)!.adminFeeRefund > 0 ? 'text-green-600' : 'text-gray-700'">
+                            {{ calculateCancelledPayment(payment)!.adminFeeRefund > 0 ? '-' : '' }}{{ (calculateCancelledPayment(payment)!.adminFee / 100).toFixed(2) }} CHF
+                          </span>
                         </div>
                         <div v-if="calculateCancelledPayment(payment)!.discountRefund > 0" class="flex justify-between text-green-600">
                           <span>Rabatt zurückgegeben:</span>
@@ -1306,11 +1308,16 @@ const calculateCancelledPayment = (payment: any) => {
     appointmentId: payment.appointments.id,
     chargePercentage,
     refundPercentage,
-    storedCharge: payment.appointments.cancellation_charge_percentage
+    storedCharge: payment.appointments.cancellation_charge_percentage,
+    paymentStatus: payment.payment_status
   })
   
-  // Admin-Fee (wird IMMER verrechnet)
+  // Admin-Fee: Wird rückerstellt nur wenn:
+  // 1. Es ist eine 100% kostenlose Stornierung (refundPercentage === 100)
+  // 2. UND die Admin Fee wurde bereits bezahlt (payment_status !== 'pending')
   const adminFee = payment.admin_fee_rappen || 0
+  const adminFeeRefund = (refundPercentage === 100 && payment.payment_status !== 'pending') ? adminFee : 0
+  const finalAdminFee = adminFee - adminFeeRefund
   
   // Termin-Kosten (wird nach Policy verrechnet) = Total - Admin-Fee
   const appointmentCost = (payment.total_amount_rappen || 0) - adminFee
@@ -1331,7 +1338,7 @@ const calculateCancelledPayment = (payment: any) => {
   const discountRefund = refundPercentage === 100 ? discountValue : 0
   const finalDiscountValue = discountValue - discountRefund
   
-  const totalCost = finalAppointmentCost + productCost + adminFee - finalDiscountValue
+  const totalCost = finalAppointmentCost + productCost + finalAdminFee - finalDiscountValue
   
   const policy = {
     charge_percentage: chargePercentage,
@@ -1345,6 +1352,8 @@ const calculateCancelledPayment = (payment: any) => {
     finalAppointmentCost,
     productCost,
     adminFee,
+    adminFeeRefund,
+    finalAdminFee,
     discountValue,
     discountRefund,
     finalDiscountValue,
