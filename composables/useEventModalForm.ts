@@ -1292,12 +1292,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
         // Check if there's a saved company billing address ID from EventModal
         // This should be set when the invoice address is saved
         const eventModalScope = (globalThis as any).savedCompanyBillingAddressId
-        if (eventModalScope) {
+        if (eventModalScope && eventModalScope.trim && eventModalScope.trim() !== '') {
           companyBillingAddressId = eventModalScope
           logger.debug('📋 Using company billing address ID from EventModal scope:', companyBillingAddressId)
         }
         // Fallback: Check PriceDisplay component directly
-        if (priceDisplay && priceDisplay.savedCompanyBillingAddressId) {
+        else if (priceDisplay && priceDisplay.savedCompanyBillingAddressId && priceDisplay.savedCompanyBillingAddressId.trim && priceDisplay.savedCompanyBillingAddressId.trim() !== '') {
           companyBillingAddressId = priceDisplay.savedCompanyBillingAddressId
           logger.debug('📋 Using company billing address ID from PriceDisplay:', companyBillingAddressId)
         }
@@ -1317,7 +1317,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
             notes: priceDisplay.invoiceData.notes || ''
           }
           logger.debug('📋 Using fallback invoice address as JSONB:', invoiceAddress)
+          companyBillingAddressId = null // IMPORTANT: Force null if we're using JSONB
         }
+        else {
+          companyBillingAddressId = null // IMPORTANT: Force null if nothing found
+        }
+      }
+      
+      // ✅ CRITICAL: Ensure companyBillingAddressId is truly null, not undefined or empty string
+      if (!companyBillingAddressId || (typeof companyBillingAddressId === 'string' && companyBillingAddressId.trim() === '')) {
+        companyBillingAddressId = null
       }
 
       // ✅ WICHTIG: tenant_id für Payments hinzufügen
