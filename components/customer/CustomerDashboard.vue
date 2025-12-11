@@ -878,6 +878,7 @@
     :categories="userDocumentCategories"
     :user-data="userData"
     @close="showProfileModal = false"
+    @document-uploaded="loadUserDocuments"
   />
   
 </template>

@@ -131,7 +131,8 @@
                   <button
                     @click="triggerFileInput(category.code)"
                     :disabled="isUploading"
-                    class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium py-1.5 px-3 rounded transition-colors disabled:opacity-50"
+                    :style="{ backgroundColor: primaryColor || '#3B82F6' }"
+                    class="text-xs text-white font-medium py-1.5 px-3 rounded transition-all hover:opacity-90 disabled:opacity-50"
                   >
                     {{ (category.documents && category.documents.length > 0) ? 'Austauschen' : 'Hochladen' }}
                   </button>
@@ -323,7 +324,8 @@
                 <button
                   @click="triggerFileInput(category.code)"
                   :disabled="isUploading"
-                  class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                  :style="{ backgroundColor: primaryColor || '#3B82F6' }"
+                  class="flex-1 text-white font-medium py-2 px-4 rounded-lg transition-all hover:opacity-90 disabled:opacity-50"
                 >
                   {{ (category.documents && category.documents.length > 0) ? 'Austausch' : 'Hochladen' }}
                 </button>
@@ -373,8 +375,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-defineEmits<{
+const emit = defineEmits<{
   close: []
+  'document-uploaded': []
 }>()
 
 const { showSuccess, showError } = useUIStore()
@@ -503,12 +506,12 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
     
     successMessage.value = `${categoryName} erfolgreich hochgeladen`
     showSuccess('Erfolg', `${categoryName} erfolgreich hochgeladen`)
-    setTimeout(() => { successMessage.value = '' }, 3000)
     
-    // Reload page to refresh documents
-    setTimeout(() => {
-      location.reload()
-    }, 1000)
+    // Reload documents by emitting event to parent (CustomerDashboard)
+    // This will trigger a refresh of the documents list without reloading the page
+    emit('document-uploaded')
+    
+    setTimeout(() => { successMessage.value = '' }, 3000)
   } catch (err: any) {
     console.error('❌ Error uploading document:', err)
     error.value = err?.message || 'Fehler beim Hochladen'
