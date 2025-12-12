@@ -179,8 +179,10 @@ export default defineEventHandler(async (event) => {
     transaction.language = 'de-CH'
     transaction.customerEmailAddress = customerEmail
     
-    // ✅ Tokenisierung aktivieren - Wallee speichert Zahlungsmethoden automatisch
-    ;(transaction as any).tokenizationEnabled = true
+    // ✅ Tokenisierung aktivieren - Wallee speichert Zahlungsmethoden automatisch (NUR für Abo-Zahlungen!)
+    // IMPORTANT: Only enable tokenization for subscription/recurring payments, not for one-time payments
+    // In live mode, "user on file" (tokenization) is only allowed for approved use cases
+    // ;(transaction as any).tokenizationEnabled = true  // DISABLED: Only use for recurring payments
     
     // ✅ Für Tokenization-only: Speichere Flag in Metadata für spätere automatische Stornierung
     if (isTokenizationOnly) {
