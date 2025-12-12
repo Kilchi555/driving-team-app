@@ -65,16 +65,19 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Payment created successfully:', payment.id)
 
-    // ✅ If no company_billing_address_id, create a pending task (Pendenz)
+    // ✅ If no company_billing_address_id AND payment_method is invoice, create a pending task (Pendenz)
     const hasBillingAddress = !!cleanPaymentData.company_billing_address_id
+    const isInvoicePayment = paymentData.payment_method === 'invoice'
     
     console.log('📝 [PENDENCY] Checking if pendency should be created:', {
       hasBillingAddress,
+      isInvoicePayment,
+      payment_method: paymentData.payment_method,
       hasAppointmentId: !!paymentData.appointment_id,
       company_billing_address_id: cleanPaymentData.company_billing_address_id
     })
     
-    if (!hasBillingAddress && paymentData.appointment_id) {
+    if (!hasBillingAddress && isInvoicePayment && paymentData.appointment_id) {
       try {
         console.log('📝 [PENDENCY] Creating pending task for missing billing address')
         
