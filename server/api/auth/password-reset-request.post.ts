@@ -240,12 +240,29 @@ export default defineEventHandler(async (event) => {
         
         logger.debug('📱 Invoking send-twilio-sms edge function with phone:', user.phone)
         
+        // Load tenant name for branded sender
+        let tenantName = ''
+        try {
+          const { data: tenantData } = await serviceSupabase
+            .from('tenants')
+            .select('name')
+            .eq('id', user.tenant_id)
+            .single()
+          
+          if (tenantData?.name) {
+            tenantName = tenantData.name
+            logger.debug('📱 Loaded tenant name for SMS sender:', tenantName)
+          }
+        } catch (tenantError) {
+          logger.warn('⚠️ Could not load tenant name:', tenantError)
+        }
+        
         // Use service role for edge function invocation
         const { data: smsResult, error: smsError } = await serviceSupabase.functions.invoke('send-twilio-sms', {
           body: {
             to: user.phone,
             message: smsMessage,
-            senderName: userProfile?.tenant?.name  // Pass tenant name for branded sender
+            senderName: tenantName  // Pass tenant name for branded sender
           },
           method: 'POST'
         })
