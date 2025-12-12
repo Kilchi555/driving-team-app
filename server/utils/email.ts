@@ -2,6 +2,7 @@
 // E-Mail Utility mit Resend
 // ============================================
 import { Resend } from 'resend'
+import { logger } from '~/utils/logger'
 
 let resendClient: Resend | null = null
 
