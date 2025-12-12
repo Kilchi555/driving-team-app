@@ -244,7 +244,8 @@ export default defineEventHandler(async (event) => {
         const { data: smsResult, error: smsError } = await serviceSupabase.functions.invoke('send-twilio-sms', {
           body: {
             to: user.phone,
-            message: smsMessage
+            message: smsMessage,
+            senderName: userProfile?.tenant?.name  // Pass tenant name for branded sender
           },
           method: 'POST'
         })

@@ -344,7 +344,8 @@ export default defineEventHandler(async (event) => {
 
                 const smsResult = await sendSMS({
                   to: user.phone,
-                  message: smsText
+                  message: smsText,
+                  senderName: tenant.name
                 })
 
                 // Save reminder to DB

@@ -322,7 +322,8 @@ ${tenantName}`
         const { data: smsResult, error: smsError } = await serviceSupabase.functions.invoke('send-twilio-sms', {
           body: {
             to: phone,
-            message: smsMessage
+            message: smsMessage,
+            senderName: tenantName  // Pass tenant name for branded sender
           }
         })
 

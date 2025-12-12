@@ -144,7 +144,8 @@ export default defineEventHandler(async (event) => {
 
           await sendSMS({
             to: user.phone,
-            message: smsText
+            message: smsText,
+            senderName: tenant.name
           })
 
           logger.debug(`✅ Customer deletion SMS sent to ${user.phone}`)

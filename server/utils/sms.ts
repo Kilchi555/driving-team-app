@@ -21,9 +21,10 @@ function getTwilioClient() {
 interface SendSMSOptions {
   to: string
   message: string
+  senderName?: string  // Optional: Alphanumeric sender ID (Tenant name)
 }
 
-export async function sendSMS({ to, message }: SendSMSOptions) {
+export async function sendSMS({ to, message, senderName }: SendSMSOptions) {
   try {
     const fromNumber = process.env.TWILIO_PHONE_NUMBER
     
@@ -33,9 +34,26 @@ export async function sendSMS({ to, message }: SendSMSOptions) {
 
     const client = getTwilioClient()
     
+    // Use senderName as alphanumeric sender ID if provided, otherwise use phone number
+    // Alphanumeric sender IDs must be 1-11 characters (letters and numbers only)
+    let from: string
+    if (senderName) {
+      // Convert to alphanumeric sender ID (max 11 chars, letters/numbers only)
+      const cleanSenderName = senderName
+        .replace(/[^a-zA-Z0-9]/g, '')  // Remove special characters
+        .substring(0, 11)  // Max 11 characters
+        .toUpperCase()
+      
+      from = cleanSenderName || fromNumber  // Fallback to phone number if empty after cleanup
+      logger.debug(`📱 SMS from: "${from}" (tenant: "${senderName}")`)
+    } else {
+      from = fromNumber
+      logger.debug(`📱 SMS from: "${from}" (phone number)`)
+    }
+    
     const result = await client.messages.create({
       body: message,
-      from: fromNumber,
+      from: from,
       to
     })
 

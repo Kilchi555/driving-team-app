@@ -7,7 +7,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export default defineEventHandler(async (event) => {
   try {
-    const { phone, message } = await readBody(event)
+    const { phone, message, senderName } = await readBody(event)
 
     if (!phone || !message) {
       throw createError({
@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
     
     logger.debug('📱 Sending SMS via Twilio:', {
       to: formattedPhone,
+      from: senderName || 'phone_number',
       messageLength: message.length
     })
 
@@ -30,7 +31,8 @@ export default defineEventHandler(async (event) => {
     const { data: smsData, error: smsError } = await supabase.functions.invoke('send-twilio-sms', {
       body: {
         to: formattedPhone,
-        message: message
+        message: message,
+        senderName: senderName  // Pass tenant name for branded sender
       }
     })
 
