@@ -634,7 +634,7 @@ function normalizePhoneNumber() {
   }
   
   form.phone = phone
-})
+}
 
 // Load user data by token
 onMounted(async () => {
