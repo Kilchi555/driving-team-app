@@ -577,6 +577,7 @@
 <script setup lang="ts">
 
 import { getSupabase } from '~/utils/supabase'
+import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
 
 const route = useRoute()
 const token = route.params.token as string
@@ -821,7 +822,16 @@ const openRegulationModal = async (type: string) => {
     }
     
     if (regulations && regulations.length > 0) {
-      currentRegulation.value = regulations[0]
+      // Load tenant data for placeholder replacement
+      const tenantData = await loadTenantData(activeTenantId)
+      
+      // Replace placeholders in content
+      const processedRegulation = {
+        ...regulations[0],
+        content: replacePlaceholders(regulations[0].content, tenantData)
+      }
+      
+      currentRegulation.value = processedRegulation
       showRegulationModal.value = true
       logger.debug('✅ Opened reglement modal:', type, regulations[0].title)
     } else {
