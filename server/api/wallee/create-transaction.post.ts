@@ -178,7 +178,9 @@ export default defineEventHandler(async (event) => {
     transaction.lineItems = [lineItem]
     transaction.autoConfirmationEnabled = true
     transaction.currency = currency
-    transaction.customerId = shortCustomerId // Konsistente Customer ID für Tokenisierung
+    // IMPORTANT: Only set customerId for recurring/subscription payments where tokenization is approved
+    // Setting customerId enables "user on file" tokenization, which is not allowed for one-time payments
+    // transaction.customerId = shortCustomerId // DISABLED: Causes "user on file" not allowed error
     transaction.merchantReference = shortMerchantRef
     transaction.language = 'de-CH'
     transaction.customerEmailAddress = customerEmail
