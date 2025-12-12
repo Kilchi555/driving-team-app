@@ -641,13 +641,29 @@ export default defineEventHandler(async (event) => {
       const { default: Puppeteer } = await getPuppeteer()
       logger.debug('✅ Puppeteer loaded successfully')
       
-      browser = await Puppeteer.launch({ 
-        args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
-      })
-      logger.debug('✅ Browser launched successfully')
+      // Try to launch browser with appropriate settings for environment
+      let launchOptions: any = { headless: 'new' }
+      
+      // If we're in a serverless environment (Vercel), use chromium
+      if (process.env.VERCEL) {
+        logger.debug('📍 Serverless environment detected (Vercel), using chromium')
+        launchOptions = {
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+        }
+      } else {
+        // Local development: use system Chrome/Chromium
+        logger.debug('📍 Local environment detected, using system Chrome')
+        launchOptions = {
+          headless: 'new',
+          args: ['--no-sandbox', '--disable-setuid-sandbox']
+        }
+      }
+      
+      browser = await Puppeteer.launch(launchOptions)
+      logger.debug('✅ Browser launched successfully with options:', { isVercel: !!process.env.VERCEL })
       
       const page = await browser.newPage()
       await page.setContent(finalHtml, { waitUntil: 'networkidle0' })

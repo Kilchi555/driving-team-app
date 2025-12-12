@@ -32,7 +32,19 @@ export default defineNuxtConfig({
   // --- TypeScript Configuration ---
   typescript: {
     strict: false,
-    typeCheck: false
+    typeCheck: false,
+    // Auto-import logger globally
+    tsConfig: {
+      compilerOptions: {
+        types: ['@nuxt/types']
+      }
+    }
+  },
+  
+  // --- Auto-imports Configuration ---
+  imports: {
+    autoImport: true,
+    dirs: ['./composables', './utils']
   },
   
   // --- Nitro Configuration ---

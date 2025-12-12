@@ -576,6 +576,7 @@
 
 <script setup lang="ts">
 
+import { logger } from '~/utils/logger'
 import { getSupabase } from '~/utils/supabase'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
 

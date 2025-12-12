@@ -278,8 +278,8 @@ export default defineEventHandler(async (event) => {
     const response: any = {
       success: true,
       message: method === 'email' 
-        ? 'Ein Magic Link wurde an Ihre E-Mail-Adresse gesendet.'
-        : 'Ein Magic Link wurde an Ihre Telefonnummer gesendet.'
+        ? 'Wenn ein Benutzer mit diesen Angaben existiert, wird ihm ein Magic Link gesendet. Bitte überprüfen Sie Ihren Posteingang.'
+        : 'Wenn ein Benutzer mit diesen Angaben existiert, wird ihm ein Magic Link gesendet. Bitte überprüfen Sie Ihre SMS.'
     }
 
     if (sendingFailed) {
