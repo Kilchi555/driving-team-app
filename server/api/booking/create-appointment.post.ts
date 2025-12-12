@@ -252,17 +252,43 @@ export default defineEventHandler(async (event) => {
       const automaticPaymentEnabled = settings.automatic_payment_enabled !== false
       const hoursBeforePayment = settings.automatic_payment_hours_before || 24
 
-      // ✅ Berechne scheduled_authorization_date (24h vor Termin)
+      // Load tenant's cancellation policy to determine payment scheduling threshold
+      const { data: cancellationPolicy } = await supabase
+        .from('cancellation_policies')
+        .select(`
+          *,
+          rules:cancellation_rules(*)
+        `)
+        .eq('tenant_id', tenant_id)
+        .eq('is_active', true)
+        .order('is_default', { ascending: false })
+        .limit(1)
+        .single()
+
+      let hoursBeforeCancellationFree = 24 // Default fallback
+      
+      if (cancellationPolicy?.rules && Array.isArray(cancellationPolicy.rules)) {
+        // Find the threshold for free cancellation
+        const freeRule = cancellationPolicy.rules.find((rule: any) => rule.charge_percentage === 0)
+        if (freeRule) {
+          hoursBeforeCancellationFree = freeRule.hours_before_appointment
+          logger.debug('📋 Loaded cancellation threshold from policy:', hoursBeforeCancellationFree, 'hours')
+        } else if (cancellationPolicy.rules.length > 0) {
+          hoursBeforeCancellationFree = Math.max(...cancellationPolicy.rules.map((r: any) => r.hours_before_appointment))
+        }
+      }
+
+      // ✅ Berechne scheduled_authorization_date (X Stunden vor Termin, based on policy)
       const appointmentDate = new Date(start_time)
       const now = new Date()
       const hoursUntilAppointment = (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60)
       
       let scheduledAuthorizationDate = null
       
-      // Nur setzen, wenn Termin >= 24h entfernt ist (sonst sofort autorisieren)
-      if (hoursUntilAppointment >= 24) {
+      // Nur setzen, wenn Termin >= hoursBeforeCancellationFree entfernt ist (sonst sofort autorisieren)
+      if (hoursUntilAppointment >= hoursBeforeCancellationFree) {
         scheduledAuthorizationDate = new Date(appointmentDate)
-        scheduledAuthorizationDate.setHours(scheduledAuthorizationDate.getHours() - 24)
+        scheduledAuthorizationDate.setHours(scheduledAuthorizationDate.getHours() - hoursBeforeCancellationFree)
         // Runde auf die nächste volle Stunde auf
         if (scheduledAuthorizationDate.getMinutes() > 0 || scheduledAuthorizationDate.getSeconds() > 0) {
           scheduledAuthorizationDate.setHours(scheduledAuthorizationDate.getHours() + 1)
@@ -271,8 +297,8 @@ export default defineEventHandler(async (event) => {
         scheduledAuthorizationDate.setSeconds(0)
         scheduledAuthorizationDate.setMilliseconds(0)
       } else {
-        // Termin < 24h: sofort autorisieren
-        logger.debug('⚡ Appointment < 24h away - will authorize immediately')
+        // Termin < hoursBeforeCancellationFree: sofort autorisieren
+        logger.debug(`⚡ Appointment < ${hoursBeforeCancellationFree}h away - will authorize immediately`)
         scheduledAuthorizationDate = new Date()
         scheduledAuthorizationDate.setSeconds(0)
         scheduledAuthorizationDate.setMilliseconds(0)

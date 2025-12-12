@@ -110,7 +110,38 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 3. Calculate hours until appointment (using Zurich timezone)
+    // 3. Get tenant's cancellation policy to determine free cancellation threshold
+    const { data: cancellationPolicy, error: policyError } = await supabaseAdmin
+      .from('cancellation_policies')
+      .select(`
+        *,
+        rules:cancellation_rules(*)
+      `)
+      .eq('tenant_id', userProfile.tenant_id)
+      .eq('is_active', true)
+      .order('is_default', { ascending: false })
+      .limit(1)
+      .single()
+
+    let hoursBeforeCancellationFree = 24 // Default fallback
+    
+    if (!policyError && cancellationPolicy?.rules && Array.isArray(cancellationPolicy.rules)) {
+      // Find the rule that determines free cancellation (typically the first rule)
+      // Rules are ordered by hours_before_appointment descending
+      const freeRule = cancellationPolicy.rules.find((rule: any) => rule.charge_percentage === 0)
+      if (freeRule) {
+        hoursBeforeCancellationFree = freeRule.hours_before_appointment
+        logger.debug('📋 Loaded free cancellation threshold from policy:', hoursBeforeCancellationFree, 'hours')
+      } else if (cancellationPolicy.rules.length > 0) {
+        // Fallback: use the rule with the highest hours threshold
+        hoursBeforeCancellationFree = Math.max(...cancellationPolicy.rules.map((r: any) => r.hours_before_appointment))
+        logger.debug('📋 Using maximum hours threshold from policy:', hoursBeforeCancellationFree, 'hours')
+      }
+    } else if (policyError) {
+      logger.warn('⚠️ Could not fetch cancellation policy, using default 24 hours:', policyError.message)
+    }
+
+    // 4. Calculate hours until appointment (using Zurich timezone)
     const appointmentTime = new Date(appointment.start_time)
     
     // Convert to Zurich timezone for accurate hour calculation
@@ -121,27 +152,25 @@ export default defineEventHandler(async (event) => {
     
     logger.debug('🕐 Backend hours until appointment (Zurich TZ):', hoursUntilAppointment.toFixed(2), {
       appointment: appointment.start_time,
-      now: now.toISOString()
+      now: now.toISOString(),
+      hoursBeforeCancellationFree
     })
 
-    // 4. Determine charge percentage
+    // 5. Determine charge percentage based on policy
     let chargePercentage = 100 // Default
     let creditHours = false
 
-    if (hoursUntilAppointment >= 24) {
-      // More than 24h before appointment
-      logger.debug('✅ Free cancellation (>= 24h)')
+    if (hoursUntilAppointment >= hoursBeforeCancellationFree) {
+      // More than threshold hours before appointment - free cancellation
+      logger.debug(`✅ Free cancellation (>= ${hoursBeforeCancellationFree}h)`)
       chargePercentage = 0
       creditHours = true
     } else {
-      // Less than 24h before appointment
-      // Will charge 100% unless medical certificate is approved
-      logger.debug('⚠️ Charged cancellation (< 24h)')
+      // Less than threshold hours before appointment - charged cancellation
+      logger.debug(`⚠️ Charged cancellation (< ${hoursBeforeCancellationFree}h)`)
       chargePercentage = 100
       creditHours = true
     }
-
-    // 5. Prepare update data
     const updateData: any = {
       status: 'cancelled',
       deleted_at: toLocalTimeString(now),
@@ -177,13 +206,13 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Appointment cancelled successfully')
 
-    // 7. Handle payment if exists
+    // 8. Handle payment if exists
     const payment = Array.isArray(appointment.payments) 
       ? appointment.payments[0] 
       : appointment.payments
 
-    if (payment && hoursUntilAppointment >= 24) {
-      // Cancel payment if more than 24h before appointment
+    if (payment && hoursUntilAppointment >= hoursBeforeCancellationFree) {
+      // Cancel payment if more than threshold hours before appointment
       if (payment.payment_status === 'authorized') {
         // TODO: Void Wallee authorization
         logger.debug('⚠️ TODO: Void Wallee authorization:', payment.wallee_transaction_id)
@@ -201,8 +230,6 @@ export default defineEventHandler(async (event) => {
         logger.debug('✅ Payment cancelled')
       }
     }
-
-    // 8. TODO: Send notification
     // await sendEmailNotification({
     //   to: user.email,
     //   subject: 'Termin abgesagt',
