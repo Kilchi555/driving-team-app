@@ -621,7 +621,7 @@ const uploadedFiles = reactive<Record<string, File>>({})
 const dragOver = reactive<Record<string, boolean>>({})
 
 // Normalize phone number to +41 79... format
-const normalizePhoneNumber = () => {
+function normalizePhoneNumber() {
   let phone = form.phone.replace(/[^0-9+]/g, '')
   
   // If starts with 0 and has 10 digits, convert to +41
