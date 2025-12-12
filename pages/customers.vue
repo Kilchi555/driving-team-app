@@ -1078,7 +1078,7 @@ const resendOnboardingSms = async () => {
   
   try {
     const onboardingLink = `https://simy.ch/onboarding/${pendingStudent.value.onboarding_token}`
-    const message = `Hallo ${pendingStudent.value.first_name}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+    const message = `Hallo ${pendingStudent.value.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
     
     const result = await sendSms(pendingStudent.value.phone, message)
     

@@ -295,7 +295,7 @@ export const useStudents = () => {
         if (data.phone && data.phone.trim() !== '') {
           // ✅ SMS-Versand
         const { sendSms } = useSmsService()
-        const message = `Hallo ${data.first_name}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+        const message = `Hallo ${data.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
         
         const smsResult = await sendSms(data.phone, message)
         

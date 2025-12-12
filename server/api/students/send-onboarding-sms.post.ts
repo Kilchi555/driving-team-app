@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     const onboardingLink = `https://simy.ch/onboarding/${token}`
     
     // SMS Message
-    const message = `Hallo ${firstName}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+    const message = `Hallo ${firstName}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
 
     logger.debug('📱 Sending onboarding SMS:', {
       to: formattedPhone,
