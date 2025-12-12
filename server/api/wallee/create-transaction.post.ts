@@ -150,7 +150,11 @@ export default defineEventHandler(async (event) => {
     
     try {
       const paymentMethodService = new Wallee.api.PaymentMethodConfigurationService(config)
-      const paymentMethodsResponse = await (paymentMethodService as any).readAll(spaceId)
+      // Use search() instead of readAll() - correct Wallee SDK method
+      const searchCriteria: any = {
+        spaceId: spaceId
+      }
+      const paymentMethodsResponse = await (paymentMethodService as any).search(spaceId, searchCriteria)
       
       if (paymentMethodsResponse.body && Array.isArray(paymentMethodsResponse.body)) {
         // Filtere nur aktive Zahlungsmethoden
