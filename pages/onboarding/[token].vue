@@ -101,15 +101,15 @@
                   v-model="form.password"
                   type="password"
                   required
-                  minlength="8"
+                  minlength="12"
                   autocomplete="off"
                   name="new-password-field"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Mindestens 8 Zeichen"
+                  placeholder="Mindestens 12 Zeichen"
                 >
                 <div class="mt-1 text-xs">
                   <p :class="passwordTooShort ? 'text-red-600' : 'text-gray-500'">
-                    {{ passwordTooShort ? 'Passwort ist zu kurz (min. 8 Zeichen).' : 'Mindestens 8 Zeichen, empfohlen: Gross-/Kleinbuchstaben, Zahlen & Sonderzeichen' }}
+                    {{ passwordTooShort ? 'Passwort ist zu kurz (min. 12 Zeichen).' : 'Mindestens 12 Zeichen, empfohlen: Gross-/Kleinbuchstaben, Zahlen & Sonderzeichen' }}
                   </p>
                 </div>
               </div>
@@ -192,6 +192,7 @@
                 <input
                   v-model="form.phone"
                   type="tel"
+                  @blur="normalizePhoneNumber"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="+41 79 123 45 67"
                 >
@@ -419,6 +420,14 @@
                     class="text-green-600 hover:text-green-800 underline font-medium"
                   >
                     Nutzungsbedingungen
+                  </button>,
+                  die
+                  <button
+                    type="button"
+                    @click.prevent="openRegulationModal('agb')"
+                    class="text-green-600 hover:text-green-800 underline font-medium"
+                  >
+                    AGB
                   </button>
                   und die
                   <button
@@ -584,7 +593,7 @@ const showErrorModal = ref(false)
 const showSuccessModal = ref(false)
 const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
-const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 8)
+const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 12)
 const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.password !== form.confirmPassword)
 
 const tenantName = ref('Deiner Fahrschule')
@@ -598,6 +607,7 @@ const form = reactive({
   password: '',
   confirmPassword: '',
   email: '',
+  phone: '',
   birthdate: '',
   categories: [] as string[],
   street: '',
@@ -609,6 +619,22 @@ const form = reactive({
 
 const uploadedFiles = reactive<Record<string, File>>({})
 const dragOver = reactive<Record<string, boolean>>({})
+
+// Normalize phone number to +41 79... format
+const normalizePhoneNumber = () => {
+  let phone = form.phone.replace(/[^0-9+]/g, '')
+  
+  // If starts with 0 and has 10 digits, convert to +41
+  if (phone.startsWith('0') && phone.length === 10) {
+    phone = '+41' + phone.substring(1)
+  } 
+  // If starts with 41 and has 11 digits, add +
+  else if (phone.startsWith('41') && phone.length === 11) {
+    phone = '+' + phone
+  }
+  
+  form.phone = phone
+})
 
 // Load user data by token
 onMounted(async () => {
@@ -813,8 +839,8 @@ const handleNextStep = async () => {
   // Validate current step
   if (step.value === 0) {
     // Password validation
-    if (form.password.length < 8) {
-      passwordError.value = 'Passwort muss mindestens 8 Zeichen lang sein'
+    if (form.password.length < 12) {
+      passwordError.value = 'Passwort muss mindestens 12 Zeichen lang sein'
       return
     }
     if (form.password !== form.confirmPassword) {
