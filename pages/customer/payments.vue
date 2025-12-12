@@ -720,15 +720,21 @@ const downloadAllReceipts = async () => {
     const blob = await pdfResponse.blob()
     logger.debug('✅ PDF blob received, size:', blob.size, 'bytes')
     
-    // Create download link
+    // Open in new window and download
     const url = URL.createObjectURL(blob)
+    const blobUrl = URL.createObjectURL(blob)
+    
+    // Open in new tab/window
+    window.open(blobUrl, '_blank')
+    logger.debug('✅ Opened in new window!')
+    
+    // Also trigger download
     const link = document.createElement('a')
     link.href = url
     link.download = response.filename || `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    URL.revokeObjectURL(url)
     
     logger.debug('✅ Download triggered!')
   } catch (err: any) {
