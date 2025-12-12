@@ -7,7 +7,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export default defineEventHandler(async (event) => {
   try {
-    const { phone, firstName, token, senderName } = await readBody(event)
+    const { phone, firstName, token } = await readBody(event)
 
     if (!phone || !firstName || !token) {
       throw createError({
@@ -22,23 +22,49 @@ export default defineEventHandler(async (event) => {
     // Build onboarding link (force public domain)
     const onboardingLink = `https://simy.ch/onboarding/${token}`
     
+    // ✅ Use existing Twilio integration via Supabase Edge Function
+    const supabase = createClient(supabaseUrl, supabaseKey)
+    
+    // Load tenant name from token
+    let tenantName = 'Driving Team' // Default fallback
+    try {
+      const { data: user } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('onboarding_token', token)
+        .single()
+      
+      if (user?.tenant_id) {
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('name')
+          .eq('id', user.tenant_id)
+          .single()
+        
+        if (tenant?.name) {
+          tenantName = tenant.name
+          logger.debug('📱 Loaded tenant name from token:', tenantName)
+        }
+      }
+    } catch (tenantError) {
+      logger.warn('⚠️ Could not load tenant name from token, using default:', tenantError)
+    }
+    
     // SMS Message
     const message = `Hallo ${firstName}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
 
     logger.debug('📱 Sending onboarding SMS:', {
       to: formattedPhone,
       firstName,
-      link: onboardingLink
+      link: onboardingLink,
+      senderName: tenantName
     })
-
-    // ✅ Use existing Twilio integration via Supabase Edge Function
-    const supabase = createClient(supabaseUrl, supabaseKey)
     
     const { data: smsData, error: smsError } = await supabase.functions.invoke('send-twilio-sms', {
       body: {
         to: formattedPhone,
         message: message,
-        senderName: senderName  // Optional: Pass tenant name for branded sender
+        senderName: tenantName  // Pass tenant name for branded sender
       }
     })
 
