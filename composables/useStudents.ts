@@ -346,7 +346,7 @@ export const useStudents = () => {
       }
 
       // Zur lokalen Liste hinzufügen
-      students.value.unshift(data)
+      students.value.unshift(data as any)
 
       return result as any
 
