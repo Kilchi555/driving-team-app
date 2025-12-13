@@ -858,7 +858,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       // Appointment Data
       // ✅ FIX: Für "other" EventTypes ohne Schüler, verwende staff_id als user_id
-      const userId = formData.value.user_id || (formData.value.eventType === 'other' ? formData.value.staff_id || dbUser.id : null)
+      // WICHTIG: user_id darf NIEMALS null sein - Foreign Key Constraint!
+      const userId = formData.value.user_id || formData.value.staff_id || dbUser.id
+      
+      if (!userId) {
+        throw new Error('Kein gültiger User für diesen Termin vorhanden')
+      }
+      
+      logger.debug('📋 Appointment user_id:', userId, 'eventType:', formData.value.eventType)
       
       // Determine if this is a chargeable lesson-type appointment
       const isChargeableLesson = (formData.value.appointment_type || 'lesson') && ['lesson', 'exam', 'theory'].includes(formData.value.appointment_type || 'lesson')
