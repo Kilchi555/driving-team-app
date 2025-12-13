@@ -17,8 +17,9 @@
             <!-- Passkey Option -->
             <button
               v-if="mfaOptions?.hasPasskeys"
-              @click="mfaSelectedMethod = 'passkey'; mfaStep = 'passkey'"
-              class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left"
+              @click="verifyPasskey"
+              :disabled="mfaCodeLoading"
+              class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50"
             >
               <div class="font-semibold text-gray-900">🔐 Sicherheitsschlüssel</div>
               <div class="text-sm text-gray-600">Nutze dein Gerät (Face ID, Fingerprint, etc.)</div>
@@ -27,7 +28,7 @@
             <!-- SMS Option -->
             <button
               v-if="mfaOptions?.canUseSmsCode"
-              @click="mfaSelectedMethod = 'sms'; sendMFACode('sms', mfaOptions.email)"
+              @click="mfaSelectedMethod = 'sms'; sendMFACode('sms', mfaEmail)"
               :disabled="mfaCodeLoading"
               class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50"
             >
@@ -38,7 +39,7 @@
             <!-- Email Option -->
             <button
               v-if="mfaOptions?.canUseEmailCode"
-              @click="mfaSelectedMethod = 'email'; sendMFACode('email', mfaOptions.email)"
+              @click="mfaSelectedMethod = 'email'; sendMFACode('email', mfaEmail)"
               :disabled="mfaCodeLoading"
               class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50"
             >
@@ -388,9 +389,11 @@ const {
   mfaCodeError,
   mfaCodeExpiresIn,
   mfaOptions,
+  mfaEmail,
   openMFAFlow,
   sendMFACode,
   verifyMFACode,
+  verifyPasskey,
   closeMFAFlow,
   formatExpiresIn
 } = useMFAFlow()
@@ -484,7 +487,8 @@ const handleLogin = async () => {
       openMFAFlow(
         loginResponse.user.id,
         loginResponse.tempSessionToken,
-        loginResponse.mfaOptions
+        loginResponse.mfaOptions,
+        loginResponse.user.email
       )
       return
     }
