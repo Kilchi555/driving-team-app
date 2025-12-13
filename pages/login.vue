@@ -349,8 +349,18 @@ const handleLogin = async () => {
       const authStore = useAuthStore()
       const errorMsg = authStore.errorMessage
       
+      logger.debug('📋 Login error message:', errorMsg)
+      
       if (errorMsg?.includes('Invalid login credentials')) {
-        loginError.value = 'Falsches Passwort oder E-Mail-Adresse.'
+        loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.'
+      } else if (errorMsg?.includes('Email not confirmed')) {
+        loginError.value = 'Bitte bestätigen Sie Ihre E-Mail-Adresse zuerst. Prüfen Sie Ihren Posteingang.'
+      } else if (errorMsg?.includes('User not found')) {
+        loginError.value = 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.'
+      } else if (errorMsg?.includes('User account is disabled')) {
+        loginError.value = 'Ihr Account wurde deaktiviert. Bitte kontaktieren Sie den Administrator.'
+      } else if (errorMsg?.includes('too many')) {
+        loginError.value = 'Zu viele Anmeldeversuche. Bitte versuchen Sie es in einigen Minuten erneut.'
       } else {
         loginError.value = errorMsg || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
       }
@@ -413,9 +423,20 @@ const handleLogin = async () => {
     
   } catch (error: any) {
     console.error('Login error:', error)
+    logger.debug('🔴 Login error caught:', error?.message)
     
     if (error.message?.includes('Invalid login credentials')) {
-      loginError.value = 'Falsches Passwort oder E-Mail-Adresse.'
+      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.'
+    } else if (error.message?.includes('Email not confirmed')) {
+      loginError.value = 'Bitte bestätigen Sie Ihre E-Mail-Adresse zuerst. Prüfen Sie Ihren Posteingang.'
+    } else if (error.message?.includes('User not found')) {
+      loginError.value = 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.'
+    } else if (error.message?.includes('disabled')) {
+      loginError.value = 'Ihr Account wurde deaktiviert. Bitte kontaktieren Sie den Administrator.'
+    } else if (error.message?.includes('too many')) {
+      loginError.value = 'Zu viele Anmeldeversuche. Bitte versuchen Sie es in einigen Minuten erneut.'
+    } else if (error.message?.includes('network') || error.message?.includes('timeout')) {
+      loginError.value = 'Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung.'
     } else {
       loginError.value = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }
