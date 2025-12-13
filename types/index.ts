@@ -13,7 +13,7 @@ export interface Location {
 export interface User {
   id: string
   email: string | null  // ✅ Email kann null sein
-  role: 'client' | 'staff' | 'admin'
+  role: 'client' | 'staff' | 'admin' | 'super_admin'
   first_name: string | null
   last_name: string | null
   phone?: string | null
