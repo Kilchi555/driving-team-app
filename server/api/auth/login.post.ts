@@ -13,10 +13,20 @@ export default defineEventHandler(async (event) => {
     
     logger.debug('🔐 Login attempt from IP:', ipAddress)
     
-    // Check if IP is blocked
+    // Get Supabase client
     const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('❌ Missing Supabase credentials')
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Server configuration error'
+      })
+    }
+    
+    // Check if IP is blocked
     if (supabaseUrl && serviceRoleKey) {
       const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
       
@@ -69,19 +79,6 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         statusMessage: 'Ungültige E-Mail-Adresse'
-      })
-    }
-
-    // Get Supabase client
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('❌ Missing Supabase credentials')
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
       })
     }
 
