@@ -1165,6 +1165,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
         .from('appointments')
         .select('type, start_time, user_id, title')
         .eq('staff_id', currentUser.id)
+        .is('deleted_at', null)
+        .not('status', 'eq', 'cancelled')
+        .not('status', 'eq', 'aborted')
         .order('start_time', { ascending: false })
       
       if (studentId) {
@@ -1172,10 +1175,15 @@ const useEventModalForm = (currentUser?: any, refs?: {
         query = query.eq('user_id', studentId)
       }
       
-      const { data: lastAppointment, error } = await query.limit(1).single()
+      const { data: lastAppointment, error } = await query.limit(1).maybeSingle()
 
       if (error) {
         console.error('❌ Error loading last appointment:', error)
+        return null
+      }
+
+      if (!lastAppointment) {
+        logger.debug('ℹ️ No last appointment category found (first appointment for this student)')
         return null
       }
 
@@ -1183,7 +1191,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         logger.debug('✅ Last appointment category loaded:', lastAppointment.type)
         return lastAppointment.type
       } else {
-        logger.debug('ℹ️ No last appointment category found')
+        logger.debug('ℹ️ No appointment type found')
         return null
       }
 
