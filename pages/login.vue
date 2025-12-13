@@ -1,6 +1,108 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4" :style="{ background: `linear-gradient(to bottom right, ${(currentTenant?.primary_color || '#2563eb')}15, #64748b15)` }">
     
+    <!-- MFA Modal -->
+    <div v-if="showMFAModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200">
+          <h2 class="text-2xl font-bold text-gray-900">Zwei-Faktor-Authentifizierung</h2>
+          <p class="text-gray-600 text-sm mt-1">Wählen Sie eine Authentifizierungsmethode</p>
+        </div>
+
+        <!-- MFA Content -->
+        <div class="p-6 space-y-4">
+          <!-- Step 1: Choose Method -->
+          <div v-if="mfaStep === 'method'" class="space-y-3">
+            <!-- Passkey Option -->
+            <button
+              v-if="mfaOptions?.hasPasskeys"
+              @click="mfaSelectedMethod = 'passkey'; mfaStep = 'passkey'"
+              class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left"
+            >
+              <div class="font-semibold text-gray-900">🔐 Sicherheitsschlüssel</div>
+              <div class="text-sm text-gray-600">Nutze dein Gerät (Face ID, Fingerprint, etc.)</div>
+            </button>
+
+            <!-- SMS Option -->
+            <button
+              v-if="mfaOptions?.canUseSmsCode"
+              @click="mfaSelectedMethod = 'sms'; sendMFACode('sms', mfaOptions.email)"
+              :disabled="mfaCodeLoading"
+              class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50"
+            >
+              <div class="font-semibold text-gray-900">📱 SMS Code</div>
+              <div class="text-sm text-gray-600">Erhalten Sie einen 6-stelligen Code per SMS</div>
+            </button>
+
+            <!-- Email Option -->
+            <button
+              v-if="mfaOptions?.canUseEmailCode"
+              @click="mfaSelectedMethod = 'email'; sendMFACode('email', mfaOptions.email)"
+              :disabled="mfaCodeLoading"
+              class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50"
+            >
+              <div class="font-semibold text-gray-900">📧 Email Code</div>
+              <div class="text-sm text-gray-600">Erhalten Sie einen 6-stelligen Code per Email</div>
+            </button>
+          </div>
+
+          <!-- Step 2: Enter Code -->
+          <div v-if="mfaStep === 'code'" class="space-y-3">
+            <p class="text-sm text-gray-600">
+              {{ mfaSelectedMethod === 'sms' ? 'Code wurde per SMS gesendet' : 'Code wurde per Email gesendet' }}
+            </p>
+
+            <input
+              v-model="mfaCodeInput"
+              type="text"
+              inputmode="numeric"
+              placeholder="000000"
+              maxlength="6"
+              class="w-full px-4 py-3 text-center text-2xl tracking-widest border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+            >
+
+            <!-- Expires in -->
+            <div v-if="mfaCodeSent" class="text-xs text-gray-500 text-center">
+              Code läuft ab in: <span class="font-semibold">{{ formatExpiresIn(mfaCodeExpiresIn) }}</span>
+            </div>
+
+            <!-- Error Message -->
+            <div v-if="mfaCodeError" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p class="text-sm text-red-700">{{ mfaCodeError }}</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3 pt-4">
+              <button
+                @click="mfaStep = 'method'"
+                class="flex-1 py-2 px-4 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                Zurück
+              </button>
+              <button
+                @click="verifyMFACode('sms')"
+                :disabled="mfaCodeLoading || mfaCodeInput.length < 6"
+                class="flex-1 py-2 px-4 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {{ mfaCodeLoading ? 'Wird verifiziert...' : 'Verifizieren' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Close Button -->
+          <div v-if="mfaStep === 'method'" class="flex gap-3 pt-4">
+            <button
+              @click="closeMFAFlow"
+              class="w-full py-2 px-4 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- Login Form -->
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
       <!-- Header mit Tenant-Branding -->
@@ -260,6 +362,7 @@ import { useRouter, definePageMeta, useHead, useRoute, navigateTo } from '#impor
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
+import { useMFAFlow } from '~/composables/useMFAFlow'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
@@ -275,6 +378,22 @@ const route = useRoute()
 const { login, logout, isLoggedIn, loading } = useAuthStore()
 const { showError, showSuccess } = useUIStore()
 const { loadTenant, currentTenant } = useTenant()
+const { 
+  showMFAModal, 
+  mfaStep, 
+  mfaSelectedMethod, 
+  mfaCodeInput,
+  mfaCodeSent,
+  mfaCodeLoading,
+  mfaCodeError,
+  mfaCodeExpiresIn,
+  mfaOptions,
+  openMFAFlow,
+  sendMFACode,
+  verifyMFACode,
+  closeMFAFlow,
+  formatExpiresIn
+} = useMFAFlow()
 const supabase = getSupabase()
 
 // Get tenant from URL parameter or route params
@@ -359,107 +478,38 @@ const handleLogin = async () => {
       return
     }
 
-    // Aktualisiere Auth Store mit Benutzer-Daten
-    const loginSuccess = await login(loginForm.value.email, loginForm.value.password)
-    
-    if (!loginSuccess) {
-      console.error('❌ Auth store login failed')
-      const authStore = useAuthStore()
-      const errorMsg = authStore.errorMessage
-      
-      logger.debug('📋 Login error message:', errorMsg)
-      
-      if (errorMsg?.includes('Invalid login credentials')) {
-        loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.'
-      } else if (errorMsg?.includes('Email not confirmed')) {
-        loginError.value = 'Bitte bestätigen Sie Ihre E-Mail-Adresse zuerst. Prüfen Sie Ihren Posteingang.'
-      } else if (errorMsg?.includes('User not found')) {
-        loginError.value = 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.'
-      } else if (errorMsg?.includes('User account is disabled')) {
-        loginError.value = 'Ihr Account wurde deaktiviert. Bitte kontaktieren Sie den Administrator.'
-      } else if (errorMsg?.includes('too many')) {
-        loginError.value = 'Zu viele Anmeldeversuche. Bitte versuchen Sie es in einigen Minuten erneut.'
-      } else {
-        loginError.value = errorMsg || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
-      }
+    // ✅ Check if MFA is required
+    if (loginResponse.requiresMfa) {
+      logger.debug('🔐 MFA required for user')
+      openMFAFlow(
+        loginResponse.user.id,
+        loginResponse.tempSessionToken,
+        loginResponse.mfaOptions
+      )
       return
     }
-    
-    logger.debug('✅ Login successful')
-    
-    // Wait for auth store to update with user profile
-    const authStore = useAuthStore()
-    logger.debug('⏳ Waiting for user profile to load...')
-    let attempts = 0
-    while (!authStore.userProfile && attempts < 20) {
-      await new Promise(resolve => setTimeout(resolve, 100))
-      attempts++
-    }
-    
-    const user = authStore.userProfile
-    
-    if (!user) {
-      console.error('❌ User profile not loaded after login!')
-      loginError.value = 'Fehler beim Laden des Benutzerprofils. Bitte erneut einloggen.'
-      await logout()
-      return
-    }
-    
-    logger.debug('✅ User profile loaded:', user.email)
 
-    // Lade Tenant-Informationen
-    let redirectPath = '/dashboard' // Fallback
-    
-    if (user.tenant_id) {
-      logger.debug('🏢 Loading tenant info for tenant_id:', user.tenant_id)
-      
-      const { data: tenant, error: tenantError } = await supabase
-        .from('tenants')
-        .select('slug')
-        .eq('id', user.tenant_id)
-        .single()
-      
-      if (tenantError) {
-        console.error('❌ Error loading tenant:', tenantError)
-      } else if (tenant?.slug) {
-        logger.debug('✅ Found tenant slug:', tenant.slug)
-        
-        // Weiterleitung basierend auf Rolle
-        if (user.role === 'admin' || user.role === 'tenant_admin') {
-          redirectPath = '/admin'
-        } else if (user.role === 'staff') {
-          redirectPath = '/dashboard'
-        } else {
-          redirectPath = '/customer-dashboard'
-        }
+    // ✅ No MFA required - proceed with normal login
+    logger.debug('✅ No MFA required - proceeding with normal login')
+    isLoading.value = false
+
+    // Store session in auth store
+    const authStore = useAuthStore()
+    if (loginResponse.session) {
+      try {
+        await supabase.auth.setSession(loginResponse.session)
+        await router.push('/dashboard')
+      } catch (error: any) {
+        console.error('❌ Error setting session:', error)
+        loginError.value = 'Fehler beim Speichern der Sitzung'
       }
     }
-    
-    showSuccess('Erfolgreich angemeldet', 'Willkommen zurück!')
-    logger.debug('🔄 Redirecting to:', redirectPath)
-    router.push(redirectPath)
+    return
     
   } catch (error: any) {
     console.error('Login error:', error)
-    logger.debug('🔴 Login error caught:', error?.message)
-    
-    if (error.message?.includes('Invalid login credentials')) {
-      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.'
-    } else if (error.message?.includes('Email not confirmed')) {
-      loginError.value = 'Bitte bestätigen Sie Ihre E-Mail-Adresse zuerst. Prüfen Sie Ihren Posteingang.'
-    } else if (error.message?.includes('User not found')) {
-      loginError.value = 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.'
-    } else if (error.message?.includes('disabled')) {
-      loginError.value = 'Ihr Account wurde deaktiviert. Bitte kontaktieren Sie den Administrator.'
-    } else if (error.message?.includes('too many')) {
-      loginError.value = 'Zu viele Anmeldeversuche. Bitte versuchen Sie es in einigen Minuten erneut.'
-    } else if (error.message?.includes('network') || error.message?.includes('timeout')) {
-      loginError.value = 'Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung.'
-    } else {
-      loginError.value = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
-    }
-  } finally {
     isLoading.value = false
+    loginError.value = error?.message || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
   }
 }
 
