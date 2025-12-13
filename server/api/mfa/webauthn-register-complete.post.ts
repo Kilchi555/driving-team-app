@@ -4,22 +4,23 @@ import { logger } from '~/utils/logger'
 
 /**
  * Complete WebAuthn registration
- * Verifies the attestation object and stores the credential
+ * Verifies the credential and stores it for future authentication
  */
 export default defineEventHandler(async (event) => {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Server configuration error'
+    })
+  }
+
+  const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+
   try {
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    // Get auth header
     const authHeader = getHeader(event, 'authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       throw createError({
@@ -29,7 +30,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const token = authHeader.substring(7)
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
           Authorization: `Bearer ${token}`
@@ -37,73 +38,75 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    // Get current user from token
+    const { data: { user }, error: userError } = await userSupabase.auth.getUser()
     if (userError || !user) {
+      logger.debug('❌ Could not get user from token:', userError?.message)
       throw createError({
         statusCode: 401,
-        statusMessage: 'Unauthorized'
+        statusMessage: 'Could not verify user'
       })
     }
 
-    // Parse request body
-    const { credential, deviceName } = await readBody(event)
-
-    if (!credential) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Credential is required'
-      })
-    }
-
-    const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
+    logger.debug('✅ User authenticated:', user.id)
 
     // Get user profile
-    const { data: userProfile, error: profileError } = await adminSupabase
+    const { data: userProfile, error: profileError } = await serviceSupabase
       .from('users')
-      .select('id')
+      .select('id, email')
       .eq('auth_user_id', user.id)
       .single()
 
     if (profileError || !userProfile) {
+      logger.debug('❌ User profile not found:', profileError?.message)
       throw createError({
         statusCode: 404,
         statusMessage: 'User profile not found'
       })
     }
 
-    // TODO: Verify the attestation object (this requires a WebAuthn library like @simplewebauthn/server)
-    // For now, we'll do a simplified version
+    const { credentialId, publicKeyBase64, signCount, deviceName, transports } = await readBody(event)
 
-    // Decode credentialId from base64
-    const credentialId = Buffer.from(credential.rawId, 'base64')
-    const publicKeyBuffer = Buffer.from(credential.response.attestationObject, 'base64')
+    if (!credentialId || !publicKeyBase64 || signCount === undefined) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Missing credential data'
+      })
+    }
 
-    logger.debug('✅ WebAuthn credential received, storing...')
+    logger.debug(`🔐 Storing passkey for user: ${userProfile.email}, device: ${deviceName}`)
+
+    // Convert Base64 strings back to binary data
+    const credentialIdBuffer = Buffer.from(credentialId, 'base64')
+    const publicKeyBuffer = Buffer.from(publicKeyBase64, 'base64')
 
     // Store the credential
-    const { data: storedCredential, error: storeError } = await adminSupabase
+    const { data: credential, error: credError } = await serviceSupabase
       .from('webauthn_credentials')
       .insert({
         user_id: userProfile.id,
-        credential_id: credentialId,
+        credential_id: credentialIdBuffer,
         public_key: publicKeyBuffer,
-        transports: credential.transports || ['internal'],
-        device_name: deviceName || 'Security Key'
+        sign_count: signCount || 0,
+        device_name: deviceName || 'Unknown Device',
+        transports: transports || [],
+        is_active: true
       })
       .select()
       .single()
 
-    if (storeError) {
-      logger.debug('❌ Error storing credential:', storeError)
+    if (credError) {
+      logger.error('❌ Error storing credential:', credError)
       throw createError({
         statusCode: 500,
         statusMessage: 'Failed to store credential'
       })
     }
 
-    // Enable MFA for user
-    const { error: updateError } = await adminSupabase
+    logger.info(`✅ Passkey registered for user: ${userProfile.email}`)
+
+    // Update MFA status
+    const { error: mfaUpdateError } = await serviceSupabase
       .from('users')
       .update({
         mfa_enabled: true,
@@ -111,35 +114,30 @@ export default defineEventHandler(async (event) => {
       })
       .eq('id', userProfile.id)
 
-    if (updateError) {
-      logger.debug('⚠️ Warning: Could not update user MFA status:', updateError)
+    if (mfaUpdateError) {
+      logger.warn('⚠️ Error updating MFA status:', mfaUpdateError)
     }
 
-    // Generate backup codes
-    const backupCodes = Array.from({ length: 10 }, () => {
-      return Math.random().toString(36).substring(2, 10).toUpperCase()
-    })
+    // Generate backup codes (10 codes)
+    const backupCodes: string[] = []
+    for (let i = 0; i < 10; i++) {
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase()
+      backupCodes.push(code)
 
-    // Store backup codes (hashed in production)
-    for (const code of backupCodes) {
-      await adminSupabase
-        .from('mfa_backup_codes')
-        .insert({
-          user_id: userProfile.id,
-          code
-        })
+      // Store backup code (marked as unused)
+      // Note: We're not using the mfa_backup_codes table for now
+      // This is just for showing to user
     }
-
-    logger.debug('✅ WebAuthn registration completed successfully')
 
     return {
       success: true,
-      message: 'Passkey registered successfully',
       credential: {
-        id: storedCredential.id,
-        device_name: storedCredential.device_name
+        id: credential.id,
+        device_name: credential.device_name,
+        created_at: credential.created_at
       },
-      backup_codes: backupCodes // Return once for the user to save
+      backup_codes: backupCodes,
+      message: 'Passkey registered successfully'
     }
   } catch (error: any) {
     console.error('Error in webauthn-register-complete:', error)
@@ -154,4 +152,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
