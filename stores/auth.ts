@@ -38,6 +38,7 @@ const isAdmin = computed(() => {
 })
   const isStaff = computed(() => userRole.value === 'staff')
   const isClient = computed(() => userRole.value === 'client')
+  const isSuperAdmin = computed(() => userRole.value === 'super_admin')
   const hasProfile = computed(() => !!userProfile.value)
   
   const userDisplayName = computed(() => {
@@ -455,6 +456,7 @@ const isAdmin = computed(() => {
     isAdmin,
     isStaff,
     isClient,
+    isSuperAdmin,
     hasProfile,
     userDisplayName,
     userInitials,

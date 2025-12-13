@@ -369,18 +369,41 @@ const blockIpAddress = async (ipAddress: string) => {
   }
   
   try {
-    // This would require an API endpoint to actually block the IP
-    // For now, just show a message
-    alert('IP-Blockierung würde hier implementiert: ' + ipAddress)
-    logger.debug('🚫 Would block IP:', ipAddress)
-  } catch (error) {
+    const response = await $fetch('/api/security/block-ip', {
+      method: 'POST',
+      body: {
+        ipAddress
+      }
+    }) as any
+
+    if (response.success) {
+      alert(`IP-Adresse ${ipAddress} wurde blockiert.`)
+      logger.debug('✅ IP blocked:', ipAddress)
+      await loadSuspiciousAttempts()
+    }
+  } catch (error: any) {
     console.error('❌ Error blocking IP:', error)
+    alert(`Fehler beim Blockieren der IP: ${error.data?.statusMessage || error.message}`)
   }
 }
 
-const saveSettings = () => {
-  alert('Einstellungen würden hier gespeichert')
-  logger.debug('💾 Would save settings:', settings.value)
+const saveSettings = async () => {
+  try {
+    const response = await $fetch('/api/security/save-settings', {
+      method: 'POST',
+      body: {
+        settings: settings.value
+      }
+    }) as any
+
+    if (response.success) {
+      alert('Sicherheitseinstellungen wurden gespeichert!')
+      logger.debug('✅ Security settings saved:', settings.value)
+    }
+  } catch (error: any) {
+    console.error('❌ Error saving settings:', error)
+    alert(`Fehler beim Speichern: ${error.data?.statusMessage || error.message}`)
+  }
 }
 
 const formatDate = (dateString: string) => {
