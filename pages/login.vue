@@ -99,7 +99,7 @@
             
             <button
               type="button"
-              @click="() => { logger.debug('Button clicked'); showForgotPasswordModal = true; logger.debug('Modal set to:', showForgotPasswordModal.value); }"
+              @click="() => { logger.debug('Button clicked'); showForgotPasswordModal = true; logger.debug('Modal set to:', showForgotPasswordModal); }"
               class="text-sm text-blue-600 hover:underline hover:text-blue-800 cursor-pointer"
             >
               Passwort vergessen?
@@ -120,8 +120,8 @@
               background: currentTenant?.primary_color || '#2563eb',
               '--hover-color': (currentTenant?.primary_color || '#2563eb') + 'dd'
             }"
-            @mouseenter="$event.target.style.opacity = '0.9'"
-            @mouseleave="$event.target.style.opacity = '1'"
+            @mouseenter="($event.target as HTMLElement).style.opacity = '0.9'"
+            @mouseleave="($event.target as HTMLElement).style.opacity = '1'"
           >
             <span v-if="isLoading">Wird angemeldet...</span>
             <span v-else>Anmelden</span>
@@ -514,7 +514,7 @@ const handlePasswordReset = async () => {
 
 const handleLogout = async () => {
   try {
-    await logout(supabase)
+    await logout()
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
     // Zur Login-Seite weiterleiten
     navigateTo('/')
