@@ -90,29 +90,60 @@ ALTER TABLE public.mfa_verifications ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users_can_view_own_credentials"
 ON public.webauthn_credentials
 FOR SELECT
-USING (auth.uid()::text = (SELECT auth_user_id FROM public.users WHERE id = user_id));
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = user_id 
+    AND (users.auth_user_id = auth.uid() OR users.auth_user_id IS NULL)
+  )
+);
 
 CREATE POLICY "users_can_insert_own_credentials"
 ON public.webauthn_credentials
 FOR INSERT
-WITH CHECK (auth.uid()::text = (SELECT auth_user_id FROM public.users WHERE id = user_id));
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = user_id 
+    AND users.auth_user_id = auth.uid()
+  )
+);
 
 CREATE POLICY "users_can_delete_own_credentials"
 ON public.webauthn_credentials
 FOR DELETE
-USING (auth.uid()::text = (SELECT auth_user_id FROM public.users WHERE id = user_id));
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = user_id 
+    AND users.auth_user_id = auth.uid()
+  )
+);
 
 -- RLS Policies for webauthn_sessions
 CREATE POLICY "users_can_manage_own_sessions"
 ON public.webauthn_sessions
 FOR ALL
-USING (auth.uid()::text = (SELECT auth_user_id FROM public.users WHERE id = user_id) OR user_id IS NULL);
+USING (
+  user_id IS NULL OR
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = user_id 
+    AND users.auth_user_id = auth.uid()
+  )
+);
 
 -- RLS Policies for mfa_backup_codes
 CREATE POLICY "users_can_view_own_backup_codes"
 ON public.mfa_backup_codes
 FOR SELECT
-USING (auth.uid()::text = (SELECT auth_user_id FROM public.users WHERE id = user_id));
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = user_id 
+    AND users.auth_user_id = auth.uid()
+  )
+);
 
 -- Allow service role to create backup codes during registration
 CREATE POLICY "service_role_manage_backup_codes"
@@ -124,7 +155,13 @@ WITH CHECK (true);
 CREATE POLICY "users_can_view_own_verifications"
 ON public.mfa_verifications
 FOR SELECT
-USING (auth.uid()::text = (SELECT auth_user_id FROM public.users WHERE id = user_id));
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = user_id 
+    AND users.auth_user_id = auth.uid()
+  )
+);
 
 CREATE POLICY "service_role_log_verifications"
 ON public.mfa_verifications
