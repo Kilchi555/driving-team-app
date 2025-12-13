@@ -130,6 +130,15 @@ export const useTenantBranding = () => {
         throw new Error('Tenant slug is required')
       }
       
+      // Skip loading for system pages/routes
+      const systemSlugs = ['mfa', 'login', 'auth', 'register', 'onboarding']
+      if (systemSlugs.includes(tenantSlug)) {
+        logger.debug('⏭️ Skipping tenant branding load for system slug:', tenantSlug)
+        currentTenantBranding.value = null
+        error.value = null
+        return
+      }
+      
       logger.debug('🔍 loadTenantBranding: Starting client query for slug:', tenantSlug)
 
       const { data, error: queryError } = await supabase
