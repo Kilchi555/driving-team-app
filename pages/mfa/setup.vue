@@ -151,6 +151,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from '#imports'
 import { logger } from '~/utils/logger'
+import { useAuthFetch } from '~/composables/useAuthFetch'
 import { isWebAuthnSupported, isPlatformAuthenticatorAvailable, startRegistration, arrayBufferToBase64 } from '~/utils/webauthn'
 
 definePageMeta({
@@ -188,8 +189,10 @@ const registerPasskey = async () => {
   error.value = null
 
   try {
+    const { authFetch } = useAuthFetch()
+
     // Get registration challenge from server
-    const challengeResponse = await $fetch('/api/mfa/webauthn-register-start', {
+    const challengeResponse = await authFetch('/api/mfa/webauthn-register-start', {
       method: 'POST'
     }) as any
 
@@ -201,7 +204,7 @@ const registerPasskey = async () => {
     logger.debug('✅ Credential created by browser')
 
     // Send credential to server to complete registration
-    const completeResponse = await $fetch('/api/mfa/webauthn-register-complete', {
+    const completeResponse = await authFetch('/api/mfa/webauthn-register-complete', {
       method: 'POST',
       body: {
         credential,
