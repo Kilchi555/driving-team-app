@@ -128,9 +128,73 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.debug('✅ Login successful for user:', data.user.id)
+    logger.debug('✅ Passwort verified for user:', data.user.id)
 
-    // Log successful login
+    // 3. Check if user has MFA enabled
+    let mfaRequired = false
+    let userPasskeys: any[] = []
+
+    if (serviceRoleKey) {
+      try {
+        const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
+
+        // Check MFA status
+        const { data: userProfile, error: userError } = await adminSupabase
+          .from('users')
+          .select('id, mfa_enabled, mfa_required')
+          .eq('auth_user_id', data.user.id)
+          .single()
+
+        if (userProfile) {
+          mfaRequired = userProfile.mfa_enabled || userProfile.mfa_required
+
+          // If MFA is required, get list of passkeys
+          if (mfaRequired) {
+            const { data: credentials, error: credError } = await adminSupabase
+              .from('webauthn_credentials')
+              .select('id, device_name, created_at, last_used_at')
+              .eq('user_id', userProfile.id)
+              .eq('is_active', true)
+
+            if (!credError && credentials) {
+              userPasskeys = credentials
+            }
+
+            logger.debug(`🔐 MFA required for user ${data.user.id}. Passkeys: ${userPasskeys.length}`)
+          }
+        }
+      } catch (mfaCheckError: any) {
+        logger.warn('⚠️ Error checking MFA status:', mfaCheckError.message)
+        // Continue anyway - if we can't check, we skip MFA
+      }
+    }
+
+    // 4. If MFA is required, return interim response asking for MFA verification
+    if (mfaRequired) {
+      logger.debug(`⏳ Returning MFA challenge for user ${data.user.id}`)
+
+      return {
+        success: false,
+        requiresMfa: true,
+        mfaOptions: {
+          hasPasskeys: userPasskeys.length > 0,
+          passkeys: userPasskeys.map((p: any) => ({
+            id: p.id,
+            device_name: p.device_name,
+            last_used_at: p.last_used_at
+          })),
+          canUseSmsCode: true,
+          canUseEmailCode: true
+        },
+        tempSessionToken: data.session?.access_token,
+        user: {
+          id: data.user.id,
+          email: data.user.email
+        }
+      }
+    }
+
+    // 5. Log successful login (no MFA required)
     if (serviceRoleKey) {
       try {
         const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
@@ -149,9 +213,12 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    logger.debug('✅ Login successful for user (no MFA):', data.user.id)
+
     // Return session data
     return {
       success: true,
+      requiresMfa: false,
       user: {
         id: data.user.id,
         email: data.user.email,
@@ -179,4 +246,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
