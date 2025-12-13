@@ -34,7 +34,7 @@ CREATE INDEX IF NOT EXISTS webauthn_sessions_user_id_idx ON public.webauthn_sess
 CREATE INDEX IF NOT EXISTS webauthn_sessions_expires_at_idx ON public.webauthn_sessions(expires_at);
 CREATE INDEX IF NOT EXISTS webauthn_sessions_is_used_idx ON public.webauthn_sessions(is_used);
 
--- Create mfa_codes table for email/SMS backup codes
+-- Create mfa_backup_codes table for backup codes
 CREATE TABLE IF NOT EXISTS public.mfa_backup_codes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -45,6 +45,19 @@ CREATE TABLE IF NOT EXISTS public.mfa_backup_codes (
 
 CREATE INDEX IF NOT EXISTS mfa_backup_codes_user_id_idx ON public.mfa_backup_codes(user_id);
 CREATE INDEX IF NOT EXISTS mfa_backup_codes_code_idx ON public.mfa_backup_codes(code);
+
+-- Create mfa_email_codes table for temporary email codes
+CREATE TABLE IF NOT EXISTS public.mfa_email_codes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  code VARCHAR(10) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS mfa_email_codes_user_id_idx ON public.mfa_email_codes(user_id);
+CREATE INDEX IF NOT EXISTS mfa_email_codes_expires_at_idx ON public.mfa_email_codes(expires_at);
 
 -- Create mfa_verifications table to track MFA attempts
 CREATE TABLE IF NOT EXISTS public.mfa_verifications (
