@@ -10,8 +10,9 @@ export default defineEventHandler(async (event) => {
   try {
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
       throw createError({
         statusCode: 500,
         statusMessage: 'Server configuration error'
@@ -21,6 +22,7 @@ export default defineEventHandler(async (event) => {
     // Get auth header for current user
     const authHeader = getHeader(event, 'authorization')
     if (!authHeader?.startsWith('Bearer ')) {
+      logger.debug('❌ No authorization header')
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
@@ -28,7 +30,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const token = authHeader.substring(7)
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    
+    // Create client with user's token
+    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
           Authorization: `Bearer ${token}`
@@ -36,24 +40,19 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    // Get current user from token
+    const { data: { user }, error: userError } = await userSupabase.auth.getUser()
     if (userError || !user) {
+      logger.debug('❌ Could not get user from token:', userError?.message)
       throw createError({
         statusCode: 401,
-        statusMessage: 'Unauthorized'
+        statusMessage: 'Could not verify user'
       })
     }
+
+    logger.debug('✅ User authenticated:', user.id)
 
     // Get user profile
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceRoleKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
     const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
     const { data: userProfile, error: profileError } = await adminSupabase
       .from('users')
@@ -62,6 +61,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (profileError || !userProfile) {
+      logger.debug('❌ User profile not found:', profileError?.message)
       throw createError({
         statusCode: 404,
         statusMessage: 'User profile not found'
@@ -134,4 +134,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
