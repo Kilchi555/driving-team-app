@@ -1,6 +1,7 @@
 // composables/useStudents.ts
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 import { useSmsService } from '~/composables/useSmsService'
 import type { User } from '~/types'
 

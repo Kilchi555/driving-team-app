@@ -291,6 +291,7 @@
 
 import { ref, onMounted, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 import { useSmsService } from '~/composables/useSmsService'
 import { useUIStore } from '~/stores/ui'
 import EnhancedStudentModal from '~/components/EnhancedStudentModal.vue'
@@ -527,7 +528,7 @@ const resendOnboardingSms = async () => {
   
   try {
     const onboardingLink = `https://simy.ch/onboarding/${pendingCustomer.value.onboarding_token}`
-    const message = `Hallo ${pendingCustomer.value.first_name}! Willkommen bei deiner Fahrschule. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+    const message = `Hallo ${pendingCustomer.value.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
     
     const result = await sendSms(pendingCustomer.value.phone, message)
     

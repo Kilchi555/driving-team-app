@@ -255,13 +255,13 @@
 
 <script setup lang="ts">
 
-import { logger } from '~/utils/logger'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, definePageMeta, useHead, useRoute, navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 // Meta
 definePageMeta({
@@ -470,8 +470,8 @@ const handlePasswordReset = async () => {
         resetError.value = response.message
       } else {
         resetSuccess.value = resetContactMethod.value === 'email'
-          ? `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihren Posteingang.`
-          : `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihre SMS.`
+          ? `Wenn ein Benutzer mit ${contact} vorhanden ist, wird ihm ein Magic Link gesendet. Bitte überprüfen Sie Ihren Posteingang.`
+          : `Wenn ein Benutzer mit ${contact} vorhanden ist, wird ihm ein Magic Link gesendet. Bitte überprüfen Sie Ihre SMS.`
         
         resetForm.value.email = ''
         resetForm.value.phone = ''
