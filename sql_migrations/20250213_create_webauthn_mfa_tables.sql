@@ -86,6 +86,16 @@ ALTER TABLE public.webauthn_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mfa_backup_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mfa_verifications ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "users_can_view_own_credentials" ON public.webauthn_credentials;
+DROP POLICY IF EXISTS "users_can_insert_own_credentials" ON public.webauthn_credentials;
+DROP POLICY IF EXISTS "users_can_delete_own_credentials" ON public.webauthn_credentials;
+DROP POLICY IF EXISTS "users_can_manage_own_sessions" ON public.webauthn_sessions;
+DROP POLICY IF EXISTS "users_can_view_own_backup_codes" ON public.mfa_backup_codes;
+DROP POLICY IF EXISTS "service_role_manage_backup_codes" ON public.mfa_backup_codes;
+DROP POLICY IF EXISTS "users_can_view_own_verifications" ON public.mfa_verifications;
+DROP POLICY IF EXISTS "service_role_log_verifications" ON public.mfa_verifications;
+
 -- RLS Policies for webauthn_credentials
 CREATE POLICY "users_can_view_own_credentials"
 ON public.webauthn_credentials
