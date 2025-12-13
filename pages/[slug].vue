@@ -652,8 +652,8 @@ const handlePasswordReset = async () => {
         resetError.value = response.message
       } else {
         resetSuccess.value = resetContactMethod.value === 'email'
-          ? `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihren Posteingang.`
-          : `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihre SMS.`
+          ? `Wenn ein Benutzer mit ${contact} vorhanden ist, wird ihm ein Magic Link gesendet. Bitte überprüfen Sie Ihren Posteingang.`
+          : `Wenn ein Benutzer mit ${contact} vorhanden ist, wird ihm ein Magic Link gesendet. Bitte überprüfen Sie Ihre SMS.`
         
         resetForm.value.email = ''
         resetForm.value.phone = ''
@@ -784,7 +784,7 @@ const headerLogo = computed(() => getLogo('header'))
 // Check if this is a sub-route that should be handled by other pages
 const isSubRoute = computed(() => {
   const currentPath = route.path
-  return currentPath.includes('/services') || currentPath.includes('/register')
+  return currentPath.includes('/services') || currentPath.includes('/register') || currentPath.includes('/mfa') || currentPath.includes('/login') || currentPath.includes('/auth')
 })
 
 // Check if this is specifically a register route
