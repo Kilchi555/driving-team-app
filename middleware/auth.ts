@@ -87,14 +87,16 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     // ✅ NEU: Versuche zur Slug-Route weiterzuleiten, ansonsten zum Login
     // Extract slug from current path if available
     const slugMatch = to.path.match(/^\/([^\/]+)/)
-    if (slugMatch && slugMatch[1]) {
+    const systemRoutes = ['mfa', 'login', 'auth', 'register', 'onboarding', 'admin', 'tenant-admin', 'dashboard']
+    
+    if (slugMatch && slugMatch[1] && !systemRoutes.includes(slugMatch[1])) {
       const slug = slugMatch[1]
       logger.debug('Auth middleware: Redirecting to slug route:', `/${slug}`)
       return navigateTo(`/${slug}`)
     }
     
     // Fallback: Leite zum Login weiter
-    logger.debug('Auth middleware: No slug found, redirecting to login')
+    logger.debug('Auth middleware: No valid slug found, redirecting to login')
     return navigateTo('/login')
   }
 })
