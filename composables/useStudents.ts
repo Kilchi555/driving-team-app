@@ -322,7 +322,7 @@ export const useStudents = () => {
             }
           })
           
-          if (emailResponse.success) {
+          if ((emailResponse as any)?.success) {
             logger.debug('✅ Onboarding email sent to:', data.email)
             emailSuccess = true
           } else {
@@ -337,15 +337,18 @@ export const useStudents = () => {
         emailSuccess = false
       }
       
-      // Füge Status und Link zu den Daten hinzu
-      data.smsSuccess = smsSuccess
-      data.emailSuccess = emailSuccess
-      data.onboardingLink = onboardingLink
+      // Return mit Status und Link
+      const result = {
+        ...data,
+        smsSuccess,
+        emailSuccess,
+        onboardingLink
+      }
 
       // Zur lokalen Liste hinzufügen
       students.value.unshift(data)
 
-      return data
+      return result as any
 
     } catch (err: any) {
       error.value = err.message
