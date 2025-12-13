@@ -341,11 +341,29 @@ const handleLogin = async () => {
       logger.debug('✅ "Angemeldet bleiben" aktiviert - Session wird 7 Tage gespeichert')
     }
     
-    // Login mit Supabase
+    // Verwende Server-seitigen Login-Endpoint mit Rate Limiting
+    const loginResponse = await $fetch('/api/auth/login', {
+      method: 'POST',
+      body: {
+        email: loginForm.value.email,
+        password: loginForm.value.password
+      }
+    }).catch((error: any) => {
+      console.error('❌ Login API error:', error)
+      return null
+    }) as any
+
+    if (!loginResponse) {
+      console.error('❌ Login failed - no response from server')
+      loginError.value = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+      return
+    }
+
+    // Aktualisiere Auth Store mit Benutzer-Daten
     const loginSuccess = await login(loginForm.value.email, loginForm.value.password)
     
     if (!loginSuccess) {
-      console.error('❌ Login failed - no success returned')
+      console.error('❌ Auth store login failed')
       const authStore = useAuthStore()
       const errorMsg = authStore.errorMessage
       
