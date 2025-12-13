@@ -13,6 +13,36 @@ export default defineEventHandler(async (event) => {
     
     logger.debug('🔐 Login attempt from IP:', ipAddress)
     
+    // Check if IP is blocked
+    const supabaseUrl = process.env.SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (supabaseUrl && serviceRoleKey) {
+      const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
+      
+      try {
+        const { data: blockedIp, error } = await adminSupabase
+          .from('blocked_ip_addresses')
+          .select('id')
+          .eq('ip_address', ipAddress)
+          .is('unblocked_at', null)
+          .single()
+        
+        if (blockedIp && !error) {
+          logger.debug('🚫 Blocked IP detected:', ipAddress)
+          throw createError({
+            statusCode: 429,
+            statusMessage: 'Diese IP-Adresse wurde blockiert. Bitte kontaktieren Sie den Support.'
+          })
+        }
+      } catch (checkError: any) {
+        if (checkError.statusCode === 429) {
+          throw checkError
+        }
+        // Ignore "no rows returned" error - just means IP is not blocked
+      }
+    }
+    
     // Apply rate limiting (max 10 attempts per minute)
     const rateLimit = checkRateLimit(ipAddress, 'login')
     if (!rateLimit.allowed) {
