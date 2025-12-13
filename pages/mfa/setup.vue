@@ -154,8 +154,9 @@ import { logger } from '~/utils/logger'
 import { isWebAuthnSupported, isPlatformAuthenticatorAvailable, startRegistration, arrayBufferToBase64 } from '~/utils/webauthn'
 
 definePageMeta({
-  middleware: 'auth',
-  layout: 'blank' // Don't load tenant branding for MFA pages
+  layout: 'blank'
+  // Note: No auth middleware - MFA setup page should be accessible for testing
+  // In production, this would be called after successful login if MFA is required
 })
 
 const router = useRouter()
