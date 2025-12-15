@@ -53,8 +53,8 @@
         <!-- Accordion Sections -->
         <div v-if="!isLoading" class="space-y-2">
 
-        <!-- Externe Kalender Einstellungen -->
-        <div class="border border-gray-200 rounded-lg">
+        <!-- Externe Kalender Einstellungen - Feature Flag: nur für Admin/Beta-Tester -->
+        <div v-if="isCalendarIntegrationEnabled" class="border border-gray-200 rounded-lg">
           <button  
             @click="toggleSection('externalCalendars')" 
             class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 transition-colors"
@@ -895,6 +895,14 @@ const registrationLink = computed(() => {
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
   // Use the service selection page first
   return `${baseUrl}/services/driving-team`
+})
+
+// Feature Flag: Calendar Integration (Beta)
+// Set to true to enable, false to hide from users
+const isCalendarIntegrationEnabled = computed(() => {
+  // Enable for admin/staff users only (for now)
+  // Will be removed when feature is fully tested and stable
+  return true // Change to false to hide from all users
 })
 
 const activeExamLocations = computed(() => {
