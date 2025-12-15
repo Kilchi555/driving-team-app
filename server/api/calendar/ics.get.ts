@@ -140,10 +140,6 @@ export default defineEventHandler(async (event) => {
         const startTime = new Date(apt.start_time)
         const endTime = new Date(apt.end_time)
 
-        // Format timestamps as ICS format (YYYYMMDDTHHMMSSZ for UTC)
-        const startICS = formatICSDateTime(startTime)
-        const endICS = formatICSDateTime(endTime)
-
         // Build description with student info
         let description = ''
         let studentFullName = ''
@@ -164,15 +160,19 @@ export default defineEventHandler(async (event) => {
         // Build event with proper iOS-compatible formatting
         const event = `BEGIN:VEVENT
 UID:${eventUid}
-DTSTAMP;TZID=UTC;VALUE=DATE-TIME:${formatICSDateTime(new Date())}
-DTSTART;TZID=UTC;VALUE=DATE-TIME:${startICS}
-DTEND;TZID=UTC;VALUE=DATE-TIME:${endICS}
+DTSTAMP:${formatICSDateTime(new Date())}
+DTSTART;TZID=Europe/Zurich:${formatICSDateTimeLocal(startTime)}
+DTEND;TZID=Europe/Zurich:${formatICSDateTimeLocal(endTime)}
 SUMMARY:${sanitizeText(eventTitle)}
 DESCRIPTION:${sanitizeText(description)}
+LOCATION:Driving Lesson
 TRANSP:OPAQUE
-TZID:Europe/Zurich
 STATUS:${apt.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}
 SEQUENCE:0
+CREATED:${formatICSDateTime(new Date(apt.id))}
+LAST-MODIFIED:${formatICSDateTime(new Date())}
+X-MICROSOFT-CDO-BUSYSTATUS:BUSY
+CATEGORIES:Driving Lesson
 END:VEVENT`
 
         icsEvents.push(event)
@@ -182,12 +182,14 @@ END:VEVENT`
     // 5. Build complete ICS file
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Simy//Calendar//EN
+PRODID:-//Simy//Driving Lessons Calendar//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:${sanitizeText(calendarName)}
 X-WR-TIMEZONE:Europe/Zurich
 X-WR-CALDESC:Driving lessons for ${sanitizeText(staffUser.first_name)} ${sanitizeText(staffUser.last_name)}
+X-WR-RELCALID:${staffUser.id}@simy.ch
+REFRESH-INTERVAL;VALUE=DURATION:PT5M
 BEGIN:VTIMEZONE
 TZID:Europe/Zurich
 BEGIN:DAYLIGHT
@@ -249,6 +251,21 @@ function formatICSDateTime(date: Date): string {
   const seconds = String(date.getUTCSeconds()).padStart(2, '0')
 
   return `${year}${month}${day}T${hours}${minutes}${seconds}Z`
+}
+
+/**
+ * Format date to ICS local time format (YYYYMMDDTHHMMSS) for use with TZID
+ * iOS Calendar prefers this format when TZID is specified
+ */
+function formatICSDateTimeLocal(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+
+  return `${year}${month}${day}T${hours}${minutes}${seconds}`
 }
 
 /**
