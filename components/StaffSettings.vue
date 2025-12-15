@@ -837,7 +837,9 @@ const loadCalendarToken = async () => {
     
     if (tokenData?.token) {
       const baseUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://simy.ch'
-      const calendarLink = `${baseUrl}/api/calendar/ics?token=${tokenData.token}`
+      // Convert to webcals:// for iOS Calendar compatibility
+      const domain = baseUrl.replace('https://', '').replace('http://', '')
+      const calendarLink = `webcals://${domain}/api/calendar/ics?token=${tokenData.token}`
       calendarTokenLink.value = calendarLink
       logger.debug('✅ Calendar token loaded:', calendarLink)
     } else {
