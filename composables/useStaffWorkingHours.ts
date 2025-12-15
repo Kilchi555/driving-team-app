@@ -232,14 +232,14 @@ export const useStaffWorkingHours = () => {
           })
         }
         
-        // 3. Nicht-Arbeitszeit: Arbeitsende bis 23:59 (UTC)
-        if (utcEndTime !== '23:59') {
+        // 3. Nicht-Arbeitszeit: Arbeitsende bis 22:59 (UTC)
+        if (utcEndTime !== '22:59') {
           entries.push({
             staff_id: staffId,
             tenant_id: userData.tenant_id,
             day_of_week: workingHour.day_of_week,
             start_time: utcEndTime,
-            end_time: '23:59',
+            end_time: '22:59',
             is_active: false
           })
         }
@@ -250,7 +250,7 @@ export const useStaffWorkingHours = () => {
           tenant_id: userData.tenant_id,
           day_of_week: workingHour.day_of_week,
           start_time: '00:00',
-          end_time: '23:59',
+          end_time: '22:59',
           is_active: false
         })
       }
@@ -365,14 +365,14 @@ export const useStaffWorkingHours = () => {
           currentTime = block.end_time
         })
         
-        // Nach dem letzten Block bis 23:59
-        if (currentTime < '23:59') {
+        // Nach dem letzten Block bis 22:59
+        if (currentTime < '22:59') {
           entries.push({
             staff_id: staffId,
             tenant_id: userData.tenant_id,
             day_of_week: workingDay.day_of_week,
             start_time: currentTime,
-            end_time: '23:59',
+            end_time: '22:59',
             is_active: false
           })
         }
@@ -383,7 +383,7 @@ export const useStaffWorkingHours = () => {
           tenant_id: userData.tenant_id,
           day_of_week: workingDay.day_of_week,
           start_time: '00:00',
-          end_time: '23:59',
+          end_time: '22:59',
           is_active: false
         })
       }
