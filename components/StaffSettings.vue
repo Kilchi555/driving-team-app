@@ -424,45 +424,74 @@
               <h4 class="text-md font-semibold text-gray-900">Handy-Kalender Integration</h4>
             </div>
             
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div class="flex items-start space-x-2">
-                <span class="text-yellow-600 text-lg">⚠️</span>
-                <div class="text-sm text-yellow-800">
-                  <strong>Feature in Entwicklung</strong><br>
-                  Die Handy-Kalender Integration wird aktuell entwickelt und ist noch nicht verfügbar. 
-                  Diese Funktion wird in einem zukünftigen Update freigeschaltet.
-                </div>
-              </div>
+            <!-- Loading State -->
+            <div v-if="isLoadingCalendarToken" class="flex items-center space-x-2 text-gray-500">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+              <span class="text-sm">Laden...</span>
             </div>
             
-            <div class="space-y-3 opacity-50 pointer-events-none">
+            <!-- No Token Yet -->
+            <div v-else-if="!calendarTokenLink" class="space-y-3">
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start space-x-2">
+                  <span class="text-blue-600 text-lg">ℹ️</span>
+                  <div class="text-sm text-blue-800">
+                    <strong>Kalender-Link erstellen</strong><br>
+                    Generieren Sie einen persönlichen Link um Ihre Termine in Ihrem Handy-Kalender anzuzeigen.
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                @click="generateCalendarToken"
+                :disabled="isGeneratingToken"
+                class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              >
+                <span v-if="isGeneratingToken" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                <span>{{ isGeneratingToken ? 'Generiere...' : 'Kalender-Link generieren' }}</span>
+              </button>
+            </div>
+            
+            <!-- Has Token -->
+            <div v-else class="space-y-3">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Kalender-Link:</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Ihr Kalender-Link:</label>
                 <div class="flex space-x-2">
                   <input
-                    :value="calendarLink"
+                    :value="calendarTokenLink"
                     readonly
-                    disabled
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-600"
                   >
                   <button
-                    disabled
-                    class="px-4 py-2 bg-gray-400 text-white rounded text-sm cursor-not-allowed"
+                    @click="copyCalendarLink"
+                    class="px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
                   >
                     Kopieren
                   </button>
                 </div>
               </div>
               
-              <div class="bg-blue-50 p-3 rounded-lg">
+              <div class="bg-green-50 p-3 rounded-lg">
                 <div class="flex items-start space-x-2">
-                  <span class="text-blue-600 text-sm">💡</span>
-                  <div class="text-sm text-blue-800">
-                    <strong>Anleitung:</strong> Fügen Sie diesen Link in Ihren Handy-Kalender ein (Google Calendar, Apple Calendar, etc.). 
-                    Alle Ihre Termine werden automatisch synchronisiert.
+                  <span class="text-green-600 text-sm">✅</span>
+                  <div class="text-sm text-green-800">
+                    <strong>Anleitung iPhone:</strong><br>
+                    1. Kopieren Sie den Link<br>
+                    2. Öffnen Sie Einstellungen → Kalender → Accounts<br>
+                    3. Tippen Sie auf "Account hinzufügen" → "Kalenderabo hinzufügen"<br>
+                    4. Fügen Sie den Link ein und bestätigen Sie
                   </div>
                 </div>
               </div>
+              
+              <button
+                @click="generateCalendarToken"
+                :disabled="isGeneratingToken"
+                class="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                <span v-if="isGeneratingToken" class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></span>
+                <span>{{ isGeneratingToken ? 'Generiere...' : 'Neuen Link generieren (alter wird ungültig)' }}</span>
+              </button>
             </div>
           </div>
 
@@ -778,11 +807,98 @@ const availableLocationsForSignup = computed(() => {
 })
 
 // Calendar Integration Links
+const calendarTokenLink = ref<string | null>(null)
+const isGeneratingToken = ref(false)
+const isLoadingCalendarToken = ref(false)
+
+// Legacy computed (fallback)
 const calendarLink = computed(() => {
+  if (calendarTokenLink.value) return calendarTokenLink.value
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
   const staffId = props.currentUser?.id
   return `${baseUrl}/api/calendar/ics?staff_id=${staffId}`
 })
+
+// Load existing calendar token on mount
+const loadCalendarToken = async () => {
+  if (!props.currentUser?.id) return
+  
+  isLoadingCalendarToken.value = true
+  try {
+    logger.debug('📅 Loading existing calendar token...')
+    const supabase = getSupabase()
+    
+    const { data: tokenData, error: tokenError } = await supabase
+      .from('calendar_tokens')
+      .select('token')
+      .eq('staff_id', props.currentUser.id)
+      .eq('is_active', true)
+      .maybeSingle()
+    
+    if (tokenError) {
+      logger.warn('⚠️ Error loading calendar token:', tokenError.message)
+      return
+    }
+    
+    if (tokenData?.token) {
+      const baseUrl = 'https://simy.ch'
+      const domain = baseUrl.replace('https://', '')
+      calendarTokenLink.value = `webcals://${domain}/api/calendar/ics?token=${tokenData.token}`
+      logger.debug('✅ Calendar token loaded:', calendarTokenLink.value)
+    } else {
+      logger.debug('ℹ️ No active calendar token found')
+      calendarTokenLink.value = null
+    }
+  } catch (error: any) {
+    logger.error('❌ Error loading calendar token:', error)
+  } finally {
+    isLoadingCalendarToken.value = false
+  }
+}
+
+// Generate new calendar token (invalidates old one)
+const generateCalendarToken = async () => {
+  if (!props.currentUser?.id) return
+  
+  isGeneratingToken.value = true
+  try {
+    const supabase = getSupabase()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.access_token) {
+      throw new Error('Nicht authentifiziert')
+    }
+    
+    const response: any = await $fetch('/api/calendar/generate-token', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
+    })
+    
+    if (response?.success && response?.calendarLink) {
+      calendarTokenLink.value = response.calendarLink
+      logger.debug('✅ Calendar token generated:', response.calendarLink)
+      showSuccessToast('Kalender-Link generiert', 'Neuer Link wurde erstellt. Der alte Link ist nun ungültig.')
+    } else {
+      throw new Error(response?.message || 'Token generation failed')
+    }
+  } catch (error: any) {
+    logger.error('❌ Error generating calendar token:', error)
+    showErrorToast('Fehler', error?.message || 'Kalender-Link konnte nicht generiert werden')
+  } finally {
+    isGeneratingToken.value = false
+  }
+}
+
+// Copy calendar link to clipboard
+const copyCalendarLink = async () => {
+  if (!calendarTokenLink.value) {
+    showErrorToast('Fehler', 'Bitte generieren Sie zuerst einen Kalender-Link')
+    return
+  }
+  await copyToClipboard(calendarTokenLink.value, 'Kalender-Link')
+}
 
 const registrationLink = computed(() => {
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
@@ -1951,6 +2067,9 @@ onMounted(async () => {
   
   // Initialize working hours form after data is loaded
   initializeWorkingHoursForm()
+  
+  // Load calendar token for calendar integration
+  await loadCalendarToken()
 })
 
 // Cleanup - Auto-Save Timeouts löschen
