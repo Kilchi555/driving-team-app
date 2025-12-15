@@ -109,9 +109,7 @@ export default defineEventHandler(async (event) => {
         if (apt.users) {
           studentFullName = `${apt.users.first_name} ${apt.users.last_name}`
           description = `Student: ${studentFullName}`
-          if (apt.users.phone) {
-            description += `\\nPhone: ${apt.users.phone}`
-          }
+          // Removed: phone and email for privacy
         }
 
         // Create unique ID for event (using appointment ID)
@@ -130,7 +128,6 @@ DTSTART:${startICS}
 DTEND:${endICS}
 SUMMARY:${sanitizeText(eventTitle)}
 DESCRIPTION:${sanitizeText(description)}
-LOCATION:${sanitizeText(apt.users?.email || '')}
 STATUS:${apt.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}
 SEQUENCE:0
 END:VEVENT`
