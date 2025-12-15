@@ -225,9 +225,9 @@ END:VCALENDAR`
       .slice(0, 16)
     
     setHeader(event, 'ETag', `"${contentHash}"`)
-    setHeader(event, 'Cache-Control', 'public, max-age=300, must-revalidate') // Refresh every 5 minutes
+    setHeader(event, 'Cache-Control', 'public, max-age=30, must-revalidate') // Refresh every 30 seconds
     setHeader(event, 'Last-Modified', new Date().toUTCString())
-    setHeader(event, 'X-Publish-Interval', '300') // Hint to calendar apps: refresh every 5 minutes
+    setHeader(event, 'X-Publish-Interval', '30') // Hint to calendar apps: refresh every 30 seconds
 
     return icsContent
   } catch (error: any) {
