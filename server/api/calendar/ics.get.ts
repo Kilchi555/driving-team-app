@@ -120,14 +120,16 @@ export default defineEventHandler(async (event) => {
           ? `${apt.title || 'Appointment'} - ${studentFullName}`
           : apt.title || 'Appointment'
 
-        // Build event
+        // Build event with proper iOS-compatible formatting
         const event = `BEGIN:VEVENT
 UID:${eventUid}
-DTSTAMP:${formatICSDateTime(new Date())}
-DTSTART:${startICS}
-DTEND:${endICS}
+DTSTAMP;TZID=UTC;VALUE=DATE-TIME:${formatICSDateTime(new Date())}
+DTSTART;TZID=UTC;VALUE=DATE-TIME:${startICS}
+DTEND;TZID=UTC;VALUE=DATE-TIME:${endICS}
 SUMMARY:${sanitizeText(eventTitle)}
 DESCRIPTION:${sanitizeText(description)}
+TRANSP:OPAQUE
+TZID:Europe/Zurich
 STATUS:${apt.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}
 SEQUENCE:0
 END:VEVENT`
