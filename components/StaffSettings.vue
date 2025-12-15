@@ -798,6 +798,57 @@ const availableLocationsForSignup = computed(() => {
 const isGeneratingToken = ref(false)
 const calendarTokenLink = ref<string | null>(null)
 
+const loadCalendarToken = async () => {
+  try {
+    logger.debug('📅 Loading existing calendar token...')
+    
+    const supabase = getSupabase()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      logger.warn('⚠️ Could not get current user for calendar token')
+      return
+    }
+    
+    // Get user profile to find their user_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .single()
+    
+    if (profileError || !userProfile) {
+      logger.warn('⚠️ Could not get user profile for calendar token')
+      return
+    }
+    
+    // Load active calendar token from database
+    const { data: tokenData, error: tokenError } = await supabase
+      .from('calendar_tokens')
+      .select('token')
+      .eq('staff_id', userProfile.id)
+      .eq('is_active', true)
+      .maybeSingle()
+    
+    if (tokenError) {
+      logger.warn('⚠️ Error loading calendar token:', tokenError.message)
+      return
+    }
+    
+    if (tokenData?.token) {
+      const baseUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://simy.ch'
+      const calendarLink = `${baseUrl}/api/calendar/ics?token=${tokenData.token}`
+      calendarTokenLink.value = calendarLink
+      logger.debug('✅ Calendar token loaded:', calendarLink)
+    } else {
+      logger.debug('ℹ️ No active calendar token found')
+      calendarTokenLink.value = null
+    }
+  } catch (error: any) {
+    logger.error('❌ Error loading calendar token:', error)
+  }
+}
+
 const generateCalendarToken = async () => {
   isGeneratingToken.value = true
   try {
@@ -1994,6 +2045,7 @@ onMounted(async () => {
   await loadData()
   await loadWorkingHoursData()
   await loadExamLocations()
+  await loadCalendarToken() // Load existing calendar token
   
   // Load working hours from composable
   if (props.currentUser?.id) {
