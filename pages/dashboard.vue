@@ -137,6 +137,20 @@ const refreshPendingData = async () => {
   }
 }
 
+// NEU: Nur Kalender neu laden (für Settings-Updates, ohne Modal zu öffnen)
+const refreshCalendarOnly = async () => {
+  logger.debug('🔄 Refreshing calendar only (settings updated)...')
+  
+  try {
+    if (calendarRef.value && 'refreshCalendar' in calendarRef.value) {
+      await (calendarRef.value as any).refreshCalendar?.()
+      logger.debug('✅ Calendar refreshed')
+    }
+  } catch (err) {
+    console.error('❌ Error refreshing calendar:', err)
+  }
+}
+
 // NEU: Zentrale Funktion zum kompletten Neu-Laden aller Dashboard-Daten
 const reloadDashboardData = async () => {
   logger.debug('🔄 Reloading all dashboard data...')
@@ -154,13 +168,8 @@ const reloadDashboardData = async () => {
     await refreshPendingData()
     logger.debug('✅ Pending data reloaded')
     
-    // 3. Falls unbestätigte Termine (24h) existieren: Modal öffnen auf Tab "unconfirmed"
-    if ((unconfirmedNext24hCount?.value || 0) > 0) {
-      logger.debug('🔔 Opening Pendenzen modal for unconfirmed appointments within 24h:', unconfirmedNext24hCount.value)
-      // @ts-ignore - defaultPendenzenTab may be read-only computed
-      defaultPendenzenTab.value = 'unconfirmed'
-      showPendenzen.value = true
-    }
+    // ENTFERNT: Modal wird NICHT mehr automatisch geöffnet bei jedem Reload
+    // Das war störend wenn man nur Arbeitszeiten ändert
     
     logger.debug('✅ Dashboard reload complete')
   } catch (err) {
@@ -501,7 +510,7 @@ onUnmounted(() => {
     v-if="showStaffSettings && currentUser" 
     :current-user="currentUser"
     @close="showStaffSettings = false"
-    @settings-updated="reloadDashboardData"
+    @settings-updated="refreshCalendarOnly"
 />
 </template>
 
