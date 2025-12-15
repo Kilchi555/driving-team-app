@@ -801,8 +801,19 @@ const calendarTokenLink = ref<string | null>(null)
 const generateCalendarToken = async () => {
   isGeneratingToken.value = true
   try {
+    // Get Supabase session for auth header
+    const supabase = getSupabase()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.access_token) {
+      throw new Error('Nicht authentifiziert')
+    }
+
     const response: any = await $fetch('/api/calendar/generate-token', {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
     })
 
     if (response?.success && response?.calendarLink) {
