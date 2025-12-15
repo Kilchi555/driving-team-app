@@ -262,7 +262,7 @@ export const useStudents = () => {
           id: userId,
           auth_user_id: null, // Erst nach Onboarding gesetzt
           tenant_id: tenantId, // ✅ FIX: tenant_id hinzufügen
-          email: studentData.email || '', // ✅ FIX: Leerer String statt null
+          email: studentData.email && studentData.email.trim() !== '' ? studentData.email.trim() : null, // ✅ FIX: null statt leerer String für UNIQUE Constraint
           role: 'client',
           is_active: false, // Inaktiv bis Onboarding abgeschlossen
           onboarding_status: 'pending',
@@ -292,29 +292,33 @@ export const useStudents = () => {
       try {
         onboardingLink = `https://simy.ch/onboarding/${onboardingToken}`
         
+        // Sanitize phone und email - stelle sicher dass sie Strings sind
+        const cleanPhone = data.phone ? String(data.phone).trim() : ''
+        const cleanEmail = data.email ? String(data.email).trim() : ''
+        
         // Entscheide: SMS wenn Telefon vorhanden, sonst E-Mail
-        if (data.phone && data.phone.trim() !== '') {
+        if (cleanPhone !== '') {
           // ✅ SMS-Versand
-        const { sendSms } = useSmsService()
-        const message = `Hallo ${data.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
-        
-        const smsResult = await sendSms(data.phone, message)
-        
-        if (smsResult.success) {
-          logger.debug('✅ Onboarding SMS sent to:', data.phone, 'SID:', smsResult.data?.sid)
-          smsSuccess = true
-        } else {
-          console.warn('⚠️ SMS sending failed:', smsResult.error)
-          smsSuccess = false
-        }
-        } else if (data.email && data.email.trim() !== '') {
+          const { sendSms } = useSmsService()
+          const message = `Hallo ${data.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+          
+          const smsResult = await sendSms(cleanPhone, message)
+          
+          if (smsResult.success) {
+            logger.debug('✅ Onboarding SMS sent to:', cleanPhone, 'SID:', smsResult.data?.sid)
+            smsSuccess = true
+          } else {
+            console.warn('⚠️ SMS sending failed:', smsResult.error)
+            smsSuccess = false
+          }
+        } else if (cleanEmail !== '') {
           // ✅ E-Mail-Versand
-          logger.debug('📧 Sending onboarding email to:', data.email)
+          logger.debug('📧 Sending onboarding email to:', cleanEmail)
           
           const emailResponse = await $fetch('/api/students/send-onboarding-email', {
             method: 'POST',
             body: {
-              email: data.email,
+              email: cleanEmail,
               firstName: data.first_name || 'Kunde',
               lastName: data.last_name || '',
               onboardingLink: onboardingLink,
@@ -323,7 +327,7 @@ export const useStudents = () => {
           })
           
           if ((emailResponse as any)?.success) {
-            logger.debug('✅ Onboarding email sent to:', data.email)
+            logger.debug('✅ Onboarding email sent to:', cleanEmail)
             emailSuccess = true
           } else {
             console.warn('⚠️ Email sending failed')
