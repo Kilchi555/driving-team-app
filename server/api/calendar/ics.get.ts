@@ -170,7 +170,7 @@ END:VCALENDAR`
     // Set response headers for calendar file download
     setHeader(event, 'Content-Type', 'text/calendar; charset=utf-8')
     setHeader(event, 'Content-Disposition', `attachment; filename="calendar-${staffUser.id}.ics"`)
-    setHeader(event, 'Cache-Control', 'public, max-age=3600') // Cache for 1 hour
+    setHeader(event, 'Cache-Control', 'no-cache, max-age=5') // Update every 5 seconds like carzi
 
     return icsContent
   } catch (error: any) {
