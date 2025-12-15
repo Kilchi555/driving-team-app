@@ -18,25 +18,61 @@ export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
     const staffId = query.staff_id as string
+    const calendarToken = query.token as string
 
-    if (!staffId) {
-      logger.warn('❌ No staff_id provided to calendar endpoint')
+    // Either staff_id OR token must be provided
+    if (!staffId && !calendarToken) {
+      logger.warn('❌ No staff_id or token provided to calendar endpoint')
       return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Simy//Calendar//EN\r\nEND:VCALENDAR'
     }
 
-    logger.debug(`📅 Generating calendar for staff: ${staffId}`)
+    logger.debug(`📅 Generating calendar for: ${staffId ? 'staff_id=' + staffId : 'token=' + calendarToken}`)
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+
+    let resolvedStaffId = staffId
+
+    // If token is provided, validate and resolve to staff_id
+    if (calendarToken && !staffId) {
+      logger.debug(`🔑 Validating token: ${calendarToken.substring(0, 8)}...`)
+
+      const { data: tokenData, error: tokenError } = await serviceSupabase
+        .from('calendar_tokens')
+        .select('staff_id, last_used_at')
+        .eq('token', calendarToken)
+        .eq('is_active', true)
+        .single()
+
+      if (tokenError || !tokenData) {
+        logger.warn(`❌ Invalid or expired token`)
+        return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Simy//Calendar//EN\r\nEND:VCALENDAR'
+      }
+
+      resolvedStaffId = tokenData.staff_id
+
+      // Update last_used_at
+      await serviceSupabase
+        .from('calendar_tokens')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('token', calendarToken)
+
+      logger.debug(`✅ Token validated, staff_id: ${resolvedStaffId}`)
+    }
+
+    if (!resolvedStaffId) {
+      logger.warn('❌ No valid staff_id found')
+      return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Simy//Calendar//EN\r\nEND:VCALENDAR'
+    }
 
     // 1. Get staff member info
     const { data: staffUser, error: staffError } = await serviceSupabase
       .from('users')
       .select('id, first_name, last_name, email, tenant_id')
-      .eq('id', staffId)
+      .eq('id', resolvedStaffId)
       .single()
 
     if (staffError || !staffUser) {
-      logger.warn(`❌ Staff user not found: ${staffId}`)
+      logger.warn(`❌ Staff user not found: ${resolvedStaffId}`)
       return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Simy//Calendar//EN\r\nEND:VCALENDAR'
     }
 
