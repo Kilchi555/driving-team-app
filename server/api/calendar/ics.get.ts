@@ -112,7 +112,7 @@ export default defineEventHandler(async (event) => {
           phone
         )
       `)
-      .eq('staff_id', staffId)
+      .eq('staff_id', resolvedStaffId)
       .gte('start_time', today.toISOString())
       .lte('start_time', nextYear.toISOString())
       .is('deleted_at', null)
