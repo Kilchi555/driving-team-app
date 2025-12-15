@@ -87,6 +87,28 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Auto-generate calendar token for external instructor (if needed for calendar)
+    try {
+      const calendarToken = Math.random()
+        .toString(36)
+        .substring(2, 15) + 
+        Math.random()
+          .toString(36)
+          .substring(2, 15)
+      
+      await supabase
+        .from('calendar_tokens')
+        .insert({
+          staff_id: userData.id,
+          token: calendarToken,
+          is_active: true
+        })
+      
+      console.log('✅ Calendar token auto-generated for external instructor:', userData.id)
+    } catch (tokenErr) {
+      console.warn('⚠️ Calendar token generation failed (non-fatal):', tokenErr)
+    }
+
     // Send invitation email
     const { error: inviteError } = await supabase.auth.admin.generateLink({
       type: 'invite',

@@ -143,7 +143,29 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ User profile created:', newUser.id)
 
-    // 4. Store categories if provided
+    // 4. Auto-generate calendar token for staff
+    try {
+      const calendarToken = Math.random()
+        .toString(36)
+        .substring(2, 15) + 
+        Math.random()
+          .toString(36)
+          .substring(2, 15)
+      
+      await serviceSupabase
+        .from('calendar_tokens')
+        .insert({
+          staff_id: newUser.id,
+          token: calendarToken,
+          is_active: true
+        })
+      
+      logger.debug('✅ Calendar token auto-generated for staff:', newUser.id)
+    } catch (tokenErr) {
+      console.warn('⚠️ Calendar token generation failed (non-fatal):', tokenErr)
+    }
+
+    // 5. Store categories if provided
     if (selectedCategories && selectedCategories.length > 0) {
       try {
         const categoryInserts = selectedCategories.map((code: string) => ({
@@ -162,7 +184,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 5. Mark invitation as accepted
+    // 6. Mark invitation as accepted
     await serviceSupabase
       .from('staff_invitations')
       .update({

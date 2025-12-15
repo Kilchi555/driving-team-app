@@ -74,6 +74,19 @@ export default defineEventHandler(async (event) => {
 
     logger.debug(`✅ User is staff: ${userProfile.role}`)
 
+    // Invalidate old token (if exists)
+    try {
+      await serviceSupabase
+        .from('calendar_tokens')
+        .update({ is_active: false })
+        .eq('staff_id', userProfile.id)
+        .eq('is_active', true)
+      
+      logger.debug(`ℹ️ Old calendar token invalidated for staff: ${userProfile.email}`)
+    } catch (invalidateErr) {
+      console.warn('⚠️ Failed to invalidate old token (continuing):', invalidateErr)
+    }
+
     // Generate random token (32 chars, alphanumeric)
     const calendarToken = Math.random()
       .toString(36)
@@ -81,29 +94,6 @@ export default defineEventHandler(async (event) => {
       Math.random()
         .toString(36)
         .substring(2, 15)
-
-    // Check if token already exists
-    const { data: existingToken, error: existingError } = await serviceSupabase
-      .from('calendar_tokens')
-      .select('token')
-      .eq('staff_id', userProfile.id)
-      .eq('is_active', true)
-      .single()
-
-    if (existingToken && !existingError) {
-      // Return existing token
-      logger.debug(`ℹ️ Using existing token for staff: ${userProfile.email}`)
-      
-      const baseUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://simy.ch'
-      const calendarLink = `${baseUrl}/api/calendar/ics?token=${existingToken.token}`
-
-      return {
-        success: true,
-        token: existingToken.token,
-        calendarLink: calendarLink,
-        message: 'Existing token returned'
-      }
-    }
 
     // Store new token in database
     const { error: insertError } = await serviceSupabase
@@ -122,7 +112,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.info(`✅ Calendar token generated for staff: ${userProfile.email}`)
+    logger.info(`✅ New calendar token generated for staff: ${userProfile.email}`)
 
     const baseUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://simy.ch'
     const calendarLink = `${baseUrl}/api/calendar/ics?token=${calendarToken}`
@@ -131,7 +121,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       token: calendarToken,
       calendarLink: calendarLink,
-      message: 'Calendar token generated successfully'
+      message: 'New calendar token generated and previous token invalidated'
     }
   } catch (error: any) {
     console.error('Error generating calendar token:', error)
