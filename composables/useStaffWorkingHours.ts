@@ -131,16 +131,20 @@ export const useStaffWorkingHours = () => {
       }
       
       // Erst alle bestehenden Einträge für diesen Tag löschen
-      const { error: deleteError } = await supabase
+      // WICHTIG: .select() hinzufügen um zu prüfen ob wirklich gelöscht wurde!
+      const { data: deletedRows, error: deleteError } = await supabase
         .from('staff_working_hours')
         .delete()
         .eq('staff_id', staffId)
         .eq('day_of_week', workingHour.day_of_week)
+        .select()
       
       if (deleteError) {
         console.error('❌ Error deleting existing hours:', deleteError)
         throw deleteError
       }
+      
+      logger.debug(`🗑️ Deleted ${deletedRows?.length || 0} existing entries for day ${workingHour.day_of_week}`)
       
       const entries = []
       
@@ -231,15 +235,24 @@ export const useStaffWorkingHours = () => {
       }
       
       // Erst alle bestehenden Einträge für diesen Tag löschen
-      const { error: deleteError } = await supabase
+      // WICHTIG: .select() hinzufügen um zu prüfen ob wirklich gelöscht wurde!
+      const { data: deletedRows, error: deleteError } = await supabase
         .from('staff_working_hours')
         .delete()
         .eq('staff_id', staffId)
         .eq('day_of_week', workingDay.day_of_week)
+        .select()
       
       if (deleteError) {
         console.error('❌ Error deleting existing hours:', deleteError)
         throw deleteError
+      }
+      
+      logger.debug(`🗑️ Deleted ${deletedRows?.length || 0} existing entries for day ${workingDay.day_of_week}`)
+      
+      // Wenn RLS das Löschen blockiert hat, warnen
+      if (deletedRows && deletedRows.length === 0) {
+        logger.debug('⚠️ No rows deleted - RLS might be blocking DELETE operation')
       }
       
       const entries = []

@@ -608,7 +608,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, reactive } from 'vue'
 import { logger } from '~/utils/logger'
 import { navigateTo } from '#app/composables/router'
 import { getSupabase } from '~/utils/supabase'
@@ -1795,33 +1795,60 @@ const autoSaveWorkingHour = async (dayOfWeek: number) => {
 }
 
 // Auto-Save für Working Day mit mehreren Blöcken
+// Debounce-Timeout-IDs pro Tag
+const autoSaveTimeouts = ref<Record<number, NodeJS.Timeout>>({})
+// Flag um Race Conditions zu verhindern
+const isAutoSaveInProgress = ref(false)
+
 const autoSaveWorkingDay = async (dayOfWeek: number) => {
   if (!props.currentUser?.id) return
   
-  isSavingWorkingHours.value = true
-  try {
-    const dayData = workingDayForm.value[dayOfWeek]
-    logger.debug(`💾 Auto-saving working day ${dayOfWeek}:`, dayData)
-    
-    await saveWorkingDay(props.currentUser.id, dayData)
-    
-    logger.debug(`✅ Working day ${dayOfWeek} auto-saved successfully`)
-    
-    // Reload working hours to update calendar
-    await loadWorkingHours(props.currentUser.id)
-    logger.debug('🔄 Working hours reloaded after save')
-    
-    // Emit event to notify parent (calendar needs to reload)
-    emit('settings-updated')
-    
-  } catch (err: any) {
-    console.error(`❌ Error auto-saving working day ${dayOfWeek}:`, err)
-    error.value = `Fehler beim Speichern: ${err.message}`
-  } finally {
-    setTimeout(() => {
-      isSavingWorkingHours.value = false
-    }, 500) // Kurz anzeigen, dann ausblenden
+  // Verhindere mehrfache gleichzeitige Saves
+  if (isAutoSaveInProgress.value) {
+    logger.debug(`⏳ Auto-save already in progress, skipping day ${dayOfWeek}`)
+    return
   }
+  
+  // Debounce: Vorheriges Timeout für diesen Tag löschen
+  if (autoSaveTimeouts.value[dayOfWeek]) {
+    clearTimeout(autoSaveTimeouts.value[dayOfWeek])
+  }
+  
+  // Debounce: Speichern nach 500ms Inaktivität
+  autoSaveTimeouts.value[dayOfWeek] = setTimeout(async () => {
+    if (isAutoSaveInProgress.value) {
+      logger.debug(`⏳ Auto-save already in progress (debounced), skipping day ${dayOfWeek}`)
+      return
+    }
+    
+    isAutoSaveInProgress.value = true
+    isSavingWorkingHours.value = true
+    
+    try {
+      const dayData = workingDayForm.value[dayOfWeek]
+      logger.debug(`💾 Auto-saving working day ${dayOfWeek}:`, dayData)
+      
+      await saveWorkingDay(props.currentUser!.id, dayData)
+      
+      logger.debug(`✅ Working day ${dayOfWeek} auto-saved successfully`)
+      
+      // Reload working hours to update calendar (NICHT die Form!)
+      await loadWorkingHours(props.currentUser!.id)
+      logger.debug('🔄 Working hours reloaded after save')
+      
+      // Emit event to notify parent (calendar needs to reload)
+      emit('settings-updated')
+      
+    } catch (err: any) {
+      console.error(`❌ Error auto-saving working day ${dayOfWeek}:`, err)
+      error.value = `Fehler beim Speichern: ${err.message}`
+    } finally {
+      setTimeout(() => {
+        isSavingWorkingHours.value = false
+        isAutoSaveInProgress.value = false
+      }, 500) // Kurz anzeigen, dann ausblenden
+    }
+  }, 500) // 500ms Debounce
 }
 
 // Arbeitszeit-Block hinzufügen
@@ -1948,6 +1975,14 @@ onMounted(async () => {
   
   // Initialize working hours form after data is loaded
   initializeWorkingHoursForm()
+})
+
+// Cleanup - Auto-Save Timeouts löschen
+onBeforeUnmount(() => {
+  Object.values(autoSaveTimeouts.value).forEach(timeout => {
+    clearTimeout(timeout)
+  })
+  autoSaveTimeouts.value = {}
 })
 </script>
 
