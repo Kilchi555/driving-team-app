@@ -61,6 +61,7 @@ export default defineEventHandler(async (event) => {
 
     if (!resolvedStaffId) {
       logger.warn('❌ No valid staff_id found')
+      logger.warn(`Debug: staffId=${staffId}, calendarToken=${calendarToken?.substring(0, 8)}...`)
       return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Simy//Calendar//EN\r\nEND:VCALENDAR'
     }
 
@@ -123,7 +124,10 @@ export default defineEventHandler(async (event) => {
       logger.warn(`⚠️ Error fetching appointments: ${appointmentsError.message}`)
     }
 
-    logger.debug(`📅 Found ${appointments?.length || 0} appointments for staff`)
+    logger.debug(`📅 Found ${appointments?.length || 0} appointments for staff: ${resolvedStaffId}`)
+    if (appointments && appointments.length === 0) {
+      logger.debug(`ℹ️ No appointments found in range for staff: ${resolvedStaffId}`)
+    }
 
     // 4. Build ICS file
     const icsEvents: string[] = []
