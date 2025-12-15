@@ -841,9 +841,7 @@ const loadCalendarToken = async () => {
     }
     
     if (tokenData?.token) {
-      const baseUrl = 'https://simy.ch'
-      const domain = baseUrl.replace('https://', '')
-      calendarTokenLink.value = `webcals://${domain}/api/calendar/ics?token=${tokenData.token}`
+      calendarTokenLink.value = `https://simy.ch/api/calendar/ics?token=${tokenData.token}`
       logger.debug('✅ Calendar token loaded:', calendarTokenLink.value)
     } else {
       logger.debug('ℹ️ No active calendar token found')

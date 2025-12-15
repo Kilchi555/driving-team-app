@@ -95,9 +95,7 @@ export default defineEventHandler(async (event) => {
     logger.info(`✅ New calendar token generated for staff: ${userProfile.email}`)
 
     const baseUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://simy.ch'
-    // Convert to webcals:// for iOS Calendar compatibility
-    const domain = baseUrl.replace('https://', '').replace('http://', '')
-    const calendarLink = `webcals://${domain}/api/calendar/ics?token=${calendarToken}`
+    const calendarLink = `${baseUrl}/api/calendar/ics?token=${calendarToken}`
 
     return {
       success: true,
