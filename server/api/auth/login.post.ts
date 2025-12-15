@@ -72,19 +72,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get Supabase client
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('❌ Missing Supabase credentials')
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
     // Use anon client for login (as frontend would)
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
