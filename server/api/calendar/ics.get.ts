@@ -105,9 +105,10 @@ export default defineEventHandler(async (event) => {
 
         // Build description with student info
         let description = ''
+        let studentFullName = ''
         if (apt.users) {
-          const studentName = `${apt.users.first_name} ${apt.users.last_name}`
-          description = `Student: ${studentName}`
+          studentFullName = `${apt.users.first_name} ${apt.users.last_name}`
+          description = `Student: ${studentFullName}`
           if (apt.users.phone) {
             description += `\\nPhone: ${apt.users.phone}`
           }
@@ -116,13 +117,18 @@ export default defineEventHandler(async (event) => {
         // Create unique ID for event (using appointment ID)
         const eventUid = `${apt.id}@${new URL(process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000').hostname}`
 
+        // Build title with student name
+        const eventTitle = studentFullName 
+          ? `${apt.title || 'Appointment'} - ${studentFullName}`
+          : apt.title || 'Appointment'
+
         // Build event
         const event = `BEGIN:VEVENT
 UID:${eventUid}
 DTSTAMP:${formatICSDateTime(new Date())}
 DTSTART:${startICS}
 DTEND:${endICS}
-SUMMARY:${sanitizeText(apt.title || 'Appointment')}
+SUMMARY:${sanitizeText(eventTitle)}
 DESCRIPTION:${sanitizeText(description)}
 LOCATION:${sanitizeText(apt.users?.email || '')}
 STATUS:${apt.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}
