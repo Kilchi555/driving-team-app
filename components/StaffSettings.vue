@@ -429,40 +429,54 @@
                 <span class="text-green-600 text-lg">✅</span>
                 <div class="text-sm text-green-800">
                   <strong>Feature aktiv!</strong><br>
-                  Teilen Sie diesen Kalender-Link mit Google Calendar, Apple Calendar oder anderen Kalender-Apps. 
+                  Generieren Sie einen sicheren Kalender-Link und abonnieren Sie ihn in Ihrer Kalender-App. 
                   Ihre Termine werden automatisch synchronisiert.
                 </div>
               </div>
             </div>
             
             <div class="space-y-3">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Kalender-Link:</label>
-                <div class="flex space-x-2">
-                  <input
-                    :value="calendarLink"
-                    readonly
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-xs"
-                  >
-                  <button
-                    @click="copyToClipboard(calendarLink, 'Kalender-Link')"
-                    class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
-                  >
-                    Kopieren
-                  </button>
+              <!-- Generate Token Button -->
+              <button
+                @click="generateCalendarToken"
+                :disabled="isGeneratingToken"
+                class="w-full px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium flex items-center justify-center space-x-2"
+              >
+                <span v-if="!isGeneratingToken">🔑</span>
+                <span v-else>⏳</span>
+                <span>{{ isGeneratingToken ? 'Wird generiert...' : 'Kalender-Link generieren' }}</span>
+              </button>
+
+              <!-- Display Token Link if Generated -->
+              <div v-if="calendarTokenLink" class="space-y-2">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Dein Kalender-Link:</label>
+                  <div class="flex space-x-2">
+                    <input
+                      :value="calendarTokenLink"
+                      readonly
+                      class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-xs"
+                    >
+                    <button
+                      @click="copyToClipboard(calendarTokenLink, 'Kalender-Link')"
+                      class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                    >
+                      Kopieren
+                    </button>
+                  </div>
                 </div>
-              </div>
-              
-              <div class="bg-blue-50 p-3 rounded-lg">
-                <div class="flex items-start space-x-2">
-                  <span class="text-blue-600 text-sm">💡</span>
-                  <div class="text-sm text-blue-800">
-                    <strong>Anleitung:</strong>
-                    <ul class="list-disc list-inside mt-2 space-y-1">
-                      <li><strong>Google Calendar:</strong> Einstellungen → Andere Kalender → URL hinzufügen</li>
-                      <li><strong>Apple Calendar:</strong> Datei → Kalender abonnieren</li>
-                      <li><strong>Outlook:</strong> Kalender → Kalender hinzufügen → Aus dem Internet</li>
-                    </ul>
+                
+                <div class="bg-blue-50 p-3 rounded-lg">
+                  <div class="flex items-start space-x-2">
+                    <span class="text-blue-600 text-sm">💡</span>
+                    <div class="text-sm text-blue-800">
+                      <strong>Anleitung:</strong>
+                      <ul class="list-disc list-inside mt-2 space-y-1">
+                        <li><strong>Google Calendar:</strong> Einstellungen → Andere Kalender → URL hinzufügen</li>
+                        <li><strong>Apple Calendar:</strong> Datei → Kalender abonnieren</li>
+                        <li><strong>Outlook:</strong> Kalender → Kalender hinzufügen → Aus dem Internet</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -780,12 +794,38 @@ const availableLocationsForSignup = computed(() => {
   )
 })
 
-// Calendar Integration Links
-const calendarLink = computed(() => {
-  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
-  const staffId = props.currentUser?.id
-  return `${baseUrl}/api/calendar/ics?staff_id=${staffId}`
-})
+// Calendar Integration
+const isGeneratingToken = ref(false)
+const calendarTokenLink = ref<string | null>(null)
+
+const generateCalendarToken = async () => {
+  isGeneratingToken.value = true
+  try {
+    const response: any = await $fetch('/api/calendar/generate-token', {
+      method: 'POST'
+    })
+
+    if (response?.success && response?.calendarLink) {
+      calendarTokenLink.value = response.calendarLink
+      logger.debug('✅ Calendar token generated:', response.calendarLink)
+      // Show success message
+      toastType.value = 'success'
+      toastTitle.value = 'Erfolg'
+      toastMessage.value = 'Kalender-Link wurde generiert'
+      showToast.value = true
+    } else {
+      throw new Error(response?.message || 'Token generation failed')
+    }
+  } catch (error: any) {
+    logger.error('❌ Error generating calendar token:', error)
+    toastType.value = 'error'
+    toastTitle.value = 'Fehler'
+    toastMessage.value = error?.message || 'Kalender-Link konnte nicht generiert werden'
+    showToast.value = true
+  } finally {
+    isGeneratingToken.value = false
+  }
+}
 
 const registrationLink = computed(() => {
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
