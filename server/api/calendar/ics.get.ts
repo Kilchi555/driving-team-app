@@ -1,6 +1,7 @@
-import { defineEventHandler, getQuery } from 'h3'
+import { defineEventHandler, getQuery, setHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import crypto from 'crypto'
 
 /**
  * Generate iCalendar (ICS) format for staff appointments
@@ -209,10 +210,22 @@ END:VCALENDAR`
 
     logger.info(`✅ Calendar ICS generated for staff: ${staffUser.email}`)
 
-    // Set response headers for calendar file download
+    // Set response headers for calendar subscription (not download)
+    // iOS Calendar checks these headers to decide how often to refresh
     setHeader(event, 'Content-Type', 'text/calendar; charset=utf-8')
-    setHeader(event, 'Content-Disposition', `attachment; filename="calendar-${staffUser.id}.ics"`)
-    setHeader(event, 'Cache-Control', 'no-cache, max-age=5') // Update every 5 seconds like carzi
+    setHeader(event, 'Content-Disposition', 'inline') // Don't force download, allow subscription
+    
+    // Generate ETag based on content hash for efficient caching
+    const contentHash = crypto
+      .createHash('md5')
+      .update(icsContent)
+      .digest('hex')
+      .slice(0, 16)
+    
+    setHeader(event, 'ETag', `"${contentHash}"`)
+    setHeader(event, 'Cache-Control', 'public, max-age=300, must-revalidate') // Refresh every 5 minutes
+    setHeader(event, 'Last-Modified', new Date().toUTCString())
+    setHeader(event, 'X-Publish-Interval', '300') // Hint to calendar apps: refresh every 5 minutes
 
     return icsContent
   } catch (error: any) {
