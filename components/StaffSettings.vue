@@ -424,30 +424,29 @@
               <h4 class="text-md font-semibold text-gray-900">Handy-Kalender Integration</h4>
             </div>
             
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
               <div class="flex items-start space-x-2">
-                <span class="text-yellow-600 text-lg">⚠️</span>
-                <div class="text-sm text-yellow-800">
-                  <strong>Feature in Entwicklung</strong><br>
-                  Die Handy-Kalender Integration wird aktuell entwickelt und ist noch nicht verfügbar. 
-                  Diese Funktion wird in einem zukünftigen Update freigeschaltet.
+                <span class="text-green-600 text-lg">✅</span>
+                <div class="text-sm text-green-800">
+                  <strong>Feature aktiv!</strong><br>
+                  Teilen Sie diesen Kalender-Link mit Google Calendar, Apple Calendar oder anderen Kalender-Apps. 
+                  Ihre Termine werden automatisch synchronisiert.
                 </div>
               </div>
             </div>
             
-            <div class="space-y-3 opacity-50 pointer-events-none">
+            <div class="space-y-3">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Kalender-Link:</label>
                 <div class="flex space-x-2">
                   <input
                     :value="calendarLink"
                     readonly
-                    disabled
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-xs"
                   >
                   <button
-                    disabled
-                    class="px-4 py-2 bg-gray-400 text-white rounded text-sm cursor-not-allowed"
+                    @click="copyToClipboard(calendarLink, 'Kalender-Link')"
+                    class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
                   >
                     Kopieren
                   </button>
@@ -458,8 +457,12 @@
                 <div class="flex items-start space-x-2">
                   <span class="text-blue-600 text-sm">💡</span>
                   <div class="text-sm text-blue-800">
-                    <strong>Anleitung:</strong> Fügen Sie diesen Link in Ihren Handy-Kalender ein (Google Calendar, Apple Calendar, etc.). 
-                    Alle Ihre Termine werden automatisch synchronisiert.
+                    <strong>Anleitung:</strong>
+                    <ul class="list-disc list-inside mt-2 space-y-1">
+                      <li><strong>Google Calendar:</strong> Einstellungen → Andere Kalender → URL hinzufügen</li>
+                      <li><strong>Apple Calendar:</strong> Datei → Kalender abonnieren</li>
+                      <li><strong>Outlook:</strong> Kalender → Kalender hinzufügen → Aus dem Internet</li>
+                    </ul>
                   </div>
                 </div>
               </div>
