@@ -688,8 +688,19 @@ onMounted(async () => {
     userData.value = data.value.user
     tenantName.value = data.value.tenantName || 'Deiner Fahrschule'
     
-    // Pre-fill known data
+    // ✅ FIX: Pre-fill ALL known data from the database
     if (userData.value.email) form.email = userData.value.email
+    if (userData.value.first_name) form.firstName = userData.value.first_name
+    if (userData.value.last_name) form.lastName = userData.value.last_name
+    if (userData.value.phone) form.phone = userData.value.phone
+    if (userData.value.birthdate) form.birthdate = userData.value.birthdate?.split('T')[0] // Format as YYYY-MM-DD
+    if (userData.value.street) form.street = userData.value.street
+    if (userData.value.street_nr) form.street_nr = userData.value.street_nr
+    if (userData.value.zip) form.zip = userData.value.zip
+    if (userData.value.city) form.city = userData.value.city
+    if (userData.value.category && Array.isArray(userData.value.category)) {
+      form.categories = userData.value.category
+    }
 
     // Load dynamic categories
     try {
