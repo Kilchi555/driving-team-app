@@ -255,14 +255,21 @@ export const useStudents = () => {
       tokenExpires.setDate(tokenExpires.getDate() + 7) // 7 Tage gültig
       
       // 1. Erstelle nur users Eintrag (OHNE auth_user_id)
+      // ✅ FIX: category ist ein Array in der DB, nicht ein String!
+      const categoryArray = studentData.category 
+        ? (Array.isArray(studentData.category) ? studentData.category : [studentData.category])
+        : []
+      
       const { error: insertError } = await supabase
         .from('users')
         .insert([{
           ...studentData,
+          category: categoryArray, // ✅ FIX: Konvertiere zu Array
           id: userId,
           auth_user_id: null, // Erst nach Onboarding gesetzt
           tenant_id: tenantId, // ✅ FIX: tenant_id hinzufügen
           email: studentData.email && studentData.email.trim() !== '' ? studentData.email.trim() : null, // ✅ FIX: null statt leerer String für UNIQUE Constraint
+          phone: studentData.phone && studentData.phone.trim() !== '' ? studentData.phone.trim() : null, // ✅ FIX: null statt leerer String
           role: 'client',
           is_active: false, // Inaktiv bis Onboarding abgeschlossen
           onboarding_status: 'pending',
