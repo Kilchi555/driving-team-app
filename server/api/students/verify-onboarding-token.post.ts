@@ -41,10 +41,10 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Get tenant name
+    // Get tenant name and slug
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name')
+      .select('name, slug')
       .eq('id', user.tenant_id)
       .single()
 
@@ -56,9 +56,11 @@ export default defineEventHandler(async (event) => {
         lastName: user.last_name,
         email: user.email,
         phone: user.phone,
-        tenant_id: user.tenant_id
+        tenant_id: user.tenant_id,
+        tenant_slug: tenant?.slug
       },
-      tenantName: tenant?.name
+      tenantName: tenant?.name,
+      tenantSlug: tenant?.slug
     }
 
   } catch (error: any) {

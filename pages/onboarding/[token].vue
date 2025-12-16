@@ -576,6 +576,8 @@
 
 <script setup lang="ts">
 
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute, navigateTo, useFetch } from '#app'
 import { logger } from '~/utils/logger'
 import { getSupabase } from '~/utils/supabase'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
@@ -678,7 +680,7 @@ onMounted(async () => {
     const { data, error: fetchError } = await useFetch('/api/students/verify-onboarding-token', {
       method: 'POST',
       body: { token }
-    })
+    }) as any
 
     if (fetchError.value || !data.value?.success) {
       error.value = 'Ungültiger oder abgelaufener Link. Bitte kontaktiere deine Fahrschule.'
@@ -707,7 +709,7 @@ onMounted(async () => {
       const { data: catData } = await useFetch(`/api/onboarding/categories`, {
         method: 'GET',
         query: { token }
-      })
+      }) as any
       categories.value = catData.value?.categories || []
     } catch {}
 
@@ -716,7 +718,7 @@ onMounted(async () => {
       const { data: termsData } = await useFetch(`/api/onboarding/terms`, {
         method: 'GET',
         query: { token }
-      })
+      }) as any
       termsText.value = (termsData.value?.terms || 'AGB aktuell nicht verfügbar').trim()
     } catch {
       termsText.value = 'AGB aktuell nicht verfügbar'
@@ -913,7 +915,7 @@ const completeOnboarding = async () => {
           const { data: uploadData, error: uploadError } = await useFetch('/api/students/upload-document', {
           method: 'POST',
           body: formData
-        })
+        }) as any
 
           if (uploadError.value) {
             console.error('❌ Document upload error:', uploadError.value)
@@ -952,7 +954,7 @@ const completeOnboarding = async () => {
     const { data, error: completeError } = await useFetch('/api/students/complete-onboarding', {
       method: 'POST',
       body: requestBody
-    })
+    }) as any
     
     logger.debug('📥 Onboarding completion response:', { data: data.value, error: completeError.value })
 
@@ -982,7 +984,7 @@ const completeOnboarding = async () => {
     // Auto-redirect to login after 2 seconds
     setTimeout(async () => {
       // Get tenant slug from userData or extract from token API response
-      const tenantSlug = userData.value?.tenant_slug || data.value?.tenant_slug
+      const tenantSlug = userData.value?.tenant_slug || (data.value as any)?.tenant_slug
       
       if (tenantSlug) {
         logger.debug('✅ Redirecting to tenant login:', `/${tenantSlug}`)
