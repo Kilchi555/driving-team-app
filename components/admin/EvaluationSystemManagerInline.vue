@@ -895,7 +895,13 @@
                     <!-- Image Upload Area -->
                     <div 
                       @click="triggerSectionImageUpload(sectionIndex)"
-                      class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors mb-3"
+                      @dragover.prevent="dragOver[`section-${sectionIndex}`] = true"
+                      @dragleave.prevent="dragOver[`section-${sectionIndex}`] = false"
+                      @drop.prevent="handleSectionImageDrop($event, sectionIndex)"
+                      :class="[
+                        'border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors mb-3',
+                        dragOver[`section-${sectionIndex}`] ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400'
+                      ]"
                     >
                       <input
                         :ref="el => setSectionImageInput(sectionIndex, el as HTMLInputElement | null)"
@@ -2326,7 +2332,8 @@ const addSection = () => {
   educationalContentForm.value.sections.push({
     title: '',
     text: '',
-    images: []
+    images: [],
+    categories: []
   })
 }
 
@@ -2372,6 +2379,54 @@ const handleSectionImageUpload = async (event: Event, sectionIndex: number) => {
   const validFiles: File[] = []
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
+    if (file.size > 5 * 1024 * 1024) {
+      uiStore.showWarning('Datei zu groß', `${file.name} ist größer als 5MB`)
+      continue
+    }
+    if (!file.type.startsWith('image/')) {
+      uiStore.showWarning('Ungültiger Dateityp', `${file.name} ist kein Bild`)
+      continue
+    }
+    validFiles.push(file)
+  }
+  
+  if (validFiles.length === 0) return
+  
+  // Get or create preview array for this section
+  const previews = sectionImagePreviews.value.get(sectionIndex) || []
+  const pending = sectionPendingFiles.value.get(sectionIndex) || []
+  
+  // Create preview URLs
+  for (const file of validFiles) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        previews.push(e.target.result as string)
+        sectionImagePreviews.value.set(sectionIndex, [...previews])
+      }
+    }
+    reader.readAsDataURL(file)
+    pending.push(file)
+  }
+  
+  sectionPendingFiles.value.set(sectionIndex, pending)
+}
+
+const handleSectionImageDrop = async (event: DragEvent, sectionIndex: number) => {
+  dragOver[`section-${sectionIndex}`] = false
+  
+  const files = event.dataTransfer?.files
+  if (!files || files.length === 0) return
+  
+  // Convert FileList to File[] for validation
+  const fileArray: File[] = []
+  for (let i = 0; i < files.length; i++) {
+    fileArray.push(files[i])
+  }
+  
+  // Validate files
+  const validFiles: File[] = []
+  for (const file of fileArray) {
     if (file.size > 5 * 1024 * 1024) {
       uiStore.showWarning('Datei zu groß', `${file.name} ist größer als 5MB`)
       continue
