@@ -255,15 +255,32 @@ function formatICSDateTime(date: Date): string {
 
 /**
  * Format date to ICS local time format (YYYYMMDDTHHMMSS) for use with TZID
+ * Converts UTC date to Europe/Zurich timezone
  * iOS Calendar prefers this format when TZID is specified
  */
 function formatICSDateTimeLocal(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
+  // Use Intl.DateTimeFormat to get the correct Zurich time
+  // This works correctly on servers running in UTC (like Vercel)
+  const zurichFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Zurich',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+  
+  const parts = zurichFormatter.formatToParts(date)
+  const getPart = (type: string) => parts.find(p => p.type === type)?.value || '00'
+  
+  const year = getPart('year')
+  const month = getPart('month')
+  const day = getPart('day')
+  const hours = getPart('hour')
+  const minutes = getPart('minute')
+  const seconds = getPart('second')
 
   return `${year}${month}${day}T${hours}${minutes}${seconds}`
 }
