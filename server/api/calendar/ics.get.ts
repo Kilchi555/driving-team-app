@@ -224,10 +224,27 @@ END:VCALENDAR`
       .digest('hex')
       .slice(0, 16)
     
-    setHeader(event, 'ETag', `"${contentHash}"`)
-    setHeader(event, 'Cache-Control', 'public, max-age=30, must-revalidate') // Refresh every 30 seconds
+    // AGGRESSIVE HEADERS TO FORCE APPLE CALENDAR FREQUENT REFRESH
+    // Apple Calendar checks for updates based on these headers
+    
+    // Tell Apple to ALWAYS revalidate (max-age=0) - forces check on every open
+    setHeader(event, 'Cache-Control', 'public, max-age=0, must-revalidate, no-cache, no-store')
+    
+    // Always send new Last-Modified time (triggers Apple to think content changed)
     setHeader(event, 'Last-Modified', new Date().toUTCString())
-    setHeader(event, 'X-Publish-Interval', '30') // Hint to calendar apps: refresh every 30 seconds
+    
+    // Always send new ETag (makes Apple think content changed)
+    setHeader(event, 'ETag', `"${contentHash}-${Date.now()}"`)
+    
+    // Additional headers for maximum compatibility
+    setHeader(event, 'Pragma', 'no-cache')
+    setHeader(event, 'Expires', '0')
+    
+    // Tell clients to refresh every minute
+    setHeader(event, 'X-Publish-Interval', 'PT60S')
+    
+    // Mark as dynamic content (not static)
+    setHeader(event, 'X-Content-Type-Options', 'nosniff')
 
     return icsContent
   } catch (error: any) {
