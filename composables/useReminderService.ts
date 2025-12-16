@@ -1,5 +1,6 @@
 // composables/useReminderService.ts
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export const useReminderService = () => {
   const supabase = getSupabase()
