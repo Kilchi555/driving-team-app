@@ -663,7 +663,7 @@ class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
         </div>
 
         <!-- Payment Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           <div class="bg-white overflow-hidden shadow rounded-lg">
             <div class="p-5">
               <div class="flex items-center">
@@ -739,6 +739,27 @@ class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                   <dl>
                     <dt class="text-sm font-medium text-gray-500 truncate">Offener Betrag</dt>
                     <dd class="text-lg font-medium text-gray-900">{{ formattedTotalUnpaidAmount }}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Credit Balance Card -->
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Guthaben</dt>
+                    <dd class="text-lg font-medium text-purple-600 font-semibold">{{ formattedCreditBalance }}</dd>
                   </dl>
                 </div>
               </div>
@@ -1005,6 +1026,14 @@ v-if="(appointment.discount_amount || 0) > 0"
                              class="flex justify-between text-xs text-green-600">
                           <span>Rabatt:</span>
                           <span>-{{ formatCurrency(appointment.discount_amount || 0) }}</span>
+                        </div>
+                        
+                        <!-- Credit Used -->
+                        <div
+v-if="(appointment.credit_used || 0) > 0" 
+                             class="flex justify-between text-xs text-purple-600 font-medium pt-1 border-t border-gray-200">
+                          <span>Guthaben verwendet:</span>
+                          <span>-{{ formatCurrency(appointment.credit_used || 0) }}</span>
                         </div>
                       </div>
                     </div>
@@ -1358,6 +1387,7 @@ interface Appointment {
   admin_fee?: number
   products_price?: number
   discount_amount?: number
+  credit_used?: number
   // Zahlungsstatus aus payments
   payment_status?: string
   // Neue Felder für Titel-Anzeige
@@ -1393,6 +1423,7 @@ interface Payment {
   admin_fee_rappen?: number
   products_price_rappen?: number
   discount_amount_rappen?: number
+  credit_used_rappen?: number
   paid_at?: string
   refunded_at?: string
   created_at?: string
@@ -1420,6 +1451,7 @@ const userId = route.params.id as string
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const userDetails = ref<UserDetails | null>(null)
+const studentCredit = ref<any>(null)
 const appointments = ref<Appointment[]>([])
 const companyBillingAddress = ref<CompanyBillingAddress | null>(null)
 const appointmentFilter = ref<'all' | 'paid' | 'unpaid' | 'failed' | 'deleted'>('all')
@@ -1567,6 +1599,11 @@ const formattedTotalUnpaidAmount = computed(() => {
   return formatCurrency(totalUnpaidAmount.value)
 })
 
+const formattedCreditBalance = computed(() => {
+  if (!studentCredit.value) return formatCurrency(0)
+  return formatCurrency(studentCredit.value.balance_rappen || 0)
+})
+
 const filteredAppointments = computed(() => {
   switch (appointmentFilter.value) {
     case 'paid':
@@ -1647,6 +1684,22 @@ const loadUserDetails = async () => {
 
     userDetails.value = data
     logger.debug('✅ User details loaded:', data)
+
+    // Load student credit balance
+    if (data?.id) {
+      const { data: creditData, error: creditError } = await supabase
+        .from('student_credits')
+        .select('id, balance_rappen, updated_at')
+        .eq('user_id', data.id)
+        .single()
+      
+      if (!creditError && creditData) {
+        studentCredit.value = creditData
+        logger.debug('✅ Student credit loaded:', creditData)
+      } else if (creditError?.code !== 'PGRST116') {
+        logger.warn('⚠️ Error loading student credit:', creditError)
+      }
+    }
 
     // Load event types for this tenant
     if (data?.tenant_id) {
@@ -1996,7 +2049,8 @@ const loadUserAppointments = async () => {
         lesson_price: lessonPrice,
         admin_fee: adminFee,
         products_price: productsPrice,
-        discount_amount: discountAmount
+        discount_amount: discountAmount,
+        credit_used: payment ? (payment.credit_used_rappen || 0) / 100 : 0
       }
       
       logger.debug(`📋 Final processed appointment ${appointment.id}:`, {
