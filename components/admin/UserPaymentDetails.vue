@@ -1572,13 +1572,13 @@ const filteredAppointments = computed(() => {
     case 'paid':
       return appointments.value.filter(apt => apt.is_paid && !apt.deleted_at)
     case 'unpaid':
-      return appointments.value.filter(apt => !apt.is_paid && apt.payment_status !== 'failed' && !apt.deleted_at)
+      return appointments.value.filter(apt => !apt.is_paid && apt.payment_status !== 'failed' && !apt.deleted_at && apt.status !== 'cancelled')
     case 'failed':
       return appointments.value.filter(apt => apt.payment_status === 'failed' && !apt.deleted_at)
     case 'deleted':
       return appointments.value.filter(apt => apt.deleted_at)
     default:
-      return appointments.value.filter(apt => !apt.deleted_at)
+      return appointments.value.filter(apt => !apt.deleted_at && apt.status !== 'cancelled')
   }
 })
 
