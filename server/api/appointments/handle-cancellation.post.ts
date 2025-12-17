@@ -218,12 +218,54 @@ export default defineEventHandler(async (event) => {
         // authorized/pending → cancelled (never paid)
         logger.debug('ℹ️ Free cancellation - updating payment status')
         
+        // ✅ NEW: If credit was used, refund it back to student credit
+        let creditRefundNeeded = false
+        if (payment.credit_used_rappen > 0) {
+          creditRefundNeeded = true
+          logger.debug('💳 Credit was used for this payment - will refund:', {
+            creditUsed: (payment.credit_used_rappen / 100).toFixed(2),
+            userId: appointment.user_id
+          })
+          
+          // Load current student credit balance
+          const { data: studentCredit, error: creditError } = await supabase
+            .from('student_credits')
+            .select('id, balance_rappen')
+            .eq('user_id', appointment.user_id)
+            .single()
+          
+          if (!creditError && studentCredit) {
+            const oldBalance = studentCredit.balance_rappen || 0
+            const newBalance = oldBalance + payment.credit_used_rappen
+            
+            // Refund the credit
+            const { error: updateCreditError } = await supabase
+              .from('student_credits')
+              .update({
+                balance_rappen: newBalance,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', studentCredit.id)
+            
+            if (updateCreditError) {
+              console.warn('⚠️ Could not refund credit to student balance:', updateCreditError)
+            } else {
+              logger.debug('✅ Credit refunded to student balance:', {
+                oldBalance: (oldBalance / 100).toFixed(2),
+                refund: (payment.credit_used_rappen / 100).toFixed(2),
+                newBalance: (newBalance / 100).toFixed(2)
+              })
+            }
+          }
+        }
+        
         const newStatus = payment.payment_status === 'completed' ? 'refunded' : 'cancelled'
         const { error: updatePaymentError } = await supabase
           .from('payments')
           .update({
             payment_status: newStatus,
-            notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}`
+            credit_used_rappen: 0, // ✅ NEW: Clear credit used since it's being refunded
+            notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}${creditRefundNeeded ? ' (credit refunded)' : ''}`
           })
           .eq('id', payment.id)
         
@@ -251,11 +293,54 @@ export default defineEventHandler(async (event) => {
       // ✅ FREE CANCELLATION: Update payment status to cancelled
       if (refundableAmount === 0) {
         logger.debug('ℹ️ Free cancellation - updating payment status to cancelled')
+        
+        // ✅ NEW: If credit was used, refund it back to student credit
+        let creditRefundNeeded = false
+        if (payment.credit_used_rappen > 0) {
+          creditRefundNeeded = true
+          logger.debug('💳 Credit was used for this payment - will refund:', {
+            creditUsed: (payment.credit_used_rappen / 100).toFixed(2),
+            userId: appointment.user_id
+          })
+          
+          // Load current student credit balance
+          const { data: studentCredit, error: creditError } = await supabase
+            .from('student_credits')
+            .select('id, balance_rappen')
+            .eq('user_id', appointment.user_id)
+            .single()
+          
+          if (!creditError && studentCredit) {
+            const oldBalance = studentCredit.balance_rappen || 0
+            const newBalance = oldBalance + payment.credit_used_rappen
+            
+            // Refund the credit
+            const { error: updateCreditError } = await supabase
+              .from('student_credits')
+              .update({
+                balance_rappen: newBalance,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', studentCredit.id)
+            
+            if (updateCreditError) {
+              console.warn('⚠️ Could not refund credit to student balance:', updateCreditError)
+            } else {
+              logger.debug('✅ Credit refunded to student balance:', {
+                oldBalance: (oldBalance / 100).toFixed(2),
+                refund: (payment.credit_used_rappen / 100).toFixed(2),
+                newBalance: (newBalance / 100).toFixed(2)
+              })
+            }
+          }
+        }
+        
         const { error: updatePaymentError } = await supabase
           .from('payments')
           .update({
             payment_status: 'cancelled',
-            notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}`
+            credit_used_rappen: 0, // ✅ NEW: Clear credit used since it's being refunded
+            notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}${creditRefundNeeded ? ' (credit refunded)' : ''}`
           })
           .eq('id', payment.id)
         
