@@ -91,10 +91,15 @@ export default defineEventHandler(async (event) => {
       logger.warn(`❌ Tenant not found for staff: ${staffId}`)
     }
 
-    // 3. Get all appointments for this staff member (next 12 months)
+    // 3. Get all appointments for this staff member (last 6 months + next 12 months)
     const today = new Date()
     today.setUTCHours(0, 0, 0, 0)
 
+    // Start from 6 months ago
+    const sixMonthsAgo = new Date(today)
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
+    // End at 12 months from now
     const nextYear = new Date(today)
     nextYear.setFullYear(nextYear.getFullYear() + 1)
 
@@ -115,7 +120,7 @@ export default defineEventHandler(async (event) => {
         )
       `)
       .eq('staff_id', resolvedStaffId)
-      .gte('start_time', today.toISOString())
+      .gte('start_time', sixMonthsAgo.toISOString())
       .lte('start_time', nextYear.toISOString())
       .is('deleted_at', null)
       .not('status', 'eq', 'cancelled')

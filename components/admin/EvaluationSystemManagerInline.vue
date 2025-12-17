@@ -894,14 +894,8 @@
                     
                     <!-- Image Upload Area -->
                     <div 
-                      @click="triggerSectionImageUpload(sectionIndex)"
-                      @dragover.prevent="dragOver[`section-${sectionIndex}`] = true"
-                      @dragleave.prevent="dragOver[`section-${sectionIndex}`] = false"
-                      @drop.prevent="handleSectionImageDrop($event, sectionIndex)"
-                      :class="[
-                        'border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors mb-3',
-                        dragOver[`section-${sectionIndex}`] ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400'
-                      ]"
+                      class="relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors mb-3"
+                      :class="dragOver[`section-${sectionIndex}`] ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400'"
                     >
                       <input
                         :ref="el => setSectionImageInput(sectionIndex, el as HTMLInputElement | null)"
@@ -909,13 +903,18 @@
                         accept="image/*"
                         multiple
                         @change="handleSectionImageUpload($event, sectionIndex)"
-                        class="hidden"
+                        @dragenter.prevent="dragOver[`section-${sectionIndex}`] = true; console.log('DRAGENTER')"
+                        @dragover.prevent="dragOver[`section-${sectionIndex}`] = true; console.log('DRAGOVER')"
+                        @dragleave.prevent="dragOver[`section-${sectionIndex}`] = false; console.log('DRAGLEAVE')"
+                        @drop.prevent="handleSectionImageDrop($event, sectionIndex); console.log('DROP')"
+                        class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        style="pointer-events: auto;"
                       />
-                      <svg class="w-8 h-8 mx-auto text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="w-8 h-8 mx-auto text-gray-400 mb-1 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                       </svg>
-                      <p class="text-xs text-gray-600">Klicken Sie hier oder ziehen Sie Bilder hierher</p>
-                      <p class="text-xs text-gray-500 mt-0.5">JPG, PNG bis 5MB</p>
+                      <p class="text-xs text-gray-600 pointer-events-none">Klicken Sie hier oder ziehen Sie Bilder hierher</p>
+                      <p class="text-xs text-gray-500 mt-0.5 pointer-events-none">JPG, PNG bis 5MB</p>
                     </div>
 
                     <!-- Image Preview Grid for this section -->
@@ -1128,6 +1127,7 @@ const currentUploadingSection = ref<number | null>(null) // Track which section 
 const sectionImagePreviews = ref<Map<number, string[]>>(new Map()) // Map: section index -> preview URLs
 const sectionPendingFiles = ref<Map<number, File[]>>(new Map()) // Map: section index -> pending files
 const sectionImageInputs = ref<Map<number, HTMLInputElement | null>>(new Map()) // Map: section index -> input element
+const dragOver = reactive<Record<string, boolean>>({})
 
 // Inline criteria form
 const inlineCriteriaForm = ref({
@@ -2413,31 +2413,75 @@ const handleSectionImageUpload = async (event: Event, sectionIndex: number) => {
 }
 
 const handleSectionImageDrop = async (event: DragEvent, sectionIndex: number) => {
+  console.log('🎯 Drop event triggered for section:', sectionIndex)
+  console.log('🔍 Event details:', {
+    eventType: event.type,
+    dataTransferAvailable: !!event.dataTransfer,
+    filesCount: event.dataTransfer?.files?.length || 0
+  })
+  
   dragOver[`section-${sectionIndex}`] = false
   
-  const files = event.dataTransfer?.files
-  if (!files || files.length === 0) return
+  const dt = event.dataTransfer
+  if (!dt) {
+    console.error('❌ No dataTransfer object')
+    return
+  }
   
-  // Convert FileList to File[] for validation
-  const fileArray: File[] = []
-  for (let i = 0; i < files.length; i++) {
-    fileArray.push(files[i])
+  console.log('📋 DataTransfer items:', dt.items?.length || 0)
+  console.log('📋 DataTransfer files:', dt.files?.length || 0)
+  
+  // Try using items first (more reliable)
+  let fileArray: File[] = []
+  
+  if (dt.items && dt.items.length > 0) {
+    console.log('✅ Using DataTransfer.items')
+    for (let i = 0; i < dt.items.length; i++) {
+      const item = dt.items[i]
+      console.log(`  Item ${i}: kind=${item.kind}, type=${item.type}`)
+      
+      if (item.kind === 'file') {
+        const file = item.getAsFile()
+        if (file) {
+          fileArray.push(file)
+          console.log(`  ✅ Got file: ${file.name}`)
+        }
+      }
+    }
+  } else if (dt.files && dt.files.length > 0) {
+    console.log('✅ Using DataTransfer.files')
+    for (let i = 0; i < dt.files.length; i++) {
+      fileArray.push(dt.files[i])
+      console.log(`  ✅ Got file: ${dt.files[i].name}`)
+    }
+  }
+  
+  console.log(`📦 Total files extracted: ${fileArray.length}`)
+  if (fileArray.length === 0) {
+    console.warn('❌ No valid files in drop event')
+    return
   }
   
   // Validate files
   const validFiles: File[] = []
   for (const file of fileArray) {
+    console.log(`🔍 Validating: ${file.name} (${file.size} bytes, ${file.type})`)
+    
     if (file.size > 5 * 1024 * 1024) {
+      console.warn(`⚠️ File too large: ${file.name}`)
       uiStore.showWarning('Datei zu groß', `${file.name} ist größer als 5MB`)
       continue
     }
     if (!file.type.startsWith('image/')) {
+      console.warn(`⚠️ Not an image: ${file.name} (${file.type})`)
       uiStore.showWarning('Ungültiger Dateityp', `${file.name} ist kein Bild`)
       continue
     }
     validFiles.push(file)
+    console.log(`✅ Valid file: ${file.name}`)
   }
   
+  console.log(`✅ Valid files count: ${validFiles.length}`)
   if (validFiles.length === 0) return
   
   // Get or create preview array for this section
@@ -2451,13 +2495,18 @@ const handleSectionImageDrop = async (event: DragEvent, sectionIndex: number) =>
       if (e.target?.result) {
         previews.push(e.target.result as string)
         sectionImagePreviews.value.set(sectionIndex, [...previews])
+        console.log(`🖼️ Preview loaded for: ${file.name}`)
       }
+    }
+    reader.onerror = () => {
+      console.error(`❌ Failed to read file: ${file.name}`)
     }
     reader.readAsDataURL(file)
     pending.push(file)
   }
   
   sectionPendingFiles.value.set(sectionIndex, pending)
+  console.log(`✅ Drag-drop complete! Added ${validFiles.length} files to section ${sectionIndex}`)
 }
 
 const removeSectionImage = (sectionIndex: number, imgIndex: number, type: 'existing' | 'preview') => {
