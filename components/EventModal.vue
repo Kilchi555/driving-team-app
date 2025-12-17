@@ -4271,8 +4271,19 @@ const goToPolicySelection = async () => {
   // ✅ NEW: Check if selected reason has force_charge_percentage
   const selectedReason = cancellationReasons.value.find(r => r.id === selectedCancellationReasonId.value)
   // @ts-ignore - selectedReason may have additional properties from database
-  if (selectedReason && (selectedReason as any).force_charge_percentage !== null && (selectedReason as any).force_charge_percentage !== undefined) {
-    logger.debug('✅ Force charge percentage found:', (selectedReason as any).force_charge_percentage)
+  const forceChargePercentage = (selectedReason as any).force_charge_percentage
+  const cancellationType = (selectedReason as any).cancellation_type
+  
+  // ✅ FIX: Handle both explicit force_charge_percentage and default for staff cancellations
+  // If force_charge_percentage is explicitly set, use it
+  // If it's staff cancellation but force_charge_percentage is null, default to 0 (free)
+  const shouldUseForceCharge = forceChargePercentage !== null && forceChargePercentage !== undefined
+  const chargePercentageToUse = shouldUseForceCharge 
+    ? forceChargePercentage 
+    : (cancellationType === 'staff' ? 0 : null)
+  
+  if (selectedReason && chargePercentageToUse !== null) {
+    logger.debug('✅ Force charge percentage found or defaulted for staff:', chargePercentageToUse, 'cancellationType:', cancellationType)
     // Load appointment price first
     if (props.eventData?.id) {
       const price = await loadAppointmentPrice(props.eventData.id)
@@ -4281,16 +4292,16 @@ const goToPolicySelection = async () => {
     // Directly set the policy result with force_charge_percentage
     cancellationPolicyResult.value = {
       calculation: {
-        chargePercentage: (selectedReason as any).force_charge_percentage
+        chargePercentage: chargePercentageToUse
       },
-      chargeAmountRappen: Math.round((appointmentPrice.value || 0) * (selectedReason as any).force_charge_percentage / 100),
-      shouldCreateInvoice: (selectedReason as any).force_charge_percentage > 0,
-      shouldCreditHours: (selectedReason as any).force_charge_percentage === 0,
-      invoiceDescription: (selectedReason as any).force_charge_percentage === 0 
+      chargeAmountRappen: Math.round((appointmentPrice.value || 0) * chargePercentageToUse / 100),
+      shouldCreateInvoice: chargePercentageToUse > 0,
+      shouldCreditHours: chargePercentageToUse === 0,
+      invoiceDescription: chargePercentageToUse === 0 
         ? 'Kostenlose Stornierung durch Fahrlehrer'
-        : `Stornogebühr für Termin (${(selectedReason as any).force_charge_percentage}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
+        : `Stornogebühr für Termin (${chargePercentageToUse}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
     }
-    logger.debug('✅ Policy result set with force_charge_percentage:', cancellationPolicyResult.value)
+    logger.debug('✅ Policy result set with force charge percentage:', cancellationPolicyResult.value)
     // ✅ IMPORTANT: Skip policy selection modal and go directly to confirmation!
     cancellationStep.value = 3
     return
