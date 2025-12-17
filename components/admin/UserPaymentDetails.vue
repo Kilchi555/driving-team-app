@@ -1819,7 +1819,11 @@ const loadUserAppointments = async () => {
       const isPaid = payment?.payment_status === 'completed' || payment?.payment_status === 'invoiced'
       
       // Merge Zahlungsstatus und Methode in Termin-Datensatz
-      ;(appointment as any).payment_status = payment?.payment_status || 'pending'
+      // ✅ If appointment is cancelled, show 'cancelled' status regardless of payment status
+      const paymentStatus = appointment.status === 'cancelled' 
+        ? 'cancelled' 
+        : (payment?.payment_status || 'pending')
+      ;(appointment as any).payment_status = paymentStatus
       ;(appointment as any).payment_method = payment?.payment_method || 'pending'
       
       if (payment?.payment_status === 'failed') {
