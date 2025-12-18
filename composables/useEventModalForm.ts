@@ -987,62 +987,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
       logger.debug('✅ Appointment saved:', result.id)
       
       // ✅ NEW: Send appointment confirmation email with token
-      if (mode === 'create' && result.status === 'pending_confirmation') {
-        try {
-          logger.debug('📧 Sending appointment confirmation email...')
-          
-          // ✅ FIX: Fetch student data directly instead of using problematic join syntax
-          const { data: studentData } = await supabase
-            .from('users')
-            .select('first_name, last_name, email')
-            .eq('id', result.user_id)
-            .single()
-          
-          // Fetch staff data
-          const { data: staffData } = await supabase
-            .from('users')
-            .select('first_name, last_name')
-            .eq('id', result.staff_id)
-            .single()
-          
-          // Fetch location data
-          const { data: locationData } = await supabase
-            .from('locations')
-            .select('name')
-            .eq('id', result.location_id)
-            .maybeSingle()
-          
-          if (studentData?.email) {
-            const confirmationResponse = await $fetch('/api/email/send-appointment-notification', {
-              method: 'POST',
-              body: {
-                email: studentData.email,
-                studentName: `${studentData.first_name || ''} ${studentData.last_name || ''}`.trim(),
-                appointmentTime: new Date(result.start_time).toLocaleString('de-CH', {
-                  weekday: 'long',
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                }),
-                type: 'pending_payment',
-                staffName: staffData ? `${staffData.first_name} ${staffData.last_name}` : undefined,
-                location: locationData?.name || undefined,
-                tenantName: 'Driving',
-                tenantId: currentUser.value?.tenant_id,
-                amount: '(wird berechnet)'
-              }
-            })
-            logger.debug('✅ Confirmation email sent:', confirmationResponse)
-          } else {
-            logger.debug('ℹ️ No email found for student, skipping confirmation email')
-          }
-        } catch (emailError: any) {
-          console.warn('⚠️ Error sending confirmation email (non-critical):', emailError.message)
-          // Non-critical - don't fail the appointment creation
-        }
-      }
+      // ✅ NOTE: Email notification is handled by createPaymentEntry() via send-payment-confirmation
+      // to avoid duplicate emails. The payment confirmation includes all necessary details.
       
       // ✅ Auto-assign staff to customer (add to assigned_staff_ids array)
       if (mode === 'create' && result.staff_id && result.user_id) {
