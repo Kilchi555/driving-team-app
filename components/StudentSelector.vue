@@ -133,8 +133,16 @@
             >
             <div class="flex items-center justify-between">
               <div class="flex-1">
-                <div class="font-semibold text-gray-900">
+                <div class="font-semibold text-gray-900 flex items-center gap-2">
                   {{ student.first_name }} {{ student.last_name }}
+                  <!-- Pending Onboarding Indikator -->
+                  <span 
+                    v-if="student.onboarding_status === 'pending'"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200"
+                    title="Onboarding ausstehend"
+                  >
+                    Neu
+                  </span>
                 </div>
                 <div class="text-sm text-gray-500 flex items-center gap-2">
                   <span>{{ student.phone }}</span>
@@ -194,7 +202,9 @@ interface Student {
   category: string
   assigned_staff_id: string
   preferred_location_id?: string
-  preferred_duration?: number 
+  preferred_duration?: number
+  is_active?: boolean
+  onboarding_status?: 'pending' | 'completed' | null
 }
 
 // Props
@@ -279,6 +289,7 @@ interface UserFromDB {
   preferred_location_id: string | null
   role: 'client' | 'staff' | 'admin'
   is_active: boolean
+  onboarding_status: 'pending' | 'completed' | null
 }
 
 interface AppointmentResponse {
@@ -426,14 +437,15 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
       }
       
       // 1. Direkt zugewiesene Schüler laden - FILTERED BY TENANT
+      // ✅ Auch Kunden mit pending onboarding anzeigen (is_active=false aber onboarding_status='pending')
       logger.debug('🔍 Loading assigned students for staff:', staffId)
       const { data: assignedStudents, error: assignedError } = await supabase
         .from('users')
-        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
+        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status')
         .eq('role', 'client')
-        .eq('is_active', true)
         .eq('assigned_staff_id', staffId)
         .eq('tenant_id', tenantId)
+        .or('is_active.eq.true,onboarding_status.eq.pending')
         .order('first_name')
 
       if (assignedError) throw assignedError
@@ -447,7 +459,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
           user_id,
           users!appointments_user_id_fkey (
             id, first_name, last_name, email, phone, category, 
-            assigned_staff_id, preferred_location_id, role, is_active
+            assigned_staff_id, preferred_location_id, role, is_active, onboarding_status
           )
         `)
         .eq('staff_id', props.currentUser?.id as string)
@@ -459,12 +471,13 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
 
       const typedAppointmentStudents = appointmentStudents as unknown as AppointmentResponse[]
       
+      // ✅ Auch Kunden mit pending onboarding anzeigen
       const historyStudents = typedAppointmentStudents
         .map(apt => apt.users)
         .filter((user): user is UserFromDB => {
           return user !== null && 
                  user.role === 'client' && 
-                 user.is_active === true
+                 (user.is_active === true || user.onboarding_status === 'pending')
         })
 
       // 3. Kombinieren und deduplizieren
@@ -502,7 +515,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         } else {
           const { data: editStudent } = await supabase
             .from('users')
-            .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
+            .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status')
             .eq('id', editStudentId)
             .eq('role', 'client')
             .single()
@@ -524,7 +537,9 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
           phone: user.phone || '',
           category: user.category || '',
           assigned_staff_id: user.assigned_staff_id || '',
-          preferred_location_id: user.preferred_location_id || undefined
+          preferred_location_id: user.preferred_location_id || undefined,
+          is_active: user.is_active,
+          onboarding_status: user.onboarding_status
         }))
         
         availableStudents.value = typedStudents
@@ -554,12 +569,13 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
         throw new Error('User has no tenant assigned')
       }
       
+      // ✅ Auch Kunden mit pending onboarding anzeigen
       let query = supabase
         .from('users')
-        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active')
+        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status')
         .eq('role', 'client')
-        .eq('is_active', true)
         .eq('tenant_id', tenantId)
+        .or('is_active.eq.true,onboarding_status.eq.pending')
         .order('first_name')
 
       if (props.currentUser?.role === 'staff') {
@@ -580,7 +596,9 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
           phone: user.phone || '',
           category: user.category || '',
           assigned_staff_id: user.assigned_staff_id || '',
-          preferred_location_id: user.preferred_location_id || undefined
+          preferred_location_id: user.preferred_location_id || undefined,
+          is_active: user.is_active,
+          onboarding_status: user.onboarding_status
         }))
         
         availableStudents.value = typedStudents
