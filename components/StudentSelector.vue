@@ -211,6 +211,9 @@ interface Props {
   showSwitchToOther?: boolean
 }
 
+// ✅ FIX: Prevent ghost clicks from calendar free slot click propagating to student list
+const clicksEnabled = ref(false)
+
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   disabled: false,
@@ -649,9 +652,17 @@ const selectStudent = (student: Student, isUserClick = false) => {
 }
 
 const handleStudentClick = (student: Student) => {
+  // ✅ FIX: Block ghost clicks that happen immediately when component mounts
+  // This prevents calendar free slot clicks from propagating to student items
+  if (!clicksEnabled.value) {
+    logger.debug('🚫 Student click blocked - clicks not yet enabled (anti-ghost-click protection)')
+    return
+  }
+  
   logger.debug('🔍 Student click attempted:', {
     studentName: student.first_name,
-    isFreeslotMode: props.isFreeslotMode
+    isFreeslotMode: props.isFreeslotMode,
+    clicksEnabled: clicksEnabled.value
   })
   
   // Manuelle Klicks sollten erlaubt sein
@@ -788,6 +799,13 @@ onMounted(() => {
   if (!props.autoLoad || props.isFreeslotMode || (!props.currentUser?.id && !props.showAllStudents)) {
     logger.debug('🚫 Initial auto-load conditions not met. Waiting for props or user action.');
   }
+  
+  // ✅ FIX: Enable clicks after a short delay to prevent ghost clicks from calendar
+  // This prevents the free slot click from propagating to the first student item
+  setTimeout(() => {
+    clicksEnabled.value = true
+    logger.debug('✅ StudentSelector: Clicks now enabled (after 300ms delay)')
+  }, 300)
 });
 
 watch(() => props.autoLoad, (newVal) => { // <--- HIER newVal HINZUFÜGEN
@@ -797,6 +815,19 @@ watch(() => props.autoLoad, (newVal) => { // <--- HIER newVal HINZUFÜGEN
     loadStudents(props.editStudentId);
   } else if (newVal && !props.currentUser?.id) {
     logger.debug('🚫 autoLoad enabled, but no ID yet. Waiting for currentUser.id watcher.');
+  }
+});
+
+// ✅ FIX: Reset click protection when freeslot mode changes (new modal opened)
+watch(() => props.isFreeslotMode, (newVal) => {
+  if (newVal) {
+    // New freeslot mode - reset click protection
+    clicksEnabled.value = false
+    logger.debug('🔄 Freeslot mode changed - resetting click protection')
+    setTimeout(() => {
+      clicksEnabled.value = true
+      logger.debug('✅ StudentSelector: Clicks re-enabled after freeslot mode change')
+    }, 300)
   }
 });
 

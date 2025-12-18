@@ -991,24 +991,33 @@ const useEventModalForm = (currentUser?: any, refs?: {
         try {
           logger.debug('📧 Sending appointment confirmation email...')
           
-          // Fetch student data for email
-          const { data: appointmentData } = await supabase
-            .from('appointments')
-            .select(`
-              *,
-              users:user_id (first_name, last_name, email),
-              staff:staff_id (first_name, last_name),
-              locations:location_id (name)
-            `)
-            .eq('id', result.id)
+          // ✅ FIX: Fetch student data directly instead of using problematic join syntax
+          const { data: studentData } = await supabase
+            .from('users')
+            .select('first_name, last_name, email')
+            .eq('id', result.user_id)
             .single()
           
-          if (appointmentData?.users?.[0]?.email) {
+          // Fetch staff data
+          const { data: staffData } = await supabase
+            .from('users')
+            .select('first_name, last_name')
+            .eq('id', result.staff_id)
+            .single()
+          
+          // Fetch location data
+          const { data: locationData } = await supabase
+            .from('locations')
+            .select('name')
+            .eq('id', result.location_id)
+            .maybeSingle()
+          
+          if (studentData?.email) {
             const confirmationResponse = await $fetch('/api/email/send-appointment-notification', {
               method: 'POST',
               body: {
-                email: appointmentData.users[0].email,
-                studentName: `${appointmentData.users[0].first_name || ''} ${appointmentData.users[0].last_name || ''}`.trim(),
+                email: studentData.email,
+                studentName: `${studentData.first_name || ''} ${studentData.last_name || ''}`.trim(),
                 appointmentTime: new Date(result.start_time).toLocaleString('de-CH', {
                   weekday: 'long',
                   day: '2-digit',
@@ -1018,8 +1027,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
                   minute: '2-digit'
                 }),
                 type: 'pending_payment',
-                staffName: appointmentData.staff?.[0] ? `${appointmentData.staff[0].first_name} ${appointmentData.staff[0].last_name}` : undefined,
-                location: appointmentData.locations?.[0]?.name || undefined,
+                staffName: staffData ? `${staffData.first_name} ${staffData.last_name}` : undefined,
+                location: locationData?.name || undefined,
                 tenantName: 'Driving',
                 tenantId: currentUser.value?.tenant_id,
                 amount: '(wird berechnet)'
@@ -1539,16 +1548,45 @@ const useEventModalForm = (currentUser?: any, refs?: {
       } else {
         const dynamicPrice = refs?.dynamicPricing?.value
         
+        // DEBUG: Zeige den aktuellen Status von dynamicPrice
+        logger.debug('🔍 Dynamic pricing state at save time:', {
+          available: !!dynamicPrice,
+          totalPriceChf: dynamicPrice?.totalPriceChf,
+          pricePerMinute: dynamicPrice?.pricePerMinute,
+          adminFeeChf: dynamicPrice?.adminFeeChf,
+          adminFeeRappen: dynamicPrice?.adminFeeRappen
+        })
+        
         if (dynamicPrice && dynamicPrice.totalPriceChf) {
           const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
           const adminFeeChf = dynamicPrice.adminFeeChf || 0
           const basePriceChf = totalChf - adminFeeChf
           lessonPriceRappen = Math.round(basePriceChf * 100)
         } else {
-          console.warn('⚠️ No dynamic pricing available, using fallback')
-          const pricePerMinute = 2.11
-          const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
-          lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+          logger.warn('⚠️ No dynamic pricing available, using fallback pricing calculation')
+          
+          // Fallback: Lade die Preisregel aus der DB
+          const { data: pricingRule } = await supabase
+            .from('pricing_rules')
+            .select('*')
+            .eq('category_code', formData.value.type)
+            .eq('tenant_id', userData.tenant_id)
+            .eq('is_default', false)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+          
+          if (pricingRule) {
+            const basePriceChf = pricingRule.base_price_rappen / 100
+            lessonPriceRappen = Math.round(basePriceChf * 100)
+            logger.debug('💾 Fallback: Using pricing rule from DB:', { category: formData.value.type, price: lessonPriceRappen })
+          } else {
+            // Last resort: Use generic calculation
+            const pricePerMinute = 2.11
+            const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
+            lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+            logger.warn('💾 Fallback: Using generic price per minute calculation:', { pricePerMinute, duration: durationMinutes, price: lessonPriceRappen })
+          }
           }
         }
       }

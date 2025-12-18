@@ -1186,6 +1186,15 @@ const handleSaveAppointment = async () => {
     let savedAppointment: any = null
     
     try {
+      // ✅ WICHTIG: Stelle sicher, dass die Preisberechnung vor dem Speichern abgeschlossen ist
+      // Dies verhindert Race Conditions, wo der Fallback-Preis verwendet wird
+      if (formData.value.eventType === 'lesson' && formData.value.type) {
+        logger.debug('⏳ Waiting for price calculation before saving...')
+        await calculatePriceForCurrentData()
+        // Gebe der Preisberechnung ein paar Millisekunden Zeit zum Aktualisieren
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+      
       savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
       
       logger.debug('✅ Appointment saved successfully:', savedAppointment)

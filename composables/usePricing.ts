@@ -643,11 +643,48 @@ const roundToNearestFranken = (rappen: number): number => {
     tenantId?: string // ✅ NEU: Tenant ID für Event-Type lookup
   ): Promise<CalculatedPrice> => {
     
-    // ✅ NEU: Bei vergangenen Terminen (Edit-Mode) direkt aus der Datenbank laden
+    // ✅ NEU: Bei Edit-Mode den bestehenden Preis aus dem Payment laden
     if (isEditMode && appointmentId) {
-    // ✅ WICHTIG: Im Edit-Mode NICHT den alten Preis laden wenn sich Duration/Kategorie gerade geändert hat!
-    // Immer neu berechnen wenn calculatePrice aufgerufen wird
-    logger.debug(`📝 Edit-Mode: Skipping old pricing load - will recalculate based on current data`)
+      logger.debug(`📝 Edit-Mode: Loading existing price from payment for appointment ${appointmentId}`)
+      
+      // Lade bestehenden Preis aus der payments Tabelle
+      const { data: existingPayment } = await supabase
+        .from('payments')
+        .select('lesson_price_rappen, admin_fee_rappen, total_amount_rappen')
+        .eq('appointment_id', appointmentId)
+        .maybeSingle()
+      
+      if (existingPayment && existingPayment.lesson_price_rappen > 0) {
+        const lessonPrice = existingPayment.lesson_price_rappen || 0
+        const adminFee = existingPayment.admin_fee_rappen || 0
+        const total = existingPayment.total_amount_rappen || (lessonPrice + adminFee)
+        
+        logger.debug('✅ Edit-Mode: Using existing payment price:', {
+          lessonPrice: lessonPrice / 100,
+          adminFee: adminFee / 100,
+          total: total / 100
+        })
+        
+        // Appointment count ermitteln für die Anzeige
+        let appointmentNumber = 1
+        if (userId) {
+          appointmentNumber = await getAppointmentCount(userId, categoryCode)
+        }
+        
+        return {
+          base_price_rappen: lessonPrice,
+          admin_fee_rappen: adminFee,
+          total_rappen: total,
+          base_price_chf: (lessonPrice / 100).toFixed(2),
+          admin_fee_chf: (adminFee / 100).toFixed(2),
+          total_chf: (total / 100).toFixed(2),
+          category_code: categoryCode,
+          duration_minutes: durationMinutes,
+          appointment_number: appointmentNumber
+        }
+      } else {
+        logger.debug('⚠️ Edit-Mode: No existing payment found, will calculate new price')
+      }
     }
       
   // ✅ NEUE VALIDIERUNG: Theorielektionen und Fahrkategorien behandeln
@@ -769,32 +806,26 @@ const roundToNearestFranken = (rappen: number): number => {
       return cachedPrice.data
     }
 
-    // ✅ KORRIGIERT: Pricing Rules nur im Create-Mode laden
-    let rule = null
-    if (!isEditMode) {
-      // Lade Pricing Rules falls noch nicht geladen
-      if (pricingRules.value.length === 0) {
-        await loadPricingRules()
-      }
-
-      rule = getPricingRule(categoryCode)
-      if (!rule) {
-        throw new Error(`Keine Preisregel für Kategorie ${categoryCode} gefunden`)
-      }
+    // ✅ Lade Pricing Rules (für beide Modi, da wir den Preis auch im Edit-Mode neu berechnen müssen
+    // falls kein bestehendes Payment existiert)
+    if (pricingRules.value.length === 0) {
+      await loadPricingRules()
     }
 
-    // ✅ KORRIGIERT: Appointment count nur im Create-Mode ermitteln
+    const rule = getPricingRule(categoryCode)
+    if (!rule) {
+      throw new Error(`Keine Preisregel für Kategorie ${categoryCode} gefunden`)
+    }
+
+    // ✅ Appointment count ermitteln (für Admin-Fee Berechnung)
     let appointmentNumber = 1
-    if (!isEditMode && userId) {
+    if (userId) {
       appointmentNumber = await getAppointmentCount(userId, categoryCode)
     }
 
-    // ✅ KORRIGIERT: Grundpreis nur im Create-Mode berechnen
-    let basePriceRappen = 0
-    if (!isEditMode && rule) {
-      basePriceRappen = Math.round(rule.price_per_minute_rappen * durationValue)
-      basePriceRappen = roundToNearestFranken(basePriceRappen)
-    }
+    // ✅ Grundpreis berechnen
+    let basePriceRappen = Math.round(rule.price_per_minute_rappen * durationValue)
+    basePriceRappen = roundToNearestFranken(basePriceRappen)
 
     // ✅ NEUE LOGIK: Admin-Fee basierend auf tatsächlichen Zahlungen
     const motorcycleCategories = ['A', 'A1', 'A35kW']
