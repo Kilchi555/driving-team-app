@@ -1,6 +1,7 @@
 // composables/useEventModalForm.ts
 import { ref, computed, reactive } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 import { useCategoryData } from '~/composables/useCategoryData'
 import { toLocalTimeString, localTimeToUTC } from '~/utils/dateUtils'
 import { useEventTypes } from '~/composables/useEventTypes'
@@ -1253,8 +1254,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
       const totalAmountRappen = lessonPriceRappen + productsPriceRappen + adminFeeRappen - discountAmountRappen
       
       // Get invoice address from PriceDisplay component if payment method is invoice
-      let companyBillingAddressId = null
-      let invoiceAddress = null
+      let companyBillingAddressId: string | null = null
+      let invoiceAddress: any = null
       
       // ✅ IMPORTANT: We no longer use globalThis for the billing address ID
       // globalThis is unreliable and causes phantom ID references
@@ -1360,12 +1361,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         paid_at: creditUsedRappen >= Math.max(0, totalAmountRappen) ? new Date().toISOString() : null
       }
       
-      // ✅ CRITICAL: Only include company_billing_address_id if it's a valid value
-      // Do NOT include it at all if null - this prevents FK constraint issues
-      if (companyBillingAddressId && companyBillingAddressId !== 'null' && companyBillingAddressId.trim && companyBillingAddressId.trim() !== '') {
-        paymentData.company_billing_address_id = companyBillingAddressId
-      }
-      // Otherwise, don't include the key at all - Supabase will set it to null automatically
+      // Note: company_billing_address_id is intentionally NOT set in create mode
+      // This triggers the Pendenz system for missing billing address if needed
       
       logger.debug('💳 Creating payment entry:', {
         paymentData,
@@ -1382,7 +1379,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       const response = await $fetch('/api/payments/create-payment', {
         method: 'POST',
         body: { paymentData }
-      })
+      }) as { success: boolean; payment?: any; error?: string }
       
       if (!response.success || !response.payment) {
         console.error('❌ Error creating payment: Server returned no payment')
@@ -1479,6 +1476,13 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let lessonPriceRappen: number
       const appointmentType = formData.value.appointment_type || 'lesson'
       
+      // ✅ Get user data for tenant_id early (needed for pricing rule lookup)
+      const { data: userData } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', formData.value.staff_id)
+        .single()
+      
       // Check if PriceDisplay already updated the payment with new price
       if (existingPayment.lesson_price_rappen && existingPayment.lesson_price_rappen > 0) {
         // Use the current payment price (already updated by PriceDisplay watcher)
@@ -1516,7 +1520,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
             .from('pricing_rules')
             .select('*')
             .eq('category_code', formData.value.type)
-            .eq('tenant_id', userData.tenant_id)
+            .eq('tenant_id', userData?.tenant_id || '')
             .eq('is_default', false)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -1577,8 +1581,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
       const totalAmountRappen = lessonPriceRappen + productsPriceRappen + adminFeeRappen - discountAmountRappen
       
       // Get invoice address
-      let companyBillingAddressId = null
-      let invoiceAddress = null
+      let companyBillingAddressId: string | null = null
+      let invoiceAddress: any = null
       
       if (paymentMethod === 'invoice') {
         const invoiceAddressData = (refs as any)?.companyBillingAddress?.value
@@ -1594,12 +1598,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         }
       }
       
-      // Get user data for tenant_id
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', formData.value.staff_id)
-        .single()
+      // userData already fetched at the start of this function
       
       const updateData = {
         lesson_price_rappen: lessonPriceRappen,

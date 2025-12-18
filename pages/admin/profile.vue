@@ -1565,6 +1565,7 @@
 import { ref, onMounted, markRaw, watch, onUnmounted } from 'vue'
 import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
