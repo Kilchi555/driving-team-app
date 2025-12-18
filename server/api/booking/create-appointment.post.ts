@@ -265,18 +265,26 @@ export default defineEventHandler(async (event) => {
         .limit(1)
         .single()
 
-      let hoursBeforeCancellationFree = 24 // Default fallback
-      
-      if (cancellationPolicy?.rules && Array.isArray(cancellationPolicy.rules)) {
-        // Find the threshold for free cancellation
-        const freeRule = cancellationPolicy.rules.find((rule: any) => rule.charge_percentage === 0)
-        if (freeRule) {
-          hoursBeforeCancellationFree = freeRule.hours_before_appointment
-          logger.debug('📋 Loaded cancellation threshold from policy:', hoursBeforeCancellationFree, 'hours')
-        } else if (cancellationPolicy.rules.length > 0) {
-          hoursBeforeCancellationFree = Math.max(...cancellationPolicy.rules.map((r: any) => r.hours_before_appointment))
-        }
+      // ✅ CRITICAL: Cancellation policy MUST be configured
+      if (!cancellationPolicy?.rules || !Array.isArray(cancellationPolicy.rules) || cancellationPolicy.rules.length === 0) {
+        const errorMsg = 'Keine Stornierungsrichtlinie konfiguriert. Bitte kontaktieren Sie den Administrator.'
+        logger.error('❌ Cancellation policy not found or invalid for tenant:', tenant_id, {
+          policy: cancellationPolicy,
+        })
+        throw new Error(errorMsg)
       }
+
+      // Find the threshold for free cancellation (rule with charge_percentage = 0)
+      const freeRule = cancellationPolicy.rules.find((rule: any) => rule.charge_percentage === 0)
+      
+      if (!freeRule) {
+        const errorMsg = 'Keine kostenloses Stornierungsregel in der Policy konfiguriert. Bitte kontaktieren Sie den Administrator.'
+        logger.error('❌ No free cancellation rule found in policy:', cancellationPolicy.id)
+        throw new Error(errorMsg)
+      }
+      
+      const hoursBeforeCancellationFree = freeRule.hours_before_appointment
+      logger.debug('✅ Loaded free cancellation threshold from policy:', hoursBeforeCancellationFree, 'hours')
 
       // ✅ Berechne scheduled_authorization_date (X Stunden vor Termin, based on policy)
       const appointmentDate = new Date(start_time)
