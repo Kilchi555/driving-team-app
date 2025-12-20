@@ -3,7 +3,7 @@
  * Trigger course sync for a specific course type (VKU or PGS)
  */
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseServerWithSession } from '~/utils/supabase'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient } from '~/utils/sariClient'
 import { SARISyncEngine } from '~/server/utils/sari-sync-engine'
@@ -11,12 +11,13 @@ import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get Supabase client (will use auth from cookies)
-    const supabase = getSupabase()
+    // Get Supabase client with session from Authorization header
+    const supabase = getSupabaseServerWithSession(event)
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
+      logger.debug('SARI sync-courses auth error:', { authError, hasUser: !!user })
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'

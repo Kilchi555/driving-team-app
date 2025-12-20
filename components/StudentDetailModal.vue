@@ -75,6 +75,11 @@
               <p class="text-sm text-gray-900">{{ formatDate(student.birthdate) }}</p>
             </div>
             
+            <div v-if="student.faberid">
+              <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Ausweisnummer</label>
+              <p class="text-sm text-gray-900 font-mono">{{ student.faberid }}</p>
+            </div>
+            
             <div v-if="student.category">
               <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Kategorie</label>
               <p class="text-sm text-gray-900">{{ student.category }}</p>

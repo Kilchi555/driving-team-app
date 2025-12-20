@@ -44,12 +44,12 @@ export class SARISyncEngine {
 
   /**
    * Sync all courses for a given type (VKU or PGS)
+   * Creates courses from SARI groups and course_sessions from individual parts
    */
   async syncAllCourses(courseType: 'VKU' | 'PGS'): Promise<SyncResult> {
     const logEntry = {
       tenant_id: this.tenantId,
       operation: 'SYNC_COURSES',
-      course_type: courseType,
       status: 'pending' as const,
       result: {} as any,
       error_message: null as string | null,
@@ -61,46 +61,37 @@ export class SARISyncEngine {
         tenant_id: this.tenantId
       })
 
-      // 1. Fetch courses from SARI
-      const courseGroup = await this.sari.getCourses(courseType)
-      logger.debug(`📥 Fetched ${courseGroup.courses.length} courses from SARI`)
+      // 1. Fetch course GROUPS from SARI (each group = 1 course with multiple sessions)
+      const courseGroups = await this.sari.getCourseGroups(courseType)
+      logger.debug(`📥 Fetched ${courseGroups.length} course groups from SARI`)
 
-      // 2. Get existing categories for this course type
-      const { data: categories, error: catError } = await this.supabase
-        .from('course_categories')
-        .select('*')
-        .eq('tenant_id', this.tenantId)
-        .eq('sari_course_type', courseType)
-
-      if (catError) {
-        throw new Error(`Failed to fetch categories: ${catError.message}`)
-      }
-
-      const syncedCourses: CourseMapping[] = []
+      let syncedCourses = 0
+      let syncedSessions = 0
+      let syncedParticipants = 0
       const errors: string[] = []
 
-      // 3. Process each course
-      for (const sariCourse of courseGroup.courses) {
+      // 2. Process each course GROUP
+      for (const group of courseGroups) {
         try {
-          const mapped = await this.mapAndStoreCourse(
-            sariCourse,
-            courseType,
-            categories || []
-          )
-          if (mapped) {
-            syncedCourses.push(mapped)
+          const result = await this.mapAndStoreCourseGroup(group, courseType)
+          if (result) {
+            syncedCourses++
+            syncedSessions += result.sessionsCreated
+            syncedParticipants += result.participantsSynced || 0
           }
         } catch (err: any) {
-          const errMsg = `Failed to sync course ${sariCourse.id}: ${err.message}`
-          logger.error(errMsg, { sari_course_id: sariCourse.id })
+          const errMsg = `Failed to sync course group "${group.name}": ${err.message}`
+          logger.error(errMsg, { group_name: group.name })
           errors.push(errMsg)
         }
       }
 
-      // 4. Log success
+      // 3. Log success
       logEntry.status = errors.length === 0 ? 'success' : 'partial'
       logEntry.result = {
-        courses_synced: syncedCourses.length,
+        courses_synced: syncedCourses,
+        sessions_synced: syncedSessions,
+        participants_synced: syncedParticipants,
         courses_failed: errors.length
       }
 
@@ -110,12 +101,14 @@ export class SARISyncEngine {
         success: errors.length === 0,
         operation: 'SYNC_COURSES',
         status: logEntry.status,
-        synced_count: syncedCourses.length,
+        synced_count: syncedCourses,
         error_count: errors.length,
         errors,
         metadata: {
           course_type: courseType,
-          courses_synced: syncedCourses.length
+          courses_synced: syncedCourses,
+          sessions_synced: syncedSessions,
+          participants_synced: syncedParticipants
         }
       }
     } catch (error: any) {
@@ -139,6 +132,353 @@ export class SARISyncEngine {
         errors: [errMsg],
         metadata: { course_type: courseType }
       }
+    }
+  }
+
+  /**
+   * Map a SARI course GROUP to a Simy course + sessions
+   * Group = "Verkehrskunde Lachen" with sessions Teil 1, 2, 3, 4
+   */
+  private async mapAndStoreCourseGroup(
+    group: SARICourseGroup,
+    courseType: 'VKU' | 'PGS'
+  ): Promise<{ courseId: string; sessionsCreated: number; participantsSynced: number } | null> {
+    const sessions = group.courses || []
+    if (sessions.length === 0) {
+      logger.warn(`Course group "${group.name}" has no sessions, skipping`)
+      return null
+    }
+
+    // Get first session for location info
+    const firstSession = sessions[0]
+    const location = firstSession.address 
+      ? `${firstSession.address.name}, ${firstSession.address.address}, ${firstSession.address.zip} ${firstSession.address.city}`
+      : ''
+    
+    // Parse group start date
+    const groupDate = group.date ? new Date(group.date.replace(' ', 'T')) : new Date()
+    const formattedDate = groupDate.toLocaleDateString('de-CH', { 
+      day: '2-digit', month: '2-digit', year: 'numeric' 
+    })
+
+    // Standard VKU/PGS settings
+    const maxParticipants = 12
+    // current_participants = 0 initially, wird durch Registrierungen gepflegt
+    const currentParticipants = 0
+    
+    // Calculate free places (will be updated after participant sync)
+    const freePlaces = maxParticipants - currentParticipants
+
+    // Create unique identifier from first session's SARI ID for the group
+    const groupSariId = `GROUP_${sessions.map(s => s.id).join('_')}`
+
+    // Extract instructor name from SARI data
+    // SARI may provide instructor in different fields: instructor, teacher, or address.name (location)
+    const instructorName = firstSession.instructor || firstSession.teacher || firstSession.address?.name || 'SARI Kursleiter'
+    
+    // Prepare course data
+    const courseData = {
+      tenant_id: this.tenantId,
+      category: courseType,
+      name: `${group.name} - ${formattedDate}`,
+      description: `📍 ${location}\n📅 Start: ${formattedDate}\n👥 ${sessions.length} Kursteile`,
+      max_participants: maxParticipants,
+      current_participants: currentParticipants,
+      instructor_id: null,
+      external_instructor_name: instructorName,
+      sari_managed: true,
+      sari_course_id: groupSariId,
+      sari_sync_status: 'synced',
+      sari_last_sync: new Date().toISOString()
+    }
+
+    // Check if course already exists
+    const { data: existing } = await this.supabase
+      .from('courses')
+      .select('id, current_participants')
+      .eq('sari_course_id', groupSariId)
+      .eq('tenant_id', this.tenantId)
+      .maybeSingle()
+
+    let courseId: string
+
+    if (existing) {
+      // Update existing course - but preserve current_participants
+      const updateData = {
+        ...courseData,
+        current_participants: existing.current_participants // Keep existing participant count
+      }
+      
+      const { error: updateError } = await this.supabase
+        .from('courses')
+        .update(updateData)
+        .eq('id', existing.id)
+
+      if (updateError) {
+        throw new Error(`Failed to update course: ${updateError.message}`)
+      }
+      courseId = existing.id
+      
+      // Delete old sessions to replace with fresh data
+      await this.supabase
+        .from('course_sessions')
+        .delete()
+        .eq('course_id', courseId)
+    } else {
+      // Create new course
+      const { data: newCourse, error: insertError } = await this.supabase
+        .from('courses')
+        .insert(courseData)
+        .select('id')
+        .single()
+
+      if (insertError) {
+        throw new Error(`Failed to create course: ${insertError.message}`)
+      }
+      courseId = newCourse.id
+    }
+
+    // Create sessions for each Teil
+    let sessionsCreated = 0
+    for (let i = 0; i < sessions.length; i++) {
+      const sariSession = sessions[i]
+      
+      // Parse session date (format: "2026-01-10 08:00")
+      const sessionDate = new Date(sariSession.date.replace(' ', 'T'))
+      // Assume 2 hour sessions for VKU
+      const endDate = new Date(sessionDate.getTime() + 2 * 60 * 60 * 1000)
+
+      // Extract instructor for this session
+      const sessionInstructor = sariSession.instructor || sariSession.teacher || sariSession.address?.name || 'SARI Kursleiter'
+      
+      const sessionData = {
+        course_id: courseId,
+        tenant_id: this.tenantId,
+        session_number: i + 1,
+        title: sariSession.name,
+        description: `SARI ID: ${sariSession.id} | Freie Plätze: ${sariSession.freeplaces}`,
+        start_time: sessionDate.toISOString(),
+        end_time: endDate.toISOString(),
+        instructor_type: 'external' as const,
+        external_instructor_name: sessionInstructor,
+        custom_location: sariSession.address 
+          ? `${sariSession.address.address}, ${sariSession.address.zip} ${sariSession.address.city}`
+          : null,
+        is_active: true,
+        sari_session_id: String(sariSession.id) // Store SARI course ID for enrollment
+      }
+
+      const { error: sessionError } = await this.supabase
+        .from('course_sessions')
+        .insert(sessionData)
+
+      if (sessionError) {
+        logger.error(`Failed to create session: ${sessionError.message}`, { 
+          course_id: courseId, 
+          session: sariSession.name 
+        })
+      } else {
+        sessionsCreated++
+      }
+    }
+
+    // Sync participants from all sessions in this group
+    let participantsSynced = 0
+    for (const sariSession of sessions) {
+      try {
+        const syncedCount = await this.syncCourseParticipants(courseId, sariSession.id)
+        participantsSynced += syncedCount
+      } catch (err: any) {
+        logger.error(`Failed to sync participants for session ${sariSession.id}: ${err.message}`)
+      }
+    }
+
+    // Get actual registration count (including existing ones)
+    const { data: registrations, error: regError } = await this.supabase
+      .from('course_registrations')
+      .select('id')
+      .eq('course_id', courseId)
+
+    const totalParticipants = registrations?.length || 0
+
+    // Always update course with actual participant count from registrations
+    logger.debug(`📊 Updating course ${courseId} with ${totalParticipants} total registrations (${participantsSynced} new)`)
+    
+    const { error: updateError } = await this.supabase
+      .from('courses')
+      .update({
+        current_participants: totalParticipants
+      })
+      .eq('id', courseId)
+
+    if (updateError) {
+      logger.error(`Failed to update participant count: ${updateError.message}`)
+    } else {
+      logger.debug(`✅ Updated course participant count to ${totalParticipants}`)
+    }
+
+    logger.debug(`✅ Course group synced: "${group.name}" → ${courseId} with ${sessionsCreated} sessions and ${participantsSynced} new participants`)
+
+    return { courseId, sessionsCreated, participantsSynced }
+  }
+
+  /**
+   * Sync participants from a SARI course to Simy
+   * Creates course_participants if they don't exist and creates course registrations
+   */
+  async syncCourseParticipants(simyCourseId: string, sariCourseId: number): Promise<number> {
+    try {
+      logger.debug(`📥 Syncing participants for SARI course ${sariCourseId}...`)
+      
+      // Get participants from SARI
+      const participants = await this.sari.getCourseDetail(sariCourseId)
+      
+      if (!participants || participants.length === 0) {
+        logger.debug(`No participants found for SARI course ${sariCourseId}`)
+        return 0
+      }
+
+      let syncedCount = 0
+
+      for (const participant of participants) {
+        if (!participant.faberid) {
+          logger.warn(`Participant without faberid, skipping`)
+          continue
+        }
+
+        try {
+          // Try to get full customer data from SARI
+          let fullCustomerData = null
+          try {
+            if (participant.birthdate) {
+              fullCustomerData = await this.sari.getCustomer(participant.faberid, participant.birthdate)
+              logger.debug(`📥 Got full customer data for ${participant.faberid}`)
+            }
+          } catch (err: any) {
+            logger.warn(`Could not fetch full customer data for ${participant.faberid}: ${err.message}`)
+          }
+
+          // Check if course_participant with this faberid already exists
+          const { data: existingParticipant } = await this.supabase
+            .from('course_participants')
+            .select('id, first_name, last_name, email, street, zip, city')
+            .eq('tenant_id', this.tenantId)
+            .eq('faberid', participant.faberid)
+            .maybeSingle()
+
+          let participantId: string
+
+          if (existingParticipant) {
+            participantId = existingParticipant.id
+            
+            // Update participant with SARI data if fields are empty
+            const updateData: any = {}
+            
+            // Only fill empty fields (don't overwrite manual changes)
+            if (fullCustomerData) {
+              if (!existingParticipant.first_name || existingParticipant.first_name === 'Unbekannt') {
+                updateData.first_name = fullCustomerData.firstname
+              }
+              if (!existingParticipant.last_name || existingParticipant.last_name === 'Unbekannt') {
+                updateData.last_name = fullCustomerData.lastname
+              }
+              if (!existingParticipant.street && fullCustomerData.address) {
+                updateData.street = fullCustomerData.address
+              }
+              if (!existingParticipant.zip && fullCustomerData.zip) {
+                updateData.zip = fullCustomerData.zip
+              }
+              if (!existingParticipant.city && fullCustomerData.city) {
+                updateData.city = fullCustomerData.city
+              }
+            }
+            
+            // Update if we have data to update
+            if (Object.keys(updateData).length > 0) {
+              updateData.sari_synced = true
+              updateData.sari_synced_at = new Date().toISOString()
+              
+              const { error: updateError } = await this.supabase
+                .from('course_participants')
+                .update(updateData)
+                .eq('id', existingParticipant.id)
+              
+              if (!updateError) {
+                logger.debug(`✅ Updated participant ${participant.faberid} with SARI data`)
+              }
+            }
+          } else {
+            // Create new course_participant with full SARI data
+            const participantData: any = {
+              tenant_id: this.tenantId,
+              faberid: participant.faberid,
+              first_name: fullCustomerData?.firstname || participant.firstname || 'Unbekannt',
+              last_name: fullCustomerData?.lastname || participant.lastname || 'Unbekannt',
+              birthdate: fullCustomerData?.birthdate || participant.birthdate || null,
+              sari_synced: true,
+              sari_synced_at: new Date().toISOString()
+            }
+            
+            // Add address data if available
+            if (fullCustomerData) {
+              if (fullCustomerData.address) participantData.street = fullCustomerData.address
+              if (fullCustomerData.zip) participantData.zip = fullCustomerData.zip
+              if (fullCustomerData.city) participantData.city = fullCustomerData.city
+            }
+            
+            const { data: newParticipant, error: createError } = await this.supabase
+              .from('course_participants')
+              .insert(participantData)
+              .select('id')
+              .single()
+
+            if (createError) {
+              logger.error(`Error creating participant ${participant.faberid}: ${createError.message}`)
+              continue
+            }
+
+            participantId = newParticipant.id
+            logger.debug(`✅ Created participant ${participant.faberid}: ${participantData.first_name} ${participantData.last_name}`)
+          }
+
+          // Check if registration already exists
+          const { data: existingReg } = await this.supabase
+            .from('course_registrations')
+            .select('id')
+            .eq('course_id', simyCourseId)
+            .eq('participant_id', participantId)
+            .maybeSingle()
+
+          if (!existingReg) {
+            // Create course registration
+            const { error: regError } = await this.supabase
+              .from('course_registrations')
+              .insert({
+                course_id: simyCourseId,
+                participant_id: participantId,
+                tenant_id: this.tenantId,
+                status: participant.confirmed ? 'confirmed' : 'pending',
+                sari_synced: true,
+                sari_synced_at: new Date().toISOString(),
+                created_at: new Date().toISOString()
+              })
+
+            if (regError) {
+              logger.error(`Error creating registration for ${participant.faberid}: ${regError.message}`)
+            } else {
+              syncedCount++
+              logger.debug(`✅ Created registration for ${participant.faberid}`)
+            }
+          }
+        } catch (err: any) {
+          logger.error(`Error processing participant ${participant.faberid}: ${err.message}`)
+        }
+      }
+
+      return syncedCount
+    } catch (err: any) {
+      logger.error(`Failed to sync participants for SARI course ${sariCourseId}: ${err.message}`)
+      return 0
     }
   }
 
@@ -206,90 +546,6 @@ export class SARISyncEngine {
         errors: [errMsg],
         metadata: { faberid }
       }
-    }
-  }
-
-  /**
-   * Map SARI course to Simy course and store it
-   */
-  private async mapAndStoreCourse(
-    sariCourse: SARICourse,
-    courseType: 'VKU' | 'PGS',
-    categories: any[]
-  ): Promise<CourseMapping | null> {
-    // Find matching category
-    const category = categories.find(
-      c =>
-        c.sari_category_code ===
-        courseType /* Ideally map by specific category code */
-    )
-
-    if (!category) {
-      logger.warn(`No category found for course type ${courseType}`)
-      return null
-    }
-
-    // Prepare course data
-    const courseData = {
-      tenant_id: this.tenantId,
-      category_id: category.id,
-      name: sariCourse.name,
-      description: sariCourse.address?.name || '',
-      start_date: new Date(sariCourse.date).toISOString(),
-      max_participants: sariCourse.freeplaces + 1, // Estimate
-      current_participants: 0,
-      location_name: sariCourse.address?.name,
-      location_address: `${sariCourse.address?.address}, ${sariCourse.address?.zip} ${sariCourse.address?.city}`,
-      sari_course_id: sariCourse.id,
-      sari_last_sync_at: new Date().toISOString()
-    }
-
-    // Check if course already exists
-    const { data: existing } = await this.supabase
-      .from('courses')
-      .select('id')
-      .eq('sari_course_id', sariCourse.id)
-      .eq('tenant_id', this.tenantId)
-      .maybeSingle()
-
-    let courseId: string
-
-    if (existing) {
-      // Update existing course
-      const { error: updateError } = await this.supabase
-        .from('courses')
-        .update(courseData)
-        .eq('id', existing.id)
-
-      if (updateError) {
-        throw new Error(`Failed to update course: ${updateError.message}`)
-      }
-
-      courseId = existing.id
-    } else {
-      // Create new course
-      const { data: newCourse, error: insertError } = await this.supabase
-        .from('courses')
-        .insert(courseData)
-        .select('id')
-        .single()
-
-      if (insertError) {
-        throw new Error(`Failed to create course: ${insertError.message}`)
-      }
-
-      courseId = newCourse.id
-    }
-
-    logger.debug(`✅ Course synced: ${sariCourse.id} → ${courseId}`)
-
-    return {
-      sari_course_id: sariCourse.id,
-      simy_course_id: courseId,
-      tenant_id: this.tenantId,
-      sari_name: sariCourse.name,
-      simy_name: courseData.name,
-      last_synced_at: new Date().toISOString()
     }
   }
 
@@ -379,6 +635,42 @@ export class SARISyncEngine {
       last_sync_at: latestLog?.created_at || null,
       last_sync_status: latestLog?.status || null,
       total_syncs: logs?.length || 0
+    }
+  }
+
+  /**
+   * Enroll a student in a SARI course
+   * Called during payment completion for public enrollment
+   */
+  async enrollStudentInSARI(
+    sariCourseId: string,
+    faberid: string,
+    birthdate: string,
+    tenantId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      logger.debug('📝 Enrolling student in SARI course', {
+        sariCourseId,
+        faberid
+      })
+
+      // Call SARI API to enroll student
+      const result = await this.sari.enrollStudent(sariCourseId, faberid)
+
+      if (!result.success) {
+        throw new Error(result.error || 'SARI enrollment failed')
+      }
+
+      logger.debug('✅ Student enrolled in SARI', {
+        sariCourseId,
+        faberid
+      })
+
+      return { success: true }
+    } catch (err: any) {
+      const error = `Failed to enroll student in SARI: ${err.message}`
+      logger.error(error, { sariCourseId, faberid })
+      return { success: false, error }
     }
   }
 }

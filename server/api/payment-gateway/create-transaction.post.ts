@@ -10,6 +10,8 @@ export default defineEventHandler(async (event) => {
 
   try {
     const body = await readBody(event)
+    console.log('📥 Raw body received:', body)
+    
     const {
       orderId,
       amount,
@@ -26,8 +28,24 @@ export default defineEventHandler(async (event) => {
       lineItems
     } = body
 
+    // Debug: Log each field
+    console.log('🔍 Field validation:', {
+      orderId: orderId ? '✅' : '❌',
+      amount: amount !== undefined && amount !== null ? '✅' : '❌',
+      customerEmail: customerEmail ? '✅' : '❌',
+      userId: userId ? '✅' : '❌',
+      tenantId: tenantId ? '✅' : '❌'
+    })
+
     // Validierung
-    if (!orderId || !amount || !customerEmail || !userId || !tenantId) {
+    if (!orderId || amount === undefined || amount === null || !customerEmail || !userId || !tenantId) {
+      console.error('❌ Validation failed. Missing fields:', {
+        orderId: !orderId ? 'MISSING' : 'OK',
+        amount: (amount === undefined || amount === null) ? 'MISSING' : 'OK',
+        customerEmail: !customerEmail ? 'MISSING' : 'OK',
+        userId: !userId ? 'MISSING' : 'OK',
+        tenantId: !tenantId ? 'MISSING' : 'OK'
+      })
       throw createError({
         statusCode: 400,
         statusMessage: 'Missing required fields: orderId, amount, customerEmail, userId, tenantId'

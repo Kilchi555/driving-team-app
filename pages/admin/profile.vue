@@ -728,7 +728,7 @@
                     v-model="sariSettings.sari_environment"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="test">Test (sari-vku-test.ky2help.com)</option>
+                    <option value="test">Test (sari-v4-test.ky2help.com)</option>
                     <option value="production">Production (www.vku-pgs.asa.ch)</option>
                   </select>
                   <p class="text-xs text-gray-500 mt-1">
@@ -736,14 +736,32 @@
                   </p>
                 </div>
 
+                <!-- Show/Hide Credentials Toggle -->
+                <div class="flex items-center gap-2 mb-2">
+                  <button
+                    type="button"
+                    @click="showSariCredentials = !showSariCredentials"
+                    class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <svg v-if="!showSariCredentials" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                    {{ showSariCredentials ? 'Credentials verbergen' : 'Credentials anzeigen' }}
+                  </button>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Client ID</label>
                     <input 
                       v-model="sariSettings.sari_client_id"
-                      type="password"
+                      :type="showSariCredentials ? 'text' : 'password'"
                       placeholder="Von Kyberna bereitgestellt"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                     />
                   </div>
 
@@ -751,9 +769,9 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Client Secret</label>
                     <input 
                       v-model="sariSettings.sari_client_secret"
-                      type="password"
+                      :type="showSariCredentials ? 'text' : 'password'"
                       placeholder="Von Kyberna bereitgestellt"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                     />
                   </div>
 
@@ -761,9 +779,9 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Benutzername</label>
                     <input 
                       v-model="sariSettings.sari_username"
-                      type="text"
+                      :type="showSariCredentials ? 'text' : 'password'"
                       placeholder="Von Kyberna bereitgestellt"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                     />
                   </div>
 
@@ -771,9 +789,9 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Passwort</label>
                     <input 
                       v-model="sariSettings.sari_password"
-                      type="password"
+                      :type="showSariCredentials ? 'text' : 'password'"
                       placeholder="Von Kyberna bereitgestellt"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                     />
                   </div>
                 </div>
@@ -814,8 +832,59 @@
                   {{ sariConnectionMessage }}
                 </div>
 
+                <!-- Manual Sync Section -->
+                <div class="border-t border-gray-200 pt-4 mt-4">
+                  <h4 class="text-sm font-medium text-gray-900 mb-3">Manuelle Kurssynchronisierung</h4>
+                  <div class="flex gap-3">
+                    <button
+                      @click="syncSARICourses('VKU')"
+                      :disabled="isSARISyncing"
+                      class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 transition-colors font-medium flex items-center justify-center"
+                    >
+                      <span v-if="!isSARISyncing || syncingCourseType !== 'VKU'">VKU Kurse laden</span>
+                      <span v-else class="flex items-center">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Synchronisiere...
+                      </span>
+                    </button>
+                    <button
+                      @click="syncSARICourses('PGS')"
+                      :disabled="isSARISyncing"
+                      class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors font-medium flex items-center justify-center"
+                    >
+                      <span v-if="!isSARISyncing || syncingCourseType !== 'PGS'">PGS Kurse laden</span>
+                      <span v-else class="flex items-center">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Synchronisiere...
+                      </span>
+                    </button>
+                  </div>
+                  
+                  <!-- Sync Result -->
+                  <div v-if="sariSyncResult" :class="[
+                    'mt-3 p-3 rounded-lg text-sm',
+                    sariSyncResult.success
+                      ? 'bg-green-50 border border-green-200 text-green-800'
+                      : 'bg-red-50 border border-red-200 text-red-800'
+                  ]">
+                    <div v-if="sariSyncResult.success">
+                      <strong>Synchronisierung erfolgreich!</strong>
+                      <p class="mt-1">{{ sariSyncResult.message }}</p>
+                    </div>
+                    <div v-else>
+                      <strong>Fehler:</strong> {{ sariSyncResult.message }}
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Info Box -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                   <div class="flex">
                     <svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
@@ -1720,6 +1789,10 @@ const sariSettings = ref({
 const isSARITesting = ref(false)
 const sariConnectionMessage = ref<string | null>(null)
 const sariConnectionSuccess = ref(false)
+const showSariCredentials = ref(false)
+const isSARISyncing = ref(false)
+const syncingCourseType = ref<'VKU' | 'PGS' | null>(null)
+const sariSyncResult = ref<{ success: boolean; message: string } | null>(null)
 
 // Template Settings
 const selectedTemplateStage = ref('first')
@@ -2558,16 +2631,37 @@ const testSARIConnection = async () => {
     isSARITesting.value = true
     sariConnectionMessage.value = null
 
+    // Get session for Authorization header
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      sariConnectionSuccess.value = false
+      sariConnectionMessage.value = 'Fehler: Nicht eingeloggt'
+      return
+    }
+
+    // Trim all credentials to remove accidental whitespace
+    const credentials = {
+      environment: sariSettings.value.sari_environment,
+      clientId: sariSettings.value.sari_client_id?.trim() || '',
+      clientSecret: sariSettings.value.sari_client_secret?.trim() || '',
+      username: sariSettings.value.sari_username?.trim() || '',
+      password: sariSettings.value.sari_password?.trim() || ''
+    }
+    
+    logger.debug('Testing SARI connection with:', {
+      environment: credentials.environment,
+      clientId: credentials.clientId ? `${credentials.clientId.substring(0, 5)}...` : 'empty',
+      username: credentials.username
+    })
+
     const response = await fetch('/api/sari/test-connection', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        environment: sariSettings.value.sari_environment,
-        clientId: sariSettings.value.sari_client_id,
-        clientSecret: sariSettings.value.sari_client_secret,
-        username: sariSettings.value.sari_username,
-        password: sariSettings.value.sari_password
-      })
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(credentials)
     })
 
     if (!response.ok) {
@@ -2591,24 +2685,110 @@ const saveSARISettings = async () => {
   try {
     isSaving.value = true
 
+    // Get session for Authorization header
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      showError('Nicht eingeloggt')
+      return
+    }
+
+    // Trim credentials before saving
+    const settingsToSave = {
+      sari_enabled: sariSettings.value.sari_enabled,
+      sari_environment: sariSettings.value.sari_environment,
+      sari_client_id: sariSettings.value.sari_client_id?.trim() || '',
+      sari_client_secret: sariSettings.value.sari_client_secret?.trim() || '',
+      sari_username: sariSettings.value.sari_username?.trim() || '',
+      sari_password: sariSettings.value.sari_password?.trim() || ''
+    }
+
     const response = await fetch('/api/sari/save-settings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sariSettings.value)
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(settingsToSave)
     })
 
     if (!response.ok) {
       const error = await response.json()
-      showError(error.statusMessage || 'Fehler beim Speichern')
+      sariConnectionSuccess.value = false
+      sariConnectionMessage.value = `Fehler: ${error.statusMessage || 'Fehler beim Speichern'}`
       return
     }
 
-    showSuccess('SARI-Einstellungen gespeichert')
-    sariConnectionMessage.value = null
+    sariConnectionSuccess.value = true
+    sariConnectionMessage.value = 'Einstellungen erfolgreich gespeichert'
+    
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      if (sariConnectionSuccess.value) {
+        sariConnectionMessage.value = null
+      }
+    }, 3000)
   } catch (error: any) {
-    showError(error.message || 'Fehler beim Speichern')
+    sariConnectionSuccess.value = false
+    sariConnectionMessage.value = `Fehler: ${error.message || 'Fehler beim Speichern'}`
   } finally {
     isSaving.value = false
+  }
+}
+
+// Sync SARI Courses
+const syncSARICourses = async (courseType: 'VKU' | 'PGS') => {
+  try {
+    isSARISyncing.value = true
+    syncingCourseType.value = courseType
+    sariSyncResult.value = null
+
+    // Get session for Authorization header
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      sariSyncResult.value = { success: false, message: 'Nicht eingeloggt' }
+      return
+    }
+
+    const response = await fetch('/api/sari/sync-courses', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ courseType })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      sariSyncResult.value = { 
+        success: false, 
+        message: data.statusMessage || 'Synchronisierung fehlgeschlagen' 
+      }
+      return
+    }
+
+    // Show success with details from API response
+    const coursesCount = data.synced_count || 0
+    const sessionsCount = data.metadata?.sessions_synced || 0
+    const participantsCount = data.metadata?.participants_synced || 0
+    sariSyncResult.value = { 
+      success: data.success, 
+      message: `${coursesCount} ${courseType}-Kurse mit ${sessionsCount} Sessions und ${participantsCount} Teilnehmern synchronisiert.` 
+    }
+
+    logger.debug('SARI sync result:', data)
+
+  } catch (error: any) {
+    sariSyncResult.value = { 
+      success: false, 
+      message: error.message || 'Synchronisierungsfehler' 
+    }
+  } finally {
+    isSARISyncing.value = false
+    syncingCourseType.value = null
   }
 }
 

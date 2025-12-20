@@ -3,18 +3,19 @@
  * Save SARI credentials for a tenant
  */
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseServerWithSession } from '~/utils/supabase'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get Supabase client (will use auth from cookies)
-    const supabase = getSupabase()
+    // Get Supabase client with session from Authorization header
+    const supabase = getSupabaseServerWithSession(event)
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
+      logger.debug('SARI save-settings auth error:', { authError, hasUser: !!user })
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'

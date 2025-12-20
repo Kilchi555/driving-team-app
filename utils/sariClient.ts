@@ -37,6 +37,8 @@ export interface SARICourse {
     city: string
   }
   freeplaces: number
+  instructor?: string // Instructor name, if provided by SARI
+  teacher?: string // Alternative field name for instructor
 }
 
 export interface SARICourseGroup {
@@ -68,7 +70,7 @@ export class SARIClient {
     this.config = config
     this.baseUrl =
       config.environment === 'test'
-        ? 'https://sari-vku-test.ky2help.com'
+        ? 'https://sari-v4-test.ky2help.com'
         : 'https://www.vku-pgs.asa.ch'
   }
 
@@ -162,6 +164,9 @@ export class SARIClient {
     const token = await this.authenticate()
 
     const url = `${this.baseUrl}/api/courseregistration/customer/${encodeURIComponent(faberid)}/${encodeURIComponent(birthdate)}`
+    
+    console.log('🔍 SARI getCustomer URL:', url)
+    console.log('📝 SARI getCustomer params:', { faberid, birthdate })
 
     const response = await fetch(url, {
       method: 'GET',
@@ -170,26 +175,38 @@ export class SARIClient {
       }
     })
 
+    console.log('📊 SARI getCustomer response status:', response.status, response.statusText)
+
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ SARI getCustomer HTTP error:', { status: response.status, statusText: response.statusText, body: errorText })
       throw new Error(`SARI getCustomer failed: ${response.statusText}`)
     }
 
     const data = (await response.json()) as SARIResponse<SARICustomer>
+    
+    console.log('📥 SARI getCustomer response data:', data)
 
     if (data.status !== 'OK') {
+      console.error('❌ SARI getCustomer returned error status:', data.status)
       throw new Error(`SARI error: ${data.status}`)
     }
 
+    console.log('✅ SARI getCustomer success:', data.result)
     return data.result
   }
 
   /**
-   * Get all courses for a given type (VKU or PGS)
+   * Get all course GROUPS for a given type (VKU or PGS)
+   * Each group contains multiple sessions (Teil 1, 2, 3, 4)
+   * Returns raw array of groups for proper course/session mapping
    */
-  async getCourses(courseType: 'VKU' | 'PGS'): Promise<SARICourseGroup> {
+  async getCourseGroups(courseType: 'VKU' | 'PGS'): Promise<SARICourseGroup[]> {
     const token = await this.authenticate()
 
     const url = `${this.baseUrl}/api/courseregistration/courses/${courseType}`
+
+    console.log(`🔍 SARI getCourseGroups URL: ${url}`)
 
     const response = await fetch(url, {
       method: 'GET',
@@ -199,16 +216,62 @@ export class SARIClient {
     })
 
     if (!response.ok) {
-      throw new Error(`SARI getCourses failed: ${response.statusText}`)
+      const errorText = await response.text()
+      console.error('SARI getCourseGroups error:', { status: response.status, body: errorText })
+      throw new Error(`SARI getCourseGroups failed: ${response.statusText}`)
     }
 
-    const data = (await response.json()) as SARIResponse<SARICourseGroup>
+    const data = await response.json()
 
     if (data.status !== 'OK') {
       throw new Error(`SARI error: ${data.status}`)
     }
 
-    return data.result
+    // SARI returns an array of course GROUPS
+    const result = data.result
+    
+    if (Array.isArray(result)) {
+      console.log(`🔍 SARI: Found ${result.length} course groups`)
+      return result as SARICourseGroup[]
+    }
+    
+    // Single group
+    if (result && result.name) {
+      return [result as SARICourseGroup]
+    }
+
+    console.warn('SARI getCourseGroups: Unexpected response structure')
+    return []
+  }
+
+  /**
+   * Get all courses for a given type (VKU or PGS) - flattened
+   * @deprecated Use getCourseGroups for proper course/session mapping
+   */
+  async getCourses(courseType: 'VKU' | 'PGS'): Promise<SARICourseGroup> {
+    const groups = await this.getCourseGroups(courseType)
+    
+    // Flatten all groups into individual courses
+    const allCourses: SARICourse[] = []
+    
+    for (const group of groups) {
+      if (group.courses && Array.isArray(group.courses)) {
+        for (const course of group.courses) {
+          allCourses.push({
+            ...course,
+            groupName: group.name
+          } as SARICourse & { groupName: string })
+        }
+      }
+    }
+    
+    console.log(`🔍 SARI: Flattened ${groups.length} groups into ${allCourses.length} individual courses`)
+    
+    return {
+      name: courseType,
+      date: new Date().toISOString(),
+      courses: allCourses
+    }
   }
 
   /**
@@ -280,6 +343,7 @@ export class SARIClient {
   /**
    * Unenroll a student from a course
    * Only works if student is not yet confirmed
+   * Note: DELETE sends data in body with application/x-www-form-urlencoded (per SARI docs)
    */
   async unenrollStudent(
     courseId: number,
@@ -287,13 +351,20 @@ export class SARIClient {
   ): Promise<void> {
     const token = await this.authenticate()
 
-    const url = `${this.baseUrl}/api/courseregistration/personcourse?courseid=${courseId}&faberid=${encodeURIComponent(faberid)}`
+    const url = `${this.baseUrl}/api/courseregistration/personcourse`
+
+    const body = new URLSearchParams({
+      courseid: courseId.toString(),
+      faberid
+    })
 
     const response = await fetch(url, {
       method: 'DELETE',
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: body.toString()
     })
 
     if (!response.ok) {

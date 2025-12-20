@@ -1,7 +1,7 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-    <div class="bg-white rounded-lg max-w-2xl w-full max-h-[95vh] overflow-hidden flex flex-col">
-      <div class="bg-green-600 text-white p-4">
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+    <div class="bg-white rounded-lg max-w-2xl w-full flex flex-col evaluation-modal-container">
+      <div class="bg-green-600 text-white p-4 flex-shrink-0">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-bold">Lektion bewerten</h2>
@@ -18,7 +18,7 @@
       </div>
 
       <!-- Sortierungs-Regler -->
-      <div v-if="selectedCriteriaOrder.length > 1" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+      <div v-if="selectedCriteriaOrder.length > 1" class="flex items-center justify-between p-2 bg-gray-50 border-b flex-shrink-0">
         <div class="flex items-center space-x-3">
           <span class="text-gray-500 text-xs font-semibold">Sortierung:</span>
           <button
@@ -41,7 +41,7 @@
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-4">
+      <div class="flex-1 overflow-y-auto p-4 evaluation-modal-content">
         <div v-if="isLoading" class="flex items-center justify-center py-4">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
@@ -165,7 +165,7 @@
 
       
 
-      <div class="bg-gray-50 px-4 py-3 border-t">
+      <div class="bg-gray-50 px-4 py-3 border-t flex-shrink-0 evaluation-modal-footer">
         <div class="flex gap-3">
           <button
             @click="closeModal"
@@ -959,6 +959,26 @@ watch(() => props.studentCategory, (newCategory) => {
 </script>
 
 <style scoped>
+/* iOS Safari Fix: Use dynamic viewport height */
+.evaluation-modal-container {
+  max-height: 90vh;
+  max-height: 90dvh; /* Dynamic viewport height for iOS */
+  overflow: hidden;
+}
+
+/* Ensure content area is scrollable */
+.evaluation-modal-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Footer with Safe Area padding for iOS notch/home indicator */
+.evaluation-modal-footer {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(0.75rem + constant(safe-area-inset-bottom)); /* Fallback for older iOS */
+}
+
 /* Custom scrollbar */
 .overflow-y-auto::-webkit-scrollbar {
   width: 4px;
@@ -985,5 +1005,26 @@ watch(() => props.studentCategory, (newCategory) => {
 /* Focus states for accessibility */
 input:focus, textarea:focus {
   outline: none;
+}
+
+/* Mobile optimization for iOS */
+@media (max-width: 640px) {
+  .evaluation-modal-container {
+    max-height: 85vh;
+    max-height: 85dvh; /* More space for buttons on mobile */
+  }
+}
+
+/* Fallback for browsers that don't support dvh */
+@supports not (height: 1dvh) {
+  .evaluation-modal-container {
+    max-height: 85vh;
+  }
+  
+  @media (max-width: 640px) {
+    .evaluation-modal-container {
+      max-height: 75vh; /* Even more conservative on mobile to avoid footer overlap */
+    }
+  }
 }
 </style>

@@ -87,6 +87,53 @@
       <!-- Form -->
       <form @submit.prevent="submitForm" class="overflow-y-auto max-h-[70vh]">
         <div class="p-6 space-y-6">
+          
+          <!-- SARI Lookup Section -->
+          <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <h3 class="text-sm font-medium text-purple-900 mb-3 flex items-center gap-2">
+              <span>🔍</span> SARI Daten laden (optional)
+            </h3>
+            <p class="text-xs text-purple-700 mb-3">
+              Geben Sie die Ausweisnummer und das Geburtsdatum ein, um die Daten automatisch aus SARI zu laden.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-purple-800 mb-1">Ausweisnummer (faberid)</label>
+                <input
+                  v-model="sariLookup.faberid"
+                  type="text"
+                  placeholder="z.B. CH123456"
+                  class="w-full border border-purple-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-purple-800 mb-1">Geburtsdatum</label>
+                <input
+                  v-model="sariLookup.birthdate"
+                  type="date"
+                  class="w-full border border-purple-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+              </div>
+              <div class="flex items-end">
+                <button
+                  type="button"
+                  @click="lookupSARICustomer"
+                  :disabled="isLookingUpSARI || !sariLookup.faberid || !sariLookup.birthdate"
+                  class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg v-if="isLookingUpSARI" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {{ isLookingUpSARI ? 'Suche...' : 'Laden' }}
+                </button>
+              </div>
+            </div>
+            <p v-if="sariLookupMessage" :class="sariLookupSuccess ? 'text-green-600' : 'text-red-600'" class="text-xs mt-2">
+              {{ sariLookupMessage }}
+            </p>
+          </div>
+
           <!-- Personal Information -->
           <div>
             <h3 class="text-lg font-medium text-gray-900 mb-4">Persönliche Angaben</h3>
@@ -171,6 +218,24 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none"
                   style="min-height: 42px; appearance: none; -webkit-appearance: none; -moz-appearance: none;"
                 >
+              </div>
+
+              <!-- Ausweisnummer / FABER-ID (für SARI VKU/PGS) -->
+              <div>
+                <label for="faberid" class="block text-sm font-medium text-gray-700 mb-1">
+                  Ausweisnummer <span class="text-gray-400">(für VKU/PGS)</span>
+                </label>
+                <input
+                  id="faberid"
+                  v-model="form.faberid"
+                  type="text"
+                  maxlength="20"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-300': errors.faberid }"
+                  placeholder="001234567"
+                >
+                <p class="text-xs text-gray-500 mt-1">Lernfahrausweis-Nr. für SARI-Kurse</p>
+                <p v-if="errors.faberid" class="text-red-600 text-xs mt-1">{{ errors.faberid }}</p>
               </div>
 
               <!-- Category (Optional) -->
@@ -375,6 +440,7 @@ const emit = defineEmits<{
 interface Props {
   show: boolean
   currentUser: any | null
+  isSARICourse?: boolean  // True if this is a SARI-managed course
 }
 
 const props = defineProps<Props>()
@@ -396,6 +462,74 @@ const duplicateInfo = ref({
   actions: [] as string[]
 })
 
+// SARI Lookup State
+const sariLookup = ref({
+  faberid: '',
+  birthdate: ''
+})
+const isLookingUpSARI = ref(false)
+const sariLookupMessage = ref('')
+const sariLookupSuccess = ref(false)
+
+// SARI Lookup Function
+const lookupSARICustomer = async () => {
+  if (!sariLookup.value.faberid || !sariLookup.value.birthdate) {
+    sariLookupMessage.value = 'Bitte Ausweisnummer und Geburtsdatum eingeben'
+    sariLookupSuccess.value = false
+    return
+  }
+
+  isLookingUpSARI.value = true
+  sariLookupMessage.value = ''
+  sariLookupSuccess.value = false
+
+  try {
+    const { data: session } = await getSupabase().auth.getSession()
+    
+    const response = await fetch('/api/sari/lookup-customer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.session?.access_token}`
+      },
+      body: JSON.stringify({
+        faberid: sariLookup.value.faberid,
+        birthdate: sariLookup.value.birthdate
+      })
+    })
+
+    const data = await response.json()
+
+    if (data.success && data.customer) {
+      // Fill form with SARI data
+      form.value.first_name = data.customer.firstname || ''
+      form.value.last_name = data.customer.lastname || ''
+      form.value.birthdate = data.customer.birthdate || sariLookup.value.birthdate
+      form.value.faberid = data.customer.faberid || sariLookup.value.faberid
+      form.value.street = data.customer.address || ''
+      form.value.zip = data.customer.zip || ''
+      form.value.city = data.customer.city || ''
+      
+      sariLookupSuccess.value = true
+      
+      if (data.existingUser) {
+        sariLookupMessage.value = `✅ Daten geladen! Hinweis: User existiert bereits (${data.existingUser.first_name} ${data.existingUser.last_name})`
+      } else {
+        sariLookupMessage.value = `✅ Daten geladen: ${data.customer.firstname} ${data.customer.lastname}`
+      }
+    } else {
+      sariLookupSuccess.value = false
+      sariLookupMessage.value = data.message || 'Kunde nicht gefunden'
+    }
+  } catch (error: any) {
+    console.error('SARI lookup error:', error)
+    sariLookupSuccess.value = false
+    sariLookupMessage.value = `❌ Fehler: ${error.message}`
+  } finally {
+    isLookingUpSARI.value = false
+  }
+}
+
 // Form Data
 const form = ref({
   first_name: '',
@@ -403,6 +537,7 @@ const form = ref({
   email: '',
   phone: '',
   birthdate: '',
+  faberid: '',
   street: '',
   street_nr: '',
   zip: '',
@@ -488,6 +623,7 @@ const resetForm = () => {
     email: '',
     phone: '',
     birthdate: '',
+    faberid: '',
     street: '',
     street_nr: '',
     zip: '',
@@ -496,6 +632,10 @@ const resetForm = () => {
     assigned_staff_id: ''
   }
   errors.value = {}
+  // Reset SARI lookup
+  sariLookup.value = { faberid: '', birthdate: '' }
+  sariLookupMessage.value = ''
+  sariLookupSuccess.value = false
 }
 
 const loadStaffMembers = async () => {
@@ -568,181 +708,72 @@ const loadCategories = async () => {
 const submitForm = async () => {
   if (!validateForm()) return
 
+  // For SARI courses: SARI lookup must be successful
+  if (props.isSARICourse && !sariLookupSuccess.value) {
+    showWarningToast(
+      'SARI Lookup erforderlich',
+      'Für SARI-verwaltete Kurse müssen Sie zuerst die SARI-Daten laden (Ausweisnummer + Geburtsdatum). Dies stellt sicher, dass die Daten mit SARI synchronisiert sind.'
+    )
+    return
+  }
+
   isSubmitting.value = true
-  logger.debug('🚀🚀🚀 Starting form submission...')
+  logger.debug('🚀🚀🚀 Starting form submission (course_participant)...')
 
   try {
-    // Prepare form data - ensure at least empty strings for required DB fields
-    const studentData: any = {
+    // Prepare participant data
+    const participantData: any = {
       first_name: form.value.first_name.trim() || '',
       last_name: form.value.last_name.trim() || '',
-      email: form.value.email.trim() || '',
-      phone: form.value.phone.trim() || ''
+      email: form.value.email.trim() || null,
+      phone: form.value.phone.trim() || null
     }
     
     // Add optional fields only if they have values
-    if (form.value.birthdate) studentData.birthdate = form.value.birthdate
-    if (form.value.street) studentData.street = form.value.street.trim()
-    if (form.value.street_nr) studentData.street_nr = form.value.street_nr.trim()
-    if (form.value.zip) studentData.zip = form.value.zip.trim()
-    if (form.value.city) studentData.city = form.value.city.trim()
-    if (form.value.category) studentData.category = form.value.category
-    if (form.value.assigned_staff_id) studentData.assigned_staff_id = form.value.assigned_staff_id
+    if (form.value.birthdate) participantData.birthdate = form.value.birthdate
+    if (form.value.faberid) participantData.faberid = form.value.faberid.trim()
+    if (form.value.street) participantData.street = form.value.street.trim()
+    if (form.value.street_nr) participantData.street_nr = form.value.street_nr.trim()
+    if (form.value.zip) participantData.zip = form.value.zip.trim()
+    if (form.value.city) participantData.city = form.value.city.trim()
 
-    // Auto-assign to current user if staff
-    if (props.currentUser?.role === 'staff') {
-      studentData.assigned_staff_id = props.currentUser.id
-    }
+    logger.debug('📝 Creating course participant with:', participantData)
 
-    logger.debug('📝 Calling addStudent with:', studentData)
-    const newStudent = await addStudent(studentData) as any
+    // Call API to create participant
+    const { data: session } = await getSupabase().auth.getSession()
     
-    logger.debug('✅✅✅ Schüler erfolgreich hinzugefügt:', newStudent)
-    logger.debug('📱 SMS Success:', newStudent?.smsSuccess)
-    logger.debug('📧 Email Success:', newStudent?.emailSuccess)
-    logger.debug('🔗 Onboarding Link:', newStudent?.onboardingLink)
-    
-    // ✅ Benachrichtigung basierend auf Versandmethode
-    if (newStudent?.smsSuccess) {
-      logger.debug('📲📲📲 SMS success notification triggered')
-      showSuccessToast(
-        'Einladung versendet!',
-        `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet.`
-      )
-    } else if (newStudent?.emailSuccess) {
-      logger.debug('📧📧📧 Email success notification triggered')
-      showSuccessToast(
-        'Einladung versendet!',
-        `Eine E-Mail mit Onboarding-Link wurde an ${form.value.email} gesendet.`
-      )
-    } else {
-      // SMS/Email fehlgeschlagen - zeige Link zum manuellen Kopieren
-      const contactInfo = form.value.phone || form.value.email
-      const contactType = form.value.phone ? 'SMS' : 'E-Mail'
-      
-      logger.debug('⚠️⚠️⚠️ Contact method failed:', { contactType, contactInfo, smsSuccess: newStudent?.smsSuccess, emailSuccess: newStudent?.emailSuccess })
-      showWarningToast(
-        `Schüler erstellt, aber ${contactType} fehlgeschlagen`,
-        `Bitte senden Sie den Onboarding-Link manuell an ${contactInfo}`
-      )
-      
-      // Zeige den Link in der Konsole für Copy/Paste
-      logger.debug('🔗 Onboarding-Link:', newStudent?.onboardingLink)
-      
-      // Optional: Kopiere Link in Zwischenablage
-      if (newStudent?.onboardingLink && navigator.clipboard) {
-        try {
-          await navigator.clipboard.writeText(newStudent.onboardingLink)
-          logger.debug('✅ Link wurde in Zwischenablage kopiert')
-        } catch (e) {
-          logger.debug('⚠️ Konnte Link nicht in Zwischenablage kopieren')
-        }
+    const response = await fetch('/api/course-participants/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.session?.access_token}`
+      },
+      body: JSON.stringify(participantData)
+    })
+
+    const result = await response.json()
+
+    if (!response.ok || !result.success) {
+      // Check for duplicate error
+      if (response.status === 409) {
+        showWarningToast('Teilnehmer existiert bereits', result.message)
+      } else {
+        showWarningToast('Fehler', result.message || 'Teilnehmer konnte nicht erstellt werden')
       }
+      return
     }
-    
-    // Reset form and close modal - mit VIEL längerer Verzögerung damit Toast sichtbar wird
+
+    logger.debug('✅ Participant created:', result.participant)
+    showSuccessToast('Erfolg', `${result.participant.first_name} ${result.participant.last_name} wurde hinzugefügt!`)
+
+    // Emit success and close
+    emit('added', result.participant)
     resetForm()
-    emit('added', newStudent)
-    
-    // Gebe der Toast-Notification Zeit, angezeigt zu werden (2 Sekunden mindestens)
-    setTimeout(() => {
-      logger.debug('🚀 Closing modal after toast display (2000ms delay)')
-      emit('close')
-    }, 2000)
+    emit('close')
 
   } catch (error: any) {
-    console.error('❌❌❌ Fehler beim Hinzufügen des Schülers:', error)
-    console.error('Error details:', error)
-    
-    // ✅ Verständliche Fehlermeldungen mit schönem Modal
-    // Prüfe auch auf Datenbank-Constraint-Fehler (code: 23505)
-    const isDatabaseDuplicatePhone = error.code === '23505' && 
-      (error.message?.includes('users_phone_tenant_unique') || 
-       error.message?.includes('phone'))
-    
-    const isDatabaseDuplicateEmail = error.code === '23505' && 
-      (error.message?.includes('users_email_tenant_unique') || 
-       error.message?.includes('email'))
-    
-    if (error.message === 'DUPLICATE_PHONE' || isDatabaseDuplicatePhone) {
-      const existing = error.existingUser
-      const hasAccount = existing?.auth_user_id !== null
-      
-      let message = `Diese Telefonnummer ist bereits registriert.`
-      
-      if (existing?.first_name && existing?.last_name) {
-        message = `Diese Telefonnummer ist bereits registriert für ${existing.first_name} ${existing.last_name}.`
-      }
-      
-      duplicateInfo.value = {
-        title: 'Telefonnummer bereits vorhanden',
-        message: message,
-        existingUser: existing || null,
-        actionTitle: existing 
-          ? (hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert')
-          : '⚠️ Telefonnummer bereits verwendet',
-        actions: existing && hasAccount 
-          ? [
-              'Schüler anweisen, sich mit E-Mail/Telefon anzumelden',
-              'Bei Passwort vergessen: "Passwort vergessen" verwenden'
-            ]
-          : [
-              'Bestehende Telefonnummer in der Schülerliste suchen',
-              'Ggf. inaktiven/alten Schüler löschen',
-              'Andere Telefonnummer verwenden'
-            ]
-      }
-      
-      errors.value.phone = 'Diese Telefonnummer ist bereits registriert'
-      showDuplicateWarning.value = true
-      
-    } else if (error.message === 'DUPLICATE_EMAIL' || isDatabaseDuplicateEmail) {
-      const existing = error.existingUser
-      const hasAccount = existing?.auth_user_id !== null
-      
-      let message = `Diese E-Mail-Adresse ist bereits registriert.`
-      
-      if (existing?.first_name && existing?.last_name) {
-        message = `Diese E-Mail-Adresse ist bereits registriert für ${existing.first_name} ${existing.last_name}.`
-      }
-      
-      duplicateInfo.value = {
-        title: 'E-Mail bereits vorhanden',
-        message: message,
-        existingUser: existing || null,
-        actionTitle: existing 
-          ? (hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert')
-          : '⚠️ E-Mail bereits verwendet',
-        actions: existing && hasAccount 
-          ? [
-              'Schüler anweisen, sich mit E-Mail anzumelden',
-              'Bei Passwort vergessen: "Passwort vergessen" verwenden'
-            ]
-          : [
-              'Bestehende E-Mail in der Schülerliste suchen',
-              'Ggf. inaktiven/alten Schüler löschen',
-              'Andere E-Mail verwenden'
-            ]
-      }
-      
-      errors.value.email = 'Diese E-Mail-Adresse ist bereits registriert'
-      showDuplicateWarning.value = true
-      
-    } else if (error.message?.includes('duplicate')) {
-      errors.value.email = 'Diese E-Mail-Adresse oder Telefonnummer ist bereits registriert'
-      uiStore.addNotification({
-        type: 'error',
-        title: 'Duplikat gefunden',
-        message: 'Ein Schüler mit dieser E-Mail oder Telefonnummer existiert bereits.'
-      })
-    } else {
-      // General error
-      uiStore.addNotification({
-        type: 'error',
-        title: 'Fehler',
-        message: 'Fehler beim Hinzufügen des Schülers: ' + error.message
-      })
-    }
+    logger.error('❌ Error submitting form:', error)
+    showWarningToast('Fehler', error.message || 'Ein Fehler ist aufgetreten')
   } finally {
     isSubmitting.value = false
   }
@@ -760,71 +791,6 @@ watch(() => props.show, (newValue) => {
     resetForm()
     loadStaffMembers()
     loadCategories()
-  }
-})
-
-// Real-time validation
-watch(() => form.value.email, () => {
-  if (errors.value.email && isValidEmail(form.value.email)) {
-    delete errors.value.email
-  }
-})
-
-watch(() => form.value.first_name, () => {
-  if (errors.value.first_name && form.value.first_name.trim()) {
-    delete errors.value.first_name
-  }
-})
-
-watch(() => form.value.last_name, () => {
-  if (errors.value.last_name && form.value.last_name.trim()) {
-    delete errors.value.last_name
-  }
-})
-
-watch(() => form.value.phone, () => {
-  if (errors.value.phone && form.value.phone.trim()) {
-    delete errors.value.phone
-  }
-})
-
-watch(() => form.value.category, () => {
-  if (errors.value.category && form.value.category.trim()) {
-    delete errors.value.category
-  }
-})
-
-watch(() => form.value.street, () => {
-  if (errors.value.street && form.value.street.trim()) {
-    delete errors.value.street
-  }
-})
-
-watch(() => form.value.street_nr, () => {
-  if (errors.value.street_nr && form.value.street_nr.trim()) {
-    delete errors.value.street_nr
-  }
-})
-
-watch(() => form.value.zip, () => {
-  if (errors.value.zip && form.value.zip.trim()) {
-    delete errors.value.zip
-  }
-})
-
-watch(() => form.value.city, () => {
-  if (errors.value.city && form.value.city.trim()) {
-    delete errors.value.city
-  }
-})
-
-// Phone number formatting watcher
-watch(() => form.value.phone, (newPhone) => {
-  if (newPhone) {
-    const formatted = formatPhoneNumber(newPhone)
-    if (formatted !== newPhone) {
-      form.value.phone = formatted
-    }
   }
 })
 </script>
