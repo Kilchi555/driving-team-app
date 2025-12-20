@@ -103,6 +103,7 @@ export default defineEventHandler(async (event) => {
     const nextYear = new Date(today)
     nextYear.setFullYear(nextYear.getFullYear() + 1)
 
+    // First, get appointments without locations join
     const { data: appointments, error: appointmentsError } = await serviceSupabase
       .from('appointments')
       .select(`
@@ -114,15 +115,11 @@ export default defineEventHandler(async (event) => {
         type,
         location_id,
         user_id,
-        users!appointments_user_id_fkey (
+        users:users!appointments_user_id_fkey (
           first_name,
           last_name,
           email,
           phone
-        ),
-        locations!left (
-          name,
-          address
         )
       `)
       .eq('staff_id', resolvedStaffId)
@@ -134,11 +131,36 @@ export default defineEventHandler(async (event) => {
 
     if (appointmentsError) {
       logger.warn(`⚠️ Error fetching appointments: ${appointmentsError.message}`)
+      logger.warn(`⚠️ Full error:`, appointmentsError)
     }
 
     logger.debug(`📅 Found ${appointments?.length || 0} appointments for staff: ${resolvedStaffId}`)
     if (appointments && appointments.length === 0) {
       logger.debug(`ℹ️ No appointments found in range for staff: ${resolvedStaffId}`)
+    }
+    
+    // If we have appointments with location_ids, fetch locations separately
+    let locationsMap: Record<string, { name: string; address: string }> = {}
+    if (appointments && appointments.length > 0) {
+      const locationIds = appointments
+        .map(apt => apt.location_id)
+        .filter(Boolean) as string[]
+      
+      if (locationIds.length > 0) {
+        const { data: locations } = await serviceSupabase
+          .from('locations')
+          .select('id, name, address')
+          .in('id', locationIds)
+        
+        if (locations) {
+          locations.forEach(loc => {
+            locationsMap[loc.id] = { name: loc.name, address: loc.address }
+          })
+        }
+      }
+      
+      logger.debug(`🔍 First appointment structure:`, JSON.stringify(appointments[0], null, 2))
+      logger.debug(`📍 Loaded ${Object.keys(locationsMap).length} locations`)
     }
 
     // 4. Build ICS file
@@ -162,11 +184,14 @@ export default defineEventHandler(async (event) => {
           // Removed: phone and email for privacy
         }
         
-        // Get location address
-        if (apt.locations?.address) {
-          eventLocation = apt.locations.address
-        } else if (apt.locations?.name) {
-          eventLocation = apt.locations.name
+        // Get location address from map
+        if (apt.location_id && locationsMap[apt.location_id]) {
+          const location = locationsMap[apt.location_id]
+          if (location.address) {
+            eventLocation = location.address
+          } else if (location.name) {
+            eventLocation = location.name
+          }
         }
 
         // Create unique ID for event (using appointment ID)
