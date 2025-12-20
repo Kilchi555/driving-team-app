@@ -938,6 +938,35 @@
             <div v-else class="text-sm text-gray-500 italic">Keine Rechnungsadresse vorhanden</div>
           </div>
 
+          <!-- Firmen-Rechnungsadressen -->
+          <div v-if="userBillingAddresses.length > 0" class="bg-white rounded-lg border p-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+              Firmen-Rechnungsadressen
+            </h4>
+            
+            <div class="space-y-3">
+              <div 
+                v-for="address in userBillingAddresses" 
+                :key="address.id" 
+                class="p-3 bg-gray-50 rounded border border-gray-200 text-sm"
+              >
+                <div class="font-semibold text-gray-900">{{ address.company_name }}</div>
+                <div v-if="address.contact_person" class="text-gray-600">{{ address.contact_person }}</div>
+                <div v-if="address.street && address.street_number" class="text-gray-600">
+                  {{ address.street }} {{ address.street_number }}
+                </div>
+                <div v-if="address.zip && address.city" class="text-gray-600">
+                  {{ address.zip }} {{ address.city }}
+                </div>
+                <div v-if="address.email" class="text-gray-600">{{ address.email }}</div>
+                <div v-if="address.phone" class="text-gray-600">{{ address.phone }}</div>
+              </div>
+            </div>
+          </div>
+
           <!-- Andere Details... -->
         </div>
       </div>
@@ -1244,6 +1273,7 @@ const studentDocuments = ref<any[]>([])
 const examResults = ref<any[]>([])
 const cancellationPolicies = ref<any[]>([])
 const studentBalance = ref<number | undefined>(undefined) // ✅ NEU: Student credit balance
+const userBillingAddresses = ref<any[]>([]) // ✅ NEU: Firmen-Rechnungsadressen für diesen User
 const isLoadingLessons = ref(false)
 const isLoadingExamResults = ref(false)
 const sortMode = ref<'newest' | 'worst'>('newest') // Toggle zwischen neueste und schlechteste Bewertungen
@@ -2621,10 +2651,42 @@ const loadStudentDocuments = async () => {
   }
 }
 
+// ===== USER BILLING ADDRESSES =====
+const loadUserBillingAddresses = async () => {
+  if (!props.selectedStudent) {
+    logger.debug('⚠️ No student selected')
+    return
+  }
+  
+  try {
+    logger.debug('🏢 Loading billing addresses for user:', props.selectedStudent.id)
+    
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('company_billing_addresses')
+      .select('*')
+      .eq('user_id', props.selectedStudent.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('❌ Error loading billing addresses:', error)
+      return
+    }
+    
+    userBillingAddresses.value = data || []
+    logger.debug('✅ Loaded', userBillingAddresses.value.length, 'billing addresses for user')
+  } catch (err: any) {
+    console.error('❌ Error in loadUserBillingAddresses:', err)
+  }
+}
+
 // Watch for tab changes to load documents when Documents tab is opened
 watch(() => activeTab.value, (newTab) => {
   if (newTab === 'documents') {
     loadStudentDocuments()
+  } else if (newTab === 'details') {
+    loadUserBillingAddresses()
   }
 })
 
@@ -2632,6 +2694,10 @@ watch(() => activeTab.value, (newTab) => {
 watch(() => props.selectedStudent, async () => {
   if (props.selectedStudent) {
     await loadStudentDocuments()
+    // Load billing addresses if details tab is currently active
+    if (activeTab.value === 'details') {
+      await loadUserBillingAddresses()
+    }
   }
 }, { immediate: true })
 

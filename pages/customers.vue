@@ -255,47 +255,6 @@
                   </span>
                 </div>
               </div>
-
-              <!-- Additional Info Row (Mobile) -->
-              <div class="mt-2 pt-2 border-t border-gray-100 sm:hidden">
-                <div class="flex items-center justify-between text-xs text-gray-400">
-                  <!-- Left: Additional info -->
-                  <div class="flex items-center gap-3">
-                    <span>
-                      Fahrlehrer: {{ student.assignedInstructor || '-' }}
-                    </span>
-                    <span>
-                      Lektionen: {{ student.completedLessonsCount || '-' }}
-                    </span>
-
-                  </div>
-                  
-                  <!-- Right: Date -->
-                  <span class="text-xs text-gray-400">
-                    Letzter Termin: {{ student.lastLesson ? formatRelativeDate(student.lastLesson) : '-' }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Desktop: Additional Info Row (hidden on mobile) -->
-              <div class="mt-2 pt-2 border-t border-gray-100 hidden sm:block">
-                <div class="flex items-center justify-between text-xs text-gray-400">
-                  <!-- Left: Additional info -->
-                  <div class="flex items-center gap-3">
-                    <span>
-                      Fahrlehrer: {{ student.assignedInstructor || '-' }}
-                    </span>
-                    <span>
-                      Lektionen: {{ student.completedLessonsCount || '-' }}
-                    </span>
-                  </div>
-                  
-                  <!-- Right: Date -->
-                  <span class="text-xs text-gray-400">
-                    Letzter Termin: {{ student.lastLesson ? formatRelativeDate(student.lastLesson) : '-' }}
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -1001,26 +960,37 @@ const loadStudents = async (loadAppointments = true) => {
     logger.debug('📋 Billing addresses result:', { billingAddresses, billingError })
 
     // Load billing addresses for students
-    logger.debug('📋 Loading billing addresses')
+    logger.debug('📋 Loading billing addresses for each user')
     const { data: companyBillingAddresses, error: billingAddressError } = await supabase
       .from('company_billing_addresses')
       .select('*')
+      .in('user_id', studentIds)
+      .eq('is_active', true)
       .order('created_at', { ascending: false })
-      .limit(1) // Get the most recent one
 
-    logger.debug('📋 Billing addresses result:', { companyBillingAddresses, billingAddressError })
+    logger.debug('📋 Billing addresses result:', { count: companyBillingAddresses?.length, billingAddressError })
 
     if (!billingAddressError && companyBillingAddresses && companyBillingAddresses.length > 0) {
       logger.debug('📋 Found', companyBillingAddresses.length, 'billing addresses')
-      logger.debug('📋 First address:', companyBillingAddresses[0])
       
-      // Add first billing address to each student as invoice_address - formatted nicely
+      // Group addresses by user_id
+      const addressesByUser: Record<string, any[]> = {}
+      companyBillingAddresses.forEach(addr => {
+        if (!addressesByUser[addr.user_id]) {
+          addressesByUser[addr.user_id] = []
+        }
+        addressesByUser[addr.user_id].push(addr)
+      })
+      
+      // Add billing addresses to each student
       enrichedStudents.forEach((student: any) => {
-        if (companyBillingAddresses.length > 0) {
-          const addr = companyBillingAddresses[0]
+        const userAddresses = addressesByUser[student.id] || []
+        if (userAddresses.length > 0) {
+          const addr = userAddresses[0] // Most recent one for this user
           
           // Format as multi-line address
           const addressLines = [
+            addr.company_name,
             addr.contact_person,
             addr.street && addr.street_number ? `${addr.street} ${addr.street_number}` : addr.street,
             addr.zip && addr.city ? `${addr.zip} ${addr.city}` : (addr.zip || addr.city),
@@ -1029,7 +999,7 @@ const loadStudents = async (loadAppointments = true) => {
           
           student.invoice_address = addressLines.join('\n')
           
-          logger.debug('📋 Added invoice address to student:', student.id, '\n', student.invoice_address)
+          logger.debug('📋 Added invoice address to student:', student.id)
         }
       })
       students.value = enrichedStudents
