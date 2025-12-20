@@ -120,7 +120,7 @@ export default defineEventHandler(async (event) => {
           email,
           phone
         ),
-        locations (
+        locations!left (
           name,
           address
         )
