@@ -111,12 +111,18 @@ export default defineEventHandler(async (event) => {
         start_time,
         end_time,
         status,
+        type,
+        location_id,
         user_id,
         users!appointments_user_id_fkey (
           first_name,
           last_name,
           email,
           phone
+        ),
+        locations (
+          name,
+          address
         )
       `)
       .eq('staff_id', resolvedStaffId)
@@ -148,18 +154,28 @@ export default defineEventHandler(async (event) => {
         // Build description with student info
         let description = ''
         let studentFullName = ''
+        let eventLocation = 'Driving Lesson' // Default fallback
+        
         if (apt.users) {
           studentFullName = `${apt.users.first_name} ${apt.users.last_name}`
           description = `Student: ${studentFullName}`
           // Removed: phone and email for privacy
         }
+        
+        // Get location address
+        if (apt.locations?.address) {
+          eventLocation = apt.locations.address
+        } else if (apt.locations?.name) {
+          eventLocation = apt.locations.name
+        }
 
         // Create unique ID for event (using appointment ID)
         const eventUid = `${apt.id}@${new URL(process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000').hostname}`
 
-        // Build title with student name
+        // Build title: "Vorname Name - Kategorie Type"
+        const vehicleType = apt.type || 'Fahrstunde'
         const eventTitle = studentFullName 
-          ? `${apt.title || 'Appointment'} - ${studentFullName}`
+          ? `${studentFullName} - Kategorie ${vehicleType}`
           : apt.title || 'Appointment'
 
         // Build event with proper iOS-compatible formatting
@@ -170,7 +186,7 @@ DTSTART;TZID=Europe/Zurich:${formatICSDateTimeLocal(startTime)}
 DTEND;TZID=Europe/Zurich:${formatICSDateTimeLocal(endTime)}
 SUMMARY:${sanitizeText(eventTitle)}
 DESCRIPTION:${sanitizeText(description)}
-LOCATION:Driving Lesson
+LOCATION:${sanitizeText(eventLocation)}
 TRANSP:OPAQUE
 STATUS:${apt.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}
 SEQUENCE:0
