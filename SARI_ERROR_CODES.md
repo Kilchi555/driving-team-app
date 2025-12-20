@@ -28,7 +28,8 @@ Diese basieren auf SARI API Responses und sollten entsprechend gehandhabt werden
 |---|---|---|---|
 | `COURSE_FULL` | Kurs ist ausgebucht | "Der Kurs ist ausgebucht" | Benutzer kann sich nicht anmelden |
 | `COURSE_CANCELLED` | Kurs wurde storniert | "Der Kurs wurde abgesagt" | Benutzer kann sich nicht anmelden |
-| `ALREADY_ENROLLED` | Teilnehmer ist bereits in diesem Kurs angemeldet | "Sie sind bereits in diesem Kurs angemeldet" | Duplikat-Schutz |
+| `ALREADY_ENROLLED` | Teilnehmer ist bereits in diesem Kurs angemeldet | "Sie sind bereits für diesen Kurs angemeldet" | Duplikat-Schutz |
+| `PERSON_ALREADY_ADDED` | Teilnehmer ist bereits in diesem Kurs angemeldet (SARI-intern) | "Sie sind bereits für diesen Kurs angemeldet" | Duplikat-Schutz |
 | `COURSE_IN_PAST` | Kurs liegt in der Vergangenheit | "Der Kurs hat bereits stattgefunden" | Benutzer kann sich nicht anmelden |
 | `REGISTRATION_DEADLINE_PASSED` | Anmeldeschluss ist vorbei | "Die Anmeldefrist für diesen Kurs ist abgelaufen" | Benutzer kann sich nicht anmelden |
 

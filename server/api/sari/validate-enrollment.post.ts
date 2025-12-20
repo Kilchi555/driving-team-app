@@ -129,8 +129,16 @@ export default defineEventHandler(async (event) => {
     if (error.message?.includes('ALREADY_ENROLLED')) {
       return {
         success: false,
-        message: 'Sie sind bereits in diesem Kurs angemeldet.',
+        message: 'Sie sind bereits für diesen Kurs angemeldet.',
         error_code: 'ALREADY_ENROLLED'
+      }
+    }
+
+    if (error.message?.includes('PERSON_ALREADY_ADDED')) {
+      return {
+        success: false,
+        message: 'Sie sind bereits für diesen Kurs angemeldet.',
+        error_code: 'PERSON_ALREADY_ADDED'
       }
     }
 
