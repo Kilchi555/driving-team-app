@@ -70,17 +70,18 @@ export const useCancellationPolicies = () => {
 
       // Build query
       // ✅ IMPORTANT: Load both tenant-specific policies AND global policies (tenant_id = NULL)
-      // For now, load ALL active policies with the correct applies_to
-      // Then filter in code if needed
       let query = supabase
         .from('cancellation_policies')
         .select('*')
-        .eq('is_active', true)
       
       // Filter by applies_to if specified
       if (appliesTo) {
         query = query.eq('applies_to', appliesTo)
       }
+      
+      // ✅ IMPORTANT: Don't filter by is_active - load all policies
+      // The is_active column might be stored as text 'true'/'false' instead of boolean
+      // We'll check is_active in the code below
       
       // Order: tenant-specific policies first (non-NULL tenant_id), then global policies
       query = query.order('tenant_id', { ascending: false })
@@ -96,11 +97,17 @@ export const useCancellationPolicies = () => {
 
       logger.debug('✅ Raw policies data loaded:', { count: policiesData?.length || 0, policies: policiesData })
 
-      // Filter to get both tenant-specific AND global policies
+      // Filter to get:
+      // 1. Active policies (is_active = true)
+      // 2. Both tenant-specific AND global policies
       // Tenant-specific policies take precedence over global
-      const filteredPolicies = (policiesData || []).filter(p => 
-        p.tenant_id === null || p.tenant_id === tenantId
-      )
+      const filteredPolicies = (policiesData || []).filter(p => {
+        // Check if policy is active (handle both boolean and string 'true'/'false')
+        const isActive = p.is_active === true || p.is_active === 'true'
+        
+        // Include if active AND (tenant-specific OR global)
+        return isActive && (p.tenant_id === null || p.tenant_id === tenantId)
+      })
       
       policies.value = filteredPolicies
 
