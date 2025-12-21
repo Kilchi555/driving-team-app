@@ -1443,7 +1443,7 @@ const handleSendSmsRequest = async ({
   onError
 }: SmsPayload) => {
   // Rufe die eigentliche Sendelogik auf
-  const result = await sendSms(phoneNumber, message);
+  const result = await sendSms(phoneNumber, message, tenantName.value);
 
   if (result.success) {
     onSuccess('SMS erfolgreich gesendet!'); // Callback an die Child-Komponente
@@ -5661,11 +5661,14 @@ watch(() => props.isVisible, async (newVisible) => {
       if (tenantId) {
         const { data: tenantData } = await supabase
           .from('tenants')
-          .select('name')
+          .select('name, twilio_from_sender')
           .eq('id', tenantId)
           .single()
         
-        if (tenantData?.name) {
+        if (tenantData?.twilio_from_sender) {
+          tenantName.value = tenantData.twilio_from_sender
+          logger.debug('🏢 Tenant SMS sender loaded (twilio_from_sender):', tenantName.value)
+        } else if (tenantData?.name) {
           tenantName.value = tenantData.name
           logger.debug('🏢 Tenant name loaded:', tenantName.value)
         }
