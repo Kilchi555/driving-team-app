@@ -4275,18 +4275,14 @@ const goBackInCancellationFlow = async () => {
     cancellationStep.value = 2
   } else if (cancellationStep.value === 2) {
     // Go back from policy selection to reason selection
+    // DON'T call goToPolicySelection - it would jump to step 3 again!
+    // Instead, just reset the policy result and go back
+    cancellationPolicyResult.value = null
     cancellationStep.value = 1
-    
-    // ✅ Re-calculate policy based on the already selected reason
-    // This ensures the correct charge (0% for staff, policy % for student)
-    if (selectedCancellationReasonId.value) {
-      await goToPolicySelection()
-    }
   } else if (cancellationStep.value === 1) {
     // Go back from reason selection to type selection
     cancellationStep.value = 0
     selectedCancellationReasonId.value = null
-    // ✅ Reset policy result when going back to type selection
     cancellationPolicyResult.value = null
   }
   logger.debug('⬅️ Going back in cancellation flow, step:', cancellationStep.value)
