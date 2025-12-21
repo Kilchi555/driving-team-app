@@ -97,106 +97,43 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!payment) {
-      logger.debug('⚠️ No payment found for appointment - check if shouldCreditHours is true')
+      logger.debug('⚠️ No payment found for appointment')
       
-      // ✅ NEW: If shouldCreditHours is true but no payment found, still create credit!
-      // This happens when appointment has no associated payment (e.g., free lessons)
-      if (shouldCreditHours && chargePercentage === 0) {
-        const refundAmount = (originalLessonPrice || 0) + (originalAdminFee || 0)
-        
-        if (refundAmount > 0) {
-          logger.debug('💚 No payment but shouldCreditHours=true, creating credit anyway:', {
-            refundAmount: (refundAmount / 100).toFixed(2)
-          })
-          
-          // Fetch appointment for user_id
-          const { data: apt } = await supabase
-            .from('appointments')
-            .select('user_id')
-            .eq('id', appointmentId)
-            .single()
-          
-          if (apt) {
-            // Create credit directly
-            const { data: { user: authUser } } = await supabase.auth.getUser()
-            const { data: currentUser } = await supabase
-              .from('users')
-              .select('id')
-              .eq('auth_user_id', authUser?.id)
-              .single()
-            
-            if (currentUser) {
-              // Load current balance
-              const { data: studentCredit } = await supabase
-                .from('student_credits')
-                .select('id, balance_rappen')
-                .eq('user_id', apt.user_id)
-                .single()
-              
-              if (studentCredit) {
-                const oldBalance = studentCredit.balance_rappen || 0
-                const newBalance = oldBalance + refundAmount
-                
-                await supabase
-                  .from('student_credits')
-                  .update({
-                    balance_rappen: newBalance,
-                    updated_at: new Date().toISOString()
-                  })
-                  .eq('id', studentCredit.id)
-                
-                await supabase
-                  .from('credit_transactions')
-                  .insert([{
-                    user_id: apt.user_id,
-                    transaction_type: 'cancellation',
-                    amount_rappen: refundAmount,
-                    balance_before_rappen: oldBalance,
-                    balance_after_rappen: newBalance,
-                    payment_method: 'refund',
-                    reference_id: appointmentId,
-                    reference_type: 'appointment',
-                    created_by: currentUser.id,
-                    notes: `Rückerstattung für Terminabsage: ${deletionReason} (CHF ${(refundAmount / 100).toFixed(2)})`
-                  }])
-                
-                logger.debug('✅ Credit created despite no payment:', {
-                  oldBalance: (oldBalance / 100).toFixed(2),
-                  newBalance: (newBalance / 100).toFixed(2),
-                  refund: (refundAmount / 100).toFixed(2)
-                })
-                
-                // ✅ NEW: Update appointment to mark credit_created as true
-                const { error: updateAptError } = await supabase
-                  .from('appointments')
-                  .update({ credit_created: true })
-                  .eq('id', appointmentId)
-                
-                if (updateAptError) {
-                  console.warn('⚠️ Could not update appointment credit_created flag:', updateAptError)
-                } else {
-                  logger.debug('✅ Appointment marked as credit_created (no payment case)')
-                }
-                
-                return {
-                  success: true,
-                  message: 'Appointment cancelled - credit applied to student balance (no payment found)',
-                  refundAmount: (refundAmount / 100),
-                  action: 'credit_created_no_payment',
-                  details: {
-                    oldBalance: (oldBalance / 100).toFixed(2),
-                    newBalance: (newBalance / 100).toFixed(2),
-                    refundAmount: (refundAmount / 100).toFixed(2),
-                    deletionReason
-                  }
-                }
-              }
-            }
+      // ✅ UPDATED LOGIC: When appointment is unpaid (no payment found)
+      // - Staff cancellation (chargePercentage = 0): Do nothing, just delete
+      // - Client cancellation (chargePercentage = 100): Payment stays pending for next appointment
+      
+      if (chargePercentage === 0 && shouldCreditHours) {
+        // Staff cancellation without charge - no need to create credit or do anything
+        logger.debug('✅ Staff cancellation with no charge on unpaid appointment - no action needed')
+        return {
+          success: true,
+          message: 'Appointment cancelled - no payment to process (staff cancellation)',
+          action: 'no_payment_staff_cancel',
+          details: {
+            deletionReason
+          }
+        }
+      } else if (chargePercentage > 0) {
+        // Client cancellation with charge on unpaid appointment
+        // Payment will remain pending and be charged with next appointment
+        logger.debug('✅ Client cancellation with charge on unpaid appointment - payment stays pending', {
+          chargePercentage,
+          chargeAmount: Math.round((lessonPriceRappen + adminFeeRappen) * chargePercentage / 100)
+        })
+        return {
+          success: true,
+          message: 'Appointment cancelled - pending charge will be applied to next payment',
+          action: 'pending_charge_no_payment',
+          details: {
+            chargePercentage,
+            chargeAmountRappen: Math.round((lessonPriceRappen + adminFeeRappen) * chargePercentage / 100),
+            deletionReason
           }
         }
       }
       
-      return { success: false, message: 'No payment found for this appointment' }
+      return { success: true, message: 'No payment found for this appointment' }
     }
 
     // 3. Check if payment was completed/authorized
