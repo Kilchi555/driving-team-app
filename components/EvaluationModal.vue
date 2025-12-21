@@ -99,11 +99,7 @@
                 <div class="flex-1">
                   <h4 class="font-medium text-gray-900">
                     {{ getCriteriaById(criteriaId)?.name }}
-                  </h4>
-                      <!-- NEU: Lektionsdatum hinzufügen -->
-                  <p v-if="criteriaAppointments[criteriaId]?.start_time" class="text-xs text-gray-500 mt-1">
-                    Bewertung vom {{ formatLessonDate(criteriaId) }}
-                  </p>
+                  </h4>         
                 </div>
                 
                 <button
