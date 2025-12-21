@@ -3674,19 +3674,33 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     if (isLessonType) {
       // ✅ IMPORTANT: Use the cancellation policy to determine charge percentage
       // Do NOT hardcode 100% - the policy decides based on time until appointment
-      chargePercentage = cancellationPolicyResult.value?.chargePercentage || 100
+      chargePercentage = cancellationPolicyResult.value?.calculation.chargePercentage || 100
       
       logger.debug('💳 Using cancellation policy for charge determination:', {
-        policyChargePercentage: cancellationPolicyResult.value?.chargePercentage,
+        policyChargePercentage: cancellationPolicyResult.value?.calculation.chargePercentage,
         withCosts,
         finalChargePercentage: chargePercentage
       })
       
-      if (chargePercentage === 0) {
-        logger.debug('💳 Appointment cancelled without charge - processing refund via handle-cancellation')
+      // ✅ CRITICAL: Check if appointment is already paid
+      const isPaid = payments && payments.length > 0 && payments[0].payment_status === 'completed'
+      
+      logger.debug('💳 Payment status check:', {
+        isPaid,
+        paymentStatus: payments && payments.length > 0 ? payments[0].payment_status : 'no payment found',
+        chargePercentage
+      })
+      
+      // ✅ CORRECT LOGIC:
+      // 1. Paid + 0% charge → Create credit (call handle-cancellation)
+      // 2. Paid + 100% charge → NO credit (money stays as cancellation fee)
+      // 3. Unpaid + 0% charge → Set payment to 'cancelled', NO credit
+      // 4. Unpaid + 100% charge → Payment remains 'pending' for next appointment
+      
+      if (isPaid && chargePercentage === 0) {
+        // CASE 1: Paid + Free cancellation → Create credit
+        logger.debug('💳 CASE 1: Paid appointment with free cancellation - crediting to student credit')
         
-        // ✅ NEW: Call handle-cancellation endpoint to process refunds
-        logger.debug('📡 Calling handle-cancellation endpoint for refund processing...')
         try {
           const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
             method: 'POST',
@@ -3702,26 +3716,39 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
             }
           })
           
-          logger.debug('✅ Cancellation refund processed:', cancellationResult)
-          // @ts-ignore - cancellationResult is of type unknown
-          if (cancellationResult.action === 'refund_processed' || cancellationResult.action === 'credit_created_no_payment') {
-            // @ts-ignore
-            logger.debug(`💰 Refund/Credit applied: CHF ${cancellationResult.details?.refundAmount || cancellationResult.refundAmount}`)
-          }
+          logger.debug('✅ Credit created for paid appointment:', cancellationResult)
         } catch (error: any) {
-          console.error('❌ Error calling handle-cancellation endpoint:', {
-            message: error.message,
-            statusCode: error.statusCode,
-            statusMessage: error.statusMessage,
-            data: error.data,
-            fullError: error
-          })
+          console.error('❌ Error creating credit:', error)
         }
-      } else if (chargePercentage > 0) {
-        logger.debug('💳 Appointment will be charged cancellation fee - keeping all payment data')
-        logger.debug('   - lesson_price_rappen: KEPT (for cancellation fee)')
-        logger.debug('   - products_price_rappen: KEPT (for cancellation fee)')
-        logger.debug('   - product_sales: KEPT (for accounting)')
+      } else if (isPaid && chargePercentage > 0) {
+        // CASE 2: Paid + Charged cancellation → No credit
+        logger.debug('💳 CASE 2: Paid appointment with charge - NO credit given (cancellation fee applies)')
+        logger.debug('   - Payment remains completed')
+        logger.debug('   - Amount is kept as cancellation fee')
+      } else if (!isPaid && chargePercentage === 0) {
+        // CASE 3: Unpaid + Free cancellation → Set payment to cancelled, NO credit
+        logger.debug('💳 CASE 3: Unpaid appointment with free cancellation - setting payment to cancelled')
+        
+        if (payments && payments.length > 0) {
+          const { error: updatePaymentError } = await supabase
+            .from('payments')
+            .update({
+              payment_status: 'cancelled',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', payments[0].id)
+          
+          if (updatePaymentError) {
+            console.error('❌ Error updating payment to cancelled:', updatePaymentError)
+          } else {
+            logger.debug('✅ Payment set to cancelled - no credit given')
+          }
+        }
+      } else if (!isPaid && chargePercentage > 0) {
+        // CASE 4: Unpaid + Charged cancellation → Payment remains pending
+        logger.debug('💳 CASE 4: Unpaid appointment with charge - payment remains pending')
+        logger.debug('   - Payment status: Will remain pending')
+        logger.debug('   - Will be charged on next appointment')
       }
       const appointmentTime = new Date(props.eventData.start || props.eventData.start_time)
       const now = new Date()
