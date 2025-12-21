@@ -69,16 +69,21 @@ export const useCancellationPolicies = () => {
       logger.debug('🔍 Cancellation Policies - Current tenant_id:', tenantId, 'appliesTo:', appliesTo)
 
       // Build query
+      // ✅ IMPORTANT: Load both tenant-specific policies AND global policies (tenant_id = NULL)
+      // Tenant-specific policies take precedence, global policies act as fallback
       let query = supabase
         .from('cancellation_policies')
         .select('*')
         .eq('is_active', true)
-        .eq('tenant_id', tenantId) // Filter by current tenant
+        .or(`tenant_id.eq.${tenantId},tenant_id.is.null`) // Load tenant-specific OR global policies
       
       // Filter by applies_to if specified
       if (appliesTo) {
         query = query.eq('applies_to', appliesTo)
       }
+      
+      // Order: tenant-specific policies first (non-NULL tenant_id), then global policies
+      query = query.order('tenant_id', { ascending: false })
       
       const { data: policiesData, error: policiesError } = await query
         .order('created_at', { ascending: false })
@@ -162,10 +167,13 @@ export const useCancellationPolicies = () => {
 
       logger.debug('🔍 All Cancellation Policies - Current tenant_id:', userData.tenant_id)
 
+      // ✅ IMPORTANT: Load both tenant-specific policies AND global policies (tenant_id = NULL)
+      // This allows admins to see and manage both their tenant policies and the global fallback policies
       const { data: policiesData, error: policiesError } = await supabase
         .from('cancellation_policies')
         .select('*')
-        .eq('tenant_id', userData.tenant_id) // Filter by current tenant
+        .or(`tenant_id.eq.${userData.tenant_id},tenant_id.is.null`) // Load tenant-specific OR global policies
+        .order('tenant_id', { ascending: false }) // Tenant-specific policies first
         .order('created_at', { ascending: false })
 
       if (policiesError) {
