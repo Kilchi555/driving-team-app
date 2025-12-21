@@ -1,13 +1,10 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-    <div class="bg-white rounded-lg max-w-2xl w-full flex flex-col evaluation-modal-container">
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
+    <div class="bg-white rounded-lg max-w-4xl w-full h-[95vh] sm:h-[90vh] flex flex-col evaluation-modal-container">
       <div class="bg-green-600 text-white p-4 flex-shrink-0">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-bold">Lektion bewerten</h2>
-            <p class="text-green-100 text-sm">
-              {{ appointment?.title }} - {{ formatDate(appointment?.start_time) }}
-            </p>
           </div>
           <button @click="closeModal" class="text-white hover:text-green-200">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -961,8 +958,8 @@ watch(() => props.studentCategory, (newCategory) => {
 <style scoped>
 /* iOS Safari Fix: Use dynamic viewport height */
 .evaluation-modal-container {
-  max-height: 90vh;
-  max-height: 90dvh; /* Dynamic viewport height for iOS */
+  max-height: 95vh;
+  max-height: 95dvh; /* Dynamic viewport height for iOS */
   overflow: hidden;
 }
 
@@ -1010,20 +1007,20 @@ input:focus, textarea:focus {
 /* Mobile optimization for iOS */
 @media (max-width: 640px) {
   .evaluation-modal-container {
-    max-height: 85vh;
-    max-height: 85dvh; /* More space for buttons on mobile */
+    max-height: 95vh;
+    max-height: 95dvh; /* Full height on mobile */
   }
 }
 
 /* Fallback for browsers that don't support dvh */
 @supports not (height: 1dvh) {
   .evaluation-modal-container {
-    max-height: 85vh;
+    max-height: 95vh;
   }
   
   @media (max-width: 640px) {
     .evaluation-modal-container {
-      max-height: 75vh; /* Even more conservative on mobile to avoid footer overlap */
+      max-height: 95vh; /* Full height on mobile */
     }
   }
 }
