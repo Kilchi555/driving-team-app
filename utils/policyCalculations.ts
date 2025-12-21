@@ -1,4 +1,5 @@
 import type { PolicyWithRules, CancellationRule, CancellationCalculation } from '~/composables/useCancellationPolicies'
+import { logger } from '~/utils/logger'
 
 export interface AppointmentData {
   id: string
@@ -59,6 +60,14 @@ export const calculateCancellationCharges = (
   cancellationType?: 'staff' | 'student'
 ): CancellationResult => {
   const appointmentDate = new Date(appointmentData.start_time)
+  
+  // ✅ DEBUG: Log policy details
+  logger.debug('💰 calculateCancellationCharges - Policy details:', {
+    policyId: policy.id,
+    policyName: policy.name,
+    rulesCount: policy.rules?.length || 0,
+    rules: policy.rules || []
+  })
   
   // ✅ NEW: Handle appointments in the past
   // If appointment is in the past, apply fixed rules:

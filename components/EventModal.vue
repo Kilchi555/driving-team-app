@@ -357,7 +357,6 @@
         
         <!-- Wer hat abgesagt? -->
         <div v-if="cancellationStep === 0" class="mb-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Wer hat abgesagt?</h3>
           
           <div class="grid grid-cols-2 gap-4">
             <button
