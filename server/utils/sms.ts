@@ -2,10 +2,11 @@
 // SMS Utility mit Twilio
 // ============================================
 import twilio from 'twilio'
+import { logger } from '~/utils/logger'
 
 let twilioClient: ReturnType<typeof twilio> | null = null
 
-function getTwilioClient() {
+export function getTwilioClient() {
   if (!twilioClient) {
     const accountSid = process.env.TWILIO_ACCOUNT_SID
     const authToken = process.env.TWILIO_AUTH_TOKEN
@@ -35,20 +36,37 @@ export async function sendSMS({ to, message, senderName }: SendSMSOptions) {
     const client = getTwilioClient()
     
     // Use senderName as alphanumeric sender ID if provided, otherwise use phone number
-    // Alphanumeric sender IDs must be 1-11 characters (letters and numbers only)
+    // Alphanumeric sender IDs: max 11 chars, at least 1 letter, letters/numbers/spaces allowed
+    // No special characters or punctuation allowed
     let from: string
     if (senderName) {
-      // Convert to alphanumeric sender ID (max 11 chars, letters/numbers only)
+      // Convert to alphanumeric sender ID
+      // 1. Replace umlauts/special chars with ASCII equivalents
+      // 2. Remove any remaining non-alphanumeric/space characters
+      // 3. Trim and limit to 11 characters
       const cleanSenderName = senderName
-        .replace(/[^a-zA-Z0-9]/g, '')  // Remove special characters
+        .replace(/ä/gi, 'a')
+        .replace(/ö/gi, 'o')
+        .replace(/ü/gi, 'u')
+        .replace(/ß/g, 'ss')
+        .replace(/[^a-zA-Z0-9 ]/g, '')  // Remove special characters (keep spaces)
+        .trim()
         .substring(0, 11)  // Max 11 characters
-        .toUpperCase()
+        .trim()  // Trim again after substring
       
-      from = cleanSenderName || fromNumber  // Fallback to phone number if empty after cleanup
-      logger.debug(`📱 SMS from: "${from}" (tenant: "${senderName}")`)
+      // Check if at least one letter exists (Twilio requirement)
+      const hasLetter = /[a-zA-Z]/.test(cleanSenderName)
+      
+      if (cleanSenderName && hasLetter) {
+        from = cleanSenderName
+        logger.debug(`SMS using Alphanumeric Sender ID: "${from}" (original: "${senderName}")`)
+      } else {
+        from = fromNumber
+        logger.debug(`SMS fallback to phone number (cleaned name "${cleanSenderName}" invalid)`)
+      }
     } else {
       from = fromNumber
-      logger.debug(`📱 SMS from: "${from}" (phone number)`)
+      logger.debug(`SMS using phone number: "${from}"`)
     }
     
     const result = await client.messages.create({

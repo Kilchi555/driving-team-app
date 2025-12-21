@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
     // 2. Load tenant data
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, contact_email, contact_phone')
+      .select('name, contact_email, contact_phone, twilio_from_sender')
       .eq('id', tenantId)
       .single()
 
@@ -145,7 +145,7 @@ export default defineEventHandler(async (event) => {
           await sendSMS({
             to: user.phone,
             message: smsText,
-            senderName: tenant.name
+            senderName: tenant.twilio_from_sender || tenant.name
           })
 
           logger.debug(`✅ Customer deletion SMS sent to ${user.phone}`)

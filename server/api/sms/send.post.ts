@@ -1,13 +1,14 @@
 // server/api/sms/send.post.ts
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { sendSMS } from '~/server/utils/sms'
 
 const supabaseUrl = process.env.SUPABASE_URL!
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export default defineEventHandler(async (event) => {
   try {
-    const { phone, message, senderName } = await readBody(event)
+    const { phone, message, senderName, tenantId } = await readBody(event)
 
     if (!phone || !message) {
       throw createError({
@@ -19,32 +20,45 @@ export default defineEventHandler(async (event) => {
     // Format phone number (ensure +41 format for Swiss numbers)
     const formattedPhone = formatSwissPhoneNumber(phone)
     
+    // Determine sender name: tenantId lookup > explicit senderName > fallback
+    let resolvedSenderName = senderName
+    
+    if (tenantId && !senderName) {
+      // Load sender name from tenant if tenantId provided
+      try {
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('name, twilio_from_sender')
+          .eq('id', tenantId)
+          .single()
+        
+        if (tenant?.twilio_from_sender) {
+          resolvedSenderName = tenant.twilio_from_sender
+          logger.debug('📱 Loaded twilio_from_sender from DB:', resolvedSenderName)
+        } else if (tenant?.name) {
+          resolvedSenderName = tenant.name
+          logger.debug('📱 Fallback to tenant name:', resolvedSenderName)
+        }
+      } catch (tenantError) {
+        logger.warn('⚠️ Could not load tenant for SMS sender:', tenantError)
+      }
+    }
+    
     logger.debug('📱 Sending SMS via Twilio:', {
       to: formattedPhone,
-      from: senderName || 'phone_number',
+      from: resolvedSenderName || 'phone_number',
       messageLength: message.length
     })
 
-    // Use Supabase Edge Function to send SMS via Twilio
-    const supabase = createClient(supabaseUrl, supabaseKey)
-    
-    const { data: smsData, error: smsError } = await supabase.functions.invoke('send-twilio-sms', {
-      body: {
-        to: formattedPhone,
-        message: message,
-        senderName: senderName  // Pass tenant name for branded sender
-      }
+    // Use local sendSMS function with Alphanumeric Sender ID support
+    const smsResult = await sendSMS({
+      to: formattedPhone,
+      message: message,
+      senderName: resolvedSenderName
     })
 
-    if (smsError) {
-      console.error('❌ SMS sending failed:', smsError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to send SMS: ' + (smsError?.message || 'Unknown error')
-      })
-    }
-
-    logger.debug('✅ SMS sent successfully:', smsData)
+    logger.debug('✅ SMS sent successfully:', smsResult)
 
     // Try to log SMS in database (non-critical)
     try {
@@ -54,10 +68,11 @@ export default defineEventHandler(async (event) => {
         .insert({
           to_phone: formattedPhone,
           message: message,
-          twilio_sid: smsData?.sid || `sms_${Date.now()}`,
-          status: smsData?.status || 'sent',
+          twilio_sid: smsResult?.messageSid || `sms_${Date.now()}`,
+          status: 'sent',
           sent_at: new Date().toISOString(),
-          purpose: 'appointment_notification'
+          purpose: 'appointment_notification',
+          tenant_id: tenantId || null
         })
     } catch (logError) {
       console.warn('⚠️ Failed to log SMS:', logError)
@@ -68,7 +83,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       phone: formattedPhone,
       message: 'SMS sent successfully',
-      smsData
+      smsData: smsResult
     }
 
   } catch (error: any) {

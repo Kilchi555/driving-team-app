@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
 import { logger } from '~/utils/logger'
+import { sendSMS } from '~/server/utils/sms'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -238,41 +239,32 @@ export default defineEventHandler(async (event) => {
       try {
         const smsMessage = `Ihr Passwort-Reset-Link: ${resetLink}. Dieser Link ist 1 Stunde gültig.`
         
-        logger.debug('📱 Invoking send-twilio-sms edge function with phone:', user.phone)
-        
-        // Load tenant name for branded sender
+        // Load tenant SMS sender name
         let tenantName = ''
         try {
           const { data: tenantData } = await serviceSupabase
             .from('tenants')
-            .select('name')
+            .select('name, twilio_from_sender')
             .eq('id', user.tenant_id)
             .single()
           
-          if (tenantData?.name) {
+          if (tenantData?.twilio_from_sender) {
+            tenantName = tenantData.twilio_from_sender
+            logger.debug('📱 Using twilio_from_sender:', tenantName)
+          } else if (tenantData?.name) {
             tenantName = tenantData.name
-            logger.debug('📱 Loaded tenant name for SMS sender:', tenantName)
+            logger.debug('📱 Fallback to tenant name:', tenantName)
           }
         } catch (tenantError) {
           logger.warn('⚠️ Could not load tenant name:', tenantError)
         }
         
-        // Use service role for edge function invocation
-        const { data: smsResult, error: smsError } = await serviceSupabase.functions.invoke('send-twilio-sms', {
-          body: {
-            to: user.phone,
-            message: smsMessage,
-            senderName: tenantName  // Pass tenant name for branded sender
-          },
-          method: 'POST'
+        // Use local sendSMS function with Alphanumeric Sender ID support
+        const smsResult = await sendSMS({
+          to: user.phone!,
+          message: smsMessage,
+          senderName: tenantName
         })
-        
-        logger.debug('📱 SMS edge function response:', { data: smsResult, error: smsError })
-        
-        if (smsError) {
-          console.error('❌ SMS sending via send-twilio-sms failed:', smsError)
-          throw smsError
-        }
         
         logger.debug('✅ Password reset SMS sent successfully:', smsResult)
       } catch (smsError: any) {
@@ -280,8 +272,7 @@ export default defineEventHandler(async (event) => {
         console.error('❌ SMS error details:', {
           message: smsError?.message,
           cause: smsError?.cause,
-          status: smsError?.status,
-          data: smsError?.data
+          status: smsError?.status
         })
         // Don't fail the whole process - token is created, SMS just failed
         logger.debug('⚠️ Continuing despite SMS error - token still valid')

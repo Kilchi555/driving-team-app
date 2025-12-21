@@ -1,6 +1,7 @@
 import { getSupabase } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { logger } from '~/utils/logger'
+import { sendSMS } from '~/server/utils/sms'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -144,11 +145,12 @@ export default defineEventHandler(async (event) => {
     // Get tenant info for branding using service role
     const { data: tenant } = await serviceSupabase
       .from('tenants')
-      .select('name, contact_email')
+      .select('name, contact_email, twilio_from_sender')
       .eq('id', userProfile.tenant_id)
       .single()
 
     const tenantName = tenant?.name || 'Driving Team'
+    const smsSenderName = tenant?.twilio_from_sender || tenantName
 
     // Send invitation
     if (sendVia === 'email') {
@@ -312,25 +314,18 @@ ${tenantName}`
       }
       
     } else if (sendVia === 'sms' && phone) {
-      // Send SMS via Twilio (using Edge Function)
+      // Send SMS via local Twilio function
       logger.debug(`📱 Sending SMS to ${phone} with link: ${inviteLink}`)
       
       try {
         const smsMessage = `Hallo ${firstName}! Sie wurden als Fahrlehrer bei ${tenantName} eingeladen. Registrierung: ${inviteLink}`
 
-        // Use service role for edge function invocation
-        const { data: smsResult, error: smsError } = await serviceSupabase.functions.invoke('send-twilio-sms', {
-          body: {
-            to: phone,
-            message: smsMessage,
-            senderName: tenantName  // Pass tenant name for branded sender
-          }
+        // Use local sendSMS function with Alphanumeric Sender ID support
+        const smsResult = await sendSMS({
+          to: phone,
+          message: smsMessage,
+          senderName: smsSenderName
         })
-
-        if (smsError) {
-          console.error('❌ SMS sending failed:', smsError)
-          throw smsError
-        }
 
         logger.debug('✅ SMS sent via Twilio:', smsResult)
 
@@ -340,7 +335,7 @@ ${tenantName}`
           .insert({
             to_phone: phone,
             message: smsMessage,
-            twilio_sid: smsResult?.sid || 'unknown',
+            twilio_sid: smsResult?.messageSid || 'unknown',
             status: 'sent',
             sent_at: new Date().toISOString(),
             tenant_id: userProfile.tenant_id
@@ -351,7 +346,7 @@ ${tenantName}`
           sentVia: 'sms',
           phone,
           inviteLink,
-          smsId: smsResult?.sid,
+          smsId: smsResult?.messageSid,
           message: 'Einladung per SMS gesendet'
         }
 

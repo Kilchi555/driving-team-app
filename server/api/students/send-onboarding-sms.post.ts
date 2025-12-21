@@ -1,6 +1,7 @@
 // server/api/students/send-onboarding-sms.post.ts
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { sendSMS } from '~/server/utils/sms'
 
 const supabaseUrl = process.env.SUPABASE_URL!
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -22,7 +23,6 @@ export default defineEventHandler(async (event) => {
     // Build onboarding link (force public domain)
     const onboardingLink = `https://simy.ch/onboarding/${token}`
     
-    // ✅ Use existing Twilio integration via Supabase Edge Function
     const supabase = createClient(supabaseUrl, supabaseKey)
     
     // Load tenant name from token
@@ -37,13 +37,16 @@ export default defineEventHandler(async (event) => {
       if (user?.tenant_id) {
         const { data: tenant } = await supabase
           .from('tenants')
-          .select('name')
+          .select('name, twilio_from_sender')
           .eq('id', user.tenant_id)
           .single()
         
-        if (tenant?.name) {
+        if (tenant?.twilio_from_sender) {
+          tenantName = tenant.twilio_from_sender
+          logger.debug('📱 Using twilio_from_sender:', tenantName)
+        } else if (tenant?.name) {
           tenantName = tenant.name
-          logger.debug('📱 Loaded tenant name from token:', tenantName)
+          logger.debug('📱 Fallback to tenant name:', tenantName)
         }
       }
     } catch (tenantError) {
@@ -51,7 +54,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // SMS Message
-    const message = `Hallo ${firstName}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+    const message = `Hallo ${firstName}! Willkommen bei ${tenantName}. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
 
     logger.debug('📱 Sending onboarding SMS:', {
       to: formattedPhone,
@@ -60,15 +63,15 @@ export default defineEventHandler(async (event) => {
       senderName: tenantName
     })
     
-    const { data: smsData, error: smsError } = await supabase.functions.invoke('send-twilio-sms', {
-      body: {
+    // Use local sendSMS function with Alphanumeric Sender ID support
+    let smsResult
+    try {
+      smsResult = await sendSMS({
         to: formattedPhone,
         message: message,
-        senderName: tenantName  // Pass tenant name for branded sender
-      }
-    })
-
-    if (smsError) {
+        senderName: tenantName
+      })
+    } catch (smsError: any) {
       console.error('❌ SMS sending failed:', smsError)
       // Don't throw - student was created, SMS can be resent manually
       return {
@@ -80,7 +83,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    logger.debug('✅ Onboarding SMS sent successfully:', smsData)
+    logger.debug('✅ Onboarding SMS sent successfully:', smsResult)
 
     // Log SMS in database
     try {
@@ -89,8 +92,8 @@ export default defineEventHandler(async (event) => {
         .insert({
           to_phone: formattedPhone,
           message: message,
-          twilio_sid: smsData?.sid || `onboarding_${Date.now()}`,
-          status: smsData?.status || 'sent',
+          twilio_sid: smsResult?.messageSid || `onboarding_${Date.now()}`,
+          status: 'sent',
           sent_at: new Date().toISOString(),
           purpose: 'student_onboarding'
         })
@@ -104,7 +107,7 @@ export default defineEventHandler(async (event) => {
       phone: formattedPhone,
       message: 'SMS sent successfully',
       onboardingLink: onboardingLink,
-      smsData
+      smsData: smsResult
     }
 
   } catch (error: any) {

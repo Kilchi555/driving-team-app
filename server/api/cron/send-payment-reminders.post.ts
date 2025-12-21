@@ -196,7 +196,7 @@ export default defineEventHandler(async (event) => {
                 // Get tenant data
                 const { data: tenant, error: tenantError } = await supabase
                   .from('tenants')
-                  .select('name, slug, primary_color')
+                  .select('name, slug, primary_color, twilio_from_sender')
                   .eq('id', tenantId)
                   .single()
 
@@ -307,7 +307,7 @@ export default defineEventHandler(async (event) => {
                 // Get tenant data
                 const { data: tenant, error: tenantError } = await supabase
                   .from('tenants')
-                  .select('name, slug')
+                  .select('name, slug, twilio_from_sender')
                   .eq('id', tenantId)
                   .single()
 
@@ -345,7 +345,7 @@ export default defineEventHandler(async (event) => {
                 const smsResult = await sendSMS({
                   to: user.phone,
                   message: smsText,
-                  senderName: tenant.name
+                  senderName: tenant.twilio_from_sender || tenant.name
                 })
 
                 // Save reminder to DB
