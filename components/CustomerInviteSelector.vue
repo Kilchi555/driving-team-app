@@ -415,6 +415,7 @@ const categories = ref<any[]>([])
 const isLoadingCategories = ref(false)
 const smsStatus = ref<Record<string, { sent: boolean, sid?: string, error?: string }>>({})
 const sendingSms = ref(false)
+const tenantSenderName = ref<string>('Fahrschule')
 
 const newCustomer = ref<NewCustomer>({
   first_name: '',
@@ -565,14 +566,21 @@ const loadCategories = async () => {
     if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
-    // Get tenant business_type
+    // Get tenant business_type and SMS sender name
     const { data: tenantData, error: tenantError } = await supabase
       .from('tenants')
-      .select('business_type')
+      .select('business_type, name, twilio_from_sender')
       .eq('id', userProfile.tenant_id)
       .single()
 
     if (tenantError) throw tenantError
+    
+    // Set SMS sender name
+    if (tenantData?.twilio_from_sender) {
+      tenantSenderName.value = tenantData.twilio_from_sender
+    } else if (tenantData?.name) {
+      tenantSenderName.value = tenantData.name
+    }
     
     // Only load categories if business_type is driving_school
     if (tenantData?.business_type !== 'driving_school') {
@@ -792,7 +800,7 @@ const createInvitedCustomers = async (appointmentData: any) => {
           logger.debug('📱 Sending SMS to:', customer.phone)
           logger.debug('📄 Message:', smsMessage)
 
-          const smsResult = await sendSms(customer.phone, smsMessage)
+          const smsResult = await sendSms(customer.phone, smsMessage, tenantSenderName.value)
 
        if (smsResult.success) {
           logger.debug('✅ SMS sent successfully:', smsResult.data?.sid)
@@ -940,7 +948,7 @@ const createInvitedCustomers = async (appointmentData: any) => {
 const retrySms = async (customer: NewCustomer) => {
   try {
     const smsMessage = createInvitationSmsMessage(customer)
-    const smsResult = await sendSms(customer.phone, smsMessage)
+    const smsResult = await sendSms(customer.phone, smsMessage, tenantSenderName.value)
     
     if (smsResult.success) {
       smsStatus.value[customer.phone] = {

@@ -527,10 +527,37 @@ const resendOnboardingSms = async () => {
   isResendingSms.value = true
   
   try {
-    const onboardingLink = `https://simy.ch/onboarding/${pendingCustomer.value.onboarding_token}`
-    const message = `Hallo ${pendingCustomer.value.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+    // Get tenant name for SMS sender
+    let senderName = 'Fahrschule'
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', authUser?.id)
+        .single()
+      
+      if (userProfile?.tenant_id) {
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('name, twilio_from_sender')
+          .eq('id', userProfile.tenant_id)
+          .single()
+        
+        if (tenantData?.twilio_from_sender) {
+          senderName = tenantData.twilio_from_sender
+        } else if (tenantData?.name) {
+          senderName = tenantData.name
+        }
+      }
+    } catch (tenantError) {
+      console.warn('Could not load tenant name:', tenantError)
+    }
     
-    const result = await sendSms(pendingCustomer.value.phone, message)
+    const onboardingLink = `https://simy.ch/onboarding/${pendingCustomer.value.onboarding_token}`
+    const message = `Hallo ${pendingCustomer.value.first_name}! Willkommen bei ${senderName}. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+    
+    const result = await sendSms(pendingCustomer.value.phone, message, senderName)
     
     if (result.success) {
       uiStore.addNotification({
