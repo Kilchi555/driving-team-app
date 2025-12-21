@@ -472,43 +472,16 @@ const submitForm = async () => {
     logger.debug('📧 Email Success:', newStudent?.emailSuccess)
     logger.debug('🔗 Onboarding Link:', newStudent?.onboardingLink)
     
-    // ✅ Benachrichtigung basierend auf Versandmethode
-    if (newStudent?.smsSuccess) {
-      logger.debug('📲📲📲 SMS success notification triggered')
-      showSuccessToast(
-        'Einladung versendet!',
-        `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet.`
-      )
-    } else if (newStudent?.emailSuccess) {
-      logger.debug('📧📧📧 Email success notification triggered')
-      showSuccessToast(
-        'Einladung versendet!',
-        `Eine E-Mail mit Onboarding-Link wurde an ${form.value.email} gesendet.`
-      )
-    } else {
-      // SMS/Email fehlgeschlagen - zeige Link zum manuellen Kopieren
-      const contactInfo = form.value.phone || form.value.email
-      const contactType = form.value.phone ? 'SMS' : 'E-Mail'
-      
-      logger.debug('⚠️⚠️⚠️ Contact method failed:', { contactType, contactInfo, smsSuccess: newStudent?.smsSuccess, emailSuccess: newStudent?.emailSuccess })
-      showWarningToast(
-        `Schüler erstellt, aber ${contactType} fehlgeschlagen`,
-        `Bitte senden Sie den Onboarding-Link manuell an ${contactInfo}`
-      )
-      
-      // Zeige den Link in der Konsole für Copy/Paste
-      logger.debug('🔗 Onboarding-Link:', newStudent?.onboardingLink)
-      
-      // Optional: Kopiere Link in Zwischenablage
-      if (newStudent?.onboardingLink && navigator.clipboard) {
-        try {
-          await navigator.clipboard.writeText(newStudent.onboardingLink)
-          logger.debug('✅ Link wurde in Zwischenablage kopiert')
-        } catch (e) {
-          logger.debug('⚠️ Konnte Link nicht in Zwischenablage kopieren')
-        }
-      }
-    }
+    // ✅ Benachrichtigung - zeige Erfolg an wenn Schüler erstellt wurde
+    // SMS/Email werden automatisch im Backend versendet
+    const contactInfo = form.value.phone || form.value.email
+    const contactType = form.value.phone ? 'SMS' : 'E-Mail'
+    
+    logger.debug('✅ Schüler erstellt und Einladung versendet via:', contactType)
+    showSuccessToast(
+      'Schüler erstellt!',
+      `Onboarding-Link wurde via ${contactType} an ${contactInfo} gesendet.`
+    )
     
     // Reset form and close modal - mit VIEL längerer Verzögerung damit Toast sichtbar wird
     resetForm()
