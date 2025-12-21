@@ -744,7 +744,6 @@ import { useStudentCredits } from '~/composables/useStudentCredits'
 import { useCancellationReasons } from '~/composables/useCancellationReasons'
 import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
 import CancellationPolicySelector from '~/components/CancellationPolicySelector.vue'
-import { createCancellationFeeInvoice } from '~/utils/policyCalculations'
 
 
 import { useAuthStore } from '~/stores/auth'
@@ -4010,32 +4009,9 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     logger.debug('✅ Cancellation reason ID:', cancellationReasonId)
     logger.debug('✅ Database response:', data)
     
-    // Create cancellation fee invoice if policy charges apply
-    if (cancellationPolicyResult.value?.shouldCreateInvoice && cancellationPolicyResult.value.chargeAmountRappen > 0) {
-      logger.debug('💰 Creating cancellation fee invoice...')
-      
-      const appointmentData = {
-        id: props.eventData.id,
-        start_time: props.eventData.start || props.eventData.start_time,
-        duration_minutes: props.eventData.duration_minutes || 45,
-        price_rappen: props.eventData.price_rappen || 0,
-        user_id: props.eventData.user_id || '',
-        staff_id: props.eventData.staff_id || ''
-      }
-      
-      const invoiceResult = await createCancellationFeeInvoice(
-        appointmentData,
-        cancellationPolicyResult.value,
-        pendingCancellationReason.value?.name_de || 'Unbekannt',
-        props.currentUser?.id || ''
-      )
-      
-      if (invoiceResult.success) {
-        logger.debug('✅ Cancellation fee invoice created:', invoiceResult.invoiceId)
-      } else {
-        console.warn('⚠️ Could not create cancellation fee invoice:', invoiceResult.error)
-      }
-    }
+    // ✅ REMOVED: Cancellation fee invoice creation
+    // Cancellation charges are now handled via pending payments
+    // They will be automatically added to the next appointment payment
     
     // ✅ NEU: SMS und Email versenden bei Löschung
     const phoneNumber = props.eventData?.phone || props.eventData?.extendedProps?.phone
