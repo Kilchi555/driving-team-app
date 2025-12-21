@@ -121,7 +121,7 @@ export default defineEventHandler(async (event) => {
       .eq('is_active', true)
       .order('is_default', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
     // ✅ CRITICAL: Cancellation policy MUST be configured
     if (policyError || !cancellationPolicy?.rules || !Array.isArray(cancellationPolicy.rules) || cancellationPolicy.rules.length === 0) {
