@@ -507,6 +507,39 @@
       @close="showPostAppointmentModal = false"
       @saved="onPostAppointmentSaved"
     />
+    
+    <!-- No Policy Modal - Staff Decision -->
+    <div v-if="showNoPolicyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+          Keine Stornierungsrichtlinie gefunden
+        </h3>
+        <p class="text-gray-600 mb-6">
+          Für diesen Termin wurde keine Stornierungsrichtlinie gefunden. Bitte wähle aus, ob der Termin verrechnet werden soll:
+        </p>
+        
+        <div class="space-y-3">
+          <button
+            @click="handleNoPolicyChoice(0)"
+            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+          >
+            Kostenlos (0% verrechnen)
+          </button>
+          <button
+            @click="handleNoPolicyChoice(100)"
+            class="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+          >
+            Vollständig verrechnen (100%)
+          </button>
+          <button
+            @click="showNoPolicyModal = false"
+            class="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+          >
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    </div>
 
 
     <!-- Payment Status Modal für Stornierungs-Rechnungen -->
@@ -711,6 +744,8 @@ const cancellationPolicyResult = ref<any>(null)
 const timeUntilAppointment = ref({ hours: 0, days: 0, isOverdue: false, description: '' })
 const appointmentNumber = ref(1)
 const availableDurations = ref([45] as number[])
+const showNoPolicyModal = ref(false) // ✅ NEW: Modal when no policy found
+const manualChargePercentage = ref<number | null>(null) // ✅ NEW: Staff choice when no policy
 const customerInviteSelectorRef = ref()
 const authStore = useAuthStore()
 // ✅ NEU: Verwende useProductSale Composable für Produktverwaltung
@@ -3627,6 +3662,38 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
 }
 
 // ✅ NEUE SOFT-DELETE FUNKTION mit Absage-Grund
+// ✅ NEW: Handle staff choice when no policy found
+const handleNoPolicyChoice = async (chargePercent: number) => {
+  logger.debug('👤 Staff chose charge percentage:', chargePercent)
+  
+  // Store the manual choice
+  manualChargePercentage.value = chargePercent
+  
+  // Create a policy result manually
+  const price = appointmentPrice.value || 0
+  cancellationPolicyResult.value = {
+    calculation: {
+      chargePercentage: chargePercent
+    },
+    chargeAmountRappen: Math.round(price * chargePercent / 100),
+    shouldCreateInvoice: chargePercent > 0,
+    shouldCreditHours: chargePercent === 0,
+    invoiceDescription: chargePercent === 0 
+      ? 'Kostenlose Stornierung (manuell festgelegt)'
+      : `Stornogebühr ${chargePercent}% (manuell festgelegt)`
+  }
+  
+  // Close modal
+  showNoPolicyModal.value = false
+  
+  logger.debug('✅ Manual policy set:', cancellationPolicyResult.value)
+  
+  // Continue with cancellation
+  if (pendingCancellationReason.value) {
+    await proceedWithCancellation(pendingCancellationReason.value)
+  }
+}
+
 const performSoftDeleteWithReason = async (deletionReason: string, cancellationReasonId: string, status: string = 'cancelled', cancellationType: 'student' | 'staff', withCosts: boolean = true) => {
   if (!props.eventData?.id) return
   
@@ -3674,11 +3741,23 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     if (isLessonType) {
       // ✅ IMPORTANT: Use the cancellation policy to determine charge percentage
       // Do NOT hardcode 100% - the policy decides based on time until appointment
-      // ✅ CRITICAL FIX: Use ?? instead of || to allow 0 as valid value
-      chargePercentage = cancellationPolicyResult.value?.calculation.chargePercentage ?? 100
+      // ✅ CRITICAL FIX: Use ?? to check for null/undefined separately
+      const policyCharge = cancellationPolicyResult.value?.calculation.chargePercentage
+      
+      // ✅ NEW: If no policy found, ask staff to decide
+      if (policyCharge === null || policyCharge === undefined) {
+        logger.debug('⚠️ No cancellation policy found - asking staff for decision')
+        
+        // Show modal and wait for staff decision
+        showNoPolicyModal.value = true
+        // Wait for staff to choose (this will be handled by modal buttons)
+        return // Exit here, will continue after staff choice
+      }
+      
+      chargePercentage = policyCharge
       
       logger.debug('💳 Using cancellation policy for charge determination:', {
-        policyChargePercentage: cancellationPolicyResult.value?.calculation.chargePercentage,
+        policyChargePercentage: policyCharge,
         withCosts,
         finalChargePercentage: chargePercentage
       })
