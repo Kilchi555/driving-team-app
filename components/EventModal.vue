@@ -4271,12 +4271,23 @@ const goToPolicySelection = async () => {
 
 const goBackInCancellationFlow = async () => {
   if (cancellationStep.value === 3) {
-    // Go back from confirmation to policy selection
-    cancellationStep.value = 2
+    // Going back from confirmation
+    // Check if this is a staff cancellation with force_charge (no policy selection was shown)
+    const selectedReason = cancellationReasons.value.find(r => r.id === selectedCancellationReasonId.value)
+    const forceChargePercentage = (selectedReason as any)?.force_charge_percentage
+    const hasForceCharge = forceChargePercentage !== null && forceChargePercentage !== undefined
+    const isStaffReason = (selectedReason as any)?.cancellation_type === 'staff'
+    
+    if (hasForceCharge || isStaffReason) {
+      // Skip policy selection step (step 2) and go directly to reason selection (step 1)
+      cancellationStep.value = 1
+      cancellationPolicyResult.value = null
+    } else {
+      // Normal flow: go back to policy selection
+      cancellationStep.value = 2
+    }
   } else if (cancellationStep.value === 2) {
     // Go back from policy selection to reason selection
-    // DON'T call goToPolicySelection - it would jump to step 3 again!
-    // Instead, just reset the policy result and go back
     cancellationPolicyResult.value = null
     cancellationStep.value = 1
   } else if (cancellationStep.value === 1) {
